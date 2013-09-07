@@ -6,13 +6,32 @@
 
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
+    <packaging>jar</packaging>
     <version>2.1.0</version>
-    
+    <description>Java JSON serialization</description>
+    <url>https://github.com/jdereg/json-io</url>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <scm>
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
     </scm>
+
+    <developers>
+        <developer>
+            <id>jdereg</id>
+            <name>John DeRegnaucourt</name>
+            <email>jdereg@gmail.com</email>
+        </developer>
+    </developers>
 
     <properties>
         <version.junit>4.9</version.junit>
