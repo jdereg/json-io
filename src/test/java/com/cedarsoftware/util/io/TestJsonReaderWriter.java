@@ -58,7 +58,7 @@ import com.cedarsoftware.util.SafeSimpleDateFormat;
  *         limitations under the License. */
 public class TestJsonReaderWriter extends TestCase
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -5051,6 +5051,51 @@ public class TestJsonReaderWriter extends TestCase
         assertTrue(json1.contains("phantom"));
         assertTrue(json1.contains("TestObject"));
         assertTrue(json1.contains("_other"));
+    }
+
+    public static class Transient1
+    {
+        String fname;
+        String lname;
+        transient String fullname;
+
+        void setFname(String f) { fname = f; buildFull(); }
+        void setLname(String l) { lname = l; buildFull(); }
+        void buildFull()        { fullname = fname + " " + lname; }
+    }
+
+    public void testTransient1() throws Exception
+    {
+        Transient1 person = new Transient1();
+        person.setFname("John");
+        person.setLname("DeRegnaucourt");
+
+        String json = JsonWriter.objectToJson(person);
+        println("json = " + json);
+        assertFalse(json.contains("fullname"));
+
+        person = (Transient1) JsonReader.jsonToJava(json);
+        assertTrue(person.fullname == null);
+    }
+
+    public static class Transient2
+    {
+        transient TestObject backup;
+        TestObject main;
+    }
+
+    public void testTransient2() throws Exception
+    {
+        Transient2 trans = new Transient2();
+        trans.backup = new TestObject("Roswell");
+        trans.main = trans.backup;
+
+        String json = JsonWriter.objectToJson(trans);
+        println("json = " + json);
+        assertFalse(json.contains("backup"));
+
+        trans = (Transient2) JsonReader.jsonToJava(json);
+        assertEquals(trans.main._name, "Roswell");
     }
 
     private static void println(Object ... args)

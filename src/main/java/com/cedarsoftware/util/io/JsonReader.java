@@ -111,7 +111,7 @@ public class JsonReader implements Closeable
             _byteCache[i] = (byte) (i - 128);
         }
 
-        // Save heap memory by re-using common strings (Strings immutable)
+        // Save heap memory by re-using common strings (String's immutable)
         _stringCache.put("", "");
         _stringCache.put("true", "true");
         _stringCache.put("false", "false");

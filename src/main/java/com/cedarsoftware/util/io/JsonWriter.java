@@ -512,7 +512,7 @@ public class JsonWriter implements Closeable, Flushable
                 continue;
             }
 
-            if (!JsonReader.isPrimitive(obj.getClass()))
+            if (!JsonReader.isPrimitive(obj.getClass()) && !(obj instanceof String))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -528,7 +528,7 @@ public class JsonWriter implements Closeable, Flushable
             if (clazz.isArray())
             {
                 Class compType = clazz.getComponentType();
-                if (!JsonReader.isPrimitive(compType))
+                if (!JsonReader.isPrimitive(compType) && compType != String.class)
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -1496,6 +1496,10 @@ public class JsonWriter implements Closeable, Flushable
 
         for (Field field : classInfo.values())
         {
+            if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
+            {   // Do not write transient fields
+                continue;
+            }
             if (first)
             {
                 first = false;
