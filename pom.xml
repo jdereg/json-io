@@ -7,6 +7,12 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <version>2.0</version>
+    
+    <scm>
+        <url>https://github.com/jdereg/json-io</url>
+        <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
+        <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
+    </scm>
 
     <properties>
         <version.junit>4.9</version.junit>
