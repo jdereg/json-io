@@ -19,10 +19,10 @@
 
     <scm>
         <url>https://github.com/jdereg/json-io</url>
-        <connection>scm:git:ssh://git@github.com/jdereg/json-io.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/jdereg/json-io.git</developerConnection>
+        <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
+        <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
       <tag>json-io-2.2.0</tag>
-  </scm>
+    </scm>
 
     <developers>
         <developer>
