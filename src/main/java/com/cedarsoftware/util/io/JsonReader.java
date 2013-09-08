@@ -241,7 +241,7 @@ public class JsonReader implements Closeable
                 {
                     throw new IOException("Calendar missing 'time' field, pos = " + jObj.pos);
                 }
-                Date date = JsonWriter._dateFormat.parse(time);
+                Date date = JsonWriter._dateFormat.get().parse(time);
                 Class c;
                 if (jObj.target != null)
                 {

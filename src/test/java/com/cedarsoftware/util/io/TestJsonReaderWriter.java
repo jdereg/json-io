@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -35,8 +36,6 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.cedarsoftware.util.SafeSimpleDateFormat;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -4281,11 +4280,9 @@ public class TestJsonReaderWriter extends TestCase
 
     public class WeirdDateWriter implements JsonWriter.JsonClassWriter
     {
-        private SafeSimpleDateFormat dateFormat = new SafeSimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
         public void write(Object o, boolean showType, Writer out) throws IOException
         {
-            String value = dateFormat.format((Date)o);
+            String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
             out.write("\"value\":\"");
             out.write(value);
             out.write('"');
@@ -4298,7 +4295,7 @@ public class TestJsonReaderWriter extends TestCase
 
         public void writePrimitiveForm(Object o, Writer out) throws IOException
         {
-            String value = dateFormat.format((Date)o);
+            String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date)o);
             out.write('"');
             out.write(value);
             out.write('"');
@@ -4307,15 +4304,13 @@ public class TestJsonReaderWriter extends TestCase
 
     public class WeirdDateReader implements JsonReader.JsonClassReader
     {
-        private SafeSimpleDateFormat dateFormat = new SafeSimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
-
         public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof String)
             {
                 try
                 {
-                    return new WeirdDate(dateFormat.parse((String) o));
+                    return new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) o));
                 }
                 catch (ParseException e)
                 {
@@ -4328,7 +4323,7 @@ public class TestJsonReaderWriter extends TestCase
             {
                 try
                 {
-                    return jObj.target = new WeirdDate(dateFormat.parse((String) jObj.get("value")));
+                    return jObj.target = new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) jObj.get("value")));
                 }
                 catch (ParseException e)
                 {

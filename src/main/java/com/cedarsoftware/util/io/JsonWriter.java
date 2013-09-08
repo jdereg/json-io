@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.SafeSimpleDateFormat;
-
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -17,6 +15,7 @@ import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -84,7 +83,13 @@ public class JsonWriter implements Closeable, Flushable
     private static Object[] _byteStrings = new Object[256];
     private final Writer _out;
     private long _identity = 1;
-    static SafeSimpleDateFormat _dateFormat = new SafeSimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+    static final ThreadLocal<SimpleDateFormat> _dateFormat = new ThreadLocal<SimpleDateFormat>()
+    {
+        public SimpleDateFormat initialValue()
+        {
+            return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        }
+    };
 
     static
     {   // Add customer writers (these make common classes more succinct)
@@ -244,9 +249,9 @@ public class JsonWriter implements Closeable, Flushable
         public void write(Object obj, boolean showType, Writer out) throws IOException
         {
             Calendar cal = (Calendar) obj;
-            _dateFormat.setTimeZone(cal.getTimeZone());
+            _dateFormat.get().setTimeZone(cal.getTimeZone());
             out.write("\"time\":\"");
-            out.write(_dateFormat.format(cal.getTime()));
+            out.write(_dateFormat.get().format(cal.getTime()));
             out.write("\",\"zone\":\"");
             out.write(cal.getTimeZone().getID());
             out.write('"');
