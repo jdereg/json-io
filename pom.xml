@@ -21,7 +21,6 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
   </scm>
 
     <developers>
@@ -53,7 +52,7 @@
     </pluginRepositories>
 
     <distributionManagement>
-        <downloadUrl>https://github.com/jdereg/${project.artifactId}/mvn-repo/</downloadUrl>
+        <!--<downloadUrl>https://github.com/jdereg/${project.artifactId}/mvn-repo/</downloadUrl>-->
         <!--<repository>-->
             <!--<uniqueVersion>false</uniqueVersion>-->
             <!--<id>github</id>-->
