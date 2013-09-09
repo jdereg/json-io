@@ -53,12 +53,12 @@
 
     <distributionManagement>
         <downloadUrl>https://github.com/jdereg/${project.artifactId}/mvn-repo/</downloadUrl>
-        <repository>
-            <uniqueVersion>false</uniqueVersion>
-            <id>github</id>
-            <name>GitHub ${project.artifactId} Repository</name>
-            <url>https://raw.github.com/jdereg/${project.artifactId}/mvn-repo</url>
-        </repository>
+        <!--<repository>-->
+            <!--<uniqueVersion>false</uniqueVersion>-->
+            <!--<id>github</id>-->
+            <!--<name>GitHub ${project.artifactId} Repository</name>-->
+            <!--<url>https://raw.github.com/jdereg/${project.artifactId}/mvn-repo</url>-->
+        <!--</repository>-->
 
         <repository>
             <id>repo</id>
