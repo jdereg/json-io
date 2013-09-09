@@ -52,9 +52,13 @@
         </pluginRepository>
     </pluginRepositories>
 
+    <distributionManagement>
+        <downloadUrl>https://github.com/jdereg/json-io/releases</downloadUrl>
+        <status>deployed</status>
+    </distributionManagement>
+
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
