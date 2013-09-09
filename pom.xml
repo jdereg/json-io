@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.cedarsoftware</groupId>
@@ -21,7 +23,6 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
   </scm>
 
     <developers>
@@ -63,11 +64,11 @@
 
         <repository>
             <id>repo</id>
-            <url>https://raw.github.com/jdereg/jdereg-mvn-repo/raw/master/releases</url>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
         </repository>
         <snapshotRepository>
             <id>snapshot-repo</id>
-            <url>https://raw.github.com/jdereg/jdereg-mvn-repo/raw/master/snapshots</url>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
 
 
