@@ -21,8 +21,7 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
+    </scm>
 
     <developers>
         <developer>
@@ -54,7 +53,6 @@
 
     <distributionManagement>
         <downloadUrl>https://github.com/jdereg/json-io/releases</downloadUrl>
-        <status>deployed</status>
     </distributionManagement>
 
     <build>
