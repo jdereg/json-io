@@ -53,7 +53,7 @@
     </pluginRepositories>
 
     <distributionManagement>
-        <downloadUrl>https://github.com/jdereg/${project.artifactId}/releases</downloadUrl>
+        <downloadUrl>https://github.com/jdereg/${project.artifactId}/mvn-repo/</downloadUrl>
         <repository>
             <uniqueVersion>false</uniqueVersion>
             <id>github</id>
