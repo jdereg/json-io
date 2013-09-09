@@ -21,7 +21,6 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
   </scm>
 
     <developers>
@@ -60,6 +59,17 @@
             <name>GitHub ${project.artifactId} Repository</name>
             <url>https://raw.github.com/jdereg/${project.artifactId}/mvn-repo</url>
         </repository>
+
+        <repository>
+            <id>repo</id>
+            <url>https://github.com/jdereg/jdereg-mvn-repo/raw/master/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshot-repo</id>
+            <url>https://github.com/jdereg/jdereg-mvn-repo/raw/master/snapshots</url>
+        </snapshotRepository>
+
+
     </distributionManagement>
 
     <build>
