@@ -3,6 +3,15 @@ json-io
 
 Perfect Java serialization to and from JSON format
 
+To include in your project:
+
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-io</artifactId>
+  <version>2.2.29</version>
+</dependency>
+
+
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  
 
 **json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes (static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the ObjectOutputStream behavior.
