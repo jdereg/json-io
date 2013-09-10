@@ -4,13 +4,13 @@ json-io
 Perfect Java serialization to and from JSON format
 
 To include in your project:
-
+```
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
   <version>2.2.29</version>
 </dependency>
-
+```
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  
 
