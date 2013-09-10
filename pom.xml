@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
+    <name>json-io</name>
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>jar</packaging>
@@ -21,7 +21,6 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
   </scm>
 
     <developers>
@@ -53,14 +52,6 @@
     </pluginRepositories>
 
     <distributionManagement>
-        <!--<downloadUrl>https://github.com/jdereg/${project.artifactId}/mvn-repo/</downloadUrl>-->
-        <!--<repository>-->
-            <!--<uniqueVersion>false</uniqueVersion>-->
-            <!--<id>github</id>-->
-            <!--<name>GitHub ${project.artifactId} Repository</name>-->
-            <!--<url>https://raw.github.com/jdereg/${project.artifactId}/mvn-repo</url>-->
-        <!--</repository>-->
-
         <repository>
             <id>sonatype-nexus-staging</id>
             <name>Nexus Staging Repository</name>
