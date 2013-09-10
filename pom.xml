@@ -21,8 +21,7 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
+    </scm>
 
     <developers>
         <developer>
@@ -62,8 +61,6 @@
             <id>snapshot-repo</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
-
-
     </distributionManagement>
 
     <build>
