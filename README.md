@@ -1,9 +1,7 @@
 json-io
 =======
 
-Perfect Java serialization to and from JSON format
-
-To include in your project:
+Perfect Java serialization to and from JSON format. To include in your project:
 ```
 <dependency>
   <groupId>com.cedarsoftware</groupId>
@@ -20,6 +18,7 @@ The `JsonReader / JsonWriter` code does not depend on any native or 3rd party li
 
 _Please donate some Bitcoins (or fractional bitcoins) to: 1FBca31Ta3uDvgxcvJEo6QzQQjsDVFeA4W if you find json-io useful and use it your software._
 
+_For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as possible.  When an object's class can be inferred from a field type or array type, the object's type information is left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`. 
