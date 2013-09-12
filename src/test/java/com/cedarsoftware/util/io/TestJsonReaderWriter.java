@@ -57,7 +57,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *         limitations under the License. */
 public class TestJsonReaderWriter extends TestCase
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);

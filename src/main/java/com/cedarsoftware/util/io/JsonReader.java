@@ -178,9 +178,9 @@ public class JsonReader implements Closeable
         addReader(TimeZone.class, new TimeZoneReader());
         addReader(Locale.class, new LocaleReader());
         addReader(Calendar.class, new CalendarReader());
+        addReader(Class.class, new ClassReader());
         addReader(StringBuilder.class, new StringBuilderReader());
         addReader(StringBuffer.class, new StringBufferReader());
-        addReader(Class.class, new ClassReader());
     }
 
     public interface JsonClassReader
