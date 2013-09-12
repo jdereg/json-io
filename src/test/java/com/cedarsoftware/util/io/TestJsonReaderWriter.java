@@ -2846,6 +2846,7 @@ public class TestJsonReaderWriter extends TestCase
         assertTrue(bb._other.equals(new TestObject("C")));
         TestObject aa = (TestObject) map.keySet().toArray()[0];
         assertTrue(aa._other == bb);
+        time(map);
     }
 
     public void testMap3() throws Exception
@@ -2858,6 +2859,7 @@ public class TestJsonReaderWriter extends TestCase
         map = (Map) readJsonObject(json);
         assertTrue(map != null);
         assertTrue(map.size() == 1);
+        time(map);
     }
 
     public void testCustom() throws Exception
@@ -2930,8 +2932,9 @@ public class TestJsonReaderWriter extends TestCase
         GregorianCalendar[] gregs = new GregorianCalendar[] {new GregorianCalendar()};
         String json = getJsonString(gregs);
         println("json=" + json);
-        GregorianCalendar[] gregs2 = (GregorianCalendar[]) JsonReader.jsonToJava(json);
+        GregorianCalendar[] gregs2 = (GregorianCalendar[]) readJsonObject(json);
         assertTrue(gregs2[0].equals(gregs[0]));
+        time(gregs);
     }
 
     public void testCalendarUntypedArray() throws Exception
@@ -3069,27 +3072,30 @@ public class TestJsonReaderWriter extends TestCase
         TimeZone zone = TimeZone.getDefault();
         TestTimeZone tz = new TestTimeZone();
         tz._zone = zone;
-        String json = JsonWriter.toJson(tz);
+        String json = getJsonString(tz);
         println("json=" + json);
 
-        tz = (TestTimeZone) JsonReader.jsonToJava(json);
+        tz = (TestTimeZone) readJsonObject(json);
         assertTrue(zone.equals(tz._zone));
+        time(tz);
     }
 
     public void testTimeZone() throws Exception
     {
         println("\nTestJsonReaderWriter.testTimeZone()");
         TimeZone est = TimeZone.getTimeZone("EST");
-        String json = JsonWriter.objectToJson(est);
+        String json = getJsonString(est);
         println("json=" + json);
-        TimeZone tz = (TimeZone) JsonReader.jsonToJava(json);
+        TimeZone tz = (TimeZone) readJsonObject(json);
         assertTrue(tz.equals(est));
+        time(est);
 
         TimeZone pst = TimeZone.getTimeZone("PST");
-        json = JsonWriter.objectToJson(pst);
+        json = getJsonString(pst);
         println("json=" + json);
-        tz = (TimeZone) JsonReader.jsonToJava(json);
+        tz = (TimeZone) readJsonObject(json);
         assertTrue(tz.equals(pst));
+        time(pst);
 
         try
         {
@@ -3104,10 +3110,10 @@ public class TestJsonReaderWriter extends TestCase
     {
         println("\nTestJsonReaderWriter.testTimeZoneInArray()");
         TimeZone pst = TimeZone.getTimeZone("PST");
-        String json = JsonWriter.objectToJson(new Object[] {pst});
+        String json = getJsonString(new Object[] {pst});
         println("json=" + json);
 
-        Object[] oArray = (Object[]) JsonReader.jsonToJava(json);
+        Object[] oArray = (Object[]) readJsonObject(json);
         assertTrue(oArray.length == 1);
         TimeZone tz = (TimeZone)oArray[0];
         assertTrue(tz.equals(pst));
@@ -3127,13 +3133,14 @@ public class TestJsonReaderWriter extends TestCase
         TimeZone pst = TimeZone.getTimeZone("PST");
         List col = new ArrayList();
         col.add(pst);
-        String json = JsonWriter.objectToJson(col);
+        String json = getJsonString(col);
         println("json=" + json);
 
-        col = (List) JsonReader.jsonToJava(json);
+        col = (List) readJsonObject(json);
         assertTrue(col.size() == 1);
         TimeZone tz = (TimeZone) col.get(0);
         assertTrue(tz.equals(pst));
+        time(col);
     }
 
     public void testTimeZoneInMapValue() throws Exception
@@ -3308,11 +3315,12 @@ public class TestJsonReaderWriter extends TestCase
         list.add(null);
         list.add("b");
         String json = getJsonString(list);
-        List list2 = (List) JsonReader.toJava(json);
+        List list2 = (List) readJsonObject(json);
         assertTrue(list.equals(list2));
+        time(list);
 
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[\"a\",{},\"b\"]}";
-        list2 = (List) JsonReader.toJava(json);
+        list2 = (List) readJsonObject(json);
         assertTrue(list2.size() == 3);
         assertTrue(list2.get(0).equals("a"));
         assertTrue(list2.get(1).getClass().equals(JsonObject.class));
@@ -3330,8 +3338,9 @@ public class TestJsonReaderWriter extends TestCase
         // Backward reference
         String json = getJsonString(list);
         println("json=" + json);
-        List list2 = (List) JsonReader.toJava(json);
+        List list2 = (List) readJsonObject(json);
         assertTrue(list.equals(list2));
+        time(list);
 
         // Forward reference
         String pkg = TestObject.class.getName();
@@ -3360,27 +3369,30 @@ public class TestJsonReaderWriter extends TestCase
         Locale locale = Locale.getDefault();
         TestLocale tl = new TestLocale();
         tl._loc = locale;
-        String json = JsonWriter.toJson(tl);
+        String json = getJsonString(tl);
         println("json=" + json);
 
-        tl = (TestLocale) JsonReader.jsonToJava(json);
+        tl = (TestLocale) readJsonObject(json);
         assertTrue(locale.equals(tl._loc));
+        time(tl);
     }
 
     public void testLocale() throws Exception
     {
         println("\nTestJsonReaderWriter.testLocale()");
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
-        String json = JsonWriter.objectToJson(locale);
+        String json = getJsonString(locale);
         println("json=" + json);
-        Locale us = (Locale) JsonReader.jsonToJava(json);
+        Locale us = (Locale) readJsonObject(json);
         assertTrue(locale.equals(us));
+        time(locale);
 
         locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry(), "johnson");
-        json = JsonWriter.objectToJson(locale);
+        json = getJsonString(locale);
         println("json=" + json);
-        us = (Locale) JsonReader.jsonToJava(json);
+        us = (Locale) readJsonObject(json);
         assertTrue(locale.equals(us));
+        time(locale);
 
         try
         {
@@ -3428,11 +3440,12 @@ public class TestJsonReaderWriter extends TestCase
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         List list = new ArrayList();
         list.add(locale);
-        String json = JsonWriter.objectToJson(list);
+        String json = getJsonString(list);
         println("json=" + json);
-        list = (List) JsonReader.jsonToJava(json);
+        list = (List) readJsonObject(json);
         assertTrue(list.size() == 1);
         assertTrue(list.get(0).equals(locale));
+        time(list);
     }
 
     public void testLocaleInMapValue() throws Exception
@@ -3441,11 +3454,12 @@ public class TestJsonReaderWriter extends TestCase
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         Map map = new HashMap();
         map.put("us", locale);
-        String json = JsonWriter.objectToJson(map);
+        String json = getJsonString(map);
         println("json=" + json);
-        map = (Map) JsonReader.jsonToJava(json);
+        map = (Map) readJsonObject(json);
         assertTrue(map.size() == 1);
         assertTrue(map.get("us").equals(locale));
+        time(map);
     }
 
     public void testLocaleInMapKey() throws Exception
@@ -5065,11 +5079,11 @@ public class TestJsonReaderWriter extends TestCase
         person.setFname("John");
         person.setLname("DeRegnaucourt");
 
-        String json = JsonWriter.objectToJson(person);
+        String json = getJsonString(person);
         println("json = " + json);
         assertFalse(json.contains("fullname"));
 
-        person = (Transient1) JsonReader.jsonToJava(json);
+        person = (Transient1) readJsonObject(json);
         assertTrue(person.fullname == null);
     }
 
@@ -5085,11 +5099,11 @@ public class TestJsonReaderWriter extends TestCase
         trans.backup = new TestObject("Roswell");
         trans.main = trans.backup;
 
-        String json = JsonWriter.objectToJson(trans);
+        String json = getJsonString(trans);
         println("json = " + json);
         assertFalse(json.contains("backup"));
 
-        trans = (Transient2) JsonReader.jsonToJava(json);
+        trans = (Transient2) readJsonObject(json);
         assertEquals(trans.main._name, "Roswell");
     }
 
@@ -5139,9 +5153,13 @@ public class TestJsonReaderWriter extends TestCase
         long endRead = System.nanoTime();
         in.close();
 
-        println("JSON write time = " + (_endWrite - _startWrite) / 1000000 + " ms");
-        println("ObjectOutputStream time = " + (endWrite - startWrite) / 1000000 + " ms");
-        println("JSON  read time  = " + (_endRead - _startRead) / 1000000 + " ms");
-        println("ObjectInputStream time = " + (endRead - startRead) / 1000000 + " ms");
+        double t1 = (_endWrite - _startWrite) / 1000000.0;
+        double t2 = (endWrite - startWrite) / 1000000.0;
+        double t3 = (_endRead - _startRead) / 1000000.0;
+        double t4 = (endRead - startRead) / 1000000.0;
+        println("JSON write time = " + t1 + " ms");
+        println("ObjectOutputStream time = " + t2 + " ms");
+        println("JSON  read time  = " + t3 + " ms");
+        println("ObjectInputStream time = " + t4 + " ms");
     }
 }

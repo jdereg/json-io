@@ -101,9 +101,9 @@ public class JsonWriter implements Closeable, Flushable
         addWriter(TimeZone.class, new TimeZoneWriter());
         addWriter(Calendar.class, new CalendarWriter());
         addWriter(Locale.class, new LocaleWriter());
+        addWriter(Class.class, new ClassWriter());
         addWriter(StringBuilder.class, new StringBuilderWriter());
         addWriter(StringBuffer.class, new StringBufferWriter());
-        addWriter(Class.class, new ClassWriter());
     }
 
     public interface JsonClassWriter
@@ -216,7 +216,7 @@ public class JsonWriter implements Closeable, Flushable
         for (Object[] item : _writers)
         {
             Class clz = (Class)item[0];
-            if (clz.equals(c))
+            if (clz == c)
             {
                 item[1] = writer;   // Replace writer
                 return;
@@ -655,47 +655,47 @@ public class JsonWriter implements Closeable, Flushable
         out.write("\"@type\":\"");
         Class c = obj.getClass();
 
-        if (Boolean.class.equals(c))
+        if (Boolean.class == c)
         {
             out.write("boolean");
         }
-        else if (Byte.class.equals(c))
+        else if (Byte.class == c)
         {
             out.write("byte");
         }
-        else if (Short.class.equals(c))
+        else if (Short.class == c)
         {
             out.write("short");
         }
-        else if (Integer.class.equals(c))
+        else if (Integer.class == c)
         {
             out.write("int");
         }
-        else if (Long.class.equals(c))
+        else if (Long.class == c)
         {
             out.write("long");
         }
-        else if (Double.class.equals(c))
+        else if (Double.class == c)
         {
             out.write("double");
         }
-        else if (Float.class.equals(c))
+        else if (Float.class == c)
         {
             out.write("float");
         }
-        else if (Character.class.equals(c))
+        else if (Character.class == c)
         {
             out.write("char");
         }
-        else if (Date.class.equals(c))
+        else if (Date.class == c)
         {
             out.write("date");
         }
-        else if (Class.class.equals(c))
+        else if (Class.class == c)
         {
             out.write("class");
         }
-        else if (String.class.equals(c))
+        else if (String.class == c)
         {
             out.write("string");
         }
@@ -728,7 +728,7 @@ public class JsonWriter implements Closeable, Flushable
         Class arrayType = array.getClass();
         int len = Array.getLength(array);
         boolean referenced = _objsReferenced.containsKey(array);
-        boolean typeWritten = showType && !Object[].class.equals(arrayType);
+        boolean typeWritten = showType && !(Object[].class == arrayType);
 
         final Writer out = _out; // performance opt: place in final local for quicker access
         if (typeWritten || referenced)
@@ -775,35 +775,35 @@ public class JsonWriter implements Closeable, Flushable
         // Intentionally processing each primitive array type in separate
         // custom loop for speed. All of them could be handled using
         // reflective Array.get() but it is slower.  I chose speed over code length.
-        if (byte[].class.equals(arrayType))
+        if (byte[].class == arrayType)
         {
             writeByteArray((byte[]) array, lenMinus1);
         }
-        else if (char[].class.equals(arrayType))
+        else if (char[].class == arrayType)
         {
             writeJsonUtf8String(new String((char[]) array), out);
         }
-        else if (short[].class.equals(arrayType))
+        else if (short[].class == arrayType)
         {
             writeShortArray((short[]) array, lenMinus1);
         }
-        else if (int[].class.equals(arrayType))
+        else if (int[].class == arrayType)
         {
             writeIntArray((int[]) array, lenMinus1);
         }
-        else if (long[].class.equals(arrayType))
+        else if (long[].class == arrayType)
         {
             writeLongArray((long[]) array, lenMinus1);
         }
-        else if (float[].class.equals(arrayType))
+        else if (float[].class == arrayType)
         {
             writeFloatArray((float[]) array, lenMinus1);
         }
-        else if (double[].class.equals(arrayType))
+        else if (double[].class == arrayType)
         {
             writeDoubleArray((double[]) array, lenMinus1);
         }
-        else if (boolean[].class.equals(arrayType))
+        else if (boolean[].class == arrayType)
         {
             writeBooleanArray((boolean[]) array, lenMinus1);
         }
@@ -811,7 +811,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             final Class componentClass = array.getClass().getComponentType();
             final boolean isPrimitiveArray = JsonReader.isPrimitive(componentClass);
-            final boolean isObjectArray = Object[].class.equals(arrayType);
+            final boolean isObjectArray = Object[].class == arrayType;
 
             for (int i = 0; i < len; i++)
             {
@@ -832,7 +832,7 @@ public class JsonWriter implements Closeable, Flushable
                 else if (writeArrayElementIfMatching(componentClass, value, false, out)) { }
                 else if (isObjectArray)
                 {
-                     if (writeIfMatching(value, true, out)) { }
+                    if (writeIfMatching(value, true, out)) { }
                     else
                     {
                         writeImpl(value, true);
@@ -841,7 +841,7 @@ public class JsonWriter implements Closeable, Flushable
                 else
                 {   // Specific Class-type arrays - only force type when
                     // the instance is derived from array base class.
-                    boolean forceType = !value.getClass().equals(componentClass);
+                    boolean forceType = !(value.getClass() == componentClass);
                     writeImpl(value, forceType);
                 }
 
@@ -1011,7 +1011,7 @@ public class JsonWriter implements Closeable, Flushable
         String type = jObj.type;
         Class arrayClass;
 
-        if (type == null || "[Ljava.lang.Object;".equals(type))
+        if (type == null || Object[].class.getName().equals(type))
         {
             arrayClass = Object[].class;
         }
@@ -1021,7 +1021,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         final Writer out = _out;
-        final boolean isObjectArray = Object[].class.equals(arrayClass);
+        final boolean isObjectArray = Object[].class == arrayClass;
         final Class componentClass = arrayClass.getComponentType();
         boolean referenced = _objsReferenced.containsKey(jObj) && jObj.hasId();
         boolean typeWritten = showType && !isObjectArray;
@@ -1077,7 +1077,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 out.write("null");
             }
-            else if (Character.class.equals(componentClass) || char.class.equals(componentClass))
+            else if (Character.class == componentClass || char.class == componentClass)
             {
                 writeJsonUtf8String((String) value, out);
             }
@@ -1101,7 +1101,7 @@ public class JsonWriter implements Closeable, Flushable
             else
             {   // Specific Class-type arrays - only force type when
                 // the instance is derived from array base class.
-                boolean forceType = !value.getClass().equals(componentClass);
+                boolean forceType = !(value.getClass() == componentClass);
                 writeImpl(value, forceType);
             }
 
@@ -1354,11 +1354,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             ClassMeta meta = getDeepDeclaredFields(type);
             Field field = meta.get(fieldName);
-            if (field == null)
-            {   // Can happen when the 'same' class is different in two different JVMs.
-                return false;
-            }
-            return value.getClass().equals(field.getType());
+            return field != null && (value.getClass() == field.getType());
         }
         return false;
     }

@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -423,7 +424,7 @@ public class JsonReader implements Closeable
         for (Object[] item : _readers)
         {
             Class clz = (Class)item[0];
-            if (clz.equals(c))
+            if (clz == c)
             {
                 item[1] = reader;   // Replace reader
                 return;
@@ -812,7 +813,7 @@ public class JsonReader implements Closeable
 
         Class compType = jsonObj.getComponentType();
 
-        if (byte.class.equals(compType))
+        if (byte.class == compType)
         {   // Handle byte[] special for performance boost.
             jsonObj.moveBytesToMate();
             jsonObj.clearArray();
@@ -847,7 +848,7 @@ public class JsonReader implements Closeable
             }
             else if (element.getClass().isArray())
             {   // Array of arrays
-                if (char[].class.equals(compType))
+                if (char[].class == compType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF-8 strings for compactness and speed.
                     Object[] jsonArray = (Object[]) element;
@@ -1185,11 +1186,11 @@ public class JsonReader implements Closeable
                 {
                     jsonObj.put(key, newPrimitiveWrapper(fieldType, value));
                 }
-                else if (BigDecimal.class.equals(fieldType))
+                else if (BigDecimal.class == fieldType)
                 {
                     jsonObj.put(key, new BigDecimal((String) value));
                 }
-                else if (BigInteger.class.equals(fieldType))
+                else if (BigInteger.class == fieldType)
                 {
                     jsonObj.put(key, new BigInteger((String) value));
                 }
@@ -1276,7 +1277,7 @@ public class JsonReader implements Closeable
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 Object[] elements = (Object[]) rhs;
                 JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
-                if (char[].class.equals(fieldType))
+                if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF8 strings for compactness and speed.
                     if (elements.length == 0)
@@ -1375,7 +1376,7 @@ public class JsonReader implements Closeable
                 {
                     mate = newPrimitiveWrapper(c, jsonObj.get("value"));
                 }
-                else if (c.equals(Class.class))
+                else if (c == Class.class)
                 {
                     mate = classForName((String) jsonObj.get("value"));
                 }
@@ -1403,7 +1404,7 @@ public class JsonReader implements Closeable
 
             // if @items is specified, it must be an [] type.
             // if clazz.isArray(), then it must be an [] type.
-            if (clazz.isArray() || (items != null && clazz.equals(Object.class)))
+            if (clazz.isArray() || (items != null && clazz == Object.class))
             {
                 int size = (items == null) ? 0 : items.length;
                 mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
@@ -1936,35 +1937,35 @@ public class JsonReader implements Closeable
         {
             if (argTypes[i].isPrimitive())
             {
-                if (argTypes[i].equals(byte.class))
+                if (argTypes[i] == byte.class)
                 {
                     values[i] = (byte) 0;
                 }
-                else if (argTypes[i].equals(short.class))
+                else if (argTypes[i] == short.class)
                 {
                     values[i] = (short) 0;
                 }
-                else if (argTypes[i].equals(int.class))
+                else if (argTypes[i] == int.class)
                 {
                     values[i] = 0;
                 }
-                else if (argTypes[i].equals(long.class))
+                else if (argTypes[i] == long.class)
                 {
                     values[i] = 0L;
                 }
-                else if (argTypes[i].equals(boolean.class))
+                else if (argTypes[i] == boolean.class)
                 {
                     values[i] = Boolean.FALSE;
                 }
-                else if (argTypes[i].equals(float.class))
+                else if (argTypes[i] == float.class)
                 {
                     values[i] = 0.0f;
                 }
-                else if (argTypes[i].equals(double.class))
+                else if (argTypes[i] == double.class)
                 {
                     values[i] = 0.0;
                 }
-                else if (argTypes[i].equals(char.class))
+                else if (argTypes[i] == char.class)
                 {
                     values[i] = (char) 0;
                 }
@@ -1985,27 +1986,27 @@ public class JsonReader implements Closeable
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
     {
-        if (c.equals(Byte.class) || c.equals(byte.class))
+        if (c == Byte.class || c == byte.class)
         {
             return rhs != null ? _byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
         }
-        if (c.equals(Boolean.class) || c.equals(boolean.class))
+        if (c == Boolean.class || c == boolean.class)
         {    // Booleans are tokenized into Boolean.TRUE or Boolean.FALSE
             return rhs != null ? rhs : Boolean.FALSE;
         }
-        if (c.equals(Integer.class) || c.equals(int.class))
+        if (c == Integer.class || c == int.class)
         {
             return rhs != null ? ((Number) rhs).intValue() : 0;
         }
-        if (c.equals(Long.class) || c.equals(long.class))
+        if (c == Long.class || c == long.class)
         {
             return rhs != null ? rhs : (long) 0;
         }
-        if (c.equals(Double.class) || c.equals(double.class))
+        if (c == Double.class || c == double.class)
         {
             return rhs != null ? rhs : 0.0d;
         }
-        if (c.equals(Character.class) || c.equals(char.class))
+        if (c == Character.class || c == char.class)
         {
             if (rhs == null)
             {
@@ -2020,11 +2021,11 @@ public class JsonReader implements Closeable
                 return rhs;
             }
         }
-        if (c.equals(Short.class) || c.equals(short.class))
+        if (c == Short.class || c == short.class)
         {
             return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
         }
-        if (c.equals(Float.class) || c.equals(float.class))
+        if (c == Float.class || c == float.class)
         {
             return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
         }
