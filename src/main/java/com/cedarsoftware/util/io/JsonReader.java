@@ -172,12 +172,13 @@ public class JsonReader implements Closeable
 
         addReader(String.class, new StringReader());
         addReader(Date.class, new DateReader());
-        addReader(Timestamp.class, new TimestampReader());
         addReader(BigInteger.class, new BigIntegerReader());
         addReader(BigDecimal.class, new BigDecimalReader());
+        addReader(java.sql.Date.class, new SqlDateReader());
+        addReader(Timestamp.class, new TimestampReader());
+        addReader(Calendar.class, new CalendarReader());
         addReader(TimeZone.class, new TimeZoneReader());
         addReader(Locale.class, new LocaleReader());
-        addReader(Calendar.class, new CalendarReader());
         addReader(Class.class, new ClassReader());
         addReader(StringBuilder.class, new StringBuilderReader());
         addReader(StringBuffer.class, new StringBufferReader());
@@ -286,6 +287,24 @@ public class JsonReader implements Closeable
                 return jObj.target = new Date((Long) jObj.get("value"));
             }
             throw new IOException("Date missing 'value' field, pos = " + jObj.pos);
+        }
+    }
+
+    public static class SqlDateReader implements JsonClassReader
+    {
+        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        {
+            if (o instanceof Long)
+            {
+                return new java.sql.Date((Long) o);
+            }
+
+            JsonObject jObj = (JsonObject) o;
+            if (jObj.containsKey("value"))
+            {
+                return jObj.target = new java.sql.Date((Long) jObj.get("value"));
+            }
+            throw new IOException("java.sql.Date missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -521,6 +540,11 @@ public class JsonReader implements Closeable
         for (Object[] item : _readers)
         {
             Class clz = (Class)item[0];
+            if (clz == c)
+            {
+                closestReader = (JsonClassReader)item[1];
+                break;
+            }
             int distance = JsonWriter.getDistance(clz, c);
             if (distance < minDistance)
             {

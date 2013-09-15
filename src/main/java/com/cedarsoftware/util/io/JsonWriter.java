@@ -95,11 +95,12 @@ public class JsonWriter implements Closeable, Flushable
     {   // Add customer writers (these make common classes more succinct)
         addWriter(String.class, new JsonStringWriter());
         addWriter(Date.class, new DateWriter());
-        addWriter(Timestamp.class, new TimestampWriter());
         addWriter(BigInteger.class, new BigIntegerWriter());
         addWriter(BigDecimal.class, new BigDecimalWriter());
-        addWriter(TimeZone.class, new TimeZoneWriter());
+        addWriter(java.sql.Date.class, new SqlDateWriter());
+        addWriter(Timestamp.class, new TimestampWriter());
         addWriter(Calendar.class, new CalendarWriter());
+        addWriter(TimeZone.class, new TimeZoneWriter());
         addWriter(Locale.class, new LocaleWriter());
         addWriter(Class.class, new ClassWriter());
         addWriter(StringBuilder.class, new StringBuilderWriter());
@@ -160,6 +161,11 @@ public class JsonWriter implements Closeable, Flushable
         for (Object[] item : _writers)
         {
             Class clz = (Class)item[0];
+            if (clz == arrayComponentClass)
+            {
+                closestWriter = (JsonClassWriter)item[1];
+                break;
+            }
             int distance = getDistance(clz, arrayComponentClass);
             if (distance < minDistance)
             {
@@ -276,6 +282,40 @@ public class JsonWriter implements Closeable, Flushable
         {
             out.write(Long.toString(((Date) o).getTime()));
         }
+    }
+
+    public static class SqlDateWriter implements JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer out) throws IOException
+        {
+            String value = Long.toString(((Date) obj).getTime());
+            out.write("\"value\":");
+            out.write(value);
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer out) throws IOException
+        {
+            out.write(Long.toString(((java.sql.Date) o).getTime()));
+        }
+    }
+
+    public static class TimestampWriter implements JsonClassWriter
+    {
+        public void write(Object o, boolean showType, Writer out) throws IOException
+        {
+            Timestamp tstamp = (Timestamp) o;
+            out.write("\"time\":\"");
+            out.write(Long.toString((tstamp.getTime() / 1000) * 1000));
+            out.write("\",\"nanos\":\"");
+            out.write(Integer.toString(tstamp.getNanos()));
+            out.write('"');
+        }
+
+        public boolean hasPrimitiveForm() { return false; }
+
+        public void writePrimitiveForm(Object o, Writer out) throws IOException { }
     }
 
     public static class ClassWriter implements JsonClassWriter
@@ -411,23 +451,6 @@ public class JsonWriter implements Closeable, Flushable
             out.write(buffer.toString());
             out.write('"');
         }
-    }
-
-    public static class TimestampWriter implements JsonClassWriter
-    {
-        public void write(Object o, boolean showType, Writer out) throws IOException
-        {
-            Timestamp tstamp = (Timestamp) o;
-            out.write("\"time\":\"");
-            out.write(Long.toString((tstamp.getTime() / 1000) * 1000));
-            out.write("\",\"nanos\":\"");
-            out.write(Integer.toString(tstamp.getNanos()));
-            out.write('"');
-        }
-
-        public boolean hasPrimitiveForm() { return false; }
-
-        public void writePrimitiveForm(Object o, Writer out) throws IOException { }
     }
 
     static

@@ -57,7 +57,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *         limitations under the License. */
 public class TestJsonReaderWriter extends TestCase
 {
-    public static boolean _debug = true;
+    public static boolean _debug = false;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -240,7 +240,7 @@ public class TestJsonReaderWriter extends TestCase
 
     private static class Empty implements Serializable
     {
-        public static double multiple(double x, double y)
+        public static double multiply(double x, double y)
         {
             return x * y;
         }
@@ -5105,6 +5105,161 @@ public class TestJsonReaderWriter extends TestCase
 
         trans = (Transient2) readJsonObject(json);
         assertEquals(trans.main._name, "Roswell");
+    }
+
+    // Currently allows , at end.  Future, may drop this support.
+    public void testBadArray() throws Exception
+    {
+        String json = "[1, 10, 100,]";
+        Object[] array = (Object[]) JsonReader.jsonToJava(json);
+        assertTrue(array.length == 3);
+        assertEquals(array[0], 1L);
+        assertEquals(array[1], 10L);
+        assertEquals(array[2], 100L);
+    }
+
+    private static class ObjectDateField
+    {
+        private Object date;
+        private ObjectDateField(Object date)
+        {
+            this.date = date;
+        }
+    }
+
+    private static class DateField
+    {
+        private Date date;
+        private DateField(Date date)
+        {
+            this.date = date;
+        }
+    }
+
+    private static class SqlDateField
+    {
+        private java.sql.Date date;
+        private SqlDateField(java.sql.Date date)
+        {
+            this.date = date;
+        }
+    }
+    private static class TimestampField
+    {
+        private Timestamp date;
+        private TimestampField(Timestamp date)
+        {
+            this.date = date;
+        }
+    }
+
+    public void testDates() throws Exception
+    {
+        // As root
+        long now = System.currentTimeMillis();
+        Date utilDate = new Date(now);
+        java.sql.Date sqlDate = new java.sql.Date(now);
+        Timestamp sqlTimestamp = new Timestamp(now);
+
+        String json = getJsonString(utilDate);
+        println(json);
+        Date checkDate = (Date) readJsonObject(json);
+        assertTrue(checkDate instanceof Date);
+        assertEquals(checkDate, utilDate);
+
+        json = getJsonString(sqlDate);
+        println(json);
+        java.sql.Date checkSqlDate = (java.sql.Date)readJsonObject(json);
+        assertTrue(checkSqlDate instanceof java.sql.Date);
+        assertEquals(checkSqlDate, sqlDate);
+
+        json = getJsonString(sqlTimestamp);
+        println(json);
+        Timestamp checkSqlTimestamp = (Timestamp)readJsonObject(json);
+        assertTrue(checkSqlTimestamp instanceof Timestamp);
+        assertEquals(checkSqlTimestamp, sqlTimestamp);
+
+        // In Object[]
+        Object[] dates = new Object[] { utilDate, sqlDate, sqlTimestamp };
+        json = getJsonString(dates);
+        println(json);
+        Object[] checkDates = (Object[]) readJsonObject(json);
+        assertTrue(checkDates.length == 3);
+        assertTrue(checkDates[0] instanceof Date);
+        assertTrue(checkDates[1] instanceof java.sql.Date);
+        assertTrue(checkDates[2] instanceof Timestamp);
+        assertEquals(checkDates[0], utilDate);
+        assertEquals(checkDates[1], sqlDate);
+        assertEquals(checkDates[2], sqlTimestamp);
+
+        // In Typed[]
+        Date[] utilDates = new Date[] { utilDate };
+        json = getJsonString(utilDates);
+        println(json);
+        Date[] checkUtilDates = (Date[]) readJsonObject(json);
+        assertTrue(checkUtilDates.length == 1);
+        assertTrue(checkUtilDates[0] instanceof Date);
+        assertEquals(checkUtilDates[0], utilDate);
+
+        java.sql.Date[] sqlDates = new java.sql.Date[] { sqlDate };
+        json = getJsonString(sqlDates);
+        println(json);
+        java.sql.Date[] checkSqlDates = (java.sql.Date[]) readJsonObject(json);
+        assertTrue(checkSqlDates.length == 1);
+        assertTrue(checkSqlDates[0] instanceof java.sql.Date);
+        assertEquals(checkSqlDates[0], sqlDate);
+
+        Timestamp[] sqlTimestamps = new Timestamp[] { sqlTimestamp };
+        json = getJsonString(sqlTimestamps);
+        println(json);
+        Timestamp[] checkTimestamps = (Timestamp[]) readJsonObject(json);
+        assertTrue(checkTimestamps.length == 1);
+        assertTrue(checkTimestamps[0] instanceof Timestamp);
+        assertEquals(checkTimestamps[0], sqlTimestamp);
+
+        // as Object field
+        ObjectDateField dateField = new ObjectDateField(utilDate);
+        json = getJsonString(dateField);
+        println(json);
+        ObjectDateField readDateField = (ObjectDateField) readJsonObject(json);
+        assertTrue(readDateField.date instanceof Date);
+        assertEquals(readDateField.date, utilDate);
+
+        dateField = new ObjectDateField(sqlDate);
+        json = getJsonString(dateField);
+        println(json);
+        readDateField = (ObjectDateField) readJsonObject(json);
+        assertTrue(readDateField.date instanceof java.sql.Date);
+        assertEquals(readDateField.date, sqlDate);
+
+        dateField = new ObjectDateField(sqlTimestamp);
+        json = getJsonString(dateField);
+        println(json);
+        readDateField = (ObjectDateField) readJsonObject(json);
+        assertTrue(readDateField.date instanceof Timestamp);
+        assertEquals(readDateField.date, sqlTimestamp);
+
+        // as Typed field
+        DateField typedDateField = new DateField(utilDate);
+        json = getJsonString(typedDateField);
+        println(json);
+        DateField readTypeDateField = (DateField) readJsonObject(json);
+        assertTrue(readTypeDateField.date instanceof Date);
+        assertEquals(readTypeDateField.date, utilDate);
+
+        SqlDateField sqlDateField = new SqlDateField(sqlDate);
+        json = getJsonString(sqlDateField);
+        println(json);
+        SqlDateField readSqlDateField = (SqlDateField) readJsonObject(json);
+        assertTrue(readSqlDateField.date instanceof java.sql.Date);
+        assertEquals(readSqlDateField.date, sqlDate);
+
+        TimestampField timestampField = new TimestampField(sqlTimestamp);
+        json = getJsonString(timestampField);
+        println(json);
+        TimestampField readTimestampField = (TimestampField) readJsonObject(json);
+        assertTrue(readTimestampField.date instanceof Timestamp);
+        assertEquals(readTimestampField.date, sqlTimestamp);
     }
 
     private static void println(Object ... args)
