@@ -245,4 +245,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     {
         remove("@items");
     }
+
+    public long getPos()
+    {
+        return pos;
+    }
 }
