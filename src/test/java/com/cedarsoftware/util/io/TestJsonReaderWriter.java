@@ -5262,6 +5262,43 @@ public class TestJsonReaderWriter extends TestCase
         assertEquals(readTimestampField.date, sqlTimestamp);
     }
 
+    private class NoNullConstructor
+    {
+        List list;
+        Map map;
+        String string;
+        Date date;
+
+        private NoNullConstructor(List list, Map map, String string, Date date)
+        {
+            if (list == null || map == null || string == null || date == null)
+            {
+                throw new RuntimeException("Constructor arguments cannot be null");
+            }
+            this.list = list;
+            this.map = map;
+            this.string = string;
+            this.date = date;
+        }
+    }
+
+    public void testNoNullConstructor() throws Exception
+    {
+        NoNullConstructor noNull = new NoNullConstructor(new ArrayList(), new HashMap(), "", new Date());
+        noNull.list = null;
+        noNull.map = null;
+        noNull.string = null;
+        noNull.date = null;
+
+        String json = getJsonString(noNull);
+        println(json);
+        NoNullConstructor foo = (NoNullConstructor) readJsonObject(json);
+        assertNull(foo.list);
+        assertNull(foo.map);
+        assertNull(foo.string);
+        assertNull(foo.date);
+    }
+
     private static void println(Object ... args)
     {
         if (_debug)

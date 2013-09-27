@@ -16,7 +16,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -24,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -85,7 +85,7 @@ public class JsonReader implements Closeable
     private static final Byte[] _byteCache = new Byte[256];
     private static final Map<String, String> _stringCache = new HashMap<String, String>();
     private static final Set<Class> _prims = new HashSet<Class>();
-    private static final Map<Class, Constructor> _constructors = new HashMap<Class, Constructor>();
+    private static final Map<Class, Object[]> _constructors = new HashMap<Class, Object[]>();
     private static final Map<String, Class> _nameToClass = new HashMap<String, Class>();
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
     private final Collection<UnresolvedReference> _unresolvedRefs = new ArrayList<UnresolvedReference>();
@@ -1875,9 +1875,11 @@ public class JsonReader implements Closeable
 
     private static Object newInstance(Class c) throws IOException
     {
-        Constructor constructor = _constructors.get(c);
-        if (constructor != null)
-        {
+        Object[] constructorInfo = _constructors.get(c);
+        if (constructorInfo != null)
+        {   // Constructor was cached
+            Constructor constructor = (Constructor) constructorInfo[0];
+            Boolean useNull = (Boolean) constructorInfo[1];
             Class[] paramTypes = constructor.getParameterTypes();
             if (paramTypes == null || paramTypes.length == 0)
             {
@@ -1886,23 +1888,25 @@ public class JsonReader implements Closeable
                     return constructor.newInstance();
                 }
                 catch (Exception e)
-                {
-                    throw new IOException("Could not instantiate " + c.getName());
+                {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                    throw new IOException("Could not instantiate " + c.getName(), e);
                 }
             }
-            Object[] values = fillArgs(paramTypes);
+            Object[] values = fillArgs(paramTypes, useNull);
             try
             {
                 return constructor.newInstance(values);
             }
             catch (Exception e)
-            {
-                throw new IOException("Could not instantiate " + c.getName());
+            {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                throw new IOException("Could not instantiate " + c.getName(), e);
             }
         }
+
+        // Constructor not cached, go find a constructor
         Object[] ret = newInstanceEx(c);
-        _constructors.put(c, (Constructor) ret[0]);
-        return ret[1];
+        _constructors.put(c, new Object[] {ret[1], ret[2]});
+        return ret[0];
     }
 
     /**
@@ -1915,7 +1919,7 @@ public class JsonReader implements Closeable
             Constructor constructor = c.getConstructor(_emptyClassArray);
             if (constructor != null)
             {
-                return new Object[] {constructor, constructor.newInstance()};
+                return new Object[] {constructor.newInstance(), constructor, true};
             }
             return tryOtherConstructors(c);
         }
@@ -1936,16 +1940,29 @@ public class JsonReader implements Closeable
             throw new IOException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
-        // Try each constructor (private, protected, or public) with default values until
-        // the object instantiates without exception.
+        // Try each constructor (private, protected, or public) with null values for non-primitives.
         for (Constructor constructor : constructors)
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes);
+            Object[] values = fillArgs(argTypes, true);
             try
             {
-                return new Object[] {constructor, constructor.newInstance(values)};
+                return new Object[] {constructor.newInstance(values), constructor, true};
+            }
+            catch (Exception ignored)
+            { }
+        }
+
+        // Try each constructor (private, protected, or public) with non-null values for primitives.
+        for (Constructor constructor : constructors)
+        {
+            constructor.setAccessible(true);
+            Class[] argTypes = constructor.getParameterTypes();
+            Object[] values = fillArgs(argTypes, false);
+            try
+            {
+                return new Object[] {constructor.newInstance(values), constructor, false};
             }
             catch (Exception ignored)
             { }
@@ -1954,49 +1971,86 @@ public class JsonReader implements Closeable
         throw new IOException("Could not instantiate " + c.getName() + " using any constructor");
     }
 
-    private static Object[] fillArgs(Class[] argTypes)
+    private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
     {
         Object[] values = new Object[argTypes.length];
         for (int i = 0; i < argTypes.length; i++)
         {
-            if (argTypes[i].isPrimitive())
+            final Class argType = argTypes[i];
+            if (isPrimitive(argType))
             {
-                if (argTypes[i] == byte.class)
-                {
-                    values[i] = (byte) 0;
-                }
-                else if (argTypes[i] == short.class)
-                {
-                    values[i] = (short) 0;
-                }
-                else if (argTypes[i] == int.class)
-                {
-                    values[i] = 0;
-                }
-                else if (argTypes[i] == long.class)
-                {
-                    values[i] = 0L;
-                }
-                else if (argTypes[i] == boolean.class)
-                {
-                    values[i] = Boolean.FALSE;
-                }
-                else if (argTypes[i] == float.class)
-                {
-                    values[i] = 0.0f;
-                }
-                else if (argTypes[i] == double.class)
-                {
-                    values[i] = 0.0;
-                }
-                else if (argTypes[i] == char.class)
-                {
-                    values[i] = (char) 0;
-                }
+                values[i] = newPrimitiveWrapper(argType, null);
+            }
+            else if (useNull)
+            {
+                values[i] = null;
             }
             else
             {
-                values[i] = null;
+                if (argType == String.class)
+                {
+                    values[i] = "";
+                }
+                else if (argType == Date.class)
+                {
+                    values[i] = new Date();
+                }
+                else if (List.class.isAssignableFrom(argType))
+                {
+                    values[i] = new ArrayList();
+                }
+                else if (Set.class.isAssignableFrom(argType))
+                {
+                    values[i] = new LinkedHashSet();
+                }
+                else if (Map.class.isAssignableFrom(argType))
+                {
+                    values[i] = new HashMap();
+                }
+                else if (Calendar.class.isAssignableFrom(argType))
+                {
+                    values[i] = Calendar.getInstance();
+                }
+                else if (TimeZone.class.isAssignableFrom(argType))
+                {
+                    values[i] = TimeZone.getDefault();
+                }
+                else if (argType == BigInteger.class)
+                {
+                    values[i] = BigInteger.TEN;
+                }
+                else if (argType == BigDecimal.class)
+                {
+                    values[i] = BigDecimal.TEN;
+                }
+                else if (argType == StringBuilder.class)
+                {
+                    values[i] = new StringBuilder();
+                }
+                else if (argType == StringBuffer.class)
+                {
+                    values[i] = new StringBuffer();
+                }
+                else if (argType == Locale.class)
+                {
+                    values[i] = Locale.FRANCE;  // overwritten
+                }
+                else if (argType == Class.class)
+                {
+                    values[i] = String.class;
+                }
+                else if (argType == java.sql.Timestamp.class)
+                {
+                    values[i] = new Timestamp(System.currentTimeMillis());
+                }
+                else if (argType == java.sql.Date.class)
+                {
+                    values[i] = new java.sql.Date(System.currentTimeMillis());
+                }
+                else
+                {
+                    values[i] = null;
+                }
             }
         }
 
@@ -2024,7 +2078,7 @@ public class JsonReader implements Closeable
         }
         if (c == Long.class || c == long.class)
         {
-            return rhs != null ? rhs : (long) 0;
+            return rhs != null ? rhs : 0L;
         }
         if (c == Double.class || c == double.class)
         {
@@ -2113,13 +2167,13 @@ public class JsonReader implements Closeable
             arrayType = true;
             if (className.endsWith(";")) className = className.substring(0,className.length()-1);
             if (className.equals("[B")) primitiveArray = byte[].class;
-            if (className.equals("[S")) primitiveArray = short[].class;
-            if (className.equals("[I")) primitiveArray = int[].class;
-            if (className.equals("[J")) primitiveArray = long[].class;
-            if (className.equals("[F")) primitiveArray = float[].class;
-            if (className.equals("[D")) primitiveArray = double[].class;
-            if (className.equals("[Z")) primitiveArray = boolean[].class;
-            if (className.equals("[C")) primitiveArray = char[].class;
+            else if (className.equals("[S")) primitiveArray = short[].class;
+            else if (className.equals("[I")) primitiveArray = int[].class;
+            else if (className.equals("[J")) primitiveArray = long[].class;
+            else if (className.equals("[F")) primitiveArray = float[].class;
+            else if (className.equals("[D")) primitiveArray = double[].class;
+            else if (className.equals("[Z")) primitiveArray = boolean[].class;
+            else if (className.equals("[C")) primitiveArray = char[].class;
             int startpos = className.startsWith("[L") ? 2 : 1;
             className = className.substring(startpos);
         }
@@ -2134,7 +2188,7 @@ public class JsonReader implements Closeable
             currentClass = (null != primitiveArray) ? primitiveArray : Array.newInstance(currentClass, 0).getClass();
             while (name.startsWith("[["))
             {
-                currentClass=Array.newInstance(currentClass, 0).getClass();
+                currentClass = Array.newInstance(currentClass, 0).getClass();
                 name = name.substring(1);
             }
         }
