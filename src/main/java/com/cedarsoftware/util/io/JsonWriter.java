@@ -1224,7 +1224,7 @@ public class JsonWriter implements Closeable, Flushable
         out.write('{');
         if (referenced)
         {
-            writeId(String.valueOf(jObj.id));
+            writeId(String.valueOf(jObj.getId()));
         }
 
         if (showType)
@@ -1233,7 +1233,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 out.write(',');
             }
-            String type = jObj.type;
+            String type = jObj.getType();
             if (type != null)
             {
                 Class mapClass = JsonReader.classForName2(type);

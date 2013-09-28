@@ -237,17 +237,17 @@ public class JsonReader implements Closeable
             try
             {
                 JsonObject jObj = (JsonObject) o;
-                pos = jObj.pos;
+                pos = jObj.getPos();
                 time = (String) jObj.get("time");
                 if (time == null)
                 {
-                    throw new IOException("Calendar missing 'time' field, pos = " + jObj.pos);
+                    throw new IOException("Calendar missing 'time' field, pos = " + pos);
                 }
                 Date date = JsonWriter._dateFormat.get().parse(time);
                 Class c;
-                if (jObj.target != null)
+                if (jObj.getTarget() != null)
                 {
-                    c = jObj.target.getClass();
+                    c = jObj.getTarget().getClass();
                 }
                 else
                 {
@@ -257,7 +257,7 @@ public class JsonReader implements Closeable
 
                 Calendar calendar = (Calendar) newInstance(c);
                 calendar.setTime(date);
-                jObj.target = calendar;
+                jObj.setTarget(calendar);
                 String zone = (String) jObj.get("zone");
                 if (zone != null)
                 {
@@ -1152,7 +1152,7 @@ public class JsonReader implements Closeable
             String key = e.getKey();
 
             if (key.charAt(0) == '@')
-            {   // Skip our own generated fields
+            {   // Skip our own meta fields
                 continue;
             }
 
