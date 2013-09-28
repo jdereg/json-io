@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format. To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.2.29</version>
+  <version>2.2.31</version>
 </dependency>
 ```
 
@@ -108,5 +108,8 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 
 Featured on http://json.org.
 
+ * 2.2.31 - adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
+ * 2.2.30 - java.sql.Date when read in, was instantiated as a java.util.Date. This has been corrected.
+ * 2.2.29 - First official release through Maven Central
 
 by John DeRegnaucourt
