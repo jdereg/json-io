@@ -965,13 +965,18 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
+
         final Writer out = _out;
         boolean referenced = _objsReferenced.containsKey(col);
-
         boolean isEmpty = col.isEmpty();
-        if (referenced || showType || isEmpty)
+
+        if (referenced || showType)
         {
             out.write('{');
+        }
+        else if (isEmpty)
+        {
+            out.write('[');
         }
 
         if (referenced)
@@ -990,7 +995,14 @@ public class JsonWriter implements Closeable, Flushable
 
         if (isEmpty)
         {
-            out.write('}');
+            if (referenced || showType)
+            {
+                out.write('}');
+            }
+            else
+            {
+                out.write(']');
+            }
             return;
         }
 

@@ -54,7 +54,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
- *         limitations under the License. */
+ *         limitations under the License.
+ */
 public class TestJsonReaderWriter extends TestCase
 {
     public static boolean _debug = false;
@@ -5297,6 +5298,15 @@ public class TestJsonReaderWriter extends TestCase
         assertNull(foo.map);
         assertNull(foo.string);
         assertNull(foo.date);
+    }
+
+    public void testEmptyArrayList() throws Exception
+    {
+        class X {ArrayList<String> list = new ArrayList<String>();}
+        X x = new X();
+        String json = getJsonString(x);
+        println(json);
+        assertTrue(json.contains("list\":[]"));
     }
 
     private static void println(Object ... args)
