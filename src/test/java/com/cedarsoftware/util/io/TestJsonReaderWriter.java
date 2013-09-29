@@ -58,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TestJsonReaderWriter extends TestCase
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -2868,7 +2868,7 @@ public class TestJsonReaderWriter extends TestCase
 
     }
 
-    public class A
+    static public class A
     {
         public String a;
 
@@ -4287,7 +4287,7 @@ public class TestJsonReaderWriter extends TestCase
         assertTrue("EST".equals(tz.getID()));
     }
 
-    public class WeirdDate extends Date
+    public static class WeirdDate extends Date
     {
         public WeirdDate(Date date) { super(date.getTime()); }
         public WeirdDate(long millis) { super(millis); }
@@ -4982,18 +4982,18 @@ public class TestJsonReaderWriter extends TestCase
         }
     }
 
+    static class MyBooleanTesting
+    {
+        private boolean myBoolean = false;
+    }
+
+    static class MyBoolean2Testing
+    {
+        private Boolean myBoolean = false;
+    }
+
     public void testBooleanCompatibility() throws IOException
     {
-        class MyBooleanTesting
-        {
-            private boolean myBoolean = false;
-        }
-
-        class MyBoolean2Testing
-        {
-            private Boolean myBoolean = false;
-        }
-
         MyBooleanTesting testObject = new MyBooleanTesting();
         MyBoolean2Testing testObject2 = new MyBoolean2Testing();
         String json0 = JsonWriter.objectToJson(testObject);
@@ -5263,7 +5263,7 @@ public class TestJsonReaderWriter extends TestCase
         assertEquals(readTimestampField.date, sqlTimestamp);
     }
 
-    private class NoNullConstructor
+    static class NoNullConstructor
     {
         List list;
         Map map;
@@ -5300,13 +5300,49 @@ public class TestJsonReaderWriter extends TestCase
         assertNull(foo.date);
     }
 
+    static class EmptyArrayList
+    {
+        ArrayList<String> list = new ArrayList<String>();
+    }
+
     public void testEmptyArrayList() throws Exception
     {
-        class X {ArrayList<String> list = new ArrayList<String>();}
-        X x = new X();
+        EmptyArrayList x = new EmptyArrayList();
         String json = getJsonString(x);
         println(json);
         assertTrue(json.contains("list\":[]"));
+
+        Map obj = JsonReader.jsonToMaps(json);
+        json = getJsonString(obj);
+        println(json);
+        assertTrue(json.contains("list\":[]"));
+    }
+
+    static class Outer
+    {
+        String name;
+        class Inner
+        {
+            String name;
+        }
+        Inner foo;
+    }
+
+    public void testNestedWithSameMemberName() throws Exception
+    {
+        Outer outer = new Outer();
+        outer.name = "Joe Outer";
+
+        Outer.Inner inner = outer.new Inner();
+        inner.name = "Jane Inner";
+        outer.foo = inner;
+
+        String json = getJsonString(outer);
+        println("json = " + json);
+
+        Outer x = (Outer) readJsonObject(json);
+        assertEquals(x.name, "Joe Outer");
+        assertEquals(x.foo.name, "Jane Inner");
     }
 
     private static void println(Object ... args)
