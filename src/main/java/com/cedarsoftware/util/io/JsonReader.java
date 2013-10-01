@@ -1239,8 +1239,8 @@ public class JsonReader implements Closeable
             jsonObj.target = special;
             return;
         }
-        Object javaMate = jsonObj.target;
 
+        Object javaMate = jsonObj.target;
         Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
         Class cls = javaMate.getClass();
 
