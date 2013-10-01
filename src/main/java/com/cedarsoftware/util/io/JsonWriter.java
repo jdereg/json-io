@@ -1530,8 +1530,9 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        for (Field field : classInfo.values())
+        for (Map.Entry<String, Field> entry : classInfo.entrySet())
         {
+            Field field = entry.getValue();
             if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
             {   // Do not write transient fields
                 continue;
@@ -1545,7 +1546,7 @@ public class JsonWriter implements Closeable, Flushable
                 out.write(',');
             }
 
-            writeJsonUtf8String(field.getName(), out);
+            writeJsonUtf8String(entry.getKey(), out);
             out.write(':');
 
             Object o;
@@ -1679,7 +1680,14 @@ public class JsonWriter implements Closeable, Flushable
                             }
                             catch (Exception ignored) { }
                         }
-                        classInfo.put(field.getName(), field);
+                        if (classInfo.containsKey(field.getName()))
+                        {
+                            classInfo.put(curr.getName() + '.' + field.getName(), field);
+                        }
+                        else
+                        {
+                            classInfo.put(field.getName(), field);
+                        }
                     }
                 }
             }

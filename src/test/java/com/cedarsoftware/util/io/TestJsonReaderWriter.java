@@ -58,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TestJsonReaderWriter extends TestCase
 {
-    public static boolean _debug = true;
+    public static boolean _debug = false;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -5343,6 +5343,55 @@ public class TestJsonReaderWriter extends TestCase
         Outer x = (Outer) readJsonObject(json);
         assertEquals(x.name, "Joe Outer");
         assertEquals(x.foo.name, "Jane Inner");
+    }
+
+    public static class Parent
+    {
+        private String name;
+
+        public String getParentName()
+        {
+            return name;
+        }
+
+        public void setParentName(String name)
+        {
+            this.name = name;
+        }
+    }
+
+    public static class Child extends Parent
+    {
+        private String name;
+
+        public String getChildName()
+        {
+            return name;
+        }
+
+        public void setChildName(String name)
+        {
+            this.name = name;
+        }
+    }
+
+    public void testSameMemberName() throws IOException
+    {
+        Child child = new Child();
+        child.setChildName("child");
+        child.setParentName("parent");
+
+        String json = JsonWriter.objectToJson(child);
+        println(json);
+        Child roundTrip = (Child) JsonReader.jsonToJava(json);
+
+        assertEquals(child.getParentName(), roundTrip.getParentName());
+        assertEquals(child.getChildName(), roundTrip.getChildName());
+
+        JsonObject jObj = (JsonObject)JsonReader.jsonToMaps(json);
+        String json1 = JsonWriter.objectToJson(jObj);
+        println(json1);
+        assertEquals(json, json1);
     }
 
     private static void println(Object ... args)
