@@ -1450,8 +1450,7 @@ public class JsonReader implements Closeable
                 mate = newInstance(clazz);
             }
         }
-        jsonObj.target = mate;
-        return mate;
+        return jsonObj.target = mate;
     }
 
     // Parser code
@@ -1866,11 +1865,7 @@ public class JsonReader implements Closeable
 
         String s = strBuf.toString();
         String cacheHit = _stringCache.get(s);
-        if (cacheHit == null)
-        {
-            return s;
-        }
-        return cacheHit;
+        return cacheHit == null ? s : cacheHit;
     }
 
     private static Object newInstance(Class c) throws IOException
@@ -2216,7 +2211,7 @@ public class JsonReader implements Closeable
      * Read until non-whitespace character and then return it.
      * This saves extra read/pushback.
      *
-     * @return int repesenting the next non-whitespace character in the stream.
+     * @return int representing the next non-whitespace character in the stream.
      * @throws IOException for stream errors or parsing errors.
      */
     private int skipWhitespaceRead() throws IOException
@@ -2233,8 +2228,7 @@ public class JsonReader implements Closeable
 
     private void skipWhitespace() throws IOException
     {
-        int c = skipWhitespaceRead();
-        _in.unread(c);
+        _in.unread(skipWhitespaceRead());
     }
 
     public void close()
