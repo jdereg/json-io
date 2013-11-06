@@ -29,7 +29,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -97,6 +101,7 @@ public class JsonReader implements Closeable
     private static final Class[] _emptyClassArray = new Class[]{};
     private static final List<Object[]> _readers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
+    private static final Map<Class, Factory> _factory = new LinkedHashMap<Class, Factory>();
 
     static
     {
@@ -182,11 +187,65 @@ public class JsonReader implements Closeable
         addReader(Class.class, new ClassReader());
         addReader(StringBuilder.class, new StringBuilderReader());
         addReader(StringBuffer.class, new StringBufferReader());
+
+        Factory colFactory = new CollectionFactory();
+        Factory mapFactory = new MapFactory();
+        _factory.put(Collection.class, colFactory);
+        _factory.put(List.class, colFactory);
+        _factory.put(Set.class, colFactory);
+        _factory.put(SortedSet.class, colFactory);
+        _factory.put(Map.class, mapFactory);
+        _factory.put(SortedMap.class, mapFactory);
     }
 
     public interface JsonClassReader
     {
         Object read(Object jOb, LinkedList<JsonObject<String, Object>> stack) throws IOException;
+    }
+
+    public interface Factory
+    {
+        Object newInstance(Class c);
+    }
+
+    public static class CollectionFactory implements Factory
+    {
+        public Object newInstance(Class c)
+        {
+            if (List.class.isAssignableFrom(c))
+            {
+                return new ArrayList();
+            }
+            else if (SortedSet.class.isAssignableFrom(c))
+            {
+                return new TreeSet();
+            }
+            else if (Set.class.isAssignableFrom(c))
+            {
+                return new LinkedHashSet();
+            }
+            else if (Collection.class.isAssignableFrom(c))
+            {
+                return new ArrayList();
+            }
+            return null;
+        }
+    }
+
+    public static class MapFactory implements Factory
+    {
+        public Object newInstance(Class c)
+        {
+            if (SortedMap.class.isAssignableFrom(c))
+            {
+                return new TreeMap();
+            }
+            else if (Map.class.isAssignableFrom(c))
+            {
+                return new LinkedHashMap();
+            }
+            return null;
+        }
     }
 
     public static class TimeZoneReader implements JsonClassReader
@@ -1899,6 +1958,10 @@ public class JsonReader implements Closeable
         }
 
         // Constructor not cached, go find a constructor
+        if (_factory.containsKey(c))
+        {
+            return _factory.get(c).newInstance(c);
+        }
         Object[] ret = newInstanceEx(c);
         _constructors.put(c, new Object[] {ret[1], ret[2]});
         return ret[0];
