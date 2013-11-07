@@ -38,6 +38,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -5397,6 +5399,26 @@ public class TestJsonReaderWriter
         assertEquals(json, json1);
     }
 
+    static class EmptyCols
+    {
+        Collection col = new LinkedList();
+        List list = new ArrayList();
+        Map map = new HashMap();
+        Set set = new HashSet();
+        SortedSet sortedSet = new TreeSet();
+        SortedMap sortedMap = new TreeMap();
+    }
+    
+    @Test 
+    public void testEmptyCollections() throws Exception
+    {
+        EmptyCols emptyCols = new EmptyCols();
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
+        System.out.println("json = " + json);
+        Object foo = readJsonObject(json);
+        System.out.println("foo = " + foo);
+    }
+    
     @Test
     public void testZTimings()
     {

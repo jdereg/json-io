@@ -189,11 +189,12 @@ public class JsonReader implements Closeable
         addReader(StringBuffer.class, new StringBufferReader());
 
         Factory colFactory = new CollectionFactory();
-        Factory mapFactory = new MapFactory();
         _factory.put(Collection.class, colFactory);
         _factory.put(List.class, colFactory);
         _factory.put(Set.class, colFactory);
         _factory.put(SortedSet.class, colFactory);
+
+        Factory mapFactory = new MapFactory();
         _factory.put(Map.class, mapFactory);
         _factory.put(SortedMap.class, mapFactory);
     }
@@ -208,6 +209,9 @@ public class JsonReader implements Closeable
         Object newInstance(Class c);
     }
 
+    /**
+     * Use to create new instances of collection interfaces (needed for empty collections)
+     */
     public static class CollectionFactory implements Factory
     {
         public Object newInstance(Class c)
@@ -232,6 +236,9 @@ public class JsonReader implements Closeable
         }
     }
 
+    /**
+     * Use to create new instances of Map interfaces (needed for empty Maps)
+     */
     public static class MapFactory implements Factory
     {
         public Object newInstance(Class c)
@@ -1334,7 +1341,7 @@ public class JsonReader implements Closeable
         {
             Class fieldType = field.getType();
             if (rhs instanceof JsonObject)
-            {
+            {   // Ensure .type field set on JsonObject
                 JsonObject job = (JsonObject) rhs;
                 String type = job.type;
                 if (type == null || type.isEmpty())
@@ -1350,7 +1357,10 @@ public class JsonReader implements Closeable
             }
             else if (rhs == EMPTY_OBJECT)
             {
-                field.set(target, newInstance(fieldType));
+                JsonObject jObj = new JsonObject();
+                jObj.type = fieldType.getName();
+                Object value = createJavaObjectInstance(fieldType, jObj);
+                field.set(target, value);
             }
             else if ((special = readIfMatching(rhs, field.getType(), stack)) != null)
             {
@@ -1929,6 +1939,12 @@ public class JsonReader implements Closeable
 
     private static Object newInstance(Class c) throws IOException
     {
+        // Constructor not cached, go find a constructor
+        if (_factory.containsKey(c))
+        {
+            return _factory.get(c).newInstance(c);
+        }
+
         Object[] constructorInfo = _constructors.get(c);
         if (constructorInfo != null)
         {   // Constructor was cached
@@ -1957,11 +1973,6 @@ public class JsonReader implements Closeable
             }
         }
 
-        // Constructor not cached, go find a constructor
-        if (_factory.containsKey(c))
-        {
-            return _factory.get(c).newInstance(c);
-        }
         Object[] ret = newInstanceEx(c);
         _constructors.put(c, new Object[] {ret[1], ret[2]});
         return ret[0];
@@ -2057,13 +2068,25 @@ public class JsonReader implements Closeable
                 {
                     values[i] = new ArrayList();
                 }
+                else if (SortedSet.class.isAssignableFrom(argType))
+                {
+                    values[i] = new TreeSet();
+                }
                 else if (Set.class.isAssignableFrom(argType))
                 {
                     values[i] = new LinkedHashSet();
                 }
+                else if (SortedMap.class.isAssignableFrom(argType))
+                {
+                    values[i] = new TreeMap();
+                }
                 else if (Map.class.isAssignableFrom(argType))
                 {
-                    values[i] = new HashMap();
+                    values[i] = new LinkedHashMap();
+                }
+                else if (Collection.class.isAssignableFrom(argType))
+                {
+                    values[i] = new ArrayList();
                 }
                 else if (Calendar.class.isAssignableFrom(argType))
                 {

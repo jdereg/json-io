@@ -50,7 +50,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return id != -1;
     }
 
-    void setType(String type)
+    public void setType(String type)
     {
         this.type = type.intern();
     }
@@ -224,6 +224,29 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         for (int i = 0; i < len; i++)
         {
             bytes[i] = ((Number) items[i]).byteValue();
+        }
+    }
+
+    public V put(K key, V value)
+    {
+        if (key == null)
+        {
+            return super.put(key, value);
+        }
+
+        if (key.equals("@type"))
+        {
+            type = (String) value;
+            return null;
+        }
+        else if (key.equals("@id"))
+        {
+            id = (Long) value;
+            return null;
+        }
+        else
+        {
+            return super.put(key, value);
         }
     }
 
