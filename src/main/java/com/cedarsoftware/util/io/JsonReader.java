@@ -1596,17 +1596,6 @@ public class JsonReader implements Closeable
                     if ("@id".equals(field))
                     {
                         _objsRead.put((Long)value, object);
-                        object.id = (Long)value;
-                        object.remove("@id");
-                    }
-                    else if ("@type".equals(field))
-                    {
-                        object.setType((String)value);
-                        object.remove("@type");
-                    }
-                    else if ("@items".equals(field) && object.containsKey("@keys"))
-                    {
-                        object.isMap = true;
                     }
                     state = STATE_READ_POST_VALUE;
                     break;

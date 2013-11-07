@@ -236,18 +236,24 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
         if (key.equals("@type"))
         {
+            String oldType = type;
             type = (String) value;
-            return null;
+            return (V) oldType;
         }
         else if (key.equals("@id"))
         {
+            Long oldId = id;
             id = (Long) value;
-            return null;
+            return (V) oldId;
         }
-        else
+        else if ("@items".equals(key) || "@keys".equals(key))
         {
-            return super.put(key, value);
+            if (containsKey("@items") && containsKey("@keys"))
+            {
+                isMap = true;
+            }
         }
+        return super.put(key, value);
     }
 
     public void clear()

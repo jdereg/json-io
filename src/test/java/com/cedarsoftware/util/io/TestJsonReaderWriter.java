@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -5414,11 +5415,23 @@ public class TestJsonReaderWriter
     {
         EmptyCols emptyCols = new EmptyCols();
         String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
-        System.out.println("json = " + json);
-        Object foo = readJsonObject(json);
-        System.out.println("foo = " + foo);
+        println("json = " + json);
+        emptyCols = (EmptyCols) readJsonObject(json);
+
+        assertTrue(emptyCols.col.size() == 0);
+        assertTrue(emptyCols.col instanceof ArrayList);
+        assertTrue(emptyCols.list.size() == 0);
+        assertTrue(emptyCols.list instanceof ArrayList);
+        assertTrue(emptyCols.map.size() == 0);
+        assertTrue(emptyCols.map instanceof LinkedHashMap);
+        assertTrue(emptyCols.set.size() == 0);
+        assertTrue(emptyCols.set instanceof LinkedHashSet);
+        assertTrue(emptyCols.sortedSet.size() == 0);
+        assertTrue(emptyCols.sortedSet instanceof TreeSet);
+        assertTrue(emptyCols.sortedMap.size() == 0);
+        assertTrue(emptyCols.sortedMap instanceof TreeMap);
     }
-    
+
     @Test
     public void testZTimings()
     {
