@@ -15,6 +15,7 @@ import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -37,7 +38,7 @@ import java.util.TimeZone;
  * references and can serialize any Object graph without requiring a class
  * to be 'Serializeable' or have any specific methods on it.
  * <br/><ul><li>
- * Call the static method: <code>JsonWriter.toJson(employee)</code>.  This will
+ * Call the static method: {@code JsonWriter.toJson(employee)}.  This will
  * convert the passed in 'employee' instance into a JSON String.</li>
  * <li>Using streams:
  * <pre>     JsonWriter writer = new JsonWriter(stream);
@@ -56,7 +57,7 @@ import java.util.TimeZone;
  * object in it, and then C will be serialized with a reference to A (ref), not a
  * redefinition of A.</p>
  * <br/>
-*
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>
  *         Copyright (c) John DeRegnaucourt
@@ -75,6 +76,9 @@ import java.util.TimeZone;
  */
 public class JsonWriter implements Closeable, Flushable
 {
+    public static final String DATE_FORMAT = "DATE_FORMAT";
+    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
+    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private final Map<Object, Long> _objVisited = new IdentityHashMap<Object, Long>();
     private final Map<Object, Long> _objsReferenced = new IdentityHashMap<Object, Long>();
     private static final Map<String, ClassMeta> _classMetaCache = new HashMap<String, ClassMeta>();
@@ -83,6 +87,13 @@ public class JsonWriter implements Closeable, Flushable
     private static Object[] _byteStrings = new Object[256];
     private final Writer _out;
     private long _identity = 1;
+    static final ThreadLocal<Map> _args = new ThreadLocal<Map>()
+    {
+        public Map initialValue()
+        {
+            return new HashMap();
+        }
+    };
     static final ThreadLocal<SimpleDateFormat> _dateFormat = new ThreadLocal<SimpleDateFormat>()
     {
         public SimpleDateFormat initialValue()
@@ -97,7 +108,7 @@ public class JsonWriter implements Closeable, Flushable
         addWriter(Date.class, new DateWriter());
         addWriter(BigInteger.class, new BigIntegerWriter());
         addWriter(BigDecimal.class, new BigDecimalWriter());
-        addWriter(java.sql.Date.class, new SqlDateWriter());
+        addWriter(java.sql.Date.class, new DateWriter());
         addWriter(Timestamp.class, new TimestampWriter());
         addWriter(Calendar.class, new CalendarWriter());
         addWriter(TimeZone.class, new TimeZoneWriter());
@@ -105,6 +116,122 @@ public class JsonWriter implements Closeable, Flushable
         addWriter(Class.class, new ClassWriter());
         addWriter(StringBuilder.class, new StringBuilderWriter());
         addWriter(StringBuffer.class, new StringBufferWriter());
+    }
+
+    static
+    {
+        for (short i = -128; i <= 127; i++)
+        {
+            char[] chars = Integer.toString(i).toCharArray();
+            _byteStrings[i + 128] = chars;
+        }
+    }
+
+    static class ClassMeta extends LinkedHashMap<String, Field>
+    {
+    }
+
+    /**
+     * Convert a Java Object to a JSON String.  This is the
+     * easy-to-use API - it returns null if there was an error.
+     * @param item Object to convert to a JSON String.
+     * @param optionalArgs (optional) Map of extra arguments indicating how dates are formatted,
+     * what fields are written out (optional).  For Date parameters, use the public static
+     * DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Also,
+     * you can specify your own custom SimpleDateFormat String, or you can associate a
+     * SimpleDateFormat object, in which case it will be used.  This setting is for both
+     * java.util.Date and java.sql.Date. If the DATE_FORMAT key is not used, then dates will
+     * be formatted as longs.  This long can be turned back into a date by using 'new Date(longValue)'.
+     * <p>
+     * If you want to change what fields are written to the JSON format, you can set
+     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
+     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
+     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
+     * the of the FieldGrabber interface, and return the field Set for the passed in class.
+     * </p>
+     * @return String containing JSON representation of passed
+     *         in object, or null if an error occurred.
+     */
+    public static String toJson(Object item, Map ... optionalArgs)
+    {
+        try
+        {
+            return objectToJson(item, optionalArgs);
+        }
+        catch (IOException ignored)
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Convert a Java Object to a JSON String.
+     *
+     * @param item Object to convert to a JSON String.
+     * @param optionalArgs (optional) Map of extra arguments indicating how dates are formatted,
+     * what fields are written out (optional).  For Date parameters, use the public static
+     * DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Or you can specify
+     * your own custom SimpleDateFormat String, or you can associate a SimpleDateFormat object,
+     * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
+     * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
+     * be turned back into a date by using 'new Date(longValue)'.
+     * <p>
+     * If you want to change what fields are written to the JSON format, you can set
+     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
+     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
+     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
+     * the of the FieldGrabber interface, and return the field Set for the passed in class.
+     * </p>
+     * @return String containing JSON representation of passed
+     *         in object.
+     * @throws java.io.IOException If an I/O error occurs
+     */
+    public static String objectToJson(Object item, Map ... optionalArgs) throws IOException
+    {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        JsonWriter writer = new JsonWriter(stream, optionalArgs);
+        writer.write(item);
+        writer.close();
+        return new String(stream.toByteArray(), "UTF-8");
+    }
+
+    /**
+     * @param out OutputStream to which the JSON output will be written.
+     * @param optionalArgs (optional) Map of extra arguments indicating how dates are formatted,
+     * what fields are written out (optional).  For Date parameters, use the public static
+     * DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Or you can specify
+     * your own custom SimpleDateFormat String, or you can associate a SimpleDateFormat object,
+     * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
+     * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
+     * be turned back into a date by using 'new Date(longValue)'.
+     * <p>
+     * If you want to change what fields are written to the JSON format, you can set
+     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
+     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
+     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
+     * the of the FieldGrabber interface, and return the field Set for the passed in class.
+     * </p>
+     * @throws IOException
+     */
+    public JsonWriter(OutputStream out, Map ... optionalArgs) throws IOException
+    {
+        _args.get().clear();
+        if (optionalArgs != null && optionalArgs.length == 1)
+        {
+            _args.get().putAll(optionalArgs[0]);
+        }
+        if (optionalArgs.length > 1)
+        {
+            throw new IllegalArgumentException("The optionalArgs parameter must be a single Map passed in (or have no 2nd parameter).");
+        }
+        try
+        {
+            _out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new IOException("Unsupported encoding.  Get a JVM that supports UTF-8", e);
+        }
     }
 
     public interface JsonClassWriter
@@ -212,7 +339,7 @@ public class JsonWriter implements Closeable, Flushable
             out.write(',');
         }
 
-        closestWriter.write(o, showType, out);
+        closestWriter.write(o, showType || referenced, out);
         out.write('}');
         return true;
     }
@@ -271,33 +398,42 @@ public class JsonWriter implements Closeable, Flushable
     {
         public void write(Object obj, boolean showType, Writer out) throws IOException
         {
-            String value = Long.toString(((Date) obj).getTime());
-            out.write("\"value\":");
-            out.write(value);
+            Date date = (Date)obj;
+            Object dateFormat = _args.get().get(DATE_FORMAT);
+            if (dateFormat instanceof String)
+            {   // Passed in as String, turn into a SimpleDateFormat instance to be used throughout this stream write.
+                dateFormat = new SimpleDateFormat((String) dateFormat);
+                _args.get().put(DATE_FORMAT, dateFormat);
+            }
+            if (showType)
+            {
+                out.write("\"value\":");
+            }
+
+            if (dateFormat instanceof Format)
+            {
+                out.write("\"");
+                out.write(((Format)dateFormat).format(date));
+                out.write("\"");
+            }
+            else
+            {
+                out.write(Long.toString(((Date) obj).getTime()));
+            }
         }
 
         public boolean hasPrimitiveForm() { return true; }
 
         public void writePrimitiveForm(Object o, Writer out) throws IOException
         {
-            out.write(Long.toString(((Date) o).getTime()));
-        }
-    }
-
-    public static class SqlDateWriter implements JsonClassWriter
-    {
-        public void write(Object obj, boolean showType, Writer out) throws IOException
-        {
-            String value = Long.toString(((Date) obj).getTime());
-            out.write("\"value\":");
-            out.write(value);
-        }
-
-        public boolean hasPrimitiveForm() { return true; }
-
-        public void writePrimitiveForm(Object o, Writer out) throws IOException
-        {
-            out.write(Long.toString(((java.sql.Date) o).getTime()));
+            if (_args.get().containsKey(DATE_FORMAT))
+            {
+                write(o, false, out);
+            }
+            else
+            {
+                out.write(Long.toString(((Date) o).getTime()));
+            }
         }
     }
 
@@ -453,68 +589,6 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    static
-    {
-        for (short i = -128; i <= 127; i++)
-        {
-            char[] chars = Integer.toString(i).toCharArray();
-            _byteStrings[i + 128] = chars;
-        }
-    }
-
-    static class ClassMeta extends LinkedHashMap<String, Field>
-    {
-    }
-
-    /**
-     * Convert a Java Object to a JSON String.  This is the
-     * easy-to-use API - it returns null if there was an error.
-     *
-     * @param item Object to convert to a JSON String.
-     * @return String containing JSON representation of passed
-     *         in object, or null if an error occurred.
-     */
-    public static String toJson(Object item)
-    {
-        try
-        {
-            return objectToJson(item);
-        }
-        catch (IOException ignored)
-        {
-            return null;
-        }
-    }
-
-    /**
-     * Convert a Java Object to a JSON String.
-     *
-     * @param item Object to convert to a JSON String.
-     * @return String containing JSON representation of passed
-     *         in object.
-     * @throws java.io.IOException If an I/O error occurs
-     */
-    public static String objectToJson(Object item) throws IOException
-    {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        JsonWriter writer = new JsonWriter(stream);
-        writer.write(item);
-        writer.close();
-        return new String(stream.toByteArray(), "UTF-8");
-    }
-
-    public JsonWriter(OutputStream out) throws IOException
-    {
-        try
-        {
-            _out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new IOException("Unsupported encoding.  Get a JVM that supports UTF-8", e);
-        }
-    }
-
     public void write(Object obj) throws IOException
     {
         traceReferences(obj);
@@ -523,6 +597,8 @@ public class JsonWriter implements Closeable, Flushable
         flush();
         _objVisited.clear();
         _objsReferenced.clear();
+        _args.get().clear();
+        _args.remove();
     }
 
     private void traceReferences(Object root)
@@ -540,7 +616,7 @@ public class JsonWriter implements Closeable, Flushable
                 continue;
             }
 
-            if (!JsonReader.isPrimitive(obj.getClass()) && !(obj instanceof String))
+            if (!JsonReader.isPrimitive(obj.getClass()) && !(obj instanceof String) && !(obj instanceof Date))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -1383,7 +1459,7 @@ public class JsonWriter implements Closeable, Flushable
         out.write('}');
     }
 
-    private boolean doesValueTypeMatchFieldType(Class type, String fieldName, Object value)
+    private static boolean doesValueTypeMatchFieldType(Class type, String fieldName, Object value)
     {
         if (type != null)
         {

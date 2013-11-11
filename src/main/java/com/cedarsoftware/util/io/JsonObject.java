@@ -202,7 +202,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             }
             return Array.getLength(target);
         }
-        if (isCollection())
+        if (isCollection() || isMap())
         {
             Object[] items = (Object[]) get("@items");
             return items == null ? 0 : items.length;

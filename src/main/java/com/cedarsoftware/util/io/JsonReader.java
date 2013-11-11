@@ -34,6 +34,8 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -101,7 +103,12 @@ public class JsonReader implements Closeable
     private static final Class[] _emptyClassArray = new Class[]{};
     private static final List<Object[]> _readers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
-    private static final Map<Class, Factory> _factory = new LinkedHashMap<Class, Factory>();
+    private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
+    private static final Pattern datePattern1 = Pattern.compile("^(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})");
+    private static final Pattern datePattern2 = Pattern.compile("^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})");
+    private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
+    private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
+    private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
 
     static
     {
@@ -120,24 +127,24 @@ public class JsonReader implements Closeable
         // Save heap memory by re-using common strings (String's immutable)
         _stringCache.put("", "");
         _stringCache.put("true", "true");
-        _stringCache.put("false", "false");
-        _stringCache.put("TRUE", "TRUE");
-        _stringCache.put("FALSE", "FALSE");
         _stringCache.put("True", "True");
+        _stringCache.put("TRUE", "TRUE");
+        _stringCache.put("false", "false");
         _stringCache.put("False", "False");
+        _stringCache.put("FALSE", "FALSE");
         _stringCache.put("null", "null");
         _stringCache.put("yes", "yes");
-        _stringCache.put("no", "no");
-        _stringCache.put("YES", "YES");
-        _stringCache.put("NO", "NO");
         _stringCache.put("Yes", "Yes");
+        _stringCache.put("YES", "YES");
+        _stringCache.put("no", "no");
         _stringCache.put("No", "No");
+        _stringCache.put("NO", "NO");
         _stringCache.put("on", "on");
-        _stringCache.put("off", "off");
-        _stringCache.put("ON", "ON");
-        _stringCache.put("OFF", "OFF");
         _stringCache.put("On", "On");
+        _stringCache.put("ON", "ON");
+        _stringCache.put("off", "off");
         _stringCache.put("Off", "Off");
+        _stringCache.put("OFF", "OFF");
         _stringCache.put("@id", "@id");
         _stringCache.put("@ref", "@ref");
         _stringCache.put("@items", "@items");
@@ -188,15 +195,16 @@ public class JsonReader implements Closeable
         addReader(StringBuilder.class, new StringBuilderReader());
         addReader(StringBuffer.class, new StringBufferReader());
 
-        Factory colFactory = new CollectionFactory();
-        _factory.put(Collection.class, colFactory);
-        _factory.put(List.class, colFactory);
-        _factory.put(Set.class, colFactory);
-        _factory.put(SortedSet.class, colFactory);
+        ClassFactory colFactory = new CollectionFactory();
+        assignInstantiator(Collection.class, colFactory);
+        assignInstantiator(List.class, colFactory);
+        assignInstantiator(Set.class, colFactory);
+        assignInstantiator(SortedSet.class, colFactory);
+        assignInstantiator(Collection.class, colFactory);
 
-        Factory mapFactory = new MapFactory();
-        _factory.put(Map.class, mapFactory);
-        _factory.put(SortedMap.class, mapFactory);
+        ClassFactory mapFactory = new MapFactory();
+        assignInstantiator(Map.class, mapFactory);
+        assignInstantiator(SortedMap.class, mapFactory);
     }
 
     public interface JsonClassReader
@@ -204,15 +212,30 @@ public class JsonReader implements Closeable
         Object read(Object jOb, LinkedList<JsonObject<String, Object>> stack) throws IOException;
     }
 
-    public interface Factory
+    public interface ClassFactory
     {
         Object newInstance(Class c);
     }
 
     /**
+     * For difficult to instantiate classes, you can add your own ClassFactory
+     * which will be called when the passed in class 'c' is encountered.  Your
+     * ClassFactory will be called with newInstance(c) and your factory is expected
+     * to return a new instance of 'c'.
+     *
+     * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
+     * and is useful when you encounter a class that JsonReader cannot instantiate using its
+     * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
+     */
+    public static void assignInstantiator(Class c, ClassFactory factory)
+    {
+        _factory.put(c, factory);
+    }
+
+    /**
      * Use to create new instances of collection interfaces (needed for empty collections)
      */
-    public static class CollectionFactory implements Factory
+    public static class CollectionFactory implements ClassFactory
     {
         public Object newInstance(Class c)
         {
@@ -232,14 +255,14 @@ public class JsonReader implements Closeable
             {
                 return new ArrayList();
             }
-            return null;
+            throw new RuntimeException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
         }
     }
 
     /**
      * Use to create new instances of Map interfaces (needed for empty Maps)
      */
-    public static class MapFactory implements Factory
+    public static class MapFactory implements ClassFactory
     {
         public Object newInstance(Class c)
         {
@@ -251,7 +274,7 @@ public class JsonReader implements Closeable
             {
                 return new LinkedHashMap();
             }
-            return null;
+            throw new RuntimeException("MapFactory handed Class for which it was not expecting: " + c.getName());
         }
     }
 
@@ -346,31 +369,140 @@ public class JsonReader implements Closeable
             {
                 return new Date((Long) o);
             }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            else if (o instanceof String)
             {
-                return jObj.target = new Date((Long) jObj.get("value"));
+                return parseDate((String)o, -1);
             }
-            throw new IOException("Date missing 'value' field, pos = " + jObj.pos);
+            else if (o instanceof JsonObject)
+            {
+                JsonObject jObj = (JsonObject)o;
+                Object val = jObj.get("value");
+                if (val instanceof Long)
+                {
+                    return new Date((Long) val);
+                }
+                else if (val instanceof String)
+                {
+                    return parseDate((String) val, jObj.pos);
+                }
+                throw new IOException("Unable to parse date: " + o + ", pos = " + jObj.pos);
+            }
+            else
+            {
+                throw new IOException("Unable to parse date, encountered unknown object: " + o);
+            }
+        }
+
+        private void error(String date, long pos) throws IOException
+        {
+            throw new IOException("Unable to parse date: " + date + ", pos = " + pos);
+        }
+
+        private Date parseDate(String dateStr, long pos) throws IOException
+        {
+            dateStr = dateStr.trim();
+
+            // Determine which date pattern (Matcher) to use
+            Matcher matcher = datePattern1.matcher(dateStr);
+
+            String year, month, day;
+
+            if (matcher.find())
+            {
+                year = matcher.group(1);
+                month = matcher.group(2);
+                day = matcher.group(3);
+            }
+            else
+            {
+                matcher = datePattern2.matcher(dateStr);
+                if (!matcher.find())
+                {
+                    error(dateStr, pos);
+                }
+                month = matcher.group(1);
+                day = matcher.group(2);
+                year = matcher.group(3);
+            }
+
+            // Determine which date pattern (Matcher) to use
+            matcher = timePattern1.matcher(dateStr);
+            if (!matcher.find())
+            {
+                matcher = timePattern2.matcher(dateStr);
+                if (!matcher.find())
+                {
+                    matcher = timePattern3.matcher(dateStr);
+                    if (!matcher.find())
+                    {
+                        matcher = null;
+                    }
+                }
+            }
+
+            Calendar c = Calendar.getInstance();
+            c.clear();
+
+            int y = 0;
+            int m = 0;
+            int d = 0;
+            try
+            {
+                y = Integer.parseInt(year);
+                m = Integer.parseInt(month) - 1;    // months are 0-based
+                d = Integer.parseInt(day);
+            }
+            catch (Exception e)
+            {
+                error(dateStr, pos);
+            }
+
+            if (matcher == null)
+            {   // no [valid] time portion
+                c.set(y, m, d);
+            }
+            else
+            {
+                String hour = matcher.group(1);
+                String min = matcher.group(2);
+                String sec = "00";
+                String milli = "000";
+                if (matcher.groupCount() > 2)
+                {
+                    sec = matcher.group(3);
+                }
+                if (matcher.groupCount() > 3)
+                {
+                    milli = matcher.group(4);
+                }
+
+                int h = 0;
+                int mn = 0;
+                int s = 0;
+                int ms = 0;
+                try
+                {
+                    h = Integer.parseInt(hour);
+                    mn = Integer.parseInt(min);
+                    s = Integer.parseInt(sec);
+                    ms = Integer.parseInt(milli);
+                }
+                catch (Exception e)
+                {
+                    error(dateStr, pos);
+                }
+                c.set(y, m, d, h, mn, s);
+                c.set(Calendar.MILLISECOND, ms);
+            }
+            return c.getTime();
         }
     }
 
-    public static class SqlDateReader implements JsonClassReader
+    public static class SqlDateReader extends DateReader
     {
         public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
         {
-            if (o instanceof Long)
-            {
-                return new java.sql.Date((Long) o);
-            }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
-            {
-                return jObj.target = new java.sql.Date((Long) jObj.get("value"));
-            }
-            throw new IOException("java.sql.Date missing 'value' field, pos = " + jObj.pos);
+            return new java.sql.Date(((Date) super.read(o, stack)).getTime());
         }
     }
 
@@ -1928,12 +2060,12 @@ public class JsonReader implements Closeable
 
     private static Object newInstance(Class c) throws IOException
     {
-        // Constructor not cached, go find a constructor
         if (_factory.containsKey(c))
         {
             return _factory.get(c).newInstance(c);
         }
 
+        // Constructor not cached, go find a constructor
         Object[] constructorInfo = _constructors.get(c);
         if (constructorInfo != null)
         {   // Constructor was cached
@@ -2418,7 +2550,7 @@ public class JsonReader implements Closeable
      * This is required because Maps hash items using hashCode(), which will
      * change between VMs.  Rehashing the map fixes this.
      *
-     * If _noObjects==true, then move @keys to keys and @values to values
+     * If _noObjects==true, then move @keys to keys and @items to values
      * and then drop these two entries from the map.
      */
     private void rehashMaps()

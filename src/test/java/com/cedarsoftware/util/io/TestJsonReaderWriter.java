@@ -868,7 +868,7 @@ public class TestJsonReaderWriter
         assertTrue(root._testRefs0[9].equals("Happy"));
 
         assertTrue(root._testRefs1.length == 10);
-        assertTrue(root._testRefs1[0] ==  root._testRefs0[0]);
+        assertFalse(root._testRefs1[0] == root._testRefs0[0]);
         assertTrue(root._testRefs1[1] == root._testRefs0[1]);    // Works because we only read in Boolean.TRUE, Boolean.FALSE, or null
         assertTrue(root._testRefs1[2] == root._testRefs0[2]);
         assertTrue(root._testRefs1[3] == root._testRefs0[3]);
@@ -2652,16 +2652,16 @@ public class TestJsonReaderWriter
         assertTrue(that._polyRefTarget.equals(new Date(71)));
         assertTrue(that._polyRef.equals(new Date(71)));
         assertTrue(that._polyNotRef.equals(new Date(71)));
-        assertTrue(that._polyRef == that._polyRefTarget);
+        assertFalse(that._polyRef == that._polyRefTarget);
         assertFalse(that._polyNotRef == that._polyRef);
 
         assertTrue(that._typeArray.length == 6);
-        assertTrue(that._typeArray[0] == that._arrayElement);
+        assertFalse(that._typeArray[0] == that._arrayElement);
         assertTrue(that._typeArray[1] instanceof Date);
         assertTrue(that._typeArray[1] instanceof Date);
         assertTrue(that._typeArray[1].equals(new Date(69)));
         assertTrue(that._objArray.length == 6);
-        assertTrue(that._objArray[0] == that._arrayElement);
+        assertFalse(that._objArray[0] == that._arrayElement);
         assertTrue(that._objArray[1] instanceof Date);
         assertTrue(that._objArray[1].equals(new Date(69)));
         assertTrue(that._polyRefTarget instanceof Date);
@@ -2671,7 +2671,7 @@ public class TestJsonReaderWriter
         assertTrue(that._typeArray[1] != that._objArray[1]);
         assertTrue(that._typeArray[5] != that._objArray[5]);
 
-        assertTrue(that._objArray[2] == that._typeArray[2]);
+        assertFalse(that._objArray[2] == that._typeArray[2]);
         assertTrue(that._objArray[2].equals(new Date(75)));
 
         assertTrue(that._null == null);
@@ -5430,6 +5430,155 @@ public class TestJsonReaderWriter
         assertTrue(emptyCols.sortedSet instanceof TreeSet);
         assertTrue(emptyCols.sortedMap.size() == 0);
         assertTrue(emptyCols.sortedMap instanceof TreeMap);
+    }
+
+    static class DateTest
+    {
+        Date birthDay;
+        Date anniversary;
+        java.sql.Date christmas;
+    }
+
+    @Test
+    public void testCustomDateFormat() throws Exception
+    {
+        DateTest dt = new DateTest();
+        Calendar c = Calendar.getInstance();
+        c.clear();
+        c.set(1965, Calendar.DECEMBER, 17, 14, 01, 30);
+        dt.birthDay = c.getTime();
+        c.clear();
+        c.set(1991, Calendar.OCTOBER, 5, 1, 1, 30);
+        dt.anniversary = new java.sql.Date(c.getTime().getTime());
+        c.clear();
+        c.set(2013, Calendar.DECEMBER, 25, 1, 2, 34);
+        dt.christmas = new java.sql.Date(c.getTime().getTime());
+
+        // Custom writer that only outputs ISO date portion
+        Map args = new HashMap();
+        args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_FORMAT);
+        String json = JsonWriter.objectToJson(dt, args);
+        println("json = " + json);
+
+        // Read it back in
+        DateTest readDt = (DateTest) readJsonObject(json);
+
+        Calendar exp = Calendar.getInstance();
+        exp.setTime(dt.birthDay);
+        Calendar act = Calendar.getInstance();
+        act.setTime(readDt.birthDay);
+        compareDatePortion(exp, act);
+
+        exp.setTime(dt.anniversary);
+        act.setTime(readDt.anniversary);
+        compareDatePortion(exp, act);
+
+        exp.setTime(dt.christmas);
+        act.setTime(readDt.christmas);
+        compareDatePortion(exp, act);
+
+        // Custom writer that outputs date and time portion in ISO format
+        args = new HashMap();
+        args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME_FORMAT);
+        json = JsonWriter.objectToJson(dt, args);
+        println("json = " + json);
+
+        // Read it back in
+        readDt = (DateTest) readJsonObject(json);
+
+        exp.setTime(dt.birthDay);
+        act.setTime(readDt.birthDay);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.anniversary);
+        act.setTime(readDt.anniversary);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.christmas);
+        act.setTime(readDt.christmas);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        // Write out dates as long (standard behavior)
+        json = getJsonString(dt);
+        readDt = (DateTest) readJsonObject(json);
+
+        exp.setTime(dt.birthDay);
+        act.setTime(readDt.birthDay);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.anniversary);
+        act.setTime(readDt.anniversary);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.christmas);
+        act.setTime(readDt.christmas);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        // Version with milliseconds
+        args.clear();
+        args.put(JsonWriter.DATE_FORMAT, "yyyy-MM-dd'T'HH:mm:ss.SSS");
+        json = JsonWriter.objectToJson(dt, args);
+        readDt = (DateTest) readJsonObject(json);
+
+        exp.setTime(dt.birthDay);
+        act.setTime(readDt.birthDay);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.anniversary);
+        act.setTime(readDt.anniversary);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        exp.setTime(dt.christmas);
+        act.setTime(readDt.christmas);
+        compareDatePortion(exp, act);
+        compareTimePortion(exp, act);
+
+        // MM/DD/YYYY format
+        args.clear();
+        args.put(JsonWriter.DATE_FORMAT, "MM/dd/yyyy HH:mm");
+        json = JsonWriter.objectToJson(dt, args);
+        readDt = (DateTest) readJsonObject(json);
+
+        exp.setTime(dt.birthDay);
+        act.setTime(readDt.birthDay);
+        compareDatePortion(exp, act);
+        assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
+        assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
+
+        exp.setTime(dt.anniversary);
+        act.setTime(readDt.anniversary);
+        compareDatePortion(exp, act);
+        assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
+        assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
+
+        exp.setTime(dt.christmas);
+        act.setTime(readDt.christmas);
+        compareDatePortion(exp, act);
+        assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
+        assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
+    }
+
+    private void compareTimePortion(Calendar exp, Calendar act)
+    {
+        assertEquals(exp.get(Calendar.HOUR_OF_DAY), act.get(Calendar.HOUR_OF_DAY));
+        assertEquals(exp.get(Calendar.MINUTE), act.get(Calendar.MINUTE));
+        assertEquals(exp.get(Calendar.SECOND), act.get(Calendar.SECOND));
+        assertEquals(exp.get(Calendar.MILLISECOND), act.get(Calendar.MILLISECOND));
+    }
+
+    private void compareDatePortion(Calendar exp, Calendar act)
+    {
+        assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
+        assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
+        assertEquals(exp.get(Calendar.DAY_OF_MONTH), act.get(Calendar.DAY_OF_MONTH));
     }
 
     @Test
