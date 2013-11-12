@@ -87,11 +87,11 @@ public class JsonWriter implements Closeable, Flushable
     private static Object[] _byteStrings = new Object[256];
     private final Writer _out;
     private long _identity = 1;
-    static final ThreadLocal<Map> _args = new ThreadLocal<Map>()
+    static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
     {
-        public Map initialValue()
+        public Map<String, Object> initialValue()
         {
-            return new HashMap();
+            return new HashMap<String, Object>();
         }
     };
     static final ThreadLocal<SimpleDateFormat> _dateFormat = new ThreadLocal<SimpleDateFormat>()
@@ -132,11 +132,11 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * @see JsonWriter#toJson(Object, java.util.Map[])
+     * @see JsonWriter#toJson(Object, java.util.Map)
      */
     public static String toJson(Object item)
     {
-        return toJson(item, new HashMap());
+        return toJson(item, new HashMap<String, Object>());
     }
 
     /**
@@ -160,7 +160,7 @@ public class JsonWriter implements Closeable, Flushable
      * @return String containing JSON representation of passed
      *         in object, or null if an error occurred.
      */
-    public static String toJson(Object item, Map optionalArgs)
+    public static String toJson(Object item, Map<String, Object> optionalArgs)
     {
         try
         {
@@ -177,7 +177,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public static String objectToJson(Object item) throws IOException
     {
-        return objectToJson(item, new HashMap());
+        return objectToJson(item, new HashMap<String, Object>());
     }
 
     /**
@@ -202,7 +202,7 @@ public class JsonWriter implements Closeable, Flushable
      *         in object.
      * @throws java.io.IOException If an I/O error occurs
      */
-    public static String objectToJson(Object item, Map optionalArgs) throws IOException
+    public static String objectToJson(Object item, Map<String, Object> optionalArgs) throws IOException
     {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         JsonWriter writer = new JsonWriter(stream, optionalArgs);
@@ -216,7 +216,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out) throws IOException
     {
-        this(out, new HashMap());
+        this(out, new HashMap<String, Object>());
     }
 
     /**
@@ -237,7 +237,7 @@ public class JsonWriter implements Closeable, Flushable
      * </p>
      * @throws IOException
      */
-    public JsonWriter(OutputStream out, Map optionalArgs) throws IOException
+    public JsonWriter(OutputStream out, Map<String, Object> optionalArgs) throws IOException
     {
         _args.get().clear();
         _args.get().putAll(optionalArgs);
