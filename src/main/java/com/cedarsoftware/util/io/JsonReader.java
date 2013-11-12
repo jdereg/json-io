@@ -106,6 +106,7 @@ public class JsonReader implements Closeable
     private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
     private static final Pattern datePattern1 = Pattern.compile("^(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})");
     private static final Pattern datePattern2 = Pattern.compile("^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})");
+    // private static final Pattern datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
@@ -1607,11 +1608,11 @@ public class JsonReader implements Closeable
                 }
                 else if (c.isEnum())
                 {
-                    mate = Enum.valueOf(c, (String)jsonObj.get("name"));
+                    mate = getEnum(c, jsonObj);
                 }
                 else if (Enum.class.isAssignableFrom(c)) // anonymous subclass of an enum
                 {
-                    mate = Enum.valueOf(c.getSuperclass(), (String)jsonObj.get("name"));
+                    mate = getEnum(c.getSuperclass(), jsonObj);
                 }
                 else if ("java.util.Arrays$ArrayList".equals(c.getName()))
                 {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
@@ -1636,11 +1637,11 @@ public class JsonReader implements Closeable
             }
             else if (clazz.isEnum())
             {
-                mate = Enum.valueOf(clazz, (String)jsonObj.get("name"));
+                mate = getEnum(clazz, jsonObj);
             }
             else if (Enum.class.isAssignableFrom(clazz)) // anonymous subclass of an enum
             {
-                mate = Enum.valueOf(clazz.getSuperclass(), (String)jsonObj.get("name"));
+                mate = getEnum(clazz.getSuperclass(), jsonObj);
             }
             else if ("java.util.Arrays$ArrayList".equals(clazz.getName()))
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
@@ -1652,6 +1653,21 @@ public class JsonReader implements Closeable
             }
         }
         return jsonObj.target = mate;
+    }
+
+    /**
+     * Fetch enum value (may need to try twice, due to potential 'name' field shadowing by enum subclasses
+     */
+    private Object getEnum(Class c, JsonObject jsonObj)
+    {
+        try
+        {
+            return Enum.valueOf(c, (String) jsonObj.get("name"));
+        }
+        catch (Exception e)
+        {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
+            return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
+        }
     }
 
     // Parser code
