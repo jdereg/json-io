@@ -132,6 +132,14 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
+     * @see JsonWriter#toJson(Object, java.util.Map[])
+     */
+    public static String toJson(Object item)
+    {
+        return toJson(item, new HashMap());
+    }
+
+    /**
      * Convert a Java Object to a JSON String.  This is the
      * easy-to-use API - it returns null if there was an error.
      * @param item Object to convert to a JSON String.
@@ -152,7 +160,7 @@ public class JsonWriter implements Closeable, Flushable
      * @return String containing JSON representation of passed
      *         in object, or null if an error occurred.
      */
-    public static String toJson(Object item, Map ... optionalArgs)
+    public static String toJson(Object item, Map optionalArgs)
     {
         try
         {
@@ -162,6 +170,14 @@ public class JsonWriter implements Closeable, Flushable
         {
             return null;
         }
+    }
+
+    /**
+     * @see JsonWriter#objectToJson(Object, java.util.Map)
+     */
+    public static String objectToJson(Object item) throws IOException
+    {
+        return objectToJson(item, new HashMap());
     }
 
     /**
@@ -186,13 +202,21 @@ public class JsonWriter implements Closeable, Flushable
      *         in object.
      * @throws java.io.IOException If an I/O error occurs
      */
-    public static String objectToJson(Object item, Map ... optionalArgs) throws IOException
+    public static String objectToJson(Object item, Map optionalArgs) throws IOException
     {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         JsonWriter writer = new JsonWriter(stream, optionalArgs);
         writer.write(item);
         writer.close();
         return new String(stream.toByteArray(), "UTF-8");
+    }
+
+    /**
+     * @see JsonWriter#JsonWriter(java.io.OutputStream, java.util.Map)
+     */
+    public JsonWriter(OutputStream out) throws IOException
+    {
+        this(out, new HashMap());
     }
 
     /**
@@ -213,17 +237,11 @@ public class JsonWriter implements Closeable, Flushable
      * </p>
      * @throws IOException
      */
-    public JsonWriter(OutputStream out, Map ... optionalArgs) throws IOException
+    public JsonWriter(OutputStream out, Map optionalArgs) throws IOException
     {
         _args.get().clear();
-        if (optionalArgs != null && optionalArgs.length == 1)
-        {
-            _args.get().putAll(optionalArgs[0]);
-        }
-        if (optionalArgs.length > 1)
-        {
-            throw new IllegalArgumentException("The optionalArgs parameter must be a single Map passed in (or have no 2nd parameter).");
-        }
+        _args.get().putAll(optionalArgs);
+
         try
         {
             _out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
