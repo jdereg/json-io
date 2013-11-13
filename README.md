@@ -88,7 +88,7 @@ To specify an alternative date format for JsonWriter:
     args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME);
     String json = JsonWriter.objectToJson(root, args);
 
-In this example, the ISO yyyy/MM/ddThh:mm:ss format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be JsonWriter.ISO_DATE_TIME, JsonWriter.ISO_DATE, a date format String pattern (eg. "yyyy/MM/dd hh:mm"), or a java.text.Format instance.
+In this example, the ISO yyyy/MM/ddTHH:mm:ss format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be JsonWriter.ISO_DATE_TIME, JsonWriter.ISO_DATE, a date format String pattern (eg. "yyyy/MM/dd HH:mm"), or a java.text.Format instance.
 
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will completely fix up the `@ref's` to point to the appropriate objects.
