@@ -16,7 +16,7 @@ Perfect Java serialization to and from JSON format. To include in your project:
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-_Please donate some Bitcoins (or fractional bitcoins) to: 1FBca31Ta3uDvgxcvJEo6QzQQjsDVFeA4W if you find json-io useful and use it your software._
+_Please donate some **Bitcoins** (or fractional Bitcoins) to: **1461PT1TYVng8uftp2gg5iG6q4xV7tR6h5** if you find json-io useful and use it your software._
 
 _For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
