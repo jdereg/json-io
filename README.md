@@ -1,12 +1,12 @@
 json-io
 =======
 
-Perfect Java serialization to and from JSON format. To include in your project:
+Perfect Java serialization to and from JSON format (available on Maven Central). To include in your project:
 ```
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.2.31</version>
+  <version>2.2.32</version>
 </dependency>
 ```
 
@@ -16,7 +16,7 @@ Perfect Java serialization to and from JSON format. To include in your project:
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-_Please donate some Bitcoins (or fractional bitcoins) to: 1FBca31Ta3uDvgxcvJEo6QzQQjsDVFeA4W if you find json-io useful and use it your software._
+Please donate some **Bitcoins** (or fractional Bitcoins) to: **1461PT1TYVng8uftp2gg5iG6q4xV7tR6h5** if you find json-io useful and use it your software.
 
 _For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
@@ -81,6 +81,15 @@ This 'Maps' representation can be re-written to a JSON String or Stream and _the
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0 approach allows you to customize the JSON format for classes for which you do not have the source code.
 
+#### Dates
+To specify an alternative date format for JsonWriter:
+
+    Map args = new HashMap();
+    args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME);
+    String json = JsonWriter.objectToJson(root, args);
+
+In this example, the ISO yyyy/MM/ddTHH:mm:ss format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be JsonWriter.ISO_DATE_TIME, JsonWriter.ISO_DATE, a date format String pattern (eg. "yyyy/MM/dd HH:mm"), or a java.text.Format instance.
+
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will completely fix up the `@ref's` to point to the appropriate objects.
 
@@ -108,6 +117,7 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 
 Featured on http://json.org.
 
+ * 2.2.32 - Date/Time format can be customized when writing JSON output. New optional 'Map args' parameter added to main API of JsonWriter that specifies additional parameters for JsonWriter. JsonReader updated to read many different date/time formats. When JsonReader encounters a class that cannot be constructed, you can associate a Class Factory to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
  * 2.2.31 - adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
  * 2.2.30 - java.sql.Date when read in, was instantiated as a java.util.Date. This has been corrected.
  * 2.2.29 - First official release through Maven Central
