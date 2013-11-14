@@ -15,10 +15,12 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -104,12 +106,19 @@ public class JsonReader implements Closeable
     private static final List<Object[]> _readers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
     private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
-    private static final Pattern datePattern1 = Pattern.compile("^(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})");
-    private static final Pattern datePattern2 = Pattern.compile("^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})");
-    // private static final Pattern datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
-    private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
-    private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
+    private static final Pattern _datePattern1 = Pattern.compile("^(\\d{4})[\\./-](\\d{1,2})[\\./-](\\d{1,2})");
+    private static final Pattern _datePattern2 = Pattern.compile("^(\\d{1,2})[\\./-](\\d{1,2})[\\./-](\\d{4})");
+    // private static final Pattern _datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
+    private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
+    private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
+    static final ThreadLocal<Deque<char[]>> _snippet = new ThreadLocal<Deque<char[]>>()
+    {
+        public Deque<char[]> initialValue()
+        {
+            return new ArrayDeque<char[]>(128);
+        }
+    };
 
     static
     {
@@ -287,7 +296,7 @@ public class JsonReader implements Closeable
             Object zone = jObj.get("zone");
             if (zone == null)
             {
-                throw new IOException("java.util.TimeZone must special 'zone' field, pos = " + jObj.pos);
+                error("java.util.TimeZone must special 'zone' field, pos = " + jObj.pos);
             }
             return jObj.target = TimeZone.getTimeZone((String) zone);
         }
@@ -301,7 +310,7 @@ public class JsonReader implements Closeable
             Object language = jObj.get("language");
             if (language == null)
             {
-                throw new IOException("java.util.Locale must specify 'language' field, pos = " + jObj.pos);
+                error("java.util.Locale must specify 'language' field, pos = " + jObj.pos);
             }
             Object country = jObj.get("country");
             Object variant = jObj.get("variant");
@@ -331,7 +340,7 @@ public class JsonReader implements Closeable
                 time = (String) jObj.get("time");
                 if (time == null)
                 {
-                    throw new IOException("Calendar missing 'time' field, pos = " + pos);
+                    error("Calendar missing 'time' field, pos = " + pos);
                 }
                 Date date = JsonWriter._dateFormat.get().parse(time);
                 Class c;
@@ -357,7 +366,7 @@ public class JsonReader implements Closeable
             }
             catch(Exception e)
             {
-                throw new IOException("Failed to parse calendar, time: " + time + ", pos = " + pos);
+                return error("Failed to parse calendar, time: " + time + ", pos = " + pos);
             }
         }
     }
@@ -386,17 +395,12 @@ public class JsonReader implements Closeable
                 {
                     return parseDate((String) val, jObj.pos);
                 }
-                throw new IOException("Unable to parse date: " + o + ", pos = " + jObj.pos);
+                return error("Unable to parse date: " + o + ", pos = " + jObj.pos);
             }
             else
             {
-                throw new IOException("Unable to parse date, encountered unknown object: " + o);
+                return error("Unable to parse date, encountered unknown object: " + o);
             }
-        }
-
-        private void error(String date, long pos) throws IOException
-        {
-            throw new IOException("Unable to parse date: " + date + ", pos = " + pos);
         }
 
         private Date parseDate(String dateStr, long pos) throws IOException
@@ -404,7 +408,7 @@ public class JsonReader implements Closeable
             dateStr = dateStr.trim();
 
             // Determine which date pattern (Matcher) to use
-            Matcher matcher = datePattern1.matcher(dateStr);
+            Matcher matcher = _datePattern1.matcher(dateStr);
 
             String year, month, day;
 
@@ -416,10 +420,10 @@ public class JsonReader implements Closeable
             }
             else
             {
-                matcher = datePattern2.matcher(dateStr);
+                matcher = _datePattern2.matcher(dateStr);
                 if (!matcher.find())
                 {
-                    error(dateStr, pos);
+                    error("Unable to parse: " + dateStr + ", pos = " + pos);
                 }
                 month = matcher.group(1);
                 day = matcher.group(2);
@@ -427,13 +431,13 @@ public class JsonReader implements Closeable
             }
 
             // Determine which date pattern (Matcher) to use
-            matcher = timePattern1.matcher(dateStr);
+            matcher = _timePattern1.matcher(dateStr);
             if (!matcher.find())
             {
-                matcher = timePattern2.matcher(dateStr);
+                matcher = _timePattern2.matcher(dateStr);
                 if (!matcher.find())
                 {
-                    matcher = timePattern3.matcher(dateStr);
+                    matcher = _timePattern3.matcher(dateStr);
                     if (!matcher.find())
                     {
                         matcher = null;
@@ -455,7 +459,7 @@ public class JsonReader implements Closeable
             }
             catch (Exception e)
             {
-                error(dateStr, pos);
+                error("Unable to parse: " + dateStr + ", pos = " + pos, e);
             }
 
             if (matcher == null)
@@ -490,7 +494,7 @@ public class JsonReader implements Closeable
                 }
                 catch (Exception e)
                 {
-                    error(dateStr, pos);
+                    error("Unable to parse time: " + dateStr + ", pos = " + pos, e);
                 }
                 c.set(y, m, d, h, mn, s);
                 c.set(Calendar.MILLISECOND, ms);
@@ -521,7 +525,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = jObj.get("value");
             }
-            throw new IOException("String missing 'value' field, pos = " + jObj.pos);
+            return error("String missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -539,7 +543,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = classForName2((String) jObj.get("value"));
             }
-            throw new IOException("Class missing 'value' field, pos = " + jObj.pos);
+            return error("Class missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -557,7 +561,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = new BigInteger((String) jObj.get("value"));
             }
-            throw new IOException("BigInteger missing 'value' field, pos = " + jObj.pos);
+            return error("BigInteger missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -575,7 +579,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = new BigDecimal((String) jObj.get("value"));
             }
-            throw new IOException("BigDecimal missing 'value' field, pos = " + jObj.pos);
+            return error("BigDecimal missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -593,7 +597,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = new StringBuilder((String) jObj.get("value"));
             }
-            throw new IOException("StringBuilder missing 'value' field, pos = " + jObj.pos);
+            return error("StringBuilder missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -611,7 +615,7 @@ public class JsonReader implements Closeable
             {
                 return jObj.target = new StringBuffer((String) jObj.get("value"));
             }
-            throw new IOException("StringBuffer missing 'value' field, pos = " + jObj.pos);
+            return error("StringBuffer missing 'value' field, pos = " + jObj.pos);
         }
     }
 
@@ -623,7 +627,7 @@ public class JsonReader implements Closeable
             Object time = jObj.get("time");
             if (time == null)
             {
-                throw new IOException("java.sql.Timestamp must specify 'time' field, pos = " + jObj.pos);
+                error("java.sql.Timestamp must specify 'time' field, pos = " + jObj.pos);
             }
             Object nanos = jObj.get("nanos");
             if (nanos == null)
@@ -660,7 +664,7 @@ public class JsonReader implements Closeable
     {
         if (o == null)
         {
-            throw new IOException("Bug in json-io, null must be checked before calling this method.");
+            error("Bug in json-io, null must be checked before calling this method.");
         }
 
         if (_notCustom.contains(o.getClass()))
@@ -720,7 +724,7 @@ public class JsonReader implements Closeable
                 }
                 catch(Exception e)
                 {
-                    throw new IOException("Class listed in @type [" + typeStr + "] is not found, pos = " + jObj.pos);
+                    return error("Class listed in @type [" + typeStr + "] is not found, pos = " + jObj.pos, e);
                 }
             }
             else
@@ -1109,7 +1113,7 @@ public class JsonReader implements Closeable
                     JsonObject refObject = _objsRead.get(ref);
                     if (refObject == null)
                     {
-                        throw new IOException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jsonObj.pos);
+                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jsonObj.pos);
                     }
                     if (refObject.target != null)
                     {   // Array element with @ref to existing object
@@ -1186,7 +1190,7 @@ public class JsonReader implements Closeable
                     JsonObject refObject = _objsRead.get(ref);
                     if (refObject == null)
                     {
-                        throw new IOException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jsonObj.pos);
+                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jsonObj.pos);
                     }
                     copy.set(idx, refObject);
                 }
@@ -1263,7 +1267,7 @@ public class JsonReader implements Closeable
                     JsonObject refObject = _objsRead.get(ref);
                     if (refObject == null)
                     {
-                        throw new IOException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
+                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
                     }
 
                     if (refObject.target != null)
@@ -1314,7 +1318,7 @@ public class JsonReader implements Closeable
         {
             if (keys != items)
             {
-                throw new IOException("Map written where one of @keys or @items is empty, pos = " + jsonObj.pos);
+                error("Map written where one of @keys or @items is empty, pos = " + jsonObj.pos);
             }
             return;
         }
@@ -1322,7 +1326,7 @@ public class JsonReader implements Closeable
         int size = keys.length;
         if (size != items.length)
         {
-            throw new IOException("Map written with @keys and @items entries of different sizes, pos = " + jsonObj.pos);
+            error("Map written with @keys and @items entries of different sizes, pos = " + jsonObj.pos);
         }
 
         JsonObject jsonKeyCollection = new JsonObject();
@@ -1393,7 +1397,7 @@ public class JsonReader implements Closeable
                     JsonObject refObject = _objsRead.get(ref);
                     if (refObject == null)
                     {
-                        throw new IOException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
+                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
                     }
                     jsonObj.put(key, refObject);    // Update Map-of-Maps reference
                 }
@@ -1533,7 +1537,7 @@ public class JsonReader implements Closeable
                     JsonObject refObject = _objsRead.get(ref);
                     if (refObject == null)
                     {
-                        throw new IOException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
+                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value, pos = " + jObj.pos);
                     }
 
                     if (refObject.target != null)
@@ -1561,7 +1565,7 @@ public class JsonReader implements Closeable
         }
         catch (IllegalAccessException e)
         {
-            throw new IOException("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs + ", pos = " + jsonObj.pos);
+            error("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs + ", pos = " + jsonObj.pos, e);
         }
     }
 
@@ -1707,7 +1711,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        throw new IOException("Input is invalid JSON; does not start with '{' or '[', c=" + c);
+                        error("Input is invalid JSON; does not start with '{' or '[', c=" + c);
                     }
                     break;
 
@@ -1719,14 +1723,14 @@ public class JsonReader implements Closeable
                         c = skipWhitespaceRead();
                         if (c != ':')
                         {
-                            throw new IOException("Expected ':' between string field and value at position " + in.getPos());
+                            error("Expected ':' between string field and value at position " + in.getPos());
                         }
                         skipWhitespace();
                         state = STATE_READ_VALUE;
                     }
                     else
                     {
-                        throw new IOException("Expected quote at position " + in.getPos());
+                        error("Expected quote at position " + in.getPos());
                     }
                     break;
 
@@ -1752,7 +1756,7 @@ public class JsonReader implements Closeable
                     c = skipWhitespaceRead();
                     if (c == -1 && objectRead)
                     {
-                        throw new IOException("EOF reached before closing '}'");
+                        error("EOF reached before closing '}'");
                     }
                     if (c == '}' || c == -1)
                     {
@@ -1764,7 +1768,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        throw new IOException("Object not ended with '}' or ']' at position " + in.getPos());
+                        error("Object not ended with '}' or ']' at position " + in.getPos());
                     }
                     break;
             }
@@ -1824,9 +1828,9 @@ public class JsonReader implements Closeable
         }
         if (c == -1)
         {
-            throw new IOException("EOF reached prematurely");
+            error("EOF reached prematurely");
         }
-        throw new IOException("Unknown value type at position " + _in.getPos());
+        return error("Unknown value type at position " + _in.getPos());
     }
 
     /**
@@ -1852,7 +1856,7 @@ public class JsonReader implements Closeable
             }
             if (c != ',')
             {
-                throw new IOException("Expected ',' or ']' inside array at position " + _in.getPos());
+                error("Expected ',' or ']' inside array at position " + _in.getPos());
             }
         }
 
@@ -1874,14 +1878,14 @@ public class JsonReader implements Closeable
             int c = _in.read();
             if (c == -1)
             {
-                throw new IOException("EOF reached while reading token: " + token);
+                error("EOF reached while reading token: " + token);
             }
             c = Character.toLowerCase((char) c);
             int loTokenChar = token.charAt(i);
 
             if (loTokenChar != c)
             {
-                throw new IOException("Expected token: " + token + " at position " + _in.getPos());
+                error("Expected token: " + token + " at position " + _in.getPos());
             }
         }
 
@@ -1922,7 +1926,7 @@ public class JsonReader implements Closeable
                 }
                 else if (c == -1)
                 {
-                    throw new IOException("Reached EOF while reading number at position " + in.getPos());
+                    error("Reached EOF while reading number at position " + in.getPos());
                 }
                 else
                 {
@@ -1933,7 +1937,7 @@ public class JsonReader implements Closeable
         }
         catch (ArrayIndexOutOfBoundsException e)
         {
-            throw new IOException("Too many digits in number at position " + in.getPos());
+            error("Too many digits in number at position " + in.getPos(), e);
         }
 
         if (isFloat)
@@ -1945,7 +1949,7 @@ public class JsonReader implements Closeable
             }
             catch (NumberFormatException e)
             {
-                throw new IOException("Invalid floating point number at position " + in.getPos() + ", number: " + num);
+                error("Invalid floating point number at position " + in.getPos() + ", number: " + num, e);
             }
         }
         boolean isNeg = numBuf[0] == '-';
@@ -1980,7 +1984,7 @@ public class JsonReader implements Closeable
             int c = _in.read();
             if (c == -1)
             {
-                throw new IOException("EOF reached while reading JSON string");
+                error("EOF reached while reading JSON string");
             }
 
             switch (state)
@@ -2045,7 +2049,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        throw new IOException("Invalid character escape sequence specified at position " + _in.getPos());
+                        error("Invalid character escape sequence specified at position " + _in.getPos());
                     }
                     state = STATE_STRING_START;
                     break;
@@ -2063,7 +2067,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        throw new IOException("Expected hexadecimal digits at position " + _in.getPos());
+                        error("Expected hexadecimal digits at position " + _in.getPos());
                     }
                     break;
             }
@@ -2096,7 +2100,7 @@ public class JsonReader implements Closeable
                 }
                 catch (Exception e)
                 {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    throw new IOException("Could not instantiate " + c.getName(), e);
+                    error("Could not instantiate " + c.getName(), e);
                 }
             }
             Object[] values = fillArgs(paramTypes, useNull);
@@ -2106,7 +2110,7 @@ public class JsonReader implements Closeable
             }
             catch (Exception e)
             {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                throw new IOException("Could not instantiate " + c.getName(), e);
+                error("Could not instantiate " + c.getName(), e);
             }
         }
 
@@ -2143,7 +2147,7 @@ public class JsonReader implements Closeable
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
         {
-            throw new IOException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
+            error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
         // Try each constructor (private, protected, or public) with null values for non-primitives.
@@ -2174,7 +2178,8 @@ public class JsonReader implements Closeable
             { }
         }
 
-        throw new IOException("Could not instantiate " + c.getName() + " using any constructor");
+        error("Could not instantiate " + c.getName() + " using any constructor");
+        return null;
     }
 
     private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
@@ -2326,7 +2331,7 @@ public class JsonReader implements Closeable
             return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
         }
 
-        throw new IOException("Class '" + c.getName() + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
+        return error("Class '" + c.getName() + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
     }
 
     private static boolean isDigit(int c)
@@ -2343,7 +2348,7 @@ public class JsonReader implements Closeable
     {
         if (name == null || name.isEmpty())
         {
-            throw new IOException("Invalid class name specified, position: " + _in.getPos());
+            error("Invalid class name specified, position: " + _in.getPos());
         }
         try
         {
@@ -2352,7 +2357,7 @@ public class JsonReader implements Closeable
         }
         catch (ClassNotFoundException e)
         {
-            throw new IOException("Class instance '" + name + "' could not be created at position " + _in.getPos());
+            return (Class) error("Class instance '" + name + "' could not be created at position " + _in.getPos(), e);
         }
     }
 
@@ -2360,7 +2365,7 @@ public class JsonReader implements Closeable
     {
         if (name == null || name.isEmpty())
         {
-            throw new IOException("Empty class name.");
+            error("Empty class name.");
         }
         try
         {
@@ -2369,7 +2374,8 @@ public class JsonReader implements Closeable
         }
         catch (ClassNotFoundException e)
         {
-            throw new IOException("Class instance '" + name + "' could not be created.");
+            error("Class instance '" + name + "' could not be created.", e);
+            return null;
         }
     }
 
@@ -2526,7 +2532,7 @@ public class JsonReader implements Closeable
                     }
                     catch (Exception e)
                     {
-                        throw new IOException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId);
+                        error("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
                     }
                 }
             }
@@ -2557,7 +2563,7 @@ public class JsonReader implements Closeable
                 out.append("\n\n");
                 count++;
             }
-            throw new IOException(out.toString());
+            error(out.toString());
         }
     }
 
@@ -2602,11 +2608,31 @@ public class JsonReader implements Closeable
         }
     }
 
+    private static Object error(String msg) throws IOException
+    {
+        throw new IOException(msg + "\nLast read: " + getLastWritten());
+    }
+
+    private static Object error(String msg, Exception e) throws IOException
+    {
+        throw new IOException(msg + "\nLast read: " + getLastWritten(), e);
+    }
+
+    private static String getLastWritten()
+    {
+        StringBuilder s = new StringBuilder();
+        for (char[] chars : _snippet.get())
+        {
+            s.append(chars);
+        }
+        return s.toString();
+    }
+
     /**
      * This is a performance optimization.  The lowest 128 characters are re-used.
      *
      * @param c char to match to a Character.
-     * @return a Character that matches the passed in char.  If the valuye is
+     * @return a Character that matches the passed in char.  If the value is
      *         less than 127, then the same Character instances are re-used.
      */
     private static Character valueOf(char c)
@@ -2640,7 +2666,7 @@ public class JsonReader implements Closeable
 
     /**
      * This class adds significant performance increase over using the JDK
-     * PushbackReader.  This is due to this class not using syncrhonization
+     * PushbackReader.  This is due to this class not using synchronization
      * as it is not needed.
      */
     private static class FastPushbackReader extends FilterReader
@@ -2652,6 +2678,7 @@ public class JsonReader implements Closeable
         private FastPushbackReader(Reader reader, int size)
         {
             super(reader);
+            _snippet.get().clear();
             if (size <= 0)
             {
                 throw new IllegalArgumentException("size <= 0");
@@ -2672,22 +2699,37 @@ public class JsonReader implements Closeable
 
         public int read() throws IOException
         {
+            int ch;
             _pos++;
             if (_idx < _buf.length)
-            {
-                return _buf[_idx++];
+            {   // read from push-back buffer
+                ch = _buf[_idx++];
             }
-            return super.read();
+            else
+            {
+                ch = super.read();
+            }
+            if (ch > 0)
+            {
+                Deque<char[]> buffer = _snippet.get();
+                buffer.addLast(toChars(ch));
+                if (buffer.size() > 100)
+                {
+                    buffer.removeFirst();
+                }
+            }
+            return ch;
         }
 
         public void unread(int c) throws IOException
         {
             if (_idx == 0)
             {
-                throw new IOException("unread(int c) called more than buffer size (" + _buf.length + "), position = " + _pos);
+                error("unread(int c) called more than buffer size (" + _buf.length + "), position = " + _pos);
             }
             _pos--;
             _buf[--_idx] = c;
+            _snippet.get().removeLast();
         }
 
         /**

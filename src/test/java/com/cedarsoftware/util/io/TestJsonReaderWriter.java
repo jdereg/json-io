@@ -50,6 +50,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -73,7 +74,7 @@ import static org.junit.Assert.assertTrue;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -5579,6 +5580,20 @@ public class TestJsonReaderWriter
         assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
         assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
         assertEquals(exp.get(Calendar.DAY_OF_MONTH), act.get(Calendar.DAY_OF_MONTH));
+    }
+
+    @Test
+    public void testErrorReporting() throws IOException
+    {
+        String json = "[{\"@type\":\"funky\"}]";
+        try
+        {
+            JsonReader.jsonToJava(json);
+            fail("Should not make it here");
+        }
+        catch (IOException e)
+        {
+        }
     }
 
     @Test
