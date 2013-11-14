@@ -1563,7 +1563,7 @@ public class JsonReader implements Closeable
                 field.set(target, newPrimitiveWrapper(fieldType, rhs));
             }
         }
-        catch (IllegalAccessException e)
+        catch (Exception e)
         {
             error("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs + ", pos = " + jsonObj.pos, e);
         }
