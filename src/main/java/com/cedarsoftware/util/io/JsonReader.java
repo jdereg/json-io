@@ -105,10 +105,12 @@ public class JsonReader implements Closeable
     private static final Class[] _emptyClassArray = new Class[]{};
     private static final List<Object[]> _readers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
+    private static final Map<String, String> _months = new LinkedHashMap<String, String>();
     private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
     private static final Pattern _datePattern1 = Pattern.compile("^(\\d{4})[\\./-](\\d{1,2})[\\./-](\\d{1,2})");
     private static final Pattern _datePattern2 = Pattern.compile("^(\\d{1,2})[\\./-](\\d{1,2})[\\./-](\\d{4})");
-    // private static final Pattern _datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,](Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
@@ -230,6 +232,32 @@ public class JsonReader implements Closeable
         ClassFactory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
+
+        // Month name to number map
+        _months.put("jan", "1");
+        _months.put("january", "1");
+        _months.put("feb", "2");
+        _months.put("february", "2");
+        _months.put("mar", "3");
+        _months.put("march", "3");
+        _months.put("apr", "4");
+        _months.put("april", "4");
+        _months.put("may", "5");
+        _months.put("jun", "6");
+        _months.put("june", "6");
+        _months.put("jul", "7");
+        _months.put("july", "7");
+        _months.put("aug", "8");
+        _months.put("august", "8");
+        _months.put("sep", "9");
+        _months.put("sept", "9");
+        _months.put("september", "9");
+        _months.put("oct", "10");
+        _months.put("october", "10");
+        _months.put("nov", "11");
+        _months.put("november", "11");
+        _months.put("dec", "12");
+        _months.put("december", "12");
     }
 
     public interface JsonClassReader
@@ -423,7 +451,7 @@ public class JsonReader implements Closeable
             // Determine which date pattern (Matcher) to use
             Matcher matcher = _datePattern1.matcher(dateStr);
 
-            String year, month, day;
+            String year, month = null, day, mon = null;
 
             if (matcher.find())
             {
@@ -434,13 +462,42 @@ public class JsonReader implements Closeable
             else
             {
                 matcher = _datePattern2.matcher(dateStr);
-                if (!matcher.find())
+                if (matcher.find())
                 {
-                    error("Unable to parse: " + dateStr);
+                    month = matcher.group(1);
+                    day = matcher.group(2);
+                    year = matcher.group(3);
                 }
-                month = matcher.group(1);
-                day = matcher.group(2);
-                year = matcher.group(3);
+                else
+                {
+                    matcher = _datePattern3.matcher(dateStr);
+                    if (matcher.find())
+                    {
+                        mon = matcher.group(1);
+                        day = matcher.group(2);
+                        year = matcher.group(3);
+                    }
+                    else
+                    {
+                        matcher = _datePattern4.matcher(dateStr);
+                        if (!matcher.find())
+                        {
+                            error("Unable to parse: " + dateStr);
+                        }
+                        day = matcher.group(1);
+                        mon = matcher.group(2);
+                        year = matcher.group(3);
+                    }
+                }
+            }
+
+            if (mon != null)
+            {
+                month = _months.get(mon.trim().toLowerCase());
+                if (month == null)
+                {
+                    error("Unable to parse month portion of date: " + dateStr);
+                }
             }
 
             // Determine which date pattern (Matcher) to use
