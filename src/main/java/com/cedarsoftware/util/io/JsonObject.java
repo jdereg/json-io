@@ -38,7 +38,8 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     boolean isMap = false;
     String type;
     long id = -1;
-    long pos = -1;   // Parse position of Object (used for error messages)
+    int line;
+    int col;
 
     public long getId()
     {
@@ -118,7 +119,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             String s = (String) get("value");
             return s.charAt(0);
         }
-        throw new IOException("Invalid primitive type, pos = " + pos);
+        return JsonReader.error("Invalid primitive type");
     }
 
     // Map APIs
@@ -207,7 +208,8 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             Object[] items = (Object[]) get("@items");
             return items == null ? 0 : items.length;
         }
-        throw new IOException("getLength() called on a non-collection, pos = " + pos);
+        JsonReader.error("getLength() called on a non-collection");
+        return 0;   // will never be reached
     }
 
     public Class getComponentType()
@@ -267,8 +269,28 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         remove("@items");
     }
 
+    /**
+     * @Deprecated use getLine() and getCol() to determine where this object was read from in the JSON stream.
+     * @return int line number where this object was read from
+     */
     public long getPos()
     {
-        return pos;
+        return line;
+    }
+
+    /**
+     * @return int line where this object '{' started in the JSON stream
+     */
+    public int getLine()
+    {
+        return line;
+    }
+
+    /**
+     * @return int column where this object '{' started in the JSON stream
+     */
+    public int getCol()
+    {
+        return col;
     }
 }

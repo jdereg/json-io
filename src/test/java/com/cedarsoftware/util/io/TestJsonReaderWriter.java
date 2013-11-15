@@ -5585,7 +5585,7 @@ public class TestJsonReaderWriter
     @Test
     public void testErrorReporting() throws IOException
     {
-        String json = "[{\"@type\":\"funky\"}]";
+        String json = "[{\"@type\":\"funky\"},\n{\"field:\"value\"]";
         try
         {
             JsonReader.jsonToJava(json);
@@ -5618,7 +5618,7 @@ public class TestJsonReaderWriter
         }
     }
 
-    private String getJsonString(Object obj) throws Exception
+    private static String getJsonString(Object obj) throws Exception
     {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         JsonWriter jsonWriter = new JsonWriter(bout);
@@ -5654,7 +5654,7 @@ public class TestJsonReaderWriter
         return json;
     }
 
-    private Object readJsonObject(String json) throws Exception
+    private static Object readJsonObject(String json) throws Exception
     {    
         long startRead1 = System.nanoTime();
         Object o = JsonReader.jsonToJava(json);
