@@ -1569,6 +1569,25 @@ public class JsonReader implements Closeable
                 if (rhs instanceof JsonObject)
                 {
                     JsonObject map = (JsonObject) rhs;
+                    if (!map.containsKey("@keys"))
+                    {
+                        Object[] keys = new Object[map.keySet().size()];
+                        Object[] values = new Object[map.keySet().size()];
+                        int i=0;
+                        for (Object e : map.entrySet())
+                        {
+                            Map.Entry entry = (Map.Entry)e;
+                            keys[i] = entry.getKey();
+                            values[i] = entry.getValue();
+                            i++;
+                        }
+                        String saveType = map.getType();
+                        map.clear();
+                        map.setType(saveType);
+                        map.put("@keys", keys);
+                        map.put("@values", values);
+                    }
+
                     if (map.get("@keys") instanceof Object[])
                     {
                         Object[] keys = (Object[]) map.get("@keys");
