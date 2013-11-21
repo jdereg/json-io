@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -8,6 +9,7 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.junit.runners.MethodSorters;
 
+import java.awt.Point;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,6 +19,9 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -74,7 +79,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -2544,6 +2549,12 @@ public class TestJsonReaderWriter
             _cache = new Object[] {"true", "true", "golf", "golf"};
             _poly = "Poly";
         }
+    }
+
+    @Test
+    public void testFoo() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestString\",\"_range\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f !\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abc\",\"_utf8HandBuilt\":\"𝀀\",\"_strArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objStrArray\":{\"@type\":\"[Ljava.lang.String;\",\"@items\":[\"1st\",\"2nd\",null,null,\"3rd\"]},\"_cache\":[\"true\",\"true\",\"golf\",\"golf\"],\"_poly\":{\"@type\":\"string\",\"value\":\"Poly\"},\"_null\":null}";
     }
 
     @Test
@@ -5635,6 +5646,83 @@ public class TestJsonReaderWriter
         catch (IOException e)
         {
         }
+    }
+
+    @Test
+    public void testAlwaysShowType() throws Exception
+    {
+        TestObject btc = new TestObject("Bitcoin");
+        TestObject sat = new TestObject("Satoshi");
+        btc._other = sat;
+        Map args = new HashMap();
+        args.put(JsonWriter.TYPE, true);
+        String json0 = JsonWriter.objectToJson(btc, args);
+        TestObject thatBtc = (TestObject) readJsonObject(json0);
+        assertTrue(DeepEquals.deepEquals(btc, thatBtc));
+        String json1 = JsonWriter.objectToJson(btc);
+        assertTrue(json0.length() > json1.length());
+
+        TestArray ta = new TestArray();
+        ta.init();
+        json0 = JsonWriter.objectToJson(ta, args);
+        TestArray thatTa = (TestArray) readJsonObject(json0);
+//        assertTrue(DeepEquals.deepEquals(ta, thatTa));
+        json1 = JsonWriter.objectToJson(ta);
+        System.out.println("json0 = " + json0);
+        System.out.println("json1 = " + json1);
+        assertTrue(json0.length() > json1.length());
+
+        TestFields tf = new TestFields();
+        tf.init();
+        json0 = JsonWriter.objectToJson(tf, args);
+        json1 = JsonWriter.objectToJson(tf);
+        assertTrue(json0.length() > json1.length());
+
+        TestCollection tc = new TestCollection();
+        tc.init();
+        json0 = JsonWriter.objectToJson(tc, args);
+        json1 = JsonWriter.objectToJson(tc);
+        System.out.println("json0 = " + json0);
+        System.out.println("json1 = " + json1);
+        assertTrue(json0.length() > json1.length());
+    }
+
+    @Test
+    public void testFunnyChars() throws Exception
+    {
+        String json = "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0004\"]}";
+        char[] chars = (char[]) readJsonObject(json);
+        System.out.println("chars = " + chars);
+    }
+
+    static class PointList
+    {
+        List<Point> points;
+    }
+
+    @Test
+    public void testGenericInfoCollection() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$PointList\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
+        PointList list = (PointList) readJsonObject(json);
+        assertTrue(list.points.size() == 1);
+        Point p1 = list.points.get(0);
+        assertTrue(p1.x == 1 && p1.y == 2);
+    }
+
+    static class PointMap
+    {
+        Map<Point, Point> points;
+    }
+
+    @Test
+    public void testGenericInfoMap() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$PointMap\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
+        PointMap pointMap = (PointMap) readJsonObject(json);
+        assertTrue(pointMap.points.size() == 1);
+        Point p1 = pointMap.points.get(new Point(10, 20));
+        assertTrue(p1.x == 1 && p1.y == 2);
     }
 
     @Test

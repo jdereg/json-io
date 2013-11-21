@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.sun.xml.internal.ws.wsdl.writer.document.ParamType;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -12,6 +14,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -95,13 +99,6 @@ public class JsonReader implements Closeable
     private static final Set<Class> _prims = new HashSet<Class>();
     private static final Map<Class, Object[]> _constructors = new HashMap<Class, Object[]>();
     private static final Map<String, Class> _nameToClass = new HashMap<String, Class>();
-    private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
-    private final Collection<UnresolvedReference> _unresolvedRefs = new ArrayList<UnresolvedReference>();
-    private final Collection<Object[]> _prettyMaps = new ArrayList<Object[]>();
-    private final FastPushbackReader _in;
-    private boolean _noObjects = false;
-    private final char[] _numBuf = new char[256];
-    private final StringBuilder _strBuf = new StringBuilder();
     private static final Class[] _emptyClassArray = new Class[]{};
     private static final List<Object[]> _readers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
@@ -114,6 +111,15 @@ public class JsonReader implements Closeable
     private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
+
+    private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
+    private final Collection<UnresolvedReference> _unresolvedRefs = new ArrayList<UnresolvedReference>();
+    private final Collection<Object[]> _prettyMaps = new ArrayList<Object[]>();
+    private final FastPushbackReader _in;
+    private boolean _noObjects = false;
+    private final char[] _numBuf = new char[256];
+    private final StringBuilder _strBuf = new StringBuilder();
+
     static final ThreadLocal<Deque<char[]>> _snippet = new ThreadLocal<Deque<char[]>>()
     {
         public Deque<char[]> initialValue()
@@ -1547,6 +1553,36 @@ public class JsonReader implements Closeable
         try
         {
             Class fieldType = field.getType();
+
+            if (Collection.class.isAssignableFrom(fieldType))
+            {   // Process Collection (and potentially generic objects within it) by marketing contained items with
+                // template info if it exists, and the items do not have @type specified on them.
+                if (rhs instanceof JsonObject)
+                {
+                    JsonObject col = (JsonObject) rhs;
+                    Object[] items = col.getArray();
+                    markSubobjectTypes(field, items, 0);
+                }
+            }
+            else if (Map.class.isAssignableFrom(fieldType))
+            {
+                if (rhs instanceof JsonObject)
+                {
+                    JsonObject map = (JsonObject) rhs;
+                    if (map.get("@keys") instanceof Object[])
+                    {
+                        Object[] keys = (Object[]) map.get("@keys");
+                        markSubobjectTypes(field, keys, 0);
+                    }
+                    if (map.get("@items") instanceof Object[])
+                    {
+                        Object[] values = (Object[]) map.get("@items");
+                        markSubobjectTypes(field, values, 1);
+                    }
+                }
+            }
+
+
             if (rhs instanceof JsonObject)
             {   // Ensure .type field set on JsonObject
                 JsonObject job = (JsonObject) rhs;
@@ -1636,6 +1672,43 @@ public class JsonReader implements Closeable
         catch (Exception e)
         {
             error("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs, e);
+        }
+    }
+
+    /**
+     * Mark the @type field on JsonObject's that have no type information,
+     * no target, but where the Field generic type information contains the
+     * type of the enclosed objects.
+     * @param field Field instance containing the Generic info of the Collection that holds the enclosed objects.
+     * @param items Object[] of JsonObjects that may be type-less.
+     * @param typeArg Used to indicate whether to use type argument 0 or 1 (Collection or Map).
+     */
+    private void markSubobjectTypes(Field field, Object[] items, int typeArg)
+    {
+        if (items == null || items.length == 0)
+        {
+            return;
+        }
+        for (Object o : items)
+        {
+            if (o instanceof JsonObject)
+            {
+                JsonObject item = (JsonObject) o;
+                String type = item.getType();
+                if (type == null || type.isEmpty())
+                {
+                    if (field.getGenericType() instanceof ParameterizedType)
+                    {
+                        ParameterizedType paramType = (ParameterizedType) field.getGenericType();
+                        Type[] typeArgs = paramType.getActualTypeArguments();
+                        if (typeArgs != null && typeArgs.length > typeArg && typeArgs[typeArg] instanceof Class)
+                        {
+                            Class c = (Class) typeArgs[typeArg];
+                            item.setType(c.getName());
+                        }
+                    }
+                }
+            }
         }
     }
 

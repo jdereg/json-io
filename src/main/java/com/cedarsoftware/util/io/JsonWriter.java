@@ -79,12 +79,13 @@ public class JsonWriter implements Closeable, Flushable
     public static final String DATE_FORMAT = "DATE_FORMAT";
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    private final Map<Object, Long> _objVisited = new IdentityHashMap<Object, Long>();
-    private final Map<Object, Long> _objsReferenced = new IdentityHashMap<Object, Long>();
+    public static final String TYPE = "TYPE";
     private static final Map<String, ClassMeta> _classMetaCache = new HashMap<String, ClassMeta>();
     private static final List<Object[]> _writers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
     private static Object[] _byteStrings = new Object[256];
+    private final Map<Object, Long> _objVisited = new IdentityHashMap<Object, Long>();
+    private final Map<Object, Long> _objsReferenced = new IdentityHashMap<Object, Long>();
     private final Writer _out;
     private long _identity = 1;
     static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
@@ -679,8 +680,9 @@ public class JsonWriter implements Closeable, Flushable
         {
             try
             {
-                if (JsonReader.isPrimitive(field.getType()))
-                {    // speed up: primitives cannot reference another object
+                final Class<?> type = field.getType();
+                if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type))
+                {    // speed up: primitives (Dates/Strings considered primitive by json-io) cannot reference another object
                     continue;
                 }
 
@@ -959,7 +961,7 @@ public class JsonWriter implements Closeable, Flushable
                 {   // Specific Class-type arrays - only force type when
                     // the instance is derived from array base class.
                     boolean forceType = !(value.getClass() == componentClass);
-                    writeImpl(value, forceType);
+                    writeImpl(value, forceType || alwaysShowType());
                 }
 
                 if (i != lenMinus1)
@@ -974,6 +976,14 @@ public class JsonWriter implements Closeable, Flushable
         {
             out.write('}');
         }
+    }
+
+    /**
+     * @return true if the user set the 'TYPE' flag to true, indicating to always show type.
+     */
+    private boolean alwaysShowType()
+    {
+        return Boolean.TRUE.equals(_args.get().get(TYPE));
     }
 
     private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException
@@ -1231,7 +1241,7 @@ public class JsonWriter implements Closeable, Flushable
             {   // Specific Class-type arrays - only force type when
                 // the instance is derived from array base class.
                 boolean forceType = !(value.getClass() == componentClass);
-                writeImpl(value, forceType);
+                writeImpl(value, forceType || alwaysShowType());
             }
 
             if (i != lenMinus1)
@@ -1669,7 +1679,7 @@ public class JsonWriter implements Closeable, Flushable
             else if (writeIfMatching(o, forceType, out)) { }
             else
             {
-                writeImpl(o, forceType);
+                writeImpl(o, forceType || alwaysShowType());
             }
         }
 

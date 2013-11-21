@@ -270,9 +270,11 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     }
 
     /**
-     * @Deprecated use getLine() and getCol() to determine where this object was read from in the JSON stream.
+     * This method is deprecated. Use getLine() and getCol() to determine where this object was read
+     * from in the JSON stream.
      * @return int line number where this object was read from
      */
+    @Deprecated
     public long getPos()
     {
         return line;
