@@ -1387,6 +1387,7 @@ public class JsonReader implements Closeable
     private void traverseMap(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         // Convert @keys to a Collection of Java objects.
+        convertMapToKeysItems(jsonObj);
         Object[] keys = (Object[]) jsonObj.get("@keys");
         Object[] items = jsonObj.getArray();
 
@@ -1569,24 +1570,7 @@ public class JsonReader implements Closeable
                 if (rhs instanceof JsonObject)
                 {
                     JsonObject map = (JsonObject) rhs;
-                    if (!map.containsKey("@keys"))
-                    {
-                        Object[] keys = new Object[map.keySet().size()];
-                        Object[] values = new Object[map.keySet().size()];
-                        int i=0;
-                        for (Object e : map.entrySet())
-                        {
-                            Map.Entry entry = (Map.Entry)e;
-                            keys[i] = entry.getKey();
-                            values[i] = entry.getValue();
-                            i++;
-                        }
-                        String saveType = map.getType();
-                        map.clear();
-                        map.setType(saveType);
-                        map.put("@keys", keys);
-                        map.put("@values", values);
-                    }
+                    convertMapToKeysItems(map);
 
                     if (map.get("@keys") instanceof Object[])
                     {
@@ -1691,6 +1675,33 @@ public class JsonReader implements Closeable
         catch (Exception e)
         {
             error("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs, e);
+        }
+    }
+
+    /**
+     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
+     * to have its keys placed into @keys, and its values placed into @items.
+     * @param map Map to convert
+     */
+    private void convertMapToKeysItems(JsonObject map)
+    {
+        if (!map.containsKey("@keys") && !map.containsKey("@ref"))
+        {
+            Object[] keys = new Object[map.keySet().size()];
+            Object[] values = new Object[map.keySet().size()];
+            int i=0;
+            for (Object e : map.entrySet())
+            {
+                Map.Entry entry = (Map.Entry)e;
+                keys[i] = entry.getKey();
+                values[i] = entry.getValue();
+                i++;
+            }
+            String saveType = map.getType();
+            map.clear();
+            map.setType(saveType);
+            map.put("@keys", keys);
+            map.put("@items", values);
         }
     }
 

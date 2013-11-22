@@ -5703,7 +5703,8 @@ public class TestJsonReaderWriter
     @Test
     public void testGenericInfoCollection() throws Exception
     {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$PointList\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
+        String className = PointList.class.getName();
+        String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
         PointList list = (PointList) readJsonObject(json);
         assertTrue(list.points.size() == 1);
         Point p1 = list.points.get(0);
@@ -5718,7 +5719,8 @@ public class TestJsonReaderWriter
     @Test
     public void testGenericInfoMap() throws Exception
     {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$PointMap\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
+        String className = PointMap.class.getName();
+        String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
         PointMap pointMap = (PointMap) readJsonObject(json);
         assertTrue(pointMap.points.size() == 1);
         Point p1 = pointMap.points.get(new Point(10, 20));

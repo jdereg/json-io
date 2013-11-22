@@ -53,7 +53,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public void setType(String type)
     {
-        this.type = type.intern();
+        this.type = type != null ? type.intern() : null;
     }
 
     public String getType()
@@ -294,5 +294,47 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     public int getCol()
     {
         return col;
+    }
+
+    public int size()
+    {
+        if (containsKey("@keys"))
+        {
+            Object value = get("@keys");
+            if (value instanceof Object[])
+            {
+                return ((Object[])value).length;
+            }
+            else if (value == null)
+            {
+                return 0;
+            }
+            else
+            {
+                throw new IllegalStateException("JsonObject with @keys, but no array [] associated to it.");
+            }
+        }
+        else if (containsKey("@items"))
+        {
+            Object value = get("@items");
+            if (value instanceof Object[])
+            {
+                return ((Object[])value).length;
+            }
+            else if (value == null)
+            {
+                return 0;
+            }
+            else
+            {
+                throw new IllegalStateException("JsonObject with @items, but no array [] associated to it.");
+            }
+        }
+        else if (containsKey("@ref"))
+        {
+            return 0;
+        }
+
+        return super.size();
     }
 }
