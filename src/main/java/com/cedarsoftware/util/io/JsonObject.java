@@ -248,12 +248,13 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             id = (Long) value;
             return (V) oldId;
         }
-        else if ("@items".equals(key) || "@keys".equals(key))
+        else if ("@items".equals(key) && containsKey("@keys"))
         {
-            if (containsKey("@items") && containsKey("@keys"))
-            {
-                isMap = true;
-            }
+            isMap = true;
+        }
+        else if ("@keys".equals(key) && containsKey("@items"))
+        {
+            isMap = true;
         }
         return super.put(key, value);
     }

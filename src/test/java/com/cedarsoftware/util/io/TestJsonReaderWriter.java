@@ -5728,6 +5728,46 @@ public class TestJsonReaderWriter
     }
 
     @Test
+    public void testGenericMap() throws Exception
+    {
+        String json = "{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}}";
+        println("json = " + json);
+        Map root = (Map) JsonReader.jsonToJava(json);
+        Map traits = (Map) root.get("traits");
+        Map uiAttributes = (Map) traits.get("ui:attributes");
+        String label = (String) uiAttributes.get("label");
+        assertEquals("Risk Type", label);
+        Map dbAttributes = (Map) traits.get("db:attributes");
+        String col = (String) dbAttributes.get("column");
+        assertEquals("QUOTE_ID", col);
+        String value = (String) traits.get("r:value");
+        assertEquals("risk", value);
+    }
+
+    @Test
+    public void testGenericArrayWithMap() throws Exception
+    {
+        String json = "[{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}},{\"key1\":1,\"key2\":2}]";
+        println("json = " + json);
+        Object[] root = (Object[]) JsonReader.jsonToJava(json);
+        Map traits = (Map) root[0];
+        traits = (Map) traits.get("traits");
+        Map uiAttributes = (Map) traits.get("ui:attributes");
+        String label = (String) uiAttributes.get("label");
+        assertEquals("Risk Type", label);
+        Map dbAttributes = (Map) traits.get("db:attributes");
+        String col = (String) dbAttributes.get("column");
+        assertEquals("QUOTE_ID", col);
+        String value = (String) traits.get("r:value");
+        assertEquals("risk", value);
+
+        Map two = (Map) root[1];
+        assertEquals(two.size(), 2);
+        assertEquals(two.get("key1"), 1L);
+        assertEquals(two.get("key2"), 2L);
+    }
+
+    @Test
     public void testZTimings()
     {
         println("Total json-io read  = " + (_totalJsonRead / 1000000.0) + " ms");

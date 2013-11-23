@@ -1824,6 +1824,21 @@ public class JsonReader implements Closeable
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
             }
+            else if (clazz == Object.class)
+            {
+                if (jsonObj.isMap())
+                {
+                    mate = new LinkedHashMap();
+                }
+                else if (jsonObj.size() > 0)
+                {
+                    mate = new LinkedHashMap();
+                }
+                else
+                {
+                    mate = newInstance(clazz);
+                }
+            }
             else
             {
                 mate = newInstance(clazz);
