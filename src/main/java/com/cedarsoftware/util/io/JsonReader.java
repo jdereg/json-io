@@ -876,6 +876,7 @@ public class JsonReader implements Closeable
      * @return Java object graph matching JSON input, or null if an
      *         error occurred.
      */
+    @Deprecated
     public static Object toJava(String json)
     {
         try
@@ -914,6 +915,7 @@ public class JsonReader implements Closeable
      * @return Java object graph of Maps matching JSON input,
      *         or null if an error occurred.
      */
+    @Deprecated
     public static Map toMaps(String json)
     {
         try

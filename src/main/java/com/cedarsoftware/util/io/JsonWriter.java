@@ -135,6 +135,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * @see JsonWriter#toJson(Object, java.util.Map)
      */
+    @Deprecated
     public static String toJson(Object item)
     {
         return toJson(item, new HashMap<String, Object>());
