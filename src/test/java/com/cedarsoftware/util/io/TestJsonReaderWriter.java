@@ -19,9 +19,6 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -5015,12 +5012,15 @@ public class TestJsonReaderWriter
     @Test
     public void testMapToMapCompatibility() throws Exception
     {
-        String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"ZYKLUS\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BIS\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"ZYKLUS\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BIS\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
+        String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
         JsonObject root = (JsonObject) JsonReader.jsonToMaps(json0);
         String json1 = getJsonString(root);
+        JsonObject root2 = (JsonObject) JsonReader.jsonToMaps(json1);
+        assertTrue(DeepEquals.deepEquals(root, root2));
+
+        // Will be different because @keys and @items get inserted during processing
         println("json0=" + json0);
         println("json1=" + json1);
-        assertTrue(json0.equals(json1));
     }
 
     @Test
@@ -5666,10 +5666,10 @@ public class TestJsonReaderWriter
         ta.init();
         json0 = JsonWriter.objectToJson(ta, args);
         TestArray thatTa = (TestArray) readJsonObject(json0);
-//        assertTrue(DeepEquals.deepEquals(ta, thatTa));
+        assertTrue(DeepEquals.deepEquals(ta, thatTa));
         json1 = JsonWriter.objectToJson(ta);
-        System.out.println("json0 = " + json0);
-        System.out.println("json1 = " + json1);
+        println("json0 = " + json0);
+        println("json1 = " + json1);
         assertTrue(json0.length() > json1.length());
 
         TestFields tf = new TestFields();
@@ -5682,8 +5682,8 @@ public class TestJsonReaderWriter
         tc.init();
         json0 = JsonWriter.objectToJson(tc, args);
         json1 = JsonWriter.objectToJson(tc);
-        System.out.println("json0 = " + json0);
-        System.out.println("json1 = " + json1);
+        println("json0 = " + json0);
+        println("json1 = " + json1);
         assertTrue(json0.length() > json1.length());
     }
 
@@ -5692,7 +5692,58 @@ public class TestJsonReaderWriter
     {
         String json = "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0004\"]}";
         char[] chars = (char[]) readJsonObject(json);
-        System.out.println("chars = " + chars);
+        assertEquals(chars.length, 3);
+        assertEquals(chars[0], 'a');
+        assertEquals(chars[1], '\t');
+        assertEquals(chars[2], '\u0004');
+    }
+
+    static class CharArrayTest
+    {
+        char[] chars_a;
+        Character[] chars_b;
+    }
+
+    @Test
+    public void testCharArray() throws Exception
+    {
+        CharArrayTest cat = new CharArrayTest();
+        cat.chars_a = new char[]{'a', '\t', '\u0005'};
+        cat.chars_b = new Character[]{'b', '\t', '\u0002'};
+
+        Map args = new HashMap();
+        args.put(JsonWriter.TYPE, true);
+        String json0 = JsonWriter.objectToJson(cat, args);
+        println(json0);
+
+        CharArrayTest cat2 = (CharArrayTest) readJsonObject(json0);
+        char[] chars_a = cat2.chars_a;
+        assertEquals(chars_a.length, 3);
+        assertEquals(chars_a[0], 'a');
+        assertEquals(chars_a[1], '\t');
+        assertEquals(chars_a[2], '\u0005');
+
+        Character[] chars_b = cat2.chars_b;
+        assertEquals(chars_b.length, 3);
+        assertTrue(chars_b[0] == 'b');
+        assertTrue(chars_b[1] == '\t');
+        assertTrue(chars_b[2] =='\u0002');
+
+        String json1 = JsonWriter.objectToJson(cat);
+        println(json1);
+
+        cat2 = (CharArrayTest) readJsonObject(json0);
+        chars_a = cat2.chars_a;
+        assertEquals(chars_a.length, 3);
+        assertEquals(chars_a[0], 'a');
+        assertEquals(chars_a[1], '\t');
+        assertEquals(chars_a[2], '\u0005');
+
+        chars_b = cat2.chars_b;
+        assertEquals(chars_b.length, 3);
+        assertTrue(chars_b[0] == 'b');
+        assertTrue(chars_b[1] == '\t');
+        assertTrue(chars_b[2] =='\u0002');
     }
 
     static class PointList

@@ -229,6 +229,28 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
     }
 
+    void moveCharsToMate()
+    {
+        Object[] items = getArray();
+        if (items == null)
+        {
+             target = null;
+        }
+        else if (items.length == 0)
+        {
+            target = new char[0];
+        }
+        else if (items.length == 1)
+        {
+            String s = (String) items[0];
+            target = s.toCharArray();
+        }
+        else
+        {
+            throw new IllegalStateException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
+        }
+    }
+
     public V put(K key, V value)
     {
         if (key == null)

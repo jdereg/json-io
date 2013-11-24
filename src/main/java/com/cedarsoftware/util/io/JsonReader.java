@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.sun.xml.internal.ws.wsdl.writer.document.ParamType;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -1116,6 +1114,11 @@ public class JsonReader implements Closeable
 
         Class compType = jsonObj.getComponentType();
 
+        if (char.class == compType)
+        {
+            return;
+        }
+
         if (byte.class == compType)
         {   // Handle byte[] special for performance boost.
             jsonObj.moveBytesToMate();
@@ -1215,7 +1218,7 @@ public class JsonReader implements Closeable
                 Array.set(array, i, element);
             }
         }
-        jsonObj.remove("@items");   // Reduce memory requirements while processing
+        jsonObj.clearArray();
     }
 
     /**
@@ -1585,7 +1588,6 @@ public class JsonReader implements Closeable
                 }
             }
 
-
             if (rhs instanceof JsonObject)
             {   // Ensure .type field set on JsonObject
                 JsonObject job = (JsonObject) rhs;
@@ -1771,7 +1773,15 @@ public class JsonReader implements Closeable
             {    // Handle []
                 Object[] items = jsonObj.getArray();
                 int size = (items == null) ? 0 : items.length;
-                mate = Array.newInstance(c.getComponentType(), size);
+                if (c == char[].class)
+                {
+                    jsonObj.moveCharsToMate();
+                    mate = jsonObj.target;
+                }
+                else
+                {
+                    mate = Array.newInstance(c.getComponentType(), size);
+                }
             }
             else
             {    // Handle regular field.object reference
@@ -1807,7 +1817,7 @@ public class JsonReader implements Closeable
 
             // if @items is specified, it must be an [] type.
             // if clazz.isArray(), then it must be an [] type.
-            if (clazz.isArray() || (items != null && clazz == Object.class))
+            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey("@keys")))
             {
                 int size = (items == null) ? 0 : items.length;
                 mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
@@ -1826,16 +1836,12 @@ public class JsonReader implements Closeable
             }
             else if (clazz == Object.class)
             {
-                if (jsonObj.isMap())
-                {
-                    mate = new LinkedHashMap();
-                }
-                else if (jsonObj.size() > 0)
-                {
+                if (jsonObj.isMap() || jsonObj.size() > 0)
+                {   // Map-Like (has @keys and @items, or it has entries) but either way, type and class are not set.
                     mate = new LinkedHashMap();
                 }
                 else
-                {
+                {   // Dunno
                     mate = newInstance(clazz);
                 }
             }
