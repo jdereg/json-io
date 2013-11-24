@@ -125,7 +125,7 @@ Featured on http://json.org.
  * 2.2.32
   * Date/Time format can be customized when writing JSON output. New optional `Map args` parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. Set the key to `JsonWriter.DATE_FORMAT` and the value to a `SimpleDateFormat` string.  Two ISO formats are available for convenience as constants on `JsonWriter`, `JsonWriter.ISO_DATE_FORMAT` and `JsonWriter.ISO_DATE_TIME_FORMAT`.
   * `JsonReader` updated to read many different date/time formats.
-  * When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
+  * When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class. New API: `JsonReader.assignInstantiator(Class c, ClassFactory factory)`
  * 2.2.31
   * Adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
  * 2.2.30
