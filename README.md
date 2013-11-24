@@ -119,11 +119,11 @@ Featured on http://json.org.
 
  * 2.2.33
   * Maps and Collections (Lists, Set, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
-  * **json-io** will now use the generic info on a `Map<Foo, Bar>` or `Collection<Foo>` object's field when the `@type` information is not included.
+  * **json-io** will now use the generic info on a `Map<Foo, Bar>` or `Collection<Foo>` object's field when the `@type` information is not included. **json-io** will then know to create `Foo` instances, `Bar` instances, etc. within the `Collection` or `Map`.
   * All parsing error messages now output the last 100 characters read, making it easier to locate the problem in JSON text. Furthermore, line and column number are now included (before it was a single position number). This allows you to immediately find the offending location.
   * You can now force `@type` to be written (not recommended) by putting the `JsonWriter.TYPE` key in the `JsonWriter` args map, and assigning the associated value to `true`.
  * 2.2.32
-  * Date/Time format can be customized when writing JSON output. New optional `Map args`' parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. `JsonReader` updated to read many different date/time formats. When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
+  * Date/Time format can be customized when writing JSON output. New optional `Map args` parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. `JsonReader` updated to read many different date/time formats. When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
  * 2.2.31
   * Adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
  * 2.2.30
