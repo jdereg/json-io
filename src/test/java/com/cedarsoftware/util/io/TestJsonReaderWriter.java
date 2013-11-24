@@ -3305,12 +3305,15 @@ public class TestJsonReaderWriter
     @Test
     public void testToMaps() throws Exception
     {
-        Map map = JsonReader.jsonToMaps("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}");
+        JsonObject map = (JsonObject) JsonReader.jsonToMaps("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}");
         assertTrue(map != null);
         assertTrue(map.size() == 3);
         assertTrue(map.get("num").equals(0L));
         assertTrue(map.get("nullValue") == null);
         assertTrue(map.get("string").equals("yo"));
+
+        assertTrue(map.getCol() > 0);
+        assertTrue(map.getLine() > 0);
     }
 
     @Test
