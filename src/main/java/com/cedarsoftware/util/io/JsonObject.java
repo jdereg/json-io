@@ -208,8 +208,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             Object[] items = (Object[]) get("@items");
             return items == null ? 0 : items.length;
         }
-        JsonReader.error("getLength() called on a non-collection");
-        return 0;   // will never be reached
+        throw new IllegalStateException("getLength() called on a non-collection, line " + line + ", col " + col);
     }
 
     public Class getComponentType()
@@ -270,11 +269,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             id = (Long) value;
             return (V) oldId;
         }
-        else if ("@items".equals(key) && containsKey("@keys"))
-        {
-            isMap = true;
-        }
-        else if ("@keys".equals(key) && containsKey("@items"))
+        else if (("@items".equals(key) && containsKey("@keys")) || ("@keys".equals(key) && containsKey("@items")))
         {
             isMap = true;
         }
@@ -334,7 +329,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             }
             else
             {
-                throw new IllegalStateException("JsonObject with @keys, but no array [] associated to it.");
+                throw new IllegalStateException("JsonObject with @keys, but no array [] associated to it, line " + line + ", col " + col);
             }
         }
         else if (containsKey("@items"))
@@ -350,7 +345,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             }
             else
             {
-                throw new IllegalStateException("JsonObject with @items, but no array [] associated to it.");
+                throw new IllegalStateException("JsonObject with @items, but no array [] associated to it, line " + line + ", col " + col);
             }
         }
         else if (containsKey("@ref"))
