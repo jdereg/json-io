@@ -76,7 +76,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = true;
+    public static boolean _debug = false;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
