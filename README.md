@@ -123,7 +123,8 @@ Featured on http://json.org.
   * All parsing error messages now output the last 100 characters read, making it easier to locate the problem in JSON text. Furthermore, line and column number are now included (before it was a single position number). This allows you to immediately find the offending location.
   * You can now force `@type` to be written (not recommended) by putting the `JsonWriter.TYPE` key in the `JsonWriter` args map, and assigning the associated value to `true`.
  * 2.2.32
-  * Date/Time format can be customized when writing JSON output. New optional `Map args` parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. `JsonReader` updated to read many different date/time formats. When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
+  * Date/Time format can be customized when writing JSON output. New optional `Map args` parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. `JsonReader` updated to read many different date/time formats.  Set the key to `JsonWriter.DATE_FORMAT` and the value to a `SimpleDateFormat` String or `DateFormat` instance.
+  * When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class.
  * 2.2.31
   * Adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
  * 2.2.30
