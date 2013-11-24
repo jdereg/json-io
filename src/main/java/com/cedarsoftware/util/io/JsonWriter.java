@@ -162,6 +162,7 @@ public class JsonWriter implements Closeable, Flushable
      * @return String containing JSON representation of passed
      *         in object, or null if an error occurred.
      */
+    @Deprecated
     public static String toJson(Object item, Map<String, Object> optionalArgs)
     {
         try
