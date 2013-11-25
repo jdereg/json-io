@@ -1867,13 +1867,13 @@ public class TestJsonReaderWriter
         String jsonOut = getJsonString(foo);
         println(jsonOut);
 
-        Object[] bar = (Object[]) JsonReader.toJava(jsonOut);
+        Object[] bar = (Object[]) JsonReader.jsonToJava(jsonOut);
         assertTrue(bar.length == 2);
         assertTrue(bar[0].equals(new TestObject("alpha")));
         assertTrue(bar[1].equals(new TestObject("beta")));
 
         String json = "[\"getStartupInfo\",[\"890.022905.16112006.00024.0067ur\",\"machine info\"]]";
-        Object[] baz = (Object[]) JsonReader.toJava(json);
+        Object[] baz = (Object[]) JsonReader.jsonToJava(json);
         assertTrue(baz.length == 2);
         assertTrue("getStartupInfo".equals(baz[0]));
         Object[] args = (Object[]) baz[1];
@@ -1882,19 +1882,19 @@ public class TestJsonReaderWriter
         assertTrue("machine info".equals(args[1]));
 
         String hw = "[\"Hello, World\"]";
-        Object[] qux = (Object[]) JsonReader.toJava(hw);
+        Object[] qux = (Object[]) JsonReader.jsonToJava(hw);
         assertTrue(qux != null);
         assertTrue("Hello, World".equals(qux[0]));
 
         // Whitespace
         String pkg = TestObject.class.getName();
-        Object[] fred = (Object[]) JsonReader.toJava(" [  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"alpha\"  ,  \"_other\"  :  null  }  ,  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"beta\"  ,  \"_other\" : null  }  ]  ");
+        Object[] fred = (Object[]) JsonReader.jsonToJava(" [  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"alpha\"  ,  \"_other\"  :  null  }  ,  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"beta\"  ,  \"_other\" : null  }  ]  ");
         assertTrue(fred != null);
         assertTrue(fred.length == 2);
         assertTrue(fred[0].equals(new TestObject("alpha")));
         assertTrue(fred[1].equals(new TestObject("beta")));
 
-        Object[] wilma = (Object[]) JsonReader.toJava("[{\"@type\":\"" + pkg + "\",\"_name\" : \"alpha\" , \"_other\":null,\"fake\":\"_typeArray\"},{\"@type\": \"" + pkg + "\",\"_name\":\"beta\",\"_other\":null}]");
+        Object[] wilma = (Object[]) JsonReader.jsonToJava("[{\"@type\":\"" + pkg + "\",\"_name\" : \"alpha\" , \"_other\":null,\"fake\":\"_typeArray\"},{\"@type\": \"" + pkg + "\",\"_name\":\"beta\",\"_other\":null}]");
         assertTrue(wilma != null);
         assertTrue(wilma.length == 2);
         assertTrue(wilma[0].equals(new TestObject("alpha")));
@@ -1907,7 +1907,7 @@ public class TestJsonReaderWriter
         // Test root JSON type as [ ]
         Object array = new Object[] {"Hello"};
         String json = getJsonString(array);
-        Object oa = JsonReader.toJava(json);
+        Object oa = JsonReader.jsonToJava(json);
         assertTrue(oa.getClass().isArray());
         assertTrue(((Object[])oa)[0].equals("Hello"));
 
@@ -1916,7 +1916,7 @@ public class TestJsonReaderWriter
         cal.set(1965, 11, 17);
         json = getJsonString(cal);
         println("json = " + json);
-        Object obj = JsonReader.toJava(json);
+        Object obj = JsonReader.jsonToJava(json);
         assertTrue(!obj.getClass().isArray());
         Calendar date = (Calendar) obj;
         assertTrue(date.get(Calendar.YEAR) == 1965);
@@ -2551,7 +2551,8 @@ public class TestJsonReaderWriter
     @Test
     public void testFoo() throws Exception
     {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestString\",\"_range\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f !\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abc\",\"_utf8HandBuilt\":\"𝀀\",\"_strArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objStrArray\":{\"@type\":\"[Ljava.lang.String;\",\"@items\":[\"1st\",\"2nd\",null,null,\"3rd\"]},\"_cache\":[\"true\",\"true\",\"golf\",\"golf\"],\"_poly\":{\"@type\":\"string\",\"value\":\"Poly\"},\"_null\":null}";
+        String className = TestJsonReaderWriter.class.getName();
+        String json = "{\"@type\":\"" + className + "$TestString\",\"_range\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f !\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abc\",\"_utf8HandBuilt\":\"𝀀\",\"_strArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objStrArray\":{\"@type\":\"[Ljava.lang.String;\",\"@items\":[\"1st\",\"2nd\",null,null,\"3rd\"]},\"_cache\":[\"true\",\"true\",\"golf\",\"golf\"],\"_poly\":{\"@type\":\"string\",\"value\":\"Poly\"},\"_null\":null}";
     }
 
     @Test
@@ -3007,7 +3008,7 @@ public class TestJsonReaderWriter
         String json = getJsonString(new Object[] {now});
         println("json=" + json);
 
-        Map map = JsonReader.toMaps(json);
+        Map map = JsonReader.jsonToMaps(json);
         Object[] items = (Object[]) map.get("@items");
         Map item = (Map) items[0];
         assertTrue(item.containsKey("time"));
@@ -3183,7 +3184,7 @@ public class TestJsonReaderWriter
         String json = getJsonString(new Object[] {pst});
         println("json=" + json);
 
-        Map map = JsonReader.toMaps(json);
+        Map map = JsonReader.jsonToMaps(json);
         Object[] items = (Object[]) map.get("@items");
         Map item = (Map) items[0];
         assertTrue(item.containsKey("zone"));
@@ -3225,7 +3226,7 @@ public class TestJsonReaderWriter
         assertTrue((Integer) ints[1] == 5);
 
         json ="{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":2},{\"@id\":2,\"@type\":\"int\",\"value\":5}]}";
-        List list = (List) JsonReader.toJava(json);
+        List list = (List) JsonReader.jsonToJava(json);
         assertTrue((Integer)list.get(0) == 5);
         assertTrue((Integer)list.get(1) == 5);
 
@@ -3249,7 +3250,7 @@ public class TestJsonReaderWriter
     @Test
     public void testNull() throws Exception
     {
-        String json = JsonWriter.toJson(null);
+        String json = JsonWriter.objectToJson(null);
         println("json=" + json);
         assertTrue("null".equals(json));
     }
@@ -3280,9 +3281,9 @@ public class TestJsonReaderWriter
     {
         String[] array = new String[]{};
         Object[] refArray = new Object[]{array};
-        String json = JsonWriter.toJson(refArray);
+        String json = JsonWriter.objectToJson(refArray);
         println("json=" + json);
-        Object[] oa = (Object[]) JsonReader.toJava(json);
+        Object[] oa = (Object[]) JsonReader.jsonToJava(json);
         assertTrue(oa[0].getClass().equals(String[].class));
         assertTrue(((String[])oa[0]).length == 0);
     }
@@ -3290,16 +3291,18 @@ public class TestJsonReaderWriter
     @Test
     public void testBadJson() throws Exception
     {
-        Object o = JsonReader.toJava("[\"bad JSON input\"");
-        assertTrue(o == null);
+        Object o = null;
 
         try
         {
             o = readJsonObject("[\"bad JSON input\"");
-            assertTrue("Should have received exception", false);
+            fail("should not make it here");
         }
-        catch(Exception ignored)
-        { }
+        catch(Exception e)
+        {
+            assertTrue(e.getMessage().contains("inside"));
+        }
+        assertTrue(o == null);
     }
 
     @Test
@@ -3352,7 +3355,7 @@ public class TestJsonReaderWriter
         // Forward reference
         String pkg = TestObject.class.getName();
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":3},{\"@id\":3,\"@type\":\"" + pkg + "\",\"_name\":\"JSON\",\"_other\":null}]}";
-        list2 = (List) JsonReader.toJava(json);
+        list2 = (List) JsonReader.jsonToJava(json);
         assertTrue(list.equals(list2));
     }
 
@@ -3360,7 +3363,7 @@ public class TestJsonReaderWriter
     public void testEmptyArray() throws Exception
     {
         String json = "{\"@type\":\"[Ljava.lang.String;\"}";
-        String[] s = (String[])JsonReader.toJava(json);
+        String[] s = (String[])JsonReader.jsonToJava(json);
         assertTrue(s != null);
         assertTrue(s.length == 0);
     }
@@ -3484,7 +3487,7 @@ public class TestJsonReaderWriter
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = getJsonString(locale);
         println("json=" + json);
-        Map map = JsonReader.toMaps(json);
+        Map map = JsonReader.jsonToMaps(json);
         assertTrue("en".equals(map.get("language")));
         assertTrue("US".equals(map.get("country")));
     }
@@ -3506,46 +3509,55 @@ public class TestJsonReaderWriter
     public void testEmptyPrimitives() throws Exception
     {
         String json = "{\"@type\":\"byte\"}";
-        Byte b = (Byte) JsonReader.toJava(json);
+        Byte b = (Byte) JsonReader.jsonToJava(json);
         assertTrue(b.getClass().equals(Byte.class));
         assertTrue(b == 0);
 
         json = "{\"@type\":\"short\"}";
-        Short s = (Short) JsonReader.toJava(json);
+        Short s = (Short) JsonReader.jsonToJava(json);
         assertTrue(s.getClass().equals(Short.class));
         assertTrue(s == 0);
 
         json = "{\"@type\":\"int\"}";
-        Integer i = (Integer) JsonReader.toJava(json);
+        Integer i = (Integer) JsonReader.jsonToJava(json);
         assertTrue(i.getClass().equals(Integer.class));
         assertTrue(i == 0);
 
         json = "{\"@type\":\"long\"}";
-        Long l = (Long) JsonReader.toJava(json);
+        Long l = (Long) JsonReader.jsonToJava(json);
         assertTrue(l.getClass().equals(Long.class));
         assertTrue(l == 0);
 
         json = "{\"@type\":\"float\"}";
-        Float f = (Float) JsonReader.toJava(json);
+        Float f = (Float) JsonReader.jsonToJava(json);
         assertTrue(f.getClass().equals(Float.class));
         assertTrue(f == 0.0f);
 
         json = "{\"@type\":\"double\"}";
-        Double d = (Double) JsonReader.toJava(json);
+        Double d = (Double) JsonReader.jsonToJava(json);
         assertTrue(d.getClass().equals(Double.class));
         assertTrue(d == 0.0d);
 
         json = "{\"@type\":\"char\"}";
-        Character c = (Character) JsonReader.toJava(json);
+        Character c = (Character) JsonReader.jsonToJava(json);
         assertTrue(c.getClass().equals(Character.class));
         assertTrue(c == '\u0000');
 
         json = "{\"@type\":\"boolean\"}";
-        Boolean bool = (Boolean) JsonReader.toJava(json);
+        Boolean bool = (Boolean) JsonReader.jsonToJava(json);
         assertTrue(bool == Boolean.FALSE);
 
         json = "{\"@type\":\"string\"}";
-        String str = (String) JsonReader.toJava(json);
+        String str = null;
+        try
+        {
+            str = (String) JsonReader.jsonToJava(json);
+            fail("should not make it here");
+        }
+        catch (IOException e)
+        {
+            assertTrue(e.getMessage().contains("'value'"));
+        }
         assertTrue(str == null);
     }
 
@@ -3855,7 +3867,16 @@ public class TestJsonReaderWriter
     @Test
     public void testBadInputForMapAPI() throws Exception
     {
-        Object o = JsonReader.toMaps("[This is not quoted]");
+        Object o = null;
+        try
+        {
+            o = JsonReader.jsonToMaps("[This is not quoted]");
+            fail("should not make it here");
+        }
+        catch (IOException e)
+        {
+            assertTrue(e.getMessage().contains("token"));
+        }
         assertTrue(o == null);
     }
 
@@ -3875,7 +3896,7 @@ public class TestJsonReaderWriter
     public void testWriterObjectAPI() throws Exception
     {
         String json = "[1,true,null,3.14,[]]";
-        Object o = JsonReader.toJava(json);
+        Object o = JsonReader.jsonToJava(json);
         assertTrue(getJsonString(o).equals(json));
 
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
@@ -5429,7 +5450,8 @@ public class TestJsonReaderWriter
     public void testEmptyCollections() throws Exception
     {
         EmptyCols emptyCols = new EmptyCols();
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
+        String className = TestJsonReaderWriter.class.getName();
+        String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
         println("json = " + json);
         emptyCols = (EmptyCols) readJsonObject(json);
 

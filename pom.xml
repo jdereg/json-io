@@ -22,7 +22,7 @@
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
       <tag>HEAD</tag>
-  </scm>
+    </scm>
 
     <developers>
         <developer>
