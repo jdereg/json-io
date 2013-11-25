@@ -1836,7 +1836,7 @@ public class JsonReader implements Closeable
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
             }
-            else if (clazz == Object.class)
+            else if (clazz == Object.class && !_noObjects)
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {   // Map-Like (has @keys and @items, or it has entries) but either way, type and class are not set.
