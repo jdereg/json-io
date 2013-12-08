@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>0.1.0</version.java-util>
+        <version.java-util>1.5.1</version.java-util>
         <version.junit>4.11</version.junit>
     </properties>
 
@@ -131,7 +131,7 @@
         <dependency>
             <groupId>com.cedarsoftware</groupId>
             <artifactId>java-util</artifactId>
-            <version>1.4.0</version>
+            <version>${version.java-util}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
