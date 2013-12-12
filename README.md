@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.2.33</version>
+  <version>2.3.0</version>
 </dependency>
 ```
 
@@ -117,7 +117,7 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 
 Featured on http://json.org.
 
- * 2.2.33
+ * 2.3.0
   * Maps and Collections (Lists, Set, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
   * **json-io** will now use the generic info on a `Map<Foo, Bar>` or `Collection<Foo>` object's field when the `@type` information is not included. **json-io** will then know to create `Foo` instances, `Bar` instances, etc. within the `Collection` or `Map`.
   * All parsing error messages now output the last 100 characters read, making it easier to locate the problem in JSON text. Furthermore, line and column number are now included (before it was a single position number). This allows you to immediately find the offending location.
