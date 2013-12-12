@@ -2486,22 +2486,42 @@ public class JsonReader implements Closeable
     {
         if (c == Byte.class || c == byte.class)
         {
+            if (rhs instanceof String)
+            {
+                return Byte.parseByte((String)rhs);
+            }
             return rhs != null ? _byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
         }
         if (c == Boolean.class || c == boolean.class)
         {    // Booleans are tokenized into Boolean.TRUE or Boolean.FALSE
+            if (rhs instanceof String)
+            {
+                return Boolean.parseBoolean((String)rhs);
+            }
             return rhs != null ? rhs : Boolean.FALSE;
         }
         if (c == Integer.class || c == int.class)
         {
+            if (rhs instanceof String)
+            {
+                return Integer.parseInt((String)rhs);
+            }
             return rhs != null ? ((Number) rhs).intValue() : 0;
         }
         if (c == Long.class || c == long.class)
         {
+            if (rhs instanceof String)
+            {
+                return Long.parseLong((String)rhs);
+            }
             return rhs != null ? rhs : 0L;
         }
         if (c == Double.class || c == double.class)
         {
+            if (rhs instanceof String)
+            {
+                return Double.parseDouble((String)rhs);
+            }
             return rhs != null ? rhs : 0.0d;
         }
         if (c == Character.class || c == char.class)
@@ -2521,10 +2541,18 @@ public class JsonReader implements Closeable
         }
         if (c == Short.class || c == short.class)
         {
+            if (rhs instanceof String)
+            {
+                return Short.parseShort((String)rhs);
+            }
             return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
         }
         if (c == Float.class || c == float.class)
         {
+            if (rhs instanceof String)
+            {
+                return Float.parseFloat((String)rhs);
+            }
             return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
         }
 

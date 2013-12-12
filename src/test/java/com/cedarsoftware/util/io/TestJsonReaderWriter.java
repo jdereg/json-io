@@ -5843,6 +5843,49 @@ public class TestJsonReaderWriter
         assertEquals(two.get("key2"), 2L);
     }
 
+    class AllPrimitives
+    {
+        boolean b;
+        Boolean bb;
+        byte by;
+        Byte bby;
+        char c;
+        Character cc;
+        double d;
+        double dd;
+        float f;
+        Float ff;
+        int i;
+        Integer ii;
+        long l;
+        Long ll;
+        short s;
+        Short ss;
+    }
+
+    @Test
+    public void testPrimitivesSetWithStrings() throws Exception
+    {
+        String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"true\",\"bb\":\"true\",\"by\":\"9\",\"bby\":\"9\",\"c\":\"B\",\"cc\":\"B\",\"d\":\"9.0\",\"dd\":\"9.0\",\"f\":\"9.0\",\"ff\":\"9.0\",\"i\":\"9\",\"ii\":\"9\",\"l\":\"9\",\"ll\":\"9\",\"s\":\"9\",\"ss\":\"9\"}";
+        AllPrimitives ap = (AllPrimitives) readJsonObject(json);
+        assertTrue(ap.b);
+        assertTrue(ap.bb);
+        assertTrue(ap.by == 9);
+        assertTrue(ap.bby == 9);
+        assertTrue(ap.c == 'B');
+        assertTrue(ap.cc == 'B');
+        assertTrue(ap.d == 9);
+        assertTrue(ap.dd == 9);
+        assertTrue(ap.f == 9);
+        assertTrue(ap.ff == 9);
+        assertTrue(ap.i == 9);
+        assertTrue(ap.ii == 9);
+        assertTrue(ap.l == 9);
+        assertTrue(ap.ll == 9);
+        assertTrue(ap.s == 9);
+        assertTrue(ap.ss == 9);
+    }
+
     @Test
     public void testZTimings()
     {
