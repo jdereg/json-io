@@ -16,7 +16,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-Please send 1 **Bitcoin** to **1461PT1TYVng8uftp2gg5iG6q4xV7tR6h5** if you find use json-io in your software.
+Please send 1 **Bitcoin** to **1461PT1TYVng8uftp2gg5iG6q4xV7tR6h5** if you use json-io in your software.
 
 _For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
