@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.3.0</version>
+  <version>2.4.0</version>
 </dependency>
 ```
 
