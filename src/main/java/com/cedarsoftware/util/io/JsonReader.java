@@ -109,6 +109,7 @@ public class JsonReader implements Closeable
     private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
+    private static final Pattern _extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
 
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
     private final Collection<UnresolvedReference> _unresolvedRefs = new ArrayList<UnresolvedReference>();
@@ -594,6 +595,11 @@ public class JsonReader implements Closeable
                 return o;
             }
 
+            if (isPrimitive(o.getClass()))
+            {
+                return o.toString();
+            }
+
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
@@ -625,17 +631,84 @@ public class JsonReader implements Closeable
     {
         public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
         {
-            if (o instanceof String)
+            JsonObject jObj = null;
+            Object value = o;
+            if (o instanceof JsonObject)
             {
-                return new BigInteger((String)o);
+                jObj = (JsonObject) o;
+                if (jObj.containsKey("value"))
+                {
+                    value = jObj.get("value");
+                }
+                else
+                {
+                    return error("BigInteger missing 'value' field");
+                }
             }
 
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            BigInteger x = null;
+
+            if (value instanceof JsonObject)
             {
-                return jObj.target = new BigInteger((String) jObj.get("value"));
+                JsonObject valueObj = (JsonObject)value;
+                if ("java.math.BigDecimal".equals(valueObj.type))
+                {
+                    BigDecimalReader reader = new BigDecimalReader();
+                    value = reader.read(value, stack);
+                }
+                else if ("java.math.BigInteger".equals(valueObj.type))
+                {
+                    value = read(value, stack);
+                }
+                else
+                {
+                    return error("Unknown object type attempted to be assigned to BigInteger field: " + value);
+                }
             }
-            return error("BigInteger missing 'value' field");
+
+            if (value instanceof String)
+            {
+                x = new BigInteger(removeLeadingAndTrailingQuotes((String) value));
+            }
+
+            if (value instanceof BigInteger)
+            {
+                x = (BigInteger) value;
+            }
+
+            if (value instanceof BigDecimal)
+            {
+                BigDecimal bd = (BigDecimal) value;
+                String str = bd.toPlainString();
+                if (str.contains("."))
+                {
+                    return error("Cannot assign BigDecimal to BigInteger if BigDecimal has fractional part: " + value);
+                }
+                x = new BigInteger(str);
+            }
+
+            if (value instanceof Boolean)
+            {
+                x = new BigInteger(((Boolean) value) ? "1" : "0");
+            }
+
+            if (value instanceof Double || value instanceof Float)
+            {
+                return error("Cannot assign floating point value to a BigInteger: " + value);
+            }
+
+            if (value instanceof Long || value instanceof Integer ||
+                value instanceof Short || value instanceof Byte)
+            {
+                x = new BigInteger(value.toString());
+            }
+
+            if (jObj != null)
+            {
+                jObj.target = x;
+            }
+
+            return x != null ? x : error("BigInteger 'value' convertible to a BigInteger: " + value);
         }
     }
 
@@ -643,17 +716,72 @@ public class JsonReader implements Closeable
     {
         public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
         {
-            if (o instanceof String)
+            JsonObject jObj = null;
+            Object value = o;
+            if (o instanceof JsonObject)
             {
-                return new BigDecimal((String) o);
+                jObj = (JsonObject) o;
+                if (jObj.containsKey("value"))
+                {
+                    value = jObj.get("value");
+                }
+                else
+                {
+                    return error("BigDecimal missing 'value' field");
+                }
             }
 
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            BigDecimal x = null;
+
+            if (value instanceof JsonObject)
             {
-                return jObj.target = new BigDecimal((String) jObj.get("value"));
+                JsonObject valueObj = (JsonObject)value;
+                if ("java.math.BigInteger".equals(valueObj.type))
+                {
+                    BigIntegerReader reader = new BigIntegerReader();
+                    value = reader.read(value, stack);
+                }
+                else if ("java.math.BigDecimal".equals(valueObj.type))
+                {
+                    value = read(value, stack);
+                }
+                else
+                {
+                    return error("Unknown object type attempted to be assigned to BigInteger field: " + value);
+                }
             }
-            return error("BigDecimal missing 'value' field");
+
+            if (value instanceof String)
+            {
+                x = new BigDecimal(removeLeadingAndTrailingQuotes((String) value));
+            }
+
+            if (value instanceof BigDecimal)
+            {
+                x = (BigDecimal) value;
+            }
+
+            if (value instanceof BigInteger)
+            {
+                x = new BigDecimal((BigInteger)value);
+            }
+
+            if (value instanceof Boolean)
+            {
+                x = new BigDecimal(((Boolean) value) ? "1" : "0");
+            }
+
+            if (value instanceof Long || value instanceof Double || value instanceof Integer ||
+                value instanceof Short || value instanceof Byte || value instanceof Float || value instanceof BigInteger)
+            {
+                x = new BigDecimal(value.toString());
+            }
+
+            if (jObj != null)
+            {
+                jObj.target = x;
+            }
+            return x != null ? x : error("BigDecimal missing 'value' field not convertible to a BigDecimal: " + value);
         }
     }
 
@@ -1497,11 +1625,11 @@ public class JsonReader implements Closeable
                 }
                 else if (BigDecimal.class == fieldType)
                 {
-                    jsonObj.put(key, new BigDecimal((String) value));
+                    jsonObj.put(key, new BigDecimal(value.toString()));
                 }
                 else if (BigInteger.class == fieldType)
                 {
-                    jsonObj.put(key, new BigInteger((String) value));
+                    jsonObj.put(key, new BigInteger(value.toString()));
                 }
             }
         }
@@ -1840,7 +1968,7 @@ public class JsonReader implements Closeable
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {   // Map-Like (has @keys and @items, or it has entries) but either way, type and class are not set.
-                    mate = new LinkedHashMap();
+                    mate = new JsonObject();
                 }
                 else
                 {   // Dunno
@@ -2027,7 +2155,7 @@ public class JsonReader implements Closeable
         {
             error("EOF reached prematurely");
         }
-        return error("Unknown value type");
+        return error("Unknown JSON value type");
     }
 
     /**
@@ -2488,6 +2616,11 @@ public class JsonReader implements Closeable
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0";
+                }
                 return Byte.parseByte((String)rhs);
             }
             return rhs != null ? _byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
@@ -2496,6 +2629,11 @@ public class JsonReader implements Closeable
         {    // Booleans are tokenized into Boolean.TRUE or Boolean.FALSE
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "false";
+                }
                 return Boolean.parseBoolean((String)rhs);
             }
             return rhs != null ? rhs : Boolean.FALSE;
@@ -2504,14 +2642,24 @@ public class JsonReader implements Closeable
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0";
+                }
                 return Integer.parseInt((String)rhs);
             }
             return rhs != null ? ((Number) rhs).intValue() : 0;
         }
-        if (c == Long.class || c == long.class)
+        if (c == Long.class || c == long.class || c == Number.class)
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0";
+                }
                 return Long.parseLong((String)rhs);
             }
             return rhs != null ? rhs : 0L;
@@ -2520,6 +2668,11 @@ public class JsonReader implements Closeable
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0.0";
+                }
                 return Double.parseDouble((String)rhs);
             }
             return rhs != null ? rhs : 0.0d;
@@ -2532,6 +2685,11 @@ public class JsonReader implements Closeable
             }
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "\u0000";
+                }
                 return valueOf(((String) rhs).charAt(0));
             }
             if (rhs instanceof Character)
@@ -2543,6 +2701,11 @@ public class JsonReader implements Closeable
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0";
+                }
                 return Short.parseShort((String)rhs);
             }
             return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
@@ -2551,12 +2714,27 @@ public class JsonReader implements Closeable
         {
             if (rhs instanceof String)
             {
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs))
+                {
+                    rhs = "0.0f";
+                }
                 return Float.parseFloat((String)rhs);
             }
             return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
         }
 
         return error("Class '" + c.getName() + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
+    }
+
+    static String removeLeadingAndTrailingQuotes(String s)
+    {
+        Matcher m = _extraQuotes.matcher(s);
+        if (m.find())
+        {
+            s = m.group(2);
+        }
+        return s;
     }
 
     private static boolean isDigit(int c)

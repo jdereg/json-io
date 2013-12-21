@@ -5886,6 +5886,123 @@ public class TestJsonReaderWriter
         assertTrue(ap.ss == 9);
     }
 
+    class TestStringField
+    {
+        String intField;
+        String booleanField;
+        String doubleField;
+        String nullField;
+        String[] values;
+    }
+
+    @Test
+    public void testAssignPrimitiveToString() throws Exception
+    {
+        String json = "{\"@type\":\"" + TestStringField.class.getName() + "\",\"intField\":16,\"booleanField\":true,\"doubleField\":345.12321,\"nullField\":null,\"values\":[10,true,3.14159,null]}";
+        TestStringField tsf = (TestStringField) readJsonObject(json);
+        assertEquals("16", tsf.intField);
+        assertEquals("true", tsf.booleanField);
+        assertEquals("345.12321", tsf.doubleField);
+        assertNull(tsf.nullField);
+        assertEquals("10", tsf.values[0]);
+        assertEquals("true", tsf.values[1]);
+        assertEquals("3.14159", tsf.values[2]);
+        assertEquals(null, tsf.values[3]);
+    }
+
+    class TestBigDecimalField
+    {
+        BigDecimal fromString;
+        BigDecimal fromLong;
+        BigDecimal fromDouble;
+        BigDecimal fromBoolean;
+        BigDecimal fromStringObj;
+        BigDecimal fromLongObj;
+        BigDecimal fromDoubleObj;
+        BigDecimal fromBooleanObj;
+        BigDecimal fromBigIntObj;
+        BigDecimal fromBigDecObj;
+        BigDecimal[] values;
+    }
+
+    @Test
+    public void testAssignBigDecimal() throws Exception
+    {
+        String json = "{\"@type\":\"" + TestBigDecimalField.class.getName() + "\",\"fromString\":\"3.14159\",\"fromLong\":314159,\"fromDouble\":3.14159,\"fromBoolean\":true,\"fromStringObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":\"3.14159\"},\"fromLongObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":314159},\"fromDoubleObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":3.14159},\"fromBooleanObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":false},\"fromBigIntObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":72}},\"fromBigDecObj\":{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":72.1}},\"values\":[\"3.14159\",314159,3.14159,true,{\"@type\":\"java.math.BigDecimal\",\"value\":\"3.14159\"},{\"@type\":\"java.math.BigDecimal\",\"value\":314159},{\"@type\":\"java.math.BigDecimal\",\"value\":3.14159},{\"@type\":\"java.math.BigDecimal\",\"value\":true},{\"@type\":\"java.math.BigDecimal\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":72.72}}]}";
+        TestBigDecimalField tbd = (TestBigDecimalField) readJsonObject(json);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromString);
+        assertEquals(new BigDecimal(314159), tbd.fromLong);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromDouble);
+        assertEquals(new BigDecimal(1), tbd.fromBoolean);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromStringObj);
+        assertEquals(new BigDecimal(314159), tbd.fromLongObj);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromDoubleObj);
+        assertEquals(new BigDecimal(0), tbd.fromBooleanObj);
+        assertEquals(new BigDecimal(72), tbd.fromBigIntObj);
+        assertEquals(new BigDecimal("72.1"), tbd.fromBigDecObj);
+
+        assertEquals(new BigDecimal("3.14159"), tbd.values[0]);
+        assertEquals(new BigDecimal(314159), tbd.values[1]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[2]);
+        assertEquals(new BigDecimal(1), tbd.values[3]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[4]);
+        assertEquals(new BigDecimal(314159), tbd.values[5]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[6]);
+        assertEquals(new BigDecimal(1), tbd.values[7]);
+        assertEquals(new BigDecimal("72.72"), tbd.values[8]);
+    }
+
+    class TestBigIntegerField
+    {
+        BigInteger fromString;
+        BigInteger fromLong;
+        BigInteger fromBoolean;
+        BigInteger fromStringObj;
+        BigInteger fromLongObj;
+        BigInteger fromBooleanObj;
+        BigInteger fromBigDecObj;
+        BigInteger fromBigIntObj;
+        BigInteger[] values;
+    }
+
+    @Test
+    public void testAssignBigInteger() throws Exception
+    {
+        String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"314159\",\"fromLong\":314159,\"fromBoolean\":true,\"fromStringObj\":{\"@type\":\"java.math.BigInteger\",\"value\":\"314159\"},\"fromLongObj\":{\"@type\":\"java.math.BigInteger\",\"value\":314159},\"fromBooleanObj\":{\"@type\":\"java.math.BigInteger\",\"value\":false},\"fromBigDecObj\":{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":9}},\"fromBigIntObj\":{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":99}},\"values\":[\"314159\",314159,true,{\"@type\":\"java.math.BigInteger\",\"value\":\"314159\"},{\"@type\":\"java.math.BigInteger\",\"value\":314159},{\"@type\":\"java.math.BigInteger\",\"value\":true},{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":999}}]}";
+        TestBigIntegerField tbi = (TestBigIntegerField) readJsonObject(json);
+        assertEquals(new BigInteger("314159"), tbi.fromString);
+        assertEquals(new BigInteger("314159"), tbi.fromLong);
+        assertEquals(new BigInteger("1"), tbi.fromBoolean);
+        assertEquals(new BigInteger("314159"), tbi.fromStringObj);
+        assertEquals(new BigInteger("314159"), tbi.fromLongObj);
+        assertEquals(new BigInteger("0"), tbi.fromBooleanObj);
+        assertEquals(new BigInteger("9"), tbi.fromBigDecObj);
+        assertEquals(new BigInteger("99"), tbi.fromBigIntObj);
+
+        assertEquals(new BigInteger("314159"), tbi.values[0]);
+        assertEquals(new BigInteger("314159"), tbi.values[1]);
+        assertEquals(new BigInteger("1"), tbi.values[2]);
+        assertEquals(new BigInteger("314159"), tbi.values[3]);
+        assertEquals(new BigInteger("314159"), tbi.values[4]);
+        assertEquals(new BigInteger("1"), tbi.values[5]);
+        assertEquals(new BigInteger("999"), tbi.values[6]);
+    }
+
+    @Test
+    public void testCleanString()
+    {
+        String s = JsonReader.removeLeadingAndTrailingQuotes("\"Foo\"");
+        assertEquals("Foo", s);
+        s = JsonReader.removeLeadingAndTrailingQuotes("Foo");
+        assertEquals("Foo", s);
+        s = JsonReader.removeLeadingAndTrailingQuotes("\"Foo");
+        assertEquals("Foo", s);
+        s = JsonReader.removeLeadingAndTrailingQuotes("Foo\"");
+        assertEquals("Foo", s);
+        s = JsonReader.removeLeadingAndTrailingQuotes("\"\"Foo\"\"");
+        assertEquals("Foo", s);
+    }
+
     @Test
     public void testZTimings()
     {
