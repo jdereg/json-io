@@ -117,6 +117,10 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 
 Featured on http://json.org.
 
+ * 2.4.0
+  * Primitives can be set from Strings
+  * Strings can be set from primitives
+  * BigDecimal and BigInteger can be set from primitives, Strings, BigDecimal, or BigInteger
  * 2.3.0
   * Maps and Collections (Lists, Set, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
   * **json-io** will now use the generic info on a `Map<Foo, Bar>` or `Collection<Foo>` object's field when the `@type` information is not included. **json-io** will then know to create `Foo` instances, `Bar` instances, etc. within the `Collection` or `Map`.
