@@ -115,6 +115,8 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 ### RESTful support
 **json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.  
 
+See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
+
 Featured on http://json.org.
 
  * 2.4.0
