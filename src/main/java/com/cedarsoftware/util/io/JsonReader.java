@@ -344,7 +344,7 @@ public class JsonReader implements Closeable
             Object zone = jObj.get("zone");
             if (zone == null)
             {
-                error("java.util.TimeZone must special 'zone' field");
+                error("java.util.TimeZone must specify 'zone' field");
             }
             return jObj.target = TimeZone.getTimeZone((String) zone);
         }
