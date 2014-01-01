@@ -152,13 +152,6 @@ public class JsonWriter implements Closeable, Flushable
      * SimpleDateFormat object, in which case it will be used.  This setting is for both
      * java.util.Date and java.sql.Date. If the DATE_FORMAT key is not used, then dates will
      * be formatted as longs.  This long can be turned back into a date by using 'new Date(longValue)'.
-     * <p>
-     * If you want to change what fields are written to the JSON format, you can set
-     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
-     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
-     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
-     * the of the FieldGrabber interface, and return the field Set for the passed in class.
-     * </p>
      * @return String containing JSON representation of passed
      *         in object, or null if an error occurred.
      */
@@ -194,13 +187,6 @@ public class JsonWriter implements Closeable, Flushable
      * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
-     * <p>
-     * If you want to change what fields are written to the JSON format, you can set
-     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
-     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
-     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
-     * the of the FieldGrabber interface, and return the field Set for the passed in class.
-     * </p>
      * @return String containing JSON representation of passed
      *         in object.
      * @throws java.io.IOException If an I/O error occurs
@@ -231,13 +217,6 @@ public class JsonWriter implements Closeable, Flushable
      * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
-     * <p>
-     * If you want to change what fields are written to the JSON format, you can set
-     * the key FIELDS to the constants ALL_FIELDS (includes transient), NON_TRANSIENT_FIELDS,
-     * which is all but transient fields, PUBLIC_FIELDS, in which case only public fields
-     * will be written out, or CUSTOM_FIELDS, in which case you supply an implementation of
-     * the of the FieldGrabber interface, and return the field Set for the passed in class.
-     * </p>
      * @throws IOException
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs) throws IOException
