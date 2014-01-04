@@ -2598,7 +2598,7 @@ public class JsonReader implements Closeable
         return values;
     }
 
-    static boolean isPrimitive(Class c)
+    public static boolean isPrimitive(Class c)
     {
         return c.isPrimitive() || _prims.contains(c);
     }
