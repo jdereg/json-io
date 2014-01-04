@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.google.gson.Gson;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
 import org.junit.Test;
@@ -536,6 +537,10 @@ public class TestJsonReaderWriter
 
         TestArray root = (TestArray) readJsonObject(jsonOut);
         assertArray(root);
+
+        // GSON cannot handle it
+//        Gson gson = new Gson();
+//        String j = gson.toJson(obj);
     }
 
     private void assertArray(TestArray root)
@@ -2593,11 +2598,15 @@ public class TestJsonReaderWriter
     public void testRootString() throws Exception
     {
         String s = "root string";
-        String json = getJsonString(s);
-        println("json = " + json);
-        Object o = readJsonObject(json);
-        assertTrue(o instanceof String);
-        assertTrue("root string".equals(o));
+        try
+        {
+            Object o = JsonReader.jsonToMaps(s);
+            fail("JSON string must start with '{' or '['");
+        }
+        catch (IOException e)
+        {
+            assertTrue(e.getMessage().toLowerCase().contains("invalid"));
+        }
     }
 
     @Test
@@ -3259,21 +3268,15 @@ public class TestJsonReaderWriter
      * Although a String cannot really be a root in JSON, 
      * json-io returns the JSON utf8 string.  This test
      * exists to catch if this decision ever changes.
+     * Currently, Google's Gson does the same thing.
      */
     @Test
     public void testStringRoot() throws Exception
     {
-        String json = getJsonString("This is a string");
-        println("json=" + json);
-        assertTrue("{\"@type\":\"string\",\"value\":\"This is a string\"}".equals(json));
-        Object o = readJsonObject(json);
-        assertTrue("This is a string".equals(o));
-
-        o = readJsonObject('[' + json + ']');
-        assertTrue(o.getClass().equals(Object[].class));
-        Object[] oa = (Object[]) o;
-        assertTrue(oa.length == 1);
-        assertTrue(oa[0].equals("This is a string"));
+        Gson gson = new Gson();
+        String g = gson.toJson("root should not be a string");
+        String j = JsonWriter.objectToJson("root should not be a string");
+        assertEquals(g, j);
     }
 
     @Test

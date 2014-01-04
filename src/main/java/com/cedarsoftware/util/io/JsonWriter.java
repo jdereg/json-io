@@ -307,7 +307,7 @@ public class JsonWriter implements Closeable, Flushable
 
         boolean referenced = _objsReferenced.containsKey(o);
 
-        if ((!referenced && !showType && closestWriter.hasPrimitiveForm()) || closestWriter instanceof StringWriter)
+        if ((!referenced && !showType && closestWriter.hasPrimitiveForm()) || closestWriter instanceof JsonStringWriter)
         {
             closestWriter.writePrimitiveForm(o, out);
             return true;
@@ -918,10 +918,6 @@ public class JsonWriter implements Closeable, Flushable
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
                     writePrimitive(value);
-                }
-                else if (value instanceof String)
-                {   // still want inline (no @type, value:)
-                    writeJsonUtf8String((String) value, out);
                 }
                 else if (writeArrayElementIfMatching(componentClass, value, false, out)) { }
                 else if (isObjectArray)
