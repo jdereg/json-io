@@ -7,6 +7,7 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
@@ -306,7 +307,7 @@ public class JsonWriter implements Closeable, Flushable
 
         boolean referenced = _objsReferenced.containsKey(o);
 
-        if (!referenced && !showType && closestWriter.hasPrimitiveForm())
+        if ((!referenced && !showType && closestWriter.hasPrimitiveForm()) || closestWriter instanceof StringWriter)
         {
             closestWriter.writePrimitiveForm(o, out);
             return true;
@@ -625,7 +626,7 @@ public class JsonWriter implements Closeable, Flushable
             if (clazz.isArray())
             {
                 Class compType = clazz.getComponentType();
-                if (!JsonReader.isPrimitive(compType) && compType != String.class)
+                if (!JsonReader.isPrimitive(compType) && compType != String.class && !Date.class.isAssignableFrom(compType))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -919,7 +920,7 @@ public class JsonWriter implements Closeable, Flushable
                     writePrimitive(value);
                 }
                 else if (value instanceof String)
-                {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
+                {   // still want inline (no @type, value:)
                     writeJsonUtf8String((String) value, out);
                 }
                 else if (writeArrayElementIfMatching(componentClass, value, false, out)) { }
