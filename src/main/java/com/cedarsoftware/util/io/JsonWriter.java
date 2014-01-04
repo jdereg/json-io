@@ -138,7 +138,7 @@ public class JsonWriter implements Closeable, Flushable
     @Deprecated
     public static String toJson(Object item)
     {
-        return toJson(item, new HashMap<String, Object>());
+        throw new RuntimeException("Use com.cedarsoftware.util.JsonWriter");
     }
 
     /**
@@ -158,14 +158,7 @@ public class JsonWriter implements Closeable, Flushable
     @Deprecated
     public static String toJson(Object item, Map<String, Object> optionalArgs)
     {
-        try
-        {
-            return objectToJson(item, optionalArgs);
-        }
-        catch (IOException ignored)
-        {
-            return null;
-        }
+        throw new RuntimeException("Use com.cedarsoftware.util.JsonWriter");
     }
 
     /**

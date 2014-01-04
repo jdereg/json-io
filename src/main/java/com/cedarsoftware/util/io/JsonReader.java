@@ -1007,14 +1007,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public static Object toJava(String json)
     {
-        try
-        {
-            return jsonToJava(json);
-        }
-        catch (Exception ignored)
-        {
-            return null;
-        }
+        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader");
     }
 
     /**
