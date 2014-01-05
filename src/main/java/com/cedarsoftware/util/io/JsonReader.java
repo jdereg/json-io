@@ -1794,13 +1794,13 @@ public class JsonReader implements Closeable
             }
             else // Primitives and primitive wrappers
             {
-                if (fieldType == Object.class)
-                {   // Case when field type is Object, then attempt to assign rhs directly to it (handles String, Double, Boolean, Long, null)
-                    field.set(target, rhs);
+                if (isPrimitive(fieldType))
+                {
+                    field.set(target, newPrimitiveWrapper(fieldType, rhs));
                 }
                 else
                 {
-                    field.set(target, newPrimitiveWrapper(fieldType, rhs));
+                    field.set(target, rhs);
                 }
             }
         }
