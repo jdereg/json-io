@@ -5991,6 +5991,27 @@ public class TestJsonReaderWriter
         assertEquals(new BigInteger("999"), tbi.values[6]);
     }
 
+    class TestVanillaFields
+    {
+        Object name;
+        Object salary;
+        Comparable age;
+        Serializable alive;
+        Object garbage;
+    }
+
+    @Test
+    public void testAssignToObjectField() throws Exception
+    {
+        String json = "{\"@type\":\"" + TestVanillaFields.class.getName() + "\",\"name\":\"Nakamoto\",\"salary\":100.45,\"age\":48,\"alive\":true,\"garbage\":null}";
+        TestVanillaFields vanilla = (TestVanillaFields) readJsonObject(json);
+        assertEquals(vanilla.name, "Nakamoto");
+        assertEquals(vanilla.salary, 100.45);
+        assertEquals(vanilla.age, 48L);
+        assertEquals(vanilla.alive, true);
+        assertEquals(vanilla.garbage, null);
+    }
+
     @Test
     public void testCleanString()
     {
