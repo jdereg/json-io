@@ -120,7 +120,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 
  * 2.4.1
-  * Added support to allow primitives and String to be assigned to very generically typed field on an object (Serializable, Comparable, Object, etc.).  Primitives can now be 'set' into these fields, without any additional type information.
+  * Added support to allow primitives and String to be assigned to abstract / interface / base type field on an object (Serializable, Comparable, Object, etc.). Primitives can now be 'set' into these fields, without any additional type information.
  * 2.4.0
   * Primitives can be set from Strings
   * Strings can be set from primitives
