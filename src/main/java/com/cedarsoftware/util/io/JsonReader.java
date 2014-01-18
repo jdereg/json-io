@@ -104,8 +104,8 @@ public class JsonReader implements Closeable
     private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
     private static final Pattern _datePattern1 = Pattern.compile("^(\\d{4})[\\./-](\\d{1,2})[\\./-](\\d{1,2})");
     private static final Pattern _datePattern2 = Pattern.compile("^(\\d{1,2})[\\./-](\\d{1,2})[\\./-](\\d{4})");
-    private static final Pattern _datePattern3 = Pattern.compile("(Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,](Jan|Feb|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|Sep|Sept|Oct|Nov|Dec)[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern3 = Pattern.compile("(Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,](Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
