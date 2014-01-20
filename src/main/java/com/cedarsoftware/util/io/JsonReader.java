@@ -102,10 +102,12 @@ public class JsonReader implements Closeable
     private static final Set<Class> _notCustom = new HashSet<Class>();
     private static final Map<String, String> _months = new LinkedHashMap<String, String>();
     private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
+    private static final String _mos = "(Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)";
     private static final Pattern _datePattern1 = Pattern.compile("^(\\d{4})[\\./-](\\d{1,2})[\\./-](\\d{1,2})");
     private static final Pattern _datePattern2 = Pattern.compile("^(\\d{1,2})[\\./-](\\d{1,2})[\\./-](\\d{4})");
-    private static final Pattern _datePattern3 = Pattern.compile("(Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,](Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern3 = Pattern.compile(_mos + "[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,]" + _mos + "[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern _datePattern5 = Pattern.compile("(\\d{4})[ ,]" + _mos + "[ ,]+(\\d{1,2})", Pattern.CASE_INSENSITIVE);
     private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
     private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
     private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
@@ -485,13 +487,23 @@ public class JsonReader implements Closeable
                     else
                     {
                         matcher = _datePattern4.matcher(dateStr);
-                        if (!matcher.find())
+                        if (matcher.find())
                         {
-                            error("Unable to parse: " + dateStr);
+                            day = matcher.group(1);
+                            mon = matcher.group(2);
+                            year = matcher.group(3);
                         }
-                        day = matcher.group(1);
-                        mon = matcher.group(2);
-                        year = matcher.group(3);
+                        else
+                        {
+                            matcher = _datePattern5.matcher(dateStr);
+                            if (!matcher.find())
+                            {
+                                error("Unable to parse: " + dateStr);
+                            }
+                            year = matcher.group(1);
+                            mon = matcher.group(2);
+                            day = matcher.group(3);
+                        }
                     }
                 }
             }
@@ -523,18 +535,18 @@ public class JsonReader implements Closeable
             Calendar c = Calendar.getInstance();
             c.clear();
 
-            int y = 0;
-            int m = 0;
-            int d = 0;
-            try
+            // Always parses correctly because of regex.
+            int y = Integer.parseInt(year);
+            int m = Integer.parseInt(month) - 1;    // months are 0-based
+            int d = Integer.parseInt(day);
+
+            if (m < 0 || m > 11)
             {
-                y = Integer.parseInt(year);
-                m = Integer.parseInt(month) - 1;    // months are 0-based
-                d = Integer.parseInt(day);
+                error("Month must be between 1 and 12, date: " + dateStr);
             }
-            catch (Exception e)
+            if (d < 0 || d > 31)
             {
-                error("Unable to parse: " + dateStr, e);
+                error("Day cannot be > 31, date: " + dateStr);
             }
 
             if (matcher == null)
@@ -556,21 +568,24 @@ public class JsonReader implements Closeable
                     milli = matcher.group(4);
                 }
 
-                int h = 0;
-                int mn = 0;
-                int s = 0;
-                int ms = 0;
-                try
+                int h = Integer.parseInt(hour);
+                int mn = Integer.parseInt(min);
+                int s = Integer.parseInt(sec);
+                int ms = Integer.parseInt(milli);
+
+                if (h < 0 || h > 23)
                 {
-                    h = Integer.parseInt(hour);
-                    mn = Integer.parseInt(min);
-                    s = Integer.parseInt(sec);
-                    ms = Integer.parseInt(milli);
+                    error("Hour must be between 0 and 23, time: " + dateStr);
                 }
-                catch (Exception e)
+                if (mn < 0 || mn > 59)
                 {
-                    error("Unable to parse time: " + dateStr, e);
+                    error("Minute must be between 0 and 59, time: " + dateStr);
                 }
+                if (s < 0 || s > 59)
+                {
+                    error("Second must be between 0 and 59, time: " + dateStr);
+                }
+
                 c.set(y, m, d, h, mn, s);
                 c.set(Calendar.MILLISECOND, ms);
             }
