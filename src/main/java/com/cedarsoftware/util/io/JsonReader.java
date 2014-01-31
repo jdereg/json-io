@@ -683,7 +683,15 @@ public class JsonReader implements Closeable
 
             if (value instanceof String)
             {
-                x = new BigInteger(removeLeadingAndTrailingQuotes((String) value));
+                String s = (String) value;
+                if ("".equals(s.trim()))
+                {
+                    return jObj != null ? jObj.target = null : null;
+                }
+                else
+                {
+                    x = new BigInteger(removeLeadingAndTrailingQuotes((String) value));
+                }
             }
 
             if (value instanceof BigInteger)
@@ -768,7 +776,15 @@ public class JsonReader implements Closeable
 
             if (value instanceof String)
             {
-                x = new BigDecimal(removeLeadingAndTrailingQuotes((String) value));
+                String s = (String) value;
+                if ("".equals(s.trim()))
+                {
+                    return jObj != null ? jObj.target = null : null;
+                }
+                else
+                {
+                    x = new BigDecimal(removeLeadingAndTrailingQuotes((String) value));
+                }
             }
 
             if (value instanceof BigDecimal)
@@ -1807,11 +1823,15 @@ public class JsonReader implements Closeable
                     }
                 }
             }
-            else // Primitives and primitive wrappers
+            else
             {
                 if (isPrimitive(fieldType))
                 {
                     field.set(target, newPrimitiveWrapper(fieldType, rhs));
+                }
+                else if (rhs instanceof String && "".equals(((String) rhs).trim()) && field.getType() != String.class)
+                {
+                    field.set(target, null);
                 }
                 else
                 {

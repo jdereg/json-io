@@ -5953,6 +5953,10 @@ public class TestJsonReaderWriter
         assertEquals(new BigDecimal("3.14159"), tbd.values[6]);
         assertEquals(new BigDecimal(1), tbd.values[7]);
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
+
+        json = "{\"@type\":\"" + TestBigDecimalField.class.getName() + "\",\"fromString\":\"\"}";
+        tbd = (TestBigDecimalField) readJsonObject(json);
+        assertNull(tbd.fromString);
     }
 
     class TestBigIntegerField
@@ -5989,6 +5993,10 @@ public class TestJsonReaderWriter
         assertEquals(new BigInteger("314159"), tbi.values[4]);
         assertEquals(new BigInteger("1"), tbi.values[5]);
         assertEquals(new BigInteger("999"), tbi.values[6]);
+
+        json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
+        tbi = (TestBigIntegerField) readJsonObject(json);
+        assertNull(tbi.fromString);
     }
 
     class TestVanillaFields
