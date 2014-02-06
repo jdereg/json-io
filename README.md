@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.4.2</version>
+  <version>2.4.3</version>
 </dependency>
 ```
 
@@ -118,8 +118,10 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.4.3
+  * Allow "" to be set into BigInteger or BigDecimal when return value is Map (JsonObject). "" to non-String fields will be null, except for primitives and primitive wrappers, that will result in JVM default value.
  * 2.4.2
-  * Allow "" to be set into non-String fields, when doing so, null is set on Object type fields, no primitive fields, the JVM default value is set.
+  * Allow "" to be set into non-String fields, when doing so, null is set on Object type fields, no primitive fields, the JVM default value is set. This is for when converting JSON to Java objects directly.
  * 2.4.1
   * Added support to allow primitives and String to be assigned to abstract / interface / base type field on an object (Serializable, Comparable, Object, etc.). Primitives can now be 'set' into these fields, without any additional type information.
  * 2.4.0

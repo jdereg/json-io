@@ -1649,11 +1649,37 @@ public class JsonReader implements Closeable
                 }
                 else if (BigDecimal.class == fieldType)
                 {
-                    jsonObj.put(key, new BigDecimal(value.toString()));
+                    if (value instanceof String)
+                    {
+                        String s = (String) value;
+                        jsonObj.put(key, "".equals(s.trim()) ? null : new BigDecimal((String)value));
+                    }
+                    else
+                    {
+                        jsonObj.put(key, new BigDecimal(value.toString()));
+                    }
                 }
                 else if (BigInteger.class == fieldType)
                 {
-                    jsonObj.put(key, new BigInteger(value.toString()));
+                    if (value instanceof String)
+                    {
+                        String s = (String) value;
+                        jsonObj.put(key, "".equals(s.trim()) ? null : new BigInteger((String)value));
+                    }
+                    else
+                    {
+                        jsonObj.put(key, new BigInteger(value.toString()));
+                    }
+                }
+                else if (value instanceof String)
+                {
+                    if (field.getType() != String.class && field.getType() != StringBuilder.class && field.getType() != StringBuffer.class)
+                    {
+                        if ("".equals(((String)value).trim()))
+                        {
+                            jsonObj.put(key, null);
+                        }
+                    }
                 }
             }
         }

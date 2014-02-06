@@ -5999,6 +5999,14 @@ public class TestJsonReaderWriter
         assertNull(tbi.fromString);
     }
 
+    @Test
+    public void testAssignBigIntegerStringToMaps() throws Exception
+    {
+        String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
+        Map map = JsonReader.jsonToMaps(json);
+        assertNull(map.get("fromString"));
+    }
+
     class TestVanillaFields
     {
         Object name;
