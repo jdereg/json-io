@@ -454,6 +454,10 @@ public class JsonReader implements Closeable
         private static Date parseDate(String dateStr) throws IOException
         {
             dateStr = dateStr.trim();
+            if ("".equals(dateStr))
+            {
+                return null;
+            }
 
             // Determine which date pattern (Matcher) to use
             Matcher matcher = _datePattern1.matcher(dateStr);
@@ -661,8 +665,6 @@ public class JsonReader implements Closeable
                 }
             }
 
-            BigInteger x = null;
-
             if (value instanceof JsonObject)
             {
                 JsonObject valueObj = (JsonObject)value;
@@ -681,58 +683,70 @@ public class JsonReader implements Closeable
                 }
             }
 
-            if (value instanceof String)
-            {
-                String s = (String) value;
-                if ("".equals(s.trim()))
-                {
-                    return jObj != null ? jObj.target = null : null;
-                }
-                else
-                {
-                    x = new BigInteger(removeLeadingAndTrailingQuotes((String) value));
-                }
-            }
-
-            if (value instanceof BigInteger)
-            {
-                x = (BigInteger) value;
-            }
-
-            if (value instanceof BigDecimal)
-            {
-                BigDecimal bd = (BigDecimal) value;
-                String str = bd.toPlainString();
-                if (str.contains("."))
-                {
-                    return error("Cannot assign BigDecimal to BigInteger if BigDecimal has fractional part: " + value);
-                }
-                x = new BigInteger(str);
-            }
-
-            if (value instanceof Boolean)
-            {
-                x = new BigInteger(((Boolean) value) ? "1" : "0");
-            }
-
-            if (value instanceof Double || value instanceof Float)
-            {
-                return error("Cannot assign floating point value to a BigInteger: " + value);
-            }
-
-            if (value instanceof Long || value instanceof Integer ||
-                value instanceof Short || value instanceof Byte)
-            {
-                x = new BigInteger(value.toString());
-            }
-
+            BigInteger x = bigIntegerFrom(value);
             if (jObj != null)
             {
                 jObj.target = x;
             }
 
-            return x != null ? x : error("BigInteger 'value' convertible to a BigInteger: " + value);
+            return x;
         }
+    }
+
+    /**
+     * @return a BigInteger from the given input.  A best attempt will be made to support
+     * as many input types as possible.  For example, if the input is a Boolean, a BigInteger of
+     * 1 or 0 will be returned.  If the input is a String "", a null will be returned.  If the
+     * input is a Double, Float, or BigDecimal, a BigInteger will be returned that retains the
+     * integer portion (fractional part is dropped).  The input can be a Byte, Short, Integer,
+     * or Long.
+     * @throws IOException if the input is something that cannot be converted to a BigInteger.
+     */
+    private static BigInteger bigIntegerFrom(Object value) throws IOException
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        else if (value instanceof BigInteger)
+        {
+            return (BigInteger) value;
+        }
+        else if (value instanceof String)
+        {
+            String s = (String) value;
+            if ("".equals(s.trim()))
+            {   // Allows "" to be used to assign null to BigInteger field.
+                return null;
+            }
+            try
+            {
+                return new BigInteger(removeLeadingAndTrailingQuotes(s));
+            }
+            catch (Exception e)
+            {
+                return (BigInteger) error("Could not parse '" + value + "' as BigInteger.", e);
+            }
+        }
+        else if (value instanceof BigDecimal)
+        {
+            BigDecimal bd = (BigDecimal) value;
+            return bd.toBigInteger();
+        }
+        else if (value instanceof Boolean)
+        {
+            return new BigInteger(((Boolean) value) ? "1" : "0");
+        }
+        else if (value instanceof Double || value instanceof Float)
+        {
+            return new BigDecimal(((Number)value).doubleValue()).toBigInteger();
+        }
+        else if (value instanceof Long || value instanceof Integer ||
+                value instanceof Short || value instanceof Byte)
+        {
+            return new BigInteger(value.toString());
+        }
+        return (BigInteger) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
     public static class BigDecimalReader implements JsonClassReader
@@ -754,8 +768,6 @@ public class JsonReader implements Closeable
                 }
             }
 
-            BigDecimal x = null;
-
             if (value instanceof JsonObject)
             {
                 JsonObject valueObj = (JsonObject)value;
@@ -774,46 +786,62 @@ public class JsonReader implements Closeable
                 }
             }
 
-            if (value instanceof String)
-            {
-                String s = (String) value;
-                if ("".equals(s.trim()))
-                {
-                    return jObj != null ? jObj.target = null : null;
-                }
-                else
-                {
-                    x = new BigDecimal(removeLeadingAndTrailingQuotes((String) value));
-                }
-            }
-
-            if (value instanceof BigDecimal)
-            {
-                x = (BigDecimal) value;
-            }
-
-            if (value instanceof BigInteger)
-            {
-                x = new BigDecimal((BigInteger)value);
-            }
-
-            if (value instanceof Boolean)
-            {
-                x = new BigDecimal(((Boolean) value) ? "1" : "0");
-            }
-
-            if (value instanceof Long || value instanceof Double || value instanceof Integer ||
-                value instanceof Short || value instanceof Byte || value instanceof Float || value instanceof BigInteger)
-            {
-                x = new BigDecimal(value.toString());
-            }
-
+            BigDecimal x = bigDecimalFrom(value);
             if (jObj != null)
             {
                 jObj.target = x;
             }
-            return x != null ? x : error("BigDecimal missing 'value' field not convertible to a BigDecimal: " + value);
+            return x;
         }
+    }
+
+    /**
+     * @return a BigDecimal from the given input.  A best attempt will be made to support
+     * as many input types as possible.  For example, if the input is a Boolean, a BigDecimal of
+     * 1 or 0 will be returned.  If the input is a String "", a null will be returned. The input
+     * can be a Byte, Short, Integer, Long, or BigInteger.
+     * @throws IOException if the input is something that cannot be converted to a BigDecimal.
+     */
+    private static BigDecimal bigDecimalFrom(Object value) throws IOException
+    {
+        if (value == null)
+        {
+            return null;
+        }
+        else if (value instanceof BigDecimal)
+        {
+            return (BigDecimal) value;
+        }
+        else if (value instanceof String)
+        {
+            String s = (String) value;
+            if ("".equals(s.trim()))
+            {
+                return null;
+            }
+            try
+            {
+                return new BigDecimal(removeLeadingAndTrailingQuotes(s));
+            }
+            catch (Exception e)
+            {
+                return (BigDecimal) error("Could not parse '" + s + "' as BigDecimal.", e);
+            }
+        }
+        else if (value instanceof BigInteger)
+        {
+            return new BigDecimal((BigInteger) value);
+        }
+        else if (value instanceof Boolean)
+        {
+            return new BigDecimal(((Boolean) value) ? "1" : "0");
+        }
+        else if (value instanceof Long || value instanceof Integer || value instanceof Double ||
+                value instanceof Short || value instanceof Byte || value instanceof Float)
+        {
+            return new BigDecimal(value.toString());
+        }
+        return (BigDecimal) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
     public static class StringBuilderReader implements JsonClassReader
@@ -1368,8 +1396,15 @@ public class JsonReader implements Closeable
                 }
             }
             else
-            {   // Setting primitive values into an Object[]
-                Array.set(array, i, element);
+            {
+                if (element instanceof String && "".equals(((String) element).trim()) && compType != String.class && compType != Object.class)
+                {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
+                    Array.set(array, i, null);
+                }
+                else
+                {
+                    Array.set(array, i, element);
+                }
             }
         }
         jsonObj.clearArray();
@@ -1642,38 +1677,22 @@ public class JsonReader implements Closeable
             }
             else if (field != null)
             {
-                Class fieldType = field.getType();
+                final Class fieldType = field.getType();
                 if (isPrimitive(fieldType))
                 {
                     jsonObj.put(key, newPrimitiveWrapper(fieldType, value));
                 }
                 else if (BigDecimal.class == fieldType)
                 {
-                    if (value instanceof String)
-                    {
-                        String s = (String) value;
-                        jsonObj.put(key, "".equals(s.trim()) ? null : new BigDecimal((String)value));
-                    }
-                    else
-                    {
-                        jsonObj.put(key, new BigDecimal(value.toString()));
-                    }
+                    jsonObj.put(key, bigDecimalFrom(value));
                 }
                 else if (BigInteger.class == fieldType)
                 {
-                    if (value instanceof String)
-                    {
-                        String s = (String) value;
-                        jsonObj.put(key, "".equals(s.trim()) ? null : new BigInteger((String)value));
-                    }
-                    else
-                    {
-                        jsonObj.put(key, new BigInteger(value.toString()));
-                    }
+                    jsonObj.put(key, bigIntegerFrom(value));
                 }
                 else if (value instanceof String)
                 {
-                    if (field.getType() != String.class && field.getType() != StringBuilder.class && field.getType() != StringBuffer.class)
+                    if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class)
                     {
                         if ("".equals(((String)value).trim()))
                         {

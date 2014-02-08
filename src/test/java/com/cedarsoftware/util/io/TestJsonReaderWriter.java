@@ -5452,7 +5452,7 @@ public class TestJsonReaderWriter
     @Test 
     public void testEmptyCollections() throws Exception
     {
-        EmptyCols emptyCols = new EmptyCols();
+        EmptyCols emptyCols;
         String className = TestJsonReaderWriter.class.getName();
         String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
         println("json = " + json);
@@ -5954,6 +5954,30 @@ public class TestJsonReaderWriter
         assertEquals(new BigDecimal(1), tbd.values[7]);
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
 
+        Map map = JsonReader.jsonToMaps(json);
+        json = getJsonString(map);
+        tbd = (TestBigDecimalField) readJsonObject(json);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromString);
+        assertEquals(new BigDecimal(314159), tbd.fromLong);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromDouble);
+        assertEquals(new BigDecimal(1), tbd.fromBoolean);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromStringObj);
+        assertEquals(new BigDecimal(314159), tbd.fromLongObj);
+        assertEquals(new BigDecimal("3.14159"), tbd.fromDoubleObj);
+        assertEquals(new BigDecimal(0), tbd.fromBooleanObj);
+        assertEquals(new BigDecimal(72), tbd.fromBigIntObj);
+        assertEquals(new BigDecimal("72.1"), tbd.fromBigDecObj);
+
+        assertEquals(new BigDecimal("3.14159"), tbd.values[0]);
+        assertEquals(new BigDecimal(314159), tbd.values[1]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[2]);
+        assertEquals(new BigDecimal(1), tbd.values[3]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[4]);
+        assertEquals(new BigDecimal(314159), tbd.values[5]);
+        assertEquals(new BigDecimal("3.14159"), tbd.values[6]);
+        assertEquals(new BigDecimal(1), tbd.values[7]);
+        assertEquals(new BigDecimal("72.72"), tbd.values[8]);
+
         json = "{\"@type\":\"" + TestBigDecimalField.class.getName() + "\",\"fromString\":\"\"}";
         tbd = (TestBigDecimalField) readJsonObject(json);
         assertNull(tbd.fromString);
@@ -5994,6 +6018,26 @@ public class TestJsonReaderWriter
         assertEquals(new BigInteger("1"), tbi.values[5]);
         assertEquals(new BigInteger("999"), tbi.values[6]);
 
+        Map map = JsonReader.jsonToMaps(json);
+        json = getJsonString(map);
+        tbi = (TestBigIntegerField) readJsonObject(json);
+        assertEquals(new BigInteger("314159"), tbi.fromString);
+        assertEquals(new BigInteger("314159"), tbi.fromLong);
+        assertEquals(new BigInteger("1"), tbi.fromBoolean);
+        assertEquals(new BigInteger("314159"), tbi.fromStringObj);
+        assertEquals(new BigInteger("314159"), tbi.fromLongObj);
+        assertEquals(new BigInteger("0"), tbi.fromBooleanObj);
+        assertEquals(new BigInteger("9"), tbi.fromBigDecObj);
+        assertEquals(new BigInteger("99"), tbi.fromBigIntObj);
+
+        assertEquals(new BigInteger("314159"), tbi.values[0]);
+        assertEquals(new BigInteger("314159"), tbi.values[1]);
+        assertEquals(new BigInteger("1"), tbi.values[2]);
+        assertEquals(new BigInteger("314159"), tbi.values[3]);
+        assertEquals(new BigInteger("314159"), tbi.values[4]);
+        assertEquals(new BigInteger("1"), tbi.values[5]);
+        assertEquals(new BigInteger("999"), tbi.values[6]);
+
         json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
         tbi = (TestBigIntegerField) readJsonObject(json);
         assertNull(tbi.fromString);
@@ -6005,6 +6049,37 @@ public class TestJsonReaderWriter
         String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
         Map map = JsonReader.jsonToMaps(json);
         assertNull(map.get("fromString"));
+    }
+
+    static class TestDateField
+    {
+        Date fromString;
+        Date[] dates;
+    }
+
+    @Test
+    public void testAssignDateFromEmptyString() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":\"\"}";
+        TestDateField tdf = (TestDateField) readJsonObject(json);
+        assertNull(tdf.fromString);
+
+        Map jObj = JsonReader.jsonToMaps(json);
+        assertNull(jObj.get("fromString"));
+
+        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":null,\"dates\":[\"\"]}";
+        tdf = (TestDateField) readJsonObject(json);
+        assertNull(tdf.dates[0]);
+
+        jObj = JsonReader.jsonToMaps(json);
+        json = getJsonString(jObj);
+        tdf = (TestDateField) readJsonObject(json);
+        assertNull(tdf.dates[0]);
+
+        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":1391875635941}";
+        tdf = (TestDateField) readJsonObject(json);
+        assertEquals(new Date(1391875635941L), tdf.fromString);
+
     }
 
     class TestVanillaFields

@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.4.4</version>
+  <version>2.4.5</version>
 </dependency>
 ```
 
@@ -118,6 +118,8 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.4.5
+  * Allow "" to be set into Date field, setting the Date field (or Date array element) as null.
  * 2.4.4
   * Allow "" to be set into BigInteger or BigDecimal when return value is Map (JsonObject). "" to non-String fields will be null, except for primitives and primitive wrappers, that will result in JVM default value.
  * 2.4.2
