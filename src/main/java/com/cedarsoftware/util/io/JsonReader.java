@@ -1757,35 +1757,11 @@ public class JsonReader implements Closeable
         {
             Class fieldType = field.getType();
 
-            if (Collection.class.isAssignableFrom(fieldType))
-            {   // Process Collection (and potentially generic objects within it) by marketing contained items with
-                // template info if it exists, and the items do not have @type specified on them.
-                if (rhs instanceof JsonObject)
-                {
-                    JsonObject col = (JsonObject) rhs;
-                    Object[] items = col.getArray();
-                    markSubobjectTypes(field, items, 0);
-                }
-            }
-            else if (Map.class.isAssignableFrom(fieldType))
-            {
-                if (rhs instanceof JsonObject)
-                {
-                    JsonObject map = (JsonObject) rhs;
-                    convertMapToKeysItems(map);
-
-                    if (map.get("@keys") instanceof Object[])
-                    {
-                        Object[] keys = (Object[]) map.get("@keys");
-                        markSubobjectTypes(field, keys, 0);
-                    }
-                    if (map.get("@items") instanceof Object[])
-                    {
-                        Object[] values = (Object[]) map.get("@items");
-                        markSubobjectTypes(field, values, 1);
-                    }
-                }
-            }
+            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the subobjects may not have an
+            // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
+            // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
+            // exists).
+            markUntypedObjects(field, rhs);
 
             if (rhs instanceof JsonObject)
             {   // Ensure .type field set on JsonObject
@@ -1890,30 +1866,35 @@ public class JsonReader implements Closeable
         }
     }
 
-    /**
-     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
-     * to have its keys placed into @keys, and its values placed into @items.
-     * @param map Map to convert
-     */
-    private void convertMapToKeysItems(JsonObject map)
+    private void markUntypedObjects(Field field, Object rhs)
     {
-        if (!map.containsKey("@keys") && !map.containsKey("@ref"))
+        if (!(rhs instanceof JsonObject))
+        {   // Only JsonObject instances could contain unmarked objects.
+            return;
+        }
+
+        if (Collection.class.isAssignableFrom(field.getType()))
+        {   // Process Collection (and potentially generic objects within it) by marketing contained items with
+            // template info if it exists, and the items do not have @type specified on them.
+            JsonObject col = (JsonObject) rhs;
+            Object[] items = col.getArray();
+            markSubobjectTypes(field, items, 0);
+        }
+        else if (Map.class.isAssignableFrom(field.getType()))
         {
-            Object[] keys = new Object[map.keySet().size()];
-            Object[] values = new Object[map.keySet().size()];
-            int i=0;
-            for (Object e : map.entrySet())
+            JsonObject map = (JsonObject) rhs;
+            convertMapToKeysItems(map);
+
+            if (map.get("@keys") instanceof Object[])
             {
-                Map.Entry entry = (Map.Entry)e;
-                keys[i] = entry.getKey();
-                values[i] = entry.getValue();
-                i++;
+                Object[] keys = (Object[]) map.get("@keys");
+                markSubobjectTypes(field, keys, 0);
             }
-            String saveType = map.getType();
-            map.clear();
-            map.setType(saveType);
-            map.put("@keys", keys);
-            map.put("@items", values);
+            if (map.get("@items") instanceof Object[])
+            {
+                Object[] values = (Object[]) map.get("@items");
+                markSubobjectTypes(field, values, 1);
+            }
         }
     }
 
@@ -1951,6 +1932,33 @@ public class JsonReader implements Closeable
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
+     * to have its keys placed into @keys, and its values placed into @items.
+     * @param map Map to convert
+     */
+    private void convertMapToKeysItems(JsonObject map)
+    {
+        if (!map.containsKey("@keys") && !map.containsKey("@ref"))
+        {
+            Object[] keys = new Object[map.keySet().size()];
+            Object[] values = new Object[map.keySet().size()];
+            int i=0;
+            for (Object e : map.entrySet())
+            {
+                Map.Entry entry = (Map.Entry)e;
+                keys[i] = entry.getKey();
+                values[i] = entry.getValue();
+                i++;
+            }
+            String saveType = map.getType();
+            map.clear();
+            map.setType(saveType);
+            map.put("@keys", keys);
+            map.put("@items", values);
         }
     }
 

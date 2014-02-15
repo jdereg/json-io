@@ -77,7 +77,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -6126,6 +6126,20 @@ public class TestJsonReaderWriter
         println("Total ObjectStream read  = " + (_totalRead / 1000000.0) + " ms");
         println("Total ObjectStream write = " + (_totalWrite / 1000000.0) + " ms");
         println("JDK InputStream/OutputStream fail count = " + _outputStreamFailCount);
+    }
+
+    static class ParameterizedCollection
+    {
+        Map<String, Set<String>> content = new LinkedHashMap<String, Set<String>>();
+    }
+
+    @Test
+    //TODO delete or finish test
+    public void testCollectionWithParameterizedTypes() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$ParameterizedCollection\",\"content\":{\"@type\":\"java.util.LinkedHashMap\",\"@keys\":[\"one\"],\"@items\":[{\"@type\":\"java.util.LinkedHashSet\",\"@items\":[\"1\",\"One\",\"First\"]}]}}";
+        ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        assertTrue(DeepEquals.deepEquals(pCol, pCol));
     }
 
     private static void println(Object ... args)
