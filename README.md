@@ -9,6 +9,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
   <version>2.4.5</version>
 </dependency>
 ```
+<a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Donate Bitcoins</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  
 
