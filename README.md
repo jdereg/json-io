@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.5.0</version>
+  <version>2.5.1</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Donate Bitcoins</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
@@ -119,6 +119,8 @@ Use JsonWriter.formatJson() API to format a passed in JSON string to a nice, hum
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.5.1
+  * Fixed a bug (introduced in 2.5.0) in the processing of a Map that has a Collection as a key.
  * 2.5.0
   * New 'Pretty-Print' option available.  If the 'args' Map passed to JsonWriter.objectToJson(o, args) contains the key JsonWriter.PRETTY_PRINT and the value 'true' (boolean or String), the JsonWriter output will be formatted in a nice human readable format.
   * Convert a JSON String to Pretty-Print format using JsonWriter.formatJson(String json).  A String will be returned with the JSON formatted in a nice, human readable format.
