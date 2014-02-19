@@ -5927,17 +5927,56 @@ public class TestJsonReaderWriter
     @Test
     public void test3TypeGeneric() throws Exception
     {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$GenericHolder\",\"a\":{\"t\":{\"x\":1,\"y\":2},\"u\":\"Sochi\",\"v\":{\"x\":10,\"y\":20}}}";
+        String json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":{\"x\":1,\"y\":2},\"u\":\"Sochi\",\"v\":{\"x\":10,\"y\":20}}}";
         GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json);
         assertEquals(new Point(1, 2), gen.a.t);
         assertEquals("Sochi", gen.a.u);
         assertEquals(new Point(10, 20), gen.a.v);
 
-        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$GenericHolder\",\"a\":{\"t\":null,\"u\":null,\"v\":null}}";
+        json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":null,\"u\":null,\"v\":null}}";
         gen = (GenericHolder) JsonReader.jsonToJava(json);
         assertNull(gen.a.t);
         assertNull(gen.a.u);
         assertNull(gen.a.v);
+    }
+
+    static class MapSetKey
+    {
+        Map<Set<Point>, String> content;
+    }
+
+    @Test
+    public void testMapSetKey() throws Exception
+    {
+        MapSetKey m = new MapSetKey();
+        m.content = new LinkedHashMap<Set<Point>, String>();
+        Set<Point> setA = new LinkedHashSet<Point>();
+        setA.add(new Point(1, 2));
+        setA.add(new Point(10, 20));
+        m.content.put(setA, "foo");
+        Set<Point> setB = new LinkedHashSet<Point>();
+        setB.add(new Point(3, 4));
+        setB.add(new Point(30, 40));
+        m.content.put(setB, "bar");
+        String json = getJsonString(m);
+        MapSetKey x = (MapSetKey) readJsonObject(json);
+
+        assertEquals("foo", x.content.get(setA));
+        assertEquals("bar", x.content.get(setB));
+
+        m = new MapSetKey();
+        m.content = new LinkedHashMap<Set<Point>, String>();
+        m.content.put(null, null);
+        json = getJsonString(m);
+        x = (MapSetKey) readJsonObject(json);
+        assertNull(x.content.get(null));
+
+        m = new MapSetKey();
+        m.content = new LinkedHashMap<Set<Point>, String>();
+        m.content.put(new LinkedHashSet(), "Fargo");
+        json = getJsonString(m);
+        x = (MapSetKey) readJsonObject(json);
+        assertEquals("Fargo", x.content.get(new LinkedHashSet<Point>()));
     }
 
     class AllPrimitives

@@ -1907,19 +1907,28 @@ public class JsonReader implements Closeable
                         Object[] array = (Object[]) item[1];
                         for (int i=0; i < array.length; i++)
                         {
-                            JsonObject coll = new JsonObject();
-                            coll.type = clazz.getName();
-                            Object[] vals = (Object[]) array[i];
-                            if (vals != null)
+                            Object vals = array[i];
+                            stack.addFirst(new Object[]{t, vals});
+
+                            if (vals instanceof JsonObject)
                             {
-                                List items = Arrays.asList(vals);
-                                coll.put("@items", items.toArray());
-                                stack.addFirst(new Object[]{t, items});
-                                array[i] = coll;
+                                stack.addFirst(new Object[]{t, vals});
                             }
                             else
                             {
-                                array[i] = null;
+                                if (vals instanceof Object[])
+                                {
+                                    JsonObject coll = new JsonObject();
+                                    coll.type = clazz.getName();
+                                    List items = Arrays.asList((Object[]) vals);
+                                    coll.put("@items", items.toArray());
+                                    stack.addFirst(new Object[]{t, items});
+                                    array[i] = coll;
+                                }
+                                else
+                                {
+                                    stack.addFirst(new Object[]{t, vals});
+                                }
                             }
                         }
                     }
