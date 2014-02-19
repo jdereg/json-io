@@ -1147,19 +1147,6 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Format the passed in JSON string in a nice, human readable format.
-     * @param json String input JSON
-     * @return String containing equivalent JSON, formatted nicely for human readability.
-     */
-    public static String formatJson(String json) throws IOException
-    {
-        Map map = JsonReader.jsonToMaps(json);
-        Map args = new HashMap();
-        args.put(JsonWriter.PRETTY_PRINT, "true");
-        return JsonWriter.objectToJson(map, args);
-    }
-
-    /**
      * Finite State Machine (FSM) used to parse the JSON input into
      * JsonObject's (Maps).  Then, if requested, the JsonObjects are
      * converted into Java instances.

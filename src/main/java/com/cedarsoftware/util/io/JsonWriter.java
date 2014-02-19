@@ -181,6 +181,19 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
+     * Format the passed in JSON string in a nice, human readable format.
+     * @param json String input JSON
+     * @return String containing equivalent JSON, formatted nicely for human readability.
+     */
+    public static String formatJson(String json) throws IOException
+    {
+        Map map = JsonReader.jsonToMaps(json);
+        Map args = new HashMap();
+        args.put(PRETTY_PRINT, "true");
+        return objectToJson(map, args);
+    }
+
+    /**
      * @see JsonWriter#JsonWriter(java.io.OutputStream, java.util.Map)
      */
     public JsonWriter(OutputStream out) throws IOException

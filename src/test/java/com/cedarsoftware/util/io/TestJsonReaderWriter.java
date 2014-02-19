@@ -6258,7 +6258,7 @@ public class TestJsonReaderWriter
 
         String json1 = JsonWriter.objectToJson(nice);
         assertNotEquals(json, json1);
-        String json2 = JsonReader.formatJson(json1);
+        String json2 = JsonWriter.formatJson(json1);
         assertEquals(json2, json);
     }
 

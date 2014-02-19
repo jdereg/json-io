@@ -90,7 +90,7 @@ To specify an alternative date format for JsonWriter:
 In this example, the ISO yyyy/MM/ddTHH:mm:ss format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be JsonWriter.ISO_DATE_TIME, JsonWriter.ISO_DATE, a date format String pattern (eg. "yyyy/MM/dd HH:mm"), or a java.text.Format instance.
 
 ### Javascript
-Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will completely fix up the `@ref's` to point to the appropriate objects.
+Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute @ref tags in the JSON for the actual pointed-to object.  In addition, the @keys / @items will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
 
 ### What's next?
 Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it: 
@@ -121,9 +121,9 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 
 Featured on http://json.org.
  * 2.5.0
-  * New 'Pretty-Print' option available.  If the 'args' Map passed to JsonWriter.objectToJson(o, args) contains the key JsonWriter.PRETTY and the value 'true' (boolean or String), the JsonWriter output will be formatted in a nice human readable format.
-  * Convert a JSON String to Pretty-Print format using JsonReader.formatJson(String json).  A String will be returned with the JSON formatted in a nice, human readable format.
-  * If a Field contains Parameterized types (e.g., Map<String, Set<LONG>>, and so on), and the input JSON for the given field does not have @keys/@items entries (not written by JsonWriter, but likely came from Javascript code), JsonReader will use the Generic Type information to parse the JSON data into Proper Java objects.
+  * New 'Pretty-Print' option available.  If the 'args' Map passed to JsonWriter.objectToJson(o, args) contains the key JsonWriter.PRETTY_PRINT and the value 'true' (boolean or String), the JsonWriter output will be formatted in a nice human readable format.
+  * Convert a JSON String to Pretty-Print format using JsonWriter.formatJson(String json).  A String will be returned with the JSON formatted in a nice, human readable format.
+  * If a Field contains Parameterized types (e.g., Map<String, Set<Long>>, and so on), JsonReader will use those fields to process objects deep within Maps, Collections, etc. and still create the proper Java class.
  * 2.4.5
   * Allow "" to be set into Date field, setting the Date field (or Date array element) as null.
  * 2.4.4
