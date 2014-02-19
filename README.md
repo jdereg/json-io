@@ -108,7 +108,7 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
     }
 
 ### Debugging
-Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and dump that String out.  It will reveal the object in all it's glory.  Take that output and paste it into a JSON lint / formatter so you can can easily read it: See http://jsonformatter.curiousconcept.com/ and http://www.jsonlint.com/
+Instead of doing System.out.println debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It will reveal the object in all it's glory.
 
 ### Pretty-Printing JSON
 Use JsonWriter.formatJson() API to format a passed in JSON string to a nice, human readable format.  Also, when writing JSON data, use the JsonWriter.objectToJson(o, args) API, where args is a Map with a key of JsonWriter.PRETTY_PRINT and a value of 'true' (boolean or String).  When run this way, the JSON written by the JsonWriter will be formatted in a nice, human readable format.
