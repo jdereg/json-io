@@ -6,9 +6,10 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.4.5</version>
+  <version>2.5.0</version>
 </dependency>
 ```
+<a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Donate Bitcoins</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  
 
@@ -111,6 +112,9 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
 ### Debugging
 Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and dump that String out.  It will reveal the object in all it's glory.  Take that output and paste it into a JSON lint / formatter so you can can easily read it: See http://jsonformatter.curiousconcept.com/ and http://www.jsonlint.com/
 
+### Pretty-Printing JSON
+Use JsonReader.formatJson() API to format the passed in JSON string to a nice, human readable form.  Also, when writing JSON data, use the JsonWriter.objectToJson(o, args) API, where args is a Map with a key of JsonWriter.PRETTY_PRINT and a value of 'true' (boolean or String).  When run this way, the JSON written by the JsonWriter will be formatted in a nice, human readable format.
+
 
 ### RESTful support
 **json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.  
@@ -118,6 +122,10 @@ Instead of doing System.out.println debugging, call `JsonWriter.toJson(obj)` and
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.5.0
+  * New 'Pretty-Print' option available.  If the 'args' Map passed to JsonWriter.objectToJson(o, args) contains the key JsonWriter.PRETTY and the value 'true' (boolean or String), the JsonWriter output will be formatted in a nice human readable format.
+  * Convert a JSON String to Pretty-Print format using JsonReader.formatJson(String json).  A String will be returned with the JSON formatted in a nice, human readable format.
+  * If a Field contains Parameterized types (e.g., Map<String, Set<LONG>>, and so on), and the input JSON for the given field does not have @keys/@items entries (not written by JsonWriter, but likely came from Javascript code), JsonReader will use the Generic Type information to parse the JSON data into Proper Java objects.
  * 2.4.5
   * Allow "" to be set into Date field, setting the Date field (or Date array element) as null.
  * 2.4.4

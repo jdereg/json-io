@@ -223,7 +223,21 @@ public class JsonWriter implements Closeable, Flushable
 
     public boolean isPrettyPrint()
     {
-        return "true".equalsIgnoreCase((String)_args.get().get(PRETTY_PRINT));
+        Object setting = _args.get().get(PRETTY_PRINT);
+        if (setting instanceof Boolean)
+        {
+            return Boolean.TRUE.equals(setting);
+        }
+        else if (setting instanceof String)
+        {
+            return "true".equalsIgnoreCase((String) setting);
+        }
+        else if (setting instanceof Number)
+        {
+            return ((Number)setting).intValue() != 0;
+        }
+
+        return false;
     }
 
     private void tabIn(Writer out) throws IOException

@@ -51,6 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -77,7 +79,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = true;
+    public static boolean _debug = false;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -1827,12 +1829,12 @@ public class TestJsonReaderWriter
         }
     }
 
-    public static class DateTrick
+    static class DateTrick
     {
         private Date _userDate;
     }
 
-    public static class LongTrick
+    static class LongTrick
     {
         private long _userDate;
     }
@@ -2554,13 +2556,6 @@ public class TestJsonReaderWriter
     }
 
     @Test
-    public void testFoo() throws Exception
-    {
-        String className = TestJsonReaderWriter.class.getName();
-        String json = "{\"@type\":\"" + className + "$TestString\",\"_range\":\"\\u0000\\u0001\\u0002\\u0003\\u0004\\u0005\\u0006\\u0007\\b\\t\\n\\u000b\\f\\r\\u000e\\u000f\\u0010\\u0011\\u0012\\u0013\\u0014\\u0015\\u0016\\u0017\\u0018\\u0019\\u001a\\u001b\\u001c\\u001d\\u001e\\u001f !\\\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_`abc\",\"_utf8HandBuilt\":\"𝀀\",\"_strArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objArray\":[\"1st\",\"2nd\",null,null,\"3rd\"],\"_objStrArray\":{\"@type\":\"[Ljava.lang.String;\",\"@items\":[\"1st\",\"2nd\",null,null,\"3rd\"]},\"_cache\":[\"true\",\"true\",\"golf\",\"golf\"],\"_poly\":{\"@type\":\"string\",\"value\":\"Poly\"},\"_null\":null}";
-    }
-
-    @Test
     public void testString() throws Exception
     {
         TestString test = new TestString();
@@ -2632,7 +2627,7 @@ public class TestJsonReaderWriter
         assertTrue(o[0] != o[1]);   // Change this to == if we decide to collapse identical String instances
     }
 
-    private static class TestDate implements Serializable
+    static class TestDate implements Serializable
     {
         private final Date _arrayElement;
         private final Date[] _typeArray;
@@ -2703,7 +2698,7 @@ public class TestJsonReaderWriter
         assertTrue(that._max.equals(new Date(Long.MAX_VALUE)));
     }
 
-    private static class TestClass implements Serializable
+    static class TestClass implements Serializable
     {
         private List _classes_a;
 
@@ -2788,7 +2783,7 @@ public class TestJsonReaderWriter
         assertTrue(Character.class == that._CharacterClassArrayO[0]);
     }
 
-    private static class TestSet implements Serializable
+    static class TestSet implements Serializable
     {
         private Set _hashSet;
         private Set _treeSet;
@@ -4762,7 +4757,7 @@ public class TestJsonReaderWriter
         assertTrue(json0.equals(json1));
     }
 
-    private static class SimpleMapTest
+    static class SimpleMapTest
     {
         HashMap map = new HashMap();
     }
@@ -5100,7 +5095,7 @@ public class TestJsonReaderWriter
         assertTrue(json1.contains("_other"));
     }
 
-    public static class Transient1
+    static class Transient1
     {
         String fname;
         String lname;
@@ -5159,7 +5154,7 @@ public class TestJsonReaderWriter
         assertEquals(array[2], 100L);
     }
 
-    private static class ObjectDateField
+    static class ObjectDateField
     {
         private Object date;
         private ObjectDateField(Object date)
@@ -5177,7 +5172,7 @@ public class TestJsonReaderWriter
         }
     }
 
-    private static class SqlDateField
+    static class SqlDateField
     {
         private java.sql.Date date;
         private SqlDateField(java.sql.Date date)
@@ -5185,7 +5180,7 @@ public class TestJsonReaderWriter
             this.date = date;
         }
     }
-    private static class TimestampField
+    static class TimestampField
     {
         private Timestamp date;
         private TimestampField(Timestamp date)
@@ -5846,6 +5841,105 @@ public class TestJsonReaderWriter
         assertEquals(two.get("key2"), 2L);
     }
 
+    static class ParameterizedCollection
+    {
+        Map<String, Set<Point>> content = new LinkedHashMap<String, Set<Point>>();
+    }
+
+    @Test
+    public void testCollectionWithParameterizedTypes() throws Exception
+    {
+        String json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[{\"x\":1,\"y\":2},{\"x\":10,\"y\":20}],\"bar\":[{\"x\":3,\"y\":4}, {\"x\":30,\"y\":40}]}}";
+        ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        Set<Point> points = pCol.content.get("foo");
+        assertNotNull(points);
+        assertEquals(2, points.size());
+        points.contains(new Point(1, 2));
+        points.contains(new Point(10, 20));
+
+        points = pCol.content.get("bar");
+        assertNotNull(points);
+        assertEquals(2, points.size());
+        points.contains(new Point(3, 4));
+        points.contains(new Point(30, 40));
+
+        json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[],\"bar\":null}}";
+        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        points = pCol.content.get("foo");
+        assertNotNull(points);
+        assertEquals(0, points.size());
+
+        points = pCol.content.get("bar");
+        assertNull(points);
+
+        json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{}}";
+        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        assertNotNull(pCol.content);
+        assertEquals(0, pCol.content.size());
+
+        json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":null}";
+        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        assertNull(pCol.content);
+    }
+
+    static class ParameterizedMap
+    {
+        Map<String, Map<String, Point>> content = new LinkedHashMap<String, Map<String, Point>>();
+    }
+
+    @Test
+    public void testMapWithParameterizedTypes() throws Exception
+    {
+        String json = "{\"@type\":\"" + ParameterizedMap.class.getName() + "\", \"content\":{\"foo\":{\"one\":{\"x\":1,\"y\":2},\"two\":{\"x\":10,\"y\":20}},\"bar\":{\"ten\":{\"x\":3,\"y\":4},\"twenty\":{\"x\":30,\"y\":40}}}}";
+        ParameterizedMap pCol = (ParameterizedMap) JsonReader.jsonToJava(json);
+        Map<String, Point> points = pCol.content.get("foo");
+        assertNotNull(points);
+        assertEquals(2, points.size());
+        assertEquals(new Point(1,2), points.get("one"));
+        assertEquals(new Point(10,20), points.get("two"));
+
+        points = pCol.content.get("bar");
+        assertNotNull(points);
+        assertEquals(2, points.size());
+        assertEquals(new Point(3, 4), points.get("ten"));
+        assertEquals(new Point(30, 40), points.get("twenty"));
+    }
+
+    static class ThreeType<T, U, V>
+    {
+        T t;
+        U u;
+        V v;
+
+        public ThreeType(T tt, U uu, V vv)
+        {
+            t = tt;
+            u = uu;
+            v = vv;
+        }
+    }
+
+    static class GenericHolder
+    {
+        ThreeType<Point, String, Point> a;
+    }
+
+    @Test
+    public void test3TypeGeneric() throws Exception
+    {
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$GenericHolder\",\"a\":{\"t\":{\"x\":1,\"y\":2},\"u\":\"Sochi\",\"v\":{\"x\":10,\"y\":20}}}";
+        GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json);
+        assertEquals(new Point(1, 2), gen.a.t);
+        assertEquals("Sochi", gen.a.u);
+        assertEquals(new Point(10, 20), gen.a.v);
+
+        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$GenericHolder\",\"a\":{\"t\":null,\"u\":null,\"v\":null}}";
+        gen = (GenericHolder) JsonReader.jsonToJava(json);
+        assertNull(gen.a.t);
+        assertNull(gen.a.u);
+        assertNull(gen.a.v);
+    }
+
     class AllPrimitives
     {
         boolean b;
@@ -6103,6 +6197,71 @@ public class TestJsonReaderWriter
         assertEquals(vanilla.garbage, null);
     }
 
+    static class Nice
+    {
+        private String name;
+        private Collection items;
+        private Map dictionary;
+    }
+
+    @Test
+    public void testPrettyPrint() throws Exception
+    {
+        Nice nice = new Nice();
+        nice.name = "Louie";
+        nice.items = new ArrayList();
+        nice.items.add("One");
+        nice.items.add(1L);
+        nice.items.add(1);
+        nice.items.add(true);
+        nice.dictionary = new LinkedHashMap();
+        nice.dictionary.put("grade", "A");
+        nice.dictionary.put("price", 100.0);
+        nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
+
+        String target = "{\n" +
+                "  \"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$Nice\",\n" +
+                "  \"name\":\"Louie\",\n" +
+                "  \"items\":{\n" +
+                "    \"@type\":\"java.util.ArrayList\",\n" +
+                "    \"@items\":[\n" +
+                "      \"One\",\n" +
+                "      1,\n" +
+                "      {\n" +
+                "        \"@type\":\"int\",\n" +
+                "        \"value\":1\n" +
+                "      },\n" +
+                "      true\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  \"dictionary\":{\n" +
+                "    \"@type\":\"java.util.LinkedHashMap\",\n" +
+                "    \"@keys\":[\n" +
+                "      \"grade\",\n" +
+                "      \"price\",\n" +
+                "      \"bigdec\"\n" +
+                "    ],\n" +
+                "    \"@items\":[\n" +
+                "      \"A\",\n" +
+                "      100.0,\n" +
+                "      {\n" +
+                "        \"@type\":\"java.math.BigDecimal\",\n" +
+                "        \"value\":\"3.141592653589793238462643383\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  }\n" +
+                "}";
+        Map args = new HashMap();
+        args.put(JsonWriter.PRETTY_PRINT, "true");
+        String json = JsonWriter.objectToJson(nice, args);
+        assertEquals(target, json);
+
+        String json1 = JsonWriter.objectToJson(nice);
+        assertNotEquals(json, json1);
+        String json2 = JsonReader.formatJson(json1);
+        assertEquals(json2, json);
+    }
+
     @Test
     public void testCleanString()
     {
@@ -6126,20 +6285,6 @@ public class TestJsonReaderWriter
         println("Total ObjectStream read  = " + (_totalRead / 1000000.0) + " ms");
         println("Total ObjectStream write = " + (_totalWrite / 1000000.0) + " ms");
         println("JDK InputStream/OutputStream fail count = " + _outputStreamFailCount);
-    }
-
-    static class ParameterizedCollection
-    {
-        Map<String, Set<String>> content = new LinkedHashMap<String, Set<String>>();
-    }
-
-    @Test
-    //TODO delete or finish test
-    public void testCollectionWithParameterizedTypes() throws Exception
-    {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$ParameterizedCollection\",\"content\":{\"@type\":\"java.util.LinkedHashMap\",\"@keys\":[\"one\"],\"@items\":[{\"@type\":\"java.util.LinkedHashSet\",\"@items\":[\"1\",\"One\",\"First\"]}]}}";
-        ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
-        assertTrue(DeepEquals.deepEquals(pCol, pCol));
     }
 
     private static void println(Object ... args)

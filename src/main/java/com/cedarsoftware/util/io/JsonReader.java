@@ -19,6 +19,7 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -702,7 +703,7 @@ public class JsonReader implements Closeable
      * or Long.
      * @throws IOException if the input is something that cannot be converted to a BigInteger.
      */
-    private static BigInteger bigIntegerFrom(Object value) throws IOException
+    public static BigInteger bigIntegerFrom(Object value) throws IOException
     {
         if (value == null)
         {
@@ -802,7 +803,7 @@ public class JsonReader implements Closeable
      * can be a Byte, Short, Integer, Long, or BigInteger.
      * @throws IOException if the input is something that cannot be converted to a BigDecimal.
      */
-    private static BigDecimal bigDecimalFrom(Object value) throws IOException
+    public static BigDecimal bigDecimalFrom(Object value) throws IOException
     {
         if (value == null)
         {
@@ -1066,7 +1067,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public static Object toJava(String json)
     {
-        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader");
+        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader.jsonToJava()");
     }
 
     /**
@@ -1098,14 +1099,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public static Map toMaps(String json)
     {
-        try
-        {
-            return jsonToMaps(json);
-        }
-        catch (Exception ignored)
-        {
-            return null;
-        }
+        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader.jsonToMaps()");
     }
 
     /**
@@ -1150,6 +1144,19 @@ public class JsonReader implements Closeable
         {
             throw new RuntimeException("Your JVM does not support UTF-8.  Get a new JVM.", e);
         }
+    }
+
+    /**
+     * Format the passed in JSON string in a nice, human readable format.
+     * @param json String input JSON
+     * @return String containing equivalent JSON, formatted nicely for human readability.
+     */
+    public static String formatJson(String json) throws IOException
+    {
+        Map map = JsonReader.jsonToMaps(json);
+        Map args = new HashMap();
+        args.put(JsonWriter.PRETTY_PRINT, "true");
+        return JsonWriter.objectToJson(map, args);
     }
 
     /**
@@ -1761,7 +1768,11 @@ public class JsonReader implements Closeable
             // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
             // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
             // exists).
-            markUntypedObjects(field, rhs);
+            if (rhs instanceof JsonObject && field.getGenericType() instanceof ParameterizedType)
+            {   // Only JsonObject instances could contain unmarked objects.
+                ParameterizedType paramType = (ParameterizedType) field.getGenericType();
+                markUntypedObjects(field.getGenericType(), rhs);
+            }
 
             if (rhs instanceof JsonObject)
             {   // Ensure .type field set on JsonObject
@@ -1866,73 +1877,153 @@ public class JsonReader implements Closeable
         }
     }
 
-    private void markUntypedObjects(Field field, Object rhs)
+    private void markUntypedObjects(Type type, Object rhs) throws IOException
     {
-        if (!(rhs instanceof JsonObject))
-        {   // Only JsonObject instances could contain unmarked objects.
-            return;
-        }
+        LinkedList<Object[]> stack = new LinkedList<Object[]>();
+        stack.addFirst(new Object[] {type, rhs});
 
-        if (Collection.class.isAssignableFrom(field.getType()))
-        {   // Process Collection (and potentially generic objects within it) by marketing contained items with
-            // template info if it exists, and the items do not have @type specified on them.
-            JsonObject col = (JsonObject) rhs;
-            Object[] items = col.getArray();
-            markSubobjectTypes(field, items, 0);
-        }
-        else if (Map.class.isAssignableFrom(field.getType()))
+        while (!stack.isEmpty())
         {
-            JsonObject map = (JsonObject) rhs;
-            convertMapToKeysItems(map);
+            Object[] item = stack.removeFirst();
+            Type t = (Type) item[0];
+            if (t instanceof ParameterizedType)
+            {
+                Class clazz = getRawType(t);
+                ParameterizedType pType = (ParameterizedType)t;
+                Type[] typeArgs = pType.getActualTypeArguments();
 
-            if (map.get("@keys") instanceof Object[])
-            {
-                Object[] keys = (Object[]) map.get("@keys");
-                markSubobjectTypes(field, keys, 0);
-            }
-            if (map.get("@items") instanceof Object[])
-            {
-                Object[] values = (Object[]) map.get("@items");
-                markSubobjectTypes(field, values, 1);
-            }
-        }
-    }
-
-    /**
-     * Mark the @type field on JsonObject's that have no type information,
-     * no target, but where the Field generic type information contains the
-     * type of the enclosed objects.
-     * @param field Field instance containing the Generic info of the Collection that holds the enclosed objects.
-     * @param items Object[] of JsonObjects that may be type-less.
-     * @param typeArg Used to indicate whether to use type argument 0 or 1 (Collection or Map).
-     */
-    private void markSubobjectTypes(Field field, Object[] items, int typeArg)
-    {
-        if (items == null || items.length == 0)
-        {
-            return;
-        }
-        for (Object o : items)
-        {
-            if (o instanceof JsonObject)
-            {
-                JsonObject item = (JsonObject) o;
-                String type = item.getType();
-                if (type == null || type.isEmpty())
+                if (typeArgs == null || typeArgs.length < 1 || clazz == null)
                 {
-                    if (field.getGenericType() instanceof ParameterizedType)
+                    continue;
+                }
+
+                stampTypeOnJsonObject(item[1], t);
+
+                if (Map.class.isAssignableFrom(clazz))
+                {
+                    Map map = (Map) item[1];
+                    if (!map.containsKey("@keys") && !map.containsKey("@items") && map instanceof JsonObject)
+                    {   // Maps created in Javascript will come over without @keys / @items.
+                        convertMapToKeysItems((JsonObject) map);
+                    }
+
+                    Object[] keys = (Object[])map.get("@keys");
+                    getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
+
+                    Object[] items = (Object[])map.get("@items");
+                    getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
+                }
+                else if (Collection.class.isAssignableFrom(clazz))
+                {
+                    if (item[1] instanceof Object[])
                     {
-                        ParameterizedType paramType = (ParameterizedType) field.getGenericType();
-                        Type[] typeArgs = paramType.getActualTypeArguments();
-                        if (typeArgs != null && typeArgs.length > typeArg && typeArgs[typeArg] instanceof Class)
+                        Object[] array = (Object[]) item[1];
+                        for (int i=0; i < array.length; i++)
                         {
-                            Class c = (Class) typeArgs[typeArg];
-                            item.setType(c.getName());
+                            JsonObject coll = new JsonObject();
+                            coll.type = clazz.getName();
+                            Object[] vals = (Object[]) array[i];
+                            if (vals != null)
+                            {
+                                List items = Arrays.asList(vals);
+                                coll.put("@items", items.toArray());
+                                stack.addFirst(new Object[]{t, items});
+                                array[i] = coll;
+                            }
+                            else
+                            {
+                                array[i] = null;
+                            }
+                        }
+                    }
+                    else if (item[1] instanceof Collection)
+                    {
+                        Collection col = (Collection)item[1];
+                        for (Object o : col)
+                        {
+                            stack.addFirst(new Object[]{typeArgs[0], o});
+                        }
+                    }
+                    else if (item[1] instanceof JsonObject)
+                    {
+                        JsonObject jObj = (JsonObject) item[1];
+                        Object[] array = jObj.getArray();
+                        if (array != null)
+                        {
+                            for (Object o : array)
+                            {
+                                stack.addFirst(new Object[]{typeArgs[0], o});
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (item[1] instanceof JsonObject)
+                    {
+                        int i=0;
+                        for (Object o : ((JsonObject)item[1]).values())
+                        {
+                            stack.addFirst(new Object[]{typeArgs[i++], o});
                         }
                     }
                 }
             }
+            else
+            {
+                stampTypeOnJsonObject(item[1], t);
+            }
         }
+    }
+
+    private void getTemplateTraverseWorkItem(LinkedList<Object[]> stack, Object[] items, Type type)
+    {
+        if (items == null || items.length < 1)
+        {
+            return;
+        }
+        Class rawType = getRawType(type);
+        if (rawType != null && Collection.class.isAssignableFrom(rawType))
+        {
+            stack.add(new Object[]{type, items});
+        }
+        else
+        {
+            for (Object o : items)
+            {
+                stack.add(new Object[]{type, o});
+            }
+        }
+    }
+
+    // Mark 'type' on JsonObjectwhen the type is missing and it is a 'leaf'
+    // node (no further subtypes in it's parameterized type definition)
+    private void stampTypeOnJsonObject(Object o, Type t)
+    {
+        Class clazz = t instanceof Class ? (Class)t : getRawType(t);
+
+        if (o instanceof JsonObject && clazz != null)
+        {
+            JsonObject jObj = (JsonObject) o;
+            if ((jObj.type == null || jObj.type.isEmpty()) && jObj.target == null)
+            {
+                jObj.type = clazz.getName();
+            }
+        }
+    }
+
+    public static Class getRawType(Type t)
+    {
+        if (t instanceof ParameterizedType)
+        {
+            ParameterizedType pType = ((ParameterizedType) t);
+
+            if (pType.getRawType() instanceof Class)
+            {
+                return (Class) pType.getRawType();
+            }
+        }
+        return null;
     }
 
     /**
@@ -2055,8 +2146,9 @@ public class JsonReader implements Closeable
             else if (clazz == Object.class && !_noObjects)
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
-                {   // Map-Like (has @keys and @items, or it has entries) but either way, type and class are not set.
+                {
                     mate = new JsonObject();
+                    ((JsonObject)mate).type = Map.class.getName();
                 }
                 else
                 {   // Dunno
