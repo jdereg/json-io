@@ -1914,21 +1914,18 @@ public class JsonReader implements Closeable
                             {
                                 stack.addFirst(new Object[]{t, vals});
                             }
+                            else if (vals instanceof Object[])
+                            {
+                                JsonObject coll = new JsonObject();
+                                coll.type = clazz.getName();
+                                List items = Arrays.asList((Object[]) vals);
+                                coll.put("@items", items.toArray());
+                                stack.addFirst(new Object[]{t, items});
+                                array[i] = coll;
+                            }
                             else
                             {
-                                if (vals instanceof Object[])
-                                {
-                                    JsonObject coll = new JsonObject();
-                                    coll.type = clazz.getName();
-                                    List items = Arrays.asList((Object[]) vals);
-                                    coll.put("@items", items.toArray());
-                                    stack.addFirst(new Object[]{t, items});
-                                    array[i] = coll;
-                                }
-                                else
-                                {
-                                    stack.addFirst(new Object[]{t, vals});
-                                }
+                                stack.addFirst(new Object[]{t, vals});
                             }
                         }
                     }

@@ -5979,6 +5979,42 @@ public class TestJsonReaderWriter
         assertEquals("Fargo", x.content.get(new LinkedHashSet<Point>()));
     }
 
+    static class MapArrayKey
+    {
+        Map<Object[], String> content;
+    }
+
+    @Test
+    public void testMapArrayKey() throws Exception
+    {
+        MapArrayKey m = new MapArrayKey();
+        m.content = new LinkedHashMap<Object[], String>();
+        Object[] arrayA = new Object[2];
+        arrayA[0] = new Point(1, 2);
+        arrayA[1] = new Point(10, 20);
+        m.content.put(arrayA, "foo");
+        Object[] arrayB = new Object[2];
+        arrayB[0] = new Point(3, 4);
+        arrayB[1] = new Point(30, 40);
+        m.content.put(arrayB, "bar");
+        String json = getJsonString(m);
+        MapArrayKey x = (MapArrayKey) readJsonObject(json);
+
+        Iterator<Map.Entry<Object[], String>> i = x.content.entrySet().iterator();
+        Map.Entry<Object[], String> entry = i.next();
+
+        assertEquals("foo", entry.getValue());
+        arrayA = entry.getKey();
+        assertEquals(new Point(1, 2), arrayA[0]);
+        assertEquals(new Point(10, 20), arrayA[1]);
+
+        entry = i.next();
+        assertEquals("bar", entry.getValue());
+        arrayB = entry.getKey();
+        assertEquals(new Point(3, 4), arrayB[0]);
+        assertEquals(new Point(30, 40), arrayB[1]);
+    }
+
     class AllPrimitives
     {
         boolean b;
