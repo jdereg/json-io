@@ -2768,6 +2768,10 @@ public class JsonReader implements Closeable
                 {
                     values[i] = new java.sql.Date(System.currentTimeMillis());
                 }
+                else if (argType == Object.class)
+                {
+                    values[i] = new Object();
+                }
                 else
                 {
                     values[i] = null;
