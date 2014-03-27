@@ -108,10 +108,10 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
     }
 
 ### Debugging
-Instead of doing System.out.println debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It will reveal the object in all it's glory.
+Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It will reveal the object in all it's glory.
 
 ### Pretty-Printing JSON
-Use JsonWriter.formatJson() API to format a passed in JSON string to a nice, human readable format.  Also, when writing JSON data, use the JsonWriter.objectToJson(o, args) API, where args is a Map with a key of JsonWriter.PRETTY_PRINT and a value of 'true' (boolean or String).  When run this way, the JSON written by the JsonWriter will be formatted in a nice, human readable format.
+Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a Map with a key of `JsonWriter.PRETTY_PRINT` and a value of 'true' (boolean or String).  When run this way, the JSON written by the `JsonWriter` will be formatted in a nice, human readable format.
 
 ### RESTful support
 **json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
