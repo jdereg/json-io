@@ -121,7 +121,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
  * 2.5.2
   * `java.net.URL` can now be used as a constructor argument.  The reader was throwing an exception instantiating a constructor with a `URL` parameter.
-  * `java.lang.Class` parameters in constructor arguments are now tried with both null and `new Object()` now.
+  * `java.lang.Object` parameters in constructor arguments are now tried with both null and `new Object()` now.
  * 2.5.1
   * Fixed a bug (introduced in 2.5.0) in the processing of a `Map` that has a `Collection` as a key.
  * 2.5.0
