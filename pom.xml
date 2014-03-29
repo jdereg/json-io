@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.8.4</version.java-util>
+        <version.java-util>1.9.0</version.java-util>
         <version.junit>4.11</version.junit>
     </properties>
 
