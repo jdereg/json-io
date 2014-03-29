@@ -123,34 +123,34 @@ Featured on http://json.org.
   * `java.net.URL` can now be used as a constructor argument.  The reader was throwing an exception instantiating a constructor with a `URL` parameter.
   * `java.lang.Class` parameters in constructor arguments are now tried with both null and `new Object()` now.
  * 2.5.1
-  * Fixed a bug (introduced in 2.5.0) in the processing of a Map that has a Collection as a key.
+  * Fixed a bug (introduced in 2.5.0) in the processing of a `Map` that has a `Collection` as a key.
  * 2.5.0
-  * New 'Pretty-Print' option available.  If the 'args' Map passed to JsonWriter.objectToJson(o, args) contains the key JsonWriter.PRETTY_PRINT and the value 'true' (boolean or String), the JsonWriter output will be formatted in a nice human readable format.
-  * Convert a JSON String to Pretty-Print format using JsonWriter.formatJson(String json).  A String will be returned with the JSON formatted in a nice, human readable format.
-  * If a Field contains Parameterized types (e.g., Map<String, Set<Long>>, and so on), JsonReader will use those fields to process objects deep within Maps, Collections, etc. and still create the proper Java class.
+  * New 'Pretty-Print' option available.  If the 'args' Map passed to `JsonWriter.objectToJson(o, args)` contains the key `JsonWriter.PRETTY_PRINT` and the value 'true' (`boolean` or `String`), the `JsonWriter` output will be formatted in a nice human readable format.
+  * Convert a JSON String to Pretty-Print format using `JsonWriter.formatJson(String json)`.  A `String` will be returned with the JSON formatted in a nice, human readable format.
+  * If a Field contains Parameterized types (e.g., `Map<String, Set<Long>>`, and so on), `JsonReader` will use those fields to process objects deep within Maps, Collections, etc. and still create the proper Java class.
  * 2.4.5
-  * Allow "" to be set into Date field, setting the Date field (or Date array element) as null.
+  * Allow "" to be set into `Date` field, setting the `Date` field (or `Date` array element) as null.
  * 2.4.4
-  * Allow "" to be set into BigInteger or BigDecimal when return value is Map (JsonObject). "" to non-String fields will be null, except for primitives and primitive wrappers, that will result in JVM default value.
+  * Allow "" to be set into `BigInteger` or `BigDecimal` when return value is `Map` (`JsonObject`). "" to non-String fields will be null, except for primitives and primitive wrappers, that will result in JVM default value.
  * 2.4.2
   * Allow "" to be set into non-String fields, when doing so, null is set on Object type fields, no primitive fields, the JVM default value is set. This is for when converting JSON to Java objects directly.
  * 2.4.1
-  * Added support to allow primitives and String to be assigned to abstract / interface / base type field on an object (Serializable, Comparable, Object, etc.). Primitives can now be 'set' into these fields, without any additional type information.
+  * Added support to allow primitives and `String` to be assigned to abstract / interface / base type field on an object (`Serializable`, `Comparable`, `Object`, etc.). Primitives can now be 'set' into these fields, without any additional type information.
  * 2.4.0
-  * Primitives can be set from Strings
+  * Primitives can be set from `Strings`
   * Strings can be set from primitives
-  * BigDecimal and BigInteger can be set from primitives, Strings, BigDecimal, or BigInteger
+  * `BigDecimal` and `BigInteger` can be set from primitives, `Strings`, `BigDecimal`, or `BigInteger`
  * 2.3.0
-  * Maps and Collections (Lists, Set, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
+  * `Maps` and `Collections` (`Lists`, `Set`, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
   * **json-io** will now use the generic info on a `Map<Foo, Bar>` or `Collection<Foo>` object's field when the `@type` information is not included. **json-io** will then know to create `Foo` instances, `Bar` instances, etc. within the `Collection` or `Map`.
   * All parsing error messages now output the last 100 characters read, making it easier to locate the problem in JSON text. Furthermore, line and column number are now included (before it was a single position number). This allows you to immediately find the offending location.
   * You can now force `@type` to be written (not recommended) by putting the `JsonWriter.TYPE` key in the `JsonWriter` args map, and assigning the associated value to `true`.
  * 2.2.32
   * Date/Time format can be customized when writing JSON output. New optional `Map args` parameter added to main API of `JsonWriter` that specifies additional parameters for `JsonWriter`. Set the key to `JsonWriter.DATE_FORMAT` and the value to a `SimpleDateFormat` string.  Two ISO formats are available for convenience as constants on `JsonWriter`, `JsonWriter.ISO_DATE_FORMAT` and `JsonWriter.ISO_DATE_TIME_FORMAT`.
   * `JsonReader` updated to read many different date/time formats.
-  * When JsonReader encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class. New API: `JsonReader.assignInstantiator(Class c, ClassFactory factory)`
+  * When `JsonReader` encounters a class that cannot be constructed, you can associate a `ClassFactory` to the class, so that then the un-instantiable class is encountered, your factory class will be called to create the class. New API: `JsonReader.assignInstantiator(Class c, ClassFactory factory)`
  * 2.2.31
-  * Adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (Collections, String, Date, Timezone, etc.)
+  * Adds ability to instantiate a wider range of constructors. This was done by attempting construction with both null and non-null values for many common class types (`Collections`, `String`, `Date`, `Timezone`, etc.)
  * 2.2.30
   * `java.sql.Date` when read in, was instantiated as a `java.util.Date`. This has been corrected.
  * 2.2.29
