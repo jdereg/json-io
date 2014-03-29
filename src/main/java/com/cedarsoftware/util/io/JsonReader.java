@@ -2771,7 +2771,7 @@ public class JsonReader implements Closeable
                 }
                 else if (argType == java.net.URL.class)
                 {
-                    values[i] = new URL("http://www.google.com"); // overwritten
+                    values[i] = new URL("http://localhost"); // overwritten
                 }
                 else if (argType == Object.class)
                 {
