@@ -138,7 +138,7 @@ Featured on http://json.org.
   * Added support to allow primitives and `String` to be assigned to abstract / interface / base type field on an object (`Serializable`, `Comparable`, `Object`, etc.). Primitives can now be 'set' into these fields, without any additional type information.
  * 2.4.0
   * Primitives can be set from `Strings`
-  * Strings can be set from primitives
+  * `Strings` can be set from primitives
   * `BigDecimal` and `BigInteger` can be set from primitives, `Strings`, `BigDecimal`, or `BigInteger`
  * 2.3.0
   * `Maps` and `Collections` (`Lists`, `Set`, etc.) can be read in, even when there are no `@keys` or `@items` as would come from a Javascript client.
