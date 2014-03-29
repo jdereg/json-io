@@ -16,6 +16,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -2767,6 +2768,10 @@ public class JsonReader implements Closeable
                 else if (argType == java.sql.Date.class)
                 {
                     values[i] = new java.sql.Date(System.currentTimeMillis());
+                }
+                else if (argType == java.net.URL.class)
+                {
+                    values[i] = new URL("http://www.google.com"); // overwritten
                 }
                 else if (argType == Object.class)
                 {

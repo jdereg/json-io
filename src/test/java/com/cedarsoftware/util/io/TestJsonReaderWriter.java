@@ -22,6 +22,7 @@ import java.io.Writer;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -6350,6 +6351,44 @@ public class TestJsonReaderWriter
         assertEquals("Foo", s);
         s = JsonReader.removeLeadingAndTrailingQuotes("\"\"Foo\"\"");
         assertEquals("Foo", s);
+    }
+
+    static class Canine
+    {
+        String name;
+        Canine(Object nm)
+        {
+            name = nm.toString();     // intentionally causes NPE when reflective constructor tries 'null' as arg
+        }
+    }
+
+    @Test
+    public void testConstructorWithObjectArg() throws Exception
+    {
+        Canine bella = new Canine("Bella");
+        String json = getJsonString(bella);
+        println("json = " + json);
+        Canine dog = (Canine) readJsonObject(json);
+        assertEquals("Bella", dog.name);
+    }
+
+    static class Web
+    {
+        URL url;
+        Web(URL u)
+        {
+            url = u;
+        }
+    }
+
+    @Test
+    public void testUrlInConstructor() throws Exception
+    {
+        Web addr = new Web(new URL("http://acme.com"));
+        String json = getJsonString(addr);
+        println("json = " + json);
+        Web addr2 = (Web) readJsonObject(json);
+        assertEquals(new URL("http://acme.com"), addr2.url);
     }
 
     @Test
