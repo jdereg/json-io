@@ -87,10 +87,10 @@ To specify an alternative date format for `JsonWriter`:
     args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME);
     String json = JsonWriter.objectToJson(root, args);
 
-In this example, the ISO yyyy/MM/ddTHH:mm:ss format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be JsonWriter.ISO_DATE_TIME, JsonWriter.ISO_DATE, a date format String pattern (eg. "yyyy/MM/dd HH:mm"), or a `java.text.Format` instance.
+In this example, the ISO `yyyy/MM/ddTHH:mm:ss` format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be `JsonWriter.ISO_DATE_TIME`, `JsonWriter.ISO_DATE`, a date format String pattern (eg. `yyyy/MM/dd HH:mm`), or a `java.text.Format` instance.
 
 ### Javascript
-Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute @ref tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
+Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
 
 ### What's next?
 Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it: 
