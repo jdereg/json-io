@@ -885,7 +885,8 @@ public class JsonWriter implements Closeable, Flushable
         Class arrayType = array.getClass();
         int len = Array.getLength(array);
         boolean referenced = _objsReferenced.containsKey(array);
-        boolean typeWritten = showType && !(Object[].class == arrayType);
+//        boolean typeWritten = showType && !(Object[].class == arrayType);    // causes IDE warning in NetBeans 7/4 Java 1.7
+        boolean typeWritten = showType && !(arrayType.equals(Object[].class));
 
         final Writer out = _out; // performance opt: place in final local for quicker access
         if (typeWritten || referenced)
