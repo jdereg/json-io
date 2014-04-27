@@ -80,7 +80,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.JVM)
 public class TestJsonReaderWriter
 {
-    public static boolean _debug = false;
+    public static boolean _debug = true;
     public static Date _testDate = new Date();
     public static Character _CONST_CHAR = new Character('j');
     public static Byte _CONST_BYTE = new Byte((byte) 16);
@@ -94,6 +94,7 @@ public class TestJsonReaderWriter
     private static long _totalRead;
     private static long _totalWrite;
     private static long _outputStreamFailCount;
+    private static final String newLine = System.getProperty("line.separator");
 
     @Rule
     public TestRule watcher = new TestWatcher()
@@ -6295,37 +6296,39 @@ public class TestJsonReaderWriter
         nice.dictionary.put("price", 100.0);
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
-        String target = "{\n" +
-                "  \"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$Nice\",\n" +
-                "  \"name\":\"Louie\",\n" +
-                "  \"items\":{\n" +
-                "    \"@type\":\"java.util.ArrayList\",\n" +
-                "    \"@items\":[\n" +
-                "      \"One\",\n" +
-                "      1,\n" +
-                "      {\n" +
-                "        \"@type\":\"int\",\n" +
-                "        \"value\":1\n" +
-                "      },\n" +
-                "      true\n" +
-                "    ]\n" +
-                "  },\n" +
-                "  \"dictionary\":{\n" +
-                "    \"@type\":\"java.util.LinkedHashMap\",\n" +
-                "    \"@keys\":[\n" +
-                "      \"grade\",\n" +
-                "      \"price\",\n" +
-                "      \"bigdec\"\n" +
-                "    ],\n" +
-                "    \"@items\":[\n" +
-                "      \"A\",\n" +
-                "      100.0,\n" +
-                "      {\n" +
-                "        \"@type\":\"java.math.BigDecimal\",\n" +
-                "        \"value\":\"3.141592653589793238462643383\"\n" +
-                "      }\n" +
-                "    ]\n" +
-                "  }\n" +
+
+
+        String target = "{" + newLine +
+                "  \"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$Nice\"," + newLine +
+                "  \"name\":\"Louie\"," + newLine +
+                "  \"items\":{" + newLine +
+                "    \"@type\":\"java.util.ArrayList\"," + newLine +
+                "    \"@items\":[" + newLine +
+                "      \"One\"," + newLine +
+                "      1," + newLine +
+                "      {" + newLine +
+                "        \"@type\":\"int\"," + newLine +
+                "        \"value\":1" + newLine +
+                "      }," + newLine +
+                "      true" + newLine +
+                "    ]" + newLine +
+                "  }," + newLine +
+                "  \"dictionary\":{" + newLine +
+                "    \"@type\":\"java.util.LinkedHashMap\"," + newLine +
+                "    \"@keys\":[" + newLine +
+                "      \"grade\"," + newLine +
+                "      \"price\"," + newLine +
+                "      \"bigdec\"" + newLine +
+                "    ]," + newLine +
+                "    \"@items\":[" + newLine +
+                "      \"A\"," + newLine +
+                "      100.0," + newLine +
+                "      {" + newLine +
+                "        \"@type\":\"java.math.BigDecimal\"," + newLine +
+                "        \"value\":\"3.141592653589793238462643383\"" + newLine +
+                "      }" + newLine +
+                "    ]" + newLine +
+                "  }" + newLine +
                 "}";
         Map args = new HashMap();
         args.put(JsonWriter.PRETTY_PRINT, "true");

@@ -459,7 +459,7 @@ public class JsonWriter implements Closeable, Flushable
             Object dateFormat = _args.get().get(DATE_FORMAT);
             if (dateFormat instanceof String)
             {   // Passed in as String, turn into a SimpleDateFormat instance to be used throughout this stream write.
-                dateFormat = new SimpleDateFormat((String) dateFormat);
+                dateFormat = new SimpleDateFormat((String) dateFormat, Locale.ENGLISH);
                 _args.get().put(DATE_FORMAT, dateFormat);
             }
             if (showType)
