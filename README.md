@@ -119,6 +119,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.6.0
+  * Support for specifying custom fields on a class to be serialized.  Use the JsonWriter.FIELD_SPECIFIERS key and assign the value to be a Map<Class, List<String>>, where the keys of the Map are classes and the List<String> indicates which fields on the class will be serialized.  This provides a way to reduce the number of fields written for a given class.  For example, one may encounter a 3rd Party class which fails to serialize because it has an oddball field like a ClassLoader reference as a non-static field. You may not have access to the source code to mark a field as transient. In this case, can add an entry in the FIELD_SPECIFIERS map that assigns a List<Fields> (where the List only includes the fields you want serialized for the given class). Voila, problem solved.
  * 2.5.2
   * `java.net.URL` can now be used as a constructor argument.  The reader was throwing an exception instantiating a constructor with a `URL` parameter.
   * `java.lang.Object` parameters in constructor arguments are now tried with both null and `new Object()` now.

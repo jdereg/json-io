@@ -6394,6 +6394,90 @@ public class TestJsonReaderWriter
         assertEquals(new URL("http://acme.com"), addr2.url);
     }
 
+    static class PainfulToSerialize
+    {
+        ClassLoader classLoader = TestJsonReaderWriter.class.getClassLoader();
+        String name;
+    }
+
+    @Test
+    public void testExternalFieldSpecifier() throws Exception
+    {
+        Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
+        List<String> fields = new ArrayList<String>();
+        fields.add("name");
+        fieldSpecifiers.put(PainfulToSerialize.class, fields);
+
+        PainfulToSerialize painful = new PainfulToSerialize();
+        painful.name = "Android rocks";
+
+        Map args = new HashMap();
+        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
+        String json = JsonWriter.objectToJson(painful, args);
+        Map check = JsonReader.jsonToMaps(json);
+        assertTrue(check.size() == 1);
+        assertTrue(check.containsKey("name"));
+    }
+
+    @Test
+    public void testExternalFieldSpecifiedBadName() throws Exception
+    {
+        Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
+        List<String> fields = new ArrayList<String>();
+        fields.add("mane");
+        fieldSpecifiers.put(PainfulToSerialize.class, fields);
+
+        PainfulToSerialize painful = new PainfulToSerialize();
+        painful.name = "Android rocks";
+
+        Map args = new HashMap();
+        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
+        try
+        {
+            JsonWriter.objectToJson(painful, args);
+            fail("should not make it here");
+        }
+        catch (Exception e)
+        {
+            assertTrue(e instanceof IllegalArgumentException);
+        }
+    }
+
+    static class MorePainfulToSerialize extends PainfulToSerialize
+    {
+        int age;
+    }
+
+    @Test
+    public void testExternalFieldSpecifierInheritance() throws Exception
+    {
+        Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
+        List<String> fields = new ArrayList<String>();
+        fields.add("name");
+        fieldSpecifiers.put(PainfulToSerialize.class, fields);
+
+        MorePainfulToSerialize painful = new MorePainfulToSerialize();
+        painful.name = "Android rocks";
+        painful.age = 50;
+
+        Map args = new HashMap();
+        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
+        String json = JsonWriter.objectToJson(painful, args);
+        Map check = JsonReader.jsonToMaps(json);
+        assertTrue(check.size() == 1);
+        assertTrue(check.containsKey("name"));
+
+        List<String> fields2 = new ArrayList<String>();
+        fields2.add("age");
+        fields2.add("name");
+        fieldSpecifiers.put(MorePainfulToSerialize.class, fields2);
+        json = JsonWriter.objectToJson(painful, args);
+        check = JsonReader.jsonToMaps(json);
+        assertTrue(check.size() == 2);
+        assertTrue(check.containsKey("name"));
+        assertTrue(check.containsKey("age"));
+    }
+
     @Test
     public void testZTimings()
     {

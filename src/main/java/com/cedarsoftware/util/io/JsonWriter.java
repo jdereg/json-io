@@ -81,6 +81,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     public static final String TYPE = "TYPE";
     public static final String PRETTY_PRINT = "PRETTY_PRINT";
+    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
     private static final Map<String, ClassMeta> _classMetaCache = new HashMap<String, ClassMeta>();
     private static final List<Object[]> _writers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
@@ -214,8 +215,39 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs) throws IOException
     {
-        _args.get().clear();
-        _args.get().putAll(optionalArgs);
+        Map args = _args.get();
+        args.clear();
+        args.putAll(optionalArgs);
+
+        if (!optionalArgs.containsKey(FIELD_SPECIFIERS))
+        {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
+            args.put(FIELD_SPECIFIERS, new HashMap());
+        }
+        else
+        {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
+            Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
+            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
+            for (Map.Entry<Class, List<String>> entry : specifiers.entrySet())
+            {
+                Class c = entry.getKey();
+                List<String> fields = entry.getValue();
+                List<Field> newList = new ArrayList(fields.size());
+
+                ClassMeta meta = getDeepDeclaredFields(c);
+
+                for (String field : fields)
+                {
+                    Field f = meta.get(field);
+                    if (f == null)
+                    {
+                        throw new IllegalArgumentException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
+                    }
+                    newList.add(f);
+                }
+                copy.put(c, newList);
+            }
+            args.put(FIELD_SPECIFIERS, copy);
+        }
 
         try
         {
@@ -710,28 +742,83 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
+    /**
+     * Reach-ability trace to visit all objects within the graph to be written.
+     * This API will handle any object, using either reflection APIs or by
+     * consulting a specified FIELD_SPECIFIERS map if provided.
+     */
     private static void traceFields(LinkedList<Object> stack, Object obj)
     {
         final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
+        Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
 
-        for (Field field : fields.values())
-        {
-            try
+        // If caller has special Field specifier for a given class
+        // then use it, otherwise use reflection.
+        List<Field> fieldSet = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
+        if (fieldSet != null)
+        {   // Trace fields using external field specifier (explicitly tells us which fields to use for a given class)
+            for (Field field : fieldSet)
             {
-                final Class<?> type = field.getType();
-                if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type))
-                {    // speed up: primitives (Dates/Strings considered primitive by json-io) cannot reference another object
-                    continue;
-                }
-
-                Object o = field.get(obj);
-                if (o != null)
-                {
-                    stack.addFirst(o);
-                }
+                traceField(stack, obj, field);
             }
-            catch (Exception ignored) { }
         }
+        else
+        {   // Trace fields using reflection
+            for (Field field : fields.values())
+            {
+                traceField(stack, obj, field);
+            }
+        }
+    }
+
+    /**
+     * Push object associated to field onto stack for further tracing.  If object was a primitive,
+     * Date, String, or null, no further tracing is done.
+     */
+    private static void traceField(LinkedList<Object> stack, Object obj, Field field)
+    {
+        try
+        {
+            final Class<?> type = field.getType();
+            if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type))
+            {    // speed up: primitives (Dates/Strings considered primitive by json-io) cannot reference another object
+                return;
+            }
+
+            Object o = field.get(obj);
+            if (o != null)
+            {
+                stack.addFirst(o);
+            }
+        }
+        catch (Exception ignored) { }
+    }
+
+    private static List<Field> getFieldsUsingSpecifier(Class classBeingWritten, Map<Class, List<Field>> fieldSpecifiers)
+    {
+        Iterator<Map.Entry<Class, List<Field>>> i = fieldSpecifiers.entrySet().iterator();
+        int minDistance = Integer.MAX_VALUE;
+        List<Field> fields = null;
+
+        while (i.hasNext())
+        {
+            Map.Entry<Class, List<Field>> entry = i.next();
+            Class c = entry.getKey();
+            if (c == classBeingWritten)
+            {
+                return entry.getValue();
+            }
+
+            int distance = getDistance(c, classBeingWritten);
+
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                fields = entry.getValue();
+            }
+        }
+
+        return fields;
     }
 
     private boolean writeOptionalReference(Object obj) throws IOException
@@ -1741,58 +1828,77 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        for (Map.Entry<String, Field> entry : classInfo.entrySet())
-        {
-            Field field = entry.getValue();
-            if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
-            {   // Do not write transient fields
-                continue;
+        Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
+        List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
+        if (externallySpecifiedFields != null)
+        {   // Caller is using associating a class name to a set of fields for the given class (allows field reductions)
+            for (Field field : externallySpecifiedFields)
+            {   // Not currently supporting overwritten field names in hierarchy when using external field specifier
+                first = writeField(obj, out, first, field.getName(), field);
             }
-            if (first)
+        }
+        else
+        {   // Reflectively use fields, skipping transient and static fields
+            for (Map.Entry<String, Field> entry : classInfo.entrySet())
             {
-                first = false;
-            }
-            else
-            {
-                out.write(',');
-                newLine(out);
-            }
-
-            writeJsonUtf8String(entry.getKey(), out);
-            out.write(':');
-
-            Object o;
-            try
-            {
-                o = field.get(obj);
-            }
-            catch (Exception ignored)
-            {
-                o = null;
-            }
-
-            if (o == null)
-            {    // don't quote null
-                out.write("null");
-                continue;
-            }
-
-            Class type = field.getType();
-            boolean forceType = o.getClass() != type;     // If types are not exactly the same, write "@type" field
-
-            if (JsonReader.isPrimitive(type))
-            {
-                writePrimitive(o);
-            }
-            else if (writeIfMatching(o, forceType, out)) { }
-            else
-            {
-                writeImpl(o, forceType || alwaysShowType());
+                String fieldName = entry.getKey();
+                Field field = entry.getValue();
+                first = writeField(obj, out, first, fieldName, field);
             }
         }
 
         tabOut(out);
         out.write('}');
+    }
+
+    private boolean writeField(Object obj, Writer out, boolean first, String fieldName, Field field) throws IOException
+    {
+        if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
+        {   // Do not write transient fields
+            return first;
+        }
+        if (first)
+        {
+            first = false;
+        }
+        else
+        {
+            out.write(',');
+            newLine(out);
+        }
+
+        writeJsonUtf8String(fieldName, out);
+        out.write(':');
+
+        Object o;
+        try
+        {
+            o = field.get(obj);
+        }
+        catch (Exception ignored)
+        {
+            o = null;
+        }
+
+        if (o == null)
+        {    // don't quote null
+            out.write("null");
+            return first;
+        }
+
+        Class type = field.getType();
+        boolean forceType = o.getClass() != type;     // If types are not exactly the same, write "@type" field
+
+        if (JsonReader.isPrimitive(type))
+        {
+            writePrimitive(o);
+        }
+        else if (writeIfMatching(o, forceType, out)) { }
+        else
+        {
+            writeImpl(o, forceType || alwaysShowType());
+        }
+        return first;
     }
 
     /**
