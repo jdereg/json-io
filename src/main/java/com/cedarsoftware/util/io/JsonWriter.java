@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -82,7 +83,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String TYPE = "TYPE";
     public static final String PRETTY_PRINT = "PRETTY_PRINT";
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
-    private static final Map<String, ClassMeta> _classMetaCache = new HashMap<String, ClassMeta>();
+    private static final Map<String, ClassMeta> _classMetaCache = new ConcurrentHashMap<String, ClassMeta>();
     private static final List<Object[]> _writers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
     private static Object[] _byteStrings = new Object[256];

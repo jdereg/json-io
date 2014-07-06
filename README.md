@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.6.0</version>
+  <version>2.6.1</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
@@ -119,6 +119,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.6.1
+  * Bug fix: An internal `Map` that kept meta-information about a Java Class, changed to `ConcurrentHashMap` from `HashMap`.
  * 2.6.0
   * Added support for specifying which fields on a class will be serialized.  Use the `JsonWriter.FIELD_SPECIFIERS` key and assign the value to a `Map<Class, List<String>>`, where the keys of the `Map` are classes (e.g. Bingo.class) and the values are `List<String>`, which indicates the fields to serialize for the class.  This provides a way to reduce the number of fields written for a given class.  For example, you may encounter a 3rd Party class which fails to serialize because it has an oddball field like a `ClassLoader` reference as a non-static, non-transient field. You may not have access to the source code to mark the field as `transient`. In this case, add the appropriate entries in the `FIELD_SPECIFIERS` map. Voila, problem solved. Use the `JsonWriter` API that takes `optionalArgs Map`.  The key for this `Map` is `JsonWriter.FIELD_SPECIFIER` and the value is `Map<Class, List<String>>`.
  * 2.5.2
