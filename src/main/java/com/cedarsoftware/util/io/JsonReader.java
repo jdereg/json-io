@@ -1861,7 +1861,7 @@ public class JsonReader implements Closeable
         }
         catch (Exception e)
         {
-            error("IllegalAccessException setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs, e);
+            error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs, e);
         }
     }
 
