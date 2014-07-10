@@ -1197,7 +1197,7 @@ public class JsonReader implements Closeable
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    private Object convertParsedMapsToJava(JsonObject root) throws IOException
+    protected Object convertParsedMapsToJava(JsonObject root) throws IOException
     {
         createJavaObjectInstance(Object.class, root);
         Object graph = convertMapsToObjects((JsonObject<String, Object>) root);
@@ -1220,7 +1220,7 @@ public class JsonReader implements Closeable
      *         of Maps representation (JsonObject root).
      * @throws IOException for stream errors or parsing errors.
      */
-    private Object convertMapsToObjects(JsonObject<String, Object> root) throws IOException
+    protected Object convertMapsToObjects(JsonObject<String, Object> root) throws IOException
     {
         LinkedList<JsonObject<String, Object>> stack = new LinkedList<JsonObject<String, Object>>();
         stack.addFirst(root);
@@ -1281,7 +1281,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private void traverseArray(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseArray(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         int len = jsonObj.getLength();
         if (len == 0)
@@ -1416,7 +1416,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private void traverseCollectionNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
+    protected void traverseCollectionNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -1482,7 +1482,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private void traverseCollection(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
+    protected void traverseCollection(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -1571,7 +1571,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private void traverseMap(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseMap(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
@@ -1611,7 +1611,7 @@ public class JsonReader implements Closeable
         _prettyMaps.add(new Object[] {jsonObj, javaKeys, javaValues});
     }
 
-    private void traverseFieldsNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFieldsNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
@@ -1708,7 +1708,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @throws IOException
      */
-    private void traverseFields(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFields(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         Object special;
         if ((special = readIfMatching(jsonObj, null, stack)) != null)
@@ -1745,7 +1745,7 @@ public class JsonReader implements Closeable
      *                Java target object.
      * @throws IOException for stream errors or parsing errors.
      */
-    private void assignField(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj, Field field, Object rhs) throws IOException
+    protected void assignField(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj, Field field, Object rhs) throws IOException
     {
         Object target = jsonObj.target;
         try
@@ -1990,9 +1990,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    // Mark 'type' on JsonObjectwhen the type is missing and it is a 'leaf'
+    // Mark 'type' on JsonObject when the type is missing and it is a 'leaf'
     // node (no further subtypes in it's parameterized type definition)
-    private void stampTypeOnJsonObject(Object o, Type t)
+    private static void stampTypeOnJsonObject(Object o, Type t)
     {
         Class clazz = t instanceof Class ? (Class)t : getRawType(t);
 
@@ -2025,7 +2025,7 @@ public class JsonReader implements Closeable
      * to have its keys placed into @keys, and its values placed into @items.
      * @param map Map to convert
      */
-    private void convertMapToKeysItems(JsonObject map)
+    private static void convertMapToKeysItems(JsonObject map)
     {
         if (!map.containsKey("@keys") && !map.containsKey("@ref"))
         {
@@ -2063,7 +2063,7 @@ public class JsonReader implements Closeable
      *         enough hints to get the right class instantiated.  It is not populated when returned.
      * @throws IOException for stream errors or parsing errors.
      */
-    private Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
+    protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
     {
         String type = jsonObj.type;
         Object mate;

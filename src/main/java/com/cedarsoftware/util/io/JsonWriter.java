@@ -159,6 +159,30 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
+     * @return The arguments used to configure the JsonWriter.  These are thread local.
+     */
+    protected static Map getArgs()
+    {
+        return _args.get();
+    }
+
+    /**
+     * Provide access to subclasses.
+     */
+    protected Map getObjectsReferenced()
+    {
+        return _objsReferenced;
+    }
+
+    /**
+     * Provide access to subclasses.
+     */
+    protected Map getObjectsVisited()
+    {
+        return _objVisited;
+    }
+
+    /**
      * Convert a Java Object to a JSON String.
      *
      * @param item Object to convert to a JSON String.
@@ -286,7 +310,7 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    private void tabIn(Writer out) throws IOException
+    protected void tabIn(Writer out) throws IOException
     {
         if (!isPrettyPrint())
         {
@@ -300,7 +324,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private void newLine(Writer out) throws IOException
+    protected void newLine(Writer out) throws IOException
     {
         if (!isPrettyPrint())
         {
@@ -313,7 +337,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private void tabOut(Writer out) throws IOException
+    protected void tabOut(Writer out) throws IOException
     {
         if (!isPrettyPrint())
         {
@@ -691,7 +715,7 @@ public class JsonWriter implements Closeable, Flushable
         _args.remove();
     }
 
-    private void traceReferences(Object root)
+    protected void traceReferences(Object root)
     {
         LinkedList<Object> stack = new LinkedList<Object>();
         stack.addFirst(root);
@@ -748,7 +772,7 @@ public class JsonWriter implements Closeable, Flushable
      * This API will handle any object, using either reflection APIs or by
      * consulting a specified FIELD_SPECIFIERS map if provided.
      */
-    private static void traceFields(LinkedList<Object> stack, Object obj)
+    protected void traceFields(LinkedList<Object> stack, Object obj)
     {
         final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
         Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
@@ -776,7 +800,7 @@ public class JsonWriter implements Closeable, Flushable
      * Push object associated to field onto stack for further tracing.  If object was a primitive,
      * Date, String, or null, no further tracing is done.
      */
-    private static void traceField(LinkedList<Object> stack, Object obj, Field field)
+    protected void traceField(LinkedList<Object> stack, Object obj, Field field)
     {
         try
         {
@@ -843,7 +867,7 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    private void writeImpl(Object obj, boolean showType) throws IOException
+    protected void writeImpl(Object obj, boolean showType) throws IOException
     {
         if (obj == null)
         {

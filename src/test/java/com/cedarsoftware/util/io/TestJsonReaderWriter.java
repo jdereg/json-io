@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
@@ -6231,14 +6232,15 @@ public class TestJsonReaderWriter
     @Test
     public void testAssignDateFromEmptyString() throws Exception
     {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":\"\"}";
+        String thisClass = TestDateField.class.getName();
+        String json = "{\"@type\":\"" + thisClass + "\",\"fromString\":\"\"}";
         TestDateField tdf = (TestDateField) readJsonObject(json);
         assertNull(tdf.fromString);
 
         Map jObj = JsonReader.jsonToMaps(json);
         assertNull(jObj.get("fromString"));
 
-        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":null,\"dates\":[\"\"]}";
+        json = "{\"@type\":\"" + thisClass + "\",\"fromString\":null,\"dates\":[\"\"]}";
         tdf = (TestDateField) readJsonObject(json);
         assertNull(tdf.dates[0]);
 
@@ -6247,10 +6249,94 @@ public class TestJsonReaderWriter
         tdf = (TestDateField) readJsonObject(json);
         assertNull(tdf.dates[0]);
 
-        json = "{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestDateField\",\"fromString\":1391875635941}";
+        json = "{\"@type\":\"" + thisClass + "\",\"fromString\":1391875635941}";
         tdf = (TestDateField) readJsonObject(json);
         assertEquals(new Date(1391875635941L), tdf.fromString);
+    }
 
+    static class DerivedWriter extends JsonWriter
+    {
+        public DerivedWriter(OutputStream out) throws IOException
+        {
+            super(out);
+        }
+    }
+
+    @Test
+    public void testProtectedAPIs() throws Exception
+    {
+        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+        DerivedWriter writer = new DerivedWriter(bao);
+        Map ref = writer.getObjectsReferenced();
+        Map vis = writer.getObjectsVisited();
+        Map args = DerivedWriter.getArgs();
+        assertNotNull(ref);
+        assertNotNull(vis);
+        assertNotNull(args);
+    }
+
+    @Test
+    public void testBigNumberParsers() throws Exception
+    {
+        assertNull(JsonReader.bigIntegerFrom(null));
+        assertNull(JsonReader.bigDecimalFrom(null));
+
+        try
+        {
+            JsonReader.bigIntegerFrom("Glock");
+            fail("should not make it here");
+        }
+        catch(Exception expected)
+        {
+        }
+        try
+        {
+            JsonReader.bigDecimalFrom("Glock");
+            fail("should not make it here");
+        }
+        catch(Exception expected)
+        {
+        }
+
+        try
+        {
+            JsonReader.bigIntegerFrom(new Date());
+            fail("should not make it here");
+        }
+        catch(Exception expected)
+        {
+        }
+        try
+        {
+            JsonReader.bigDecimalFrom(new Date());
+            fail("should not make it here");
+        }
+        catch(Exception expected)
+        {
+        }
+
+        BigInteger bi = JsonReader.bigIntegerFrom(3.14);
+        assertEquals(3, bi.intValue());
+    }
+
+    @Test
+    public void testClassForName2() throws Exception
+    {
+        try
+        {
+            JsonReader.classForName2(null);
+            fail("Should not make it here");
+        }
+        catch (IOException e)
+        {
+        }        try
+        {
+            JsonReader.classForName2("Smith&Wesson");
+            fail("Should not make it here");
+        }
+        catch (IOException e)
+        {
+        }
     }
 
     class TestVanillaFields
@@ -6486,6 +6572,29 @@ public class TestJsonReaderWriter
         println("Total ObjectStream read  = " + (_totalRead / 1000000.0) + " ms");
         println("Total ObjectStream write = " + (_totalWrite / 1000000.0) + " ms");
         println("JDK InputStream/OutputStream fail count = " + _outputStreamFailCount);
+    }
+
+    @Test
+    public void testDateParse() throws Exception
+    {
+        String json = "{\"@type\":\"date\",\"value\":\"2014 July 9\"}";
+        Date date = (Date) JsonReader.jsonToJava(json);
+        Calendar cal = Calendar.getInstance();
+        cal.clear();
+        cal.setTime(date);
+        assertEquals(2014, cal.get(Calendar.YEAR));
+        assertEquals(6, cal.get(Calendar.MONTH));
+        assertEquals(9, cal.get(Calendar.DAY_OF_MONTH));
+
+        json = "{\"@type\":\"date\",\"value\":\"2014 Juggler 9\"}";
+        try
+        {
+            JsonReader.jsonToJava(json);
+            fail("Should not make it here");
+        }
+        catch (Exception e)
+        {
+        }
     }
 
     private static void println(Object ... args)
