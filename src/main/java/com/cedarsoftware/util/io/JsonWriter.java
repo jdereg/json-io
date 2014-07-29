@@ -30,9 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -897,8 +897,10 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (jObj.isMap())
             {
-                if(!writeJsonObjectMapWithStringKeys(jObj, showType))
+                if (!writeJsonObjectMapWithStringKeys(jObj, showType))
+                {
                     writeJsonObjectMap(jObj, showType);
+                }
             }
             else
             {
@@ -1606,30 +1608,27 @@ public class JsonWriter implements Closeable, Flushable
     
     private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
     {
-        
-        if(!jObj.isEmpty())
+        if (!ensureStringKeys(jObj))
         {
-            Iterator keys = jObj.keySet().iterator();
-            while (keys.hasNext())
-                if(!(keys.next() instanceof String)) return false;
+            return false;
         }
-        
-        if(writeOptionalReference(jObj))
+
+        if (writeOptionalReference(jObj))
         {
             return true;
         }
 
         boolean referenced = _objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer out = _out;
-
         out.write('{');
         tabIn(out);
-        if(referenced)
+
+        if (referenced)
         {
             writeId(String.valueOf(jObj.getId()));
         }
 
-        if(showType)
+        if (showType)
         {
             if(referenced)
             {
@@ -1637,7 +1636,7 @@ public class JsonWriter implements Closeable, Flushable
                 newLine(out);
             }
             String type = jObj.getType();
-            if(type != null)
+            if (type != null)
             {
                 Class mapClass = JsonReader.classForName2(type);
                 out.write("\"@type\":\"");
@@ -1650,33 +1649,31 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
 
-        if(jObj.isEmpty())
+        if (jObj.isEmpty())
         { // Empty
             tabOut(out);
             out.write('}');
             return true;
         }
 
-        if(showType)
+        if (showType)
         {
             out.write(',');
             newLine(out);
         }
 
-        
         Iterator i = jObj.entrySet().iterator();
         
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();
             out.write("\"");
-            out.write(att2value.getKey().toString());
-            
+            out.write((String) att2value.getKey());
             out.write("\":");
             
             writeCollectionElement(att2value.getValue());
 
-            if(i.hasNext())
+            if (i.hasNext())
             {
                 out.write(',');
                 newLine(out);
@@ -1685,7 +1682,6 @@ public class JsonWriter implements Closeable, Flushable
         
         tabOut(out);
         out.write('}');
-        
         return true;
     }
     
@@ -1873,15 +1869,12 @@ public class JsonWriter implements Closeable, Flushable
     
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException
     {
-
-        if(!map.isEmpty())
+        if (!ensureStringKeys(map))
         {
-            Iterator keys = map.keySet().iterator();
-            while (keys.hasNext())
-                if(!(keys.next() instanceof String)) return false;
+            return false;
         }
 
-        if(writeOptionalReference(map))
+        if (writeOptionalReference(map))
         {
             return true;
         }
@@ -1891,14 +1884,14 @@ public class JsonWriter implements Closeable, Flushable
 
         out.write('{');
         tabIn(out);
-        if(referenced)
+        if (referenced)
         {
             writeId(getId(map));
         }
 
-        if(showType)
+        if (showType)
         {
-            if(referenced)
+            if (referenced)
             {
                 out.write(',');
                 newLine(out);
@@ -1906,49 +1899,54 @@ public class JsonWriter implements Closeable, Flushable
             writeType(map, out);
         }
 
-        if(map.isEmpty())
+        if (map.isEmpty())
         {
             tabOut(out);
             out.write('}');
             return true;
         }
 
-        if(showType || referenced)
+        if (showType || referenced)
         {
             out.write(',');
             newLine(out);
         }
 
-        
         Iterator i = map.entrySet().iterator();
         
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();
             out.write("\"");
-            out.write(att2value.getKey().toString());
-            
+            out.write((String) att2value.getKey());
             out.write("\":");
             
             writeCollectionElement(att2value.getValue());
 
-            if(i.hasNext())
+            if (i.hasNext())
             {
                 out.write(',');
                 newLine(out);
             }
         }
 
-        
         tabOut(out);
         out.write('}');
-
-
         return true;
     }
-    
-    
-    
+
+    // Ensure that all keys within the Map are String instances
+    public static boolean ensureStringKeys(Map map)
+    {
+        for (Object o : map.keySet())
+        {
+            if (!(o instanceof String || o instanceof Double || o instanceof Long || o instanceof Boolean))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * Write an element that is contained in some type of collection or Map.
