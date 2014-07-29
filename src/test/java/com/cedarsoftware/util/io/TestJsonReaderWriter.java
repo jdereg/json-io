@@ -3906,6 +3906,37 @@ public class TestJsonReaderWriter
         String s = new String(ba.toByteArray(), "UTF-8");
         assertTrue(json.equals(s));
     }
+    
+    @Test
+    public void writeJsonObjectMapWithStringKeys() throws Exception
+    {
+        String json = "{\n  \"@type\":\"java.util.HashMap\",\n  \"age\":\"36\",\n  \"name\":\"chris\"\n}";
+        Map map = new HashMap();
+        map.put("name", "chris");
+        map.put("age", "36");
+        
+        //in formatJson, the json will be parsed into a map, which checks both jsonReader and writeJsonObjectMap
+        String jsonGenerated = JsonWriter.formatJson(JsonWriter.objectToJson(map));
+        assertTrue(json.equals(jsonGenerated));
+        
+        Map clone = (Map) JsonReader.jsonToJava(jsonGenerated);
+        assertTrue(map.equals(clone));
+    }
+    
+    @Test
+    public void writeMapWithStringKeys() throws Exception
+    {
+        String json = "{\"@type\":\"java.util.HashMap\",\"age\":\"36\",\"name\":\"chris\"}";
+        Map map = new HashMap();
+        map.put("name", "chris");
+        map.put("age", "36");
+        
+        String jsonGenerated = JsonWriter.objectToJson(map);
+        assertTrue(json.equals(jsonGenerated));
+        
+        Map clone = (Map) JsonReader.jsonToJava(jsonGenerated);
+        assertTrue(map.equals(clone));
+    }
 
     @Test
     public void testUntyped() throws Exception

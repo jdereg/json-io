@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -872,7 +873,8 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (jObj.isMap())
             {
-                writeJsonObjectMap(jObj, showType);
+                if(!writeJsonObjectMapWithStringKeys(jObj, showType))
+                    writeJsonObjectMap(jObj, showType);
             }
             else
             {
@@ -881,7 +883,8 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (obj instanceof Map)
         {
-            writeMap((Map) obj, showType);
+            if(!writeMapWithStringKeys((Map) obj, showType))
+                writeMap((Map) obj, showType);
         }
         else
         {
@@ -1575,6 +1578,93 @@ public class JsonWriter implements Closeable, Flushable
         tabOut(out);
         out.write('}');
     }
+    
+    
+    private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
+    {
+        
+        if(!jObj.isEmpty())
+        {
+            Iterator keys = jObj.keySet().iterator();
+            while (keys.hasNext())
+                if(!(keys.next() instanceof String)) return false;
+        }
+        
+        if(writeOptionalReference(jObj))
+        {
+            return true;
+        }
+
+        boolean referenced = _objsReferenced.containsKey(jObj) && jObj.hasId();
+        final Writer out = _out;
+
+        out.write('{');
+        tabIn(out);
+        if(referenced)
+        {
+            writeId(String.valueOf(jObj.getId()));
+        }
+
+        if(showType)
+        {
+            if(referenced)
+            {
+                out.write(',');
+                newLine(out);
+            }
+            String type = jObj.getType();
+            if(type != null)
+            {
+                Class mapClass = JsonReader.classForName2(type);
+                out.write("\"@type\":\"");
+                out.write(mapClass.getName());
+                out.write('"');
+            }
+            else
+            { // type not displayed
+                showType = false;
+            }
+        }
+
+        if(jObj.isEmpty())
+        { // Empty
+            tabOut(out);
+            out.write('}');
+            return true;
+        }
+
+        if(showType)
+        {
+            out.write(',');
+            newLine(out);
+        }
+
+        
+        Iterator i = jObj.entrySet().iterator();
+        
+        while (i.hasNext())
+        {
+            Entry att2value = (Entry) i.next();
+            out.write("\"");
+            out.write(att2value.getKey().toString());
+            
+            out.write("\":");
+            
+            writeCollectionElement(att2value.getValue());
+
+            if(i.hasNext())
+            {
+                out.write(',');
+                newLine(out);
+            }
+        }
+        
+        tabOut(out);
+        out.write('}');
+        
+        return true;
+    }
+    
 
     private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException
     {
@@ -1755,6 +1845,86 @@ public class JsonWriter implements Closeable, Flushable
         tabOut(out);
         out.write('}');
     }
+    
+    
+    private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException
+    {
+
+        if(!map.isEmpty())
+        {
+            Iterator keys = map.keySet().iterator();
+            while (keys.hasNext())
+                if(!(keys.next() instanceof String)) return false;
+        }
+
+        if(writeOptionalReference(map))
+        {
+            return true;
+        }
+
+        final Writer out = _out;
+        boolean referenced = _objsReferenced.containsKey(map);
+
+        out.write('{');
+        tabIn(out);
+        if(referenced)
+        {
+            writeId(getId(map));
+        }
+
+        if(showType)
+        {
+            if(referenced)
+            {
+                out.write(',');
+                newLine(out);
+            }
+            writeType(map, out);
+        }
+
+        if(map.isEmpty())
+        {
+            tabOut(out);
+            out.write('}');
+            return true;
+        }
+
+        if(showType || referenced)
+        {
+            out.write(',');
+            newLine(out);
+        }
+
+        
+        Iterator i = map.entrySet().iterator();
+        
+        while (i.hasNext())
+        {
+            Entry att2value = (Entry) i.next();
+            out.write("\"");
+            out.write(att2value.getKey().toString());
+            
+            out.write("\":");
+            
+            writeCollectionElement(att2value.getValue());
+
+            if(i.hasNext())
+            {
+                out.write(',');
+                newLine(out);
+            }
+        }
+
+        
+        tabOut(out);
+        out.write('}');
+
+
+        return true;
+    }
+    
+    
+    
 
     /**
      * Write an element that is contained in some type of collection or Map.
