@@ -1118,9 +1118,24 @@ public class JsonReader implements Closeable
     {
         ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
         JsonReader jr = new JsonReader(ba, true);
-        Map map = (Map) jr.readObject();
+        Object ret = jr.readObject();
         jr.close();
-        return map;
+
+        if (ret instanceof Map)
+        {
+            return (Map) ret;
+        }
+
+        if (ret != null && ret.getClass().isArray())
+        {
+            JsonObject retMap = new JsonObject();
+            retMap.put("@items", ret);
+            return retMap;
+
+        }
+        JsonObject retMap = new JsonObject();
+        retMap.put("@items", new Object[]{ret});
+        return retMap;
     }
 
     public JsonReader()
@@ -1158,14 +1173,29 @@ public class JsonReader implements Closeable
      */
     public Object readObject() throws IOException
     {
-        Object o = readJsonObject();
+        JsonObject root = new JsonObject();
+        Object o = readValue(root);
         if (o == EMPTY_OBJECT)
         {
             return new JsonObject();
         }
 
-        Object graph = convertParsedMapsToJava((JsonObject) o);
-
+        Object graph;
+        if (o instanceof Object[])
+        {
+            root.setType(Object[].class.getName());
+            root.setTarget(o);
+            root.put("@items", o);
+            graph = convertParsedMapsToJava(root);
+        }
+        else if (o instanceof JsonObject)
+        {
+            graph = convertParsedMapsToJava((JsonObject) o);
+        }
+        else
+        {
+            graph = o;
+        }
         // Allow a complete 'Map' return (Javascript style)
         if (_noObjects)
         {
@@ -2425,7 +2455,7 @@ public class JsonReader implements Closeable
                 }
                 else if (c == -1)
                 {
-                    error("Reached EOF while reading number");
+                    break;
                 }
                 else
                 {

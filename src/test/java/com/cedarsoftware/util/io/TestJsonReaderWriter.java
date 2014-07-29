@@ -1898,7 +1898,7 @@ public class TestJsonReaderWriter
 
         // Whitespace
         String pkg = TestObject.class.getName();
-        Object[] fred = (Object[]) JsonReader.jsonToJava(" [  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"alpha\"  ,  \"_other\"  :  null  }  ,  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"beta\"  ,  \"_other\" : null  }  ]  ");
+        Object[] fred = (Object[]) JsonReader.jsonToJava("[  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"alpha\"  ,  \"_other\"  :  null  }  ,  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"beta\"  ,  \"_other\" : null  }  ]  ");
         assertTrue(fred != null);
         assertTrue(fred.length == 2);
         assertTrue(fred[0].equals(new TestObject("alpha")));
@@ -2595,16 +2595,16 @@ public class TestJsonReaderWriter
     @Test
     public void testRootString() throws Exception
     {
-        String s = "root string";
-        try
-        {
-            Object o = JsonReader.jsonToMaps(s);
-            fail("JSON string must start with '{' or '['");
-        }
-        catch (IOException e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("invalid"));
-        }
+        String s = "\"root string\"";
+        Object o = JsonReader.jsonToMaps(s);
+        assertTrue(o instanceof JsonObject);
+        JsonObject jo = (JsonObject) o;
+        assertTrue(jo.containsKey("@items"));
+        Object[] items = (Object[]) jo.get("@items");
+        assertTrue(items.length == 1);
+        assertEquals("root string", items[0]);
+        o = readJsonObject(s);
+        assertEquals("root string", o);
     }
 
     @Test
@@ -3565,13 +3565,7 @@ public class TestJsonReaderWriter
     @Test
     public void testMalformedJson() throws Exception
     {
-        String json = "\"Invalid JSON\"";          // Valid JSON must start with { or [
-        try
-        {
-            JsonReader.jsonToMaps(json);
-            assertTrue("malformed JSON should not parse 1", false);
-        }
-        catch (IOException e) { }
+        String json;
 
         try
         {
@@ -6595,6 +6589,16 @@ public class TestJsonReaderWriter
         catch (Exception e)
         {
         }
+    }
+
+    @Test
+    public void testRootTypes() throws Exception
+    {
+        assertEquals(25L, readJsonObject("25"));
+        assertEquals(25.0, readJsonObject("25.0"));
+        assertEquals(true, readJsonObject("true"));
+        assertEquals(false, readJsonObject("false"));
+        assertEquals("foo", readJsonObject("\"foo\""));
     }
 
     private static void println(Object ... args)
