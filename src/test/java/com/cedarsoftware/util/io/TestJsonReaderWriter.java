@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -102,7 +103,7 @@ public class TestJsonReaderWriter
     {
         protected void starting(Description description)
         {
-            println("\nStarting test: " + description.getMethodName());
+            println(newLine + "Starting test: " + description.getMethodName());
         }
     };
 
@@ -6439,8 +6440,10 @@ public class TestJsonReaderWriter
 
         String json1 = JsonWriter.objectToJson(nice);
         assertNotEquals(json, json1);
-        String json2 = JsonWriter.formatJson(json1);
-//        assertEquals(json2, json);  // Picking up ID on Map, why?
+        // The MAp.Entry's in the Map reference the Map, causing the map to be referenced, therefore it emits an @id
+        // making the String slightly different (but logically equivalent).
+//        String json2 = JsonWriter.formatJson(json1);
+//        assertEquals(json2, json);
     }
 
     @Test
@@ -6622,6 +6625,30 @@ public class TestJsonReaderWriter
         assertEquals(false, readJsonObject("false"));
         assertEquals("foo", readJsonObject("\"foo\""));
     }
+
+    static class UnmodifiableMapHolder
+    {
+        Map map;
+
+        UnmodifiableMapHolder()
+        {
+            Map directions = new LinkedHashMap();
+            directions.put("North", 0);
+            directions.put("South", 1);
+            directions.put("East", 2);
+            directions.put("West", 3);
+            map = Collections.unmodifiableMap(directions);
+        }
+    }
+
+    // TODO: Uncomment this test when Unmodifiable support is added.
+//    @Test
+//    public void testUnmodifiableMap() throws Exception
+//    {
+//        UnmodifiableMapHolder holder = new UnmodifiableMapHolder();
+//        String json = JsonWriter.objectToJson(holder);
+//        UnmodifiableMapHolder holder1 = (UnmodifiableMapHolder) readJsonObject(json);
+//    }
 
     private static void println(Object ... args)
     {
