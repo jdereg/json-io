@@ -4237,7 +4237,7 @@ public class TestJsonReaderWriter
         println("json=" + json);
         bigInts = (Object[]) readJsonObject(json);
         assertTrue(bigInts.length == 2);
-        assertTrue(bigInts[0] == bigInts[1]);
+        assertFalse(bigInts[0] == bigInts[1]);
         assertTrue(new BigInteger(s).equals(bigInts[0]));
         json = getJsonString(typedBigInts);
         println("json=" + json);
@@ -4259,7 +4259,7 @@ public class TestJsonReaderWriter
         list = (List) readJsonObject(json);
         assertTrue(list.size() == 2);
         assertTrue(list.get(0).equals(new BigInteger(s)));
-        assertTrue(list.get(0) == list.get(1));
+        assertFalse(list.get(0) == list.get(1));
     }
 
     @Test
@@ -4285,7 +4285,7 @@ public class TestJsonReaderWriter
 
         bigDecs = (Object[]) readJsonObject(json);
         assertTrue(bigDecs.length == 2);
-        assertTrue(bigDecs[0] == bigDecs[1]);
+        assertFalse(bigDecs[0] == bigDecs[1]);
         assertTrue(new BigDecimal(s).equals(bigDecs[0]));
         json = getJsonString(typedBigDecs);
         println("json=" + json);
@@ -4307,7 +4307,9 @@ public class TestJsonReaderWriter
         list = (List) readJsonObject(json);
         assertTrue(list.size() == 2);
         assertTrue(list.get(0).equals(new BigDecimal(s)));
-        assertTrue(list.get(0) == list.get(1));
+        // BigDecimal is treated like primitives (immutables), instances are not shared
+        // (safe to do because the immutable object cannot change, friendly to the JSON file)
+        assertFalse(list.get(0) == list.get(1));
     }
 
     @Test
@@ -6111,7 +6113,7 @@ public class TestJsonReaderWriter
         assertEquals(null, tsf.values[3]);
     }
 
-    class TestBigDecimalField
+    static class TestBigDecimalField
     {
         BigDecimal fromString;
         BigDecimal fromLong;
@@ -6624,6 +6626,18 @@ public class TestJsonReaderWriter
         assertEquals(true, readJsonObject("true"));
         assertEquals(false, readJsonObject("false"));
         assertEquals("foo", readJsonObject("\"foo\""));
+    }
+
+    @Test
+    public void testBigDecimal0() throws Exception
+    {
+        TestBigDecimalField bigDecs = new TestBigDecimalField();
+        bigDecs.fromString = new BigDecimal("123.12");
+        bigDecs.fromLong = new BigDecimal("0");
+        bigDecs.fromDouble = new BigDecimal("0.0");
+        bigDecs.fromBoolean = bigDecs.fromDouble;
+        String json = getJsonString(bigDecs);
+        assertFalse(json.contains("@ref"));
     }
 
     static class UnmodifiableMapHolder

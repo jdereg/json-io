@@ -731,7 +731,10 @@ public class JsonWriter implements Closeable, Flushable
                 continue;
             }
 
-            if (!JsonReader.isPrimitive(obj.getClass()) && !(obj instanceof String) && !(obj instanceof Date))
+            if (!JsonReader.isPrimitive(obj.getClass()) &&
+                    !(obj instanceof String) &&
+                    !(obj instanceof Date) &&
+                    !(obj instanceof Number))
             {
                 Long id = visited.get(obj);
                 if (id != null)
