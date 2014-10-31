@@ -1079,6 +1079,11 @@ public class TestJsonReaderWriter
         TestCollection root = (TestCollection) readJsonObject(jsonOut);
 
         assertCollection(root);
+
+        JsonWriter writer = new JsonWriter(new ByteArrayOutputStream());
+        writer.write(obj);
+        // TODO: Uncomment to test identity counter strategies
+//        System.out.println("writer._identity = " + writer._identity);
     }
 
     private void assertCollection(TestCollection root)
@@ -4202,6 +4207,51 @@ public class TestJsonReaderWriter
         assertTrue(Arrays.equals(array31, array32));
     }
 
+    private static enum TestEnum4
+    {
+        A, B, C;
+
+        private int internal = 6;
+        protected long age = 21;
+        String foo = "bar";
+    }
+
+    @Test
+    public void testEnumWithPrivateMembersAsField() throws Exception
+    {
+        TestEnum4 x = TestEnum4.B;
+        String json = getJsonString(x);
+        println(json);
+        assertEquals("{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"internal\":6,\"age\":21,\"foo\":\"bar\",\"name\":\"B\",\"ordinal\":1}", json);
+
+        ByteArrayOutputStream ba = new ByteArrayOutputStream();
+        JsonWriter writer = new JsonWriter(ba);
+        writer.getArgs().put(JsonWriter.ENUM_PUBLIC_ONLY, true);
+        writer.write(x);
+        json = new String(ba.toByteArray());
+        println(json);
+        assertEquals("{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"name\":\"B\",\"ordinal\":1}", json);
+    }
+
+    @Test
+    public void testEnumWithPrivateMembersInCollection() throws Exception
+    {
+        TestEnum4 x = TestEnum4.B;
+        List list = new ArrayList();
+        list.add(x);
+        String json = getJsonString(list);
+        println(json);
+        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"internal\":6,\"age\":21,\"foo\":\"bar\",\"name\":\"B\",\"ordinal\":1}]}", json);
+
+        ByteArrayOutputStream ba = new ByteArrayOutputStream();
+        JsonWriter writer = new JsonWriter(ba);
+        writer.getArgs().put(JsonWriter.ENUM_PUBLIC_ONLY, true);
+        writer.write(list);
+        json = new String(ba.toByteArray());
+        println(json);
+        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"name\":\"B\",\"ordinal\":1}]}", json);
+    }
+
     @Test
     public void testEmptyObject() throws Exception
     {
@@ -6638,6 +6688,22 @@ public class TestJsonReaderWriter
         bigDecs.fromBoolean = bigDecs.fromDouble;
         String json = getJsonString(bigDecs);
         assertFalse(json.contains("@ref"));
+    }
+
+    static class AssignToList
+    {
+        Map assignTo;
+    }
+
+    @Test
+    public void testMapWithAtType() throws Exception
+    {
+        AssignToList atl = new AssignToList();
+        String json = "{\"@id\":1,\"@type\":\"java.util.LinkedHashMap\",\"@keys\":[\"1000004947\",\"0000020985\",\"0000029443\",\"0000020994\"],\"@items\":[\"Me\",\"Fox, James\",\"Renewals, CORE\",\"Gade, Raja\"]}";
+        Map assignTo = (Map) JsonReader.jsonToJava(json);
+        atl.assignTo = assignTo;
+        json = JsonWriter.objectToJson(atl);
+        println(json);
     }
 
     static class UnmodifiableMapHolder

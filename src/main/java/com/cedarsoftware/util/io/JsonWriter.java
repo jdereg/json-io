@@ -78,21 +78,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class JsonWriter implements Closeable, Flushable
 {
-    public static final String DATE_FORMAT = "DATE_FORMAT";
-    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    public static final String TYPE = "TYPE";
-    public static final String PRETTY_PRINT = "PRETTY_PRINT";
-    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
+    public static final String DATE_FORMAT = "DATE_FORMAT";         // Set the date format to use within the JSON output
+    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";      // Constant for use as DATE_FORMAT value
+    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";  // Constant for use as DATE_FORMAT value
+    public static final String TYPE = "TYPE";                       // Force @type always
+    public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
+    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
+    public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
     private static final Map<String, ClassMeta> _classMetaCache = new ConcurrentHashMap<String, ClassMeta>();
     private static final List<Object[]> _writers  = new ArrayList<Object[]>();
     private static final Set<Class> _notCustom = new HashSet<Class>();
     private static Object[] _byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
+    private static final Long ZERO = 0L;
     private final Map<Object, Long> _objVisited = new IdentityHashMap<Object, Long>();
     private final Map<Object, Long> _objsReferenced = new IdentityHashMap<Object, Long>();
     private final Writer _out;
-    private long _identity = 1;
+    long _identity = 1;
     private int depth = 0;
     // _args is using ThreadLocal so that static inner classes can have access to them
     static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
@@ -739,10 +741,19 @@ public class JsonWriter implements Closeable, Flushable
                 Long id = visited.get(obj);
                 if (id != null)
                 {   // Only write an object once.
-                    referenced.put(obj, id);
+                    if (id == ZERO)
+                    {   // 2nd time this object has been seen, so give it a unique ID and mark it referenced
+                        id = _identity++;
+                        visited.put(obj, id);
+                        referenced.put(obj, id);
+                    }
                     continue;
                 }
-                visited.put(obj, _identity++);
+                else
+                {   // Initially, mark an object with 0 as the ID, in case it is never referenced,
+                    // we don't waste the memory to store a Long instance that is never used.
+                    visited.put(obj, ZERO);
+                }
             }
 
             final Class clazz = obj.getClass();
@@ -1147,7 +1158,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     private boolean alwaysShowType()
     {
-        return Boolean.TRUE.equals(_args.get().get(TYPE));
+        return Boolean.TRUE.equals(_args.get().containsKey(TYPE));
     }
 
     private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException
@@ -2053,6 +2064,13 @@ public class JsonWriter implements Closeable, Flushable
         {   // Do not write transient fields
             return first;
         }
+
+        int modifiers = field.getModifiers();
+        if (field.getDeclaringClass().isEnum() && !Modifier.isPublic(modifiers) && Boolean.TRUE.equals(_args.get().get(ENUM_PUBLIC_ONLY)))
+        {
+            return first;
+        }
+
         if (first)
         {
             first = false;
