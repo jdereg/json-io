@@ -294,6 +294,25 @@ public class JsonWriter implements Closeable, Flushable
         void writePrimitiveForm(Object o, Writer out) throws IOException;
     }
 
+    public boolean isPublicEnumsOnly()
+    {
+        Object setting = _args.get().get(ENUM_PUBLIC_ONLY);
+        if (setting instanceof Boolean)
+        {
+            return Boolean.TRUE.equals(setting);
+        }
+        else if (setting instanceof String)
+        {
+            return "true".equalsIgnoreCase((String) setting);
+        }
+        else if (setting instanceof Number)
+        {
+            return ((Number)setting).intValue() != 0;
+        }
+
+        return false;
+    }
+
     public boolean isPrettyPrint()
     {
         Object setting = _args.get().get(PRETTY_PRINT);
@@ -2066,7 +2085,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         int modifiers = field.getModifiers();
-        if (field.getDeclaringClass().isEnum() && !Modifier.isPublic(modifiers) && Boolean.TRUE.equals(_args.get().get(ENUM_PUBLIC_ONLY)))
+        if (field.getDeclaringClass().isEnum() && !Modifier.isPublic(modifiers) && isPublicEnumsOnly())
         {
             return first;
         }
