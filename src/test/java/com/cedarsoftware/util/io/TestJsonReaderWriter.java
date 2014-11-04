@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -6673,5 +6674,29 @@ public class TestJsonReaderWriter {
 		}
 
 		return o;
+	}
+
+	@Test
+	public void testDistanceToInterface() {
+
+		assertEquals(1, distanceToInterface(Serializable.class,
+				LinkedList.class));
+		assertEquals(3, distanceToInterface(Iterable.class, LinkedList.class));
+		assertEquals(2, distanceToInterface(Serializable.class,
+				BigInteger.class));
+	}
+
+	private int distanceToInterface(Class<?> to, Class<?> from) {
+		Method method;
+		try {
+			method = JsonWriter.class.getDeclaredMethod(
+					"getDistanceToInterface", Class.class, Class.class);
+			method.setAccessible(true);
+			return (int) method.invoke(null, to, from);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return -1;
 	}
 }
