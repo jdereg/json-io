@@ -923,7 +923,7 @@ public class JsonReader implements Closeable
         _notCustom.add(c);
     }
 
-    protected Object readIfMatching(Object o, Class compType, LinkedList<JsonObject<String, Object>> stack) throws IOException
+    protected static Object readIfMatching(Object o, Class compType, LinkedList<JsonObject<String, Object>> stack) throws IOException
     {
         if (o == null)
         {
@@ -1679,7 +1679,7 @@ public class JsonReader implements Closeable
             else if (value instanceof JsonObject)
             {
                 JsonObject<String, Object> jObj = (JsonObject) value;
-                if (field != null && jObj.isPrimitiveWrapper(field.getType()))
+                if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
                 {
                     jObj.put("value", newPrimitiveWrapper(field.getType(),jObj.get("value")));
                     continue;
