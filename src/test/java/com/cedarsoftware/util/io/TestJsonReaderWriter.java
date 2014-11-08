@@ -1,14 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.google.gson.Gson;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runners.MethodSorters;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
@@ -21,6 +19,7 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -52,13 +51,17 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
+import com.google.gson.Gson;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -6813,4 +6816,51 @@ public class TestJsonReaderWriter
 
         return o;
     }
+    
+    @Test
+	public void testDistanceToInterface() {
+
+		assertEquals(1, distanceToInterface(Serializable.class,
+				LinkedList.class));
+		assertEquals(3, distanceToInterface(Iterable.class, LinkedList.class));
+		assertEquals(2, distanceToInterface(Serializable.class,
+				BigInteger.class));
+	}
+    
+    private int distanceToInterface(Class<?> to, Class<?> from) {
+		Method method;
+		try {
+			method = JsonWriter.class.getDeclaredMethod(
+					"getDistanceToInterface", Class.class, Class.class);
+			method.setAccessible(true);
+			return (int) method.invoke(null, to, from);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return -1;
+	}
+	
+	@Test
+	public void testNoAnalysisForCustomWriter() throws NoSuchFieldException,
+			SecurityException, IOException, IllegalArgumentException,
+			IllegalAccessException {
+		JsonWriter.addWriter(Dog.class, new JsonClassWriter() {
+
+			@Override
+			public void writePrimitiveForm(Object o, Writer out)
+					throws IOException {
+			}
+
+			@Override
+			public void write(Object o, boolean showType, Writer out)
+					throws IOException {
+			}
+
+			@Override
+			public boolean hasPrimitiveForm() {
+				return false;
+			}
+		});
+	}
 }
