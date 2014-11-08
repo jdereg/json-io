@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -375,7 +376,8 @@ public class JsonWriter implements Closeable, Flushable
 
     public static int getDistance(Class a, Class b)
     {
-		if (a.isInterface()) {
+		if (a.isInterface())
+        {
 			return getDistanceToInterface(a, b);
 		}
         Class curr = b;
@@ -394,39 +396,43 @@ public class JsonWriter implements Closeable, Flushable
         return distance;
     }
 
-	private static int getDistanceToInterface(Class<?> to, Class<?> from) {
+    static int getDistanceToInterface(Class<?> to, Class<?> from)
+    {
+        Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
 
-		Set<Class<?>> possibleCandidates = new HashSet<Class<?>>();
+        Class<?>[] interfaces = from.getInterfaces();
+        // is the interface direct inherited or via interfaces extends interface?
+        for (Class<?> interfase : interfaces)
+        {
+            if (to.equals(interfase))
+            {
+                return 1;
+            }
+            // because of multi-inheritance from interfaces
+            if (to.isAssignableFrom(interfase))
+            {
+                possibleCandidates.add(interfase);
+            }
+        }
 
-		Class<?>[] interfaces = from.getInterfaces();
-		// is the interface direct inherited or via interfaces extends
-		// interface?
-		for (Class<?> interfaze : interfaces) {
-			if (to.equals(interfaze)) {
-				return 1;
-			}
-			// because of multi-inheritance from interfaces
-			if (to.isAssignableFrom(interfaze)) {
-				possibleCandidates.add(interfaze);
-			}
-		}
+        // it is also possible, that the interface is included in superclasses
+        if (from.getSuperclass() != null  && to.isAssignableFrom(from.getSuperclass()))
+        {
+            possibleCandidates.add(from.getSuperclass());
+        }
 
-		// it is also possible, that the interface is included in superclasses
-		if (from.getSuperclass() != null
-				&& to.isAssignableFrom(from.getSuperclass())) {
-			possibleCandidates.add(from.getSuperclass());
-		}
-
-		int minimum = Integer.MAX_VALUE;
-		for (Class<?> candidate : possibleCandidates) {
-			// Could do that in a non recursive way later
-			int distance = getDistanceToInterface(to, candidate);
-			if (distance < minimum) {
-				minimum = ++distance;
-			}
-		}
-		return minimum;
-	}
+        int minimum = Integer.MAX_VALUE;
+        for (Class<?> candidate : possibleCandidates)
+        {
+            // Could do that in a non recursive way later
+            int distance = getDistanceToInterface(to, candidate);
+            if (distance < minimum)
+            {
+                minimum = ++distance;
+            }
+        }
+        return minimum;
+    }
 
     public boolean writeIfMatching(Object o, boolean showType, Writer out) throws IOException
     {
@@ -500,18 +506,22 @@ public class JsonWriter implements Closeable, Flushable
         return true;
     }
 
-	private JsonClassWriter getCustomJSonWriter(Class classToWrite) {
+	private JsonClassWriter getCustomJSonWriter(Class classToWrite)
+    {
 		JsonClassWriter closestWriter = null;
 		int minDistance = Integer.MAX_VALUE;
 
-		for (Object[] item : _writers) {
+		for (Object[] item : _writers)
+        {
 			Class clz = (Class) item[0];
-			if (clz == classToWrite) {
+			if (clz == classToWrite)
+            {
 				closestWriter = (JsonClassWriter) item[1];
 				break;
 			}
 			int distance = getDistance(clz, classToWrite);
-			if (distance < minDistance) {
+			if (distance < minDistance)
+            {
 				minDistance = distance;
 				closestWriter = (JsonClassWriter) item[1];
 			}
@@ -837,7 +847,8 @@ public class JsonWriter implements Closeable, Flushable
             else
             {
 				// Only trace fields if no custom writer is present
-				if (getCustomJSonWriter(obj.getClass()) == null) {
+				if (getCustomJSonWriter(obj.getClass()) == null)
+                {
 					traceFields(stack, obj);
 				}
             }

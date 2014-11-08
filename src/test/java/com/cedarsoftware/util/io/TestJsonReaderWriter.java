@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
 import com.google.gson.Gson;
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -4411,7 +4412,7 @@ public class TestJsonReaderWriter
 
 		public void writePrimitiveForm(Object o, Writer out) throws IOException
 		{
-			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
+			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date)o);
 			out.write('"');
 			out.write(value);
 			out.write('"');
@@ -6729,6 +6730,32 @@ public class TestJsonReaderWriter
 //        String json = JsonWriter.objectToJson(holder);
 //        UnmodifiableMapHolder holder1 = (UnmodifiableMapHolder) readJsonObject(json);
 //    }
+
+	@Test
+	public void testDistanceToInterface() throws Exception
+	{
+		assertEquals(1, JsonWriter.getDistanceToInterface(Serializable.class, LinkedList.class));
+		assertEquals(3, JsonWriter.getDistanceToInterface(Iterable.class, LinkedList.class));
+		assertEquals(2, JsonWriter.getDistanceToInterface(Serializable.class, BigInteger.class));
+	}
+
+	@Test
+	public void testNoAnalysisForCustomWriter() throws Exception
+	{
+		JsonWriter.addWriter(Dog.class, new JsonClassWriter()
+		{
+			public void writePrimitiveForm(Object o, Writer out)  throws IOException
+			{ }
+
+			public void write(Object o, boolean showType, Writer out)  throws IOException
+			{ }
+
+			public boolean hasPrimitiveForm()
+			{
+				return false;
+			}
+		});
+	}
 
 	private static void println(Object ... args)
 	{
