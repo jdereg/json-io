@@ -375,6 +375,9 @@ public class JsonWriter implements Closeable, Flushable
 
     public static int getDistance(Class a, Class b)
     {
+		if (a.isInterface()) {
+			return getDistanceToInterface(a, b);
+		}
         Class curr = b;
         int distance = 0;
 
@@ -390,6 +393,40 @@ public class JsonWriter implements Closeable, Flushable
 
         return distance;
     }
+
+	private static int getDistanceToInterface(Class<?> to, Class<?> from) {
+
+		Set<Class<?>> possibleCandidates = new HashSet<Class<?>>();
+
+		Class<?>[] interfaces = from.getInterfaces();
+		// is the interface direct inherited or via interfaces extends
+		// interface?
+		for (Class<?> interfaze : interfaces) {
+			if (to.equals(interfaze)) {
+				return 1;
+			}
+			// because of multi-inheritance from interfaces
+			if (to.isAssignableFrom(interfaze)) {
+				possibleCandidates.add(interfaze);
+			}
+		}
+
+		// it is also possible, that the interface is included in superclasses
+		if (from.getSuperclass() != null
+				&& to.isAssignableFrom(from.getSuperclass())) {
+			possibleCandidates.add(from.getSuperclass());
+		}
+
+		int minimum = Integer.MAX_VALUE;
+		for (Class<?> candidate : possibleCandidates) {
+			// Could do that in a non recursive way later
+			int distance = getDistanceToInterface(to, candidate);
+			if (distance < minimum) {
+				minimum = ++distance;
+			}
+		}
+		return minimum;
+	}
 
     public boolean writeIfMatching(Object o, boolean showType, Writer out) throws IOException
     {
@@ -414,24 +451,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer out) throws IOException
     {
-        JsonClassWriter closestWriter = null;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (Object[] item : _writers)
-        {
-            Class clz = (Class)item[0];
-            if (clz == arrayComponentClass)
-            {
-                closestWriter = (JsonClassWriter)item[1];
-                break;
-            }
-            int distance = getDistance(clz, arrayComponentClass);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closestWriter = (JsonClassWriter)item[1];
-            }
-        }
+		JsonClassWriter closestWriter = getCustomJSonWriter(arrayComponentClass);
 
         if (closestWriter == null)
         {
@@ -479,6 +499,26 @@ public class JsonWriter implements Closeable, Flushable
         out.write('}');
         return true;
     }
+
+	private JsonClassWriter getCustomJSonWriter(Class classToWrite) {
+		JsonClassWriter closestWriter = null;
+		int minDistance = Integer.MAX_VALUE;
+
+		for (Object[] item : _writers) {
+			Class clz = (Class) item[0];
+			if (clz == classToWrite) {
+				closestWriter = (JsonClassWriter) item[1];
+				break;
+			}
+			int distance = getDistance(clz, classToWrite);
+			if (distance < minDistance) {
+				minDistance = distance;
+				closestWriter = (JsonClassWriter) item[1];
+			}
+		}
+
+		return closestWriter;
+	}
 
     public static void addWriter(Class c, JsonClassWriter writer)
     {
@@ -796,7 +836,10 @@ public class JsonWriter implements Closeable, Flushable
             }
             else
             {
-                traceFields(stack, obj);
+				// Only trace fields if no custom writer is present
+				if (getCustomJSonWriter(obj.getClass()) == null) {
+					traceFields(stack, obj);
+				}
             }
         }
     }
