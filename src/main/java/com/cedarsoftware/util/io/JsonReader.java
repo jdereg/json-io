@@ -18,13 +18,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Timestamp;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -91,132 +89,115 @@ public class JsonReader implements Closeable
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
+    private static final int SNIPPET_LENGTH = 200;
     private static final String EMPTY_ARRAY = "~!a~";  // compared with ==
     private static final String EMPTY_OBJECT = "~!o~";  // compared with ==
-    private static final Character[] _charCache = new Character[128];
-    private static final Byte[] _byteCache = new Byte[256];
-    private static final Map<String, String> _stringCache = new HashMap<String, String>();
-    private static final Set<Class> _prims = new HashSet<Class>();
-    private static final Map<Class, Object[]> _constructors = new HashMap<Class, Object[]>();
-    private static final Map<String, Class> _nameToClass = new HashMap<String, Class>();
-    private static final Class[] _emptyClassArray = new Class[]{};
-    private static final List<Object[]> _readers  = new ArrayList<Object[]>();
-    private static final Set<Class> _notCustom = new HashSet<Class>();
-    private static final Map<String, String> _months = new LinkedHashMap<String, String>();
-    private static final Map<Class, ClassFactory> _factory = new LinkedHashMap<Class, ClassFactory>();
-    private static final String _mos = "(Jan|January|Feb|February|Mar|March|Apr|April|May|Jun|June|Jul|July|Aug|August|Sep|Sept|September|Oct|October|Nov|November|Dec|December)";
-    private static final Pattern _datePattern1 = Pattern.compile("^(\\d{4})[\\./-](\\d{1,2})[\\./-](\\d{1,2})");
-    private static final Pattern _datePattern2 = Pattern.compile("^(\\d{1,2})[\\./-](\\d{1,2})[\\./-](\\d{4})");
-    private static final Pattern _datePattern3 = Pattern.compile(_mos + "[ ,]+(\\d{1,2})[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern _datePattern4 = Pattern.compile("(\\d{1,2})[ ,]" + _mos + "[ ,]+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern _datePattern5 = Pattern.compile("(\\d{4})[ ,]" + _mos + "[ ,]+(\\d{1,2})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern _timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,3})");
-    private static final Pattern _timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})");
-    private static final Pattern _timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})");
-    private static final Pattern _extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
+    private static final Character[] charCache = new Character[128];
+    private static final Byte[] byteCache = new Byte[256];
+    private static final Map<String, String> stringCache = new HashMap<String, String>();
+    private static final Set<Class> prims = new HashSet<Class>();
+    private static final Map<Class, Object[]> constructors = new HashMap<Class, Object[]>();
+    private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
+    private static final Class[] emptyClassArray = new Class[]{};
+    private static final List<Object[]> readers = new ArrayList<Object[]>();
+    private static final Set<Class> notCustom = new HashSet<Class>();
+    private static final Map<String, String> months = new LinkedHashMap<String, String>();
+    private static final Map<Class, ClassFactory> factory = new LinkedHashMap<Class, ClassFactory>();
+    private static final String days = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
+    private static final String mos = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
+    private static final Pattern datePattern1 = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
+    private static final Pattern datePattern2 = Pattern.compile("(\\d{1,2})[./-](\\d{1,2})[./-](\\d{4})");
+    private static final Pattern datePattern3 = Pattern.compile(mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern4 = Pattern.compile("(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern5 = Pattern.compile("(\\d{4})[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern6 = Pattern.compile(days+"[ ]+" + mos + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,3}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,10})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
+    private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
 
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
-    private final Collection<UnresolvedReference> _unresolvedRefs = new ArrayList<UnresolvedReference>();
-    private final Collection<Object[]> _prettyMaps = new ArrayList<Object[]>();
-    private final FastPushbackReader _in;
-    private boolean _noObjects = false;
-    private final char[] _numBuf = new char[256];
-    private final StringBuilder _strBuf = new StringBuilder();
+    private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
+    private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
+    private final FastPushbackReader input;
+    private boolean noObjects = false;
+    private final char[] numBuf = new char[256];
+    private final StringBuilder strBuf = new StringBuilder();
 
-    static final ThreadLocal<Deque<char[]>> _snippet = new ThreadLocal<Deque<char[]>>()
-    {
-        public Deque<char[]> initialValue()
-        {
-            return new ArrayDeque<char[]>(128);
-        }
-    };
-    static final ThreadLocal<Integer> _line = new ThreadLocal<Integer>()
-    {
-        public Integer initialValue()
-        {
-            return 1;
-        }
-    };
-
-    static final ThreadLocal<Integer> _col = new ThreadLocal<Integer>()
-    {
-        public Integer initialValue()
-        {
-            return 1;
-        }
-    };
+    static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<FastPushbackReader>();
 
     static
     {
         // Save memory by re-using common Characters (Characters are immutable)
-        for (int i = 0; i < _charCache.length; i++)
+        for (int i = 0; i < charCache.length; i++)
         {
-            _charCache[i] = (char) i;
+            charCache[i] = (char) i;
         }
 
         // Save memory by re-using all byte instances (Bytes are immutable)
-        for (int i = 0; i < _byteCache.length; i++)
+        for (int i = 0; i < byteCache.length; i++)
         {
-            _byteCache[i] = (byte) (i - 128);
+            byteCache[i] = (byte) (i - 128);
         }
 
         // Save heap memory by re-using common strings (String's immutable)
-        _stringCache.put("", "");
-        _stringCache.put("true", "true");
-        _stringCache.put("True", "True");
-        _stringCache.put("TRUE", "TRUE");
-        _stringCache.put("false", "false");
-        _stringCache.put("False", "False");
-        _stringCache.put("FALSE", "FALSE");
-        _stringCache.put("null", "null");
-        _stringCache.put("yes", "yes");
-        _stringCache.put("Yes", "Yes");
-        _stringCache.put("YES", "YES");
-        _stringCache.put("no", "no");
-        _stringCache.put("No", "No");
-        _stringCache.put("NO", "NO");
-        _stringCache.put("on", "on");
-        _stringCache.put("On", "On");
-        _stringCache.put("ON", "ON");
-        _stringCache.put("off", "off");
-        _stringCache.put("Off", "Off");
-        _stringCache.put("OFF", "OFF");
-        _stringCache.put("@id", "@id");
-        _stringCache.put("@ref", "@ref");
-        _stringCache.put("@items", "@items");
-        _stringCache.put("@type", "@type");
-        _stringCache.put("@keys", "@keys");
-        _stringCache.put("0", "0");
-        _stringCache.put("1", "1");
-        _stringCache.put("2", "2");
-        _stringCache.put("3", "3");
-        _stringCache.put("4", "4");
-        _stringCache.put("5", "5");
-        _stringCache.put("6", "6");
-        _stringCache.put("7", "7");
-        _stringCache.put("8", "8");
-        _stringCache.put("9", "9");
+        stringCache.put("", "");
+        stringCache.put("true", "true");
+        stringCache.put("True", "True");
+        stringCache.put("TRUE", "TRUE");
+        stringCache.put("false", "false");
+        stringCache.put("False", "False");
+        stringCache.put("FALSE", "FALSE");
+        stringCache.put("null", "null");
+        stringCache.put("yes", "yes");
+        stringCache.put("Yes", "Yes");
+        stringCache.put("YES", "YES");
+        stringCache.put("no", "no");
+        stringCache.put("No", "No");
+        stringCache.put("NO", "NO");
+        stringCache.put("on", "on");
+        stringCache.put("On", "On");
+        stringCache.put("ON", "ON");
+        stringCache.put("off", "off");
+        stringCache.put("Off", "Off");
+        stringCache.put("OFF", "OFF");
+        stringCache.put("@id", "@id");
+        stringCache.put("@ref", "@ref");
+        stringCache.put("@items", "@items");
+        stringCache.put("@type", "@type");
+        stringCache.put("@keys", "@keys");
+        stringCache.put("0", "0");
+        stringCache.put("1", "1");
+        stringCache.put("2", "2");
+        stringCache.put("3", "3");
+        stringCache.put("4", "4");
+        stringCache.put("5", "5");
+        stringCache.put("6", "6");
+        stringCache.put("7", "7");
+        stringCache.put("8", "8");
+        stringCache.put("9", "9");
 
-        _prims.add(Byte.class);
-        _prims.add(Integer.class);
-        _prims.add(Long.class);
-        _prims.add(Double.class);
-        _prims.add(Character.class);
-        _prims.add(Float.class);
-        _prims.add(Boolean.class);
-        _prims.add(Short.class);
+        prims.add(Byte.class);
+        prims.add(Integer.class);
+        prims.add(Long.class);
+        prims.add(Double.class);
+        prims.add(Character.class);
+        prims.add(Float.class);
+        prims.add(Boolean.class);
+        prims.add(Short.class);
 
-        _nameToClass.put("string", String.class);
-        _nameToClass.put("boolean", boolean.class);
-        _nameToClass.put("char", char.class);
-        _nameToClass.put("byte", byte.class);
-        _nameToClass.put("short", short.class);
-        _nameToClass.put("int", int.class);
-        _nameToClass.put("long", long.class);
-        _nameToClass.put("float", float.class);
-        _nameToClass.put("double", double.class);
-        _nameToClass.put("date", Date.class);
-        _nameToClass.put("class", Class.class);
+        nameToClass.put("string", String.class);
+        nameToClass.put("boolean", boolean.class);
+        nameToClass.put("char", char.class);
+        nameToClass.put("byte", byte.class);
+        nameToClass.put("short", short.class);
+        nameToClass.put("int", int.class);
+        nameToClass.put("long", long.class);
+        nameToClass.put("float", float.class);
+        nameToClass.put("double", double.class);
+        nameToClass.put("date", Date.class);
+        nameToClass.put("class", Class.class);
 
         addReader(String.class, new StringReader());
         addReader(Date.class, new DateReader());
@@ -243,30 +224,30 @@ public class JsonReader implements Closeable
         assignInstantiator(SortedMap.class, mapFactory);
 
         // Month name to number map
-        _months.put("jan", "1");
-        _months.put("january", "1");
-        _months.put("feb", "2");
-        _months.put("february", "2");
-        _months.put("mar", "3");
-        _months.put("march", "3");
-        _months.put("apr", "4");
-        _months.put("april", "4");
-        _months.put("may", "5");
-        _months.put("jun", "6");
-        _months.put("june", "6");
-        _months.put("jul", "7");
-        _months.put("july", "7");
-        _months.put("aug", "8");
-        _months.put("august", "8");
-        _months.put("sep", "9");
-        _months.put("sept", "9");
-        _months.put("september", "9");
-        _months.put("oct", "10");
-        _months.put("october", "10");
-        _months.put("nov", "11");
-        _months.put("november", "11");
-        _months.put("dec", "12");
-        _months.put("december", "12");
+        months.put("jan", "1");
+        months.put("january", "1");
+        months.put("feb", "2");
+        months.put("february", "2");
+        months.put("mar", "3");
+        months.put("march", "3");
+        months.put("apr", "4");
+        months.put("april", "4");
+        months.put("may", "5");
+        months.put("jun", "6");
+        months.put("june", "6");
+        months.put("jul", "7");
+        months.put("july", "7");
+        months.put("aug", "8");
+        months.put("august", "8");
+        months.put("sep", "9");
+        months.put("sept", "9");
+        months.put("september", "9");
+        months.put("oct", "10");
+        months.put("october", "10");
+        months.put("nov", "11");
+        months.put("november", "11");
+        months.put("dec", "12");
+        months.put("december", "12");
     }
 
     public interface JsonClassReader
@@ -291,7 +272,7 @@ public class JsonReader implements Closeable
      */
     public static void assignInstantiator(Class c, ClassFactory factory)
     {
-        _factory.put(c, factory);
+        JsonReader.factory.put(c, factory);
     }
 
     /**
@@ -431,11 +412,11 @@ public class JsonReader implements Closeable
             }
             else if (o instanceof String)
             {
-                return parseDate((String)o);
+                return parseDate((String) o);
             }
             else if (o instanceof JsonObject)
             {
-                JsonObject jObj = (JsonObject)o;
+                JsonObject jObj = (JsonObject) o;
                 Object val = jObj.get("value");
                 if (val instanceof Long)
                 {
@@ -455,6 +436,10 @@ public class JsonReader implements Closeable
 
         private static Date parseDate(String dateStr) throws IOException
         {
+            if (dateStr == null)
+            {
+                return null;
+            }
             dateStr = dateStr.trim();
             if ("".equals(dateStr))
             {
@@ -462,97 +447,175 @@ public class JsonReader implements Closeable
             }
 
             // Determine which date pattern (Matcher) to use
-            Matcher matcher = _datePattern1.matcher(dateStr);
+            Matcher matcher = datePattern1.matcher(dateStr);
 
-            String year, month = null, day, mon = null;
+            String year, month = null, day, mon = null, remains;
 
             if (matcher.find())
             {
                 year = matcher.group(1);
                 month = matcher.group(2);
                 day = matcher.group(3);
+                remains = matcher.replaceFirst("");
             }
             else
             {
-                matcher = _datePattern2.matcher(dateStr);
+                matcher = datePattern2.matcher(dateStr);
                 if (matcher.find())
                 {
                     month = matcher.group(1);
                     day = matcher.group(2);
                     year = matcher.group(3);
+                    remains = matcher.replaceFirst("");
                 }
                 else
                 {
-                    matcher = _datePattern3.matcher(dateStr);
+                    matcher = datePattern3.matcher(dateStr);
                     if (matcher.find())
                     {
                         mon = matcher.group(1);
                         day = matcher.group(2);
-                        year = matcher.group(3);
+                        year = matcher.group(4);
+                        remains = matcher.replaceFirst("");
                     }
                     else
                     {
-                        matcher = _datePattern4.matcher(dateStr);
+                        matcher = datePattern4.matcher(dateStr);
                         if (matcher.find())
                         {
                             day = matcher.group(1);
-                            mon = matcher.group(2);
-                            year = matcher.group(3);
+                            mon = matcher.group(3);
+                            year = matcher.group(4);
+                            remains = matcher.replaceFirst("");
                         }
                         else
                         {
-                            matcher = _datePattern5.matcher(dateStr);
-                            if (!matcher.find())
+                            matcher = datePattern5.matcher(dateStr);
+                            if (matcher.find())
                             {
-                                error("Unable to parse: " + dateStr);
+                                year = matcher.group(1);
+                                mon = matcher.group(2);
+                                day = matcher.group(3);
+                                remains = matcher.replaceFirst("");
                             }
-                            year = matcher.group(1);
-                            mon = matcher.group(2);
-                            day = matcher.group(3);
+                            else
+                            {
+                                matcher = datePattern6.matcher(dateStr);
+                                if (!matcher.find())
+                                {
+                                    error("Unable to parse: " + dateStr);
+                                }
+                                year = matcher.group(5);
+                                mon = matcher.group(2);
+                                day = matcher.group(3);
+                                remains = matcher.group(4);
+                            }
                         }
                     }
                 }
             }
 
             if (mon != null)
-            {
-                month = _months.get(mon.trim().toLowerCase());
-                if (month == null)
-                {
-                    error("Unable to parse month portion of date: " + dateStr);
-                }
+            {   // Month will always be in Map, because regex forces this.
+                month = months.get(mon.trim().toLowerCase());
             }
 
             // Determine which date pattern (Matcher) to use
-            matcher = _timePattern1.matcher(dateStr);
-            if (!matcher.find())
+            String hour = null, min = null, sec = "00", milli = "0", tz = null;
+            remains = remains.trim();
+            matcher = timePattern1.matcher(remains);
+            if (matcher.find())
             {
-                matcher = _timePattern2.matcher(dateStr);
-                if (!matcher.find())
+                hour = matcher.group(1);
+                min = matcher.group(2);
+                sec = matcher.group(3);
+                milli = matcher.group(4);
+                if (matcher.groupCount() > 4)
                 {
-                    matcher = _timePattern3.matcher(dateStr);
-                    if (!matcher.find())
+                    tz = matcher.group(5);
+                }
+            }
+            else
+            {
+                matcher = timePattern2.matcher(remains);
+                if (matcher.find())
+                {
+                    hour = matcher.group(1);
+                    min = matcher.group(2);
+                    sec = matcher.group(3);
+                    if (matcher.groupCount() > 3)
+                    {
+                        tz = matcher.group(4);
+                    }
+                }
+                else
+                {
+                    matcher = timePattern3.matcher(remains);
+                    if (matcher.find())
+                    {
+                        hour = matcher.group(1);
+                        min = matcher.group(2);
+                        if (matcher.groupCount() > 2)
+                        {
+                            tz = matcher.group(3);
+                        }
+                    }
+                    else
                     {
                         matcher = null;
                     }
                 }
             }
 
+            if (matcher != null)
+            {
+                remains = matcher.replaceFirst("");
+            }
+
+            // Clear out day of week (mon, tue, wed, ...)
+            if (remains != null && remains.length() > 0)
+            {
+                Matcher dayMatcher = dayPattern.matcher(remains);
+                if (dayMatcher.find())
+                {
+                    remains = dayMatcher.replaceFirst("").trim();
+                }
+            }
+            if (remains != null && remains.length() > 0)
+            {
+                remains = remains.trim();
+                if (!remains.equals(",") && (!remains.equals("T")))
+                {
+                    error("Issue parsing data/time, other characters present: " + remains);
+                }
+            }
+
             Calendar c = Calendar.getInstance();
             c.clear();
+            if (tz != null)
+            {
+                if ("z".equalsIgnoreCase(tz))
+                {
+                    c.setTimeZone(TimeZone.getTimeZone("GMT"));
+                }
+                else
+                {
+                    c.setTimeZone(TimeZone.getTimeZone("GMT" + tz));
+                }
+            }
 
-            // Always parses correctly because of regex.
+            // Regex prevents these from ever failing to parse
             int y = Integer.parseInt(year);
             int m = Integer.parseInt(month) - 1;    // months are 0-based
             int d = Integer.parseInt(day);
 
             if (m < 0 || m > 11)
             {
-                error("Month must be between 1 and 12, date: " + dateStr);
+                error("Month must be between 1 and 12 inclusive, date: " + dateStr);
             }
-            if (d < 0 || d > 31)
+            if (d < 1 || d > 31)
             {
-                error("Day cannot be > 31, date: " + dateStr);
+                error("Day must be between 1 and 31 inclusive, date: " + dateStr);
             }
 
             if (matcher == null)
@@ -561,37 +624,26 @@ public class JsonReader implements Closeable
             }
             else
             {
-                String hour = matcher.group(1);
-                String min = matcher.group(2);
-                String sec = "00";
-                String milli = "000";
-                if (matcher.groupCount() > 2)
-                {
-                    sec = matcher.group(3);
-                }
-                if (matcher.groupCount() > 3)
-                {
-                    milli = matcher.group(4);
-                }
-
+                // Regex prevents these from ever failing to parse.
                 int h = Integer.parseInt(hour);
                 int mn = Integer.parseInt(min);
                 int s = Integer.parseInt(sec);
                 int ms = Integer.parseInt(milli);
 
-                if (h < 0 || h > 23)
+                if (h > 23)
                 {
-                    error("Hour must be between 0 and 23, time: " + dateStr);
+                    error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
                 }
-                if (mn < 0 || mn > 59)
+                if (mn > 59)
                 {
-                    error("Minute must be between 0 and 59, time: " + dateStr);
+                    error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
                 }
-                if (s < 0 || s > 59)
+                if (s > 59)
                 {
-                    error("Second must be between 0 and 59, time: " + dateStr);
+                    error("Second must be between 0 and 59 inclusive, time: " + dateStr);
                 }
 
+                // regex enforces millis to number
                 c.set(y, m, d, h, mn, s);
                 c.set(Calendar.MILLISECOND, ms);
             }
@@ -906,7 +958,7 @@ public class JsonReader implements Closeable
 
     public static void addReader(Class c, JsonClassReader reader)
     {
-        for (Object[] item : _readers)
+        for (Object[] item : readers)
         {
             Class clz = (Class)item[0];
             if (clz == c)
@@ -915,12 +967,12 @@ public class JsonReader implements Closeable
                 return;
             }
         }
-        _readers.add(new Object[] {c, reader});
+        readers.add(new Object[]{c, reader});
     }
 
     public static void addNotCustomReader(Class c)
     {
-        _notCustom.add(c);
+        notCustom.add(c);
     }
 
     protected static Object readIfMatching(Object o, Class compType, LinkedList<JsonObject<String, Object>> stack) throws IOException
@@ -930,14 +982,14 @@ public class JsonReader implements Closeable
             error("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (_notCustom.contains(o.getClass()))
+        if (notCustom.contains(o.getClass()))
         {
             return null;
         }
 
         if (compType != null)
         {
-            if (_notCustom.contains(compType))
+            if (notCustom.contains(compType))
             {
                 return null;
             }
@@ -1003,7 +1055,7 @@ public class JsonReader implements Closeable
         JsonClassReader closestReader = null;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Object[] item : _readers)
+        for (Object[] item : readers)
         {
             Class clz = (Class)item[0];
             if (clz == c)
@@ -1140,8 +1192,8 @@ public class JsonReader implements Closeable
 
     public JsonReader()
     {
-        _noObjects = false;
-        _in = null;
+        noObjects = false;
+        input = null;
     }
 
     public JsonReader(InputStream in)
@@ -1151,10 +1203,11 @@ public class JsonReader implements Closeable
 
     public JsonReader(InputStream in, boolean noObjects)
     {
-        _noObjects = noObjects;
+        this.noObjects = noObjects;
         try
         {
-            _in = new FastPushbackReader(new BufferedReader(new InputStreamReader(in, "UTF-8")));
+            input = new FastPushbackReader(new BufferedReader(new InputStreamReader(in, "UTF-8")));
+            threadInput.set(input);
         }
         catch (UnsupportedEncodingException e)
         {
@@ -1197,7 +1250,7 @@ public class JsonReader implements Closeable
             graph = o;
         }
         // Allow a complete 'Map' return (Javascript style)
-        if (_noObjects)
+        if (noObjects)
         {
             return o;
         }
@@ -1213,7 +1266,7 @@ public class JsonReader implements Closeable
      */
     public Object jsonObjectsToJava(JsonObject root) throws IOException
     {
-        _noObjects = false;
+        noObjects = false;
         return convertParsedMapsToJava(root);
     }
 
@@ -1234,8 +1287,8 @@ public class JsonReader implements Closeable
         patchUnresolvedReferences();
         rehashMaps();
         _objsRead.clear();
-        _unresolvedRefs.clear();
-        _prettyMaps.clear();
+        unresolvedRefs.clear();
+        prettyMaps.clear();
         return graph;
     }
 
@@ -1254,7 +1307,7 @@ public class JsonReader implements Closeable
     {
         LinkedList<JsonObject<String, Object>> stack = new LinkedList<JsonObject<String, Object>>();
         stack.addFirst(root);
-        final boolean useMaps = _noObjects;
+        final boolean useMaps = noObjects;
 
         while (!stack.isEmpty())
         {
@@ -1407,7 +1460,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {    // Array with a forward @ref as an element
-                        _unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
+                        unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
                 }
                 else
@@ -1569,7 +1622,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        _unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
+                        unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
                         if (isList)
                         {   // Indexable collection, so set 'null' as element for now - will be patched in later.
                             col.add(null);
@@ -1638,7 +1691,7 @@ public class JsonReader implements Closeable
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
-        _prettyMaps.add(new Object[] {jsonObj, javaKeys, javaValues});
+        prettyMaps.add(new Object[]{jsonObj, javaKeys, javaValues});
     }
 
     protected void traverseFieldsNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
@@ -1861,7 +1914,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        _unresolvedRefs.add(new UnresolvedReference(jsonObj, field.getName(), ref));
+                        unresolvedRefs.add(new UnresolvedReference(jsonObj, field.getName(), ref));
                     }
                 }
                 else
@@ -2167,7 +2220,7 @@ public class JsonReader implements Closeable
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
             }
-            else if (clazz == Object.class && !_noObjects)
+            else if (clazz == Object.class && !noObjects)
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {
@@ -2211,7 +2264,7 @@ public class JsonReader implements Closeable
         JsonObject<String, Object> object = new JsonObject<String, Object>();
         int state = STATE_READ_START_OBJECT;
         boolean objectRead = false;
-        final FastPushbackReader in = _in;
+        final FastPushbackReader in = input;
 
         while (!done)
         {
@@ -2223,8 +2276,8 @@ public class JsonReader implements Closeable
                     if (c == '{')
                     {
                         objectRead = true;
-                        object.line = _line.get();
-                        object.col = _col.get();
+                        object.line = in.line;
+                        object.col = in.col;
                         c = skipWhitespaceRead();
                         if (c == '}')
                         {    // empty object
@@ -2276,7 +2329,7 @@ public class JsonReader implements Closeable
                     // If object is referenced (has @id), then put it in the _objsRead table.
                     if ("@id".equals(field))
                     {
-                        _objsRead.put((Long)value, object);
+                        _objsRead.put((Long) value, object);
                     }
                     state = STATE_READ_POST_VALUE;
                     break;
@@ -2303,7 +2356,7 @@ public class JsonReader implements Closeable
             }
         }
 
-        if (_noObjects && object.isPrimitive())
+        if (noObjects && object.isPrimitive())
         {
             return object.getPrimitiveValue();
         }
@@ -2313,7 +2366,7 @@ public class JsonReader implements Closeable
 
     private Object readValue(JsonObject object) throws IOException
     {
-        int c = _in.read();
+        int c = input.read();
 
         if (c == '"')
         {
@@ -2325,24 +2378,24 @@ public class JsonReader implements Closeable
         }
         if (c == '{')
         {
-            _in.unread('{');
+            input.unread('{');
             return readJsonObject();
         }
         if (c == 't' || c == 'T')
         {
-            _in.unread(c);
+            input.unread(c);
             readToken("true");
             return Boolean.TRUE;
         }
         if (c == 'f' || c == 'F')
         {
-            _in.unread(c);
+            input.unread(c);
             readToken("false");
             return Boolean.FALSE;
         }
         if (c == 'n' || c == 'N')
         {
-            _in.unread(c);
+            input.unread(c);
             readToken("null");
             return null;
         }
@@ -2352,7 +2405,7 @@ public class JsonReader implements Closeable
         }
         if (c == ']')
         {    // [] empty array
-            _in.unread(']');
+            input.unread(']');
             return EMPTY_ARRAY;
         }
         if (c == -1)
@@ -2404,7 +2457,7 @@ public class JsonReader implements Closeable
 
         for (int i = 0; i < len; i++)
         {
-            int c = _in.read();
+            int c = input.read();
             if (c == -1)
             {
                 error("EOF reached while reading token: " + token);
@@ -2433,8 +2486,8 @@ public class JsonReader implements Closeable
      */
     private Number readNumber(int c) throws IOException
     {
-        final FastPushbackReader in = _in;
-        final char[] numBuf = _numBuf;
+        final FastPushbackReader in = input;
+        final char[] numBuf = this.numBuf;
         numBuf[0] = (char) c;
         int len = 1;
         boolean isFloat = false;
@@ -2499,7 +2552,7 @@ public class JsonReader implements Closeable
      */
     private String readString() throws IOException
     {
-        final StringBuilder strBuf = _strBuf;
+        final StringBuilder strBuf = this.strBuf;
         strBuf.setLength(0);
         StringBuilder hex = new StringBuilder();
         boolean done = false;
@@ -2510,7 +2563,7 @@ public class JsonReader implements Closeable
 
         while (!done)
         {
-            int c = _in.read();
+            int c = input.read();
             if (c == -1)
             {
                 error("EOF reached while reading JSON string");
@@ -2603,19 +2656,19 @@ public class JsonReader implements Closeable
         }
 
         String s = strBuf.toString();
-        String cacheHit = _stringCache.get(s);
+        String cacheHit = stringCache.get(s);
         return cacheHit == null ? s : cacheHit;
     }
 
     private static Object newInstance(Class c) throws IOException
     {
-        if (_factory.containsKey(c))
+        if (factory.containsKey(c))
         {
-            return _factory.get(c).newInstance(c);
+            return factory.get(c).newInstance(c);
         }
 
         // Constructor not cached, go find a constructor
-        Object[] constructorInfo = _constructors.get(c);
+        Object[] constructorInfo = constructors.get(c);
         if (constructorInfo != null)
         {   // Constructor was cached
             Constructor constructor = (Constructor) constructorInfo[0];
@@ -2644,7 +2697,7 @@ public class JsonReader implements Closeable
         }
 
         Object[] ret = newInstanceEx(c);
-        _constructors.put(c, new Object[] {ret[1], ret[2]});
+        constructors.put(c, new Object[]{ret[1], ret[2]});
         return ret[0];
     }
 
@@ -2655,7 +2708,7 @@ public class JsonReader implements Closeable
     {
         try
         {
-            Constructor constructor = c.getConstructor(_emptyClassArray);
+            Constructor constructor = c.getConstructor(emptyClassArray);
             if (constructor != null)
             {
                 return new Object[] {constructor.newInstance(), constructor, true};
@@ -2819,7 +2872,7 @@ public class JsonReader implements Closeable
 
     public static boolean isPrimitive(Class c)
     {
-        return c.isPrimitive() || _prims.contains(c);
+        return c.isPrimitive() || prims.contains(c);
     }
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
@@ -2835,7 +2888,7 @@ public class JsonReader implements Closeable
                 }
                 return Byte.parseByte((String)rhs);
             }
-            return rhs != null ? _byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+            return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
         }
         if (c == Boolean.class || c == boolean.class)
         {    // Booleans are tokenized into Boolean.TRUE or Boolean.FALSE
@@ -2941,7 +2994,7 @@ public class JsonReader implements Closeable
 
     static String removeLeadingAndTrailingQuotes(String s)
     {
-        Matcher m = _extraQuotes.matcher(s);
+        Matcher m = extraQuotes.matcher(s);
         if (m.find())
         {
             s = m.group(2);
@@ -2967,7 +3020,7 @@ public class JsonReader implements Closeable
         }
         try
         {
-            Class c = _nameToClass.get(name);
+            Class c = nameToClass.get(name);
             return c == null ? loadClass(name) : c;
         }
         catch (ClassNotFoundException e)
@@ -2984,7 +3037,7 @@ public class JsonReader implements Closeable
         }
         try
         {
-            Class c = _nameToClass.get(name);
+            Class c = nameToClass.get(name);
             return c == null ? loadClass(name) : c;
         }
         catch (ClassNotFoundException e)
@@ -3060,7 +3113,7 @@ public class JsonReader implements Closeable
      */
     private int skipWhitespaceRead() throws IOException
     {
-        final FastPushbackReader in = _in;
+        final FastPushbackReader in = input;
         int c = in.read();
         while (isWhitespace(c))
         {
@@ -3072,16 +3125,17 @@ public class JsonReader implements Closeable
 
     private void skipWhitespace() throws IOException
     {
-        _in.unread(skipWhitespaceRead());
+        input.unread(skipWhitespaceRead());
     }
 
     public void close()
     {
         try
         {
-            if (_in != null)
+            threadInput.remove();
+            if (input != null)
             {
-                _in.close();
+                input.close();
             }
         }
         catch (IOException ignored) { }
@@ -3094,7 +3148,7 @@ public class JsonReader implements Closeable
      */
     private void patchUnresolvedReferences() throws IOException
     {
-        Iterator i = _unresolvedRefs.iterator();
+        Iterator i = unresolvedRefs.iterator();
         while (i.hasNext())
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
@@ -3155,13 +3209,13 @@ public class JsonReader implements Closeable
             i.remove();
         }
 
-        int count = _unresolvedRefs.size();
+        int count = unresolvedRefs.size();
         if (count > 0)
         {
             StringBuilder out = new StringBuilder();
             out.append(count);
             out.append(" unresolved references:\n");
-            i = _unresolvedRefs.iterator();
+            i = unresolvedRefs.iterator();
             count = 1;
 
             while (i.hasNext())
@@ -3187,13 +3241,13 @@ public class JsonReader implements Closeable
      * This is required because Maps hash items using hashCode(), which will
      * change between VMs.  Rehashing the map fixes this.
      *
-     * If _noObjects==true, then move @keys to keys and @items to values
+     * If noObjects==true, then move @keys to keys and @items to values
      * and then drop these two entries from the map.
      */
     private void rehashMaps()
     {
-        final boolean useMaps = _noObjects;
-        for (Object[] mapPieces : _prettyMaps)
+        final boolean useMaps = noObjects;
+        for (Object[] mapPieces : prettyMaps)
         {
             JsonObject jObj = (JsonObject)  mapPieces[0];
             Object[] javaKeys, javaValues;
@@ -3225,7 +3279,11 @@ public class JsonReader implements Closeable
 
     private static String getErrorMessage(String msg)
     {
-        return msg + "\nLast read: " + getLastReadSnippet() + "\nline: " + _line.get() + ", col: " + _col.get();
+        if (threadInput.get() != null)
+        {
+            return msg + "\nLast read: " + getLastReadSnippet() + "\nline: " + threadInput.get().line + ", col: " + threadInput.get().col;
+        }
+        return msg;
     }
 
     static Object error(String msg) throws IOException
@@ -3240,12 +3298,11 @@ public class JsonReader implements Closeable
 
     private static String getLastReadSnippet()
     {
-        StringBuilder s = new StringBuilder();
-        for (char[] chars : _snippet.get())
+        if (threadInput.get() != null)
         {
-            s.append(chars);
+            return threadInput.get().getLastSnippet();
         }
-        return s.toString();
+        return "";
     }
 
     /**
@@ -3257,7 +3314,7 @@ public class JsonReader implements Closeable
      */
     private static Character valueOf(char c)
     {
-        return c <= 127 ? _charCache[(int) c] : c;
+        return c <= 127 ? charCache[(int) c] : c;
     }
 
     public static final int MAX_CODE_POINT = 0x10ffff;
@@ -3293,13 +3350,16 @@ public class JsonReader implements Closeable
     {
         private final int[] _buf;
         private int _idx;
+        private int line, col;
+        private final int[] snippet;
+        private int snippetLoc = 0;
 
         private FastPushbackReader(Reader reader, int size)
         {
             super(reader);
-            _snippet.get().clear();
-            _line.set(1);
-            _col.set(1);
+            snippet = new int[SNIPPET_LENGTH];
+            line = 1;
+            col = 1;
             if (size <= 0)
             {
                 throw new IllegalArgumentException("size <= 0");
@@ -3313,34 +3373,70 @@ public class JsonReader implements Closeable
             this(r, 1);
         }
 
+        private String getLastSnippet()
+        {
+            StringBuilder s = new StringBuilder();
+            for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
+            {
+                char[] character = new char[0];
+                try
+                {
+                    character = toChars(snippet[i]);
+                }
+                catch (Exception e)
+                {
+                    break;
+                }
+                if (snippet[i] != 0)
+                {
+                    s.append(character);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            for (int i=0; i < snippetLoc; i++)
+            {
+                char[] character = new char[0];
+                try
+                {
+                    character = toChars(snippet[i]);
+                }
+                catch (Exception e)
+                {
+                    break;
+                }
+                if (snippet[i] != 0)
+                {
+                    s.append(character);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return s.toString();
+        }
+
         public int read() throws IOException
         {
-            int ch;
-
-            if (_idx < _buf.length)
-            {   // read from push-back buffer
-                ch = _buf[_idx++];
-            }
-            else
-            {
-                ch = super.read();
-            }
+            int ch = _idx < _buf.length ? _buf[_idx++] : super.read();
             if (ch >= 0)
             {
                 if (ch == 0x0a)
                 {
-                    _line.set(_line.get() + 1);
-                    _col.set(0);
+                    line++;
+                    col = 0;
                 }
                 else
                 {
-                    _col.set(_col.get() + 1);
+                    col++;
                 }
-                Deque<char[]> buffer = _snippet.get();
-                buffer.addLast(toChars(ch));
-                if (buffer.size() > 100)
+                snippet[snippetLoc++] = ch;
+                if (snippetLoc >= SNIPPET_LENGTH)
                 {
-                    buffer.removeFirst();
+                    snippetLoc = 0;
                 }
             }
             return ch;
@@ -3354,14 +3450,19 @@ public class JsonReader implements Closeable
             }
             if (c == 0x0a)
             {
-                _line.set(_line.get() - 1);
+                line--;
             }
             else
             {
-                _col.set(_col.get() - 1);
+                col--;
             }
             _buf[--_idx] = c;
-            _snippet.get().removeLast();
+            snippetLoc--;
+            if (snippetLoc < 0)
+            {
+                snippetLoc = SNIPPET_LENGTH - 1;
+            }
+            snippet[snippetLoc] = c;
         }
 
         /**
@@ -3375,9 +3476,6 @@ public class JsonReader implements Closeable
         public void close() throws IOException
         {
             super.close();
-            _snippet.remove();
-            _line.remove();
-            _col.remove();
         }
     }
 }

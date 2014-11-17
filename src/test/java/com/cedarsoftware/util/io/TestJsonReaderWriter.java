@@ -3314,6 +3314,225 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
+	public void testParseMissingQuote() throws Exception
+	{
+		try
+		{
+			String json = "{\n" +
+					"  \"array\": [\n" +
+					"    1,\n" +
+					"    2,\n" +
+					"    3\n" +
+					"  ],\n" +
+					"  \"boolean\": true,\n" +
+					"  \"null\": null,\n" +
+					"  \"number\": 123,\n" +
+					"  \"object\": {\n" +
+					"    \"a\": \"b\",\n" +
+					"    \"c\": \"d\",\n" +
+					"    \"e\": \"f\"\n" +
+					"  },\n" +
+					"  \"string: \"Hello World\"\n" +
+					"}";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("Expected ':' between string field and value"));
+		}
+	}
+	@Test
+	public void testParseInvalid1stChar() throws IOException
+	{
+		try
+		{
+			String json = "\n" +
+					"  \"array\": [\n" +
+					"    1,\n" +
+					"    2,\n" +
+					"    3\n" +
+					"  ],\n" +
+					"  \"boolean\": true,\n" +
+					"  \"null\": null,\n" +
+					"  \"number\": 123,\n" +
+					"  \"object\": {\n" +
+					"    \"a\": \"b\",\n" +
+					"    \"c\": \"d\",\n" +
+					"    \"e\": \"f\"\n" +
+					"  },\n" +
+					"  \"string:\" \"Hello World\"\n" +
+					"}";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("nknown JSON value type"));
+		}
+	}
+
+	@Test
+	public void testParseMissingLastBrace() throws IOException
+	{
+		try
+		{
+			String json = "{\n" +
+                    "  \"array\": [\n" +
+                    "    1,\n" +
+                    "    2,\n" +
+                    "    3\n" +
+                    "  ],\n" +
+                    "  \"boolean\": true,\n" +
+                    "  \"null\": null,\n" +
+                    "  \"number\": 123,\n" +
+                    "  \"object\": {\n" +
+                    "    \"a\": \"b\",\n" +
+                    "    \"c\": \"d\",\n" +
+                    "    \"e\": \"f\"\n" +
+                    "  },\n" +
+                    "  \"string\": \"Hello World\"\n" +
+                    "";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("EOF reached before closing '}'"));
+		}
+	}
+
+	@Test
+	public void testParseMissingLastBracket() throws IOException
+	{
+		String json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10]";
+		JsonReader.jsonToJava(json);
+
+		try
+		{
+			json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("xpected ',' or ']' inside array"));
+		}
+	}
+
+	@Test
+	public void testParseBadValueInArray() throws IOException
+	{
+		String json;
+
+		try
+		{
+			json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,'a']";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("nknown JSON value type"));
+		}
+	}
+
+	@Test
+	public void testParseObjectWithoutClosingBrace() throws IOException
+	{
+		try
+		{
+			String json = "{\n" +
+					"  \"key\": true\n" +
+					"{";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("Object not ended with '}' or ']"));
+		}
+	}
+
+	@Test
+	public void testParseBadHex()
+	{
+		try
+		{
+			String json = "\"\\u5h1t\"";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("Expected hexadecimal digits"));
+		}
+	}
+
+	@Test
+	public void testParseBadEscapeChar()
+	{
+		try
+		{
+			String json = "\"What if I try to escape incorrectly \\L1CK\"";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("nvalid character escape sequence specified"));
+		}
+	}
+
+	@Test
+	public void testParseUnfinishedString()
+	{
+		try
+		{
+			String json = "\"This is an unfinished string...";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("EOF reached while reading JSON string"));
+		}
+	}
+
+	@Test
+	public void testParseEOFInToken()
+	{
+		try
+		{
+			String json = "falsz";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("xpected token: false"));
+		}
+	}
+
+	@Test
+	public void testParseEOFReadingToken()
+	{
+		try
+		{
+			String json = "tru";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("EOF reached while reading token"));
+		}
+	}
+
+	@Test
+	public void testParseEOFinArray()
+	{
+		try
+		{
+			String json = "[true, false,";
+			JsonReader.jsonToJava(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().contains("EOF reached prematurely"));
+		}
+	}
+
+	@Test
 	public void testToMaps() throws Exception
 	{
 		JsonObject map = (JsonObject) JsonReader.jsonToMaps("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}");
@@ -6408,14 +6627,15 @@ public class TestJsonReaderWriter
 		}
 		catch (IOException e)
 		{
-		}        try
-	{
-		JsonReader.classForName2("Smith&Wesson");
-		fail("Should not make it here");
-	}
-	catch (IOException e)
-	{
-	}
+		}
+		try
+		{
+			JsonReader.classForName2("Smith&Wesson");
+			fail("Should not make it here");
+		}
+		catch (IOException e)
+		{
+		}
 	}
 
 	class TestVanillaFields

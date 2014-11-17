@@ -254,7 +254,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     {
         if (key == null)
         {
-            return super.put(key, value);
+            return super.put(null, value);
         }
 
         if (key.equals("@type"))
