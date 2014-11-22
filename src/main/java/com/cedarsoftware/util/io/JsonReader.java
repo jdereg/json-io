@@ -270,9 +270,9 @@ public class JsonReader implements Closeable
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
      * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
      */
-    public static void assignInstantiator(Class c, ClassFactory factory)
+    public static void assignInstantiator(Class c, ClassFactory f)
     {
-        JsonReader.factory.put(c, factory);
+        factory.put(c, f);
     }
 
     /**
@@ -1088,7 +1088,7 @@ public class JsonReader implements Closeable
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
      * definition.  This can point to a field reference or an array/Collection element reference.
      */
-    private static class UnresolvedReference
+    private static final class UnresolvedReference
     {
         private JsonObject referencingObj;
         private String field;
@@ -2552,8 +2552,8 @@ public class JsonReader implements Closeable
      */
     private String readString() throws IOException
     {
-        final StringBuilder strBuf = this.strBuf;
-        strBuf.setLength(0);
+        final StringBuilder str = this.strBuf;
+        str.setLength(0);
         StringBuilder hex = new StringBuilder();
         boolean done = false;
         final int STATE_STRING_START = 0;
@@ -2582,46 +2582,46 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        strBuf.append(toChars(c));
+                        str.append(toChars(c));
                     }
                     break;
 
                 case STATE_STRING_SLASH:
                     if (c == 'n')
                     {
-                        strBuf.append('\n');
+                        str.append('\n');
                     }
                     else if (c == 'r')
                     {
-                        strBuf.append('\r');
+                        str.append('\r');
                     }
                     else if (c == 't')
                     {
-                        strBuf.append('\t');
+                        str.append('\t');
                     }
                     else if (c == 'f')
                     {
-                        strBuf.append('\f');
+                        str.append('\f');
                     }
                     else if (c == 'b')
                     {
-                        strBuf.append('\b');
+                        str.append('\b');
                     }
                     else if (c == '\\')
                     {
-                        strBuf.append('\\');
+                        str.append('\\');
                     }
                     else if (c == '/')
                     {
-                        strBuf.append('/');
+                        str.append('/');
                     }
                     else if (c == '"')
                     {
-                        strBuf.append('"');
+                        str.append('"');
                     }
                     else if (c == '\'')
                     {
-                        strBuf.append('\'');
+                        str.append('\'');
                     }
                     else if (c == 'u')
                     {
@@ -2643,7 +2643,7 @@ public class JsonReader implements Closeable
                         if (hex.length() == 4)
                         {
                             int value = Integer.parseInt(hex.toString(), 16);
-                            strBuf.append(valueOf((char) value));
+                            str.append(valueOf((char) value));
                             state = STATE_STRING_START;
                         }
                     }
@@ -2655,7 +2655,7 @@ public class JsonReader implements Closeable
             }
         }
 
-        String s = strBuf.toString();
+        String s = str.toString();
         String cacheHit = stringCache.get(s);
         return cacheHit == null ? s : cacheHit;
     }
@@ -3346,7 +3346,7 @@ public class JsonReader implements Closeable
      * PushbackReader.  This is due to this class not using synchronization
      * as it is not needed.
      */
-    private static class FastPushbackReader extends FilterReader
+    private static final class FastPushbackReader extends FilterReader
     {
         private final int[] _buf;
         private int _idx;
@@ -3378,7 +3378,7 @@ public class JsonReader implements Closeable
             StringBuilder s = new StringBuilder();
             for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
             {
-                char[] character = new char[0];
+                char[] character;
                 try
                 {
                     character = toChars(snippet[i]);
@@ -3398,7 +3398,7 @@ public class JsonReader implements Closeable
             }
             for (int i=0; i < snippetLoc; i++)
             {
-                char[] character = new char[0];
+                char[] character;
                 try
                 {
                     character = toChars(snippet[i]);
