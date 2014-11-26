@@ -1,15 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
-import com.google.gson.Gson;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runners.MethodSorters;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
@@ -53,13 +50,19 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.Dog.Shoe;
+import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
+import com.google.gson.Gson;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -7059,5 +7062,37 @@ public class TestJsonReaderWriter
 		}
 
 		return o;
+	}
+
+	@Test
+	public void testCustomTopReaderShoe() throws IOException {
+		JsonReader.addReader(Shoe.class, new JsonClassReader() {
+
+			@Override
+			public Object read(Object jOb,
+					LinkedList<JsonObject<String, Object>> stack)
+					throws IOException {
+
+				// no need to do anything special
+				return Shoe.construct();
+			}
+		});
+		Shoe shoe = Shoe.construct();
+
+		// Dirty Workaround otherwise
+		Object[] array = new Object[1];
+		array[0] = shoe;
+		String workaroundString = JsonWriter.objectToJson(array);
+		JsonReader.jsonToJava(workaroundString);// shoe can be acessed by
+												// checking array type + length
+												// and acessing [0]
+
+		String json = JsonWriter.objectToJson(shoe);
+		//Should not fail, as we defined our own reader
+		// It is expected, that this object is instanciated twice:
+		// -once for analysis + Stack
+		// -deserialization with Stack
+		JsonReader.jsonToJava(json);
+
 	}
 }

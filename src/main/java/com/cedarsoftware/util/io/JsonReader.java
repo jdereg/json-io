@@ -1052,7 +1052,22 @@ public class JsonReader implements Closeable
             c = compType;
         }
 
-        JsonClassReader closestReader = null;
+        JsonClassReader closestReader = getCustomReader(c);
+
+        if (closestReader == null)
+        {
+            return null;
+        }
+
+        if (needsType && isJsonObject)
+        {
+            ((JsonObject)o).setType(c.getName());
+        }
+        return closestReader.read(o, stack);
+    }
+
+	private static JsonClassReader getCustomReader(Class c) {
+		JsonClassReader closestReader = null;
         int minDistance = Integer.MAX_VALUE;
 
         for (Object[] item : readers)
@@ -1070,18 +1085,8 @@ public class JsonReader implements Closeable
                 closestReader = (JsonClassReader)item[1];
             }
         }
-
-        if (closestReader == null)
-        {
-            return null;
-        }
-
-        if (needsType && isJsonObject)
-        {
-            ((JsonObject)o).setType(c.getName());
-        }
-        return closestReader.read(o, stack);
-    }
+		return closestReader;
+	}
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -2193,7 +2198,13 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-                    mate = newInstance(c);
+					JsonClassReader customReader = getCustomReader(c);
+					if (customReader != null) {
+						mate = customReader.read(jsonObj,
+								new LinkedList<JsonObject<String, Object>>());
+					} else {
+						mate = newInstance(c);
+					}
                 }
             }
         }
