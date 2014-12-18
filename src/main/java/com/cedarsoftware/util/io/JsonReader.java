@@ -2046,7 +2046,8 @@ public class JsonReader implements Closeable
                         int i=0;
                         for (Object o : ((JsonObject)item[1]).values())
                         {
-                            stack.addFirst(new Object[]{typeArgs[i++], o});
+                            stack.addFirst(new Object[]{typeArgs[Math.min(typeArgs.length-1, i)], o});
+                            i++;
                         }
                     }
                 }
