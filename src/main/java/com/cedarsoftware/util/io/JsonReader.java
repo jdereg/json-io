@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -2058,7 +2059,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    private void getTemplateTraverseWorkItem(LinkedList<Object[]> stack, Object[] items, Type type)
+    private static void getTemplateTraverseWorkItem(Deque<Object[]> stack, Object[] items, Type type)
     {
         if (items == null || items.length < 1)
         {
