@@ -6,12 +6,12 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.7.3</version>
+  <version>2.7.4</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
 
-**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  
+**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  There is a 3rd rigorous test class (`TestJsonReaderWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.
 
 **json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes (static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the ObjectOutputStream behavior.
 
@@ -20,7 +20,7 @@ The `JsonReader / JsonWriter` code does not depend on any native or 3rd party li
 _For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
 ### Format
-**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as possible.  When an object's class can be inferred from a field type or array type, the object's type information is left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`. 
+**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as possible.  When an object's class can be inferred from a field type or array type, the object's type information is left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
 
 When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  When read, this tells the JsonReader what class to instantiate.
 
@@ -30,7 +30,7 @@ If an object is referenced more than once, or references an object that has not 
 **json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's `ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static variable `_debug` is `true` in `TestJsonReaderWriter`).
 
 Usage
-**json-io** can be used directly on JSON Strings or with Java's Streams.  
+**json-io** can be used directly on JSON Strings or with Java's Streams.
 
 _Example 1: String to Java object_
 
@@ -73,7 +73,7 @@ In this example, a Java object is written to an output stream in JSON format.
     JsonReader jr = new JsonReader(InputStream, true);
     Map map = (Map) jr.readObject();
 
-This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the `Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within the JSON stream, and other information.  
+This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the `Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within the JSON stream, and other information.
 
 This 'Maps' representation can be re-written to a JSON String or Stream and _the output JSON will exactly match the original input JSON stream_.  This permits a JVM receiving JSON strings / streams that contain class references which do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data_.
 
@@ -93,7 +93,7 @@ In this example, the ISO `yyyy/MM/ddTHH:mm:ss` format is used to format dates in
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
 
 ### What's next?
-Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it: 
+Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
 
 ### Cloning
 Many projects use `JsonWriter` to write an object to JSON, then use the `JsonReader` to read it in, perfectly cloning the original object graph:
@@ -104,7 +104,7 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
 
     public Object cloneObject(Object root)
     {
-        return JsonReader.jsonToJava(JsonWriter.objectToJson(root));    
+        return JsonReader.jsonToJava(JsonWriter.objectToJson(root));
     }
 
 ### Debugging
@@ -119,6 +119,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.7.4
+  * Bug fix: ArrayIndexOutOfBounds exception occurring when serializing non-static inner class with nested template parameters.  JsonReader was incorrectly passing on the 'this$0' field for further template argument processing when it should not have.
  * 2.7.3
   * `JsonReader` executes faster (more efficiently manages internal 'snippet' buffer and last line and column read.)
   * Improved date parsing: day of week support (long or short name), days with suffix (3rd, 25th, etc.), Java's default `.toString()` output for `Date` now parses, full time zone support, extra whitespace allowed within the date string.

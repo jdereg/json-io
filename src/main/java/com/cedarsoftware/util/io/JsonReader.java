@@ -2044,10 +2044,15 @@ public class JsonReader implements Closeable
                 {
                     if (item[1] instanceof JsonObject)
                     {
+                        JsonObject<String, Object> jObj = (JsonObject) item[1];
+
                         int i=0;
-                        for (Object o : ((JsonObject)item[1]).values())
+                        for (Map.Entry<String, Object> entry : jObj.entrySet())
                         {
-                            stack.addFirst(new Object[]{typeArgs[i++], o});
+                            if (!entry.getKey().startsWith("this$"))
+                            {
+                                stack.addFirst(new Object[]{typeArgs[i++], entry.getValue()});
+                            }
                         }
                     }
                 }

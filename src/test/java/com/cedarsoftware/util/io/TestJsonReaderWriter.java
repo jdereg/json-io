@@ -1,12 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.Dog.Shoe;
+import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
+import com.google.gson.Gson;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
 
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
@@ -50,19 +55,13 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runners.MethodSorters;
-
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.Dog.Shoe;
-import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
-import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
-import com.google.gson.Gson;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -3273,7 +3272,7 @@ public class TestJsonReaderWriter
 	}
 
 	/**
-	 * Although a String cannot really be a root in JSON, 
+	 * Although a String cannot really be a root in JSON,
 	 * json-io returns the JSON utf8 string.  This test
 	 * exists to catch if this decision ever changes.
 	 * Currently, Google's Gson does the same thing.
@@ -6978,6 +6977,105 @@ public class TestJsonReaderWriter
 				return false;
 			}
 		});
+	}
+
+	class Single<T>
+	{
+		private T field1;
+
+		public Single(T field1)
+		{
+			this.field1 = field1;
+		}
+	}
+
+	class UseSingle
+	{
+		private Single<String> single;
+
+		public UseSingle(Single<String> single)
+		{
+			this.single = single;
+		}
+	}
+
+	@Test
+	public void testSingle() throws IOException
+	{
+		UseSingle useSingle = new UseSingle(new Single<String>("Steel"));
+
+		String json = JsonWriter.objectToJson(useSingle);
+		//this will crash on ArrayIndexOutOfBoundsException
+		UseSingle other = (UseSingle) JsonReader.jsonToJava(json);
+
+		assertEquals("Steel", other.single.field1);
+	}
+
+	class TwoParam<T, V>
+	{
+		private T field1;
+		private V field2;
+
+		public TwoParam(T field1, V field2)
+		{
+			this.field1 = field1;
+			this.field2 = field2;
+		}
+	}
+
+	class UseTwoParam
+	{
+		private TwoParam<String, Long> twoParam;
+
+		public UseTwoParam(TwoParam<String, Long> twoParam)
+		{
+			this.twoParam = twoParam;
+		}
+	}
+
+	@Test
+	public void testTwoParam() throws IOException
+	{
+		UseTwoParam useTwoParam = new UseTwoParam(new TwoParam<String, Long>("Hello", 75L));
+
+		String json = JsonWriter.objectToJson(useTwoParam);
+		//this will crash on ArrayIndexOutOfBoundsException
+		UseTwoParam other = (UseTwoParam) JsonReader.jsonToJava(json);
+
+		assertEquals("Hello", other.twoParam.field1);
+		assertTrue(other.twoParam.field2 == 75L);
+	}
+
+	static class StaticSingle<T>
+	{
+		private T field1;
+
+		public StaticSingle(T field1)
+		{
+			this.field1 = field1;
+		}
+	}
+
+	static class StaticUseSingle
+	{
+		private Single<String> single;
+
+		public StaticUseSingle(Single<String> single)
+		{
+			this.single = single;
+		}
+	}
+
+	@Test
+	public void testStaticSingle() throws IOException
+	{
+		StaticUseSingle useSingle = new StaticUseSingle(new Single<String>("Boonies"));
+
+		String json = JsonWriter.objectToJson(useSingle);
+		//this will crash on ArrayIndexOutOfBoundsException
+		StaticUseSingle other = (StaticUseSingle) JsonReader.jsonToJava(json);
+
+		assertEquals("Boonies", other.single.field1);
 	}
 
 	private static void println(Object ... args)
