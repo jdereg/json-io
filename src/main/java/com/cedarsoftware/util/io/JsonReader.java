@@ -1847,7 +1847,6 @@ public class JsonReader implements Closeable
             // exists).
             if (rhs instanceof JsonObject && field.getGenericType() instanceof ParameterizedType)
             {   // Only JsonObject instances could contain unmarked objects.
-                ParameterizedType paramType = (ParameterizedType) field.getGenericType();
                 markUntypedObjects(field.getGenericType(), rhs);
             }
 
@@ -1963,6 +1962,7 @@ public class JsonReader implements Closeable
         {
             Object[] item = stack.removeFirst();
             Type t = (Type) item[0];
+            Object instance = item[1];
             if (t instanceof ParameterizedType)
             {
                 Class clazz = getRawType(t);
@@ -1974,11 +1974,11 @@ public class JsonReader implements Closeable
                     continue;
                 }
 
-                stampTypeOnJsonObject(item[1], t);
+                stampTypeOnJsonObject(instance, t);
 
                 if (Map.class.isAssignableFrom(clazz))
                 {
-                    Map map = (Map) item[1];
+                    Map map = (Map) instance;
                     if (!map.containsKey("@keys") && !map.containsKey("@items") && map instanceof JsonObject)
                     {   // Maps created in Javascript will come over without @keys / @items.
                         convertMapToKeysItems((JsonObject) map);
@@ -1992,9 +1992,9 @@ public class JsonReader implements Closeable
                 }
                 else if (Collection.class.isAssignableFrom(clazz))
                 {
-                    if (item[1] instanceof Object[])
+                    if (instance instanceof Object[])
                     {
-                        Object[] array = (Object[]) item[1];
+                        Object[] array = (Object[]) instance;
                         for (int i=0; i < array.length; i++)
                         {
                             Object vals = array[i];
@@ -2019,17 +2019,17 @@ public class JsonReader implements Closeable
                             }
                         }
                     }
-                    else if (item[1] instanceof Collection)
+                    else if (instance instanceof Collection)
                     {
-                        Collection col = (Collection)item[1];
+                        Collection col = (Collection)instance;
                         for (Object o : col)
                         {
                             stack.addFirst(new Object[]{typeArgs[0], o});
                         }
                     }
-                    else if (item[1] instanceof JsonObject)
+                    else if (instance instanceof JsonObject)
                     {
-                        JsonObject jObj = (JsonObject) item[1];
+                        JsonObject jObj = (JsonObject) instance;
                         Object[] array = jObj.getArray();
                         if (array != null)
                         {
@@ -2042,16 +2042,16 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-                    if (item[1] instanceof JsonObject)
+                    if (instance instanceof JsonObject)
                     {
-                        JsonObject<String, Object> jObj = (JsonObject) item[1];
+                        JsonObject<String, Object> jObj = (JsonObject) instance;
 
-                        int i=0;
                         for (Map.Entry<String, Object> entry : jObj.entrySet())
                         {
                             if (!entry.getKey().startsWith("this$"))
                             {
-                                stack.addFirst(new Object[]{typeArgs[i++], entry.getValue()});
+                                // TODO: If more than one type, need to associate correct typeArgs entry to value
+                                stack.addFirst(new Object[]{typeArgs[0], entry.getValue()});
                             }
                         }
                     }
@@ -2059,7 +2059,7 @@ public class JsonReader implements Closeable
             }
             else
             {
-                stampTypeOnJsonObject(item[1], t);
+                stampTypeOnJsonObject(instance, t);
             }
         }
     }

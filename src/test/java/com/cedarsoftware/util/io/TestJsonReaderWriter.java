@@ -6982,10 +6982,12 @@ public class TestJsonReaderWriter
 	class Single<T>
 	{
 		private T field1;
+		private T field2;
 
-		public Single(T field1)
+		public Single(T field1, T field2)
 		{
 			this.field1 = field1;
+			this.field2 = field2;
 		}
 	}
 
@@ -7002,32 +7004,33 @@ public class TestJsonReaderWriter
 	@Test
 	public void testSingle() throws IOException
 	{
-		UseSingle useSingle = new UseSingle(new Single<String>("Steel"));
-
+		UseSingle useSingle = new UseSingle(new Single<String>("Steel", "Wood"));
 		String json = JsonWriter.objectToJson(useSingle);
-		//this will crash on ArrayIndexOutOfBoundsException
 		UseSingle other = (UseSingle) JsonReader.jsonToJava(json);
 
 		assertEquals("Steel", other.single.field1);
+		assertEquals("Wood", other.single.field2);
 	}
 
 	class TwoParam<T, V>
 	{
 		private T field1;
-		private V field2;
+		private T field2;
+		private V field3;
 
-		public TwoParam(T field1, V field2)
+		public TwoParam(T field1, T field2, V field3)
 		{
 			this.field1 = field1;
 			this.field2 = field2;
+			this.field3 = field3;
 		}
 	}
 
 	class UseTwoParam
 	{
-		private TwoParam<String, Long> twoParam;
+		private TwoParam<String, Point> twoParam;
 
-		public UseTwoParam(TwoParam<String, Long> twoParam)
+		public UseTwoParam(TwoParam<String, Point> twoParam)
 		{
 			this.twoParam = twoParam;
 		}
@@ -7036,14 +7039,14 @@ public class TestJsonReaderWriter
 	@Test
 	public void testTwoParam() throws IOException
 	{
-		UseTwoParam useTwoParam = new UseTwoParam(new TwoParam<String, Long>("Hello", 75L));
-
+		UseTwoParam useTwoParam = new UseTwoParam(new TwoParam<String, Point>("Hello", "Goodbye", new Point(20, 40)));
 		String json = JsonWriter.objectToJson(useTwoParam);
-		//this will crash on ArrayIndexOutOfBoundsException
 		UseTwoParam other = (UseTwoParam) JsonReader.jsonToJava(json);
 
 		assertEquals("Hello", other.twoParam.field1);
-		assertTrue(other.twoParam.field2 == 75L);
+		assertEquals("Goodbye", other.twoParam.field2);
+		assertTrue(other.twoParam.field3.x == 20);
+		assertTrue(other.twoParam.field3.y == 40);
 	}
 
 	static class StaticSingle<T>
@@ -7058,9 +7061,9 @@ public class TestJsonReaderWriter
 
 	static class StaticUseSingle
 	{
-		private Single<String> single;
+		private StaticSingle<String> single;
 
-		public StaticUseSingle(Single<String> single)
+		public StaticUseSingle(StaticSingle<String> single)
 		{
 			this.single = single;
 		}
@@ -7069,7 +7072,7 @@ public class TestJsonReaderWriter
 	@Test
 	public void testStaticSingle() throws IOException
 	{
-		StaticUseSingle useSingle = new StaticUseSingle(new Single<String>("Boonies"));
+		StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<String>("Boonies"));
 
 		String json = JsonWriter.objectToJson(useSingle);
 		//this will crash on ArrayIndexOutOfBoundsException
