@@ -119,6 +119,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.7.5
+  * Bug fix: ArrayIndexOutOfBounds could still occur when serializing a class with multiple Templated fields.  The exception has been fixed.
  * 2.7.4
   * Bug fix: ArrayIndexOutOfBounds exception occurring when serializing non-static inner class with nested template parameters.  JsonReader was incorrectly passing on the 'this$0' field for further template argument processing when it should not have.
  * 2.7.3
