@@ -7062,6 +7062,14 @@ public class TestJsonReaderWriter
 		assertEquals(50, other.twoParam.field1);
 		assertEquals(100, other.twoParam.field2);
 		assertEquals("Hello", other.twoParam.field3);
+
+		useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), new TestObject("Hello")));
+		json = JsonWriter.objectToJson(useTwoParam);
+		other = (UseTwoParam) JsonReader.jsonToJava(json);
+
+		assertEquals(new Point(10, 30), other.twoParam.field1);
+		assertEquals(new Point(20, 40), other.twoParam.field2);
+		assertEquals(new TestObject("Hello"), other.twoParam.field3);
 	}
 
 	static class StaticSingle<T>
