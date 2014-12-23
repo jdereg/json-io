@@ -7028,9 +7028,9 @@ public class TestJsonReaderWriter
 
 	class UseTwoParam
 	{
-		private TwoParam<String, Point> twoParam;
+		private TwoParam twoParam;
 
-		public UseTwoParam(TwoParam<String, Point> twoParam)
+		public UseTwoParam(TwoParam twoParam)
 		{
 			this.twoParam = twoParam;
 		}
@@ -7039,14 +7039,29 @@ public class TestJsonReaderWriter
 	@Test
 	public void testTwoParam() throws IOException
 	{
-		UseTwoParam useTwoParam = new UseTwoParam(new TwoParam<String, Point>("Hello", "Goodbye", new Point(20, 40)));
+		UseTwoParam useTwoParam = new UseTwoParam(new TwoParam("Hello", "Goodbye", new Point(20, 40)));
 		String json = JsonWriter.objectToJson(useTwoParam);
 		UseTwoParam other = (UseTwoParam) JsonReader.jsonToJava(json);
 
 		assertEquals("Hello", other.twoParam.field1);
 		assertEquals("Goodbye", other.twoParam.field2);
-		assertTrue(other.twoParam.field3.x == 20);
-		assertTrue(other.twoParam.field3.y == 40);
+		assertEquals(new Point(20, 40), other.twoParam.field3);
+
+		useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), "Hello"));
+		json = JsonWriter.objectToJson(useTwoParam);
+		other = (UseTwoParam) JsonReader.jsonToJava(json);
+
+		assertEquals(new Point(10, 30), other.twoParam.field1);
+		assertEquals(new Point(20, 40), other.twoParam.field2);
+		assertEquals("Hello", other.twoParam.field3);
+
+		useTwoParam = new UseTwoParam(new TwoParam(50, 100, "Hello"));
+		json = JsonWriter.objectToJson(useTwoParam);
+		other = (UseTwoParam) JsonReader.jsonToJava(json);
+
+		assertEquals(50, other.twoParam.field1);
+		assertEquals(100, other.twoParam.field2);
+		assertEquals("Hello", other.twoParam.field3);
 	}
 
 	static class StaticSingle<T>
