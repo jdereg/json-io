@@ -86,14 +86,14 @@ public class JsonWriter implements Closeable, Flushable
     public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
-    private static final Map<String, ClassMeta> classMetaCache = new ConcurrentHashMap<String, ClassMeta>();
-    private static final List<Object[]> writers = new ArrayList<Object[]>();
-    private static final Set<Class> notCustom = new HashSet<Class>();
+    private static final Map<String, ClassMeta> classMetaCache = new ConcurrentHashMap<>();
+    private static final List<Object[]> writers = new ArrayList<>();
+    private static final Set<Class> notCustom = new HashSet<>();
     private static Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    private final Map<Object, Long> objVisited = new IdentityHashMap<Object, Long>();
-    private final Map<Object, Long> objsReferenced = new IdentityHashMap<Object, Long>();
+    private final Map<Object, Long> objVisited = new IdentityHashMap<>();
+    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     long identity = 1;
     private int depth = 0;
@@ -102,7 +102,7 @@ public class JsonWriter implements Closeable, Flushable
     {
         public Map<String, Object> initialValue()
         {
-            return new HashMap<String, Object>();
+            return new HashMap<>();
         }
     };
     static final ThreadLocal<SimpleDateFormat> _dateFormat = new ThreadLocal<SimpleDateFormat>()
@@ -255,7 +255,7 @@ public class JsonWriter implements Closeable, Flushable
         else
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
-            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
+            Map<Class, List<Field>> copy = new HashMap<>();
             for (Map.Entry<Class, List<String>> entry : specifiers.entrySet())
             {
                 Class c = entry.getKey();
@@ -295,9 +295,9 @@ public class JsonWriter implements Closeable, Flushable
         void writePrimitiveForm(Object o, Writer out) throws IOException;
     }
 
-    public boolean isPublicEnumsOnly()
+    public static boolean isPublicEnumsOnly()
     {
-        Object setting = _args.get().get(ENUM_PUBLIC_ONLY);
+        final Object setting = _args.get().get(ENUM_PUBLIC_ONLY);
         if (setting instanceof Boolean)
         {
             return Boolean.TRUE.equals(setting);
@@ -314,9 +314,9 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    public boolean isPrettyPrint()
+    public static boolean isPrettyPrint()
     {
-        Object setting = _args.get().get(PRETTY_PRINT);
+        final Object setting = _args.get().get(PRETTY_PRINT);
         if (setting instanceof Boolean)
         {
             return Boolean.TRUE.equals(setting);
@@ -398,7 +398,7 @@ public class JsonWriter implements Closeable, Flushable
 
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
+        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
 
         Class<?>[] interfaces = from.getInterfaces();
         // is the interface direct inherited or via interfaces extends interface?
@@ -506,7 +506,7 @@ public class JsonWriter implements Closeable, Flushable
         return true;
     }
 
-	private JsonClassWriter getCustomJSonWriter(Class classToWrite)
+	private static JsonClassWriter getCustomJSonWriter(Class classToWrite)
     {
 		JsonClassWriter closestWriter = null;
 		int minDistance = Integer.MAX_VALUE;
@@ -789,7 +789,7 @@ public class JsonWriter implements Closeable, Flushable
 
     protected void traceReferences(Object root)
     {
-        LinkedList<Object> stack = new LinkedList<Object>();
+        LinkedList<Object> stack = new LinkedList<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
@@ -893,12 +893,12 @@ public class JsonWriter implements Closeable, Flushable
         try
         {
             final Class<?> type = field.getType();
-            if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type))
+            if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type) || Number.class.isAssignableFrom(type))
             {    // speed up: primitives (Dates/Strings considered primitive by json-io) cannot reference another object
                 return;
             }
 
-            Object o = field.get(obj);
+            final Object o = field.get(obj);
             if (o != null)
             {
                 stack.addFirst(o);
@@ -1005,7 +1005,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private void writeId(String id) throws IOException
+    private void writeId(final String id) throws IOException
     {
         out.write("\"@id\":");
         out.write(id == null ? "0" : id);
@@ -1014,60 +1014,51 @@ public class JsonWriter implements Closeable, Flushable
     private static void writeType(Object obj, Writer out) throws IOException
     {
         out.write("\"@type\":\"");
-        Class c = obj.getClass();
+        final Class c = obj.getClass();
+        switch (c.getName())
+        {
+            case "java.lang.Boolean":
+                out.write("boolean");
+                break;
+            case "java.lang.Byte":
+                out.write("byte");
+                break;
+            case "java.lang.Character":
+                out.write("char");
+                break;
+            case "java.lang.Class":
+                out.write("class");
+                break;
+            case "java.lang.Double":
+                out.write("double");
+                break;
+            case "java.lang.Float":
+                out.write("float");
+                break;
+            case "java.lang.Integer":
+                out.write("int");
+                break;
+            case "java.lang.Long":
+                out.write("long");
+                break;
+            case "java.lang.Short":
+                out.write("short");
+                break;
+            case "java.lang.String":
+                out.write("string");
+                break;
+            case "java.util.Date":
+                out.write("date");
+                break;
+            default:
+                out.write(c.getName());
+                break;
+        }
 
-        if (Boolean.class == c)
-        {
-            out.write("boolean");
-        }
-        else if (Byte.class == c)
-        {
-            out.write("byte");
-        }
-        else if (Short.class == c)
-        {
-            out.write("short");
-        }
-        else if (Integer.class == c)
-        {
-            out.write("int");
-        }
-        else if (Long.class == c)
-        {
-            out.write("long");
-        }
-        else if (Double.class == c)
-        {
-            out.write("double");
-        }
-        else if (Float.class == c)
-        {
-            out.write("float");
-        }
-        else if (Character.class == c)
-        {
-            out.write("char");
-        }
-        else if (Date.class == c)
-        {
-            out.write("date");
-        }
-        else if (Class.class == c)
-        {
-            out.write("class");
-        }
-        else if (String.class == c)
-        {
-            out.write("string");
-        }
-        else
-        {
-            out.write(c.getName());
-        }
         out.write('"');
     }
 
-    private void writePrimitive(Object obj) throws IOException
+    private void writePrimitive(final Object obj) throws IOException
     {
         if (obj instanceof Character)
         {
@@ -1079,7 +1070,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private void writeArray(Object array, boolean showType) throws IOException
+    private void writeArray(final Object array, final boolean showType) throws IOException
     {
         if (writeOptionalReference(array))
         {
@@ -2144,11 +2135,7 @@ public class JsonWriter implements Closeable, Flushable
             return first;
         }
 
-        if (first)
-        {
-            first = false;
-        }
-        else
+        if (!first)
         {
             out.write(',');
             newLine(out);
@@ -2170,7 +2157,7 @@ public class JsonWriter implements Closeable, Flushable
         if (o == null)
         {    // don't quote null
             out.write("null");
-            return first;
+            return false;
         }
 
         Class type = field.getType();
@@ -2185,7 +2172,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeImpl(o, forceType || alwaysShowType());
         }
-        return first;
+        return false;
     }
 
     /**
@@ -2196,7 +2183,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param s String to be written in utf8 format on the output stream.
      * @throws IOException if an error occurs writing to the output stream.
      */
-    public static void writeJsonUtf8String(String s, Writer out) throws IOException
+    public static void writeJsonUtf8String(String s, final Writer out) throws IOException
     {
         out.write('\"');
         int len = s.length();
@@ -2207,36 +2194,33 @@ public class JsonWriter implements Closeable, Flushable
 
             if (c < ' ')
             {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-                if (c == '\b')
+                switch (c)
                 {
-                    out.write("\\b");
-                }
-                else if (c == '\t')
-                {
-                    out.write("\\t");
-                }
-                else if (c == '\n')
-                {
-                    out.write("\\n");
-                }
-                else if (c == '\f')
-                {
-                    out.write("\\f");
-                }
-                else if (c == '\r')
-                {
-                    out.write("\\r");
-                }
-                else
-                {
-                    String hex = Integer.toHexString(c);
-                    out.write("\\u");
-                    int pad = 4 - hex.length();
-                    for (int k = 0; k < pad; k++)
-                    {
-                        out.write('0');
-                    }
-                    out.write(hex);
+                    case '\b':
+                        out.write("\\b");
+                        break;
+                    case '\f':
+                        out.write("\\f");
+                        break;
+                    case '\n':
+                        out.write("\\n");
+                        break;
+                    case '\r':
+                        out.write("\\r");
+                        break;
+                    case '\t':
+                        out.write("\\t");
+                        break;
+                    default:
+                        String hex = Integer.toHexString(c);
+                        out.write("\\u");
+                        final int pad = 4 - hex.length();
+                        for (int k = 0; k < pad; k++)
+                        {
+                            out.write('0');
+                        }
+                        out.write(hex);
+                        break;
                 }
             }
             else if (c == '\\' || c == '"')

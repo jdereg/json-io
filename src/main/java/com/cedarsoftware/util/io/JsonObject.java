@@ -78,48 +78,72 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public boolean isPrimitive()
     {
-        return ("int".equals(type) || "long".equals(type) || "boolean".equals(type) || "double".equals(type) ||
-                "byte".equals(type) || "short".equals(type) || "float".equals(type) || "char".equals(type));
+        if (type == null)
+        {
+            return false;
+        }
+        switch (type)
+        {
+            case "boolean":
+            case "byte":
+            case "char":
+            case "double":
+            case "float":
+            case "int":
+            case "long":
+            case "short":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public static boolean isPrimitiveWrapper(Class c)
     {
-        return Integer.class.equals(c) || Long.class.equals(c) || Boolean.class.equals(c) || Double.class.equals(c) ||
-                Byte.class.equals(c) || Short.class.equals(c) || Float.class.equals(c) || Character.class.equals(c);
+        final String cname = c.getName();
+        switch (cname)
+        {
+            case "java.lang.Boolean":
+            case "java.lang.Byte":
+            case "java.lang.Character":
+            case "java.lang.Double":
+            case "java.lang.Float":
+            case "java.lang.Integer":
+            case "java.lang.Long":
+            case "java.lang.Short":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public Object getPrimitiveValue() throws IOException
     {
-        if ("int".equals(type))
+        switch(type)
         {
-            Number integer = (Number) get("value");
-            return integer.intValue();
+            case "byte":
+                Number b = (Number) get("value");
+                return b.byteValue();
+            case "char":
+                String c = (String) get("value");
+                return c.charAt(0);
+            case "boolean":
+            case "double":
+            case "long":
+                return get("value");
+            case "float":
+                Number f = (Number) get("value");
+                return f.floatValue();
+            case "int":
+                Number integer = (Number) get("value");
+                return integer.intValue();
+            case "short":
+                Number s = (Number) get("value");
+                return s.shortValue();
+
+            default:
+                return JsonReader.error("Invalid primitive type");
         }
-        if ("long".equals(type) || "boolean".equals(type) || "double".equals(type))
-        {
-            return get("value");
-        }
-        if ("byte".equals(type))
-        {
-            Number b = (Number) get("value");
-            return b.byteValue();
-        }
-        if ("float".equals(type))
-        {
-            Number f = (Number) get("value");
-            return f.floatValue();
-        }
-        if ("short".equals(type))
-        {
-            Number s = (Number) get("value");
-            return s.shortValue();
-        }
-        if ("char".equals(type))
-        {
-            String s = (String) get("value");
-            return s.charAt(0);
-        }
-        return JsonReader.error("Invalid primitive type");
     }
 
     // Map APIs
@@ -218,9 +242,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     void moveBytesToMate()
     {
-        byte[] bytes = (byte[]) target;
-        Object[] items = getArray();
-        int len = items.length;
+        final byte[] bytes = (byte[]) target;
+        final Object[] items = getArray();
+        final int len = items.length;
 
         for (int i = 0; i < len; i++)
         {

@@ -95,15 +95,15 @@ public class JsonReader implements Closeable
     private static final String EMPTY_OBJECT = "~!o~";  // compared with ==
     private static final Character[] charCache = new Character[128];
     private static final Byte[] byteCache = new Byte[256];
-    private static final Map<String, String> stringCache = new HashMap<String, String>();
-    private static final Set<Class> prims = new HashSet<Class>();
-    private static final Map<Class, Object[]> constructors = new HashMap<Class, Object[]>();
-    private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
+    private static final Map<String, String> stringCache = new HashMap<>();
+    private static final Set<Class> prims = new HashSet<>();
+    private static final Map<Class, Object[]> constructors = new HashMap<>();
+    private static final Map<String, Class> nameToClass = new HashMap<>();
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final List<Object[]> readers = new ArrayList<Object[]>();
-    private static final Set<Class> notCustom = new HashSet<Class>();
-    private static final Map<String, String> months = new LinkedHashMap<String, String>();
-    private static final Map<Class, ClassFactory> factory = new LinkedHashMap<Class, ClassFactory>();
+    private static final List<Object[]> readers = new ArrayList<>();
+    private static final Set<Class> notCustom = new HashSet<>();
+    private static final Map<String, String> months = new LinkedHashMap<>();
+    private static final Map<Class, ClassFactory> factory = new LinkedHashMap<>();
     private static final String days = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
     private static final String mos = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
     private static final Pattern datePattern1 = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
@@ -118,15 +118,15 @@ public class JsonReader implements Closeable
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
 
-    private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<Long, JsonObject>();
-    private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
-    private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
+    private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<>();
+    private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
+    private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final FastPushbackReader input;
     private boolean noObjects = false;
     private final char[] numBuf = new char[256];
     private final StringBuilder strBuf = new StringBuilder();
 
-    static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<FastPushbackReader>();
+    static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
 
     static
     {
@@ -1311,7 +1311,7 @@ public class JsonReader implements Closeable
      */
     protected Object convertMapsToObjects(JsonObject<String, Object> root) throws IOException
     {
-        LinkedList<JsonObject<String, Object>> stack = new LinkedList<JsonObject<String, Object>>();
+        LinkedList<JsonObject<String, Object>> stack = new LinkedList<>();
         stack.addFirst(root);
         final boolean useMaps = noObjects;
 
@@ -1442,7 +1442,7 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-                    JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
+                    JsonObject<String, Object> jsonObject = new JsonObject<>();
                     jsonObject.put("@items", element);
                     Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
@@ -1528,7 +1528,7 @@ public class JsonReader implements Closeable
 
             if (element instanceof Object[])
             {   // array element inside Collection
-                JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
+                JsonObject<String, Object> jsonObject = new JsonObject<>();
                 jsonObject.put("@items", element);
                 stack.addFirst(jsonObject);
             }
@@ -1660,7 +1660,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void traverseMap(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseMap(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
@@ -1730,7 +1730,7 @@ public class JsonReader implements Closeable
             }
             else if (value.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object (Map)
-                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
+                JsonObject<String, Object> jsonArray = new JsonObject<>();
                 jsonArray.put("@items", value);
                 stack.addFirst(jsonArray);
                 jsonObj.put(key, jsonArray);
@@ -1879,7 +1879,7 @@ public class JsonReader implements Closeable
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 Object[] elements = (Object[]) rhs;
-                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
+                JsonObject<String, Object> jsonArray = new JsonObject<>();
                 if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF8 strings for compactness and speed.
@@ -1953,9 +1953,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    private void markUntypedObjects(Type type, Object rhs) throws IOException
+    private static void markUntypedObjects(Type type, Object rhs) throws IOException
     {
-        LinkedList<Object[]> stack = new LinkedList<Object[]>();
+        LinkedList<Object[]> stack = new LinkedList<>();
         stack.addFirst(new Object[] {type, rhs});
 
         while (!stack.isEmpty())
@@ -2205,10 +2205,12 @@ public class JsonReader implements Closeable
                 else
                 {
 					JsonClassReader customReader = getCustomReader(c);
-					if (customReader != null) {
-						mate = customReader.read(jsonObj,
-								new LinkedList<JsonObject<String, Object>>());
-					} else {
+					if (customReader != null)
+                    {
+						mate = customReader.read(jsonObj,  new LinkedList<JsonObject<String, Object>>());
+					}
+                    else
+                    {
 						mate = newInstance(c);
 					}
                 }
@@ -2278,7 +2280,7 @@ public class JsonReader implements Closeable
     {
         boolean done = false;
         String field = null;
-        JsonObject<String, Object> object = new JsonObject<String, Object>();
+        JsonObject<String, Object> object = new JsonObject<>();
         int state = STATE_READ_START_OBJECT;
         boolean objectRead = false;
         final FastPushbackReader in = input;
@@ -2383,51 +2385,41 @@ public class JsonReader implements Closeable
 
     private Object readValue(JsonObject object) throws IOException
     {
-        int c = input.read();
-
-        if (c == '"')
+        final int c = input.read();
+        switch(c)
         {
-            return readString();
+            case '"':
+                return readString();
+            case '{':
+                input.unread('{');
+                return readJsonObject();
+            case '[':
+                return readArray(object);
+            case ']':   // empty array
+                input.unread(']');
+                return EMPTY_ARRAY;
+            case 'f':
+            case 'F':
+                input.unread(c);
+                readToken("false");
+                return Boolean.FALSE;
+            case 'n':
+            case 'N':
+                input.unread(c);
+                readToken("null");
+                return null;
+            case 't':
+            case 'T':
+                input.unread(c);
+                readToken("true");
+                return Boolean.TRUE;
+            case -1:
+                error("EOF reached prematurely");
         }
+
         if (isDigit(c) || c == '-')
         {
             return readNumber(c);
-        }
-        if (c == '{')
-        {
-            input.unread('{');
-            return readJsonObject();
-        }
-        if (c == 't' || c == 'T')
-        {
-            input.unread(c);
-            readToken("true");
-            return Boolean.TRUE;
-        }
-        if (c == 'f' || c == 'F')
-        {
-            input.unread(c);
-            readToken("false");
-            return Boolean.FALSE;
-        }
-        if (c == 'n' || c == 'N')
-        {
-            input.unread(c);
-            readToken("null");
-            return null;
-        }
-        if (c == '[')
-        {
-            return readArray(object);
-        }
-        if (c == ']')
-        {    // [] empty array
-            input.unread(']');
-            return EMPTY_ARRAY;
-        }
-        if (c == -1)
-        {
-            error("EOF reached prematurely");
         }
         return error("Unknown JSON value type");
     }
@@ -2453,7 +2445,7 @@ public class JsonReader implements Closeable
             {
                 break;
             }
-            if (c != ',')
+            else if (c != ',')
             {
                 error("Expected ',' or ']' inside array");
             }
@@ -2504,8 +2496,8 @@ public class JsonReader implements Closeable
     private Number readNumber(int c) throws IOException
     {
         final FastPushbackReader in = input;
-        final char[] numBuf = this.numBuf;
-        numBuf[0] = (char) c;
+        final char[] buffer = this.numBuf;
+        buffer[0] = (char) c;
         int len = 1;
         boolean isFloat = false;
 
@@ -2516,11 +2508,11 @@ public class JsonReader implements Closeable
                 c = in.read();
                 if ((c >= '0' && c <= '9') || c == '-' || c == '+')     // isDigit() inlined for speed here
                 {
-                    numBuf[len++] = (char) c;
+                    buffer[len++] = (char) c;
                 }
                 else if (c == '.' || c == 'e' || c == 'E')
                 {
-                    numBuf[len++] = (char) c;
+                    buffer[len++] = (char) c;
                     isFloat = true;
                 }
                 else if (c == -1)
@@ -2541,7 +2533,7 @@ public class JsonReader implements Closeable
 
         if (isFloat)
         {   // Floating point number needed
-            String num = new String(numBuf, 0, len);
+            String num = new String(buffer, 0, len);
             try
             {
                 return Double.parseDouble(num);
@@ -2551,11 +2543,11 @@ public class JsonReader implements Closeable
                 error("Invalid floating point number: " + num, e);
             }
         }
-        boolean isNeg = numBuf[0] == '-';
+        boolean isNeg = buffer[0] == '-';
         long n = 0;
         for (int i = (isNeg ? 1 : 0); i < len; i++)
         {
-            n = (numBuf[i] - '0') + n * 10;
+            n = (buffer[i] - '0') + n * 10;
         }
         return isNeg ? -n : n;
     }
@@ -2604,53 +2596,47 @@ public class JsonReader implements Closeable
                     break;
 
                 case STATE_STRING_SLASH:
-                    if (c == 'n')
+                    switch(c)
                     {
-                        str.append('\n');
+                        case '\\':
+                            str.append('\\');
+                            break;
+                        case '/':
+                            str.append('/');
+                            break;
+                        case '"':
+                            str.append('"');
+                            break;
+                        case '\'':
+                            str.append('\'');
+                            break;
+                        case 'b':
+                            str.append('\b');
+                            break;
+                        case 'f':
+                            str.append('\f');
+                            break;
+                        case 'n':
+                            str.append('\n');
+                            break;
+                        case 'r':
+                            str.append('\r');
+                            break;
+                        case 't':
+                            str.append('\t');
+                            break;
+                        case 'u':
+                            state = STATE_HEX_DIGITS;
+                            hex.setLength(0);
+                            break;
+                        default:
+                            error("Invalid character escape sequence specified: " + c);
                     }
-                    else if (c == 'r')
+
+                    if (c != 'u')
                     {
-                        str.append('\r');
+                        state = STATE_STRING_START;
                     }
-                    else if (c == 't')
-                    {
-                        str.append('\t');
-                    }
-                    else if (c == 'f')
-                    {
-                        str.append('\f');
-                    }
-                    else if (c == 'b')
-                    {
-                        str.append('\b');
-                    }
-                    else if (c == '\\')
-                    {
-                        str.append('\\');
-                    }
-                    else if (c == '/')
-                    {
-                        str.append('/');
-                    }
-                    else if (c == '"')
-                    {
-                        str.append('"');
-                    }
-                    else if (c == '\'')
-                    {
-                        str.append('\'');
-                    }
-                    else if (c == 'u')
-                    {
-                        state = STATE_HEX_DIGITS;
-                        hex.setLength(0);
-                        break;
-                    }
-                    else
-                    {
-                        error("Invalid character escape sequence specified");
-                    }
-                    state = STATE_STRING_START;
                     break;
 
                 case STATE_HEX_DIGITS:
@@ -2783,7 +2769,7 @@ public class JsonReader implements Closeable
 
     private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
     {
-        Object[] values = new Object[argTypes.length];
+        final Object[] values = new Object[argTypes.length];
         for (int i = 0; i < argTypes.length; i++)
         {
             final Class argType = argTypes[i];
@@ -2894,119 +2880,117 @@ public class JsonReader implements Closeable
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
     {
-        if (c == Byte.class || c == byte.class)
+
+        final String cname = c.getName();
+        switch(cname)
         {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+            case "boolean":
+            case "java.lang.Boolean":
+                if (rhs instanceof String)
                 {
-                    rhs = "0";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "false";
+                    }
+                    return Boolean.parseBoolean((String)rhs);
                 }
-                return Byte.parseByte((String)rhs);
-            }
-            return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
-        }
-        if (c == Boolean.class || c == boolean.class)
-        {    // Booleans are tokenized into Boolean.TRUE or Boolean.FALSE
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                return rhs != null ? rhs : Boolean.FALSE;
+            case "byte":
+            case "java.lang.Byte":
+                if (rhs instanceof String)
                 {
-                    rhs = "false";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Byte.parseByte((String)rhs);
                 }
-                return Boolean.parseBoolean((String)rhs);
-            }
-            return rhs != null ? rhs : Boolean.FALSE;
-        }
-        if (c == Integer.class || c == int.class)
-        {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+            case "char":
+            case "java.lang.Character":
+                if (rhs == null)
                 {
-                    rhs = "0";
+                    return '\u0000';
                 }
-                return Integer.parseInt((String)rhs);
-            }
-            return rhs != null ? ((Number) rhs).intValue() : 0;
-        }
-        if (c == Long.class || c == long.class || c == Number.class)
-        {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                if (rhs instanceof String)
                 {
-                    rhs = "0";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "\u0000";
+                    }
+                    return valueOf(((String) rhs).charAt(0));
                 }
-                return Long.parseLong((String)rhs);
-            }
-            return rhs != null ? rhs : 0L;
-        }
-        if (c == Double.class || c == double.class)
-        {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                if (rhs instanceof Character)
                 {
-                    rhs = "0.0";
+                    return rhs;
                 }
-                return Double.parseDouble((String)rhs);
-            }
-            return rhs != null ? rhs : 0.0d;
-        }
-        if (c == Character.class || c == char.class)
-        {
-            if (rhs == null)
-            {
-                return '\u0000';
-            }
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                break;
+            case "double":
+            case "java.lang.Double":
+                if (rhs instanceof String)
                 {
-                    rhs = "\u0000";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0.0";
+                    }
+                    return Double.parseDouble((String)rhs);
                 }
-                return valueOf(((String) rhs).charAt(0));
-            }
-            if (rhs instanceof Character)
-            {
-                return rhs;
-            }
-        }
-        if (c == Short.class || c == short.class)
-        {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                return rhs != null ? rhs : 0.0d;
+            case "float":
+            case "java.lang.Float":
+                if (rhs instanceof String)
                 {
-                    rhs = "0";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0.0f";
+                    }
+                    return Float.parseFloat((String)rhs);
                 }
-                return Short.parseShort((String)rhs);
-            }
-            return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
-        }
-        if (c == Float.class || c == float.class)
-        {
-            if (rhs instanceof String)
-            {
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                if ("".equals(rhs))
+                return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+            case "int":
+            case "java.lang.Integer":
+                if (rhs instanceof String)
                 {
-                    rhs = "0.0f";
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Integer.parseInt((String)rhs);
                 }
-                return Float.parseFloat((String)rhs);
-            }
-            return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+                return rhs != null ? ((Number) rhs).intValue() : 0;
+            case "long":
+            case "java.lang.Long":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Long.parseLong((String)rhs);
+                }
+                return rhs != null ? rhs : 0L;
+            case "short":
+            case "java.lang.Short":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Short.parseShort((String)rhs);
+                }
+                return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
         }
 
-        return error("Class '" + c.getName() + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
+        return error("Class '" + cname + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
     }
 
     static String removeLeadingAndTrailingQuotes(String s)
@@ -3022,11 +3006,6 @@ public class JsonReader implements Closeable
     private static boolean isDigit(int c)
     {
         return c >= '0' && c <= '9';
-    }
-
-    private static boolean isWhitespace(int c)
-    {
-        return c == ' ' || c == '\t' || c == '\n' || c == '\r';
     }
 
     private static Class classForName(String name) throws IOException
@@ -3074,15 +3053,37 @@ public class JsonReader implements Closeable
         while (className.startsWith("["))
         {
             arrayType = true;
-            if (className.endsWith(";")) className = className.substring(0,className.length()-1);
-            if (className.equals("[B")) primitiveArray = byte[].class;
-            else if (className.equals("[S")) primitiveArray = short[].class;
-            else if (className.equals("[I")) primitiveArray = int[].class;
-            else if (className.equals("[J")) primitiveArray = long[].class;
-            else if (className.equals("[F")) primitiveArray = float[].class;
-            else if (className.equals("[D")) primitiveArray = double[].class;
-            else if (className.equals("[Z")) primitiveArray = boolean[].class;
-            else if (className.equals("[C")) primitiveArray = char[].class;
+            if (className.endsWith(";"))
+            {
+                className = className.substring(0, className.length() - 1);
+            }
+            switch (className)
+            {
+                case "[B":
+                    primitiveArray = byte[].class;
+                    break;
+                case "[S":
+                    primitiveArray = short[].class;
+                    break;
+                case "[I":
+                    primitiveArray = int[].class;
+                    break;
+                case "[J":
+                    primitiveArray = long[].class;
+                    break;
+                case "[F":
+                    primitiveArray = float[].class;
+                    break;
+                case "[D":
+                    primitiveArray = double[].class;
+                    break;
+                case "[Z":
+                    primitiveArray = boolean[].class;
+                    break;
+                case "[C":
+                    primitiveArray = char[].class;
+                    break;
+            }
             int startpos = className.startsWith("[L") ? 2 : 1;
             className = className.substring(startpos);
         }
@@ -3132,12 +3133,21 @@ public class JsonReader implements Closeable
     {
         final FastPushbackReader in = input;
         int c = in.read();
-        while (isWhitespace(c))
+        while (true)
         {
+            switch (c)
+            {
+                case '\t':
+                case '\n':
+                case '\r':
+                case ' ':
+                    break;
+                default:
+                    return c;
+            }
+
             c = in.read();
         }
-
-        return c;
     }
 
     private void skipWhitespace() throws IOException
@@ -3339,7 +3349,7 @@ public class JsonReader implements Closeable
     public static final char MIN_LOW_SURROGATE = '\uDC00';
     public static final char MIN_HIGH_SURROGATE = '\uD800';
 
-    private static char[] toChars(int codePoint)
+    private static char[] toChars(final int codePoint)
     {
         if (codePoint < 0 || codePoint > MAX_CODE_POINT)
         {    // int UTF-8 char must be in range
@@ -3351,8 +3361,8 @@ public class JsonReader implements Closeable
             return new char[]{(char) codePoint};
         }
 
-        char[] result = new char[2];
-        int offset = codePoint - MIN_SUPPLEMENTARY_CODE_POINT;
+        final char[] result = new char[2];
+        final int offset = codePoint - MIN_SUPPLEMENTARY_CODE_POINT;
         result[1] = (char) ((offset & 0x3ff) + MIN_LOW_SURROGATE);
         result[0] = (char) ((offset >>> 10) + MIN_HIGH_SURROGATE);
         return result;
@@ -3438,7 +3448,7 @@ public class JsonReader implements Closeable
 
         public int read() throws IOException
         {
-            int ch = _idx < _buf.length ? _buf[_idx++] : super.read();
+            final int ch = _idx < _buf.length ? _buf[_idx++] : super.read();
             if (ch >= 0)
             {
                 if (ch == 0x0a)
