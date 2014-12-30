@@ -41,6 +41,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import sun.misc.Unsafe;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -86,6 +87,7 @@ import java.util.regex.Pattern;
  */
 public class JsonReader implements Closeable
 {
+	private static final String PROPERTY_PREFIX = "com.cedarsoftware.util.io.JsonReader.";
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
@@ -128,6 +130,10 @@ public class JsonReader implements Closeable
 
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
 
+    private static String DIRECT_INSTANTIATION = "directInstantiation";
+	private static boolean useUnsafe = Boolean.getBoolean(PROPERTY_PREFIX + DIRECT_INSTANTIATION);
+	private static Unsafe unsafe;
+    
     static
     {
         // Save memory by re-using common Characters (Characters are immutable)
@@ -249,6 +255,16 @@ public class JsonReader implements Closeable
         months.put("november", "11");
         months.put("dec", "12");
         months.put("december", "12");
+        
+        if (useUnsafe) {
+			try {
+				Field field = Unsafe.class.getDeclaredField("theUnsafe");
+				field.setAccessible(true);
+				unsafe = (Unsafe) field.get(null);
+			} catch (Exception e) {
+				useUnsafe = false;
+			}
+		}
     }
 
     public interface JsonClassReader
@@ -2675,6 +2691,16 @@ public class JsonReader implements Closeable
         if (constructorInfo != null)
         {   // Constructor was cached
             Constructor constructor = (Constructor) constructorInfo[0];
+            
+            if(constructor == null){
+            	try{
+            		return unsafe.allocateInstance(c);
+            	}catch(Exception e){
+                        // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                        error("Could not instantiate " + c.getName(), e);
+                    }
+            }
+            
             Boolean useNull = (Boolean) constructorInfo[1];
             Class[] paramTypes = constructor.getParameterTypes();
             if (paramTypes == null || paramTypes.length == 0)
@@ -2716,18 +2742,18 @@ public class JsonReader implements Closeable
             {
                 return new Object[] {constructor.newInstance(), constructor, true};
             }
-            return tryOtherConstructors(c);
+            return tryOtherConstruction(c);
         }
         catch (Exception e)
         {
             // OK, this class does not have a public no-arg constructor.  Instantiate with
             // first constructor found, filling in constructor values with null or
             // defaults for primitives.
-            return tryOtherConstructors(c);
+            return tryOtherConstruction(c);
         }
     }
 
-    private static Object[] tryOtherConstructors(Class c) throws IOException
+    private static Object[] tryOtherConstruction(Class c) throws IOException
     {
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
@@ -2762,6 +2788,17 @@ public class JsonReader implements Closeable
             catch (Exception ignored)
             { }
         }
+        
+        //Try instantiation via unsafe
+        //This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized d
+        //Thats why we try ordinary constructors first
+        if (useUnsafe) {
+			try {
+				return new Object[] { unsafe.allocateInstance(c), null, null };
+			} catch (InstantiationException e) {
+				//Ok... at least we tried...
+			}
+		}
 
         error("Could not instantiate " + c.getName() + " using any constructor");
         return null;
