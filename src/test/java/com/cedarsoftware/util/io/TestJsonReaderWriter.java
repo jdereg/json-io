@@ -1,17 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.Dog.Shoe;
-import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
-import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
-import com.google.gson.Gson;
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runners.MethodSorters;
+import static org.junit.Assert.*;
 
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
@@ -24,6 +13,7 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -55,13 +45,22 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
+
+import sun.misc.Unsafe;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.Dog.OtherShoe;
+import com.cedarsoftware.util.io.Dog.Shoe;
+import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
+import com.google.gson.Gson;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -104,6 +103,7 @@ public class TestJsonReaderWriter
 	@Rule
 	public TestRule watcher = new TestWatcher()
 	{
+		@Override
 		protected void starting(Description description)
 		{
 			println(newLine + "Starting test: " + description.getMethodName());
@@ -120,6 +120,7 @@ public class TestJsonReaderWriter
 			_name = name;
 		}
 
+		@Override
 		public int compareTo(Object that)
 		{
 			if (!(that instanceof TestObject))
@@ -129,11 +130,13 @@ public class TestJsonReaderWriter
 			return _name.compareTo(((TestObject) that)._name);
 		}
 
+		@Override
 		public int hashCode()
 		{
 			return _name == null ? 0 : _name.hashCode();
 		}
 
+		@Override
 		public boolean equals(Object that)
 		{
 			if (that == null)
@@ -143,6 +146,7 @@ public class TestJsonReaderWriter
 			return that instanceof TestObject && _name.equals(((TestObject) that)._name);
 		}
 
+		@Override
 		public String toString()
 		{
 			return "name=" + _name;
@@ -284,6 +288,7 @@ public class TestJsonReaderWriter
 			return x * y;
 		}
 
+		@Override
 		public boolean equals(Object other)
 		{
 			return other != null && other instanceof Empty;
@@ -4368,14 +4373,17 @@ public class TestJsonReaderWriter
 	{
 		A("Foo")
 				{
+					@Override
 					void doXX() {}
 				},
 		B("Bar")
 				{
+					@Override
 					void doXX() {}
 				},
 		C(null)
 				{
+					@Override
 					void doXX() {}
 				};
 
@@ -4618,6 +4626,7 @@ public class TestJsonReaderWriter
 
 	public class WeirdDateWriter implements JsonWriter.JsonClassWriter
 	{
+		@Override
 		public void write(Object o, boolean showType, Writer out) throws IOException
 		{
 			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
@@ -4626,11 +4635,13 @@ public class TestJsonReaderWriter
 			out.write('"');
 		}
 
+		@Override
 		public boolean hasPrimitiveForm()
 		{
 			return true;
 		}
 
+		@Override
 		public void writePrimitiveForm(Object o, Writer out) throws IOException
 		{
 			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date)o);
@@ -4642,6 +4653,7 @@ public class TestJsonReaderWriter
 
 	public class WeirdDateReader implements JsonReader.JsonClassReader
 	{
+		@Override
 		public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
 		{
 			if (o instanceof String)
@@ -6966,12 +6978,15 @@ public class TestJsonReaderWriter
 	{
 		JsonWriter.addWriter(Dog.class, new JsonClassWriter()
 		{
+			@Override
 			public void writePrimitiveForm(Object o, Writer out)  throws IOException
 			{ }
 
+			@Override
 			public void write(Object o, boolean showType, Writer out)  throws IOException
 			{ }
 
+			@Override
 			public boolean hasPrimitiveForm()
 			{
 				return false;
@@ -7187,7 +7202,7 @@ public class TestJsonReaderWriter
 
 		return o;
 	}
-
+	
 	@Test
 	public void testCustomTopReaderShoe() throws IOException {
 		JsonReader.addReader(Shoe.class, new JsonClassReader() {
@@ -7218,5 +7233,31 @@ public class TestJsonReaderWriter
 		// -deserialization with Stack
 		JsonReader.jsonToJava(json);
 
+	}
+	
+	@Test
+	public void testDirectCreation() throws IOException{
+		//No need to set property, we set value directly
+		try {
+			Field useUnsafe = JsonReader.class.getDeclaredField("useUnsafe");
+			useUnsafe.setAccessible(true);
+			useUnsafe.setBoolean(JsonReader.class, true);
+			
+			Field field = Unsafe.class.getDeclaredField("theUnsafe");
+			field.setAccessible(true);
+				
+			Field unsafe = JsonReader.class.getDeclaredField("unsafe");
+			unsafe.setAccessible(true);
+			unsafe.set(JsonReader.class, (Unsafe) field.get(null));
+		} catch (SecurityException | NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			throw new RuntimeException("", e);
+		}
+		
+		//this test will fail without directCreation
+		OtherShoe shoe = OtherShoe.construct();
+		
+		OtherShoe oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
+		
+		assertTrue(shoe.equals(oShoe));
 	}
 }
