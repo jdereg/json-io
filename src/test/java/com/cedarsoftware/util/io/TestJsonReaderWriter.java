@@ -36,6 +36,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -4642,7 +4643,7 @@ public class TestJsonReaderWriter
 
 	public class WeirdDateReader implements JsonReader.JsonClassReader
 	{
-		public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+		public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
 		{
 			if (o instanceof String)
 			{
@@ -7116,6 +7117,63 @@ public class TestJsonReaderWriter
 		}
 	}
 
+	@Test
+	public void testNumTooBig() throws Exception
+	{
+		String json = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
+				"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
+				"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
+		try
+		{
+			readJsonObject(json);
+		}
+		catch (IOException e)
+		{
+			assertTrue(e.getMessage().toLowerCase().contains("too many digits"));
+		}
+	}
+
+	@Test
+	public void testHugeBigInteger() throws Exception
+	{
+		String json = "{\"@type\":\"java.math.BigInteger\",\"value\":\"" +
+				"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
+				"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\"}";
+		BigInteger x = (BigInteger) readJsonObject(json);
+		assertEquals(new BigInteger("1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
+				"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"), x);
+	}
+
+	@Test
+	public void testCustomTopReaderShoe() throws IOException
+	{
+		JsonReader.addReader(Shoe.class, new JsonClassReader()
+		{
+			public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
+			{
+				// no need to do anything special
+				return Shoe.construct();
+			}
+		});
+		Shoe shoe = Shoe.construct();
+
+		// Dirty Workaround otherwise
+		Object[] array = new Object[1];
+		array[0] = shoe;
+		String workaroundString = JsonWriter.objectToJson(array);
+		JsonReader.jsonToJava(workaroundString);// shoe can be acessed by
+		// checking array type + length
+		// and acessing [0]
+
+		String json = JsonWriter.objectToJson(shoe);
+		//Should not fail, as we defined our own reader
+		// It is expected, that this object is instanciated twice:
+		// -once for analysis + Stack
+		// -deserialization with Stack
+		JsonReader.jsonToJava(json);
+
+	}
+
 	private static String getJsonString(Object obj) throws Exception
 	{
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -7186,37 +7244,5 @@ public class TestJsonReaderWriter
 		}
 
 		return o;
-	}
-
-	@Test
-	public void testCustomTopReaderShoe() throws IOException {
-		JsonReader.addReader(Shoe.class, new JsonClassReader() {
-
-			@Override
-			public Object read(Object jOb,
-					LinkedList<JsonObject<String, Object>> stack)
-					throws IOException {
-
-				// no need to do anything special
-				return Shoe.construct();
-			}
-		});
-		Shoe shoe = Shoe.construct();
-
-		// Dirty Workaround otherwise
-		Object[] array = new Object[1];
-		array[0] = shoe;
-		String workaroundString = JsonWriter.objectToJson(array);
-		JsonReader.jsonToJava(workaroundString);// shoe can be acessed by
-												// checking array type + length
-												// and acessing [0]
-
-		String json = JsonWriter.objectToJson(shoe);
-		//Should not fail, as we defined our own reader
-		// It is expected, that this object is instanciated twice:
-		// -once for analysis + Stack
-		// -deserialization with Stack
-		JsonReader.jsonToJava(json);
-
 	}
 }

@@ -17,17 +17,18 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.Format;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -789,7 +790,11 @@ public class JsonWriter implements Closeable, Flushable
 
     protected void traceReferences(Object root)
     {
-        LinkedList<Object> stack = new LinkedList<>();
+        if (root == null)
+        {
+            return;
+        }
+        Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
@@ -797,15 +802,8 @@ public class JsonWriter implements Closeable, Flushable
         while (!stack.isEmpty())
         {
             Object obj = stack.removeFirst();
-            if (obj == null)
-            {
-                continue;
-            }
 
-            if (!JsonReader.isPrimitive(obj.getClass()) &&
-                    !(obj instanceof String) &&
-                    !(obj instanceof Date) &&
-                    !(obj instanceof Number))
+            if (!JsonReader.isLogicalPrimitive(obj.getClass()))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -830,7 +828,7 @@ public class JsonWriter implements Closeable, Flushable
             if (clazz.isArray())
             {
                 Class compType = clazz.getComponentType();
-                if (!JsonReader.isPrimitive(compType) && compType != String.class && !Date.class.isAssignableFrom(compType))
+                if (!JsonReader.isLogicalPrimitive(compType))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -860,7 +858,7 @@ public class JsonWriter implements Closeable, Flushable
      * This API will handle any object, using either reflection APIs or by
      * consulting a specified FIELD_SPECIFIERS map if provided.
      */
-    protected void traceFields(LinkedList<Object> stack, Object obj)
+    protected void traceFields(Deque<Object> stack, Object obj)
     {
         final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
         Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
@@ -888,13 +886,13 @@ public class JsonWriter implements Closeable, Flushable
      * Push object associated to field onto stack for further tracing.  If object was a primitive,
      * Date, String, or null, no further tracing is done.
      */
-    protected void traceField(LinkedList<Object> stack, Object obj, Field field)
+    protected void traceField(Deque<Object> stack, Object obj, Field field)
     {
         try
         {
             final Class<?> type = field.getType();
-            if (JsonReader.isPrimitive(type) || String.class == type || Date.class.isAssignableFrom(type) || Number.class.isAssignableFrom(type))
-            {    // speed up: primitives (Dates/Strings considered primitive by json-io) cannot reference another object
+            if (JsonReader.isLogicalPrimitive(type))
+            {    // speed up: primitives (and Dates/Strings/Numbers considered logical primitive by json-io) cannot reference another object
                 return;
             }
 
@@ -2058,7 +2056,7 @@ public class JsonWriter implements Closeable, Flushable
      *                 inferred from the field or array type.
      * @throws IOException if an error occurs writing to the output stream.
      */
-    private void writeObject(Object obj, boolean showType) throws IOException
+    private void writeObject(final Object obj, final boolean showType) throws IOException
     {
         if (writeIfMatching(obj, showType, out))
         {
@@ -2074,13 +2072,13 @@ public class JsonWriter implements Closeable, Flushable
 
         out.write('{');
         tabIn(out);
-        boolean referenced = objsReferenced.containsKey(obj);
+        final boolean referenced = objsReferenced.containsKey(obj);
         if (referenced)
         {
             writeId(getId(obj));
         }
 
-        ClassMeta classInfo = getDeepDeclaredFields(obj.getClass());
+        final ClassMeta classInfo = getDeepDeclaredFields(obj.getClass());
 
         if (referenced && showType)
         {
@@ -2099,8 +2097,8 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
-        List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
+        final Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
+        final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
         {   // Caller is using associating a class name to a set of fields for the given class (allows field reductions)
             for (Field field : externallySpecifiedFields)
@@ -2112,8 +2110,8 @@ public class JsonWriter implements Closeable, Flushable
         {   // Reflectively use fields, skipping transient and static fields
             for (Map.Entry<String, Field> entry : classInfo.entrySet())
             {
-                String fieldName = entry.getKey();
-                Field field = entry.getValue();
+                final String fieldName = entry.getKey();
+                final Field field = entry.getValue();
                 first = writeField(obj, out, first, fieldName, field);
             }
         }

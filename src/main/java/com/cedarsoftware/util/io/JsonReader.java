@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Timestamp;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -29,7 +30,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -253,7 +253,7 @@ public class JsonReader implements Closeable
 
     public interface JsonClassReader
     {
-        Object read(Object jOb, LinkedList<JsonObject<String, Object>> stack) throws IOException;
+        Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException;
     }
 
     public interface ClassFactory
@@ -324,7 +324,7 @@ public class JsonReader implements Closeable
 
     public static class TimeZoneReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             JsonObject jObj = (JsonObject)o;
             Object zone = jObj.get("zone");
@@ -338,7 +338,7 @@ public class JsonReader implements Closeable
 
     public static class LocaleReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             JsonObject jObj = (JsonObject) o;
             Object language = jObj.get("language");
@@ -363,7 +363,7 @@ public class JsonReader implements Closeable
 
     public static class CalendarReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             String time = null;
             try
@@ -405,7 +405,7 @@ public class JsonReader implements Closeable
 
     public static class DateReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof Long)
             {
@@ -654,7 +654,7 @@ public class JsonReader implements Closeable
 
     public static class SqlDateReader extends DateReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             return new java.sql.Date(((Date) super.read(o, stack)).getTime());
         }
@@ -662,7 +662,7 @@ public class JsonReader implements Closeable
 
     public static class StringReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof String)
             {
@@ -685,7 +685,7 @@ public class JsonReader implements Closeable
 
     public static class ClassReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof String)
             {
@@ -703,7 +703,7 @@ public class JsonReader implements Closeable
 
     public static class BigIntegerReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             JsonObject jObj = null;
             Object value = o;
@@ -806,7 +806,7 @@ public class JsonReader implements Closeable
 
     public static class BigDecimalReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             JsonObject jObj = null;
             Object value = o;
@@ -901,7 +901,7 @@ public class JsonReader implements Closeable
 
     public static class StringBuilderReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof String)
             {
@@ -919,7 +919,7 @@ public class JsonReader implements Closeable
 
     public static class StringBufferReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             if (o instanceof String)
             {
@@ -937,7 +937,7 @@ public class JsonReader implements Closeable
 
     public static class TimestampReader implements JsonClassReader
     {
-        public Object read(Object o, LinkedList<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
             JsonObject jObj = (JsonObject) o;
             Object time = jObj.get("time");
@@ -976,7 +976,7 @@ public class JsonReader implements Closeable
         notCustom.add(c);
     }
 
-    protected static Object readIfMatching(Object o, Class compType, LinkedList<JsonObject<String, Object>> stack) throws IOException
+    protected static Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack) throws IOException
     {
         if (o == null)
         {
@@ -1311,7 +1311,7 @@ public class JsonReader implements Closeable
      */
     protected Object convertMapsToObjects(JsonObject<String, Object> root) throws IOException
     {
-        LinkedList<JsonObject<String, Object>> stack = new LinkedList<>();
+        Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final boolean useMaps = noObjects;
 
@@ -1366,19 +1366,19 @@ public class JsonReader implements Closeable
      * to each array element.  All array elements are processed excluding elements
      * that reference an unresolved object.  These are filled in later.
      *
-     * @param stack   a Stack (LinkedList) used to support graph traversal.
+     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void traverseArray(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
-        int len = jsonObj.getLength();
+        final int len = jsonObj.getLength();
         if (len == 0)
         {
             return;
         }
 
-        Class compType = jsonObj.getComponentType();
+        final Class compType = jsonObj.getComponentType();
 
         if (char.class == compType)
         {
@@ -1392,13 +1392,13 @@ public class JsonReader implements Closeable
             return;
         }
 
-        boolean isPrimitive = isPrimitive(compType);
-        Object array = jsonObj.target;
-        Object[] items =  jsonObj.getArray();
+        final boolean isPrimitive = isPrimitive(compType);
+        final Object array = jsonObj.target;
+        final Object[] items =  jsonObj.getArray();
 
-        for (int i = 0; i < len; i++)
+        for (int i=0; i < len; i++)
         {
-            Object element = items[i];
+            final Object element = items[i];
 
             Object special;
             if (element == null)
@@ -1430,9 +1430,9 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        String value = (String) jsonArray[0];
-                        int numChars = value.length();
-                        char[] chars = new char[numChars];
+                        final String value = (String) jsonArray[0];
+                        final int numChars = value.length();
+                        final char[] chars = new char[numChars];
                         for (int j = 0; j < numChars; j++)
                         {
                             chars[j] = value.charAt(j);
@@ -1473,8 +1473,8 @@ public class JsonReader implements Closeable
                 {    // Convert JSON HashMap to Java Object instance and assign values
                     Object arrayElement = createJavaObjectInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
-                    if (!isPrimitive(arrayElement.getClass()))
-                    {    // Skip walking primitives, primitive wrapper classes,, Strings, and Classes
+                    if (!isLogicalPrimitive(arrayElement.getClass()))
+                    {    // Skip walking primitives, primitive wrapper classes, Strings, and Classes
                         stack.addFirst(jsonObject);
                     }
                 }
@@ -1501,11 +1501,11 @@ public class JsonReader implements Closeable
      * are filled in later.  For an indexable collection, the unresolved references are set
      * back into the proper element location.  For non-indexable collections (Sets), the
      * unresolved references are added via .add().
-     * @param stack   a Stack (LinkedList) used to support graph traversal.
+     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void traverseCollectionNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
+    protected void traverseCollectionNoObj(Deque<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -1571,7 +1571,7 @@ public class JsonReader implements Closeable
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void traverseCollection(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
+    protected void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -1639,7 +1639,7 @@ public class JsonReader implements Closeable
                 {
                     createJavaObjectInstance(Object.class, jObj);
 
-                    if (!isPrimitive(jObj.getTargetClass()))
+                    if (!isLogicalPrimitive(jObj.getTargetClass()))
                     {
                         convertMapsToObjects(jObj);
                     }
@@ -1656,7 +1656,7 @@ public class JsonReader implements Closeable
      * Process java.util.Map and it's derivatives.  These can be written specially
      * so that the serialization would not expose the derivative class internals
      * (internal fields of TreeMap for example).
-     * @param stack   a Stack (LinkedList) used to support graph traversal.
+     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
@@ -1700,7 +1700,7 @@ public class JsonReader implements Closeable
         prettyMaps.add(new Object[]{jsonObj, javaKeys, javaValues});
     }
 
-    protected void traverseFieldsNoObj(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFieldsNoObj(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
@@ -1779,7 +1779,7 @@ public class JsonReader implements Closeable
                     if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class)
                     {
                         if ("".equals(((String)value).trim()))
-                        {
+                        {   // Allow "" to null out a non-String field on the inbound JSON
                             jsonObj.put(key, null);
                         }
                     }
@@ -1793,11 +1793,11 @@ public class JsonReader implements Closeable
      * Walk the Java object fields and copy them from the JSON object to the Java object, performing
      * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
      * arrays, Collections, or Maps.
-     * @param stack   Stack (LinkedList) used for graph traversal.
+     * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @throws IOException
      */
-    protected void traverseFields(LinkedList<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
     {
         Object special;
         if ((special = readIfMatching(jsonObj, null, stack)) != null)
@@ -1827,14 +1827,14 @@ public class JsonReader implements Closeable
     /**
      * Map Json Map object field to Java object field.
      *
-     * @param stack   Stack (LinkedList) used for graph traversal.
+     * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @param field   a Java Field object representing where the jsonObj should be converted and stored.
      * @param rhs     the JSON value that will be converted and stored in the 'field' on the associated
      *                Java target object.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void assignField(LinkedList<JsonObject<String, Object>> stack, JsonObject jsonObj, Field field, Object rhs) throws IOException
+    protected void assignField(Deque<JsonObject<String, Object>> stack, JsonObject jsonObj, Field field, Object rhs) throws IOException
     {
         Object target = jsonObj.target;
         try
@@ -1925,7 +1925,7 @@ public class JsonReader implements Closeable
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
                     field.set(target, createJavaObjectInstance(fieldType, jObj));
-                    if (!isPrimitive(jObj.getTargetClass()))
+                    if (!isLogicalPrimitive(jObj.getTargetClass()))
                     {
                         stack.addFirst((JsonObject) rhs);
                     }
@@ -1938,7 +1938,7 @@ public class JsonReader implements Closeable
                     field.set(target, newPrimitiveWrapper(fieldType, rhs));
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && field.getType() != String.class)
-                {
+                {   // Allow "" to null out a non-String field
                     field.set(target, null);
                 }
                 else
@@ -1955,7 +1955,7 @@ public class JsonReader implements Closeable
 
     private static void markUntypedObjects(Type type, Object rhs) throws IOException
     {
-        LinkedList<Object[]> stack = new LinkedList<>();
+        Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
 
         while (!stack.isEmpty())
@@ -2207,7 +2207,7 @@ public class JsonReader implements Closeable
 					JsonClassReader customReader = getCustomReader(c);
 					if (customReader != null)
                     {
-						mate = customReader.read(jsonObj,  new LinkedList<JsonObject<String, Object>>());
+						mate = customReader.read(jsonObj,  new ArrayDeque<JsonObject<String, Object>>());
 					}
                     else
                     {
@@ -2429,17 +2429,17 @@ public class JsonReader implements Closeable
      */
     private Object readArray(JsonObject object) throws IOException
     {
-        Collection array = new ArrayList();
+        final Collection array = new ArrayList();
 
         while (true)
         {
             skipWhitespace();
-            Object o = readValue(object);
+            final Object o = readValue(object);
             if (o != EMPTY_ARRAY)
             {
                 array.add(o);
             }
-            int c = skipWhitespaceRead();
+            final int c = skipWhitespaceRead();
 
             if (c == ']')
             {
@@ -2528,7 +2528,7 @@ public class JsonReader implements Closeable
         }
         catch (ArrayIndexOutOfBoundsException e)
         {
-            error("Too many digits in number");
+            error("Too many digits in number: " + new String(buffer));
         }
 
         if (isFloat)
@@ -2572,7 +2572,7 @@ public class JsonReader implements Closeable
 
         while (!done)
         {
-            int c = input.read();
+            final int c = input.read();
             if (c == -1)
             {
                 error("EOF reached while reading JSON string");
@@ -2640,19 +2640,40 @@ public class JsonReader implements Closeable
                     break;
 
                 case STATE_HEX_DIGITS:
-                    if (c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' || c == 'd' || c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F' || isDigit(c))
+                    switch(c)
                     {
-                        hex.append((char) c);
-                        if (hex.length() == 4)
-                        {
-                            int value = Integer.parseInt(hex.toString(), 16);
-                            str.append(valueOf((char) value));
-                            state = STATE_STRING_START;
-                        }
-                    }
-                    else
-                    {
-                        error("Expected hexadecimal digits");
+                        case '0':
+                        case '1':
+                        case '2':
+                        case '3':
+                        case '4':
+                        case '5':
+                        case '6':
+                        case '7':
+                        case '8':
+                        case '9':
+                        case 'A':
+                        case 'B':
+                        case 'C':
+                        case 'D':
+                        case 'E':
+                        case 'F':
+                        case 'a':
+                        case 'b':
+                        case 'c':
+                        case 'd':
+                        case 'e':
+                        case 'f':
+                            hex.append((char) c);
+                            if (hex.length() == 4)
+                            {
+                                int value = Integer.parseInt(hex.toString(), 16);
+                                str.append(valueOf((char) value));
+                                state = STATE_STRING_START;
+                            }
+                            break;
+                        default:
+                            error("Expected hexadecimal digits");
                     }
                     break;
             }
@@ -2876,6 +2897,11 @@ public class JsonReader implements Closeable
     public static boolean isPrimitive(Class c)
     {
         return c.isPrimitive() || prims.contains(c);
+    }
+
+    public static boolean isLogicalPrimitive(Class c)
+    {
+        return isPrimitive(c) || String.class.isAssignableFrom(c) || Number.class.isAssignableFrom(c) || Date.class.isAssignableFrom(c);
     }
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
