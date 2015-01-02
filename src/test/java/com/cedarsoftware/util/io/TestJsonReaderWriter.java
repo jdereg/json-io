@@ -14,6 +14,8 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -7243,13 +7245,14 @@ public class TestJsonReaderWriter
 			useUnsafe.setAccessible(true);
 			useUnsafe.setBoolean(JsonReader.class, true);
 			
-			Field field = Unsafe.class.getDeclaredField("theUnsafe");
-			field.setAccessible(true);
-				
+			
+			Method allocator = JsonReader.class.getDeclaredMethod("allocateUnsafe");
+			allocator.setAccessible(true);
+			
 			Field unsafe = JsonReader.class.getDeclaredField("unsafe");
 			unsafe.setAccessible(true);
-			unsafe.set(JsonReader.class, (Unsafe) field.get(null));
-		} catch (SecurityException | NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			unsafe.set(JsonReader.class, allocator.invoke(null));
+		} catch (SecurityException | NoSuchFieldException | IllegalArgumentException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
 			throw new RuntimeException("", e);
 		}
 		
@@ -7257,6 +7260,10 @@ public class TestJsonReaderWriter
 		OtherShoe shoe = OtherShoe.construct();
 		
 		OtherShoe oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
+		
+		assertTrue(shoe.equals(oShoe));
+		
+		oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
 		
 		assertTrue(shoe.equals(oShoe));
 	}

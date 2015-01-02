@@ -12,6 +12,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
@@ -41,7 +43,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import sun.misc.Unsafe;
+
+
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -258,9 +261,7 @@ public class JsonReader implements Closeable
         
         if (useUnsafe) {
 			try {
-				Field field = Unsafe.class.getDeclaredField("theUnsafe");
-				field.setAccessible(true);
-				unsafe = (Unsafe) field.get(null);
+				unsafe = allocateUnsafe();
 			} catch (Exception e) {
 				useUnsafe = false;
 			}
@@ -3368,6 +3369,10 @@ public class JsonReader implements Closeable
         }
         return "";
     }
+    
+    private static Unsafe allocateUnsafe() throws ReflectiveOperationException{
+    	return new Unsafe();
+    }
 
     /**
      * This is a performance optimization.  The lowest 128 characters are re-used.
@@ -3405,6 +3410,50 @@ public class JsonReader implements Closeable
         return result;
     }
 
+    /**
+     * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
+     */
+    private static final class Unsafe {
+    	
+    	private Object unsafe;
+    	
+    	private Method allocateInstance;
+    	
+    	/**
+    	 * Constructs unsafe object, acting as a wrapper.
+    	 * @throws ReflectiveOperationException
+    	 */
+    	public Unsafe() throws ReflectiveOperationException{
+    		try{
+    			Constructor<Unsafe> unsafeConstructor = JsonReader.classForName("sun.misc.Unsafe").getDeclaredConstructor();
+    			unsafeConstructor.setAccessible(true);
+    			unsafe = unsafeConstructor.newInstance();
+    			
+    			allocateInstance = unsafe.getClass().getMethod("allocateInstance", Class.class);
+    			allocateInstance.setAccessible(true);
+    		}catch(Exception e){
+    			throw new ReflectiveOperationException(e);
+    		}
+    	}
+    	
+    	/**
+    	 * Creates an object without invoking constructor or initializing variables.
+    	 * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
+    	 * @param clazz to instantiate
+    	 * @return allocated Object
+    	 * @throws InstantiationException
+    	 */
+    	public Object allocateInstance(Class clazz) throws InstantiationException{
+    		try {
+				return allocateInstance.invoke(unsafe, clazz);
+			} catch (IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException e) {
+				throw new RuntimeException(e);
+			}    			
+    	}
+    	
+    }
+    
     /**
      * This class adds significant performance increase over using the JDK
      * PushbackReader.  This is due to this class not using synchronization
