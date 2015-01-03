@@ -44,8 +44,6 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
-
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
  * in a "Map of Maps." (untyped representation).  This code handles cyclic references
@@ -136,7 +134,7 @@ public class JsonReader implements Closeable
     private static String DIRECT_INSTANTIATION = "directInstantiation";
 	private static boolean useUnsafe = Boolean.getBoolean(PROPERTY_PREFIX + DIRECT_INSTANTIATION);
 	private static Unsafe unsafe;
-    
+
     static
     {
         // Save memory by re-using common Characters (Characters are immutable)
@@ -258,14 +256,18 @@ public class JsonReader implements Closeable
         months.put("november", "11");
         months.put("dec", "12");
         months.put("december", "12");
-        
-        if (useUnsafe) {
-			try {
-				unsafe = allocateUnsafe();
-			} catch (Exception e) {
-				useUnsafe = false;
-			}
-		}
+
+        if (useUnsafe)
+        {
+            try
+            {
+                unsafe = allocateUnsafe();
+            }
+            catch (Exception e)
+            {
+                useUnsafe = false;
+            }
+        }
     }
 
     public interface JsonClassReader
@@ -2713,16 +2715,20 @@ public class JsonReader implements Closeable
         if (constructorInfo != null)
         {   // Constructor was cached
             Constructor constructor = (Constructor) constructorInfo[0];
-            
-            if(constructor == null){
-            	try{
-            		return unsafe.allocateInstance(c);
-            	}catch(Exception e){
-                        // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                        error("Could not instantiate " + c.getName(), e);
-                    }
+
+            if (constructor == null)
+            {   // null constructor --> set to null when object instantiated with unsafe.allocateInstance()
+                try
+                {
+                    return unsafe.allocateInstance(c);
+                }
+                catch (Exception e)
+                {
+                    // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                    error("Could not instantiate " + c.getName(), e);
+                }
             }
-            
+
             Boolean useNull = (Boolean) constructorInfo[1];
             Class[] paramTypes = constructor.getParameterTypes();
             if (paramTypes == null || paramTypes.length == 0)
@@ -2810,17 +2816,21 @@ public class JsonReader implements Closeable
             catch (Exception ignored)
             { }
         }
-        
-        //Try instantiation via unsafe
-        //This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized d
-        //Thats why we try ordinary constructors first
-        if (useUnsafe) {
-			try {
-				return new Object[] { unsafe.allocateInstance(c), null, null };
-			} catch (InstantiationException e) {
-				//Ok... at least we tried...
-			}
-		}
+
+        // Try instantiation via unsafe
+        // This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
+        // Thats why we try ordinary constructors first
+        if (useUnsafe)
+        {
+            try
+            {
+                return new Object[]{unsafe.allocateInstance(c), null, null};
+            }
+            catch (Exception ignored)
+            {
+                ignored.printStackTrace();
+            }
+        }
 
         error("Could not instantiate " + c.getName() + " using any constructor");
         return null;
@@ -3395,8 +3405,9 @@ public class JsonReader implements Closeable
         }
         return "";
     }
-    
-    private static Unsafe allocateUnsafe() throws ReflectiveOperationException{
+
+    private static Unsafe allocateUnsafe() throws ReflectiveOperationException
+    {
     	return new Unsafe();
     }
 
@@ -3439,29 +3450,31 @@ public class JsonReader implements Closeable
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
      */
-    private static final class Unsafe {
-    	
+    private static final class Unsafe
+    {
     	private Object unsafe;
-    	
     	private Method allocateInstance;
-    	
+
     	/**
     	 * Constructs unsafe object, acting as a wrapper.
     	 * @throws ReflectiveOperationException
     	 */
-    	public Unsafe() throws ReflectiveOperationException{
-    		try{
+    	public Unsafe() throws ReflectiveOperationException
+        {
+    		try
+            {
     			Constructor<Unsafe> unsafeConstructor = JsonReader.classForName("sun.misc.Unsafe").getDeclaredConstructor();
     			unsafeConstructor.setAccessible(true);
     			unsafe = unsafeConstructor.newInstance();
-    			
     			allocateInstance = unsafe.getClass().getMethod("allocateInstance", Class.class);
     			allocateInstance.setAccessible(true);
-    		}catch(Exception e){
+    		}
+            catch(Exception e)
+            {
     			throw new ReflectiveOperationException(e);
     		}
     	}
-    	
+
     	/**
     	 * Creates an object without invoking constructor or initializing variables.
     	 * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
@@ -3469,17 +3482,19 @@ public class JsonReader implements Closeable
     	 * @return allocated Object
     	 * @throws InstantiationException
     	 */
-    	public Object allocateInstance(Class clazz) throws InstantiationException{
-    		try {
-				return allocateInstance.invoke(unsafe, clazz);
-			} catch (IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				throw new RuntimeException(e);
-			}    			
-    	}
-    	
+        public Object allocateInstance(Class clazz) throws InstantiationException
+        {
+            try
+            {
+                return allocateInstance.invoke(unsafe, clazz);
+            }
+            catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
     }
-    
+
     /**
      * This class adds significant performance increase over using the JDK
      * PushbackReader.  This is due to this class not using synchronization

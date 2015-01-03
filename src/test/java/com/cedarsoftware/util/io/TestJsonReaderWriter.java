@@ -1,6 +1,18 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.Assert.*;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.Dog.OtherShoe;
+import com.cedarsoftware.util.io.Dog.Shoe;
+import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
+import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
+import com.google.gson.Gson;
+import org.junit.FixMethodOrder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+import org.junit.runners.MethodSorters;
 
 import java.awt.Point;
 import java.io.ByteArrayInputStream;
@@ -14,7 +26,6 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -48,22 +59,13 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runners.MethodSorters;
-
-import sun.misc.Unsafe;
-
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.Dog.OtherShoe;
-import com.cedarsoftware.util.io.Dog.Shoe;
-import com.cedarsoftware.util.io.JsonReader.JsonClassReader;
-import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
-import com.google.gson.Gson;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -7177,46 +7179,38 @@ public class TestJsonReaderWriter
 		Object[] array = new Object[1];
 		array[0] = shoe;
 		String workaroundString = JsonWriter.objectToJson(array);
-		JsonReader.jsonToJava(workaroundString);// shoe can be acessed by
+		JsonReader.jsonToJava(workaroundString);// shoe can be accessed by
 		// checking array type + length
-		// and acessing [0]
+		// and accessing [0]
 
 		String json = JsonWriter.objectToJson(shoe);
 		//Should not fail, as we defined our own reader
-		// It is expected, that this object is instanciated twice:
+		// It is expected, that this object is instantiated twice:
 		// -once for analysis + Stack
 		// -deserialization with Stack
 		JsonReader.jsonToJava(json);
 	}
 
 	@Test
-	public void testDirectCreation() throws IOException{
-		//No need to set property, we set value directly
-		try {
-			Field useUnsafe = JsonReader.class.getDeclaredField("useUnsafe");
-			useUnsafe.setAccessible(true);
-			useUnsafe.setBoolean(JsonReader.class, true);
+	public void testDirectCreation() throws Exception
+	{
+		// No need to set property, we set value directly
+		Field useUnsafe = JsonReader.class.getDeclaredField("useUnsafe");
+		useUnsafe.setAccessible(true);
+		useUnsafe.setBoolean(JsonReader.class, true);
 
+		Method allocator = JsonReader.class.getDeclaredMethod("allocateUnsafe");
+		allocator.setAccessible(true);
 
-			Method allocator = JsonReader.class.getDeclaredMethod("allocateUnsafe");
-			allocator.setAccessible(true);
+		Field unsafe = JsonReader.class.getDeclaredField("unsafe");
+		unsafe.setAccessible(true);
+		unsafe.set(JsonReader.class, allocator.invoke(null));
 
-			Field unsafe = JsonReader.class.getDeclaredField("unsafe");
-			unsafe.setAccessible(true);
-			unsafe.set(JsonReader.class, allocator.invoke(null));
-		} catch (SecurityException | NoSuchFieldException | IllegalArgumentException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-			throw new RuntimeException("", e);
-		}
-
-		//this test will fail without directCreation
+		// this test will fail without directCreation
 		OtherShoe shoe = OtherShoe.construct();
-
 		OtherShoe oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
-
 		assertTrue(shoe.equals(oShoe));
-
 		oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
-
 		assertTrue(shoe.equals(oShoe));
 	}
 
