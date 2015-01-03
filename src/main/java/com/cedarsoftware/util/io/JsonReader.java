@@ -3452,7 +3452,7 @@ public class JsonReader implements Closeable
      */
     private static final class Unsafe
     {
-    	private Object unsafe;
+    	private Object sunUnsafe;
     	private Method allocateInstance;
 
     	/**
@@ -3465,8 +3465,8 @@ public class JsonReader implements Closeable
             {
     			Constructor<Unsafe> unsafeConstructor = JsonReader.classForName("sun.misc.Unsafe").getDeclaredConstructor();
     			unsafeConstructor.setAccessible(true);
-    			unsafe = unsafeConstructor.newInstance();
-    			allocateInstance = unsafe.getClass().getMethod("allocateInstance", Class.class);
+                sunUnsafe = unsafeConstructor.newInstance();
+    			allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);
     			allocateInstance.setAccessible(true);
     		}
             catch(Exception e)
@@ -3486,7 +3486,7 @@ public class JsonReader implements Closeable
         {
             try
             {
-                return allocateInstance.invoke(unsafe, clazz);
+                return allocateInstance.invoke(sunUnsafe, clazz);
             }
             catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
             {
