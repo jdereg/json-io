@@ -3449,11 +3449,12 @@ public class JsonReader implements Closeable
 
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
+     * @author Kai Hufenback
      */
     private static final class Unsafe
     {
-    	private Object sunUnsafe;
-    	private Method allocateInstance;
+    	private final Object sunUnsafe;
+    	private final Method allocateInstance;
 
     	/**
     	 * Constructs unsafe object, acting as a wrapper.
