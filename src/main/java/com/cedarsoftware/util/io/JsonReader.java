@@ -3503,24 +3503,25 @@ public class JsonReader implements Closeable
      */
     private static final class FastPushbackReader extends FilterReader
     {
-        private final int[] _buf;
-        private int _idx;
-        private int line, col;
+        private final int[] buf;
         private final int[] snippet;
+        private int idx;
+        private int line;
+        private int col;
         private int snippetLoc = 0;
 
         private FastPushbackReader(Reader reader, int size)
         {
             super(reader);
-            snippet = new int[SNIPPET_LENGTH];
-            line = 1;
-            col = 1;
             if (size <= 0)
             {
                 throw new IllegalArgumentException("size <= 0");
             }
-            _buf = new int[size];
-            _idx = size;
+            buf = new int[size];
+            idx = size;
+            snippet = new int[SNIPPET_LENGTH];
+            line = 1;
+            col = 0;
         }
 
         private FastPushbackReader(Reader r)
@@ -3533,40 +3534,14 @@ public class JsonReader implements Closeable
             StringBuilder s = new StringBuilder();
             for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
             {
-                char[] character;
-                try
-                {
-                    character = toChars(snippet[i]);
-                }
-                catch (Exception e)
-                {
-                    break;
-                }
-                if (snippet[i] != 0)
-                {
-                    s.append(character);
-                }
-                else
+                if (addCharToSnippet(s, i))
                 {
                     break;
                 }
             }
             for (int i=0; i < snippetLoc; i++)
             {
-                char[] character;
-                try
-                {
-                    character = toChars(snippet[i]);
-                }
-                catch (Exception e)
-                {
-                    break;
-                }
-                if (snippet[i] != 0)
-                {
-                    s.append(character);
-                }
-                else
+                if (addCharToSnippet(s, i))
                 {
                     break;
                 }
@@ -3574,9 +3549,31 @@ public class JsonReader implements Closeable
             return s.toString();
         }
 
+        private boolean addCharToSnippet(StringBuilder s, int i)
+        {
+            char[] character;
+            try
+            {
+                character = toChars(snippet[i]);
+            }
+            catch (Exception e)
+            {
+                return true;
+            }
+            if (snippet[i] != 0)
+            {
+                s.append(character);
+            }
+            else
+            {
+                return true;
+            }
+            return false;
+        }
+
         public int read() throws IOException
         {
-            final int ch = _idx < _buf.length ? _buf[_idx++] : super.read();
+            final int ch = idx < buf.length ? buf[idx++] : super.read();
             if (ch >= 0)
             {
                 if (ch == 0x0a)
@@ -3599,9 +3596,9 @@ public class JsonReader implements Closeable
 
         public void unread(int c) throws IOException
         {
-            if (_idx == 0)
+            if (idx == 0)
             {
-                error("unread(int c) called more than buffer size (" + _buf.length + ")");
+                error("unread(int c) called more than buffer size (" + buf.length + ")");
             }
             if (c == 0x0a)
             {
@@ -3611,7 +3608,7 @@ public class JsonReader implements Closeable
             {
                 col--;
             }
-            _buf[--_idx] = c;
+            buf[--idx] = c;
             snippetLoc--;
             if (snippetLoc < 0)
             {
