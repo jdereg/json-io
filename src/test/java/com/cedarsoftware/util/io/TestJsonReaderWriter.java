@@ -25,8 +25,6 @@ import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -7194,22 +7192,28 @@ public class TestJsonReaderWriter
 	@Test
 	public void testDirectCreation() throws Exception
 	{
-		// No need to set property, we set value directly
-		Field useUnsafe = JsonReader.class.getDeclaredField("useUnsafe");
-		useUnsafe.setAccessible(true);
-		useUnsafe.setBoolean(JsonReader.class, true);
-
-		Method allocator = JsonReader.class.getDeclaredMethod("allocateUnsafe");
-		allocator.setAccessible(true);
-
-		Field unsafe = JsonReader.class.getDeclaredField("unsafe");
-		unsafe.setAccessible(true);
-		unsafe.set(JsonReader.class, allocator.invoke(null));
-
+		JsonReader.setUseUnsafe(true);
 		// this test will fail without directCreation
 		OtherShoe shoe = OtherShoe.construct();
 		OtherShoe oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
 		assertTrue(shoe.equals(oShoe));
+		oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
+		assertTrue(shoe.equals(oShoe));
+
+		try
+		{
+			JsonReader.setUseUnsafe(false);
+			shoe = OtherShoe.construct();
+			JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
+			fail();
+		}
+		catch (NullPointerException e)
+		{
+		}
+
+		JsonReader.setUseUnsafe(true);
+		// this test will fail without directCreation
+		OtherShoe.construct();
 		oShoe = (OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)));
 		assertTrue(shoe.equals(oShoe));
 	}

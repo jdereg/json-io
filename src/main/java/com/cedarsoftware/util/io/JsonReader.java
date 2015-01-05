@@ -88,7 +88,6 @@ import java.util.regex.Pattern;
  */
 public class JsonReader implements Closeable
 {
-	private static final String PROPERTY_PREFIX = "com.cedarsoftware.util.io.JsonReader.";
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
@@ -131,9 +130,24 @@ public class JsonReader implements Closeable
 
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
 
-    private static String DIRECT_INSTANTIATION = "directInstantiation";
-	private static boolean useUnsafe = Boolean.getBoolean(PROPERTY_PREFIX + DIRECT_INSTANTIATION);
+	private static boolean useUnsafe = false;
 	private static Unsafe unsafe;
+
+    public static void setUseUnsafe(boolean state)
+    {
+        useUnsafe = state;
+        if (state)
+        {
+            try
+            {
+                unsafe = new Unsafe();
+            }
+            catch (ReflectiveOperationException e)
+            {
+                useUnsafe = false;
+            }
+        }
+    }
 
     static
     {
@@ -256,18 +270,6 @@ public class JsonReader implements Closeable
         months.put("november", "11");
         months.put("dec", "12");
         months.put("december", "12");
-
-        if (useUnsafe)
-        {
-            try
-            {
-                unsafe = allocateUnsafe();
-            }
-            catch (Exception e)
-            {
-                useUnsafe = false;
-            }
-        }
     }
 
     public interface JsonClassReader
@@ -2716,7 +2718,7 @@ public class JsonReader implements Closeable
         {   // Constructor was cached
             Constructor constructor = (Constructor) constructorInfo[0];
 
-            if (constructor == null)
+            if (constructor == null && useUnsafe)
             {   // null constructor --> set to null when object instantiated with unsafe.allocateInstance()
                 try
                 {
@@ -2827,9 +2829,7 @@ public class JsonReader implements Closeable
                 return new Object[]{unsafe.allocateInstance(c), null, null};
             }
             catch (Exception ignored)
-            {
-                ignored.printStackTrace();
-            }
+            { }
         }
 
         error("Could not instantiate " + c.getName() + " using any constructor");
@@ -3406,11 +3406,6 @@ public class JsonReader implements Closeable
         return "";
     }
 
-    private static Unsafe allocateUnsafe() throws ReflectiveOperationException
-    {
-    	return new Unsafe();
-    }
-
     /**
      * This is a performance optimization.  The lowest 128 characters are re-used.
      *
@@ -3451,7 +3446,7 @@ public class JsonReader implements Closeable
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
      * @author Kai Hufenback
      */
-    private static final class Unsafe
+    static final class Unsafe
     {
     	private final Object sunUnsafe;
     	private final Method allocateInstance;
@@ -3481,9 +3476,8 @@ public class JsonReader implements Closeable
     	 * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
     	 * @param clazz to instantiate
     	 * @return allocated Object
-    	 * @throws InstantiationException
     	 */
-        public Object allocateInstance(Class clazz) throws InstantiationException
+        public Object allocateInstance(Class clazz)
         {
             try
             {
