@@ -52,13 +52,13 @@ import java.util.regex.Pattern;
  * <br/><br/>
  * Usages:
  * <ul><li>
- * Call the static method: {@code JsonReader.objectToJava(String json)}.  This will
+ * Call the static method: {@code JsonReader.jsonToJava(String json)}.  This will
  * return a typed Java object graph.</li>
  * <li>
  * Call the static method: {@code JsonReader.jsonToMaps(String json)}.  This will
  * return an untyped object representation of the JSON String as a Map of Maps, where
  * the fields are the Map keys, and the field values are the associated Map's values.  You can
- * call the JsonWriter.objectToJava() method with the returned Map, and it will serialize
+ * call the JsonWriter.objectToJson() method with the returned Map, and it will serialize
  * the Graph into the identical JSON stream from which it was read.
  * <li>
  * Instantiate the JsonReader with an InputStream: {@code JsonReader(InputStream in)} and then call
