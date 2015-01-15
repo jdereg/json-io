@@ -1970,7 +1970,23 @@ public class JsonReader implements Closeable
         }
         catch (Exception e)
         {
-            error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + target + " with value: " + rhs, e);
+            error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
+        }
+    }
+
+    private static String safeToString(Object o)
+    {
+        if (o == null)
+        {
+            return "null";
+        }
+        try
+        {
+            return o.toString();
+        }
+        catch (Exception e)
+        {
+            return o.getClass().toString();
         }
     }
 
