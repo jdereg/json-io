@@ -124,7 +124,7 @@ Featured on http://json.org.
   * Minor Javadoc cleanup (Daniel Darabos)
   * Began migration of tests from one monolithic Java class (`TestJsonReaderWriter`) to individual Groovy test classes.
  * 2.8.0
-  * Additional attempt to instantiate classes via `sun.misc.Unsafe` added (optional must be turned on by calling `JsonReader.setUseUnsafe(true)`). json-io already tries all constructors (private or public) with varying arguments, etc.  If this fails and unsafe is true, it will try `sun.misc.Unsafe.allocateInstance()` which effectively does a C-style `malloc()`.  This is OK, because the rest of `JsonReader` fills in the member variables from the serialized content.  (Submitted by Kai Hufenback).
+  * Additional attempt to instantiate classes via `sun.misc.Unsafe` added (optional must be turned on by calling `JsonReader.setUseUnsafe(true)`). json-io already tries all constructors (private or public) with varying arguments, etc.  If this fails and unsafe is true, it will try `sun.misc.Unsafe.allocateInstance()` which effectively does a C-style `malloc()`.  This is OK, because the rest of `JsonReader` fills in the member variables from the serialized content.  (Submitted by @KaiHufenbach).
  * 2.7.6
   * Performance optimizations.  Use of switch statement instead of if-else chains.
   * JDK 1.7 for source code and target JVM.
@@ -135,7 +135,7 @@ Featured on http://json.org.
  * 2.7.3
   * `JsonReader` executes faster (more efficiently manages internal 'snippet' buffer and last line and column read.)
   * Improved date parsing: day of week support (long or short name), days with suffix (3rd, 25th, etc.), Java's default `.toString()` output for `Date` now parses, full time zone support, extra whitespace allowed within the date string.
-  * Added ability to have custom JSON writers for interfaces (submitted by Kai Hufenbach).
+  * Added ability to have custom JSON writers for interfaces (submitted by @KaiHufenbach).
  * 2.7.2
   * When writing JSON, less memory is used to manage referenced objects.  `JsonWriter` requires a smaller memory foot print during writing.
   * New option available to JsonWriter that allows you to force enums to not write private variables.  First you can make them transient.  However, if you do not own the code or cannot change it, you can set the `JsonWriter.getArgs().put(ENUM_PUBLIC_ONLY, true)`, and then only public fields on enums will be emitted.
