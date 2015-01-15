@@ -209,7 +209,7 @@ public class TestJsonReaderWriter
 		@Override
 		public boolean equals(Object other)
 		{
-			return other != null && other instanceof Empty;
+			return other instanceof Empty;
 		}
 	}
 
