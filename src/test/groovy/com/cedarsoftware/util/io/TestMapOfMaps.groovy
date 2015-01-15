@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertNotSame
 import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertSame
 import static org.junit.Assert.assertTrue
@@ -81,5 +82,22 @@ class TestMapOfMaps
         assertEquals('Sonya', female.name)
         assertSame(male.friend, female)
         assertSame(female.friend, male)
+
+        String json = JsonWriter.objectToJson(doc)
+        Map doc2 = JsonReader.jsonToMaps(json)
+
+        Object[] peeps1 = doc['@items']
+        Object[] peeps2 = doc2['@items']
+
+        assert peeps1[0].name == 'John'
+        assert peeps2[0].name == 'John'
+        assert peeps1[1].name == 'Sonya'
+        assert peeps2[1].name == 'Sonya'
+        assert peeps1[0].friend == peeps1[1]
+        assert peeps2[0].friend == peeps2[1]
+        assert peeps1[1].friend == peeps1[0]
+        assert peeps2[1].friend == peeps2[0]
+        assertNotSame(peeps1[0], peeps2[0])
+        assertNotSame(peeps1[1], peeps2[1])
     }
 }
