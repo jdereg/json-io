@@ -17,7 +17,7 @@ public class Dog
 
     public boolean equals(Object obj)
     {
-        if (this == obj)
+        if (this.is(obj))
         {
             return true;
         }
@@ -50,14 +50,14 @@ public class Dog
         {
             final int prime = 31;
             int result = 1;
-            result = prime * result + getOuterType().hashCode();
+            result = prime * result + getOuterType().hashCode()
             result = prime * result + y;
             return result;
         }
 
         public boolean equals(Object obj)
         {
-            if (this == obj)
+            if (this.is(obj))
             {
                 return true;
             }
@@ -94,13 +94,13 @@ public class Dog
             if (leg == null)
             {
                 throw new IllegalArgumentException(
-                        "A Shoe without a leg ... what a pity");
+                        "A Shoe without a leg ... what a pity")
             }
         }
 
         public static Shoe construct()
         {
-            return new Shoe(new Dog().new Leg());
+            return new Shoe(new Leg(new Dog()))
         }
     }
 
@@ -112,29 +112,29 @@ public class Dog
         {
             if (leg == null)
             {
-                throw new IllegalArgumentException("A Shoe without a leg ... what a pity");
+                throw new IllegalArgumentException("A Shoe without a leg ... what a pity")
             }
             this.leg = leg;
         }
 
         public static OtherShoe construct()
         {
-            Leg leg2 = new Dog().new Leg();
+            Leg leg2 = new Leg(new Dog())
             leg2.y = 5;
-            return new OtherShoe(leg2);
+            return new OtherShoe(leg2)
         }
 
         public int hashCode()
         {
             final int prime = 31;
             int result = 1;
-            result = prime * result + ((leg == null) ? 0 : leg.hashCode());
+            result = prime * result + ((leg == null) ? 0 : leg.hashCode())
             return result;
         }
 
         public boolean equals(Object obj)
         {
-            if (this == obj)
+            if (this.is(obj))
             {
                 return true;
             }

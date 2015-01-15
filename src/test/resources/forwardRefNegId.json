@@ -1,0 +1,16 @@
+[
+  {
+    "@id": -10,
+    "name": "John",
+    "friend": {
+      "@ref": -20
+    }
+  },
+  {
+    "@id": -20,
+    "name": "Sonya",
+    "friend": {
+      "@ref": -10
+    }
+  }
+]

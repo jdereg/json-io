@@ -2180,6 +2180,10 @@ public class JsonReader implements Closeable
      */
     protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
     {
+        if (noObjects)
+        {
+            return jsonObj;
+        }
         String type = jsonObj.type;
         Object mate;
 

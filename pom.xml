@@ -35,6 +35,7 @@
     <properties>
         <version.java-util>1.14.1</version.java-util>
         <version.junit>4.11</version.junit>
+        <version.groovy>2.3.9</version.groovy>
         <version.gson>2.3</version.gson>
         <version.plugin.compiler>3.2</version.plugin.compiler>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
@@ -42,6 +43,9 @@
         <version.plugin.javadoc>2.10.1</version.plugin.javadoc>
         <version.plugin.gpg>1.5</version.plugin.gpg>
         <version.plugin.release>2.5.1</version.plugin.release>
+        <version.plugin.surefire>2.18.1</version.plugin.surefire>
+        <version.plugin.groovy.eclipse.compiler>2.9.1-01</version.plugin.groovy.eclipse.compiler>
+        <version.plugin.groovy.eclipse.batch>2.3.7-01</version.plugin.groovy.eclipse.batch>
     </properties>
 
     <pluginRepositories>
@@ -74,13 +78,27 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
+                    <compilerId>groovy-eclipse-compiler</compilerId>
+                    <!-- <verbose>true</verbose> -->
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-compiler</artifactId>
+                        <version>${version.plugin.groovy.eclipse.compiler}</version>
+                    </dependency>
+
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-batch</artifactId>
+                        <version>${version.plugin.groovy.eclipse.batch}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
@@ -141,6 +159,15 @@
                 </configuration>
             </plugin>
 
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${version.plugin.surefire}</version>
+                <configuration>
+                    <forkCount>3</forkCount>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
@@ -151,6 +178,7 @@
             <version>${version.junit}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>com.cedarsoftware</groupId>
             <artifactId>java-util</artifactId>
@@ -162,6 +190,27 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>${version.gson}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>${version.groovy}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-templates</artifactId>
+            <version>${version.groovy}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-xml</artifactId>
+            <version>${version.groovy}</version>
             <scope>test</scope>
         </dependency>
 
