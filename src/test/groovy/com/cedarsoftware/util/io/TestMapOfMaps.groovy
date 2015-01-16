@@ -128,9 +128,21 @@ class TestMapOfMaps
         Point p1 = pointMap.points.get(new Point(10, 20))
         assertTrue(p1.x == 1 && p1.y == 2)
 
+        // Comes in as a Map [[x:20, y:20]:[x:1, y:2]] when read as Map of maps.  This is due to a Point (non simple type)
+        // being the key of the map.
         Map map = JsonReader.jsonToMaps(json)
-        println map
-        println map.size()
+        assertTrue(map.points.size() == 1)
+        Map points = map.points;
+        Map ten20 = points.keySet().iterator().next();
+        assert ten20 instanceof Map;
+        assert ten20.x == 10
+        assert ten20.y == 20
+
+        Map one2 = points.values().iterator().next();
+        assert one2 instanceof Map;
+        assert one2.x == 1
+        assert one2.y == 2
+
     }
 
     @Test
