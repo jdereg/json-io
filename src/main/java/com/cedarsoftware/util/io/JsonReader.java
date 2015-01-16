@@ -1787,8 +1787,8 @@ public class JsonReader implements Closeable
             }
             else if (field != null)
             {   // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
-                // by using the @type (when specified and exists) class, to coerce the vanilla
-                // JSON values into the proper types defined by the class lised in @type.  This is
+                // by using the @type class name (when specified and exists), to coerce the vanilla
+                // JSON values into the proper types defined by the class listed in @type.  This is
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
