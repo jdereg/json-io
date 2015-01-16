@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on Maven Central).
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.8.1</version>
+  <version>2.9.0</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="f5ab44535dc53e81b79e71f123ebdf42" data-button-style="custom_large" data-custom="json-io" href="https://coinbase.com/checkouts/f5ab44535dc53e81b79e71f123ebdf42">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
@@ -119,6 +119,10 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.9.0
+  * Unmodifiable Collections and Maps can now be serialized.
+  * Added tests to ensure that JsonReader.jsonToMaps() coerces the RHS values when logical primitives, to the optional associated @type's fields.
+  * More tests and improved code-coverage.
  * 2.8.1
   * bugfix: `JsonReader.jsonToMaps()` API was incorrectly attempting to instantiate peer objects (specified by "@type" field in the JSON) when in 'maps' mode.  This made `JsonReader.jsonToMaps()` fail if all referenced class names did not exist in the JVM.  This has been fixed.
   * Minor Javadoc cleanup (Daniel Darabos @darabos)
