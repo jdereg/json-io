@@ -120,8 +120,8 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 
 Featured on http://json.org.
  * 2.9.0
-  * Unmodifiable Collections and Maps can now be serialized.
-  * Added tests to ensure that JsonReader.jsonToMaps() coerces the RHS values when logical primitives, to the optional associated @type's fields.
+  * Unmodifiable `Collections` and `Maps` can now be serialized.
+  * Added tests to ensure that `JsonReader.jsonToMaps()` coerces the RHS values when logical primitives, to the optional associated `@type's` fields.
   * More tests and improved code-coverage.
  * 2.8.1
   * bugfix: `JsonReader.jsonToMaps()` API was incorrectly attempting to instantiate peer objects (specified by "@type" field in the JSON) when in 'maps' mode.  This made `JsonReader.jsonToMaps()` fail if all referenced class names did not exist in the JVM.  This has been fixed.
