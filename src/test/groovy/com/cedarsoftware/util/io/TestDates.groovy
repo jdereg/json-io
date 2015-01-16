@@ -138,7 +138,7 @@ class TestDates
         assertNull(tdf.fromString)
 
         Map jObj = JsonReader.jsonToMaps(json)
-        assertEquals("", jObj.fromString)
+        assertNull(jObj.fromString)
 
         json = '{"@type":"' + thisClass + '","fromString":null,"dates":[""]}'
         tdf = (TestDateField) TestUtil.readJsonObject(json)

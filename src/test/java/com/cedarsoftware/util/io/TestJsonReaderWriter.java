@@ -2880,7 +2880,7 @@ public class TestJsonReaderWriter
 		}
 		catch (IOException e)
 		{
-			assertTrue(e.getMessage().contains("Object not ended with '}' or ']"));
+			assertTrue(e.getMessage().contains("Object not ended with '}'"));
 		}
 	}
 
@@ -3329,7 +3329,7 @@ public class TestJsonReaderWriter
 		}
 		catch (IOException e)
 		{
-			assertTrue(e.getMessage().contains("instance"));
+			assertTrue(e.getMessage().contains("class"));
 			assertTrue(e.getMessage().contains("not"));
 			assertTrue(e.getMessage().contains("created"));
 		}
@@ -4456,30 +4456,30 @@ public class TestJsonReaderWriter
 	@Test
 	public void testReconstitutePrimitives() throws Exception
 	{
-		Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0, new Double(66.0), true, Boolean.TRUE,'J', new Character('K'), new String[] {"john","adams"}, new int[] {2,6}, new BigDecimal(2.71828));
+		Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0, new Double(66.0), true, Boolean.TRUE,'J', new Character('K'), new String[] {"john","adams"}, new int[] {2,6}, new BigDecimal("2.71828"));
 		String json0 = TestUtil.getJsonString(foo);
 		TestUtil.printLine("json0=" + json0);
 
 		Map map = JsonReader.jsonToMaps(json0);
-		assertEquals(1L, map.get("_byte") );
-		assertEquals(2L, map.get("_short"));
-		assertEquals(3L, map.get("_int"));
+		assertEquals((byte)1, map.get("_byte") );
+		assertEquals((short)2, map.get("_short"));
+		assertEquals(3, map.get("_int"));
 		assertEquals(4L, map.get("_long"));
-		assertEquals(5.0d, map.get("_float"));
+		assertEquals(5.0f, map.get("_float"));
 		assertEquals(6.0d, map.get("_double"));
 		assertEquals(true, map.get("_boolean"));
-		assertEquals("J", map.get("_char"));
+		assertEquals('J', map.get("_char"));
 
-		assertEquals(11L, map.get("_Byte"));
-		assertEquals(22L, map.get("_Short"));
-		assertEquals(33L, map.get("_Integer"));
+		assertEquals((byte)11, map.get("_Byte"));
+		assertEquals((short)22, map.get("_Short"));
+		assertEquals(33, map.get("_Integer"));
 		assertEquals(44L, map.get("_Long"));
-		assertEquals(55.0d, map.get("_Float"));
+		assertEquals(55.0f, map.get("_Float"));
 		assertEquals(66.0d, map.get("_Double"));
 		assertEquals(true, map.get("_Boolean"));
-		assertEquals("K", map.get("_Char"));
-		String num = (String) map.get("_bigD");
-		assertTrue(num.startsWith("2.71828"));
+		assertEquals('K', map.get("_Char"));
+		BigDecimal num = (BigDecimal) map.get("_bigD");
+		assertEquals(new BigDecimal("2.71828"), num);
 
 		String json1 = TestUtil.getJsonString(map);
 		TestUtil.printLine("json1=" + json1);
@@ -4494,14 +4494,14 @@ public class TestJsonReaderWriter
 		TestUtil.printLine("json0=" + json);
 
 		Map map = JsonReader.jsonToMaps(json);
-		assertEquals(1L, map.get("_byte"));
-		assertEquals(2L, map.get("_short"));
-		assertEquals(3L, map.get("_int"));
+		assertEquals((byte)1, map.get("_byte"));
+		assertEquals((short)2, map.get("_short"));
+		assertEquals((int)3, map.get("_int"));
 		assertEquals(4L, map.get("_long"));
-		assertEquals(5.0d, map.get("_float"));
+		assertEquals(5.0f, map.get("_float"));
 		assertEquals(6.0d, map.get("_double"));
 		assertEquals(true, map.get("_boolean"));
-		assertEquals("J", map.get("_char"));
+		assertEquals((char)'J', map.get("_char"));
 
 		Map prim = (Map) map.get("_Byte");
 		assertNull(prim);
@@ -5070,62 +5070,6 @@ public class TestJsonReaderWriter
 		assertTrue(p1.x == 1 && p1.y == 2);
 	}
 
-	static class PointMap
-	{
-		Map<Point, Point> points;
-	}
-
-	@Test
-	public void testGenericInfoMap() throws Exception
-	{
-		String className = PointMap.class.getName();
-		String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.HashMap\",\"@keys\":[{\"x\":10,\"y\":20}],\"@items\":[{\"x\":1,\"y\":2}]}}";
-		PointMap pointMap = (PointMap) TestUtil.readJsonObject(json);
-		assertTrue(pointMap.points.size() == 1);
-		Point p1 = pointMap.points.get(new Point(10, 20));
-		assertTrue(p1.x == 1 && p1.y == 2);
-	}
-
-	@Test
-	public void testGenericMap() throws Exception
-	{
-		String json = "{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}}";
-		TestUtil.printLine("json = " + json);
-		Map root = (Map) JsonReader.jsonToJava(json);
-		Map traits = (Map) root.get("traits");
-		Map uiAttributes = (Map) traits.get("ui:attributes");
-		String label = (String) uiAttributes.get("label");
-		assertEquals("Risk Type", label);
-		Map dbAttributes = (Map) traits.get("db:attributes");
-		String col = (String) dbAttributes.get("column");
-		assertEquals("QUOTE_ID", col);
-		String value = (String) traits.get("r:value");
-		assertEquals("risk", value);
-	}
-
-	@Test
-	public void testGenericArrayWithMap() throws Exception
-	{
-		String json = "[{\"traits\":{\"ui:attributes\":{\"type\":\"text\",\"label\":\"Risk Type\",\"maxlength\":\"30\"},\"v:max\":\"1\",\"v:min\":\"1\",\"v:regex\":\"[[0-9][a-z][A-Z]]\",\"db:attributes\":{\"selectColumn\":\"QR.RISK_TYPE_REF_ID\",\"table\":\"QUOTE_RISK\",\"tableAlias\":\"QR\",\"column\":\"QUOTE_ID\",\"columnName\":\"QUOTE_ID\",\"columnAlias\":\"c:riskType\",\"joinTable\":\"QUOTE\",\"joinAlias\":\"Q\",\"joinColumn\":\"QUOTE_ID\"},\"r:exists\":true,\"r:value\":\"risk\"}},{\"key1\":1,\"key2\":2}]";
-		TestUtil.printLine("json = " + json);
-		Object[] root = (Object[]) JsonReader.jsonToJava(json);
-		Map traits = (Map) root[0];
-		traits = (Map) traits.get("traits");
-		Map uiAttributes = (Map) traits.get("ui:attributes");
-		String label = (String) uiAttributes.get("label");
-		assertEquals("Risk Type", label);
-		Map dbAttributes = (Map) traits.get("db:attributes");
-		String col = (String) dbAttributes.get("column");
-		assertEquals("QUOTE_ID", col);
-		String value = (String) traits.get("r:value");
-		assertEquals("risk", value);
-
-		Map two = (Map) root[1];
-		assertEquals(two.size(), 2);
-		assertEquals(two.get("key1"), 1L);
-		assertEquals(two.get("key2"), 2L);
-	}
-
 	static class ParameterizedCollection
 	{
 		Map<String, Set<Point>> content = new LinkedHashMap<String, Set<Point>>();
@@ -5393,16 +5337,16 @@ public class TestJsonReaderWriter
 	{
 		try
 		{
-			JsonReader.classForName2(null);
-			fail("Should not make it here");
+			JsonReader.classForName(null);
+			fail();
 		}
 		catch (IOException e)
 		{
 		}
 		try
 		{
-			JsonReader.classForName2("Smith&Wesson");
-			fail("Should not make it here");
+			JsonReader.classForName("Smith&Wesson");
+			fail();
 		}
 		catch (IOException e)
 		{

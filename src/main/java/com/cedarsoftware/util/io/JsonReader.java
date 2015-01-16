@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
@@ -119,6 +120,11 @@ public class JsonReader implements Closeable
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
+    private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
+    private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
+    private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
+    private static final Map unmodifiableMap = Collections.unmodifiableMap(new HashMap());
+    private static final Map unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap());
 
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<>();
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
@@ -239,7 +245,6 @@ public class JsonReader implements Closeable
         assignInstantiator(List.class, colFactory);
         assignInstantiator(Set.class, colFactory);
         assignInstantiator(SortedSet.class, colFactory);
-        assignInstantiator(Collection.class, colFactory);
 
         ClassFactory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
@@ -404,7 +409,7 @@ public class JsonReader implements Closeable
                 else
                 {
                     Object type = jObj.type;
-                    c = classForName2((String) type);
+                    c = classForName((String) type);
                 }
 
                 Calendar calendar = (Calendar) newInstance(c);
@@ -710,13 +715,13 @@ public class JsonReader implements Closeable
         {
             if (o instanceof String)
             {
-                return classForName2((String)o);
+                return classForName((String)o);
             }
 
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = classForName2((String) jObj.get("value"));
+                return jObj.target = classForName((String) jObj.get("value"));
             }
             return error("Class missing 'value' field");
         }
@@ -1781,7 +1786,12 @@ public class JsonReader implements Closeable
                 }
             }
             else if (field != null)
-            {
+            {   // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
+                // by using the @type (when specified and exists) class, to coerce the vanilla
+                // JSON values into the proper types defined by the class lised in @type.  This is
+                // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
+                // improve the final types of values in the maps RHS, to be of the field type that
+                // was optionally specified in @type.
                 final Class fieldType = field.getType();
                 if (isPrimitive(fieldType))
                 {
@@ -1827,7 +1837,7 @@ public class JsonReader implements Closeable
             return;
         }
 
-        Object javaMate = jsonObj.target;
+        final Object javaMate = jsonObj.target;
         Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
         Class cls = javaMate.getClass();
 
@@ -2196,17 +2206,31 @@ public class JsonReader implements Closeable
      */
     protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
     {
-        if (noObjects)
-        {
-            return jsonObj;
-        }
-        String type = jsonObj.type;
+        final boolean useMaps = noObjects;
+        final String type = jsonObj.type;
         Object mate;
 
         // @type always takes precedence over inferred Java (clazz) type.
         if (type != null)
         {    // @type is explicitly set, use that as it always takes precedence
-            Class c = classForName(type);
+            Class c;
+            try
+            {
+                c = classForName(type);
+            }
+            catch (IOException e)
+            {
+                if (useMaps)
+                {
+                    jsonObj.type = null;
+                    jsonObj.target = null;
+                    return jsonObj;
+                }
+                else
+                {
+                    throw e;
+                }
+            }
             if (c.isArray())
             {    // Handle []
                 Object[] items = jsonObj.getArray();
@@ -2280,7 +2304,7 @@ public class JsonReader implements Closeable
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
             }
-            else if (clazz == Object.class && !noObjects)
+            else if (clazz == Object.class && !useMaps)
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {
@@ -2323,7 +2347,6 @@ public class JsonReader implements Closeable
         String field = null;
         JsonObject<String, Object> object = new JsonObject<>();
         int state = STATE_READ_START_OBJECT;
-        boolean objectRead = false;
         final FastPushbackReader in = input;
 
         while (!done)
@@ -2335,7 +2358,6 @@ public class JsonReader implements Closeable
                     c = skipWhitespaceRead();
                     if (c == '{')
                     {
-                        objectRead = true;
                         object.line = in.line;
                         object.col = in.col;
                         c = skipWhitespaceRead();
@@ -2346,14 +2368,9 @@ public class JsonReader implements Closeable
                         in.unread(c);
                         state = STATE_READ_FIELD;
                     }
-                    else if (c == '[')
-                    {
-                        in.unread('[');
-                        state = STATE_READ_VALUE;
-                    }
                     else
                     {
-                        error("Input is invalid JSON; does not start with '{' or '[', c=" + c);
+                        error("Input is invalid JSON; object does not start with '{', c=" + c);
                     }
                     break;
 
@@ -2396,11 +2413,11 @@ public class JsonReader implements Closeable
 
                 case STATE_READ_POST_VALUE:
                     c = skipWhitespaceRead();
-                    if (c == -1 && objectRead)
+                    if (c == -1)
                     {
                         error("EOF reached before closing '}'");
                     }
-                    if (c == '}' || c == -1)
+                    if (c == '}')
                     {
                         done = true;
                     }
@@ -2410,7 +2427,7 @@ public class JsonReader implements Closeable
                     }
                     else
                     {
-                        error("Object not ended with '}' or ']'");
+                        error("Object not ended with '}'");
                     }
                     break;
             }
@@ -2503,7 +2520,7 @@ public class JsonReader implements Closeable
      */
     private String readToken(String token) throws IOException
     {
-        int len = token.length();
+        final int len = token.length();
 
         for (int i = 0; i < len; i++)
         {
@@ -2730,6 +2747,26 @@ public class JsonReader implements Closeable
         if (factory.containsKey(c))
         {
             return factory.get(c).newInstance(c);
+        }
+        if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
+        {
+            return new TreeMap();
+        }
+        if (unmodifiableMap.getClass().isAssignableFrom(c))
+        {
+            return new LinkedHashMap();
+        }
+        if (unmodifiableSortedSet.getClass().isAssignableFrom(c))
+        {
+            return new TreeSet();
+        }
+        if (unmodifiableSet.getClass().isAssignableFrom(c))
+        {
+            return new LinkedHashSet();
+        }
+        if (unmodifiableCollection.getClass().isAssignableFrom(c))
+        {
+            return new ArrayList();
         }
 
         // Constructor not cached, go find a constructor
@@ -3102,11 +3139,11 @@ public class JsonReader implements Closeable
         return c >= '0' && c <= '9';
     }
 
-    private static Class classForName(String name) throws IOException
+    static Class classForName(String name) throws IOException
     {
         if (name == null || name.isEmpty())
         {
-            error("Invalid class name specified");
+            error("Empty class name");
         }
         try
         {
@@ -3116,24 +3153,6 @@ public class JsonReader implements Closeable
         catch (ClassNotFoundException e)
         {
             return (Class) error("Class instance '" + name + "' could not be created", e);
-        }
-    }
-
-    static Class classForName2(String name) throws IOException
-    {
-        if (name == null || name.isEmpty())
-        {
-            error("Empty class name.");
-        }
-        try
-        {
-            Class c = nameToClass.get(name);
-            return c == null ? loadClass(name) : c;
-        }
-        catch (ClassNotFoundException e)
-        {
-            error("Class instance '" + name + "' could not be created.", e);
-            return null;
         }
     }
 
@@ -3364,6 +3383,10 @@ public class JsonReader implements Closeable
      *
      * If noObjects==true, then move @keys to keys and @items to values
      * and then drop these two entries from the map.
+     *
+     * This hashes both Sets and Maps because the JDK sets are implemented
+     * as Maps.  If you have a custom built Set, this would not 'treat' it
+     * and you would need to provider a custom reader for that set.
      */
     private void rehashMaps()
     {

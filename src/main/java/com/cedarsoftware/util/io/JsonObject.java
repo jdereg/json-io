@@ -160,7 +160,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         try
         {
-            Class c = JsonReader.classForName2(type);
+            Class c = JsonReader.classForName(type);
             if (Map.class.isAssignableFrom(c))
             {
                 return true;
@@ -186,7 +186,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         try
         {
-            Class c = JsonReader.classForName2(type);
+            Class c = JsonReader.classForName(type);
             if (Collection.class.isAssignableFrom(c))
             {
                 return true;
@@ -340,23 +340,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public int size()
     {
-        if (containsKey("@keys"))
-        {
-            Object value = get("@keys");
-            if (value instanceof Object[])
-            {
-                return ((Object[])value).length;
-            }
-            else if (value == null)
-            {
-                return 0;
-            }
-            else
-            {
-                throw new IllegalStateException("JsonObject with @keys, but no array [] associated to it, line " + line + ", col " + col);
-            }
-        }
-        else if (containsKey("@items"))
+        if (containsKey("@items"))
         {
             Object value = get("@items");
             if (value instanceof Object[])

@@ -1402,7 +1402,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            arrayClass = JsonReader.classForName2(type);
+            arrayClass = JsonReader.classForName(type);
         }
 
         final Writer out = this.out;
@@ -1520,7 +1520,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         String type = jObj.type;
-        Class colClass = JsonReader.classForName2(type);
+        Class colClass = JsonReader.classForName(type);
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer out = this.out;
         int len = jObj.getLength();
@@ -1618,7 +1618,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = JsonReader.classForName2(type);
+                Class mapClass = JsonReader.classForName(type);
                 out.write("\"@type\":\"");
                 out.write(mapClass.getName());
                 out.write('"');
@@ -1684,7 +1684,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
     {
-        if (!ensureStringKeys(jObj))
+        if (!ensureJsonPrimitiveKeys(jObj))
         {
             return false;
         }
@@ -1714,7 +1714,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = JsonReader.classForName2(type);
+                Class mapClass = JsonReader.classForName(type);
                 out.write("\"@type\":\"");
                 out.write(mapClass.getName());
                 out.write('"');
@@ -1791,7 +1791,7 @@ public class JsonWriter implements Closeable, Flushable
             out.write("\"@type\":\"");
             out.write(jObj.type);
             out.write('"');
-            try  { type = JsonReader.classForName2(jObj.type); } catch(Exception ignored) { type = null; }
+            try  { type = JsonReader.classForName(jObj.type); } catch(Exception ignored) { type = null; }
         }
 
         if (jObj.isEmpty())
@@ -1945,7 +1945,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException
     {
-        if (!ensureStringKeys(map))
+        if (!ensureJsonPrimitiveKeys(map))
         {
             return false;
         }
@@ -2012,7 +2012,7 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     // Ensure that all keys within the Map are String instances
-    public static boolean ensureStringKeys(Map map)
+    public static boolean ensureJsonPrimitiveKeys(Map map)
     {
         for (Object o : map.keySet())
         {
@@ -2184,7 +2184,7 @@ public class JsonWriter implements Closeable, Flushable
     public static void writeJsonUtf8String(String s, final Writer out) throws IOException
     {
         out.write('\"');
-        int len = s.length();
+        final int len = s.length();
 
         for (int i = 0; i < len; i++)
         {

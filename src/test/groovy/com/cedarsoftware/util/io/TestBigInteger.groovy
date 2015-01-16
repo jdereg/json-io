@@ -92,7 +92,7 @@ class TestBigInteger
     {
         String json = '{"@type":"' + TestBigIntegerField.class.name + '","fromString":""}'
         Map map = JsonReader.jsonToMaps(json)
-        assertEquals("", map.fromString)
+        assertNull(map.fromString)      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
     @Test
