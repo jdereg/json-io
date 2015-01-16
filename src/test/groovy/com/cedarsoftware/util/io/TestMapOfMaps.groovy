@@ -174,7 +174,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testFoo()
+    void testRhsPrimitiveTypesAreCoercedWhenTypeIsPresent()
     {
         // This test ensures that if @type information is written into the JSON, even if it is read
         // using jsonToMaps(), the type info will be used to correct the RHS values from default
@@ -189,7 +189,6 @@ class TestMapOfMaps
         p.birthYear = 1981
 
         String json = JsonWriter.objectToJson(p)
-        println json
         JsonObject map = JsonReader.jsonToMaps(json)
 
         def age = map.age
