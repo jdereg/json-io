@@ -1340,7 +1340,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        beginCollection(showType, out, referenced);s
+        beginCollection(showType, out, referenced);
         Iterator i = col.iterator();
 
         while (i.hasNext())
