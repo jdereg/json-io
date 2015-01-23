@@ -468,7 +468,7 @@ public class JsonReader implements Closeable
                 return null;
             }
             dateStr = dateStr.trim();
-            if ("".equals(dateStr))
+            if (dateStr.isEmpty())
             {
                 return null;
             }
@@ -1706,22 +1706,22 @@ public class JsonReader implements Closeable
             error("Map written with @keys and @items entries of different sizes");
         }
 
-        JsonObject jsonKeyCollection = new JsonObject();
-        jsonKeyCollection.put("@items", keys);
-        Object[] javaKeys = new Object[size];
-        jsonKeyCollection.target = javaKeys;
-        stack.addFirst(jsonKeyCollection);
-
-        // Convert @items to a Collection of Java objects.
-        JsonObject jsonItemCollection = new JsonObject();
-        jsonItemCollection.put("@items", items);
-        Object[] javaValues = new Object[size];
-        jsonItemCollection.target = javaValues;
-        stack.addFirst(jsonItemCollection);
+        Object[] mapKeys = buildCollection(stack, keys, size);
+        Object[] mapValues = buildCollection(stack, items, size);
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
-        prettyMaps.add(new Object[]{jsonObj, javaKeys, javaValues});
+        prettyMaps.add(new Object[]{jsonObj, mapKeys, mapValues});
+    }
+
+    private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
+    {
+        JsonObject jsonCollection = new JsonObject();
+        jsonCollection.put("@items", items);
+        Object[] javaKeys = new Object[size];
+        jsonCollection.target = javaKeys;
+        stack.addFirst(jsonCollection);
+        return javaKeys;
     }
 
     protected void traverseFieldsNoObj(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException

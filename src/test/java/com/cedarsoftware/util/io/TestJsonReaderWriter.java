@@ -5428,7 +5428,7 @@ public class TestJsonReaderWriter
 
 		String json1 = JsonWriter.objectToJson(nice);
 		assertNotEquals(json, json1);
-		// The MAp.Entry's in the Map reference the Map, causing the map to be referenced, therefore it emits an @id
+		// The Map.Entry's in the Map reference the Map, causing the map to be referenced, therefore it emits an @id
 		// making the String slightly different (but logically equivalent).
 //        String json2 = JsonWriter.formatJson(json1);
 //        assertEquals(json2, json);
