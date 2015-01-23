@@ -216,7 +216,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return (Object[]) get("@items");
     }
 
-    public int getLength() throws IOException
+    public int getLength()
     {
         if (isArray())
         {

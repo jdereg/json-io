@@ -90,7 +90,7 @@ public class JsonWriter implements Closeable, Flushable
     private static final Map<String, ClassMeta> classMetaCache = new ConcurrentHashMap<>();
     private static final List<Object[]> writers = new ArrayList<>();
     private static final Set<Class> notCustom = new HashSet<>();
-    private static Object[] byteStrings = new Object[256];
+    private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
@@ -298,26 +298,16 @@ public class JsonWriter implements Closeable, Flushable
 
     public static boolean isPublicEnumsOnly()
     {
-        final Object setting = _args.get().get(ENUM_PUBLIC_ONLY);
-        if (setting instanceof Boolean)
-        {
-            return Boolean.TRUE.equals(setting);
-        }
-        else if (setting instanceof String)
-        {
-            return "true".equalsIgnoreCase((String) setting);
-        }
-        else if (setting instanceof Number)
-        {
-            return ((Number)setting).intValue() != 0;
-        }
-
-        return false;
+        return isTrue(_args.get().get(ENUM_PUBLIC_ONLY));
     }
 
     public static boolean isPrettyPrint()
     {
-        final Object setting = _args.get().get(PRETTY_PRINT);
+        return isTrue(_args.get().get(PRETTY_PRINT));
+    }
+
+    private static boolean isTrue(Object setting)
+    {
         if (setting instanceof Boolean)
         {
             return Boolean.TRUE.equals(setting);
@@ -1218,7 +1208,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * @return true if the user set the 'TYPE' flag to true, indicating to always show type.
      */
-    private boolean alwaysShowType()
+    private static boolean alwaysShowType()
     {
         return Boolean.TRUE.equals(_args.get().containsKey(TYPE));
     }
@@ -1350,18 +1340,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        if (showType || referenced)
-        {
-            out.write(',');
-            newLine(out);
-            out.write("\"@items\":[");
-        }
-        else
-        {
-            out.write('[');
-        }
-        tabIn(out);
-
+        beginCollection(showType, out, referenced);s
         Iterator i = col.iterator();
 
         while (i.hasNext())
@@ -1373,7 +1352,6 @@ public class JsonWriter implements Closeable, Flushable
                 out.write(',');
                 newLine(out);
             }
-
         }
 
         tabOut(out);
@@ -1383,6 +1361,21 @@ public class JsonWriter implements Closeable, Flushable
             tabOut(out);
             out.write("}");
         }
+    }
+
+    private void beginCollection(boolean showType, Writer out, boolean referenced) throws IOException
+    {
+        if (showType || referenced)
+        {
+            out.write(',');
+            newLine(out);
+            out.write("\"@items\":[");
+        }
+        else
+        {
+            out.write('[');
+        }
+        tabIn(out);
     }
 
     private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException
@@ -1555,17 +1548,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        if (showType || referenced)
-        {
-            out.write(',');
-            newLine(out);
-            out.write("\"@items\":[");
-        }
-        else
-        {
-            out.write('[');
-        }
-        tabIn(out);
+        beginCollection(showType, out, referenced);
 
         Object[] items = (Object[]) jObj.get("@items");
         final int itemsLen = items.length;
@@ -1739,26 +1722,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         Iterator i = jObj.entrySet().iterator();
-
-        while (i.hasNext())
-        {
-            Entry att2value = (Entry) i.next();
-            out.write("\"");
-            out.write((String) att2value.getKey());
-            out.write("\":");
-
-            writeCollectionElement(att2value.getValue());
-
-            if (i.hasNext())
-            {
-                out.write(',');
-                newLine(out);
-            }
-        }
-
-        tabOut(out);
-        out.write('}');
-        return true;
+        return writeMapBody(out, i);
     }
 
 
@@ -1989,7 +1953,11 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         Iterator i = map.entrySet().iterator();
+        return writeMapBody(out, i);
+    }
 
+    private boolean writeMapBody(final Writer out, final Iterator i) throws IOException
+    {
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();

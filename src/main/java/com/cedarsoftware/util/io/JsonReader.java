@@ -1122,9 +1122,9 @@ public class JsonReader implements Closeable
      */
     private static final class UnresolvedReference
     {
-        private JsonObject referencingObj;
+        private final JsonObject referencingObj;
         private String field;
-        private long refId;
+        private final long refId;
         private int index = -1;
 
         private UnresolvedReference(JsonObject referrer, String fld, long id)
@@ -1481,11 +1481,7 @@ public class JsonReader implements Closeable
 
                 if (ref != null)
                 {    // Connect reference
-                    JsonObject refObject = _objsRead.get(ref);
-                    if (refObject == null)
-                    {
-                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-                    }
+                    JsonObject refObject = getReferencedObj(ref);
                     if (refObject.target != null)
                     {   // Array element with @ref to existing object
                         Array.set(array, i, refObject.target);
@@ -1518,6 +1514,16 @@ public class JsonReader implements Closeable
             }
         }
         jsonObj.clearArray();
+    }
+
+    private JsonObject getReferencedObj(Long ref) throws IOException
+    {
+        JsonObject refObject = _objsRead.get(ref);
+        if (refObject == null)
+        {
+            error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
+        }
+        return refObject;
     }
 
     /**
@@ -1565,11 +1571,7 @@ public class JsonReader implements Closeable
 
                 if (ref != null)
                 {    // connect reference
-                    JsonObject refObject = _objsRead.get(ref);
-                    if (refObject == null)
-                    {
-                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-                    }
+                    JsonObject refObject = getReferencedObj(ref);
                     copy.set(idx, refObject);
                 }
                 else
@@ -1642,11 +1644,7 @@ public class JsonReader implements Closeable
 
                 if (ref != null)
                 {
-                    JsonObject refObject = _objsRead.get(ref);
-                    if (refObject == null)
-                    {
-                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-                    }
+                    JsonObject refObject = getReferencedObj(ref);
 
                     if (refObject.target != null)
                     {
@@ -1773,11 +1771,7 @@ public class JsonReader implements Closeable
 
                 if (ref != null)
                 {    // Correct field references
-                    JsonObject refObject = _objsRead.get(ref);
-                    if (refObject == null)
-                    {
-                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-                    }
+                    JsonObject refObject = getReferencedObj(ref);
                     jsonObj.put(key, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -1938,11 +1932,7 @@ public class JsonReader implements Closeable
 
                 if (ref != null)
                 {    // Correct field references
-                    JsonObject refObject = _objsRead.get(ref);
-                    if (refObject == null)
-                    {
-                        error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-                    }
+                    JsonObject refObject = getReferencedObj(ref);
 
                     if (refObject.target != null)
                     {
@@ -2000,7 +1990,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    private static void markUntypedObjects(Type type, Object rhs) throws IOException
+    private static void markUntypedObjects(Type type, Object rhs)
     {
         Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
@@ -3228,9 +3218,8 @@ public class JsonReader implements Closeable
      * @param fieldName String name of the desired field.
      * @return Field object obtained from the passed in class (by name).  The Field
      *         returned is cached so that it is only obtained via reflection once.
-     * @throws IOException for stream errors or parsing errors.
      */
-    private static Field getDeclaredField(Class c, String fieldName) throws IOException
+    private static Field getDeclaredField(Class c, String fieldName)
     {
         return JsonWriter.getDeepDeclaredFields(c).get(fieldName);
     }
@@ -3652,19 +3641,6 @@ public class JsonReader implements Closeable
                 snippetLoc = SNIPPET_LENGTH - 1;
             }
             snippet[snippetLoc] = c;
-        }
-
-        /**
-         * Closes the stream and releases any system resources associated with
-         * it. Once the stream has been closed, further read(),
-         * unread(), ready(), or skip() invocations will throw an IOException.
-         * Closing a previously closed stream has no effect.
-         *
-         * @throws java.io.IOException If an I/O error occurs
-         */
-        public void close() throws IOException
-        {
-            super.close();
         }
     }
 }
