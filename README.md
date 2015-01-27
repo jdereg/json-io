@@ -120,7 +120,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 
 Featured on http://json.org.
  * 2.9.1
-  * Bug fix: The parameterized type passed into a Class was inadvertently placed on an untyped object (JsonObject) when the type of a field was not a template variable or contained template variables.  Fixed with appropriate tests added.
+  * Bug fix: Parameterized types are only stamped onto generic Maps (Maps read with no @type) if the field point to the Map is a Template variable or it has template arguments.
  * 2.9.0
   * Unmodifiable `Collections` and `Maps` can now be serialized.
   * Added tests to ensure that `JsonReader.jsonToMaps()` coerces the RHS values when logical primitives, to the optional associated `@type's` fields.
