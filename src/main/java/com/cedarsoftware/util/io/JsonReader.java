@@ -1229,22 +1229,22 @@ public class JsonReader implements Closeable
         input = null;
     }
 
-    public JsonReader(InputStream in)
+    public JsonReader(InputStream inp)
     {
-        this(in, false);
+        this(inp, false);
     }
 
-    public JsonReader(InputStream in, boolean noObjects)
+    public JsonReader(InputStream inp, boolean noObjects)
     {
         this.noObjects = noObjects;
         try
         {
-            input = new FastPushbackReader(new BufferedReader(new InputStreamReader(in, "UTF-8")));
+            input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
             threadInput.set(input);
         }
         catch (UnsupportedEncodingException e)
         {
-            throw new RuntimeException("Your JVM does not support UTF-8.  Get a new JVM.", e);
+            throw new RuntimeException("Your JVM does not support UTF-8.  Get a better JVM.", e);
         }
     }
 
@@ -3587,7 +3587,7 @@ public class JsonReader implements Closeable
 
         private boolean addCharToSnippet(StringBuilder s, int i)
         {
-            char[] character;
+            final char[] character;
             try
             {
                 character = toChars(snippet[i]);
