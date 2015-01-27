@@ -30,7 +30,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarAsField() throws Exception
+    void testCalendarAsField() throws Exception
     {
         Calendar greg = new GregorianCalendar()
         greg.setTimeZone(TimeZone.getTimeZone("PST"))
@@ -48,7 +48,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarTypedArray() throws Exception
+    void testCalendarTypedArray() throws Exception
     {
         GregorianCalendar[] gregs = [new GregorianCalendar()] as GregorianCalendar[]
         String json = TestUtil.getJsonString(gregs)
@@ -58,7 +58,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarUntypedArray() throws Exception
+    void testCalendarUntypedArray() throws Exception
     {
         Calendar estCal = (Calendar) TestUtil.readJsonObject('{"@type":"java.util.GregorianCalendar","time":"1965-12-17T09:30:16.623-0500","zone":"EST"}')
         Calendar utcCal = (Calendar) TestUtil.readJsonObject('{"@type":"java.util.GregorianCalendar","time":"1965-12-17T14:30:16.623-0000"}')
@@ -71,7 +71,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarCollection() throws Exception
+    void testCalendarCollection() throws Exception
     {
         List gregs = new ArrayList()
         gregs.add(new GregorianCalendar())
@@ -83,7 +83,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarInMapValue() throws Exception
+    void testCalendarInMapValue() throws Exception
     {
         Calendar now = Calendar.instance
         Map map = [:]
@@ -96,7 +96,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarInMapKey() throws Exception
+    void testCalendarInMapKey() throws Exception
     {
         Calendar now = Calendar.instance
         Map map = [:]
@@ -110,7 +110,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendarInMapofMaps() throws Exception
+    void testCalendarInMapofMaps() throws Exception
     {
         Calendar now = Calendar.instance
         String json = TestUtil.getJsonString([now] as Object[])
@@ -124,7 +124,7 @@ class TestCalendars
     }
 
     @Test
-    public void testBadCalendar() throws Exception
+    void testBadCalendar() throws Exception
     {
         try
         {
@@ -135,7 +135,7 @@ class TestCalendars
     }
 
     @Test
-    public void testCalendar() throws Exception
+    void testCalendar() throws Exception
     {
         Calendar greg = new GregorianCalendar()
         greg.setTimeZone(TimeZone.getTimeZone("PST"))

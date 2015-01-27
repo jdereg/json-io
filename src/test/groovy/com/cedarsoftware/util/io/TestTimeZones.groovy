@@ -29,7 +29,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneAsField() throws Exception
+    void testTimeZoneAsField() throws Exception
     {
         TimeZone zone = TimeZone.default
         TestTimeZone tz = new TestTimeZone()
@@ -42,7 +42,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZone() throws Exception
+    void testTimeZone() throws Exception
     {
         TimeZone est = TimeZone.getTimeZone("EST")
         String json = TestUtil.getJsonString(est)
@@ -66,7 +66,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneInArray() throws Exception
+    void testTimeZoneInArray() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst] as Object[])
@@ -87,7 +87,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneInCollection() throws Exception
+    void testTimeZoneInCollection() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         List col = new ArrayList()
@@ -102,7 +102,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneInMapValue() throws Exception
+    void testTimeZoneInMapValue() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         Map map = new HashMap()
@@ -115,7 +115,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneInMapKey() throws Exception
+    void testTimeZoneInMapKey() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         Map map = new HashMap()
@@ -129,7 +129,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneInMapofMaps() throws Exception
+    void testTimeZoneInMapofMaps() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst] as Object[])
@@ -143,7 +143,7 @@ class TestTimeZones
     }
 
     @Test
-    public void testTimeZoneRef() throws Exception
+    void testTimeZoneRef() throws Exception
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst, pst] as Object[])

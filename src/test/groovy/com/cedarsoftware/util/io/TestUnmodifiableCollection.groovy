@@ -23,10 +23,25 @@ import org.junit.Test
  */
 class TestUnmodifiableCollection
 {
+    static class UnmodifiableMapHolder
+    {
+        Map map;
+
+        UnmodifiableMapHolder()
+        {
+            Map directions = new LinkedHashMap()
+            directions.put("North", 0)
+            directions.put("South", 1)
+            directions.put("East", 2)
+            directions.put("West", 3)
+            map = Collections.unmodifiableMap(directions)
+        }
+    }
+
     @Test
     void testUnmodifiableCollection()
     {
-        Collection col = new ArrayList();
+        Collection col = new ArrayList()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -41,7 +56,7 @@ class TestUnmodifiableCollection
         assert root[2] == 'baz'
         assert root[3] == 'qux'
 
-        col = new ArrayList();
+        col = new ArrayList()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -60,7 +75,7 @@ class TestUnmodifiableCollection
     @Test
     void testUnmodifiableSet()
     {
-        Collection col = new LinkedHashSet();
+        Collection col = new LinkedHashSet()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -75,7 +90,7 @@ class TestUnmodifiableCollection
         assert root[2] == 'baz'
         assert root[3] == 'qux'
 
-        col = new HashSet();
+        col = new HashSet()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -90,7 +105,7 @@ class TestUnmodifiableCollection
         assert root.contains('baz')
         assert root.contains('qux')
 
-        col = new TreeSet();
+        col = new TreeSet()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -109,7 +124,7 @@ class TestUnmodifiableCollection
     @Test
     void testUnmodifiableMap()
     {
-        Map map = new LinkedHashMap();
+        Map map = new LinkedHashMap()
         map.foo = 'foot'
         map.bar = 'bart'
         map.baz = 'bastard'
@@ -124,7 +139,7 @@ class TestUnmodifiableCollection
         assert root.baz == 'bastard'
         assert root.qux == 'quixotic'
 
-        map = new TreeMap();
+        map = new TreeMap()
         map.foo = 'foot'
         map.bar = 'bart'
         map.baz = 'bastard'
@@ -139,4 +154,17 @@ class TestUnmodifiableCollection
         assert root.baz == 'bastard'
         assert root.qux == 'quixotic'
     }
+
+    @Test
+    void testUnmodifiableMapHolder() throws Exception
+    {
+        UnmodifiableMapHolder holder = new UnmodifiableMapHolder()
+        String json = JsonWriter.objectToJson(holder)
+        UnmodifiableMapHolder holder1 = (UnmodifiableMapHolder) TestUtil.readJsonObject(json)
+        assert holder1.map.get("North") == 0
+        assert holder1.map.get("South") == 1
+        assert holder1.map.get("East") == 2
+        assert holder1.map.get("West") == 3
+    }
+
 }

@@ -43,7 +43,7 @@ class TestBigDecimal
     }
 
     @Test
-    public void testAssignBigDecimal() throws Exception
+    void testAssignBigDecimal() throws Exception
     {
         String json = '{"@type":"' + TestBigDecimalField.class.name + '","fromString":"3.14159","fromLong":314159,"fromDouble":3.14159,"fromBoolean":true,"fromStringObj":{"@type":"java.math.BigDecimal","value":"3.14159"},"fromLongObj":{"@type":"java.math.BigDecimal","value":314159},"fromDoubleObj":{"@type":"java.math.BigDecimal","value":3.14159},"fromBooleanObj":{"@type":"java.math.BigDecimal","value":false},"fromBigIntObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigInteger","value":72}},"fromBigDecObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.1}},"values":["3.14159",314159,3.14159,true,{"@type":"java.math.BigDecimal","value":"3.14159"},{"@type":"java.math.BigDecimal","value":314159},{"@type":"java.math.BigDecimal","value":3.14159},{"@type":"java.math.BigDecimal","value":true},{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.72}}]}';
         TestBigDecimalField tbd = (TestBigDecimalField) TestUtil.readJsonObject(json)
@@ -98,7 +98,7 @@ class TestBigDecimal
     }
 
     @Test
-    public void testBigDecimal0() throws Exception
+    void testBigDecimal0() throws Exception
     {
         TestBigDecimalField bigDecs = new TestBigDecimalField()
         bigDecs.fromString = new BigDecimal("123.12")
@@ -110,7 +110,7 @@ class TestBigDecimal
     }
 
     @Test
-    public void testBigDecimal() throws Exception
+    void testBigDecimal() throws Exception
     {
         String s = "123456789012345678901234567890.123456789012345678901234567890";
         BigDecimal bigDec = new BigDecimal(s)
@@ -121,7 +121,7 @@ class TestBigDecimal
     }
 
     @Test
-    public void testBigDecimalInArray() throws Exception
+    void testBigDecimalInArray() throws Exception
     {
         String s = "123456789012345678901234567890.123456789012345678901234567890";
         BigDecimal bigDec = new BigDecimal(s)
@@ -142,7 +142,7 @@ class TestBigDecimal
     }
 
     @Test
-    public void testBigDecimalInCollection() throws Exception
+    void testBigDecimalInCollection() throws Exception
     {
         String s = "-123456789012345678901234567890.123456789012345678901234567890";
         BigDecimal bigDec = new BigDecimal(s)

@@ -227,7 +227,7 @@ class TestDates
     }
 
     @Test
-    public void testCustomDateFormat() throws Exception
+    void testCustomDateFormat() throws Exception
     {
         DateTest dt = new DateTest()
         Calendar c = Calendar.instance
@@ -402,7 +402,7 @@ class TestDates
      * per date.  (Date's are more than 8 bytes, longs are 8).
      */
     @Test
-    public void testDateLongSubstitution() throws Exception
+    void testDateLongSubstitution() throws Exception
     {
         long now = System.currentTimeMillis()
         DateTrick d = new DateTrick()
@@ -421,7 +421,7 @@ class TestDates
     }
 
     @Test
-    public void testDateMissingValue() throws Exception
+    void testDateMissingValue() throws Exception
     {
         try
         {
@@ -432,7 +432,7 @@ class TestDates
     }
 
     @Test
-    public void testDates() throws Exception
+    void testDates() throws Exception
     {
         // As root
         long now = System.currentTimeMillis()
@@ -542,7 +542,7 @@ class TestDates
     }
 
     @Test
-    public void testSqlDate() throws Exception
+    void testSqlDate() throws Exception
     {
         long now = System.currentTimeMillis()
         Date[] dates = [new Date(now), new java.sql.Date(now), new Timestamp(now) ] as Date[];

@@ -220,7 +220,7 @@ public class JsonWriter implements Closeable, Flushable
     {
         Map map = JsonReader.jsonToMaps(json);
         Map args = new HashMap();
-        args.put(PRETTY_PRINT, "true");
+        args.put(PRETTY_PRINT, true);
         return objectToJson(map, args);
     }
 
@@ -766,6 +766,13 @@ public class JsonWriter implements Closeable, Flushable
         _args.remove();
     }
 
+    /**
+     * Walk object graph and visit each instance, following each field, each Collection, Map and so on.
+     * Tracks visited count to handle cycles and to determine if an item is referenced elsewhere.  If an
+     * object is never referenced more than once, no @id field needs to be emitted for it.
+     * @param root Object to be deeply traced.  The objVisited and objsReferenced Maps will be written to
+     * during the trace.
+     */
     protected void traceReferences(Object root)
     {
         if (root == null)
@@ -817,6 +824,32 @@ public class JsonWriter implements Closeable, Flushable
                         {   // Slight perf gain (null is legal)
                             stack.addFirst(o);
                         }
+                    }
+                }
+            }
+            else if (Map.class.isAssignableFrom(clazz))
+            {   // Speed up - logically walk maps, as opposed to following their internal structure.
+                Map map = (Map) obj;
+                for (Object item : map.entrySet())
+                {
+                    Map.Entry entry = (Map.Entry) item;
+                    if (entry.getValue() != null)
+                    {
+                        stack.addFirst(entry.getValue());
+                    }
+                    if (entry.getKey() != null)
+                    {
+                        stack.addFirst(entry.getKey());
+                    }
+                }
+            }
+            else if (Collection.class.isAssignableFrom(clazz))
+            {
+                for (Object item : (Collection)obj)
+                {
+                    if (item != null)
+                    {
+                        stack.addFirst(item);
                     }
                 }
             }
@@ -912,6 +945,10 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
+        if (obj != null && JsonReader.isLogicalPrimitive(obj.getClass()))
+        {
+            return false;
+        }
         final Writer output = this.out;
         if (objVisited.containsKey(obj))
         {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
@@ -948,7 +985,7 @@ public class JsonWriter implements Closeable, Flushable
             writeCollection((Collection) obj, showType);
         }
         else if (obj instanceof JsonObject)
-        {   // symmetric support for writing Map of Maps representation back as identical JSON format.
+        {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
             JsonObject jObj = (JsonObject) obj;
             if (jObj.isArray())
             {
@@ -972,8 +1009,10 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (obj instanceof Map)
         {
-            if(!writeMapWithStringKeys((Map) obj, showType))
+            if (!writeMapWithStringKeys((Map) obj, showType))
+            {
                 writeMap((Map) obj, showType);
+            }
         }
         else
         {
@@ -2203,7 +2242,12 @@ public class JsonWriter implements Closeable, Flushable
                 for (Field field : local)
                 {
                     if ((field.getModifiers() & Modifier.STATIC) == 0)
-                    {    // speed up: do not process static fields.
+                    {   // speed up: do not process static fields.
+                        if ("metaClass".equals(field.getName()) && "groovy.lang.MetaClass".equals(field.getType().getName()))
+                        {   // Skip Groovy metaClass field if present
+                            continue;
+                        }
+
                         if (!field.isAccessible())
                         {
                             try

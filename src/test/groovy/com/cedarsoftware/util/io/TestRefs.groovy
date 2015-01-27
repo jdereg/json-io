@@ -69,7 +69,7 @@ class TestRefs
     }
 
     @Test
-    public void testReferences() throws Exception
+    void testReferences() throws Exception
     {
         TestReferences obj = new TestReferences()
         obj.init()

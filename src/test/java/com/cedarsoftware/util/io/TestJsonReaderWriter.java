@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.GregorianCalendar;
@@ -40,8 +39,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -49,7 +46,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -85,7 +81,6 @@ public class TestJsonReaderWriter
 	public static Long _CONST_LONG = new Long(46);
 	public static Float _CONST_FLOAT = new Float(56.56);
 	public static Double _CONST_DOUBLE = new Double(66.66);
-	private static final String newLine = System.getProperty("line.separator");
 
 	private static class TestJsonNoDefaultOrPublicConstructor
 	{
@@ -855,298 +850,6 @@ public class TestJsonReaderWriter
 		assertTrue(root._oBigDecs[2].equals(new BigDecimal("123456789012345678901234567890.123456789012345678901234567890")));
 	}
 
-	private static class TestCollection implements Serializable
-	{
-		private Collection[] _cols;
-		private List _strings_a;
-		private List _strings_b;
-		private List _strings_c;
-		private List _dates_a;
-		private List _dates_b;
-		private List _dates_c;
-		private List _classes_a;
-		private List _classes_b;
-		private List _classes_c;
-		private List _sb_a;
-		private List _sb_b;
-		private List _sb_c;
-		private List _poly_a;
-		private ArrayList _typedCol;
-		private Set _strs_a;
-		private Set _strs_b;
-		private Set _strs_c;
-		private Set _strs_d;
-		private HashSet _typedSet;
-
-		private void init()
-		{
-			Collection array = new ArrayList();
-			array.add(_testDate);
-			array.add("Hello");
-			array.add(new TestObject("fudge"));
-			array.add(_CONST_INT);
-
-			Collection set = new HashSet();
-			set.add(Map.class);
-			set.add(Boolean.TRUE);
-			set.add(null);
-			set.add(_CONST_INT);
-
-			Collection tree = new TreeSet();
-			tree.add(new Integer(Integer.MIN_VALUE));
-			tree.add(new Integer(1));
-			tree.add(new Integer(Integer.MAX_VALUE));
-			tree.add(_CONST_INT);
-
-			_cols = new Collection[] {array, set, tree};
-
-			_strings_a = new LinkedList();
-			_strings_a.add("Alpha");
-			_strings_a.add("Bravo");
-			_strings_a.add("Charlie");
-			_strings_a.add("Delta");
-			_strings_b = new LinkedList();
-			_strings_c = null;
-
-			_dates_a = new ArrayList();
-			_dates_a.add(new Date(0));
-			_dates_a.add(_testDate);
-			_dates_a.add(new Date(Long.MAX_VALUE));
-			_dates_a.add(null);
-			_dates_b = new ArrayList();
-			_dates_c = null;
-
-			_classes_a = new ArrayList();
-			_classes_a.add(boolean.class);
-			_classes_a.add(char.class);
-			_classes_a.add(byte.class);
-			_classes_a.add(short.class);
-			_classes_a.add(int.class);
-			_classes_a.add(long.class);
-			_classes_a.add(float.class);
-			_classes_a.add(double.class);
-			_classes_a.add(String.class);
-			_classes_a.add(Date.class);
-			_classes_a.add(null);
-			_classes_a.add(Class.class);
-			_classes_b = new ArrayList();
-			_classes_c = null;
-
-			_sb_a = new LinkedList();
-			_sb_a.add(new StringBuffer("one"));
-			_sb_a.add(new StringBuffer("two"));
-			_sb_b = new LinkedList();
-			_sb_c = null;
-
-			_poly_a = new ArrayList();
-			_poly_a.add(Boolean.TRUE);
-			_poly_a.add(new Character('a'));
-			_poly_a.add(new Byte((byte) 16));
-			_poly_a.add(new Short((short) 69));
-			_poly_a.add(new Integer(714));
-			_poly_a.add(new Long(420));
-			_poly_a.add(new Float(0.4));
-			_poly_a.add(new Double(3.14));
-			_poly_a.add("Jones'in\tfor\u0019a\ncoke");
-			_poly_a.add(null);
-			_poly_a.add(new StringBuffer("eddie"));
-			_poly_a.add(_testDate);
-			_poly_a.add(Long.class);
-			_poly_a.add(new String[]{"beatles", "stones"});
-			_poly_a.add(new TestObject[]{new TestObject("flint"), new TestObject("stone")});
-			_poly_a.add(new Object[]{"fox", "wolf", "dog", "hound"});
-
-			Set colors = new TreeSet();
-			colors.add(new TestObject("red"));
-			colors.add(new TestObject("green"));
-			colors.add(new TestObject("blue"));
-			_poly_a.add(colors);
-
-			_strs_a = new HashSet();
-			_strs_a.add("Dog");
-			_strs_a.add("Cat");
-			_strs_a.add("Cow");
-			_strs_a.add("Horse");
-			_strs_a.add("Duck");
-			_strs_a.add("Bird");
-			_strs_a.add("Goose");
-			_strs_b = new HashSet();
-			_strs_c = null;
-			_strs_d = new TreeSet();
-			_strs_d.addAll(_strs_a);
-
-			_typedCol = new ArrayList();
-			_typedCol.add("string");
-			_typedCol.add(null);
-			_typedCol.add(new Date(19));
-			_typedCol.add(true);
-			_typedCol.add(17.76);
-			_typedCol.add(TimeZone.getTimeZone("PST"));
-
-			_typedSet = new HashSet();
-			_typedSet.add("string");
-			_typedSet.add(null);
-			_typedSet.add(new Date(19));
-			_typedSet.add(true);
-			_typedSet.add(17.76);
-			_typedSet.add(TimeZone.getTimeZone("PST"));
-		}
-	}
-
-	@Test
-	public void testCollection() throws Exception
-	{
-		TestUtil.printLine("\nTestJsonReaderWriter.testCollection()");
-		TestCollection obj = new TestCollection();
-		obj.init();
-		String jsonOut = TestUtil.getJsonString(obj);
-		TestUtil.printLine(jsonOut);
-
-		TestCollection root = (TestCollection) TestUtil.readJsonObject(jsonOut);
-
-		assertCollection(root);
-
-		JsonWriter writer = new JsonWriter(new ByteArrayOutputStream());
-		writer.write(obj);
-		// TODO: Uncomment to test identity counter strategies
-//        System.out.TestUtil.printLine("writer._identity = " + writer._identity);
-	}
-
-	private void assertCollection(TestCollection root)
-	{
-		assertTrue(root._cols.length == 3);
-		assertTrue(root._cols[0].getClass().equals(ArrayList.class));
-		assertTrue(root._cols[1].getClass().equals(HashSet.class));
-		assertTrue(root._cols[2].getClass().equals(TreeSet.class));
-
-		Collection array = root._cols[0];
-		assertTrue(array.size() == 4);
-		assertTrue(array.getClass().equals(ArrayList.class));
-		List alist = (List) array;
-		assertTrue(alist.get(0).equals(_testDate));
-		assertTrue(alist.get(1).equals("Hello"));
-		assertTrue(alist.get(2).equals(new TestObject("fudge")));
-		assertTrue(alist.get(3).equals(_CONST_INT));
-
-		Collection set = root._cols[1];
-		assertTrue(set.size() == 4);
-		assertTrue(set.getClass().equals(HashSet.class));
-		assertTrue(set.contains(Map.class));
-		assertTrue(set.contains(Boolean.TRUE));
-		assertTrue(set.contains(null));
-		assertTrue(set.contains(_CONST_INT));
-
-		set = root._cols[2];
-		assertTrue(set.size() == 4);
-		assertTrue(set.getClass().equals(TreeSet.class));
-		assertTrue(set.contains(new Integer(Integer.MIN_VALUE)));
-		assertTrue(set.contains(new Integer(1)));
-		assertTrue(set.contains(new Integer(Integer.MAX_VALUE)));
-		assertTrue(set.contains(_CONST_INT));
-
-		assertTrue(root._strings_a.size() == 4);
-		assertTrue(root._strings_a.get(0).equals("Alpha"));
-		assertTrue(root._strings_a.get(1).equals("Bravo"));
-		assertTrue(root._strings_a.get(2).equals("Charlie"));
-		assertTrue(root._strings_a.get(3).equals("Delta"));
-		assertTrue(root._strings_b.isEmpty());
-		assertNull(root._strings_c);
-
-		assertTrue(root._dates_a.size() == 4);
-		assertTrue(root._dates_a.get(0).equals(new Date(0)));
-		assertTrue(root._dates_a.get(1).equals(_testDate));
-		assertTrue(root._dates_a.get(2).equals(new Date(Long.MAX_VALUE)));
-		assertNull(root._dates_a.get(3));
-		assertTrue(root._dates_b.isEmpty());
-		assertNull(root._dates_c);
-
-		assertTrue(root._classes_a.size() == 12);
-		assertTrue(root._classes_a.get(0) == boolean.class);
-		assertTrue(root._classes_a.get(1).equals(char.class));
-		assertTrue(root._classes_a.get(2).equals(byte.class));
-		assertTrue(root._classes_a.get(3).equals(short.class));
-		assertTrue(root._classes_a.get(4).equals(int.class));
-		assertTrue(root._classes_a.get(5).equals(long.class));
-		assertTrue(root._classes_a.get(6).equals(float.class));
-		assertTrue(root._classes_a.get(7).equals(double.class));
-		assertTrue(root._classes_a.get(8).equals(String.class));
-		assertTrue(root._classes_a.get(9).equals(Date.class));
-		assertNull(root._classes_a.get(10));
-		assertTrue(root._classes_a.get(11).equals(Class.class));
-		assertTrue(root._classes_b.isEmpty());
-		assertNull(root._classes_c);
-
-		assertTrue(root._sb_a.size() == 2);
-		assertTrue(root._sb_a.get(0).toString().equals("one"));
-		assertTrue(root._sb_a.get(1).toString().equals("two"));
-		assertTrue(root._sb_b.isEmpty());
-		assertNull(root._sb_c);
-
-		assertTrue(root._poly_a.size() == 17);
-		assertTrue(root._poly_a.get(0).equals(Boolean.TRUE));
-		assertTrue(root._poly_a.get(1).equals(new Character('a')));
-		assertTrue(root._poly_a.get(2).equals(new Byte((byte) 16)));
-		assertTrue(root._poly_a.get(3).equals(new Short((byte) 69)));
-		assertTrue(root._poly_a.get(4).equals(new Integer(714)));
-		assertTrue(root._poly_a.get(5).equals(new Long(420)));
-		assertTrue(root._poly_a.get(6).equals(new Float(0.4)));
-		assertTrue(root._poly_a.get(7).equals(new Double(3.14)));
-		assertTrue(root._poly_a.get(8).equals("Jones'in\tfor\u0019a\ncoke"));
-		assertNull(root._poly_a.get(9));
-		assertTrue(root._poly_a.get(10).toString().equals("eddie"));
-		assertTrue(root._poly_a.get(11).equals(_testDate));
-		assertTrue(root._poly_a.get(12).equals(Long.class));
-
-		String[] sa = (String[]) root._poly_a.get(13);
-		assertTrue(sa[0].equals("beatles"));
-		assertTrue(sa[1].equals("stones"));
-		TestObject[] to = (TestObject[]) root._poly_a.get(14);
-		assertTrue(to[0].getName().equals("flint"));
-		assertTrue(to[1].getName().equals("stone"));
-		Object[] arrayInCol = (Object[]) root._poly_a.get(15);
-		assertTrue(arrayInCol[0].equals("fox"));
-		assertTrue(arrayInCol[1].equals("wolf"));
-		assertTrue(arrayInCol[2].equals("dog"));
-		assertTrue(arrayInCol[3].equals("hound"));
-
-		Set colors = (Set) root._poly_a.get(16);
-		assertTrue(colors.size() == 3);
-		assertTrue(colors.contains(new TestObject("red")));
-		assertTrue(colors.contains(new TestObject("green")));
-		assertTrue(colors.contains(new TestObject("blue")));
-
-		assertTrue(root._strs_a.size() == 7);
-		assertTrue(root._strs_a.contains("Dog"));
-		assertTrue(root._strs_a.contains("Cat"));
-		assertTrue(root._strs_a.contains("Cow"));
-		assertTrue(root._strs_a.contains("Horse"));
-		assertTrue(root._strs_a.contains("Duck"));
-		assertTrue(root._strs_a.contains("Bird"));
-		assertTrue(root._strs_a.contains("Goose"));
-		assertTrue(root._strs_b.isEmpty());
-		assertNull(root._strs_c);
-		assertTrue(root._strs_d.size() == 7);
-		assertTrue(root._strs_d instanceof TreeSet);
-
-		assertTrue(root._typedCol != null);
-		assertTrue(root._typedCol .size() == 6);
-		assertTrue("string".equals(root._typedCol.get(0)));
-		assertTrue(null == root._typedCol.get(1));
-		assertTrue((new Date(19)).equals(root._typedCol.get(2)));
-		assertTrue((Boolean)root._typedCol.get(3));
-		assertTrue(17.76 == (Double) root._typedCol.get(4));
-		assertTrue(TimeZone.getTimeZone("PST").equals(root._typedCol.get(5)));
-
-		assertTrue(root._typedSet != null);
-		assertTrue(root._typedSet .size() == 6);
-		assertTrue(root._typedSet.contains("string"));
-		assertTrue(root._typedCol.contains(null));
-		assertTrue(root._typedCol.contains(new Date(19)));
-		assertTrue(root._typedCol.contains(true));
-		assertTrue(root._typedCol.contains(17.76));
-		assertTrue(root._typedCol.contains(TimeZone.getTimeZone("PST")));
-	}
-
 	private static class TestMap implements Serializable
 	{
 		private HashMap _strings_a;
@@ -1276,384 +979,6 @@ public class TestJsonReaderWriter
 		assertTrue(root._typedMap.size() == 2);
 		assertTrue(root._typedMap.get("a").equals("alpha"));
 		assertTrue(root._typedMap.get("b").equals("bravo"));
-	}
-
-	/**
-	 * Test direct fields for all types, primitives, special handled fields
-	 * like Date, String, and Class, plus regular objects, and circular
-	 * references.
-	 */
-	private static class TestFields implements Serializable
-	{
-		private boolean _boolean_a;
-		private boolean _boolean_b;
-		private Boolean _boolean_c;
-		private Boolean _boolean_d;
-		private Boolean _boolean_e;
-
-		private char _char_a;
-		private char _char_b;
-		private char _char_c;
-		private Character _char_d;
-		private Character _char_e;
-		private Character _char_f;
-		private Character _char_g;
-
-		private byte _byte_a;
-		private byte _byte_b;
-		private Byte _byte_c;
-		private Byte _byte_d;
-		private Byte _byte_e;
-
-		private short _short_a;
-		private short _short_b;
-		private Short _short_c;
-		private Short _short_d;
-		private Short _short_e;
-
-		private int _int_a;
-		private int _int_b;
-		private Integer _int_c;
-		private Integer _int_d;
-		private Integer _int_e;
-
-		private long _long_a;
-		private long _long_b;
-		private Long _long_c;
-		private Long _long_d;
-		private Long _long_e;
-
-		private float _float_a;
-		private float _float_b;
-		private Float _float_c;
-		private Float _float_d;
-		private Float _float_e;
-
-		private double _double_a;
-		private double _double_b;
-		private Double _double_c;
-		private Double _double_d;
-		private Double _double_e;
-
-		private String _string_a;
-		private String _string_b;
-		private String _string_c;
-
-		private Date _date_a;
-		private Date _date_b;
-		private Date _date_c;
-
-		private Class _class_a;
-		private Class _class_b;
-		private Class _class_c;
-		private Class _class_d;
-		private Class _class_e;
-		private Class _class_f;
-		private Class _class_g;
-		private Class _class_h;
-		private Class _class_i;
-		private Class _class_j;
-
-		private StringBuffer _sb_a;
-		private StringBuffer _sb_b;
-		private StringBuffer _sb_c;
-		private Object _sb_d;
-
-		private StringBuilder _sbld_a;
-		private StringBuilder _sbld_b;
-		private StringBuilder _sbld_c;
-		private Object _sbld_d;
-
-		private BigInteger _bigInt;
-		private Object _bigIntO;
-		private BigDecimal _bigDec;
-		private Object _bigDecO;
-
-		// Cycle test
-		private TestObject _cycleTest;
-
-		// Ensure @type is dropped when Collection field type matches instance type
-		// Normally, this is poor coding style, however, the @type field can be dropped
-		// in these cases, making the JSON output smaller.
-		private ArrayList _arrayList_empty;
-		private ArrayList _arrayList_1;
-		private List _arrayList_2;
-		private List _arrayList_3;
-		private List _arrayList_4;
-		private ArrayList _arrayList_5;
-		private List _arrayList_6;
-
-		private HashMap _hashMap_empty;
-		private HashMap _hashMap_1;
-		private Map _hashMap_2;
-		private Map _hashMap_3;
-		private Map _hashMap_4;
-		private HashMap _hashMap_5;
-		private Map _hashMap_6;
-
-		private String[] _stringArray_empty;
-		private String[] _stringArray_1;
-		private Object[] _stringArray_2;
-		private Object[] _stringArray_3;
-		private Object[] _stringArray_4;
-		private String[] _stringArray_5;
-		private Object[] _stringArray_6;
-
-		private void init()
-		{
-			_boolean_a = true;
-			_boolean_b = false;
-			_boolean_c = new Boolean(true);
-			_boolean_d = new Boolean(false);
-			_boolean_e = null;
-
-			_char_a = 'a';
-			_char_b = '\t';
-			_char_c = '\u0004';
-			_char_d = new Character('a');
-			_char_e = new Character('\t');
-			_char_f = new Character('\u0002');
-			_char_g = null;
-
-			_byte_a = -128;
-			_byte_b = 127;
-			_byte_c = new Byte((byte) -128);
-			_byte_d = new Byte((byte) 127);
-			_byte_e = null;
-
-			_short_a = Short.MIN_VALUE;
-			_short_b = Short.MAX_VALUE;
-			_short_c = new Short(Short.MIN_VALUE);
-			_short_d = new Short(Short.MAX_VALUE);
-			_short_e = null;
-
-			_int_a = Integer.MIN_VALUE;
-			_int_b = Integer.MAX_VALUE;
-			_int_c = new Integer(Integer.MIN_VALUE);
-			_int_d = new Integer(Integer.MAX_VALUE);
-			_int_e = null;
-
-			_long_a = Long.MIN_VALUE;
-			_long_b = Long.MAX_VALUE;
-			_long_c = new Long(Long.MIN_VALUE);
-			_long_d = new Long(Long.MAX_VALUE);
-			_long_e = null;
-
-			_float_a = Float.MIN_VALUE;
-			_float_b = Float.MAX_VALUE;
-			_float_c = new Float(Float.MIN_VALUE);
-			_float_d = new Float(Float.MAX_VALUE);
-			_float_e = null;
-
-			_double_a = Double.MIN_VALUE;
-			_double_b = Double.MAX_VALUE;
-			_double_c = new Double(Double.MIN_VALUE);
-			_double_d = new Double(Double.MAX_VALUE);
-			_double_e = null;
-
-			_string_a = "Hello";
-			_string_b = "";
-			_string_c = null;
-
-			_date_a = _testDate;
-			_date_b = new Date(0);
-			_date_c = null;
-
-			_class_a = boolean.class;
-			_class_b = char.class;
-			_class_c = byte.class;
-			_class_d = short.class;
-			_class_e = int.class;
-			_class_f = long.class;
-			_class_g = float.class;
-			_class_h = double.class;
-			_class_i = String.class;
-			_class_j = null;
-
-			_sb_a = new StringBuffer("holstein");
-			_sb_b = new StringBuffer();
-			_sb_c = null;
-			_sb_d = new StringBuffer("viper");
-
-			_sbld_a = new StringBuilder("holstein");
-			_sbld_b = new StringBuilder();
-			_sbld_c = null;
-			_sbld_d = new StringBuilder("viper");
-
-			_bigInt = new BigInteger("25");
-			_bigIntO = new BigInteger("25");
-			_bigDec = new BigDecimal("25.0");
-			_bigDecO = new BigDecimal("25.0");
-
-			TestObject a = new TestObject("A");
-			TestObject b = new TestObject("B");
-			TestObject c = new TestObject("C");
-			a._other = b;
-			b._other = c;
-			c._other = a;
-			_cycleTest = a;
-
-			_arrayList_empty = new ArrayList();
-			_arrayList_1 = new ArrayList();
-			_arrayList_1.add("should be no id, no type");
-			_arrayList_2 = new ArrayList();
-			_arrayList_2.add("should have type, but no id");
-			_arrayList_3 = new ArrayList();
-			_arrayList_3.add("should have id and type");
-			_arrayList_4 = _arrayList_3;
-			_arrayList_5 = new ArrayList();
-			_arrayList_5.add("should have id, but no type");
-			_arrayList_6 = _arrayList_5;
-
-			_hashMap_empty = new HashMap();
-			_hashMap_1 = new HashMap();
-			_hashMap_1.put("mapkey", "should have no id or type");
-			_hashMap_2 = new HashMap();
-			_hashMap_2.put("mapkey", "should have type, but no id");
-			_hashMap_3 = new HashMap();
-			_hashMap_3.put("mapkey", "should have id and type");
-			_hashMap_4 = _hashMap_3;
-			_hashMap_5 = new HashMap();
-			_hashMap_5.put("mapkey", "should have id, but no type");
-			_hashMap_6 = _hashMap_5;
-
-			_stringArray_empty = new String[]{};
-			_stringArray_1 = new String[]{"should have no id, no type"};
-			_stringArray_2 = new String[]{"should have type, but no id"};
-			_stringArray_3 = new String[]{"should have id and type"};
-			_stringArray_4 = _stringArray_3;
-			_stringArray_5 = new String[]{"should have id, but not type"};
-			_stringArray_6 = _stringArray_5;
-		}
-	}
-
-	@Test
-	public void testFields() throws Exception
-	{
-		TestFields obj = new TestFields();
-		obj.init();
-		String jsonOut = TestUtil.getJsonString(obj);
-		TestUtil.printLine(jsonOut);
-
-		TestFields root = (TestFields) TestUtil.readJsonObject(jsonOut);
-		assertFields(root);
-	}
-
-	private void assertFields(TestFields root)
-	{
-		assertTrue(root._boolean_a);
-		assertFalse(root._boolean_b);
-		assertTrue(root._boolean_c.booleanValue());
-		assertFalse(root._boolean_d.booleanValue());
-		assertNull(root._boolean_e);
-
-		assertTrue(root._char_a == 'a');
-		assertTrue(root._char_b == '\t');
-		assertTrue(root._char_c == '\u0004');
-		assertTrue(root._char_d.equals(new Character('a')));
-		assertTrue(root._char_e.equals(new Character('\t')));
-		assertTrue(root._char_f.equals(new Character('\u0002')));
-		assertNull(root._char_g);
-
-		assertTrue(root._byte_a == Byte.MIN_VALUE);
-		assertTrue(root._byte_b == Byte.MAX_VALUE);
-		assertTrue(root._byte_c.equals(new Byte(Byte.MIN_VALUE)));
-		assertTrue(root._byte_d.equals(new Byte(Byte.MAX_VALUE)));
-		assertNull(root._byte_e);
-
-		assertTrue(root._short_a == Short.MIN_VALUE);
-		assertTrue(root._short_b == Short.MAX_VALUE);
-		assertTrue(root._short_c.equals(new Short(Short.MIN_VALUE)));
-		assertTrue(root._short_d.equals(new Short(Short.MAX_VALUE)));
-		assertNull(root._short_e);
-
-		assertTrue(root._int_a == Integer.MIN_VALUE);
-		assertTrue(root._int_b == Integer.MAX_VALUE);
-		assertTrue(root._int_c.equals(new Integer(Integer.MIN_VALUE)));
-		assertTrue(root._int_d.equals(new Integer(Integer.MAX_VALUE)));
-		assertNull(root._int_e);
-
-		assertTrue(root._long_a == Long.MIN_VALUE);
-		assertTrue(root._long_b == Long.MAX_VALUE);
-		assertTrue(root._long_c.equals(new Long(Long.MIN_VALUE)));
-		assertTrue(root._long_d.equals(new Long(Long.MAX_VALUE)));
-		assertNull(root._long_e);
-
-		assertTrue(root._float_a == Float.MIN_VALUE);
-		assertTrue(root._float_b == Float.MAX_VALUE);
-		assertTrue(root._float_c.equals(new Float(Float.MIN_VALUE)));
-		assertTrue(root._float_d.equals(new Float(Float.MAX_VALUE)));
-		assertNull(root._float_e);
-
-		assertTrue(root._double_a == Double.MIN_VALUE);
-		assertTrue(root._double_b == Double.MAX_VALUE);
-		assertTrue(root._double_c.equals(new Double(Double.MIN_VALUE)));
-		assertTrue(root._double_d.equals(new Double(Double.MAX_VALUE)));
-		assertNull(root._double_e);
-
-		assertTrue(root._string_a.equals("Hello"));
-		assertTrue(root._string_b.equals(""));
-		assertNull(root._string_c);
-
-		assertTrue(root._date_a.equals(_testDate));
-		assertTrue(root._date_b.equals(new Date(0)));
-		assertNull(root._date_c);
-
-		assertTrue(root._class_a.equals(boolean.class));
-		assertTrue(root._class_b.equals(char.class));
-		assertTrue(root._class_c.equals(byte.class));
-		assertTrue(root._class_d.equals(short.class));
-		assertTrue(root._class_e.equals(int.class));
-		assertTrue(root._class_f.equals(long.class));
-		assertTrue(root._class_g.equals(float.class));
-		assertTrue(root._class_h.equals(double.class));
-		assertTrue(root._class_i.equals(String.class));
-		assertNull(root._class_j);
-
-		assertTrue("holstein".equals(root._sb_a.toString()));
-		assertTrue(root._sb_b.toString().equals(""));
-		assertNull(root._sb_c);
-		assertTrue("viper".equals(root._sb_d.toString()));
-
-		assertTrue("holstein".equals(root._sb_a.toString()));
-		assertTrue(root._sb_b.toString().equals(""));
-		assertNull(root._sb_c);
-		assertTrue("viper".equals(root._sb_d.toString()));
-
-		assertTrue(root._bigInt.equals(new BigInteger("25")));
-		assertTrue(root._bigIntO.equals(new BigInteger("25")));
-		assertTrue(root._bigDec.equals(new BigDecimal("25.0")));
-		assertTrue(root._bigDec.equals(new BigDecimal("25.0")));
-
-		assertTrue(root._cycleTest._name.equals("A"));
-		assertTrue(root._cycleTest._other._name.equals("B"));
-		assertTrue(root._cycleTest._other._other._name.equals("C"));
-		assertTrue(root._cycleTest._other._other._other._name.equals("A"));
-		assertTrue(root._cycleTest == root._cycleTest._other._other._other);
-
-		assertTrue(root._arrayList_empty.isEmpty());
-		assertTrue(root._arrayList_1.size() == 1);
-		assertTrue(root._arrayList_2.size() == 1);
-		assertTrue(root._arrayList_3.size() == 1);
-		assertTrue(root._arrayList_4 == root._arrayList_3);
-		assertTrue(root._arrayList_5.size() == 1);
-		assertTrue(root._arrayList_6 == root._arrayList_5);
-
-		assertTrue(root._hashMap_empty.isEmpty());
-		assertTrue(root._hashMap_1.size() == 1);
-		assertTrue(root._hashMap_2.size() == 1);
-		assertTrue(root._hashMap_3.size() == 1);
-		assertTrue(root._hashMap_4 == root._hashMap_3);
-		assertTrue(root._hashMap_5.size() == 1);
-		assertTrue(root._hashMap_6 == root._hashMap_5);
-
-		assertTrue(root._stringArray_empty.length == 0);
-		assertTrue(root._stringArray_1.length == 1);
-		assertTrue(root._stringArray_2.length == 1);
-		assertTrue(root._stringArray_3.length == 1);
-		assertTrue(root._stringArray_4 == root._stringArray_3);
-		assertTrue(root._stringArray_5.length == 1);
-		assertTrue(root._stringArray_6 == root._stringArray_5);
 	}
 
 	@Test
@@ -2983,70 +2308,12 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
-	public void testCollectionWithEmptyElement() throws Exception
-	{
-		List list = new ArrayList();
-		list.add("a");
-		list.add(null);
-		list.add("b");
-		String json = TestUtil.getJsonString(list);
-		List list2 = (List) TestUtil.readJsonObject(json);
-		assertTrue(list.equals(list2));
-
-		json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[\"a\",{},\"b\"]}";
-		list2 = (List) TestUtil.readJsonObject(json);
-		assertTrue(list2.size() == 3);
-		assertTrue(list2.get(0).equals("a"));
-		assertTrue(list2.get(1).getClass().equals(JsonObject.class));
-		assertTrue(list2.get(2).equals("b"));
-	}
-
-	@Test
-	public void testCollectionWithReferences() throws Exception
-	{
-		TestObject o = new TestObject("JSON");
-		List list = new ArrayList();
-		list.add(o);
-		list.add(o);
-
-		// Backward reference
-		String json = TestUtil.getJsonString(list);
-		TestUtil.printLine("json=" + json);
-		List list2 = (List) TestUtil.readJsonObject(json);
-		assertTrue(list.equals(list2));
-
-		// Forward reference
-		String pkg = TestObject.class.getName();
-		json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":3},{\"@id\":3,\"@type\":\"" + pkg + "\",\"_name\":\"JSON\",\"_other\":null}]}";
-		list2 = (List) JsonReader.jsonToJava(json);
-		assertTrue(list.equals(list2));
-	}
-
-	@Test
 	public void testEmptyArray() throws Exception
 	{
 		String json = "{\"@type\":\"[Ljava.lang.String;\"}";
 		String[] s = (String[])JsonReader.jsonToJava(json);
 		assertTrue(s != null);
 		assertTrue(s.length == 0);
-	}
-
-	public static class TestLocale implements Serializable
-	{
-		private Locale _loc;
-	}
-
-	@Test
-	public void testLocaleAsField() throws Exception
-	{
-		Locale locale = Locale.getDefault();
-		TestLocale tl = new TestLocale();
-		tl._loc = locale;
-		String json = TestUtil.getJsonString(tl);
-		TestUtil.printLine("json=" + json);
-
-		tl = (TestLocale) TestUtil.readJsonObject(json);
-		assertTrue(locale.equals(tl._loc));
 	}
 
 	@Test
@@ -3102,19 +2369,6 @@ public class TestJsonReaderWriter
 		assertTrue(lArray.length == 1);
 		us = lArray[0];
 		assertTrue(locale.equals(us));
-	}
-
-	@Test
-	public void testLocaleInCollection() throws Exception
-	{
-		Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
-		List list = new ArrayList();
-		list.add(locale);
-		String json = TestUtil.getJsonString(list);
-		TestUtil.printLine("json=" + json);
-		list = (List) TestUtil.readJsonObject(json);
-		assertTrue(list.size() == 1);
-		assertTrue(list.get(0).equals(locale));
 	}
 
 	@Test
@@ -3527,18 +2781,6 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
-	public void testCollectionWithNonJsonPrimitives() throws Exception
-	{
-		Collection col = new ArrayList();
-		col.add(new Integer(7));
-		col.add(new Short((short) 9));
-		col.add(new Float(3.14));
-		String json = TestUtil.getJsonString(col);
-		Collection col1 = (Collection) TestUtil.readJsonObject(json);
-		assertTrue(col.equals(col1));
-	}
-
-	@Test
 	public void testWriterObjectAPI() throws Exception
 	{
 		String json = "[1,true,null,3.14,[]]";
@@ -3628,154 +2870,6 @@ public class TestJsonReaderWriter
 		assertTrue(args[9].equals(new Double(3.14159)));
 		assertTrue(args[10].equals(Long.MIN_VALUE));
 		assertTrue(args[11].equals(Long.MAX_VALUE));
-	}
-
-	@Test
-	public void testUntypedCollections() throws Exception
-	{
-		Object[] poly = new Object[] {"Road Runner", 16L, 3.1415, true, false, null, 7, "Coyote", "Coyote"};
-		String json = TestUtil.getJsonString(poly);
-		TestUtil.printLine("json=" + json);
-		assertTrue("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]".equals(json));
-		Collection col = new ArrayList();
-		col.add("string");
-		col.add(new Long(16));
-		col.add(new Double(3.14159));
-		col.add(Boolean.TRUE);
-		col.add(Boolean.FALSE);
-		col.add(null);
-		col.add(new Integer(7));
-		json = TestUtil.getJsonString(col);
-		TestUtil.printLine("json=" + json);
-		assertTrue("{\"@type\":\"java.util.ArrayList\",\"@items\":[\"string\",16,3.14159,true,false,null,{\"@type\":\"int\",\"value\":7}]}".equals(json));
-	}
-
-	@Test
-	public void testMapOfMapsSimpleArray() throws Exception
-	{
-		String s = "[{\"@ref\":1},{\"name\":\"Jack\",\"age\":21,\"@id\":1}]";
-		Map map = JsonReader.jsonToMaps(s);
-		Object[] list = (Object[]) map.get("@items");
-		assertTrue(list[0] == list[1]);
-	}
-
-	@Test
-	public void testMapOfMapsWithFieldAndArray() throws Exception
-	{
-		String s = "[\n" +
-				" {\"name\":\"Jack\",\"age\":21,\"@id\":1},\n" +
-				" {\"@ref\":1},\n" +
-				" {\"@ref\":2},\n" +
-				" {\"husband\":{\"@ref\":1}},\n" +
-				" {\"wife\":{\"@ref\":2}},\n" +
-				" {\"attendees\":[{\"@ref\":1},{\"@ref\":2}]},\n" +
-				" {\"name\":\"Jill\",\"age\":18,\"@id\":2},\n" +
-				" {\"witnesses\":[{\"@ref\":1},{\"@ref\":2}]}\n" +
-				"]";
-
-		TestUtil.printLine("json=" + s);
-		Map map = JsonReader.jsonToMaps(s);
-		TestUtil.printLine("map=" + map);
-		Object[] items = (Object[]) map.get("@items");
-		assertTrue(items.length == 8);
-		Map husband = (Map) items[0];
-		Map wife = (Map) items[6];
-		assertTrue(items[1] == husband);
-		assertTrue(items[2] == wife);
-		map = (Map) items[3];
-		assertTrue(map.get("husband") == husband);
-		map = (Map) items[4];
-		assertTrue(map.get("wife") == wife);
-		map = (Map) items[5];
-		map = (Map) map.get("attendees");
-		Object[] attendees = (Object[]) map.get("@items");
-		assertTrue(attendees.length == 2);
-		assertTrue(attendees[0] == husband);
-		assertTrue(attendees[1] == wife);
-		map = (Map) items[7];
-		map = (Map) map.get("witnesses");
-		Object[] witnesses = (Object[]) map.get("@items");
-		assertTrue(witnesses.length == 2);
-		assertTrue(witnesses[0] == husband);
-		assertTrue(witnesses[1] == wife);
-	}
-
-	@Test
-	public void testMapOfMapsCollection() throws Exception
-	{
-		List stuff = new ArrayList();
-		stuff.add("Hello");
-		Object testObj = new TestObject("test object");
-		stuff.add(testObj);
-		stuff.add(testObj);
-		stuff.add(new Date());
-		String json = TestUtil.getJsonString(stuff);
-		TestUtil.printLine("json=" + json);
-
-		Map map = JsonReader.jsonToMaps(json);
-		TestUtil.printLine("map=" + map);
-		Object[] items = (Object[]) map.get("@items");
-		assertTrue(items.length == 4);
-		assertTrue("Hello".equals(items[0]));
-		assertTrue(items[1] == items[2]);
-
-		List list = new ArrayList();
-		list.add(new Object[] {123L, null, true, "Hello"});
-		json = TestUtil.getJsonString(list);
-		TestUtil.printLine("json=" + json);
-		map = JsonReader.jsonToMaps(json);
-		items = (Object[]) map.get("@items");
-		assertTrue(items.length == 1);
-		Object[] oa = (Object[]) items[0];
-		assertTrue(oa.length == 4);
-		assertTrue(oa[0].equals(123L));
-		assertTrue(oa[1] == null);
-		assertTrue(oa[2] == Boolean.TRUE);
-		assertTrue("Hello".equals(oa[3]));
-	}
-
-	@Test
-	public void testMapOfMapsMap() throws Exception
-	{
-		Map stuff = new TreeMap();
-		stuff.put("a", "alpha");
-		Object testObj = new TestObject("test object");
-		stuff.put("b", testObj);
-		stuff.put("c", testObj);
-		stuff.put(testObj, 1.0f);
-		String json = TestUtil.getJsonString(stuff);
-		TestUtil.printLine("json=" + json);
-
-		Map map = JsonReader.jsonToMaps(json);
-		TestUtil.printLine("map=" + map);
-		Object aa = map.get("a");
-		Map bb = (Map) map.get("b");
-		Map cc = (Map) map.get("c");
-
-		assertTrue(aa.equals("alpha"));
-		assertTrue(bb.get("_name").equals("test object"));
-		assertTrue(bb.get("_other") == null);
-		assertTrue(bb == cc);
-		assertTrue(map.size() == 4);    // contains @type entry
-	}
-
-	@Test
-	public void testMapOfMapsPrimitivesInArray() throws Exception
-	{
-		Date date = new Date();
-		Calendar cal = Calendar.getInstance();
-		TestUtil.printLine("cal=" + cal);
-		Class strClass = String.class;
-		Object[] prims = new Object[] { true, Boolean.TRUE, (byte)8, (short)1024, 131072, 16777216, 3.14, 3.14f, 'x', "hello", date, cal, strClass};
-		String json = TestUtil.getJsonString(prims);
-		TestUtil.printLine("json=" + json);
-		Object[] javaObjs = (Object[]) TestUtil.readJsonObject(json);
-		assertTrue(prims.length == javaObjs.length);
-
-		for (int i=0; i < javaObjs.length; i ++)
-		{
-			assertTrue(javaObjs[i].equals(prims[i]));
-		}
 	}
 
 	private enum TestEnum1 { A, B, C }
@@ -3879,25 +2973,6 @@ public class TestJsonReaderWriter
 		json = new String(ba.toByteArray());
 		TestUtil.printLine(json);
 		assertEquals("{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"name\":\"B\",\"ordinal\":1}", json);
-	}
-
-	@Test
-	public void testEnumWithPrivateMembersInCollection() throws Exception
-	{
-		TestEnum4 x = TestEnum4.B;
-		List list = new ArrayList();
-		list.add(x);
-		String json = TestUtil.getJsonString(list);
-		TestUtil.printLine(json);
-		assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"internal\":6,\"age\":21,\"foo\":\"bar\",\"name\":\"B\",\"ordinal\":1}]}", json);
-
-		ByteArrayOutputStream ba = new ByteArrayOutputStream();
-		JsonWriter writer = new JsonWriter(ba);
-		writer.getArgs().put(JsonWriter.ENUM_PUBLIC_ONLY, true);
-		writer.write(list);
-		json = new String(ba.toByteArray());
-		TestUtil.printLine(json);
-		assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$TestEnum4\",\"name\":\"B\",\"ordinal\":1}]}", json);
 	}
 
 	@Test
@@ -4250,84 +3325,6 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
-	public void testReconstituteCollection() throws Exception
-	{
-		TestObject to = new TestObject("football");
-		Collection objs = new ArrayList();
-		Date now = new Date();
-		objs.add(now);
-		objs.add(123.45);
-		objs.add("This is a string");
-		objs.add(null);
-		objs.add(to);
-		objs.add(new Object[] {"dog", new String[] {"a","b","c"}});
-		Collection two = new ArrayList();
-		two.add(objs);
-		two.add("bella");
-		two.add(objs);
-
-		String json0 = TestUtil.getJsonString(two);
-		TestUtil.printLine("json0=" + json0);
-		Map map = JsonReader.jsonToMaps(json0);
-		map.hashCode();
-		String json1 = TestUtil.getJsonString(map);
-		TestUtil.printLine("json1=" + json1);
-
-		List colOuter = (List) TestUtil.readJsonObject(json1);
-		assertTrue(colOuter.get(0) == colOuter.get(2));
-		assertTrue("bella".equals(colOuter.get(1)));
-		List col1 = (List) colOuter.get(0);
-		assertTrue(col1.get(0).equals(now));
-		assertTrue(col1.get(1).equals(123.45));
-		assertTrue("This is a string".equals(col1.get(2)));
-		assertTrue(col1.get(3) == null);
-		assertTrue(col1.get(4).equals(to));
-		assertTrue(col1.get(5) instanceof Object[]);
-		Object[] oa = (Object[]) col1.get(5);
-		assertTrue("dog".equals(oa[0]));
-		assertTrue(oa[1] instanceof String[]);
-		String[] sa = (String[]) oa[1];
-		assertTrue("a".equals(sa[0]));
-		assertTrue("b".equals(sa[1]));
-		assertTrue("c".equals(sa[2]));
-
-		assertTrue(json0.equals(json1));
-	}
-
-	@Test
-	public void testReconstituteEmptyCollection() throws Exception
-	{
-		Collection empty = new ArrayList();
-		String json0 = TestUtil.getJsonString(empty);
-		TestUtil.printLine("json0=" + json0);
-
-		Map map = JsonReader.jsonToMaps(json0);
-		assertTrue(map != null);
-		assertTrue(map.isEmpty());
-		String json1 = TestUtil.getJsonString(map);
-		TestUtil.printLine("json1=" + json1);
-
-		assertTrue(json0.equals(json1));
-
-		Object[] list = new Object[] {empty, empty};
-		json0 = TestUtil.getJsonString(list);
-		TestUtil.printLine("json=" + json0);
-
-		map = JsonReader.jsonToMaps(json0);
-		assertTrue(map != null);
-		list = (Object[]) map.get("@items");
-		assertTrue(list.length == 2);
-		Map e1 = (Map) list[0];
-		Map e2 = (Map) list[1];
-		assertTrue(e1.isEmpty());
-		assertTrue(e2.isEmpty());
-
-		json1 = TestUtil.getJsonString(map);
-		TestUtil.printLine("json1=" + json1);
-		assertTrue(json0.equals(json1));
-	}
-
-	@Test
 	public void testReconstituteEmptyObject() throws Exception
 	{
 		Empty empty = new Empty();
@@ -4356,23 +3353,6 @@ public class TestJsonReaderWriter
 
 		TestMap testMap3 = (TestMap) TestUtil.readJsonObject(json1);
 		assertMap(testMap3);   // Re-written from Map of Maps and re-loaded correctly
-		assertTrue(json0.equals(json1));
-	}
-
-	@Test
-	public void testReconstituteCollection2() throws Exception
-	{
-		TestCollection testCol = new TestCollection();
-		testCol.init();
-		String json0 = TestUtil.getJsonString(testCol);
-		TestUtil.printLine("json0=" + json0);
-		Map testCol2 = JsonReader.jsonToMaps(json0);
-
-		String json1 = TestUtil.getJsonString(testCol2);
-		TestUtil.printLine("json1=" + json1);
-
-		TestCollection testCol3 = (TestCollection) TestUtil.readJsonObject(json1);
-		assertCollection(testCol3);   // Re-written from Map of Maps and re-loaded correctly
 		assertTrue(json0.equals(json1));
 	}
 
@@ -4433,23 +3413,6 @@ public class TestJsonReaderWriter
 		assertTrue(((Map)root[0]).isEmpty());
 		assertTrue(root[1] instanceof Map);
 		assertTrue(((Map) root[1]).isEmpty());
-		assertTrue(json0.equals(json1));
-	}
-
-	@Test
-	public void testReconstituteFields() throws Exception
-	{
-		TestFields testFields = new TestFields();
-		testFields.init();
-		String json0 = TestUtil.getJsonString(testFields);
-		TestUtil.printLine("json0=" + json0);
-		Map testFields2 = JsonReader.jsonToMaps(json0);
-
-		String json1 = TestUtil.getJsonString(testFields2);
-		TestUtil.printLine("json1=" + json1);
-
-		TestFields testFields3 = (TestFields) TestUtil.readJsonObject(json1);
-		assertFields(testFields3);   // Re-written from Map of Maps and re-loaded correctly
 		assertTrue(json0.equals(json1));
 	}
 
@@ -4909,39 +3872,6 @@ public class TestJsonReaderWriter
 		assertEquals(json, json1);
 	}
 
-	static class EmptyCols
-	{
-		Collection col = new LinkedList();
-		List list = new ArrayList();
-		Map map = new HashMap();
-		Set set = new HashSet();
-		SortedSet sortedSet = new TreeSet();
-		SortedMap sortedMap = new TreeMap();
-	}
-
-	@Test
-	public void testEmptyCollections() throws Exception
-	{
-		EmptyCols emptyCols;
-		String className = TestJsonReaderWriter.class.getName();
-		String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
-		TestUtil.printLine("json = " + json);
-		emptyCols = (EmptyCols) TestUtil.readJsonObject(json);
-
-		assertTrue(emptyCols.col.size() == 0);
-		assertTrue(emptyCols.col instanceof ArrayList);
-		assertTrue(emptyCols.list.size() == 0);
-		assertTrue(emptyCols.list instanceof ArrayList);
-		assertTrue(emptyCols.map.size() == 0);
-		assertTrue(emptyCols.map instanceof LinkedHashMap);
-		assertTrue(emptyCols.set.size() == 0);
-		assertTrue(emptyCols.set instanceof LinkedHashSet);
-		assertTrue(emptyCols.sortedSet.size() == 0);
-		assertTrue(emptyCols.sortedSet instanceof TreeSet);
-		assertTrue(emptyCols.sortedMap.size() == 0);
-		assertTrue(emptyCols.sortedMap instanceof TreeMap);
-	}
-
 	@Test
 	public void testErrorReporting() throws IOException
 	{
@@ -4976,20 +3906,6 @@ public class TestJsonReaderWriter
 		TestArray thatTa = (TestArray) TestUtil.readJsonObject(json0);
 		assertTrue(DeepEquals.deepEquals(ta, thatTa));
 		json1 = JsonWriter.objectToJson(ta);
-		TestUtil.printLine("json0 = " + json0);
-		TestUtil.printLine("json1 = " + json1);
-		assertTrue(json0.length() > json1.length());
-
-		TestFields tf = new TestFields();
-		tf.init();
-		json0 = JsonWriter.objectToJson(tf, args);
-		json1 = JsonWriter.objectToJson(tf);
-		assertTrue(json0.length() > json1.length());
-
-		TestCollection tc = new TestCollection();
-		tc.init();
-		json0 = JsonWriter.objectToJson(tc, args);
-		json1 = JsonWriter.objectToJson(tc);
 		TestUtil.printLine("json0 = " + json0);
 		TestUtil.printLine("json1 = " + json1);
 		assertTrue(json0.length() > json1.length());
@@ -5054,66 +3970,9 @@ public class TestJsonReaderWriter
 		assertTrue(chars_b[2] =='\u0002');
 	}
 
-	static class PointList
-	{
-		List<Point> points;
-	}
-
-	@Test
-	public void testGenericInfoCollection() throws Exception
-	{
-		String className = PointList.class.getName();
-		String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
-		PointList list = (PointList) TestUtil.readJsonObject(json);
-		assertTrue(list.points.size() == 1);
-		Point p1 = list.points.get(0);
-		assertTrue(p1.x == 1 && p1.y == 2);
-	}
-
-	static class ParameterizedCollection
-	{
-		Map<String, Set<Point>> content = new LinkedHashMap<String, Set<Point>>();
-	}
-
-	@Test
-	public void testCollectionWithParameterizedTypes() throws Exception
-	{
-		String json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[{\"x\":1,\"y\":2},{\"x\":10,\"y\":20}],\"bar\":[{\"x\":3,\"y\":4}, {\"x\":30,\"y\":40}]}}";
-		ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
-		Set<Point> points = pCol.content.get("foo");
-		assertNotNull(points);
-		assertEquals(2, points.size());
-		points.contains(new Point(1, 2));
-		points.contains(new Point(10, 20));
-
-		points = pCol.content.get("bar");
-		assertNotNull(points);
-		assertEquals(2, points.size());
-		points.contains(new Point(3, 4));
-		points.contains(new Point(30, 40));
-
-		json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[],\"bar\":null}}";
-		pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
-		points = pCol.content.get("foo");
-		assertNotNull(points);
-		assertEquals(0, points.size());
-
-		points = pCol.content.get("bar");
-		assertNull(points);
-
-		json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{}}";
-		pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
-		assertNotNull(pCol.content);
-		assertEquals(0, pCol.content.size());
-
-		json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":null}";
-		pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
-		assertNull(pCol.content);
-	}
-
 	static class ParameterizedMap
 	{
-		Map<String, Map<String, Point>> content = new LinkedHashMap<String, Map<String, Point>>();
+		Map<String, Map<String, Point>> content = new LinkedHashMap<>();
 	}
 
 	@Test
@@ -5178,12 +4037,12 @@ public class TestJsonReaderWriter
 	public void testMapSetKey() throws Exception
 	{
 		MapSetKey m = new MapSetKey();
-		m.content = new LinkedHashMap<Set<Point>, String>();
-		Set<Point> setA = new LinkedHashSet<Point>();
+		m.content = new LinkedHashMap<>();
+		Set<Point> setA = new LinkedHashSet<>();
 		setA.add(new Point(1, 2));
 		setA.add(new Point(10, 20));
 		m.content.put(setA, "foo");
-		Set<Point> setB = new LinkedHashSet<Point>();
+		Set<Point> setB = new LinkedHashSet<>();
 		setB.add(new Point(3, 4));
 		setB.add(new Point(30, 40));
 		m.content.put(setB, "bar");
@@ -5194,14 +4053,14 @@ public class TestJsonReaderWriter
 		assertEquals("bar", x.content.get(setB));
 
 		m = new MapSetKey();
-		m.content = new LinkedHashMap<Set<Point>, String>();
+		m.content = new LinkedHashMap<>();
 		m.content.put(null, null);
 		json = TestUtil.getJsonString(m);
 		x = (MapSetKey) TestUtil.readJsonObject(json);
 		assertNull(x.content.get(null));
 
 		m = new MapSetKey();
-		m.content = new LinkedHashMap<Set<Point>, String>();
+		m.content = new LinkedHashMap<>();
 		m.content.put(new LinkedHashSet(), "Fargo");
 		json = TestUtil.getJsonString(m);
 		x = (MapSetKey) TestUtil.readJsonObject(json);
@@ -5217,7 +4076,7 @@ public class TestJsonReaderWriter
 	public void testMapArrayKey() throws Exception
 	{
 		MapArrayKey m = new MapArrayKey();
-		m.content = new LinkedHashMap<Object[], String>();
+		m.content = new LinkedHashMap<>();
 		Object[] arrayA = new Object[2];
 		arrayA[0] = new Point(1, 2);
 		arrayA[1] = new Point(10, 20);
@@ -5353,87 +4212,6 @@ public class TestJsonReaderWriter
 		}
 	}
 
-	class TestVanillaFields
-	{
-		Object name;
-		Object salary;
-		Comparable age;
-		Serializable alive;
-		Object garbage;
-	}
-
-	@Test
-	public void testAssignToObjectField() throws Exception
-	{
-		String json = "{\"@type\":\"" + TestVanillaFields.class.getName() + "\",\"name\":\"Nakamoto\",\"salary\":100.45,\"age\":48,\"alive\":true,\"garbage\":null}";
-		TestVanillaFields vanilla = (TestVanillaFields) TestUtil.readJsonObject(json);
-		assertEquals(vanilla.name, "Nakamoto");
-		assertEquals(vanilla.salary, 100.45);
-		assertEquals(vanilla.age, 48L);
-		assertEquals(vanilla.alive, true);
-		assertEquals(vanilla.garbage, null);
-	}
-
-	static class Nice
-	{
-		private String name;
-		private Collection items;
-		private Map dictionary;
-	}
-
-	@Test
-	public void testPrettyPrint() throws Exception
-	{
-		Nice nice = new Nice();
-		nice.name = "Louie";
-		nice.items = new ArrayList();
-		nice.items.add("One");
-		nice.items.add(1L);
-		nice.items.add(1);
-		nice.items.add(true);
-		nice.dictionary = new LinkedHashMap();
-		nice.dictionary.put("grade", "A");
-		nice.dictionary.put("price", 100.0);
-		nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
-
-		String target = "{\n" +
-				"  \"@type\":\"com.cedarsoftware.util.io.TestJsonReaderWriter$Nice\",\n" +
-				"  \"name\":\"Louie\",\n" +
-				"  \"items\":{\n" +
-				"    \"@type\":\"java.util.ArrayList\",\n" +
-				"    \"@items\":[\n" +
-				"      \"One\",\n" +
-				"      1,\n" +
-				"      {\n" +
-				"        \"@type\":\"int\",\n" +
-				"        \"value\":1\n" +
-				"      },\n" +
-				"      true\n" +
-				"    ]\n" +
-				"  },\n" +
-				"  \"dictionary\":{\n" +
-				"    \"@type\":\"java.util.LinkedHashMap\",\n" +
-				"    \"grade\":\"A\",\n" +
-				"    \"price\":100.0,\n" +
-				"    \"bigdec\":{\n" +
-				"      \"@type\":\"java.math.BigDecimal\",\n" +
-				"      \"value\":\"3.141592653589793238462643383\"\n" +
-				"    }\n" +
-				"  }\n" +
-				"}";
-		Map args = new HashMap();
-		args.put(JsonWriter.PRETTY_PRINT, "true");
-		String json = JsonWriter.objectToJson(nice, args);
-		assertEquals(target, json);
-
-		String json1 = JsonWriter.objectToJson(nice);
-		assertNotEquals(json, json1);
-		// The Map.Entry's in the Map reference the Map, causing the map to be referenced, therefore it emits an @id
-		// making the String slightly different (but logically equivalent).
-//        String json2 = JsonWriter.formatJson(json1);
-//        assertEquals(json2, json);
-	}
-
 	@Test
 	public void testCleanString()
 	{
@@ -5487,90 +4265,6 @@ public class TestJsonReaderWriter
 		assertEquals(new URL("http://acme.com"), addr2.url);
 	}
 
-	static class PainfulToSerialize
-	{
-		ClassLoader classLoader = TestJsonReaderWriter.class.getClassLoader();
-		String name;
-	}
-
-	@Test
-	public void testExternalFieldSpecifier() throws Exception
-	{
-		Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
-		List<String> fields = new ArrayList<String>();
-		fields.add("name");
-		fieldSpecifiers.put(PainfulToSerialize.class, fields);
-
-		PainfulToSerialize painful = new PainfulToSerialize();
-		painful.name = "Android rocks";
-
-		Map args = new HashMap();
-		args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
-		String json = JsonWriter.objectToJson(painful, args);
-		Map check = JsonReader.jsonToMaps(json);
-		assertTrue(check.size() == 1);
-		assertTrue(check.containsKey("name"));
-	}
-
-	@Test
-	public void testExternalFieldSpecifiedBadName() throws Exception
-	{
-		Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
-		List<String> fields = new ArrayList<String>();
-		fields.add("mane");
-		fieldSpecifiers.put(PainfulToSerialize.class, fields);
-
-		PainfulToSerialize painful = new PainfulToSerialize();
-		painful.name = "Android rocks";
-
-		Map args = new HashMap();
-		args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
-		try
-		{
-			JsonWriter.objectToJson(painful, args);
-			fail("should not make it here");
-		}
-		catch (Exception e)
-		{
-			assertTrue(e instanceof IllegalArgumentException);
-		}
-	}
-
-	static class MorePainfulToSerialize extends PainfulToSerialize
-	{
-		int age;
-	}
-
-	@Test
-	public void testExternalFieldSpecifierInheritance() throws Exception
-	{
-		Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>();
-		List<String> fields = new ArrayList<String>();
-		fields.add("name");
-		fieldSpecifiers.put(PainfulToSerialize.class, fields);
-
-		MorePainfulToSerialize painful = new MorePainfulToSerialize();
-		painful.name = "Android rocks";
-		painful.age = 50;
-
-		Map args = new HashMap();
-		args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers);
-		String json = JsonWriter.objectToJson(painful, args);
-		Map check = JsonReader.jsonToMaps(json);
-		assertTrue(check.size() == 1);
-		assertTrue(check.containsKey("name"));
-
-		List<String> fields2 = new ArrayList<String>();
-		fields2.add("age");
-		fields2.add("name");
-		fieldSpecifiers.put(MorePainfulToSerialize.class, fields2);
-		json = JsonWriter.objectToJson(painful, args);
-		check = JsonReader.jsonToMaps(json);
-		assertTrue(check.size() == 2);
-		assertTrue(check.containsKey("name"));
-		assertTrue(check.containsKey("age"));
-	}
-
 	@Test
 	public void testRootTypes() throws Exception
 	{
@@ -5596,30 +4290,6 @@ public class TestJsonReaderWriter
 		json = JsonWriter.objectToJson(atl);
 		TestUtil.printLine(json);
 	}
-
-	static class UnmodifiableMapHolder
-	{
-		Map map;
-
-		UnmodifiableMapHolder()
-		{
-			Map directions = new LinkedHashMap();
-			directions.put("North", 0);
-			directions.put("South", 1);
-			directions.put("East", 2);
-			directions.put("West", 3);
-			map = Collections.unmodifiableMap(directions);
-		}
-	}
-
-	// TODO: Uncomment this test when Unmodifiable support is added.
-//    @Test
-//    public void testUnmodifiableMap() throws Exception
-//    {
-//        UnmodifiableMapHolder holder = new UnmodifiableMapHolder();
-//        String json = JsonWriter.objectToJson(holder);
-//        UnmodifiableMapHolder holder1 = (UnmodifiableMapHolder) TestUtil.readJsonObject(json);
-//    }
 
 	@Test
 	public void testDistanceToInterface() throws Exception
@@ -5766,7 +4436,7 @@ public class TestJsonReaderWriter
 	@Test
 	public void testStaticSingle() throws IOException
 	{
-		StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<String>("Boonies"));
+		StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<>("Boonies"));
 
 		String json = JsonWriter.objectToJson(useSingle);
 		//this will crash on ArrayIndexOutOfBoundsException
@@ -5779,5 +4449,18 @@ public class TestJsonReaderWriter
 	public void testZTimings()
 	{
 		TestUtil.getTimings();
+	}
+
+	static class TestNoId
+	{
+		protected Class<?> cls = LinkedList.class;
+	}
+
+	@Test
+	public void testShouldNotNeedId() throws Exception
+	{
+		TestNoId testNoId = new TestNoId();
+		String json = JsonWriter.objectToJson(testNoId);
+		assertFalse(json.contains("@id"));
 	}
 }

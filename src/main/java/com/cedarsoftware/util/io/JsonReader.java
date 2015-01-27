@@ -16,6 +16,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -1859,12 +1860,13 @@ public class JsonReader implements Closeable
      *                Java target object.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void assignField(Deque<JsonObject<String, Object>> stack, JsonObject jsonObj, Field field, Object rhs) throws IOException
+    protected void assignField(final Deque<JsonObject<String, Object>> stack, final JsonObject jsonObj,
+                               final Field field, final Object rhs) throws IOException
     {
-        Object target = jsonObj.target;
+        final Object target = jsonObj.target;
         try
         {
-            Class fieldType = field.getType();
+            final Class fieldType = field.getType();
 
             // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the subobjects may not have an
             // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
@@ -1872,7 +1874,7 @@ public class JsonReader implements Closeable
             // exists).
             if (rhs instanceof JsonObject && field.getGenericType() instanceof ParameterizedType)
             {   // Only JsonObject instances could contain unmarked objects.
-                markUntypedObjects(field.getGenericType(), rhs);
+                markUntypedObjects(field.getGenericType(), rhs, JsonWriter.getDeepDeclaredFields(fieldType));
             }
 
             if (rhs instanceof JsonObject)
@@ -1897,7 +1899,7 @@ public class JsonReader implements Closeable
                 Object value = createJavaObjectInstance(fieldType, jObj);
                 field.set(target, value);
             }
-            else if ((special = readIfMatching(rhs, field.getType(), stack)) != null)
+            else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
             {
                 field.set(target, special);
             }
@@ -1958,7 +1960,7 @@ public class JsonReader implements Closeable
                 {
                     field.set(target, newPrimitiveWrapper(fieldType, rhs));
                 }
-                else if (rhs instanceof String && "".equals(((String) rhs).trim()) && field.getType() != String.class)
+                else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
                     field.set(target, null);
                 }
@@ -1990,7 +1992,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    private static void markUntypedObjects(Type type, Object rhs)
+    private static void markUntypedObjects(Type type, Object rhs, JsonWriter.ClassMeta classMeta)
     {
         Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
@@ -2085,10 +2087,16 @@ public class JsonReader implements Closeable
 
                         for (Map.Entry<String, Object> entry : jObj.entrySet())
                         {
-                            if (!entry.getKey().startsWith("this$"))
+                            final String fieldName = entry.getKey();
+                            if (!fieldName.startsWith("this$"))
                             {
                                 // TODO: If more than one type, need to associate correct typeArgs entry to value
-                                stack.addFirst(new Object[]{typeArgs[0], entry.getValue()});
+                                Field field = classMeta.get(fieldName);
+
+                                if (field != null && (field.getType().getTypeParameters().length > 0 || field.getGenericType() instanceof TypeVariable))
+                                {
+                                    stack.addFirst(new Object[]{typeArgs[0], entry.getValue()});
+                                }
                             }
                         }
                     }
@@ -2508,7 +2516,7 @@ public class JsonReader implements Closeable
      * (char) c is acceptable because the 'tokens' allowed in a
      * JSON input stream (true, false, null) are all ASCII.
      */
-    private String readToken(String token) throws IOException
+    private void readToken(String token) throws IOException
     {
         final int len = token.length();
 
@@ -2527,8 +2535,6 @@ public class JsonReader implements Closeable
                 error("Expected token: " + token);
             }
         }
-
-        return token;
     }
 
     /**
@@ -2996,7 +3002,11 @@ public class JsonReader implements Closeable
 
     public static boolean isLogicalPrimitive(Class c)
     {
-        return isPrimitive(c) || String.class.isAssignableFrom(c) || Number.class.isAssignableFrom(c) || Date.class.isAssignableFrom(c);
+        return isPrimitive(c) ||
+                String.class.isAssignableFrom(c) ||
+                Number.class.isAssignableFrom(c) ||
+                Date.class.isAssignableFrom(c) ||
+                Class.class.isAssignableFrom(c);
     }
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
@@ -3599,7 +3609,7 @@ public class JsonReader implements Closeable
 
         public int read() throws IOException
         {
-            final int ch = idx < buf.length ? buf[idx++] : super.read();
+            final int ch = idx < buf.length ? buf[idx++] : in.read();
             if (ch >= 0)
             {
                 if (ch == 0x0a)

@@ -24,9 +24,9 @@ import com.cedarsoftware.util.IOUtilities
 class TestUtil
 {
     private static long totalJsonWrite;
-    private static long totalWrite;
+    private static long totalObjWrite;
     private static long totalJsonRead;
-    private static long totalRead;
+    private static long totalObjRead;
 
     private static long outputStreamFailCount;
     private static boolean debug = false;
@@ -63,7 +63,7 @@ class TestUtil
             long endWrite2 = System.nanoTime()
 
             totalJsonWrite += endWrite1 - startWrite1;
-            totalWrite += endWrite2 - startWrite2;
+            totalObjWrite += endWrite2 - startWrite2;
             double t1 = (endWrite1 - startWrite1) / 1000000.0
             double t2 = (endWrite2 - startWrite2) / 1000000.0
             if (debug)
@@ -102,7 +102,7 @@ class TestUtil
             long endRead2 = System.nanoTime()
 
             totalJsonRead += endRead1 - startRead1;
-            totalRead += endRead2 - startRead2;
+            totalObjRead += endRead2 - startRead2;
             double t1 = (endRead1 - startRead1) / 1000000.0;
             double t2 = (endRead2 - startRead2) / 1000000.0;
             if (debug)
@@ -131,8 +131,8 @@ class TestUtil
     {
         println("Total json-io read  = " + (totalJsonRead / 1000000.0) + " ms")
         println("Total json-io write = " + (totalJsonWrite / 1000000.0) + " ms")
-        println("Total ObjectStream read  = " + (totalRead / 1000000.0) + " ms")
-        println("Total ObjectStream write = " + (totalWrite / 1000000.0) + " ms")
+        println("Total ObjectStream read  = " + (totalObjRead / 1000000.0) + " ms")
+        println("Total ObjectStream write = " + (totalObjWrite / 1000000.0) + " ms")
         println("JDK InputStream/OutputStream fail count = " + outputStreamFailCount)
     }
 }
