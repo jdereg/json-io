@@ -14,19 +14,14 @@ import java.io.Serializable;
 import java.io.Writer;
 import java.math.BigInteger;
 import java.net.URL;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
 
 import static org.junit.Assert.assertEquals;
@@ -61,7 +56,6 @@ public class TestJsonReaderWriter
 	@Test
 	public void testCustom() throws Exception
 	{
-
 	}
 
 	static public class A
@@ -97,48 +91,6 @@ public class TestJsonReaderWriter
 		TestUtil.printLine("json = " + json);
 		TestJsonReaderWriter.A.B o2 = (TestJsonReaderWriter.A.B) TestUtil.readJsonObject(json);
 		assertTrue(o2.b.equals("bbb"));
-	}
-
-	@Test
-	public void testForwardRefs() throws Exception
-	{
-		TestObject one = new TestObject("One");
-		TestObject two = new TestObject("Two");
-		one._other = two;
-		two._other = one;
-		String pkg = TestObject.class.getName();
-		String fwdRef = "[[{\"@id\":2,\"@type\":\"" + pkg + "\",\"_name\":\"Two\",\"_other\":{\"@ref\":1}}],[{\n" + "\"@id\":1,\"@type\":\"" + pkg + "\",\"_name\":\"One\",\"_other\":{\"@ref\":2}}]]";
-		Object[] foo = (Object[]) TestUtil.readJsonObject(fwdRef);
-		Object[] first = (Object[]) foo[0];
-		Object[] second = (Object[]) foo[1];
-		assertTrue(one.equals(second[0]));
-		assertTrue(two.equals(first[0]));
-
-		String json = "[{\"@ref\":2},{\"@id\":2,\"@type\":\"int\",\"value\":5}]";
-		Object[] ints = (Object[]) TestUtil.readJsonObject(json);
-		assertTrue((Integer)ints[0] == 5);
-		assertTrue((Integer) ints[1] == 5);
-
-		json ="{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":2},{\"@id\":2,\"@type\":\"int\",\"value\":5}]}";
-		List list = (List) JsonReader.jsonToJava(json);
-		assertTrue((Integer)list.get(0) == 5);
-		assertTrue((Integer)list.get(1) == 5);
-
-		json = "{\"@type\":\"java.util.TreeSet\",\"@items\":[{\"@type\":\"int\",\"value\":9},{\"@ref\":16},{\"@type\":\"int\",\"value\":4},{\"@id\":16,\"@type\":\"int\",\"value\":5}]}";
-		Set set = (Set) TestUtil.readJsonObject(json);
-		assertTrue(set.size() == 3);
-		Iterator i = set.iterator();
-		assertTrue((Integer)i.next() == 4);
-		assertTrue((Integer)i.next() == 5);
-		assertTrue((Integer)i.next() == 9);
-
-		json = "{\"@type\":\"java.util.HashMap\",\"@keys\":[1,2,3,4],\n" + "\"@items\":[{\"@type\":\"int\",\"value\":9},{\"@ref\":16},{\"@type\":\"int\",\"value\":4},{\"@id\":16,\"@type\":\"int\",\"value\":5}]}";
-		Map map = (Map) TestUtil.readJsonObject(json);
-		assertTrue(map.size() == 4);
-		assertTrue((Integer)map.get(1L) == 9);
-		assertTrue((Integer)map.get(2L) == 5);
-		assertTrue((Integer)map.get(3L) == 4);
-		assertTrue((Integer)map.get(4L) == 5);
 	}
 
 	@Test
@@ -337,91 +289,6 @@ public class TestJsonReaderWriter
 		TimeZone tz = (TimeZone) jr.readObject();
 		assertTrue(tz != null);
 		assertTrue("EST".equals(tz.getID()));
-	}
-
-	public static class WeirdDate extends Date
-	{
-		public WeirdDate(Date date) { super(date.getTime()); }
-		public WeirdDate(long millis) { super(millis); }
-	}
-
-	public class WeirdDateWriter implements JsonWriter.JsonClassWriter
-	{
-		@Override
-		public void write(Object o, boolean showType, Writer out) throws IOException
-		{
-			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
-			out.write("\"value\":\"");
-			out.write(value);
-			out.write('"');
-		}
-
-		@Override
-		public boolean hasPrimitiveForm()
-		{
-			return true;
-		}
-
-		@Override
-		public void writePrimitiveForm(Object o, Writer out) throws IOException
-		{
-			String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date)o);
-			out.write('"');
-			out.write(value);
-			out.write('"');
-		}
-	}
-
-	public class WeirdDateReader implements JsonReader.JsonClassReader
-	{
-		public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
-		{
-			if (o instanceof String)
-			{
-				try
-				{
-					return new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) o));
-				}
-				catch (ParseException e)
-				{
-					throw new IOException("Date format incorrect");
-				}
-			}
-
-			JsonObject jObj = (JsonObject) o;
-			if (jObj.containsKey("value"))
-			{
-				try
-				{
-					return jObj.target = new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) jObj.get("value")));
-				}
-				catch (ParseException e)
-				{
-					throw new IOException("Date format incorrect");
-				}
-			}
-			throw new IOException("Date missing 'value' field");
-
-		}
-	}
-
-	@Test
-	public void testCustomClassReaderWriter() throws Exception
-	{
-		JsonWriter.addWriter(WeirdDate.class, new WeirdDateWriter());
-		JsonReader.addReader(WeirdDate.class, new WeirdDateReader());
-
-		WeirdDate now = new WeirdDate(System.currentTimeMillis());
-		String json = TestUtil.getJsonString(now);
-		TestUtil.printLine("json=" + json);
-		WeirdDate date = (WeirdDate)TestUtil.readJsonObject(json);
-		assertTrue(now.equals(date));
-
-		JsonWriter.addNotCustomWriter(WeirdDate.class);
-		JsonReader.addNotCustomReader(WeirdDate.class);
-		json = TestUtil.getJsonString(now);
-		TestUtil.printLine("json=" + json);
-		assertTrue(now.equals(date));
 	}
 
 	@Test
@@ -800,12 +667,6 @@ public class TestJsonReaderWriter
 				return false;
 			}
 		});
-	}
-
-	@Test
-	public void testZTimings()
-	{
-		TestUtil.getTimings();
 	}
 
 	static class TestNoId
