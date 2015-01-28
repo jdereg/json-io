@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
-import com.google.gson.Gson;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -13,14 +12,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.Writer;
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Deque;
@@ -29,7 +26,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -62,230 +58,6 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestJsonReaderWriter
 {
-	private static class TestJsonNoDefaultOrPublicConstructor
-	{
-		private final String _str;
-		private final Date _date;
-		private final byte _byte;
-		private final Byte _Byte;
-		private final short _short;
-		private final Short _Short;
-		private final int _int;
-		private final Integer _Integer;
-		private final long _long;
-		private final Long _Long;
-		private final float _float;
-		private final Float _Float;
-		private final double _double;
-		private final Double _Double;
-		private final boolean _boolean;
-		private final Boolean _Boolean;
-		private final char _char;
-		private final Character _Char;
-		private final String[] _strings;
-		private final int[] _ints;
-		private final BigDecimal _bigD;
-
-		private TestJsonNoDefaultOrPublicConstructor(String string, Date date, byte b, Byte B, short s, Short S, int i, Integer I,
-													 long l, Long L, float f, Float F, double d, Double D, boolean bool, Boolean Bool,
-													 char c, Character C, String[] strings, int[] ints, BigDecimal bigD)
-		{
-			_str = string;
-			_date = date;
-			_byte = b;
-			_Byte = B;
-			_short = s;
-			_Short = S;
-			_int = i;
-			_Integer = I;
-			_long = l;
-			_Long = L;
-			_float = f;
-			_Float = F;
-			_double = d;
-			_Double = D;
-			_boolean = bool;
-			_Boolean = Bool;
-			_char = c;
-			_Char = C;
-			_strings = strings;
-			_ints = ints;
-			_bigD = bigD;
-		}
-
-		public String getString()
-		{
-			return _str;
-		}
-
-		public Date getDate()
-		{
-			return _date;
-		}
-
-		public byte getByte()
-		{
-			return _byte;
-		}
-
-		public short getShort()
-		{
-			return _short;
-		}
-
-		public int getInt()
-		{
-			return _int;
-		}
-
-		public long getLong()
-		{
-			return _long;
-		}
-
-		public float getFloat()
-		{
-			return _float;
-		}
-
-		public double getDouble()
-		{
-			return _double;
-		}
-
-		public boolean getBoolean()
-		{
-			return _boolean;
-		}
-
-		public char getChar()
-		{
-			return _char;
-		}
-
-		public String[] getStrings()
-		{
-			return _strings;
-		}
-
-		public int[] getInts()
-		{
-			return _ints;
-		}
-	}
-
-	@Test
-	public void testPerformance() throws Exception
-	{
-		byte[] bytes = new byte[128 * 1024];
-		Random r = new Random();
-		r.nextBytes(bytes);
-		String json = TestUtil.getJsonString(bytes);
-
-		byte[] bytes2 = (byte[]) TestUtil.readJsonObject(json);
-
-		for (int i = 0; i < bytes.length; i++)
-		{
-			assertTrue(bytes[i] == bytes2[i]);
-		}
-	}
-
-	@Test
-	public void testRoots() throws Exception
-	{
-		// Test Object[] as root element passed in
-		Object[] foo = {new TestObject("alpha"), new TestObject("beta")};
-
-		String jsonOut = TestUtil.getJsonString(foo);
-		TestUtil.printLine(jsonOut);
-
-		Object[] bar = (Object[]) JsonReader.jsonToJava(jsonOut);
-		assertTrue(bar.length == 2);
-		assertTrue(bar[0].equals(new TestObject("alpha")));
-		assertTrue(bar[1].equals(new TestObject("beta")));
-
-		String json = "[\"getStartupInfo\",[\"890.022905.16112006.00024.0067ur\",\"machine info\"]]";
-		Object[] baz = (Object[]) JsonReader.jsonToJava(json);
-		assertTrue(baz.length == 2);
-		assertTrue("getStartupInfo".equals(baz[0]));
-		Object[] args = (Object[]) baz[1];
-		assertTrue(args.length == 2);
-		assertTrue("890.022905.16112006.00024.0067ur".equals(args[0]));
-		assertTrue("machine info".equals(args[1]));
-
-		String hw = "[\"Hello, World\"]";
-		Object[] qux = (Object[]) JsonReader.jsonToJava(hw);
-		assertTrue(qux != null);
-		assertTrue("Hello, World".equals(qux[0]));
-
-		// Whitespace
-		String pkg = TestObject.class.getName();
-		Object[] fred = (Object[]) JsonReader.jsonToJava("[  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"alpha\"  ,  \"_other\"  :  null  }  ,  {  \"@type\"  :  \"" + pkg + "\"  ,  \"_name\"  :  \"beta\"  ,  \"_other\" : null  }  ]  ");
-		assertTrue(fred != null);
-		assertTrue(fred.length == 2);
-		assertTrue(fred[0].equals(new TestObject("alpha")));
-		assertTrue(fred[1].equals(new TestObject("beta")));
-
-		Object[] wilma = (Object[]) JsonReader.jsonToJava("[{\"@type\":\"" + pkg + "\",\"_name\" : \"alpha\" , \"_other\":null,\"fake\":\"_typeArray\"},{\"@type\": \"" + pkg + "\",\"_name\":\"beta\",\"_other\":null}]");
-		assertTrue(wilma != null);
-		assertTrue(wilma.length == 2);
-		assertTrue(wilma[0].equals(new TestObject("alpha")));
-		assertTrue(wilma[1].equals(new TestObject("beta")));
-	}
-
-	@Test
-	public void testRoots2() throws Exception
-	{
-		// Test root JSON type as [ ]
-		Object array = new Object[] {"Hello"};
-		String json = TestUtil.getJsonString(array);
-		Object oa = JsonReader.jsonToJava(json);
-		assertTrue(oa.getClass().isArray());
-		assertTrue(((Object[])oa)[0].equals("Hello"));
-
-		// Test root JSON type as { }
-		Calendar cal = Calendar.getInstance();
-		cal.set(1965, 11, 17);
-		json = TestUtil.getJsonString(cal);
-		TestUtil.printLine("json = " + json);
-		Object obj = JsonReader.jsonToJava(json);
-		assertTrue(!obj.getClass().isArray());
-		Calendar date = (Calendar) obj;
-		assertTrue(date.get(Calendar.YEAR) == 1965);
-		assertTrue(date.get(Calendar.MONTH) == 11);
-		assertTrue(date.get(Calendar.DAY_OF_MONTH) == 17);
-	}
-
-	@Test
-	public void testNoDefaultConstructor() throws Exception
-	{
-		Calendar c = Calendar.getInstance();
-		c.set(2010, 5, 5, 5, 5, 5);
-		String[] strings = new String[] { "C", "C++", "Java"};
-		int[] ints = new int[] {1, 2, 4, 8, 16, 32, 64, 128};
-		Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", c.getTime(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0, new Double(66.0), true, Boolean.TRUE,'J', new Character('K'), strings, ints, new BigDecimal(1.1));
-		String jsonOut = TestUtil.getJsonString(foo);
-		TestUtil.printLine(jsonOut);
-
-		TestJsonNoDefaultOrPublicConstructor bar = (TestJsonNoDefaultOrPublicConstructor) TestUtil.readJsonObject(jsonOut);
-
-		assertTrue("Hello, World.".equals(bar.getString()));
-		assertTrue(bar.getDate().equals(c.getTime()));
-		assertTrue(bar.getByte() == 1);
-		assertTrue(bar.getShort() == 2);
-		assertTrue(bar.getInt() == 3);
-		assertTrue(bar.getLong() == 4);
-		assertTrue(bar.getFloat() == 5.0f);
-		assertTrue(bar.getDouble() == 6.0);
-		assertTrue(bar.getBoolean());
-		assertTrue(bar.getChar() == 'J');
-		assertTrue(bar.getStrings() != null);
-		assertTrue(bar.getStrings().length == strings.length);
-		assertTrue(bar.getInts() != null);
-		assertTrue(bar.getInts().length == ints.length);
-		assertTrue(bar._bigD.equals(new BigDecimal(1.1)));
-	}
-
 	@Test
 	public void testCustom() throws Exception
 	{
@@ -375,21 +147,6 @@ public class TestJsonReaderWriter
 		String json = JsonWriter.objectToJson(null);
 		TestUtil.printLine("json=" + json);
 		assertTrue("null".equals(json));
-	}
-
-	/**
-	 * Although a String cannot really be a root in JSON,
-	 * json-io returns the JSON utf8 string.  This test
-	 * exists to catch if this decision ever changes.
-	 * Currently, Google's Gson does the same thing.
-	 */
-	@Test
-	public void testStringRoot() throws Exception
-	{
-		Gson gson = new Gson();
-		String g = gson.toJson("root should not be a string");
-		String j = JsonWriter.objectToJson("root should not be a string");
-		assertEquals(g, j);
 	}
 
 	@Test
@@ -665,85 +422,6 @@ public class TestJsonReaderWriter
 		json = TestUtil.getJsonString(now);
 		TestUtil.printLine("json=" + json);
 		assertTrue(now.equals(date));
-	}
-
-	@Test
-	public void testReconstitutePrimitives() throws Exception
-	{
-		Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0, new Double(66.0), true, Boolean.TRUE,'J', new Character('K'), new String[] {"john","adams"}, new int[] {2,6}, new BigDecimal("2.71828"));
-		String json0 = TestUtil.getJsonString(foo);
-		TestUtil.printLine("json0=" + json0);
-
-		Map map = JsonReader.jsonToMaps(json0);
-		assertEquals((byte)1, map.get("_byte") );
-		assertEquals((short)2, map.get("_short"));
-		assertEquals(3, map.get("_int"));
-		assertEquals(4L, map.get("_long"));
-		assertEquals(5.0f, map.get("_float"));
-		assertEquals(6.0d, map.get("_double"));
-		assertEquals(true, map.get("_boolean"));
-		assertEquals('J', map.get("_char"));
-
-		assertEquals((byte)11, map.get("_Byte"));
-		assertEquals((short)22, map.get("_Short"));
-		assertEquals(33, map.get("_Integer"));
-		assertEquals(44L, map.get("_Long"));
-		assertEquals(55.0f, map.get("_Float"));
-		assertEquals(66.0d, map.get("_Double"));
-		assertEquals(true, map.get("_Boolean"));
-		assertEquals('K', map.get("_Char"));
-		BigDecimal num = (BigDecimal) map.get("_bigD");
-		assertEquals(new BigDecimal("2.71828"), num);
-
-		String json1 = TestUtil.getJsonString(map);
-		TestUtil.printLine("json1=" + json1);
-		assertTrue(json0.equals(json1));
-	}
-
-	@Test
-	public void testReconstituteNullablePrimitives() throws Exception
-	{
-		Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, null, (short) 2, null, 3, null, 4L, null, 5.0f, null, 6.0, null, true, null,'J', null, new String[] {"john","adams"}, new int[] {2,6}, null);
-		String json = TestUtil.getJsonString(foo);
-		TestUtil.printLine("json0=" + json);
-
-		Map map = JsonReader.jsonToMaps(json);
-		assertEquals((byte)1, map.get("_byte"));
-		assertEquals((short)2, map.get("_short"));
-		assertEquals(3, map.get("_int"));
-		assertEquals(4L, map.get("_long"));
-		assertEquals(5.0f, map.get("_float"));
-		assertEquals(6.0d, map.get("_double"));
-		assertEquals(true, map.get("_boolean"));
-		assertEquals((char)'J', map.get("_char"));
-
-		Map prim = (Map) map.get("_Byte");
-		assertNull(prim);
-		prim = (Map) map.get("_Short");
-		assertNull(prim);
-		prim = (Map) map.get("_Integer");
-		assertNull(prim);
-		prim = (Map) map.get("_Long");
-		assertNull(prim);
-		prim = (Map) map.get("_Float");
-		assertNull(prim);
-		prim = (Map) map.get("_Double");
-		assertNull(prim);
-		prim = (Map) map.get("_Boolean");
-		assertNull(prim);
-		prim = (Map) map.get("_Char");
-		assertNull(prim);
-		prim = (Map) map.get("_bigD");
-		assertNull(prim);
-
-		String json1 = TestUtil.getJsonString(map);
-		TestUtil.printLine("json1=" + json1);
-		assertTrue(json.equals(json1));
-
-		map = JsonReader.jsonToMaps(json1);
-		json = TestUtil.getJsonString(map);
-		TestUtil.printLine("json2=" + json);
-		assertTrue(json.equals(json1));
 	}
 
 	@Test
