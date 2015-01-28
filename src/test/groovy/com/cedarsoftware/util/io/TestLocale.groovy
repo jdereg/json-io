@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import com.cedarsoftware.util.DeepEquals
 import org.junit.Test
 
 import static org.junit.Assert.assertTrue
@@ -131,5 +132,18 @@ class TestLocale
         Locale us = (Locale) oArray[0];
         assertTrue(locale.equals(us))
         assertTrue(oArray[0] == oArray[1])
+    }
+
+    @Test
+    public void testLocaleInMap() throws Exception
+    {
+        def map = [
+                (Locale.US):'United States of America',
+                (Locale.CANADA):'Canada',
+                (Locale.UK): 'United Kingdom']
+
+        String json = TestUtil.getJsonString(map);
+        Map map2 = (Map) TestUtil.readJsonObject(json);
+        assertTrue(DeepEquals.deepEquals(map, map2));
     }
 }

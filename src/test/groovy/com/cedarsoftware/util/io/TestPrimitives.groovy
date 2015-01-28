@@ -2,7 +2,9 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertFalse
+import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertTrue
 import static org.junit.Assert.fail
 
@@ -43,6 +45,15 @@ class TestPrimitives
         Long ll;
         short s;
         Short ss;
+    }
+
+    class TestStringField
+    {
+        String intField;
+        String booleanField;
+        String doubleField;
+        String nullField;
+        String[] values;
     }
 
     @Test
@@ -146,4 +157,20 @@ class TestPrimitives
         }
         assertTrue(str == null)
     }
+
+    @Test
+    public void testAssignPrimitiveToString() throws Exception
+    {
+        String json = '{"@type":"' + TestStringField.class.getName() + '","intField":16,"booleanField":true,"doubleField":345.12321,"nullField":null,"values":[10,true,3.14159,null]}';
+        TestStringField tsf = (TestStringField) TestUtil.readJsonObject(json)
+        assertEquals("16", tsf.intField)
+        assertEquals("true", tsf.booleanField)
+        assertEquals("345.12321", tsf.doubleField)
+        assertNull(tsf.nullField)
+        assertEquals("10", tsf.values[0])
+        assertEquals("true", tsf.values[1])
+        assertEquals("3.14159", tsf.values[2])
+        assertEquals(null, tsf.values[3])
+    }
+
 }

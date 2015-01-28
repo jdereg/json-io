@@ -5,6 +5,7 @@ import org.junit.Test
 import java.awt.Point
 
 import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertNull
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -120,6 +121,25 @@ class TestTemplateFields
         }
     }
 
+    static class ThreeType<T, U, V>
+    {
+        T t;
+        U u;
+        V v;
+
+        public ThreeType(T tt, U uu, V vv)
+        {
+            t = tt;
+            u = uu;
+            v = vv;
+        }
+    }
+
+    static class GenericHolder
+    {
+        ThreeType<Point, String, Point> a;
+    }
+
     // This test was provided by Github user: reuschling
     @Test
     void testTemplateClassField() throws Exception
@@ -204,4 +224,21 @@ class TestTemplateFields
 
         assertEquals("Boonies", other.single.field1)
     }
+
+    @Test
+    public void test3TypeGeneric() throws Exception
+    {
+        String json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":{"x":1,"y":2},"u":"Sochi","v":{"x":10,"y":20}}}';
+        GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json);
+        assertEquals(new Point(1, 2), gen.a.t);
+        assertEquals("Sochi", gen.a.u);
+        assertEquals(new Point(10, 20), gen.a.v);
+
+        json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":null,"u":null,"v":null}}';
+        gen = (GenericHolder) JsonReader.jsonToJava(json);
+        assertNull(gen.a.t);
+        assertNull(gen.a.u);
+        assertNull(gen.a.v);
+    }
+
 }

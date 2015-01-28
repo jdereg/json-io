@@ -7,7 +7,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.awt.Point;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,7 +28,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -749,44 +747,6 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
-	public void testLocaleInMap() throws Exception
-	{
-		Map<Locale, String> map = new HashMap<Locale, String>();
-		map.put(Locale.US, "United States of America");
-		map.put(Locale.CANADA, "Canada");
-		map.put(Locale.UK, "United Kingdom");
-
-		String json = TestUtil.getJsonString(map);
-		Map map2 = (Map) TestUtil.readJsonObject(json);
-		assertTrue(map.equals(map2));
-	}
-
-	static class MyBooleanTesting
-	{
-		private boolean myBoolean = false;
-	}
-
-	static class MyBoolean2Testing
-	{
-		private Boolean myBoolean = false;
-	}
-
-	@Test
-	public void testBooleanCompatibility() throws Exception
-	{
-		MyBooleanTesting testObject = new MyBooleanTesting();
-		MyBoolean2Testing testObject2 = new MyBoolean2Testing();
-		String json0 = TestUtil.getJsonString(testObject);
-		String json1 = TestUtil.getJsonString(testObject2);
-
-		TestUtil.printLine("json0=" + json0);
-		TestUtil.printLine("json1=" + json1);
-
-		assertTrue(json0.contains("\"myBoolean\":false"));
-		assertTrue(json1.contains("\"myBoolean\":false"));
-	}
-
-	@Test
 	public void testJsonObjectToJava() throws Exception
 	{
 		TestObject test = new TestObject("T.O.");
@@ -1019,20 +979,6 @@ public class TestJsonReaderWriter
 	}
 
 	@Test
-	public void testErrorReporting() throws IOException
-	{
-		String json = "[{\"@type\":\"funky\"},\n{\"field:\"value\"]";
-		try
-		{
-			JsonReader.jsonToJava(json);
-			fail("Should not make it here");
-		}
-		catch (IOException e)
-		{
-		}
-	}
-
-	@Test
 	public void testAlwaysShowType() throws Exception
 	{
 		TestObject btc = new TestObject("Bitcoin");
@@ -1045,76 +991,6 @@ public class TestJsonReaderWriter
 		assertTrue(DeepEquals.deepEquals(btc, thatBtc));
 		String json1 = JsonWriter.objectToJson(btc);
 		assertTrue(json0.length() > json1.length());
-	}
-
-	@Test
-	public void testFunnyChars() throws Exception
-	{
-		String json = "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0004\"]}";
-		char[] chars = (char[]) TestUtil.readJsonObject(json);
-		assertEquals(chars.length, 3);
-		assertEquals(chars[0], 'a');
-		assertEquals(chars[1], '\t');
-		assertEquals(chars[2], '\u0004');
-	}
-
-	static class ThreeType<T, U, V>
-	{
-		T t;
-		U u;
-		V v;
-
-		public ThreeType(T tt, U uu, V vv)
-		{
-			t = tt;
-			u = uu;
-			v = vv;
-		}
-	}
-
-	static class GenericHolder
-	{
-		ThreeType<Point, String, Point> a;
-	}
-
-	@Test
-	public void test3TypeGeneric() throws Exception
-	{
-		String json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":{\"x\":1,\"y\":2},\"u\":\"Sochi\",\"v\":{\"x\":10,\"y\":20}}}";
-		GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json);
-		assertEquals(new Point(1, 2), gen.a.t);
-		assertEquals("Sochi", gen.a.u);
-		assertEquals(new Point(10, 20), gen.a.v);
-
-		json = "{\"@type\":\"" + GenericHolder.class.getName() + "\",\"a\":{\"t\":null,\"u\":null,\"v\":null}}";
-		gen = (GenericHolder) JsonReader.jsonToJava(json);
-		assertNull(gen.a.t);
-		assertNull(gen.a.u);
-		assertNull(gen.a.v);
-	}
-
-	class TestStringField
-	{
-		String intField;
-		String booleanField;
-		String doubleField;
-		String nullField;
-		String[] values;
-	}
-
-	@Test
-	public void testAssignPrimitiveToString() throws Exception
-	{
-		String json = "{\"@type\":\"" + TestStringField.class.getName() + "\",\"intField\":16,\"booleanField\":true,\"doubleField\":345.12321,\"nullField\":null,\"values\":[10,true,3.14159,null]}";
-		TestStringField tsf = (TestStringField) TestUtil.readJsonObject(json);
-		assertEquals("16", tsf.intField);
-		assertEquals("true", tsf.booleanField);
-		assertEquals("345.12321", tsf.doubleField);
-		assertNull(tsf.nullField);
-		assertEquals("10", tsf.values[0]);
-		assertEquals("true", tsf.values[1]);
-		assertEquals("3.14159", tsf.values[2]);
-		assertEquals(null, tsf.values[3]);
 	}
 
 	static class DerivedWriter extends JsonWriter
@@ -1235,15 +1111,12 @@ public class TestJsonReaderWriter
 	{
 		JsonWriter.addWriter(Dog.class, new JsonClassWriter()
 		{
-			@Override
 			public void writePrimitiveForm(Object o, Writer out)  throws IOException
 			{ }
 
-			@Override
 			public void write(Object o, boolean showType, Writer out)  throws IOException
 			{ }
 
-			@Override
 			public boolean hasPrimitiveForm()
 			{
 				return false;

@@ -24,6 +24,16 @@ import static org.junit.Assert.assertTrue
  */
 class TestBoolean
 {
+    static class MyBooleanTesting
+    {
+        private boolean myBoolean = false;
+    }
+
+    static class MyBoolean2Testing
+    {
+        private Boolean myBoolean = false;
+    }
+
     private static class ManyBooleans implements Serializable
     {
         private final Boolean _arrayElement
@@ -84,5 +94,20 @@ class TestBoolean
         assertTrue(that._typeArray[4] == null)
         assertTrue(that._objArray[3] == null)
         assertTrue(that._objArray[4] == null)
+    }
+
+    @Test
+    public void testBooleanCompatibility() throws Exception
+    {
+        MyBooleanTesting testObject = new MyBooleanTesting()
+        MyBoolean2Testing testObject2 = new MyBoolean2Testing()
+        String json0 = TestUtil.getJsonString(testObject)
+        String json1 = TestUtil.getJsonString(testObject2)
+
+        TestUtil.printLine("json0=" + json0)
+        TestUtil.printLine("json1=" + json1)
+
+        assertTrue(json0.contains('"myBoolean":false'))
+        assertTrue(json1.contains('"myBoolean":false'))
     }
 }

@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertSame
 import static org.junit.Assert.assertTrue
 
@@ -90,4 +91,14 @@ class TestCharacter
         assertTrue(that._max.equals(Character.MAX_VALUE))
     }
 
+    @Test
+    public void testFunnyChars() throws Exception
+    {
+        String json = '{"@type":"[C","@items":["a\\t\\u0004"]}';
+        char[] chars = (char[]) TestUtil.readJsonObject(json);
+        assertEquals(chars.length, 3);
+        assertEquals(chars[0], 'a' as char);
+        assertEquals(chars[1], '\t' as char);
+        assertEquals(chars[2], '\u0004' as char);
+    }
 }

@@ -170,9 +170,7 @@ class TestErrors
     {
         try
         {
-            String json = """{
-  "key": true
-{""";
+            String json = '{"key": true{'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -523,4 +521,15 @@ class TestErrors
         catch(IOException e) { }
     }
 
+    @Test
+    public void testErrorReporting() throws IOException
+    {
+        String json = '[{"@type":"funky"},\n{"field:"value"]';
+        try
+        {
+            JsonReader.jsonToJava(json);
+            fail();
+        }
+        catch (IOException e) { }
+    }
 }
