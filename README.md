@@ -119,8 +119,11 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 2.9.2
+  * Android: Rearranged `[:.]` to `[.:]` in regular expressions for Android compatibility.  Technically, it should not matter, but `[:.]` was causing `java.util.regex.PatternSyntaxException: Syntax error U_ILLEGAL_ARGUMENT_ERROR` on Android JVM.
  * 2.9.1
-  * Bug fix: Parameterized types are only stamped onto generic Maps (Maps read with no @type) if the field point to the Map is a Template variable or it has template arguments.
+  * Bug fix: Parameterized types are only internally stamped onto generic Maps (Maps read with no `@type`) if the field that points to the Map is a template variable or it has template arguments.
+  * Performance optimization: tracing references specially handles Collection and Map.  By avoiding internal structures, the reference trace is much faster.
  * 2.9.0
   * Unmodifiable `Collections` and `Maps` can now be serialized.
   * Added tests to ensure that `JsonReader.jsonToMaps()` coerces the RHS values when logical primitives, to the optional associated `@type's` fields.

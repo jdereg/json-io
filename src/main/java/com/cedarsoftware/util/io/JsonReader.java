@@ -116,9 +116,9 @@ public class JsonReader implements Closeable
     private static final Pattern datePattern4 = Pattern.compile("(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern datePattern5 = Pattern.compile("(\\d{4})[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)", Pattern.CASE_INSENSITIVE);
     private static final Pattern datePattern6 = Pattern.compile(days+"[ ]+" + mos + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,3}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})[.](\\d{1,10})([+-]\\d{2}[:]?\\d{2}|Z)?");
-    private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[:.](\\d{2})[:.](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
-    private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[:.](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})[.](\\d{1,10})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
+    private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
@@ -817,7 +817,7 @@ public class JsonReader implements Closeable
         }
         else if (value instanceof Boolean)
         {
-            return new BigInteger(((Boolean) value) ? "1" : "0");
+            return (Boolean) value ? BigInteger.ONE : BigInteger.ZERO;
         }
         else if (value instanceof Double || value instanceof Float)
         {
@@ -916,7 +916,7 @@ public class JsonReader implements Closeable
         }
         else if (value instanceof Boolean)
         {
-            return new BigDecimal(((Boolean) value) ? "1" : "0");
+            return (Boolean) value ? BigDecimal.ONE : BigDecimal.ZERO;
         }
         else if (value instanceof Long || value instanceof Integer || value instanceof Double ||
                 value instanceof Short || value instanceof Byte || value instanceof Float)
