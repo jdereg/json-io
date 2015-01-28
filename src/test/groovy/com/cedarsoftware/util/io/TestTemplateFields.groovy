@@ -2,6 +2,10 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import java.awt.Point
+
+import static org.junit.Assert.assertEquals
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>
@@ -50,6 +54,72 @@ class TestTemplateFields
         protected Person two = new Person('Jane', 45)
     }
 
+    class Single<T>
+    {
+        private T field1;
+        private T field2;
+
+        public Single(T field1, T field2)
+        {
+            this.field1 = field1;
+            this.field2 = field2;
+        }
+    }
+
+    class UseSingle
+    {
+        private Single<String> single;
+
+        public UseSingle(Single<String> single)
+        {
+            this.single = single;
+        }
+    }
+
+    static class StaticSingle<T>
+    {
+        private T field1;
+
+        public StaticSingle(T field1)
+        {
+            this.field1 = field1;
+        }
+    }
+
+    static class StaticUseSingle
+    {
+        private StaticSingle<String> single;
+
+        public StaticUseSingle(StaticSingle<String> single)
+        {
+            this.single = single;
+        }
+    }
+
+    class TwoParam<T, V>
+    {
+        private T field1;
+        private T field2;
+        private V field3;
+
+        public TwoParam(T field1, T field2, V field3)
+        {
+            this.field1 = field1;
+            this.field2 = field2;
+            this.field3 = field3;
+        }
+    }
+
+    class UseTwoParam
+    {
+        private TwoParam twoParam;
+
+        public UseTwoParam(TwoParam twoParam)
+        {
+            this.twoParam = twoParam;
+        }
+    }
+
     // This test was provided by Github user: reuschling
     @Test
     void testTemplateClassField() throws Exception
@@ -74,5 +144,64 @@ class TestTemplateFields
         Test3 reanimated = JsonReader.jsonToJava(json)
         assert reanimated.internalMember.two.name == 'Jane'
         assert reanimated.internalMember.two.age == 45
+    }
+
+    @Test
+    public void testSingle() throws IOException
+    {
+        UseSingle useSingle = new UseSingle(new Single<String>("Steel", "Wood"))
+        String json = JsonWriter.objectToJson(useSingle)
+        UseSingle other = (UseSingle) JsonReader.jsonToJava(json)
+
+        assertEquals("Steel", other.single.field1)
+        assertEquals("Wood", other.single.field2)
+    }
+
+    @Test
+    public void testTwoParam() throws IOException
+    {
+        UseTwoParam useTwoParam = new UseTwoParam(new TwoParam("Hello", "Goodbye", new Point(20, 40)))
+        String json = JsonWriter.objectToJson(useTwoParam)
+        UseTwoParam other = (UseTwoParam) JsonReader.jsonToJava(json)
+
+        assertEquals("Hello", other.twoParam.field1)
+        assertEquals("Goodbye", other.twoParam.field2)
+        assertEquals(new Point(20, 40), other.twoParam.field3)
+
+        useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), "Hello"))
+        json = JsonWriter.objectToJson(useTwoParam)
+        other = (UseTwoParam) JsonReader.jsonToJava(json)
+
+        assertEquals(new Point(10, 30), other.twoParam.field1)
+        assertEquals(new Point(20, 40), other.twoParam.field2)
+        assertEquals("Hello", other.twoParam.field3)
+
+        useTwoParam = new UseTwoParam(new TwoParam(50, 100, "Hello"))
+        json = JsonWriter.objectToJson(useTwoParam)
+        other = (UseTwoParam) JsonReader.jsonToJava(json)
+
+        assertEquals(50, other.twoParam.field1)
+        assertEquals(100, other.twoParam.field2)
+        assertEquals("Hello", other.twoParam.field3)
+
+        useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), new TestObject("Hello")))
+        json = JsonWriter.objectToJson(useTwoParam)
+        other = (UseTwoParam) JsonReader.jsonToJava(json)
+
+        assertEquals(new Point(10, 30), other.twoParam.field1)
+        assertEquals(new Point(20, 40), other.twoParam.field2)
+        assertEquals(new TestObject("Hello"), other.twoParam.field3)
+    }
+
+    @Test
+    public void testStaticSingle() throws IOException
+    {
+        StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<>("Boonies"))
+
+        String json = JsonWriter.objectToJson(useSingle)
+        //this will crash on ArrayIndexOutOfBoundsException
+        StaticUseSingle other = (StaticUseSingle) JsonReader.jsonToJava(json)
+
+        assertEquals("Boonies", other.single.field1)
     }
 }

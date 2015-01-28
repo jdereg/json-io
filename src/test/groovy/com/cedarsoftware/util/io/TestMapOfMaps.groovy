@@ -309,4 +309,34 @@ class TestMapOfMaps
             assertTrue(javaObjs[i].equals(prims[i]))
         }
     }
+
+    @Test
+    public void testBadInputForMapAPI() throws Exception
+    {
+        Object o = null;
+        try
+        {
+            o = JsonReader.jsonToMaps("[This is not quoted]")
+            fail()
+        }
+        catch (IOException e)
+        {
+            assertTrue(e.message.toLowerCase().contains("token"))
+        }
+        assertTrue(o == null)
+    }
+
+    @Test
+    public void testToMaps() throws Exception
+    {
+        JsonObject map = (JsonObject) JsonReader.jsonToMaps('{"num":0,"nullValue":null,"string":"yo"}')
+        assertTrue(map != null)
+        assertTrue(map.size() == 3)
+        assertTrue(map.get("num").equals(0L))
+        assertTrue(map.get("nullValue") == null)
+        assertTrue(map.get("string").equals("yo"))
+
+        assertTrue(map.getCol() > 0)
+        assertTrue(map.getLine() > 0)
+    }
 }
