@@ -98,6 +98,6 @@ class TestInnerClass
         TestUtil.printLine("json1=" + json1)
         Dog.Leg go = (Dog.Leg) TestUtil.readJsonObject(json1)
         assertTrue(go.y == 20)
-        assertTrue(go.parentX == 10)
+        assertTrue(go.getParentX() == 10)
     }
 }
