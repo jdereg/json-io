@@ -973,9 +973,9 @@ class TestArrays
     @Test
     void testArraysAsList() throws Exception
     {
-        Object[] strings = ['alpha', 'bravo', 'charlie'] as Object[]
-        List strs = Arrays.asList(strings)
-        List foo = (List) TestUtil.readJsonObject(TestUtil.getJsonString(strs))
+        List strs = ['alpha', 'bravo', 'charlie']
+        String json = TestUtil.getJsonString(strs)
+        List foo = (List) TestUtil.readJsonObject(json)
         assertTrue(foo.size() == 3)
         assertTrue("alpha".equals(foo.get(0)))
         assertTrue("charlie".equals(foo.get(2)))

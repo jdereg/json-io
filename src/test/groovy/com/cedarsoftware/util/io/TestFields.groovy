@@ -31,7 +31,7 @@ class TestFields
 
     static class PainfulToSerialize
     {
-        ClassLoader classLoader = TestJsonReaderWriter.class.getClassLoader()
+        ClassLoader classLoader = TestFields.class.getClassLoader()
         String name
     }
 
