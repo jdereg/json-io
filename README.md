@@ -121,7 +121,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
  * 2.9.2 (coming soon)
   * Android: Rearranged `[:.]` to `[.:]` in regular expressions for Android compatibility.  Technically, it should not matter, but `[:.]` was causing `java.util.regex.PatternSyntaxException: Syntax error U_ILLEGAL_ARGUMENT_ERROR` on Android JVM.
-  * Bug fix: When using the `JsonWriter` arguments `Map` with `FIELD_SPECIFIERS`, if you specified a field that was transient, it was not serialized.  This has been corrected.  When you specify the field list for a given class, the Map can contain any non-static fields in the class, including transient fields.
+  * Bug fix: When using the `JsonWriter` arguments `Map` with `FIELD_SPECIFIERS`, if you specified a field that was transient, it was not serialized.  This has been corrected.  When you specify the field list for a given class, the `Map` can contain any non-static fields in the class, including transient fields.
   * All JUnit tests converted to Groovy.
  * 2.9.1
   * Bug fix: Parameterized types are only internally stamped onto generic Maps (Maps read with no `@type`) if the field that points to the `Map` is a template variable or it has template arguments.
