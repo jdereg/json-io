@@ -167,7 +167,7 @@ class TestTemplateFields
     }
 
     @Test
-    public void testSingle() throws IOException
+    void testSingle() throws IOException
     {
         UseSingle useSingle = new UseSingle(new Single<String>("Steel", "Wood"))
         String json = JsonWriter.objectToJson(useSingle)
@@ -178,7 +178,7 @@ class TestTemplateFields
     }
 
     @Test
-    public void testTwoParam() throws IOException
+    void testTwoParam() throws IOException
     {
         UseTwoParam useTwoParam = new UseTwoParam(new TwoParam("Hello", "Goodbye", new Point(20, 40)))
         String json = JsonWriter.objectToJson(useTwoParam)
@@ -214,7 +214,7 @@ class TestTemplateFields
     }
 
     @Test
-    public void testStaticSingle() throws IOException
+    void testStaticSingle() throws IOException
     {
         StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<>("Boonies"))
 
@@ -226,19 +226,19 @@ class TestTemplateFields
     }
 
     @Test
-    public void test3TypeGeneric() throws Exception
+    void test3TypeGeneric() throws Exception
     {
-        String json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":{"x":1,"y":2},"u":"Sochi","v":{"x":10,"y":20}}}';
-        GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json);
-        assertEquals(new Point(1, 2), gen.a.t);
-        assertEquals("Sochi", gen.a.u);
-        assertEquals(new Point(10, 20), gen.a.v);
+        String json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":{"x":1,"y":2},"u":"Sochi","v":{"x":10,"y":20}}}'
+        GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json)
+        assertEquals(new Point(1, 2), gen.a.t)
+        assertEquals("Sochi", gen.a.u)
+        assertEquals(new Point(10, 20), gen.a.v)
 
-        json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":null,"u":null,"v":null}}';
-        gen = (GenericHolder) JsonReader.jsonToJava(json);
-        assertNull(gen.a.t);
-        assertNull(gen.a.u);
-        assertNull(gen.a.v);
+        json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":null,"u":null,"v":null}}'
+        gen = (GenericHolder) JsonReader.jsonToJava(json)
+        assertNull(gen.a.t)
+        assertNull(gen.a.u)
+        assertNull(gen.a.v)
     }
 
 }

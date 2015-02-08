@@ -2086,7 +2086,7 @@ public class JsonWriter implements Closeable, Flushable
         {   // Caller is using associating a class name to a set of fields for the given class (allows field reductions)
             for (Field field : externallySpecifiedFields)
             {   // Not currently supporting overwritten field names in hierarchy when using external field specifier
-                first = writeField(obj, first, field.getName(), field);
+                first = writeField(obj, first, field.getName(), field, true);
             }
         }
         else
@@ -2095,7 +2095,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 final String fieldName = entry.getKey();
                 final Field field = entry.getValue();
-                first = writeField(obj, first, fieldName, field);
+                first = writeField(obj, first, fieldName, field, false);
             }
         }
 
@@ -2103,9 +2103,9 @@ public class JsonWriter implements Closeable, Flushable
         out.write('}');
     }
 
-    private boolean writeField(Object obj, boolean first, String fieldName, Field field) throws IOException
+    private boolean writeField(Object obj, boolean first, String fieldName, Field field, boolean allowTransient) throws IOException
     {
-        if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
+        if (!allowTransient && (field.getModifiers() & Modifier.TRANSIENT) != 0)
         {   // Do not write transient fields
             return first;
         }

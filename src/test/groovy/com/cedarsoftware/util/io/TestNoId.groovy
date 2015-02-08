@@ -2,7 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import static org.junit.Assert.assertTrue
+import static org.junit.Assert.assertFalse
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -21,23 +21,32 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestByteArray
+class TestNoId
 {
-    @Test
-    void testPerformance() throws Exception
+    static class NoId
     {
-        byte[] bytes = new byte[128 * 1024]
-        Random r = new Random()
-        r.nextBytes(bytes)
-        String json = TestUtil.getJsonString(bytes)
-
-        byte[] bytes2 = (byte[]) TestUtil.readJsonObject(json)
-
-        for (int i = 0; i < bytes.length; i++)
-        {
-            assertTrue(bytes[i] == bytes2[i])
-        }
+        protected Class<?> cls = LinkedList.class;
     }
 
+    @Test
+    void testShouldNotNeedId() throws Exception
+    {
+        NoId noId = new NoId()
+        String json = JsonWriter.objectToJson(noId)
+        assertFalse(json.contains("@id"))
+    }
 
+    @Test
+    void testNoIdNeeded() throws Exception
+    {
+        TestObject alpha = new TestObject('alpha')
+        TestObject beta = new TestObject('beta')
+        alpha._other = beta
+        String json = TestUtil.getJsonString(alpha)
+        assert !json.contains('@id')
+
+        beta._other = alpha
+        json = TestUtil.getJsonString(alpha)
+        assert json.count('@id') == 1
+    }
 }

@@ -53,7 +53,7 @@ class TestCharacter
     }
 
     @Test
-    public void testCharacter() throws Exception
+    void testCharacter() throws Exception
     {
         ManyCharacters test = new ManyCharacters()
         String json = TestUtil.getJsonString(test)
@@ -92,13 +92,13 @@ class TestCharacter
     }
 
     @Test
-    public void testFunnyChars() throws Exception
+    void testFunnyChars() throws Exception
     {
-        String json = '{"@type":"[C","@items":["a\\t\\u0004"]}';
-        char[] chars = (char[]) TestUtil.readJsonObject(json);
-        assertEquals(chars.length, 3);
-        assertEquals(chars[0], 'a' as char);
-        assertEquals(chars[1], '\t' as char);
-        assertEquals(chars[2], '\u0004' as char);
+        String json = '{"@type":"[C","@items":["a\\t\\u0004"]}'
+        char[] chars = (char[]) TestUtil.readJsonObject(json)
+        assertEquals(chars.length, 3)
+        assertEquals(chars[0], 'a' as char)
+        assertEquals(chars[1], '\t' as char)
+        assertEquals(chars[2], '\u0004' as char)
     }
 }

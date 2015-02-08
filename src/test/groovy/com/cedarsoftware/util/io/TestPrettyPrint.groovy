@@ -32,10 +32,10 @@ class TestPrettyPrint
     }
 
     @Test
-    public void testPrettyPrint() throws Exception
+    void testPrettyPrint() throws Exception
     {
         Nice nice = new Nice()
-        nice.name = "Louie";
+        nice.name = "Louie"
         nice.items = new ArrayList()
         nice.items.add("One")
         nice.items.add(1L)

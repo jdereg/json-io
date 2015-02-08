@@ -183,9 +183,9 @@ class TestFields
             _boolean_d = new Boolean(false)
             _boolean_e = null;
 
-            _char_a = 'a';
-            _char_b = '\t';
-            _char_c = '\u0004';
+            _char_a = 'a'
+            _char_b = '\t'
+            _char_c = '\u0004'
             _char_d = new Character('a' as char)
             _char_e = new Character('\t' as char)
             _char_f = new Character('\u0002' as char)
@@ -227,8 +227,8 @@ class TestFields
             _double_d = new Double(Double.MAX_VALUE)
             _double_e = null;
 
-            _string_a = "Hello";
-            _string_b = "";
+            _string_a = "Hello"
+            _string_b = ""
             _string_c = null;
 
             _date_a = _testDate;
@@ -443,7 +443,7 @@ class TestFields
     }
 
     @Test
-    public void testReconstituteFields() throws Exception
+    void testReconstituteFields() throws Exception
     {
         ManyFields testFields = new ManyFields()
         testFields.init()
@@ -460,9 +460,9 @@ class TestFields
     }
 
     @Test
-    public void testAssignToObjectField() throws Exception
+    void testAssignToObjectField() throws Exception
     {
-        String json = '{"@type":"' + TestVanillaFields.class.getName() + '","name":"Nakamoto","salary":100.45,"age":48,"alive":true,"garbage":null}';
+        String json = '{"@type":"' + TestVanillaFields.class.getName() + '","name":"Nakamoto","salary":100.45,"age":48,"alive":true,"garbage":null}'
         TestVanillaFields vanilla = (TestVanillaFields) TestUtil.readJsonObject(json)
         assertEquals(vanilla.name, "Nakamoto")
         assertEquals(vanilla.salary, 100.45, 0.0001)
@@ -472,7 +472,7 @@ class TestFields
     }
 
     @Test
-    public void testExternalFieldSpecifiedBadName() throws Exception
+    void testExternalFieldSpecifiedBadName() throws Exception
     {
         Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>()
         List<String> fields = new ArrayList<String>()
@@ -480,7 +480,7 @@ class TestFields
         fieldSpecifiers.put(PainfulToSerialize.class, fields)
 
         PainfulToSerialize painful = new PainfulToSerialize()
-        painful.name = "Android rocks";
+        painful.name = "Android rocks"
 
         Map args = new HashMap()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
@@ -496,7 +496,7 @@ class TestFields
     }
 
     @Test
-    public void testExternalFieldSpecifier() throws Exception
+    void testExternalFieldSpecifier() throws Exception
     {
         Map<Class, List<String>> fieldSpecifiers = new HashMap<>()
         List<String> fields = new ArrayList<>()
@@ -504,7 +504,7 @@ class TestFields
         fieldSpecifiers.put(PainfulToSerialize.class, fields)
 
         PainfulToSerialize painful = new PainfulToSerialize()
-        painful.name = "Android rocks";
+        painful.name = "Android rocks"
 
         Map args = new HashMap()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
@@ -515,11 +515,11 @@ class TestFields
     }
 
     @Test
-    public void testExternalFieldSpecifierInheritance() throws Exception
+    void testExternalFieldSpecifierInheritance() throws Exception
     {
         Map<Class, List<String>> fieldSpecifiers = [(PainfulToSerialize.class):['name']]
         MorePainfulToSerialize painful = new MorePainfulToSerialize()
-        painful.name = "Android rocks";
+        painful.name = "Android rocks"
         painful.age = 50;
 
         def args = [(JsonWriter.FIELD_SPECIFIERS):fieldSpecifiers]
@@ -540,15 +540,15 @@ class TestFields
     }
 
     @Test
-    public void testLocaleAsField() throws Exception
+    void testLocaleAsField() throws Exception
     {
-        Locale locale = Locale.getDefault();
-        TestLocale tl = new TestLocale();
+        Locale locale = Locale.getDefault()
+        TestLocale tl = new TestLocale()
         tl._loc = locale;
-        String json = TestUtil.getJsonString(tl);
-        TestUtil.printLine("json=" + json);
+        String json = TestUtil.getJsonString(tl)
+        TestUtil.printLine("json=" + json)
 
-        tl = (TestLocale) TestUtil.readJsonObject(json);
-        assertTrue(locale.equals(tl._loc));
+        tl = (TestLocale) TestUtil.readJsonObject(json)
+        assertTrue(locale.equals(tl._loc))
     }
 }

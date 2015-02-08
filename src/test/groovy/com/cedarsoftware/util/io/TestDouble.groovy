@@ -52,7 +52,7 @@ class TestDouble
     }
 
     @Test
-    public void testDouble() throws Exception
+    void testDouble() throws Exception
     {
         ManyDoubles test = new ManyDoubles()
         String json = TestUtil.getJsonString(test)

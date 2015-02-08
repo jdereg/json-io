@@ -69,7 +69,7 @@ class TestString
     }
 
     @Test
-    public void testString() throws Exception
+    void testString() throws Exception
     {
         ManyStrings test = new ManyStrings()
         String jsonOut = TestUtil.getJsonString(test)
@@ -109,9 +109,9 @@ class TestString
     }
 
     @Test
-    public void testRootString() throws Exception
+    void testRootString() throws Exception
     {
-        String s = '"root string"';
+        String s = '"root string"'
         Object o = JsonReader.jsonToMaps(s)
         assertTrue(o instanceof JsonObject)
         JsonObject jo = (JsonObject) o

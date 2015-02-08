@@ -53,7 +53,7 @@ class TestShort
     }
 
     @Test
-    public void testShort() throws Exception
+    void testShort() throws Exception
     {
         ManyShorts test = new ManyShorts()
         String json = TestUtil.getJsonString(test)

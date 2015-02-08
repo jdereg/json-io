@@ -103,7 +103,7 @@ class TestPrimitives
     }
 
     @Test
-    public void testEmptyPrimitives() throws Exception
+    void testEmptyPrimitives() throws Exception
     {
         String json = '{"@type":"byte"}'
         Byte b = (Byte) JsonReader.jsonToJava(json)
@@ -159,9 +159,9 @@ class TestPrimitives
     }
 
     @Test
-    public void testAssignPrimitiveToString() throws Exception
+    void testAssignPrimitiveToString() throws Exception
     {
-        String json = '{"@type":"' + TestStringField.class.getName() + '","intField":16,"booleanField":true,"doubleField":345.12321,"nullField":null,"values":[10,true,3.14159,null]}';
+        String json = '{"@type":"' + TestStringField.class.getName() + '","intField":16,"booleanField":true,"doubleField":345.12321,"nullField":null,"values":[10,true,3.14159,null]}'
         TestStringField tsf = (TestStringField) TestUtil.readJsonObject(json)
         assertEquals("16", tsf.intField)
         assertEquals("true", tsf.booleanField)

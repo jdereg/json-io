@@ -54,7 +54,7 @@ class TestLong
     }
 
     @Test
-    public void testLong() throws Exception
+    void testLong() throws Exception
     {
         ManyLongs test = new ManyLongs()
         String json = TestUtil.getJsonString(test)

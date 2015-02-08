@@ -29,7 +29,7 @@ class TestUsingSunMisc
         private x = 0;
         ShouldBeImpossibleToInstantiate()
         {
-            throw new RuntimeException("Go away");
+            throw new RuntimeException("Go away")
         }
     }
 
@@ -95,7 +95,7 @@ class TestUsingSunMisc
     {
         try
         {
-            ShouldBeImpossibleToInstantiate s = new ShouldBeImpossibleToInstantiate();
+            ShouldBeImpossibleToInstantiate s = new ShouldBeImpossibleToInstantiate()
             fail()
         }
         catch (Exception e)
@@ -106,7 +106,7 @@ class TestUsingSunMisc
         String json = '{"@type":"' + ShouldBeImpossibleToInstantiate.class.name + '", "x":50}'
         try
         {
-            JsonReader.jsonToJava(json);
+            JsonReader.jsonToJava(json)
             fail()
         }
         catch (Exception e)
@@ -115,7 +115,7 @@ class TestUsingSunMisc
         }
 
         JsonReader.useUnsafe = true
-        ShouldBeImpossibleToInstantiate s = JsonReader.jsonToJava(json);
+        ShouldBeImpossibleToInstantiate s = JsonReader.jsonToJava(json)
         assert s.x == 50
         JsonReader.useUnsafe = false
     }

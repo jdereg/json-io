@@ -26,7 +26,7 @@ import static org.junit.Assert.fail
 class TestLocale
 {
     @Test
-    public void testLocale() throws Exception
+    void testLocale() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString(locale)
@@ -65,7 +65,7 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleArray() throws Exception
+    void testLocaleArray() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString([locale] as Object[])
@@ -84,7 +84,7 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleInMapValue() throws Exception
+    void testLocaleInMapValue() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         Map map = new HashMap()
@@ -97,7 +97,7 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleInMapKey() throws Exception
+    void testLocaleInMapKey() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         Map map = new HashMap()
@@ -111,7 +111,7 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleInMapOfMaps() throws Exception
+    void testLocaleInMapOfMaps() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString(locale)
@@ -122,7 +122,7 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleRef() throws Exception
+    void testLocaleRef() throws Exception
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString([locale, locale] as Object[])
@@ -135,15 +135,15 @@ class TestLocale
     }
 
     @Test
-    public void testLocaleInMap() throws Exception
+    void testLocaleInMap() throws Exception
     {
         def map = [
                 (Locale.US):'United States of America',
                 (Locale.CANADA):'Canada',
                 (Locale.UK): 'United Kingdom']
 
-        String json = TestUtil.getJsonString(map);
-        Map map2 = (Map) TestUtil.readJsonObject(json);
-        assertTrue(DeepEquals.deepEquals(map, map2));
+        String json = TestUtil.getJsonString(map)
+        Map map2 = (Map) TestUtil.readJsonObject(json)
+        assertTrue(DeepEquals.deepEquals(map, map2))
     }
 }

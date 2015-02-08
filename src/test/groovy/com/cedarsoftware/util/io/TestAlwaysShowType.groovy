@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import com.cedarsoftware.util.DeepEquals
 import org.junit.Test
 
 import static org.junit.Assert.assertTrue
@@ -21,23 +22,19 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestByteArray
+class TestAlwaysShowType
 {
     @Test
-    void testPerformance() throws Exception
+    void testAlwaysShowType() throws Exception
     {
-        byte[] bytes = new byte[128 * 1024]
-        Random r = new Random()
-        r.nextBytes(bytes)
-        String json = TestUtil.getJsonString(bytes)
-
-        byte[] bytes2 = (byte[]) TestUtil.readJsonObject(json)
-
-        for (int i = 0; i < bytes.length; i++)
-        {
-            assertTrue(bytes[i] == bytes2[i])
-        }
+        TestObject btc = new TestObject("Bitcoin")
+        btc._other = new TestObject("Satoshi")
+        Map args = new HashMap()
+        args.put(JsonWriter.TYPE, true)
+        String json0 = JsonWriter.objectToJson(btc, args)
+        TestObject thatBtc = (TestObject) TestUtil.readJsonObject(json0)
+        assertTrue(DeepEquals.deepEquals(btc, thatBtc))
+        String json1 = JsonWriter.objectToJson(btc)
+        assertTrue(json0.length() > json1.length())
     }
-
-
 }

@@ -52,7 +52,7 @@ class TestByte
     }
 
     @Test
-    public void testByte() throws Exception
+    void testByte() throws Exception
     {
         ManyBytes test = new ManyBytes()
         String json = TestUtil.getJsonString(test)

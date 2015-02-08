@@ -58,7 +58,7 @@ class TestBoolean
     }
 
     @Test
-    public void testBoolean() throws Exception
+    void testBoolean() throws Exception
     {
         ManyBooleans test = new ManyBooleans()
         String json = TestUtil.getJsonString(test)
@@ -97,7 +97,7 @@ class TestBoolean
     }
 
     @Test
-    public void testBooleanCompatibility() throws Exception
+    void testBooleanCompatibility() throws Exception
     {
         MyBooleanTesting testObject = new MyBooleanTesting()
         MyBoolean2Testing testObject2 = new MyBoolean2Testing()

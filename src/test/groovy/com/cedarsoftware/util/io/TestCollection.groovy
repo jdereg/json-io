@@ -37,7 +37,7 @@ class TestCollection
 
         private int internal = 6;
         protected long age = 21;
-        String foo = "bar";
+        String foo = "bar"
     }
 
     static class EmptyCols
@@ -58,6 +58,11 @@ class TestCollection
     static class PointList
     {
         List<Point> points;
+    }
+
+    static class EmptyArrayList
+    {
+        ArrayList<String> list = []
     }
 
     private static class ManyCollections implements Serializable
@@ -393,7 +398,7 @@ class TestCollection
         List list2 = (List) TestUtil.readJsonObject(json)
         assertTrue(list.equals(list2))
 
-        json = '{"@type":"java.util.ArrayList","@items":["a",{},"b"]}';
+        json = '{"@type":"java.util.ArrayList","@items":["a",{},"b"]}'
         list2 = (List) TestUtil.readJsonObject(json)
         assertTrue(list2.size() == 3)
         assertTrue(list2.get(0).equals("a"))
@@ -417,7 +422,7 @@ class TestCollection
 
         // Forward reference
         String pkg = TestObject.class.name;
-        json = '{"@type":"java.util.ArrayList","@items":[{"@ref":3},{"@id":3,"@type":"' + pkg + '","_name":"JSON","_other":null}]}';
+        json = '{"@type":"java.util.ArrayList","@items":[{"@ref":3},{"@id":3,"@type":"' + pkg + '","_name":"JSON","_other":null}]}'
         list2 = (List) JsonReader.jsonToJava(json)
         assertTrue(list.equals(list2))
     }
@@ -437,7 +442,7 @@ class TestCollection
     @Test
     void testCollectionWithParameterizedTypes() throws Exception
     {
-        String json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{"foo":[{"x":1,"y":2},{"x":10,"y":20}],"bar":[{"x":3,"y":4}, {"x":30,"y":40}]}}';
+        String json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{"foo":[{"x":1,"y":2},{"x":10,"y":20}],"bar":[{"x":3,"y":4}, {"x":30,"y":40}]}}'
         ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json)
         Set<Point> points = pCol.content.get("foo")
         assertNotNull(points)
@@ -451,7 +456,7 @@ class TestCollection
         points.contains(new Point(3, 4))
         points.contains(new Point(30, 40))
 
-        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{"foo":[],"bar":null}}';
+        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{"foo":[],"bar":null}}'
         pCol = (ParameterizedCollection) JsonReader.jsonToJava(json)
         points = pCol.content.get("foo")
         assertNotNull(points)
@@ -460,12 +465,12 @@ class TestCollection
         points = pCol.content.get("bar")
         assertNull(points)
 
-        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{}}';
+        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{}}'
         pCol = (ParameterizedCollection) JsonReader.jsonToJava(json)
         assertNotNull(pCol.content)
         assertEquals(0, pCol.content.size())
 
-        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":null}';
+        json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":null}'
         pCol = (ParameterizedCollection) JsonReader.jsonToJava(json)
         assertNull(pCol.content)
     }
@@ -475,7 +480,7 @@ class TestCollection
     {
         EmptyCols emptyCols;
         String className = TestCollection.class.getName()
-        String json = '{"@type":"' + className + '$EmptyCols","col":{},"list":{},"map":{},"set":{},"sortedSet":{},"sortedMap":{}}';
+        String json = '{"@type":"' + className + '$EmptyCols","col":{},"list":{},"map":{},"set":{},"sortedSet":{},"sortedMap":{}}'
         TestUtil.printLine("json = " + json)
         emptyCols = (EmptyCols) TestUtil.readJsonObject(json)
 
@@ -517,7 +522,7 @@ class TestCollection
     void testGenericInfoCollection() throws Exception
     {
         String className = PointList.class.getName()
-        String json = '{"@type":"' + className + '","points":{"@type":"java.util.ArrayList","@items":[{"x":1,"y":2}]}}';
+        String json = '{"@type":"' + className + '","points":{"@type":"java.util.ArrayList","@items":[{"x":1,"y":2}]}}'
         PointList list = (PointList) TestUtil.readJsonObject(json)
         assertTrue(list.points.size() == 1)
         Point p1 = list.points.get(0)
@@ -653,19 +658,33 @@ class TestCollection
     void testUntypedCollections() throws Exception
     {
         Object[] poly = ["Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"] as Object[];
-        String json = TestUtil.getJsonString(poly);
-        TestUtil.printLine("json=" + json);
-        assertTrue('["Road Runner",16,3.1415,true,false,null,{"@type":"int","value":7},"Coyote","Coyote"]'.equals(json));
-        Collection col = new ArrayList();
-        col.add("string");
-        col.add(new Long(16));
-        col.add(new Double(3.14159));
-        col.add(Boolean.TRUE);
-        col.add(Boolean.FALSE);
-        col.add(null);
-        col.add(new Integer(7));
-        json = TestUtil.getJsonString(col);
-        TestUtil.printLine("json=" + json);
-        assertTrue('{"@type":"java.util.ArrayList","@items":["string",16,3.14159,true,false,null,{"@type":"int","value":7}]}'.equals(json));
+        String json = TestUtil.getJsonString(poly)
+        TestUtil.printLine("json=" + json)
+        assertTrue('["Road Runner",16,3.1415,true,false,null,{"@type":"int","value":7},"Coyote","Coyote"]'.equals(json))
+        Collection col = new ArrayList()
+        col.add("string")
+        col.add(new Long(16))
+        col.add(new Double(3.14159))
+        col.add(Boolean.TRUE)
+        col.add(Boolean.FALSE)
+        col.add(null)
+        col.add(new Integer(7))
+        json = TestUtil.getJsonString(col)
+        TestUtil.printLine("json=" + json)
+        assertTrue('{"@type":"java.util.ArrayList","@items":["string",16,3.14159,true,false,null,{"@type":"int","value":7}]}'.equals(json))
+    }
+
+    @Test
+    void testEmptyArrayList() throws Exception
+    {
+        EmptyArrayList x = new EmptyArrayList()
+        String json = TestUtil.getJsonString(x)
+        TestUtil.printLine(json)
+        assertTrue(json.contains('list":[]'))
+
+        Map obj = JsonReader.jsonToMaps(json)
+        json = TestUtil.getJsonString(obj)
+        TestUtil.printLine(json)
+        assertTrue(json.contains('list":[]'))
     }
 }

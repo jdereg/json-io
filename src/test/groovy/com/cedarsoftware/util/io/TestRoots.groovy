@@ -26,16 +26,16 @@ import static org.junit.Assert.assertTrue
 class TestRoots
 {
     @Test
-    public void testStringRoot() throws Exception
+    void testStringRoot() throws Exception
     {
-        Gson gson = new Gson();
-        String g = gson.toJson("root should not be a string");
-        String j = JsonWriter.objectToJson("root should not be a string");
-        assertEquals(g, j);
+        Gson gson = new Gson()
+        String g = gson.toJson("root should not be a string")
+        String j = JsonWriter.objectToJson("root should not be a string")
+        assertEquals(g, j)
     }
 
     @Test
-    public void testRoots() throws Exception
+    void testRoots() throws Exception
     {
         // Test Object[] as root element passed in
         Object[] foo = [new TestObject("alpha"), new TestObject("beta")] as Object[];
@@ -48,7 +48,7 @@ class TestRoots
         assertTrue(bar[0].equals(new TestObject("alpha")))
         assertTrue(bar[1].equals(new TestObject("beta")))
 
-        String json = '["getStartupInfo",["890.022905.16112006.00024.0067ur","machine info"]]';
+        String json = '["getStartupInfo",["890.022905.16112006.00024.0067ur","machine info"]]'
         Object[] baz = (Object[]) JsonReader.jsonToJava(json)
         assertTrue(baz.length == 2)
         assertTrue("getStartupInfo".equals(baz[0]))
@@ -57,7 +57,7 @@ class TestRoots
         assertTrue("890.022905.16112006.00024.0067ur".equals(args[0]))
         assertTrue("machine info".equals(args[1]))
 
-        String hw = '["Hello, World"]';
+        String hw = '["Hello, World"]'
         Object[] qux = (Object[]) JsonReader.jsonToJava(hw)
         assertTrue(qux != null)
         assertTrue("Hello, World".equals(qux[0]))
@@ -78,7 +78,17 @@ class TestRoots
     }
 
     @Test
-    public void testRoots2() throws Exception
+    void testRootTypes() throws Exception
+    {
+        assertEquals(25L, TestUtil.readJsonObject("25"))
+        assertEquals(25.0d, TestUtil.readJsonObject("25.0"), 0.00001d)
+        assertEquals(true, TestUtil.readJsonObject("true"))
+        assertEquals(false, TestUtil.readJsonObject("false"))
+        assertEquals("foo", TestUtil.readJsonObject('"foo"'))
+    }
+
+    @Test
+    void testRoots2() throws Exception
     {
         // Test root JSON type as [ ]
         Object array = ['Hello'] as Object[]
@@ -100,5 +110,23 @@ class TestRoots
         assertTrue(date.get(Calendar.DAY_OF_MONTH) == 17)
     }
 
+    @Test
+    void testNull() throws Exception
+    {
+        String json = JsonWriter.objectToJson(null)
+        TestUtil.printLine('json=' + json)
+        assert 'null' == json
+    }
 
+    @Test
+    void testEmptyObject() throws Exception
+    {
+        Object o = TestUtil.readJsonObject('{}')
+        assert JsonObject.class == o.getClass()
+
+        Object[] oa = (Object[]) TestUtil.readJsonObject('[{},{}]')
+        assert oa.length == 2
+        assert Object.class == oa[0].getClass()
+        assert Object.class == oa[1].getClass()
+    }
 }

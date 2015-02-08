@@ -33,9 +33,9 @@
     </developers>
 
     <properties>
-        <version.java-util>1.15.0</version.java-util>
+        <version.java-util>1.16.0</version.java-util>
         <version.junit>4.11</version.junit>
-        <version.groovy>2.3.9</version.groovy>
+        <version.groovy>2.4.0</version.groovy>
         <version.gson>2.3</version.gson>
         <version.plugin.compiler>3.2</version.plugin.compiler>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>

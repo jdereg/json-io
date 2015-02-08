@@ -307,7 +307,7 @@ class TestArrays
     }
 
     @Test
-    public void testArray() throws Exception
+    void testArray() throws Exception
     {
         ManyArrays obj = new ManyArrays()
         obj.init()
@@ -703,7 +703,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteObjectArray() throws Exception
+    void testReconstituteObjectArray() throws Exception
     {
         Date now = new Date()
         TestObject to = new TestObject("football")
@@ -758,7 +758,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteObjectArrayTypes() throws Exception
+    void testReconstituteObjectArrayTypes() throws Exception
     {
         TestUtil.printLine("testReconstituteObjectArrayTypes")
         Object[] bytes = [_CONST_BYTE,  _CONST_BYTE] as Object[]
@@ -834,7 +834,7 @@ class TestArrays
         BigDecimal[] BigDecimals = [pi, pi] as BigDecimal[]
         testReconstituteArrayHelper(BigDecimals)
 
-        String s = "json-io";
+        String s = "json-io"
         Object[] strings = [s, s] as Object[]
         testReconstituteArrayHelper(strings)
         String[] Strings = [s, s] as String[]
@@ -863,7 +863,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteEmptyArray() throws Exception
+    void testReconstituteEmptyArray() throws Exception
     {
         Object[] empty = [] as Object[]
         String json0 = TestUtil.getJsonString(empty)
@@ -898,7 +898,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteTypedArray() throws Exception
+    void testReconstituteTypedArray() throws Exception
     {
         String[] strs = ["tom", "dick", "harry"] as String[]
         Object[] objs = [strs, "a", strs] as Object[]
@@ -925,7 +925,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteArray() throws Exception
+    void testReconstituteArray() throws Exception
     {
         ManyArrays testArray = new ManyArrays()
         testArray.init()
@@ -942,7 +942,7 @@ class TestArrays
     }
 
     @Test
-    public void testReconstituteEmptyObject() throws Exception
+    void testReconstituteEmptyObject() throws Exception
     {
         Empty empty = new Empty()
         String json0 = TestUtil.getJsonString(empty)
@@ -957,7 +957,7 @@ class TestArrays
     }
 
     @Test
-    public void testAlwaysShowType() throws Exception
+    void testAlwaysShowType() throws Exception
     {
         ManyArrays ta = new ManyArrays()
         ta.init()
@@ -971,7 +971,7 @@ class TestArrays
     }
 
     @Test
-    public void testArraysAsList() throws Exception
+    void testArraysAsList() throws Exception
     {
         Object[] strings = ['alpha', 'bravo', 'charlie'] as Object[]
         List strs = Arrays.asList(strings)
@@ -983,9 +983,9 @@ class TestArrays
 
     // Currently allows , at end.  Future, may drop this support.
     @Test
-    public void testBadArray() throws Exception
+    void testBadArray() throws Exception
     {
-        String json = "[1, 10, 100,]";
+        String json = "[1, 10, 100,]"
         Object[] array = (Object[]) TestUtil.readJsonObject(json)
         assertTrue(array.length == 3)
         assertEquals(array[0], 1L)
@@ -994,7 +994,7 @@ class TestArrays
     }
 
     @Test
-    public void testCharArray() throws Exception
+    void testCharArray() throws Exception
     {
         CharArrayTest cat = new CharArrayTest()
         cat.chars_a = ['a' as char, '\t' as char, '\u0005' as char] as char[]
@@ -1034,16 +1034,16 @@ class TestArrays
     }
 
     @Test
-    public void testEmptyArray() throws Exception
+    void testEmptyArray() throws Exception
     {
-        String json = "{\"@type\":\"[Ljava.lang.String;\"}";
+        String json = '{"@type":"[Ljava.lang.String;"}'
         String[] s = (String[])JsonReader.jsonToJava(json)
         assertTrue(s != null)
         assertTrue(s.length == 0)
     }
 
     @Test
-    public void testMultiDimensionalArrays() throws Exception
+    void testMultiDimensionalArrays() throws Exception
     {
         int[][][][] x = [[[[0,1],[0,1]],[[0,1],[0,1]]],[[[0,1],[0,1]],[[0,1],[0,1]]]] as int[][][][]
         for (int a=0; a < 2; a++)
@@ -1054,7 +1054,7 @@ class TestArrays
                 {
                     for (int d=0; d < 2; d++)
                     {
-                        x[a][b][c][d] = a + b + c + d;
+                        x[a][b][c][d] = a + b + c + d
                     }
                 }
             }
@@ -1087,7 +1087,7 @@ class TestArrays
                 {
                     for (int d=0; d < 2; d++)
                     {
-                        xx[a][b][c][d] = a + b + c + d;
+                        xx[a][b][c][d] = a + b + c + d
                     }
                 }
             }
@@ -1112,9 +1112,9 @@ class TestArrays
     }
 
     @Test
-    public void testObjectArrayStringReference() throws Exception
+    void testObjectArrayStringReference() throws Exception
     {
-        String s = "dogs";
+        String s = "dogs"
         String json = TestUtil.getJsonString([s, s] as Object[])
         TestUtil.printLine("json = " + json)
         Object[] o = (Object[]) TestUtil.readJsonObject(json)
@@ -1124,9 +1124,9 @@ class TestArrays
     }
 
     @Test
-    public void testStringArrayStringReference() throws Exception
+    void testStringArrayStringReference() throws Exception
     {
-        String s = "dogs";
+        String s = "dogs"
         String json = TestUtil.getJsonString([s, s] as String[])
         TestUtil.printLine("json = " + json)
         String[] o = (String[]) TestUtil.readJsonObject(json)
@@ -1136,7 +1136,7 @@ class TestArrays
     }
 
     @Test
-    public void testReferencedEmptyArray() throws Exception
+    void testReferencedEmptyArray() throws Exception
     {
         String[] array = [] as String[]
         Object[] refArray = [array] as Object[]
@@ -1148,7 +1148,7 @@ class TestArrays
     }
 
     @Test
-    public void testUntypedArray() throws Exception
+    void testUntypedArray() throws Exception
     {
         Object[] args = (Object[]) TestUtil.readJsonObject('["string",17, null, true, false, [], -1273123,32131, 1e6, 3.14159, -9223372036854775808, 9223372036854775807]')
 

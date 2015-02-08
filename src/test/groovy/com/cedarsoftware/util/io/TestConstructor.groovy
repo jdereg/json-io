@@ -23,8 +23,46 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestNoDefaultConstructor
+class TestConstructor
 {
+    static class Canine
+    {
+        String name;
+        Canine(Object nm)
+        {
+            name = nm.toString()     // intentionally causes NPE when reflective constructor tries 'null' as arg
+        }
+    }
+
+    static class NoNullConstructor
+    {
+        List list;
+        Map map;
+        String string;
+        Date date;
+
+        private NoNullConstructor(List list, Map map, String string, Date date)
+        {
+            if (list == null || map == null || string == null || date == null)
+            {
+                throw new RuntimeException("Constructor arguments cannot be null")
+            }
+            this.list = list;
+            this.map = map;
+            this.string = string;
+            this.date = date;
+        }
+    }
+
+    static class Web
+    {
+        URL url;
+        Web(URL u)
+        {
+            url = u;
+        }
+    }
+
     private static class TestJsonNoDefaultOrPublicConstructor
     {
         private final String _str
@@ -138,7 +176,7 @@ class TestNoDefaultConstructor
     }
 
     @Test
-    public void testNoDefaultConstructor() throws Exception
+    void testNoDefaultConstructor() throws Exception
     {
         Calendar c = Calendar.instance
         c.set(2010, 5, 5, 5, 5, 5)
@@ -168,7 +206,7 @@ class TestNoDefaultConstructor
     }
 
     @Test
-    public void testReconstitutePrimitives() throws Exception
+    void testReconstitutePrimitives() throws Exception
     {
         Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0d, new Double(66.0d), true, Boolean.TRUE,'J' as char, new Character('K' as char), ["john","adams"] as String[], [2,6] as int[], new BigDecimal("2.71828"))
         String json0 = TestUtil.getJsonString(foo)
@@ -201,7 +239,7 @@ class TestNoDefaultConstructor
     }
 
     @Test
-    public void testReconstituteNullablePrimitives() throws Exception
+    void testReconstituteNullablePrimitives() throws Exception
     {
         Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, null, (short) 2, null, 3, null, 4L, null, 5.0f, null, 6.0d, null, true, null,'J' as char, null, ["john","adams"] as String[], [2,6] as int[], null)
         String json = TestUtil.getJsonString(foo)
@@ -245,4 +283,68 @@ class TestNoDefaultConstructor
         TestUtil.printLine("json2=" + json)
         assertTrue(json.equals(json1))
     }
+
+    @Test
+    void testConstructorWithObjectArg() throws Exception
+    {
+        Canine bella = new Canine('Bella')
+        String json = TestUtil.getJsonString(bella)
+        TestUtil.printLine("json = " + json)
+        Canine dog = (Canine) TestUtil.readJsonObject(json)
+        assertEquals('Bella', dog.name)
+    }
+
+    @Test
+    void testNoNullConstructor() throws Exception
+    {
+        NoNullConstructor noNull = new NoNullConstructor(new ArrayList(), [:], "", new Date())
+        noNull.list = null;
+        noNull.map = null;
+        noNull.string = null;
+        noNull.date = null;
+
+        String json = TestUtil.getJsonString(noNull)
+        TestUtil.printLine(json)
+        NoNullConstructor foo = (NoNullConstructor) TestUtil.readJsonObject(json)
+        assertNull(foo.list)
+        assertNull(foo.map)
+        assertNull(foo.string)
+        assertNull(foo.date)
+    }
+
+    @Test
+    void testJsonReaderConstructor() throws Exception
+    {
+        String json = '{"@type":"sun.util.calendar.ZoneInfo","zone":"EST"}'
+        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.bytes))
+        TimeZone tz = (TimeZone) jr.readObject()
+        assertTrue(tz != null)
+        assertTrue("EST".equals(tz.ID))
+    }
+
+    @Test
+    void testWriterObjectAPI() throws Exception
+    {
+        String json = "[1,true,null,3.14,[]]"
+        Object o = JsonReader.jsonToJava(json)
+        assert TestUtil.getJsonString(o) == json
+
+        ByteArrayOutputStream ba = new ByteArrayOutputStream()
+        JsonWriter writer = new JsonWriter(ba)
+        writer.write(o)
+        writer.close()
+        String s = new String(ba.toByteArray(), "UTF-8")
+        assert json == s
+    }
+
+    @Test
+    void testUrlInConstructor() throws Exception
+    {
+        Web addr = new Web(new URL("http://acme.com"))
+        String json = TestUtil.getJsonString(addr)
+        TestUtil.printLine("json = " + json)
+        Web addr2 = (Web) TestUtil.readJsonObject(json)
+        assertEquals(new URL("http://acme.com"), addr2.url)
+    }
+
 }

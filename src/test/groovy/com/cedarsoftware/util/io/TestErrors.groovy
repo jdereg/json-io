@@ -25,7 +25,7 @@ import static org.junit.Assert.fail
 class TestErrors
 {
     @Test
-    public void testBadJson() throws Exception
+    void testBadJson() throws Exception
     {
         Object o = null;
 
@@ -42,7 +42,7 @@ class TestErrors
     }
 
     @Test
-    public void testParseMissingQuote() throws Exception
+    void testParseMissingQuote() throws Exception
     {
         try
         {
@@ -61,7 +61,7 @@ class TestErrors
     "e": "f"
   },
   "string: "Hello World"
-}''';
+}'''
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -71,7 +71,7 @@ class TestErrors
         }
     }
     @Test
-    public void testParseInvalid1stChar() throws IOException
+    void testParseInvalid1stChar() throws IOException
     {
         try
         {
@@ -90,7 +90,7 @@ class TestErrors
     "e": "f"
   },
   "string:" "Hello World"
-}''';
+}'''
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -101,7 +101,7 @@ class TestErrors
     }
 
     @Test
-    public void testParseMissingLastBrace() throws IOException
+    void testParseMissingLastBrace() throws IOException
     {
         try
         {
@@ -120,7 +120,7 @@ class TestErrors
     "e": "f"
   },
   "string": "Hello World"
-""";
+"""
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -131,14 +131,14 @@ class TestErrors
     }
 
     @Test
-    public void testParseMissingLastBracket() throws IOException
+    void testParseMissingLastBracket() throws IOException
     {
-        String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]';
+        String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]'
         JsonReader.jsonToJava(json)
 
         try
         {
-            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10';
+            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -149,13 +149,13 @@ class TestErrors
     }
 
     @Test
-    public void testParseBadValueInArray() throws IOException
+    void testParseBadValueInArray() throws IOException
     {
-        String json;
+        String json
 
         try
         {
-            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']';
+            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -166,7 +166,7 @@ class TestErrors
     }
 
     @Test
-    public void testParseObjectWithoutClosingBrace() throws IOException
+    void testParseObjectWithoutClosingBrace() throws IOException
     {
         try
         {
@@ -181,11 +181,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseBadHex()
+    void testParseBadHex()
     {
         try
         {
-            String json = '"\\u5h1t"';
+            String json = '"\\u5h1t"'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -196,11 +196,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseBadEscapeChar()
+    void testParseBadEscapeChar()
     {
         try
         {
-            String json = '"What if I try to escape incorrectly \\L1CK"';
+            String json = '"What if I try to escape incorrectly \\L1CK"'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -211,11 +211,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseUnfinishedString()
+    void testParseUnfinishedString()
     {
         try
         {
-            String json = '"This is an unfinished string...';
+            String json = '"This is an unfinished string...'
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -226,11 +226,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseEOFInToken()
+    void testParseEOFInToken()
     {
         try
         {
-            String json = "falsz";
+            String json = "falsz"
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -241,11 +241,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseEOFReadingToken()
+    void testParseEOFReadingToken()
     {
         try
         {
-            String json = "tru";
+            String json = "tru"
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -256,11 +256,11 @@ class TestErrors
     }
 
     @Test
-    public void testParseEOFinArray()
+    void testParseEOFinArray()
     {
         try
         {
-            String json = "[true, false,";
+            String json = "[true, false,"
             JsonReader.jsonToJava(json)
             fail()
         }
@@ -271,13 +271,13 @@ class TestErrors
     }
 
     @Test
-    public void testMalformedJson() throws Exception
+    void testMalformedJson() throws Exception
     {
         String json;
 
         try
         {
-            json = '{"field";0}';  // colon expected between fields
+            json = '{"field"0}'  // colon expected between fields
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -285,7 +285,7 @@ class TestErrors
 
         try
         {
-            json = "{field:0}";  // not quoted field name
+            json = "{field:0}"  // not quoted field name
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -293,7 +293,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":0';  // object not terminated correctly (ending in number)
+            json = '{"field":0'  // object not terminated correctly (ending in number)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -301,7 +301,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":true';  // object not terminated correctly (ending in token)
+            json = '{"field":true'  // object not terminated correctly (ending in token)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -309,7 +309,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":"test"';  // object not terminated correctly (ending in string)
+            json = '{"field":"test"'  // object not terminated correctly (ending in string)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -317,7 +317,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":{}';  // object not terminated correctly (ending in another object)
+            json = '{"field":{}'  // object not terminated correctly (ending in another object)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -325,7 +325,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":[]';  // object not terminated correctly (ending in an array)
+            json = '{"field":[]'  // object not terminated correctly (ending in an array)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -333,7 +333,7 @@ class TestErrors
 
         try
         {
-            json = '{"field":3.14';  // object not terminated correctly (ending in double precision number)
+            json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -341,7 +341,7 @@ class TestErrors
 
         try
         {
-            json = '[1,2,3';
+            json = '[1,2,3'
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -349,7 +349,7 @@ class TestErrors
 
         try
         {
-            json = "[false,true,false";
+            json = "[false,true,false"
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -357,7 +357,7 @@ class TestErrors
 
         try
         {
-            json = '["unclosed string]';
+            json = '["unclosed string]'
             JsonReader.jsonToMaps(json)
             fail()
         }
@@ -365,11 +365,11 @@ class TestErrors
     }
 
     @Test
-    public void testBadType() throws Exception
+    void testBadType() throws Exception
     {
         try
         {
-            String json = '{"@type":"non.existent.class.Non"}';
+            String json = '{"@type":"non.existent.class.Non"}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -383,7 +383,7 @@ class TestErrors
         // Bad class inside a Collection
         try
         {
-            String json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name"}]}';
+            String json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name"}]}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -391,7 +391,7 @@ class TestErrors
     }
 
     @Test
-    public void testBadHexNumber() throws Exception
+    void testBadHexNumber() throws Exception
     {
         StringBuilder str = new StringBuilder()
         str.append("[\"\\")
@@ -405,11 +405,11 @@ class TestErrors
     }
 
     @Test
-    public void testBadValue() throws Exception
+    void testBadValue() throws Exception
     {
         try
         {
-            String json = '{"field":19;}';
+            String json = '{"field":19;}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -417,7 +417,7 @@ class TestErrors
 
         try
         {
-            String json = '{"field":';
+            String json = '{"field":'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -425,7 +425,7 @@ class TestErrors
 
         try
         {
-            String json = '{"field":joe';
+            String json = '{"field":joe'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -433,7 +433,7 @@ class TestErrors
 
         try
         {
-            String json = '{"field":trux}';
+            String json = '{"field":trux}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -441,7 +441,7 @@ class TestErrors
 
         try
         {
-            String json = '{"field":tru';
+            String json = '{"field":tru'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -449,17 +449,17 @@ class TestErrors
     }
 
     @Test
-    public void testStringEscape() throws Exception
+    void testStringEscape() throws Exception
     {
-        String json = '["escaped slash \\\' should result in a single /"]';
+        String json = '["escaped slash \\\' should result in a single /"]'
         TestUtil.readJsonObject(json)
 
-        json = '["escaped slash \\/ should result in a single /"]';
+        json = '["escaped slash \\/ should result in a single /"]'
         TestUtil.readJsonObject(json)
 
         try
         {
-            json = '["escaped slash \\x should result in a single /"]';
+            json = '["escaped slash \\x should result in a single /"]'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -467,7 +467,7 @@ class TestErrors
     }
 
     @Test
-    public void testClassMissingValue() throws Exception
+    void testClassMissingValue() throws Exception
     {
         try
         {
@@ -478,7 +478,7 @@ class TestErrors
     }
 
     @Test
-    public void testCalendarMissingValue() throws Exception
+    void testCalendarMissingValue() throws Exception
     {
         try
         {
@@ -489,7 +489,7 @@ class TestErrors
     }
 
     @Test
-    public void testBadFormattedCalendar() throws Exception
+    void testBadFormattedCalendar() throws Exception
     {
         try
         {
@@ -500,7 +500,7 @@ class TestErrors
     }
 
     @Test
-    public void testEmptyClassName() throws Exception
+    void testEmptyClassName() throws Exception
     {
         try
         {
@@ -511,7 +511,7 @@ class TestErrors
     }
 
     @Test
-    public void testBadBackRef() throws Exception
+    void testBadBackRef() throws Exception
     {
         try
         {
@@ -522,13 +522,13 @@ class TestErrors
     }
 
     @Test
-    public void testErrorReporting() throws IOException
+    void testErrorReporting() throws IOException
     {
-        String json = '[{"@type":"funky"},\n{"field:"value"]';
+        String json = '[{"@type":"funky"},\n{"field:"value"]'
         try
         {
-            JsonReader.jsonToJava(json);
-            fail();
+            JsonReader.jsonToJava(json)
+            fail()
         }
         catch (IOException e) { }
     }

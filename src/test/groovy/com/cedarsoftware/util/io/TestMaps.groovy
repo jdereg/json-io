@@ -107,7 +107,7 @@ class TestMaps
     }
 
     @Test
-    public void testMap() throws Exception
+    void testMap() throws Exception
     {
         ManyMaps obj = new ManyMaps()
         obj.init()
@@ -188,7 +188,7 @@ class TestMaps
     }
 
     @Test
-    public void testReconstituteMap() throws Exception
+    void testReconstituteMap() throws Exception
     {
         ManyMaps testMap = new ManyMaps()
         testMap.init()
@@ -205,7 +205,7 @@ class TestMaps
     }
 
     @Test
-    public void testMap2() throws Exception
+    void testMap2() throws Exception
     {
         TestObject a = new TestObject("A")
         TestObject b = new TestObject("B")
@@ -228,7 +228,7 @@ class TestMaps
     }
 
     @Test
-    public void testMap3() throws Exception
+    void testMap3() throws Exception
     {
         Map map = new HashMap()
         map.put("a", "b")
@@ -240,7 +240,7 @@ class TestMaps
     }
 
     @Test
-    public void testMapArrayKey() throws Exception
+    void testMapArrayKey() throws Exception
     {
         MapArrayKey m = new MapArrayKey()
         m.content = new LinkedHashMap<>()
@@ -271,7 +271,7 @@ class TestMaps
     }
 
     @Test
-    public void testMapSetKey() throws Exception
+    void testMapSetKey() throws Exception
     {
         MapSetKey m = new MapSetKey()
         m.content = new LinkedHashMap<>()
@@ -305,7 +305,7 @@ class TestMaps
     }
 
     @Test
-    public void testMapToMapCompatibility() throws Exception
+    void testMapToMapCompatibility() throws Exception
     {
         String json0 = '{"rows":[{"columns":[{"name":"FOO","value":"9000"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]},{"columns":[{"name":"FOO","value":"9713"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]}],"selectedRows":"110"}'
         JsonObject root = (JsonObject) JsonReader.jsonToMaps(json0)
@@ -319,7 +319,7 @@ class TestMaps
     }
 
     @Test
-    public void testMapWithAtType() throws Exception
+    void testMapWithAtType() throws Exception
     {
         AssignToList atl = new AssignToList()
         String json = '{"@id":1,"@type":"java.util.LinkedHashMap","@keys":["1000004947","0000020985","0000029443","0000020994"],"@items":["Me","Fox, James","Renewals, CORE","Gade, Raja"]}'
@@ -331,9 +331,9 @@ class TestMaps
     }
 
     @Test
-    public void testMapWithParameterizedTypes() throws Exception
+    void testMapWithParameterizedTypes() throws Exception
     {
-        String json = '{"@type":"' + ParameterizedMap.class.getName() + '", "content":{"foo":{"one":{"x":1,"y":2},"two":{"x":10,"y":20}},"bar":{"ten":{"x":3,"y":4},"twenty":{"x":30,"y":40}}}}';
+        String json = '{"@type":"' + ParameterizedMap.class.getName() + '", "content":{"foo":{"one":{"x":1,"y":2},"two":{"x":10,"y":20}},"bar":{"ten":{"x":3,"y":4},"twenty":{"x":30,"y":40}}}}'
         ParameterizedMap pCol = (ParameterizedMap) JsonReader.jsonToJava(json)
         Map<String, Point> points = pCol.content.get("foo")
         assertNotNull(points)
@@ -349,21 +349,21 @@ class TestMaps
     }
 
     @Test
-    public void testOddMaps() throws Exception
+    void testOddMaps() throws Exception
     {
-        String json = '{"@type":"java.util.HashMap","@keys":null,"@items":null}';
+        String json = '{"@type":"java.util.HashMap","@keys":null,"@items":null}'
         Map map = (Map)TestUtil.readJsonObject(json)
         assertTrue(map instanceof HashMap)
         assertTrue(map.isEmpty())
 
-        json = '{"@type":"java.util.HashMap"}';
+        json = '{"@type":"java.util.HashMap"}'
         map = (Map)TestUtil.readJsonObject(json)
         assertTrue(map instanceof HashMap)
         assertTrue(map.isEmpty())
 
         try
         {
-            json = '{"@type":"java.util.HashMap","@keys":null,"@items":[]}';
+            json = '{"@type":"java.util.HashMap","@keys":null,"@items":[]}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -375,7 +375,7 @@ class TestMaps
 
         try
         {
-            json = '{"@type":"java.util.HashMap","@keys":[1,2],"@items":[true]}';
+            json = '{"@type":"java.util.HashMap","@keys":[1,2],"@items":[true]}'
             TestUtil.readJsonObject(json)
             fail()
         }
@@ -386,7 +386,7 @@ class TestMaps
     }
 
     @Test
-    public void testReconstituteMapEmpty() throws Exception
+    void testReconstituteMapEmpty() throws Exception
     {
         Map map = new LinkedHashMap()
         String json0 = TestUtil.getJsonString(map)
@@ -403,7 +403,7 @@ class TestMaps
     }
 
     @Test
-    public void testReconstituteRefMap() throws Exception
+    void testReconstituteRefMap() throws Exception
     {
         Map m1 = new HashMap()
         Object[] root = [m1, m1] as Object[]
@@ -424,7 +424,7 @@ class TestMaps
     }
 
     @Test
-    public void testReconstituteMapSimple() throws Exception
+    void testReconstituteMapSimple() throws Exception
     {
         SimpleMapTest smt = new SimpleMapTest()
         smt.map.put("a", "alpha")

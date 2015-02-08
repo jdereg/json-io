@@ -45,7 +45,7 @@ class TestBigDecimal
     @Test
     void testAssignBigDecimal() throws Exception
     {
-        String json = '{"@type":"' + TestBigDecimalField.class.name + '","fromString":"3.14159","fromLong":314159,"fromDouble":3.14159,"fromBoolean":true,"fromStringObj":{"@type":"java.math.BigDecimal","value":"3.14159"},"fromLongObj":{"@type":"java.math.BigDecimal","value":314159},"fromDoubleObj":{"@type":"java.math.BigDecimal","value":3.14159},"fromBooleanObj":{"@type":"java.math.BigDecimal","value":false},"fromBigIntObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigInteger","value":72}},"fromBigDecObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.1}},"values":["3.14159",314159,3.14159,true,{"@type":"java.math.BigDecimal","value":"3.14159"},{"@type":"java.math.BigDecimal","value":314159},{"@type":"java.math.BigDecimal","value":3.14159},{"@type":"java.math.BigDecimal","value":true},{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.72}}]}';
+        String json = '{"@type":"' + TestBigDecimalField.class.name + '","fromString":"3.14159","fromLong":314159,"fromDouble":3.14159,"fromBoolean":true,"fromStringObj":{"@type":"java.math.BigDecimal","value":"3.14159"},"fromLongObj":{"@type":"java.math.BigDecimal","value":314159},"fromDoubleObj":{"@type":"java.math.BigDecimal","value":3.14159},"fromBooleanObj":{"@type":"java.math.BigDecimal","value":false},"fromBigIntObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigInteger","value":72}},"fromBigDecObj":{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.1}},"values":["3.14159",314159,3.14159,true,{"@type":"java.math.BigDecimal","value":"3.14159"},{"@type":"java.math.BigDecimal","value":314159},{"@type":"java.math.BigDecimal","value":3.14159},{"@type":"java.math.BigDecimal","value":true},{"@type":"java.math.BigDecimal","value":{"@type":"java.math.BigDecimal","value":72.72}}]}'
         TestBigDecimalField tbd = (TestBigDecimalField) TestUtil.readJsonObject(json)
         assertEquals((Object)new BigDecimal("3.14159"), tbd.fromString)
         assertEquals((Object)new BigDecimal(314159), tbd.fromLong)
@@ -92,7 +92,7 @@ class TestBigDecimal
         assertEquals((Object)new BigDecimal(1), tbd.values[7])
         assertEquals((Object)new BigDecimal("72.72"), tbd.values[8])
 
-        json = '{"@type":"' + TestBigDecimalField.class.name + '","fromString":""}';
+        json = '{"@type":"' + TestBigDecimalField.class.name + '","fromString":""}'
         tbd = (TestBigDecimalField) TestUtil.readJsonObject(json)
         assertNull(tbd.fromString)
     }
@@ -112,7 +112,7 @@ class TestBigDecimal
     @Test
     void testBigDecimal() throws Exception
     {
-        String s = "123456789012345678901234567890.123456789012345678901234567890";
+        String s = "123456789012345678901234567890.123456789012345678901234567890"
         BigDecimal bigDec = new BigDecimal(s)
         String json = TestUtil.getJsonString(bigDec)
         TestUtil.printLine("json=" + json)
@@ -123,7 +123,7 @@ class TestBigDecimal
     @Test
     void testBigDecimalInArray() throws Exception
     {
-        String s = "123456789012345678901234567890.123456789012345678901234567890";
+        String s = "123456789012345678901234567890.123456789012345678901234567890"
         BigDecimal bigDec = new BigDecimal(s)
         Object[] bigDecs = [bigDec, bigDec] as Object[]
         BigDecimal[] typedBigDecs = [bigDec, bigDec] as BigDecimal[]
@@ -144,7 +144,7 @@ class TestBigDecimal
     @Test
     void testBigDecimalInCollection() throws Exception
     {
-        String s = "-123456789012345678901234567890.123456789012345678901234567890";
+        String s = "-123456789012345678901234567890.123456789012345678901234567890"
         BigDecimal bigDec = new BigDecimal(s)
         List list = new ArrayList()
         list.add(bigDec)

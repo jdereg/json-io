@@ -2,7 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import static org.junit.Assert.assertTrue
+import static org.junit.Assert.fail
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -21,23 +21,34 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestByteArray
+class TestClassForName
 {
     @Test
-    void testPerformance() throws Exception
+    void testInstantiation()
     {
-        byte[] bytes = new byte[128 * 1024]
-        Random r = new Random()
-        r.nextBytes(bytes)
-        String json = TestUtil.getJsonString(bytes)
-
-        byte[] bytes2 = (byte[]) TestUtil.readJsonObject(json)
-
-        for (int i = 0; i < bytes.length; i++)
-        {
-            assertTrue(bytes[i] == bytes2[i])
-        }
+        Class testObjectClass = JsonReader.classForName('com.cedarsoftware.util.io.TestObject')
+        assert testObjectClass instanceof Class
+        assert 'com.cedarsoftware.util.io.TestObject' == testObjectClass.name
     }
 
-
+    @Test
+    void testClassForNameErrorHandling() throws Exception
+    {
+        try
+        {
+            JsonReader.classForName(null)
+            fail()
+        }
+        catch (IOException e)
+        {
+        }
+        try
+        {
+            JsonReader.classForName('Smith&Wesson')
+            fail()
+        }
+        catch (IOException e)
+        {
+        }
+    }
 }

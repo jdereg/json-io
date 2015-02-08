@@ -49,7 +49,7 @@ class TestRefs
 
         private void init()
         {
-            _big = '\ufbfc';
+            _big = '\ufbfc'
             _b = new TestObject('B')
             _a = [_b] as TestObject[]
             _c = [_b] as TestObject[]

@@ -51,6 +51,11 @@ public class Dog
         return true;
     }
 
+    public static createLeg(Dog dog)
+    {
+        return new Leg(dog)
+    }
+
     public class Leg
     {
         public int y;

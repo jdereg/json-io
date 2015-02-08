@@ -24,8 +24,8 @@ import org.junit.Test
 class TestZLast
 {
     @Test
-    public void testZTimings()
+    void testZTimings()
     {
-        TestUtil.getTimings();
+        TestUtil.getTimings()
     }
 }

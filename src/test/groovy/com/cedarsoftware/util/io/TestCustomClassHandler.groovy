@@ -93,7 +93,7 @@ class TestCustomClassHandler
     }
 
     @Test
-    public void testCustomClassReaderWriter() throws Exception
+    void testCustomClassReaderWriter() throws Exception
     {
         JsonWriter.addWriter(WeirdDate.class, new WeirdDateWriter())
         JsonReader.addReader(WeirdDate.class, new WeirdDateReader())
