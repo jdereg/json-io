@@ -401,7 +401,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testNonStringKeys() throws Exception
+    void testLongKeyedMap() throws Exception
     {
         Map simple = [
                 0L:'alpha',
@@ -415,5 +415,53 @@ class TestMapOfMaps
         Map back = TestUtil.readJsonObject(json)
         assert back[0L] == 'alpha'
         assert back[4L] == 'echo'
+    }
+
+    @Test
+    void testBooleanKeyedMap() throws Exception
+    {
+        Map simple = [
+                (false):'alpha',
+                (true):'beta'
+        ]
+
+        String json = TestUtil.getJsonString(simple)
+        Map back = TestUtil.readJsonObject(json)
+        assert back[(false)] == 'alpha'
+        assert back[(true)] == 'beta'
+    }
+
+    @Test
+    void testDoubleKeyedMap() throws Exception
+    {
+        Map simple = [
+                0.0d:'alpha',
+                1.0d:'beta',
+                2.0d:'charlie',
+        ]
+
+        String json = TestUtil.getJsonString(simple)
+        Map back = TestUtil.readJsonObject(json)
+        assert back[0.0d] == 'alpha'
+        assert back[1.0d] == 'beta'
+        assert back[2.0d] == 'charlie'
+    }
+
+    @Test
+    void testStringKeyedMap() throws Exception
+    {
+        Map simple = [
+                alpha:0L,
+                beta:1L,
+                charlie:2L
+        ]
+
+        String json = TestUtil.getJsonString(simple)
+        assert !json.contains('@keys')
+        assert !json.contains('@items')
+        Map back = TestUtil.readJsonObject(json)
+        assert back.alpha == 0L
+        assert back.beta == 1L
+        assert back.charlie == 2L
     }
 }
