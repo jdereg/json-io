@@ -399,4 +399,21 @@ class TestMapOfMaps
         assertTrue(test2.equals(test))
         assertTrue(test2._other.equals(child))
     }
+
+    @Test
+    void testNonStringKeys() throws Exception
+    {
+        Map simple = [
+                0L:'alpha',
+                1L:'beta',
+                2L:'charlie',
+                3L:'delta',
+                4L:'echo'
+        ]
+
+        String json = TestUtil.getJsonString(simple)
+        Map back = TestUtil.readJsonObject(json)
+        assert back[0L] == 'alpha'
+        assert back[4L] == 'echo'
+    }
 }
