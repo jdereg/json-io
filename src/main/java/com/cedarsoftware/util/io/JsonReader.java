@@ -131,7 +131,7 @@ public class JsonReader implements Closeable
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final FastPushbackReader input;
-    private boolean noObjects = false;
+    private boolean useMaps = false;
     private final char[] numBuf = new char[256];
     private final StringBuilder strBuf = new StringBuilder();
 
@@ -1225,7 +1225,7 @@ public class JsonReader implements Closeable
 
     public JsonReader()
     {
-        noObjects = false;
+        useMaps = false;
         input = null;
     }
 
@@ -1234,9 +1234,9 @@ public class JsonReader implements Closeable
         this(inp, false);
     }
 
-    public JsonReader(InputStream inp, boolean noObjects)
+    public JsonReader(InputStream inp, boolean useMaps)
     {
-        this.noObjects = noObjects;
+        this.useMaps = useMaps;
         try
         {
             input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
@@ -1283,7 +1283,7 @@ public class JsonReader implements Closeable
             graph = o;
         }
         // Allow a complete 'Map' return (Javascript style)
-        if (noObjects)
+        if (useMaps)
         {
             return o;
         }
@@ -1299,7 +1299,7 @@ public class JsonReader implements Closeable
      */
     public Object jsonObjectsToJava(JsonObject root) throws IOException
     {
-        noObjects = false;
+        useMaps = false;
         return convertParsedMapsToJava(root);
     }
 
@@ -1340,13 +1340,13 @@ public class JsonReader implements Closeable
     {
         Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
-        final boolean useMaps = noObjects;
+        final boolean useMapsLocal = useMaps;
 
         while (!stack.isEmpty())
         {
             JsonObject<String, Object> jsonObj = stack.removeFirst();
 
-            if (useMaps)
+            if (useMapsLocal)
             {
                 if (jsonObj.isArray() || jsonObj.isCollection())
                 {
@@ -2204,7 +2204,7 @@ public class JsonReader implements Closeable
      */
     protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
     {
-        final boolean useMaps = noObjects;
+        final boolean useMapsLocal = useMaps;
         final String type = jsonObj.type;
         Object mate;
 
@@ -2218,7 +2218,7 @@ public class JsonReader implements Closeable
             }
             catch (IOException e)
             {
-                if (useMaps)
+                if (useMapsLocal)
                 {
                     jsonObj.type = null;
                     jsonObj.target = null;
@@ -2302,7 +2302,7 @@ public class JsonReader implements Closeable
             {	// Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
             }
-            else if (clazz == Object.class && !useMaps)
+            else if (clazz == Object.class && !useMapsLocal)
             {
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {
@@ -2431,7 +2431,7 @@ public class JsonReader implements Closeable
             }
         }
 
-        if (noObjects && object.isPrimitive())
+        if (useMaps && object.isPrimitive())
         {
             return object.getPrimitiveValue();
         }
@@ -3229,7 +3229,7 @@ public class JsonReader implements Closeable
      * @return Field object obtained from the passed in class (by name).  The Field
      *         returned is cached so that it is only obtained via reflection once.
      */
-    private static Field getDeclaredField(Class c, String fieldName)
+    protected Field getDeclaredField(Class c, String fieldName)
     {
         return JsonWriter.getDeepDeclaredFields(c).get(fieldName);
     }
@@ -3380,7 +3380,7 @@ public class JsonReader implements Closeable
      * This is required because Maps hash items using hashCode(), which will
      * change between VMs.  Rehashing the map fixes this.
      *
-     * If noObjects==true, then move @keys to keys and @items to values
+     * If useMaps==true, then move @keys to keys and @items to values
      * and then drop these two entries from the map.
      *
      * This hashes both Sets and Maps because the JDK sets are implemented
@@ -3389,14 +3389,14 @@ public class JsonReader implements Closeable
      */
     private void rehashMaps()
     {
-        final boolean useMaps = noObjects;
+        final boolean useMapsLocal = useMaps;
         for (Object[] mapPieces : prettyMaps)
         {
             JsonObject jObj = (JsonObject)  mapPieces[0];
             Object[] javaKeys, javaValues;
             Map map;
 
-            if (useMaps)
+            if (useMapsLocal)
             {   // Make the @keys be the actual keys of the map.
                 map = jObj;
                 javaKeys = (Object[]) jObj.remove("@keys");

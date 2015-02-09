@@ -2061,8 +2061,6 @@ public class JsonWriter implements Closeable, Flushable
             writeId(getId(obj));
         }
 
-        final ClassMeta classInfo = getDeepDeclaredFields(obj.getClass());
-
         if (referenced && showType)
         {
             out.write(',');
@@ -2091,6 +2089,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Reflectively use fields, skipping transient and static fields
+            final Map<String, Field> classInfo = getDeepDeclaredFields(obj.getClass());
             for (Map.Entry<String, Field> entry : classInfo.entrySet())
             {
                 final String fieldName = entry.getKey();
