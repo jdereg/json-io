@@ -871,7 +871,6 @@ public class JsonWriter implements Closeable, Flushable
      */
     protected void traceFields(Deque<Object> stack, Object obj)
     {
-        final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
         Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
 
         // If caller has special Field specifier for a given class
@@ -886,6 +885,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Trace fields using reflection
+            final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
             for (Field field : fields.values())
             {
                 traceField(stack, obj, field);
