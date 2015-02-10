@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io
 
-import com.cedarsoftware.util.IOUtilities
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Useful utilities for use in unit testing.
@@ -33,12 +35,12 @@ class TestUtil
 
     static boolean isDebug() { return debug }
 
-    static String getResource(String name)
+    static String fetchResource(String name)
     {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(8192)
-        URL url = TestJsonReaderWriter.class.getResource('/' + name)
-        IOUtilities.transfer(new File(url.file), out)
-        new String(out.toByteArray(), 'UTF-8')
+        URL url = TestUtil.class.getResource('/' + name)
+        Path resPath = Paths.get(url.toURI())
+        return new String(Files.readAllBytes(resPath), "UTF-8")
+
     }
 
     static String getJsonString(Object obj) throws Exception

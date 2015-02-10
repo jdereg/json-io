@@ -90,7 +90,7 @@ class TestMapOfMaps
     @Test
     void testForwardRefNegId() throws Exception
     {
-        Map doc = JsonReader.jsonToMaps(TestUtil.getResource("forwardRefNegId.json"))
+        Map doc = JsonReader.jsonToMaps(TestUtil.fetchResource("forwardRefNegId.json"))
         Object[] items = doc['@items']
         assertEquals(2, items.length)
         Map male = items[0]

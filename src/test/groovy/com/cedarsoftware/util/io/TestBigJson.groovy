@@ -29,7 +29,7 @@ class TestBigJson
     @Test
     void testBigJsonToMaps() throws Exception
     {
-        String json = TestUtil.getResource('big5D.json')
+        String json = TestUtil.fetchResource('big5D.json')
         def map = JsonReader.jsonToMaps(json)
         assertEquals('big5D', map.ncube)
         assertEquals(0L, map.defaultCellValue)
