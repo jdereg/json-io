@@ -43,6 +43,7 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -101,13 +102,13 @@ public class JsonReader implements Closeable
     private static final Byte[] byteCache = new Byte[256];
     private static final Map<String, String> stringCache = new HashMap<>();
     private static final Set<Class> prims = new HashSet<>();
-    private static final Map<Class, Object[]> constructors = new HashMap<>();
+    private static final Map<Class, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Map<String, Class> nameToClass = new HashMap<>();
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final List<Object[]> readers = new ArrayList<>();
+    private static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Map<String, String> months = new LinkedHashMap<>();
-    private static final Map<Class, ClassFactory> factory = new LinkedHashMap<>();
+    private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private static final String days = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
     private static final String mos = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
     private static final Pattern datePattern1 = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
@@ -986,16 +987,16 @@ public class JsonReader implements Closeable
 
     public static void addReader(Class c, JsonClassReader reader)
     {
-        for (Object[] item : readers)
+        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
         {
-            Class clz = (Class)item[0];
+            Class clz = entry.getKey();
             if (clz == c)
             {
-                item[1] = reader;   // Replace reader
+                entry.setValue(reader);
                 return;
             }
         }
-        readers.add(new Object[]{c, reader});
+        readers.put(c, reader);
     }
 
     public static void addNotCustomReader(Class c)
@@ -1094,23 +1095,24 @@ public class JsonReader implements Closeable
         return closestReader.read(o, stack);
     }
 
-	private static JsonClassReader getCustomReader(Class c) {
+	private static JsonClassReader getCustomReader(Class c)
+    {
 		JsonClassReader closestReader = null;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Object[] item : readers)
+        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
         {
-            Class clz = (Class)item[0];
+            Class clz = entry.getKey();
             if (clz == c)
             {
-                closestReader = (JsonClassReader)item[1];
+                closestReader = entry.getValue();
                 break;
             }
             int distance = JsonWriter.getDistance(clz, c);
             if (distance < minDistance)
             {
                 minDistance = distance;
-                closestReader = (JsonClassReader)item[1];
+                closestReader = entry.getValue();
             }
         }
 		return closestReader;
