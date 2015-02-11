@@ -762,7 +762,7 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-                    return error("Unknown object type attempted to be assigned to BigInteger field: " + value);
+                    return bigIntegerFrom(valueObj.get("value"));
                 }
             }
 
@@ -865,7 +865,7 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-                    return error("Unknown object type attempted to be assigned to BigInteger field: " + value);
+                    return bigDecimalFrom(valueObj.get("value"));
                 }
             }
 
