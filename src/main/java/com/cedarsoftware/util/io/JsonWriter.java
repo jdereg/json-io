@@ -882,31 +882,16 @@ public class JsonWriter implements Closeable, Flushable
         }
         for (Field field : fields)
         {
-            traceField(stack, obj, field);
-        }
-    }
-
-    /**
-     * Push object associated to field onto stack for further tracing.  If object was a primitive,
-     * Date, String, or null, no further tracing is done.
-     */
-    protected void traceField(Deque<Object> stack, Object obj, Field field)
-    {
-        try
-        {
-            final Class<?> type = field.getType();
-            if (JsonReader.isLogicalPrimitive(type))
-            {    // speed up: primitives (and Dates/Strings/Numbers considered logical primitive by json-io) cannot reference another object
-                return;
-            }
-
-            final Object o = field.get(obj);
-            if (o != null)
+            try
             {
-                stack.addFirst(o);
+                final Object o = field.get(obj);
+                if (o != null && !JsonReader.isLogicalPrimitive(o.getClass()))
+                {   // Trace through objects that can reference other objects
+                    stack.addFirst(o);
+                }
             }
+            catch (Exception ignored) { }
         }
-        catch (Exception ignored) { }
     }
 
     private static List<Field> getFieldsUsingSpecifier(Class classBeingWritten, Map<Class, List<Field>> fieldSpecifiers)
@@ -1259,7 +1244,7 @@ public class JsonWriter implements Closeable, Flushable
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++)
         {
-            output.write(Double.toString(floats[i]));
+            output.write(Float.toString(floats[i]));
             output.write(',');
         }
         output.write(Float.toString(floats[lenMinus1]));
