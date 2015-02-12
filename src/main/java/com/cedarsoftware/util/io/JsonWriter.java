@@ -875,21 +875,14 @@ public class JsonWriter implements Closeable, Flushable
 
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
-        List<Field> fieldSet = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
-        if (fieldSet != null)
-        {   // Trace fields using external field specifier (explicitly tells us which fields to use for a given class)
-            for (Field field : fieldSet)
-            {
-                traceField(stack, obj, field);
-            }
-        }
-        else
+        Collection<Field> fields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
+        if (fields == null)
         {   // Trace fields using reflection
-            final ClassMeta fields = getDeepDeclaredFields(obj.getClass());
-            for (Field field : fields.values())
-            {
-                traceField(stack, obj, field);
-            }
+            fields = getDeepDeclaredFields(obj.getClass()).values();
+        }
+        for (Field field : fields)
+        {
+            traceField(stack, obj, field);
         }
     }
 
