@@ -1,4 +1,4 @@
-json-iox
+json-io
 =======
 
 Perfect Java serialization to and from JSON format (available on Maven Central). To include in your project:
