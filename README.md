@@ -1,7 +1,7 @@
 json-io
 =======
 
-Perfect Java serialization to and from JSON format (available on Maven Central). To include in your project:
+Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
 ```
 <dependency>
   <groupId>com.cedarsoftware</groupId>
