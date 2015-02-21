@@ -1892,7 +1892,14 @@ public class JsonReader implements Closeable
             Object special;
             if (rhs == null)
             {
-                field.set(target, null);
+                if (fieldType.isPrimitive())
+                {
+                    field.set(target, newPrimitiveWrapper(fieldType, "0"));
+                }
+                else
+                {
+                    field.set(target, null);
+                }
             }
             else if (rhs == EMPTY_OBJECT)
             {
@@ -2309,7 +2316,6 @@ public class JsonReader implements Closeable
                 if (jsonObj.isMap() || jsonObj.size() > 0)
                 {
                     mate = new JsonObject();
-                    ((JsonObject)mate).type = Map.class.getName();
                 }
                 else
                 {   // Dunno
