@@ -2740,7 +2740,7 @@ public class JsonReader implements Closeable
         return cacheHit == null ? s : cacheHit;
     }
 
-    private static Object newInstance(Class c) throws IOException
+    public static Object newInstance(Class c) throws IOException
     {
         if (factory.containsKey(c))
         {
