@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.17.2-SNAPSHOT</version.java-util>
+        <version.java-util>1.18.0</version.java-util>
         <version.junit>4.12</version.junit>
         <version.groovy>2.3.9</version.groovy>
         <version.gson>2.3</version.gson>
@@ -46,6 +46,7 @@
         <version.plugin.surefire>2.18.1</version.plugin.surefire>
         <version.plugin.groovy.eclipse.compiler>2.9.1-01</version.plugin.groovy.eclipse.compiler>
         <version.plugin.groovy.eclipse.batch>2.3.7-01</version.plugin.groovy.eclipse.batch>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <pluginRepositories>
