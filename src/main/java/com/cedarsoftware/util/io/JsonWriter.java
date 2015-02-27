@@ -88,11 +88,13 @@ public class JsonWriter implements Closeable, Flushable
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
     private static final Map<String, ClassMeta> classMetaCache = new ConcurrentHashMap<>();
-    private static final List<Object[]> writers = new ArrayList<>();
+    private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
+    private static final Map<Class, JsonClassWriter> writerCache = new ConcurrentHashMap<>();
+    private static final NullClass nullWriter = new NullClass();
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
@@ -436,7 +438,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
     {
-		JsonClassWriter closestWriter = getCustomJSonWriter(arrayComponentClass);
+		JsonClassWriter closestWriter = getCustomWriter(arrayComponentClass);
 
         if (closestWriter == null)
         {
@@ -485,42 +487,69 @@ public class JsonWriter implements Closeable, Flushable
         return true;
     }
 
-	private static JsonClassWriter getCustomJSonWriter(Class classToWrite)
+    /**
+     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
+     * null value.  Instead, singleton instance of this class is placed where null values
+     * are needed.
+     */
+    static class NullClass implements JsonClassWriter
     {
-		JsonClassWriter closestWriter = null;
-		int minDistance = Integer.MAX_VALUE;
+        public void write(Object o, boolean showType, Writer output) throws IOException { }
+        public boolean hasPrimitiveForm()  { return false; }
+        public void writePrimitiveForm(Object o, Writer output) throws IOException { }
+    }
 
-		for (Object[] item : writers)
+    private static JsonClassWriter getCustomWriter(Class c)
+    {
+        JsonClassWriter writer = writerCache.get(c);
+        if (writer == null)
         {
-			Class clz = (Class) item[0];
-			if (clz == classToWrite)
+            synchronized (writerCache)
             {
-				closestWriter = (JsonClassWriter) item[1];
-				break;
-			}
-			int distance = getDistance(clz, classToWrite);
-			if (distance < minDistance)
-            {
-				minDistance = distance;
-				closestWriter = (JsonClassWriter) item[1];
-			}
-		}
+                writer = writerCache.get(c);
+                if (writer == null)
+                {
+                    writer = forceGetCustomWriter(c);
+                    writerCache.put(c, writer);
+                }
+            }
+        }
+        return writer == nullWriter ? null : writer;
+    }
+    private static JsonClassWriter forceGetCustomWriter(Class c)
+    {
+        JsonClassWriter closestWriter = nullWriter;
+        int minDistance = Integer.MAX_VALUE;
 
-		return closestWriter;
-	}
+        for (Map.Entry<Class, JsonClassWriter> entry : writers.entrySet())
+        {
+            Class clz = entry.getKey();
+            if (clz == c)
+            {
+                return entry.getValue();
+            }
+            int distance = JsonWriter.getDistance(clz, c);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestWriter = entry.getValue();
+            }
+        }
+        return closestWriter;
+    }
 
     public static void addWriter(Class c, JsonClassWriter writer)
     {
-        for (Object[] item : writers)
+        for (Map.Entry<Class, JsonClassWriter> entry : writers.entrySet())
         {
-            Class clz = (Class)item[0];
+            Class clz = entry.getKey();
             if (clz == c)
             {
-                item[1] = writer;   // Replace writer
+                entry.setValue(writer);
                 return;
             }
         }
-        writers.add(new Object[]{c, writer});
+        writers.put(c, writer);
     }
 
     public static void addNotCustomWriter(Class c)
@@ -856,7 +885,7 @@ public class JsonWriter implements Closeable, Flushable
             else
             {
 				// Only trace fields if no custom writer is present
-				if (getCustomJSonWriter(obj.getClass()) == null)
+				if (getCustomWriter(obj.getClass()) == null)
                 {
 					traceFields(stack, obj);
 				}

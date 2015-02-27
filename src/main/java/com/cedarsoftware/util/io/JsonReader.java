@@ -127,6 +127,8 @@ public class JsonReader implements Closeable
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
     private static final Map unmodifiableMap = Collections.unmodifiableMap(new HashMap());
     private static final Map unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap());
+    private static final Map<Class, JsonClassReader> readerCache = new ConcurrentHashMap<>();
+    private static final NullClass nullReader = new NullClass();
 
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<>();
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
@@ -1095,9 +1097,39 @@ public class JsonReader implements Closeable
         return closestReader.read(o, stack);
     }
 
-	private static JsonClassReader getCustomReader(Class c)
+    /**
+     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
+     * null value.  Instead, singleton instance of this class is placed where null values
+     * are needed.
+     */
+    static class NullClass implements JsonClassReader
     {
-		JsonClassReader closestReader = null;
+        public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
+        {
+            return null;
+        }
+    }
+
+    private static JsonClassReader getCustomReader(Class c)
+    {
+        JsonClassReader reader = readerCache.get(c);
+        if (reader == null)
+        {
+            synchronized (readerCache)
+            {
+                reader = readerCache.get(c);
+                if (reader == null)
+                {
+                    reader = forceGetCustomReader(c);
+                    readerCache.put(c, reader);
+                }
+            }
+        }
+        return reader == nullReader ? null : reader;
+    }
+	private static JsonClassReader forceGetCustomReader(Class c)
+    {
+		JsonClassReader closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
         for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
@@ -1105,8 +1137,7 @@ public class JsonReader implements Closeable
             Class clz = entry.getKey();
             if (clz == c)
             {
-                closestReader = entry.getValue();
-                break;
+                return entry.getValue();
             }
             int distance = JsonWriter.getDistance(clz, c);
             if (distance < minDistance)
