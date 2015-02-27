@@ -2656,7 +2656,7 @@ public class JsonReader implements Closeable
     {
         final StringBuilder str = this.strBuf;
         str.setLength(0);
-        StringBuilder hex = new StringBuilder();
+        final StringBuilder hex = new StringBuilder();
         boolean done = false;
         final int STATE_STRING_START = 0;
         final int STATE_STRING_SLASH = 1;
@@ -2772,8 +2772,8 @@ public class JsonReader implements Closeable
             }
         }
 
-        String s = str.toString();
-        String cacheHit = stringCache.get(s);
+        final String s = str.toString();
+        final String cacheHit = stringCache.get(s);
         return cacheHit == null ? s : cacheHit;
     }
 
