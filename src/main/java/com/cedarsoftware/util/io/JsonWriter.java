@@ -27,8 +27,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -87,7 +85,6 @@ public class JsonWriter implements Closeable, Flushable
     public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
-    private static final Map<String, ClassMeta> classMetaCache = new ConcurrentHashMap<>();
     private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
@@ -139,10 +136,6 @@ public class JsonWriter implements Closeable, Flushable
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
-    }
-
-    static class ClassMeta extends LinkedHashMap<String, Field>
-    {
     }
 
     @Deprecated
@@ -265,11 +258,11 @@ public class JsonWriter implements Closeable, Flushable
                 List<String> fields = entry.getValue();
                 List<Field> newList = new ArrayList(fields.size());
 
-                ClassMeta meta = getDeepDeclaredFields(c);
+                Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
 
                 for (String field : fields)
                 {
-                    Field f = meta.get(field);
+                    Field f = classFields.get(field);
                     if (f == null)
                     {
                         throw new IllegalArgumentException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
@@ -353,66 +346,6 @@ public class JsonWriter implements Closeable, Flushable
         {
             output.write("  ");
         }
-    }
-
-    public static int getDistance(Class a, Class b)
-    {
-		if (a.isInterface())
-        {
-			return getDistanceToInterface(a, b);
-		}
-        Class curr = b;
-        int distance = 0;
-
-        while (curr != a)
-        {
-            distance++;
-            curr = curr.getSuperclass();
-            if (curr == null)
-            {
-                return Integer.MAX_VALUE;
-            }
-        }
-
-        return distance;
-    }
-
-    static int getDistanceToInterface(Class<?> to, Class<?> from)
-    {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
-
-        Class<?>[] interfaces = from.getInterfaces();
-        // is the interface direct inherited or via interfaces extends interface?
-        for (Class<?> interfase : interfaces)
-        {
-            if (to.equals(interfase))
-            {
-                return 1;
-            }
-            // because of multi-inheritance from interfaces
-            if (to.isAssignableFrom(interfase))
-            {
-                possibleCandidates.add(interfase);
-            }
-        }
-
-        // it is also possible, that the interface is included in superclasses
-        if (from.getSuperclass() != null  && to.isAssignableFrom(from.getSuperclass()))
-        {
-            possibleCandidates.add(from.getSuperclass());
-        }
-
-        int minimum = Integer.MAX_VALUE;
-        for (Class<?> candidate : possibleCandidates)
-        {
-            // Could do that in a non recursive way later
-            int distance = getDistanceToInterface(to, candidate);
-            if (distance < minimum)
-            {
-                minimum = ++distance;
-            }
-        }
-        return minimum;
     }
 
     public boolean writeIfMatching(Object o, boolean showType, Writer output) throws IOException
@@ -528,7 +461,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 return entry.getValue();
             }
-            int distance = JsonWriter.getDistance(clz, c);
+            int distance = MetaUtils.getDistance(clz, c);
             if (distance < minDistance)
             {
                 minDistance = distance;
@@ -907,7 +840,7 @@ public class JsonWriter implements Closeable, Flushable
         Collection<Field> fields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (fields == null)
         {   // Trace fields using reflection
-            fields = getDeepDeclaredFields(obj.getClass()).values();
+            fields = MetaUtils.getDeepDeclaredFields(obj.getClass()).values();
         }
         for (Field field : fields)
         {
@@ -938,7 +871,7 @@ public class JsonWriter implements Closeable, Flushable
                 return entry.getValue();
             }
 
-            int distance = getDistance(c, classBeingWritten);
+            int distance = MetaUtils.getDistance(c, classBeingWritten);
 
             if (distance < minDistance)
             {
@@ -1858,8 +1791,8 @@ public class JsonWriter implements Closeable, Flushable
     {
         if (type != null)
         {
-            ClassMeta meta = getDeepDeclaredFields(type);
-            Field field = meta.get(fieldName);
+            Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(type);
+            Field field = classFields.get(fieldName);
             return field != null && (value.getClass() == field.getType());
         }
         return false;
@@ -2096,8 +2029,8 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Reflectively use fields, skipping transient and static fields
-            final Map<String, Field> classInfo = getDeepDeclaredFields(obj.getClass());
-            for (Map.Entry<String, Field> entry : classInfo.entrySet())
+            final Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(obj.getClass());
+            for (Map.Entry<String, Field> entry : classFields.entrySet())
             {
                 final String fieldName = entry.getKey();
                 final Field field = entry.getValue();
@@ -2221,69 +2154,6 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
         output.write('\"');
-    }
-
-    /**
-     * @param c Class instance
-     * @return ClassMeta which contains fields of class.  The results are cached internally for performance
-     *         when called again with same Class.
-     */
-    static ClassMeta getDeepDeclaredFields(Class c)
-    {
-        ClassMeta classInfo = classMetaCache.get(c.getName());
-        if (classInfo != null)
-        {
-            return classInfo;
-        }
-
-        classInfo = new ClassMeta();
-        Class curr = c;
-
-        while (curr != null)
-        {
-            try
-            {
-                Field[] local = curr.getDeclaredFields();
-
-                for (Field field : local)
-                {
-                    if ((field.getModifiers() & Modifier.STATIC) == 0)
-                    {   // speed up: do not process static fields.
-                        if ("metaClass".equals(field.getName()) && "groovy.lang.MetaClass".equals(field.getType().getName()))
-                        {   // Skip Groovy metaClass field if present
-                            continue;
-                        }
-
-                        if (!field.isAccessible())
-                        {
-                            try
-                            {
-                                field.setAccessible(true);
-                            }
-                            catch (Exception ignored) { }
-                        }
-                        if (classInfo.containsKey(field.getName()))
-                        {
-                            classInfo.put(curr.getName() + '.' + field.getName(), field);
-                        }
-                        else
-                        {
-                            classInfo.put(field.getName(), field);
-                        }
-                    }
-                }
-            }
-            catch (ThreadDeath t)
-            {
-                throw t;
-            }
-            catch (Throwable ignored) { }
-
-            curr = curr.getSuperclass();
-        }
-
-        classMetaCache.put(c.getName(), classInfo);
-        return classInfo;
     }
 
     public void flush()
