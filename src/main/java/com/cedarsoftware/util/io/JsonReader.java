@@ -137,7 +137,7 @@ public class JsonReader implements Closeable
     private boolean useMaps = false;
     private final char[] numBuf = new char[256];
     private final StringBuilder strBuf = new StringBuilder();
-    private final StringBuilder hexBuf = new StringBuilder(8);
+    private final StringBuilder hexBuf = new StringBuilder();
 
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
 
