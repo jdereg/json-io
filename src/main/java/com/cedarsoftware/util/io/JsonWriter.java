@@ -750,7 +750,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             Object obj = stack.removeFirst();
 
-            if (!JsonReader.isLogicalPrimitive(obj.getClass()))
+            if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -775,7 +775,7 @@ public class JsonWriter implements Closeable, Flushable
             if (clazz.isArray())
             {
                 Class compType = clazz.getComponentType();
-                if (!JsonReader.isLogicalPrimitive(compType))
+                if (!MetaUtils.isLogicalPrimitive(compType))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -847,7 +847,7 @@ public class JsonWriter implements Closeable, Flushable
             try
             {
                 final Object o = field.get(obj);
-                if (o != null && !JsonReader.isLogicalPrimitive(o.getClass()))
+                if (o != null && !MetaUtils.isLogicalPrimitive(o.getClass()))
                 {   // Trace through objects that can reference other objects
                     stack.addFirst(o);
                 }
@@ -885,7 +885,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
-        if (obj != null && JsonReader.isLogicalPrimitive(obj.getClass()))
+        if (obj != null && MetaUtils.isLogicalPrimitive(obj.getClass()))
         {
             return false;
         }
@@ -1124,7 +1124,7 @@ public class JsonWriter implements Closeable, Flushable
         else
         {
             final Class componentClass = array.getClass().getComponentType();
-            final boolean isPrimitiveArray = JsonReader.isPrimitive(componentClass);
+            final boolean isPrimitiveArray = MetaUtils.isPrimitive(componentClass);
             final boolean isObjectArray = Object[].class == arrayType;
 
             for (int i = 0; i < len; i++)
@@ -2083,7 +2083,7 @@ public class JsonWriter implements Closeable, Flushable
         Class type = field.getType();
         boolean forceType = o.getClass() != type;     // If types are not exactly the same, write "@type" field
 
-        if (JsonReader.isPrimitive(type))
+        if (MetaUtils.isPrimitive(type))
         {
             writePrimitive(o);
         }

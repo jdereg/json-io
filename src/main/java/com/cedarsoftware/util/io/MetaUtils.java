@@ -2,6 +2,8 @@ package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -31,7 +33,26 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MetaUtils
 {
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    private static final Set<Class> prims = new HashSet<>();
 
+    static
+    {
+        prims.add(Byte.class);
+        prims.add(Integer.class);
+        prims.add(Long.class);
+        prims.add(Double.class);
+        prims.add(Character.class);
+        prims.add(Float.class);
+        prims.add(Boolean.class);
+        prims.add(Short.class);
+    }
+
+    /**
+     * Return an instance of of the Java Field class corresponding to the passed in field name.
+     * @param c class containing the field / field name
+     * @param field String name of a field on the class.
+     * @return Field instance if the field with the corresponding name is found, null otherwise.
+     */
     public static Field getField(Class c, String field)
     {
         return getDeepDeclaredFields(c).get(field);
@@ -100,6 +121,9 @@ public class MetaUtils
         return classFields;
     }
 
+    /**
+     * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related.
+     */
     public static int getDistance(Class a, Class b)
     {
         if (a.isInterface())
@@ -158,5 +182,33 @@ public class MetaUtils
             }
         }
         return minimum;
+    }
+
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
+     * Integer, Long, Boolean, etc. are consider primitives by this method.
+     */
+    public static boolean isPrimitive(Class c)
+    {
+        return c.isPrimitive() || prims.contains(c);
+    }
+
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
+     * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
+     * considered 'logical' primitives is that they are immutable and therefore can be written without references
+     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics of the
+     * object graph being written.
+     */
+    public static boolean isLogicalPrimitive(Class c)
+    {
+        return c.isPrimitive() ||
+                prims.contains(c) ||
+                String.class.isAssignableFrom(c) ||
+                Number.class.isAssignableFrom(c) ||
+                Date.class.isAssignableFrom(c) ||
+                Class.class.isAssignableFrom(c);
     }
 }

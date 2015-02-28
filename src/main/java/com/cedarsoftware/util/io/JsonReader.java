@@ -101,7 +101,6 @@ public class JsonReader implements Closeable
     private static final Character[] charCache = new Character[128];
     private static final Byte[] byteCache = new Byte[256];
     private static final Map<String, String> stringCache = new HashMap<>();
-    private static final Set<Class> prims = new HashSet<>();
     private static final Map<Class, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Map<String, Class> nameToClass = new HashMap<>();
     private static final Class[] emptyClassArray = new Class[]{};
@@ -210,15 +209,6 @@ public class JsonReader implements Closeable
         stringCache.put("7", "7");
         stringCache.put("8", "8");
         stringCache.put("9", "9");
-
-        prims.add(Byte.class);
-        prims.add(Integer.class);
-        prims.add(Long.class);
-        prims.add(Double.class);
-        prims.add(Character.class);
-        prims.add(Float.class);
-        prims.add(Boolean.class);
-        prims.add(Short.class);
 
         nameToClass.put("string", String.class);
         nameToClass.put("boolean", boolean.class);
@@ -700,7 +690,7 @@ public class JsonReader implements Closeable
                 return o;
             }
 
-            if (isPrimitive(o.getClass()))
+            if (MetaUtils.isPrimitive(o.getClass()))
             {
                 return o.toString();
             }
@@ -1453,7 +1443,7 @@ public class JsonReader implements Closeable
             return;
         }
 
-        final boolean isPrimitive = isPrimitive(compType);
+        final boolean isPrimitive = MetaUtils.isPrimitive(compType);
         final Object array = jsonObj.target;
         final Object[] items =  jsonObj.getArray();
 
@@ -1530,7 +1520,7 @@ public class JsonReader implements Closeable
                 {    // Convert JSON HashMap to Java Object instance and assign values
                     Object arrayElement = createJavaObjectInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
-                    if (!isLogicalPrimitive(arrayElement.getClass()))
+                    if (!MetaUtils.isLogicalPrimitive(arrayElement.getClass()))
                     {    // Skip walking primitives, primitive wrapper classes, Strings, and Classes
                         stack.addFirst(jsonObject);
                     }
@@ -1698,7 +1688,7 @@ public class JsonReader implements Closeable
                 {
                     createJavaObjectInstance(Object.class, jObj);
 
-                    if (!isLogicalPrimitive(jObj.getTargetClass()))
+                    if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
                     {
                         convertMapsToObjects(jObj);
                     }
@@ -1822,7 +1812,7 @@ public class JsonReader implements Closeable
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class fieldType = field.getType();
-                if (isPrimitive(fieldType))
+                if (MetaUtils.isPrimitive(fieldType))
                 {
                     jsonObj.put(key, newPrimitiveWrapper(fieldType, value));
                 }
@@ -1989,7 +1979,7 @@ public class JsonReader implements Closeable
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
                     field.set(target, createJavaObjectInstance(fieldType, jObj));
-                    if (!isLogicalPrimitive(jObj.getTargetClass()))
+                    if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
                     {
                         stack.addFirst((JsonObject) rhs);
                     }
@@ -1997,7 +1987,7 @@ public class JsonReader implements Closeable
             }
             else
             {
-                if (isPrimitive(fieldType))
+                if (MetaUtils.isPrimitive(fieldType))
                 {
                     field.set(target, newPrimitiveWrapper(fieldType, rhs));
                 }
@@ -2286,7 +2276,7 @@ public class JsonReader implements Closeable
             }
             else
             {    // Handle regular field.object reference
-                if (isPrimitive(c))
+                if (MetaUtils.isPrimitive(c))
                 {
                     mate = newPrimitiveWrapper(c, jsonObj.get("value"));
                 }
@@ -2938,7 +2928,7 @@ public class JsonReader implements Closeable
         for (int i = 0; i < argTypes.length; i++)
         {
             final Class argType = argTypes[i];
-            if (isPrimitive(argType))
+            if (MetaUtils.isPrimitive(argType))
             {
                 values[i] = newPrimitiveWrapper(argType, null);
             }
@@ -3036,20 +3026,6 @@ public class JsonReader implements Closeable
         }
 
         return values;
-    }
-
-    public static boolean isPrimitive(Class c)
-    {
-        return c.isPrimitive() || prims.contains(c);
-    }
-
-    public static boolean isLogicalPrimitive(Class c)
-    {
-        return isPrimitive(c) ||
-                String.class.isAssignableFrom(c) ||
-                Number.class.isAssignableFrom(c) ||
-                Date.class.isAssignableFrom(c) ||
-                Class.class.isAssignableFrom(c);
     }
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
