@@ -105,13 +105,6 @@ public class JsonWriter implements Closeable, Flushable
             return new HashMap<>();
         }
     };
-    static final ThreadLocal<SimpleDateFormat> _dateFormat = new ThreadLocal<SimpleDateFormat>()
-    {
-        public SimpleDateFormat initialValue()
-        {
-            return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        }
-    };
 
     static
     {   // Add customer writers (these make common classes more succinct)
@@ -509,9 +502,9 @@ public class JsonWriter implements Closeable, Flushable
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
             Calendar cal = (Calendar) obj;
-            _dateFormat.get().setTimeZone(cal.getTimeZone());
+            MetaUtils.dateFormat.get().setTimeZone(cal.getTimeZone());
             output.write("\"time\":\"");
-            output.write(_dateFormat.get().format(cal.getTime()));
+            output.write(MetaUtils.dateFormat.get().format(cal.getTime()));
             output.write("\",\"zone\":\"");
             output.write(cal.getTimeZone().getID());
             output.write('"');
