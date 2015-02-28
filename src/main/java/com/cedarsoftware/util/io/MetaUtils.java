@@ -199,16 +199,16 @@ public class MetaUtils
      * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
      * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
      * considered 'logical' primitives is that they are immutable and therefore can be written without references
-     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics of the
-     * object graph being written.
+     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape)
+     * of the object graph being written.
      */
     public static boolean isLogicalPrimitive(Class c)
     {
-        return c.isPrimitive() ||
+        return  c.isPrimitive() ||
                 prims.contains(c) ||
                 String.class.isAssignableFrom(c) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
-                Class.class.isAssignableFrom(c);
+                c.equals(Class.class);
     }
 }

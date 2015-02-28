@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.Gson
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -36,4 +37,22 @@ class TestBigJson
         assertNotNull(map.axes)
         assertNotNull(map.cells)
     }
+
+    @Test
+    void testJsonIoVersusJsonSlurper()
+    {
+        String json = TestUtil.fetchResource('big5D.json')
+
+        Gson gson = new Gson()
+        long start = System.nanoTime()
+        gson.fromJson(json, Object.class)
+        long stop = System.nanoTime()
+        println ((stop - start) / 1000000L)
+
+        start = System.nanoTime()
+        def map = JsonReader.jsonToMaps(json)
+        stop = System.nanoTime()
+        println ((stop - start) / 1000000L)
+    }
+
 }
