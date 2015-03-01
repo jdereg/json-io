@@ -1556,7 +1556,7 @@ public class JsonReader implements Closeable
     /**
      * Process java.util.Collection and it's derivatives.  Collections are written specially
      * so that the serialization does not expose the Collection's internal structure, for
-     * example a TreeSet.  All entries are processed, except unresolved references, which
+     * example, a TreeSet.  All entries are processed, except unresolved references, which
      * are filled in later.  For an indexable collection, the unresolved references are set
      * back into the proper element location.  For non-indexable collections (Sets), the
      * unresolved references are added via .add().
@@ -1565,16 +1565,16 @@ public class JsonReader implements Closeable
      */
     protected void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject jsonObj) throws IOException
     {
-        Object[] items = jsonObj.getArray();
+        final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
             return;
         }
-        Collection col = (Collection) jsonObj.target;
-        boolean isList = col instanceof List;
+        final Collection col = (Collection) jsonObj.target;
+        final boolean isList = col instanceof List;
         int idx = 0;
 
-        for (Object element : items)
+        for (final Object element : items)
         {
             Object special;
             if (element == null)
@@ -1595,7 +1595,7 @@ public class JsonReader implements Closeable
             }
             else if (element.getClass().isArray())
             {
-                JsonObject jObj = new JsonObject();
+                final JsonObject jObj = new JsonObject();
                 jObj.put("@items", element);
                 createJavaObjectInstance(Object.class, jObj);
                 col.add(jObj.target);
@@ -1603,8 +1603,8 @@ public class JsonReader implements Closeable
             }
             else // if (element instanceof JsonObject)
             {
-                JsonObject jObj = (JsonObject) element;
-                Long ref = (Long) jObj.get("@ref");
+                final JsonObject jObj = (JsonObject) element;
+                final Long ref = (Long) jObj.get("@ref");
 
                 if (ref != null)
                 {
@@ -1652,8 +1652,8 @@ public class JsonReader implements Closeable
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
-        Object[] keys = (Object[]) jsonObj.get("@keys");
-        Object[] items = jsonObj.getArray();
+        final Object[] keys = (Object[]) jsonObj.get("@keys");
+        final Object[] items = jsonObj.getArray();
 
         if (keys == null || items == null)
         {
@@ -1664,7 +1664,7 @@ public class JsonReader implements Closeable
             return;
         }
 
-        int size = keys.length;
+        final int size = keys.length;
         if (size != items.length)
         {
             error("Map written with @keys and @items entries of different sizes");
@@ -1680,9 +1680,9 @@ public class JsonReader implements Closeable
 
     private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
     {
-        JsonObject jsonCollection = new JsonObject();
+        final JsonObject jsonCollection = new JsonObject();
         jsonCollection.put("@items", items);
-        Object[] javaKeys = new Object[size];
+        final Object[] javaKeys = new Object[size];
         jsonCollection.target = javaKeys;
         stack.addFirst(jsonCollection);
         return javaKeys;
@@ -1693,20 +1693,15 @@ public class JsonReader implements Closeable
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
         {
-            String fieldName = e.getKey();
+            final String fieldName = e.getKey();
 
             if (fieldName.charAt(0) == '@')
             {   // Skip our own meta fields
                 continue;
             }
 
-            Field field = null;
-            if (target != null)
-            {
-                field = MetaUtils.getField(target.getClass(), fieldName);
-            }
-
-            Object rhs = e.getValue();
+            final Field field = (target != null) ? MetaUtils.getField(target.getClass(), fieldName) : null;
+            final Object rhs = e.getValue();
 
             if (rhs == null)
             {
@@ -1866,7 +1861,7 @@ public class JsonReader implements Closeable
             Object special;
             if (rhs == EMPTY_OBJECT)
             {
-                JsonObject jObj = new JsonObject();
+                final JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
                 Object value = createJavaObjectInstance(fieldType, jObj);
                 field.set(target, value);
@@ -1877,7 +1872,7 @@ public class JsonReader implements Closeable
             }
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
-                Object[] elements = (Object[]) rhs;
+                final Object[] elements = (Object[]) rhs;
                 JsonObject<String, Object> jsonArray = new JsonObject<>();
                 if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
@@ -1901,12 +1896,12 @@ public class JsonReader implements Closeable
             }
             else if (rhs instanceof JsonObject)
             {
-                JsonObject<String, Object> jObj = (JsonObject) rhs;
-                Long ref = (Long) jObj.get("@ref");
+                final JsonObject<String, Object> jObj = (JsonObject) rhs;
+                final Long ref = (Long) jObj.get("@ref");
 
                 if (ref != null)
                 {    // Correct field references
-                    JsonObject refObject = getReferencedObj(ref);
+                    final JsonObject refObject = getReferencedObj(ref);
 
                     if (refObject.target != null)
                     {
