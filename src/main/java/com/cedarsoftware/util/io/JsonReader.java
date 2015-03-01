@@ -2442,7 +2442,7 @@ public class JsonReader implements Closeable
                 error("EOF reached prematurely");
         }
 
-        if (isDigit(c) || c == '-')
+        if (c >= '0' && c <= '9' || c == '-')
         {
             return readNumber(c);
         }
@@ -2717,11 +2717,6 @@ public class JsonReader implements Closeable
             return factory.get(c).newInstance(c);
         }
         return MetaUtils.newInstance(c, errorHandler);
-    }
-
-    private static boolean isDigit(int c)
-    {
-        return c >= '0' && c <= '9';
     }
 
     static Class classForName(String name) throws IOException
