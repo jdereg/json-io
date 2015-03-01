@@ -451,7 +451,7 @@ public class MetaUtils
                     errorHandler.error("Could not instantiate " + c.getName(), e);
                 }
             }
-            Object[] values = MetaUtils.fillArgs(paramTypes, useNull, errorHandler);
+            Object[] values = fillArgs(paramTypes, useNull, errorHandler);
             try
             {
                 return constructor.newInstance(values);
@@ -462,7 +462,7 @@ public class MetaUtils
             }
         }
 
-        Object[] ret = MetaUtils.newInstanceEx(c, errorHandler);
+        Object[] ret = newInstanceEx(c, errorHandler);
         constructors.put(c, new Object[]{ret[1], ret[2]});
         return ret[0];
     }
@@ -503,7 +503,7 @@ public class MetaUtils
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = MetaUtils.fillArgs(argTypes, true, errorHandler);
+            Object[] values = fillArgs(argTypes, true, errorHandler);
             try
             {
                 return new Object[] {constructor.newInstance(values), constructor, true};
@@ -517,7 +517,7 @@ public class MetaUtils
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = MetaUtils.fillArgs(argTypes, false, errorHandler);
+            Object[] values = fillArgs(argTypes, false, errorHandler);
             try
             {
                 return new Object[] {constructor.newInstance(values), constructor, false};
@@ -549,9 +549,9 @@ public class MetaUtils
         for (int i = 0; i < argTypes.length; i++)
         {
             final Class argType = argTypes[i];
-            if (MetaUtils.isPrimitive(argType))
+            if (isPrimitive(argType))
             {
-                values[i] = MetaUtils.newPrimitiveWrapper(argType, null, errorHandler);
+                values[i] = newPrimitiveWrapper(argType, null, errorHandler);
             }
             else if (useNull)
             {
