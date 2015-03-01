@@ -1693,9 +1693,9 @@ public class JsonReader implements Closeable
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
         {
-            String key = e.getKey();
+            String fieldName = e.getKey();
 
-            if (key.charAt(0) == '@')
+            if (fieldName.charAt(0) == '@')
             {   // Skip our own meta fields
                 continue;
             }
@@ -1703,29 +1703,29 @@ public class JsonReader implements Closeable
             Field field = null;
             if (target != null)
             {
-                field = MetaUtils.getField(target.getClass(), key);
+                field = MetaUtils.getField(target.getClass(), fieldName);
             }
 
-            Object value = e.getValue();
+            Object rhs = e.getValue();
 
-            if (value == null)
+            if (rhs == null)
             {
-                jsonObj.put(key, null);
+                jsonObj.put(fieldName, null);
             }
-            else if (value == EMPTY_OBJECT)
+            else if (rhs == EMPTY_OBJECT)
             {
-                jsonObj.put(key, new JsonObject());
+                jsonObj.put(fieldName, new JsonObject());
             }
-            else if (value.getClass().isArray())
+            else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object (Map)
                 JsonObject<String, Object> jsonArray = new JsonObject<>();
-                jsonArray.put("@items", value);
+                jsonArray.put("@items", rhs);
                 stack.addFirst(jsonArray);
-                jsonObj.put(key, jsonArray);
+                jsonObj.put(fieldName, jsonArray);
             }
-            else if (value instanceof JsonObject)
+            else if (rhs instanceof JsonObject)
             {
-                JsonObject<String, Object> jObj = (JsonObject) value;
+                JsonObject<String, Object> jObj = (JsonObject) rhs;
                 if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
                 {
                     jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value"), errorHandler));
@@ -1736,7 +1736,7 @@ public class JsonReader implements Closeable
                 if (ref != null)
                 {    // Correct field references
                     JsonObject refObject = getReferencedObj(ref);
-                    jsonObj.put(key, refObject);    // Update Map-of-Maps reference
+                    jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
                 {
@@ -1753,23 +1753,23 @@ public class JsonReader implements Closeable
                 final Class fieldType = field.getType();
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    jsonObj.put(key, MetaUtils.newPrimitiveWrapper(fieldType, value, errorHandler));
+                    jsonObj.put(fieldName, MetaUtils.newPrimitiveWrapper(fieldType, rhs, errorHandler));
                 }
                 else if (BigDecimal.class == fieldType)
                 {
-                    jsonObj.put(key, bigDecimalFrom(value));
+                    jsonObj.put(fieldName, bigDecimalFrom(rhs));
                 }
                 else if (BigInteger.class == fieldType)
                 {
-                    jsonObj.put(key, bigIntegerFrom(value));
+                    jsonObj.put(fieldName, bigIntegerFrom(rhs));
                 }
-                else if (value instanceof String)
+                else if (rhs instanceof String)
                 {
                     if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class)
                     {
-                        if ("".equals(((String)value).trim()))
+                        if ("".equals(((String)rhs).trim()))
                         {   // Allow "" to null out a non-String field on the inbound JSON
-                            jsonObj.put(key, null);
+                            jsonObj.put(fieldName, null);
                         }
                     }
                 }
@@ -1830,29 +1830,8 @@ public class JsonReader implements Closeable
         try
         {
             final Class fieldType = field.getType();
-
-            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the subobjects may not have an
-            // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
-            // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
-            // exists).
-            if (rhs instanceof JsonObject && field.getGenericType() instanceof ParameterizedType)
-            {   // Only JsonObject instances could contain unmarked objects.
-                markUntypedObjects(field.getGenericType(), rhs, MetaUtils.getDeepDeclaredFields(fieldType));
-            }
-
-            if (rhs instanceof JsonObject)
-            {   // Ensure .type field set on JsonObject
-                JsonObject job = (JsonObject) rhs;
-                String type = job.type;
-                if (type == null || type.isEmpty())
-                {
-                    job.setType(fieldType.getName());
-                }
-            }
-
-            Object special;
             if (rhs == null)
-            {
+            {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
                     field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0", errorHandler));
@@ -1861,8 +1840,31 @@ public class JsonReader implements Closeable
                 {
                     field.set(target, null);
                 }
+                return;
             }
-            else if (rhs == EMPTY_OBJECT)
+
+            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the subobjects may not have an
+            // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
+            // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
+            // exists).
+            if (rhs instanceof JsonObject)
+            {
+                if (field.getGenericType() instanceof ParameterizedType)
+                {   // Only JsonObject instances could contain unmarked objects.
+                    markUntypedObjects(field.getGenericType(), rhs, MetaUtils.getDeepDeclaredFields(fieldType));
+                }
+
+                // Ensure .type field set on JsonObject
+                final JsonObject job = (JsonObject) rhs;
+                final String type = job.type;
+                if (type == null || type.isEmpty())
+                {
+                    job.setType(fieldType.getName());
+                }
+            }
+
+            Object special;
+            if (rhs == EMPTY_OBJECT)
             {
                 JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
