@@ -3017,7 +3017,6 @@ public class JsonReader implements Closeable
 
     private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
     {
-
         final String cname = c.getName();
         switch(cname)
         {

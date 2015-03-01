@@ -236,7 +236,7 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    static Class classForName(String name) throws IOException
+    public static Class classForName(String name) throws IOException
     {
         if (name == null || name.isEmpty())
         {
