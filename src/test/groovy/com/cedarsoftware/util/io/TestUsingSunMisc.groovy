@@ -64,7 +64,7 @@ class TestUsingSunMisc
     @Test
     void testDirectCreation() throws Exception
     {
-        JsonReader.useUnsafe = true;
+        MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe shoe = Dog.OtherShoe.construct()
         Dog.OtherShoe oShoe = (Dog.OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
@@ -74,7 +74,7 @@ class TestUsingSunMisc
 
         try
         {
-            JsonReader.useUnsafe = false;
+            MetaUtils.useUnsafe = false;
             shoe = Dog.OtherShoe.construct()
             JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
             fail()
@@ -83,7 +83,7 @@ class TestUsingSunMisc
         {
         }
 
-        JsonReader.useUnsafe = true;
+        MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe.construct()
         oShoe = (Dog.OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
@@ -114,9 +114,9 @@ class TestUsingSunMisc
             e.message.toLowerCase().concat("go away")
         }
 
-        JsonReader.useUnsafe = true
+        MetaUtils.useUnsafe = true
         ShouldBeImpossibleToInstantiate s = JsonReader.jsonToJava(json)
         assert s.x == 50
-        JsonReader.useUnsafe = false
+        MetaUtils.useUnsafe = false
     }
 }
