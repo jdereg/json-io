@@ -10,23 +10,18 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
@@ -99,8 +94,6 @@ public class JsonReader implements Closeable
     private static final String EMPTY_ARRAY = "~!a~";  // compared with ==
     private static final String EMPTY_OBJECT = "~!o~";  // compared with ==
     private static final Map<String, String> stringCache = new HashMap<>();
-    private static final Map<Class, Object[]> constructors = new ConcurrentHashMap<>();
-    private static final Class[] emptyClassArray = new Class[]{};
     private static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Map<String, String> months = new LinkedHashMap<>();
@@ -112,18 +105,14 @@ public class JsonReader implements Closeable
     private static final Pattern datePattern3 = Pattern.compile(mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern datePattern4 = Pattern.compile("(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern datePattern5 = Pattern.compile("(\\d{4})[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern datePattern6 = Pattern.compile(days+"[ ]+" + mos + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,3}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern6 = Pattern.compile(days + "[ ]+" + mos + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,3}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})[.](\\d{1,10})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
-    private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
-    private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
-    private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
-    private static final Map unmodifiableMap = Collections.unmodifiableMap(new HashMap());
-    private static final Map unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap());
     private static final Map<Class, JsonClassReader> readerCache = new ConcurrentHashMap<>();
     private static final NullClass nullReader = new NullClass();
+    private static final ReaderErrorHandler errorHandler = new ReaderErrorHandler();
 
     private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<>();
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
@@ -135,25 +124,6 @@ public class JsonReader implements Closeable
     private final StringBuilder hexBuf = new StringBuilder();
 
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
-
-	private static boolean useUnsafe = false;
-	private static Unsafe unsafe;
-
-    public static void setUseUnsafe(boolean state)
-    {
-        useUnsafe = state;
-        if (state)
-        {
-            try
-            {
-                unsafe = new Unsafe();
-            }
-            catch (ReflectiveOperationException e)
-            {
-                useUnsafe = false;
-            }
-        }
-    }
 
     static
     {
@@ -1439,7 +1409,7 @@ public class JsonReader implements Closeable
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, newPrimitiveWrapper(compType, element));
+                Array.set(array, i, MetaUtils.newPrimitiveWrapper(compType, element, errorHandler));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays
@@ -1761,7 +1731,7 @@ public class JsonReader implements Closeable
                 JsonObject<String, Object> jObj = (JsonObject) value;
                 if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
                 {
-                    jObj.put("value", newPrimitiveWrapper(field.getType(),jObj.get("value")));
+                    jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value"), errorHandler));
                     continue;
                 }
                 Long ref = (Long) jObj.get("@ref");
@@ -1786,7 +1756,7 @@ public class JsonReader implements Closeable
                 final Class fieldType = field.getType();
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    jsonObj.put(key, newPrimitiveWrapper(fieldType, value));
+                    jsonObj.put(key, MetaUtils.newPrimitiveWrapper(fieldType, value, errorHandler));
                 }
                 else if (BigDecimal.class == fieldType)
                 {
@@ -1888,7 +1858,7 @@ public class JsonReader implements Closeable
             {
                 if (fieldType.isPrimitive())
                 {
-                    field.set(target, newPrimitiveWrapper(fieldType, "0"));
+                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0", errorHandler));
                 }
                 else
                 {
@@ -1961,7 +1931,7 @@ public class JsonReader implements Closeable
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    field.set(target, newPrimitiveWrapper(fieldType, rhs));
+                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, rhs, errorHandler));
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
@@ -2250,7 +2220,7 @@ public class JsonReader implements Closeable
             {    // Handle regular field.object reference
                 if (MetaUtils.isPrimitive(c))
                 {
-                    mate = newPrimitiveWrapper(c, jsonObj.get("value"));
+                    mate = MetaUtils.newPrimitiveWrapper(c, jsonObj.get("value"), errorHandler);
                 }
                 else if (c == Class.class)
                 {
@@ -2749,267 +2719,7 @@ public class JsonReader implements Closeable
         {
             return factory.get(c).newInstance(c);
         }
-        if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
-        {
-            return new TreeMap();
-        }
-        if (unmodifiableMap.getClass().isAssignableFrom(c))
-        {
-            return new LinkedHashMap();
-        }
-        if (unmodifiableSortedSet.getClass().isAssignableFrom(c))
-        {
-            return new TreeSet();
-        }
-        if (unmodifiableSet.getClass().isAssignableFrom(c))
-        {
-            return new LinkedHashSet();
-        }
-        if (unmodifiableCollection.getClass().isAssignableFrom(c))
-        {
-            return new ArrayList();
-        }
-
-        // Constructor not cached, go find a constructor
-        Object[] constructorInfo = constructors.get(c);
-        if (constructorInfo != null)
-        {   // Constructor was cached
-            Constructor constructor = (Constructor) constructorInfo[0];
-
-            if (constructor == null && useUnsafe)
-            {   // null constructor --> set to null when object instantiated with unsafe.allocateInstance()
-                try
-                {
-                    return unsafe.allocateInstance(c);
-                }
-                catch (Exception e)
-                {
-                    // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    error("Could not instantiate " + c.getName(), e);
-                }
-            }
-
-            Boolean useNull = (Boolean) constructorInfo[1];
-            Class[] paramTypes = constructor.getParameterTypes();
-            if (paramTypes == null || paramTypes.length == 0)
-            {
-                try
-                {
-                    return constructor.newInstance();
-                }
-                catch (Exception e)
-                {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    error("Could not instantiate " + c.getName(), e);
-                }
-            }
-            Object[] values = fillArgs(paramTypes, useNull);
-            try
-            {
-                return constructor.newInstance(values);
-            }
-            catch (Exception e)
-            {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                error("Could not instantiate " + c.getName(), e);
-            }
-        }
-
-        Object[] ret = newInstanceEx(c);
-        constructors.put(c, new Object[]{ret[1], ret[2]});
-        return ret[0];
-    }
-
-    /**
-     * Return constructor and instance as elements 0 and 1, respectively.
-     */
-    private static Object[] newInstanceEx(Class c) throws IOException
-    {
-        try
-        {
-            Constructor constructor = c.getConstructor(emptyClassArray);
-            if (constructor != null)
-            {
-                return new Object[] {constructor.newInstance(), constructor, true};
-            }
-            return tryOtherConstruction(c);
-        }
-        catch (Exception e)
-        {
-            // OK, this class does not have a public no-arg constructor.  Instantiate with
-            // first constructor found, filling in constructor values with null or
-            // defaults for primitives.
-            return tryOtherConstruction(c);
-        }
-    }
-
-    private static Object[] tryOtherConstruction(Class c) throws IOException
-    {
-        Constructor[] constructors = c.getDeclaredConstructors();
-        if (constructors.length == 0)
-        {
-            error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
-        }
-
-        // Try each constructor (private, protected, or public) with null values for non-primitives.
-        for (Constructor constructor : constructors)
-        {
-            constructor.setAccessible(true);
-            Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, true);
-            try
-            {
-                return new Object[] {constructor.newInstance(values), constructor, true};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        // Try each constructor (private, protected, or public) with non-null values for primitives.
-        for (Constructor constructor : constructors)
-        {
-            constructor.setAccessible(true);
-            Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, false);
-            try
-            {
-                return new Object[] {constructor.newInstance(values), constructor, false};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        // Try instantiation via unsafe
-        // This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
-        // Thats why we try ordinary constructors first
-        if (useUnsafe)
-        {
-            try
-            {
-                return new Object[]{unsafe.allocateInstance(c), null, null};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        error("Could not instantiate " + c.getName() + " using any constructor");
-        return null;
-    }
-
-    private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
-    {
-        final Object[] values = new Object[argTypes.length];
-        for (int i = 0; i < argTypes.length; i++)
-        {
-            final Class argType = argTypes[i];
-            if (MetaUtils.isPrimitive(argType))
-            {
-                values[i] = newPrimitiveWrapper(argType, null);
-            }
-            else if (useNull)
-            {
-                values[i] = null;
-            }
-            else
-            {
-                if (argType == String.class)
-                {
-                    values[i] = "";
-                }
-                else if (argType == Date.class)
-                {
-                    values[i] = new Date();
-                }
-                else if (List.class.isAssignableFrom(argType))
-                {
-                    values[i] = new ArrayList();
-                }
-                else if (SortedSet.class.isAssignableFrom(argType))
-                {
-                    values[i] = new TreeSet();
-                }
-                else if (Set.class.isAssignableFrom(argType))
-                {
-                    values[i] = new LinkedHashSet();
-                }
-                else if (SortedMap.class.isAssignableFrom(argType))
-                {
-                    values[i] = new TreeMap();
-                }
-                else if (Map.class.isAssignableFrom(argType))
-                {
-                    values[i] = new LinkedHashMap();
-                }
-                else if (Collection.class.isAssignableFrom(argType))
-                {
-                    values[i] = new ArrayList();
-                }
-                else if (Calendar.class.isAssignableFrom(argType))
-                {
-                    values[i] = Calendar.getInstance();
-                }
-                else if (TimeZone.class.isAssignableFrom(argType))
-                {
-                    values[i] = TimeZone.getDefault();
-                }
-                else if (argType == BigInteger.class)
-                {
-                    values[i] = BigInteger.TEN;
-                }
-                else if (argType == BigDecimal.class)
-                {
-                    values[i] = BigDecimal.TEN;
-                }
-                else if (argType == StringBuilder.class)
-                {
-                    values[i] = new StringBuilder();
-                }
-                else if (argType == StringBuffer.class)
-                {
-                    values[i] = new StringBuffer();
-                }
-                else if (argType == Locale.class)
-                {
-                    values[i] = Locale.FRANCE;  // overwritten
-                }
-                else if (argType == Class.class)
-                {
-                    values[i] = String.class;
-                }
-                else if (argType == java.sql.Timestamp.class)
-                {
-                    values[i] = new Timestamp(System.currentTimeMillis());
-                }
-                else if (argType == java.sql.Date.class)
-                {
-                    values[i] = new java.sql.Date(System.currentTimeMillis());
-                }
-                else if (argType == java.net.URL.class)
-                {
-                    values[i] = new URL("http://localhost"); // overwritten
-                }
-                else if (argType == Object.class)
-                {
-                    values[i] = new Object();
-                }
-                else
-                {
-                    values[i] = null;
-                }
-            }
-        }
-
-        return values;
-    }
-
-    private static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
-    {
-        try
-        {
-            return MetaUtils.newPrimitiveWrapper(c, rhs);
-        }
-        catch (Exception e)
-        {
-            return error("Unable to convert value", e);
-        }
+        return MetaUtils.newInstance(c, errorHandler);
     }
 
     private static boolean isDigit(int c)
@@ -3245,54 +2955,6 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
-     * @author Kai Hufenback
-     */
-    static final class Unsafe
-    {
-    	private final Object sunUnsafe;
-    	private final Method allocateInstance;
-
-    	/**
-    	 * Constructs unsafe object, acting as a wrapper.
-    	 * @throws ReflectiveOperationException
-    	 */
-    	public Unsafe() throws ReflectiveOperationException
-        {
-    		try
-            {
-    			Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe").getDeclaredConstructor();
-    			unsafeConstructor.setAccessible(true);
-                sunUnsafe = unsafeConstructor.newInstance();
-    			allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);
-    			allocateInstance.setAccessible(true);
-    		}
-            catch(Exception e)
-            {
-    			throw new ReflectiveOperationException(e);
-    		}
-    	}
-
-    	/**
-    	 * Creates an object without invoking constructor or initializing variables.
-    	 * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
-    	 * @param clazz to instantiate
-    	 * @return allocated Object
-    	 */
-        public Object allocateInstance(Class clazz)
-        {
-            try
-            {
-                return allocateInstance.invoke(sunUnsafe, clazz);
-            }
-            catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
-            {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    /**
      * This class adds significant performance increase over using the JDK
      * PushbackReader.  This is due to this class not using synchronization
      * as it is not needed.
@@ -3402,6 +3064,19 @@ public class JsonReader implements Closeable
                 snippetLoc = SNIPPET_LENGTH - 1;
             }
             snippet[snippetLoc] = c;
+        }
+    }
+
+    static class ReaderErrorHandler implements ErrorHandler
+    {
+        public Object error(String msg) throws IOException
+        {
+            return JsonReader.error(msg);
+        }
+
+        public Object error(String msg, Exception e) throws IOException
+        {
+            return JsonReader.error(msg, e);
         }
     }
 }

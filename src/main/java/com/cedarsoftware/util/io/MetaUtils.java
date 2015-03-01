@@ -2,16 +2,34 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URL;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,6 +62,13 @@ public class MetaUtils
     private static final Byte[] byteCache = new Byte[256];
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
+    private static final Class[] emptyClassArray = new Class[]{};
+    private static final Map<Class, Object[]> constructors = new ConcurrentHashMap<>();
+    private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
+    private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
+    private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
+    private static final Map unmodifiableMap = Collections.unmodifiableMap(new HashMap());
+    private static final Map unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap());
     static final ThreadLocal<SimpleDateFormat> dateFormat = new ThreadLocal<SimpleDateFormat>()
     {
         public SimpleDateFormat initialValue()
@@ -51,6 +76,24 @@ public class MetaUtils
             return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         }
     };
+    private static boolean useUnsafe = false;
+    private static Unsafe unsafe;
+
+    public static void setUseUnsafe(boolean state)
+    {
+        useUnsafe = state;
+        if (state)
+        {
+            try
+            {
+                unsafe = new Unsafe();
+            }
+            catch (ReflectiveOperationException e)
+            {
+                useUnsafe = false;
+            }
+        }
+    }
 
     static
     {
@@ -253,7 +296,7 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    public static Class classForName(String name) throws IOException
+    static Class classForName(String name) throws IOException
     {
         if (name == null || name.isEmpty())
         {
@@ -354,117 +397,427 @@ public class MetaUtils
         return s;
     }
 
-    static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
+    static Object newInstance(Class c, ErrorHandler errorHandler) throws IOException
     {
-        final String cname = c.getName();
-        switch(cname)
+        if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
-            case "boolean":
-            case "java.lang.Boolean":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "false";
-                    }
-                    return Boolean.parseBoolean((String)rhs);
-                }
-                return rhs != null ? rhs : Boolean.FALSE;
-            case "byte":
-            case "java.lang.Byte":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0";
-                    }
-                    return Byte.parseByte((String)rhs);
-                }
-                return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
-            case "char":
-            case "java.lang.Character":
-                if (rhs == null)
-                {
-                    return '\u0000';
-                }
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "\u0000";
-                    }
-                    return valueOf(((String) rhs).charAt(0));
-                }
-                if (rhs instanceof Character)
-                {
-                    return rhs;
-                }
-                break;
-            case "double":
-            case "java.lang.Double":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0.0";
-                    }
-                    return Double.parseDouble((String)rhs);
-                }
-                return rhs != null ? rhs : 0.0d;
-            case "float":
-            case "java.lang.Float":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0.0f";
-                    }
-                    return Float.parseFloat((String)rhs);
-                }
-                return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
-            case "int":
-            case "java.lang.Integer":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0";
-                    }
-                    return Integer.parseInt((String)rhs);
-                }
-                return rhs != null ? ((Number) rhs).intValue() : 0;
-            case "long":
-            case "java.lang.Long":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0";
-                    }
-                    return Long.parseLong((String)rhs);
-                }
-                return rhs != null ? rhs : 0L;
-            case "short":
-            case "java.lang.Short":
-                if (rhs instanceof String)
-                {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
-                        rhs = "0";
-                    }
-                    return Short.parseShort((String)rhs);
-                }
-                return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+            return new TreeMap();
+        }
+        if (unmodifiableMap.getClass().isAssignableFrom(c))
+        {
+            return new LinkedHashMap();
+        }
+        if (unmodifiableSortedSet.getClass().isAssignableFrom(c))
+        {
+            return new TreeSet();
+        }
+        if (unmodifiableSet.getClass().isAssignableFrom(c))
+        {
+            return new LinkedHashSet();
+        }
+        if (unmodifiableCollection.getClass().isAssignableFrom(c))
+        {
+            return new ArrayList();
         }
 
-        throw new IllegalArgumentException("Class '" + cname + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
+        // Constructor not cached, go find a constructor
+        Object[] constructorInfo = constructors.get(c);
+        if (constructorInfo != null)
+        {   // Constructor was cached
+            Constructor constructor = (Constructor) constructorInfo[0];
+
+            if (constructor == null && useUnsafe)
+            {   // null constructor --> set to null when object instantiated with unsafe.allocateInstance()
+                try
+                {
+                    return unsafe.allocateInstance(c);
+                }
+                catch (Exception e)
+                {
+                    // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                    errorHandler.error("Could not instantiate " + c.getName(), e);
+                }
+            }
+
+            Boolean useNull = (Boolean) constructorInfo[1];
+            Class[] paramTypes = constructor.getParameterTypes();
+            if (paramTypes == null || paramTypes.length == 0)
+            {
+                try
+                {
+                    return constructor.newInstance();
+                }
+                catch (Exception e)
+                {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                    errorHandler.error("Could not instantiate " + c.getName(), e);
+                }
+            }
+            Object[] values = MetaUtils.fillArgs(paramTypes, useNull, errorHandler);
+            try
+            {
+                return constructor.newInstance(values);
+            }
+            catch (Exception e)
+            {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
+                errorHandler.error("Could not instantiate " + c.getName(), e);
+            }
+        }
+
+        Object[] ret = MetaUtils.newInstanceEx(c, errorHandler);
+        constructors.put(c, new Object[]{ret[1], ret[2]});
+        return ret[0];
     }
+
+    /**
+     * Return constructor and instance as elements 0 and 1, respectively.
+     */
+    private static Object[] newInstanceEx(Class c, ErrorHandler errorHandler) throws IOException
+    {
+        try
+        {
+            Constructor constructor = c.getConstructor(emptyClassArray);
+            if (constructor != null)
+            {
+                return new Object[] {constructor.newInstance(), constructor, true};
+            }
+            return tryOtherConstruction(c, errorHandler);
+        }
+        catch (Exception e)
+        {
+            // OK, this class does not have a public no-arg constructor.  Instantiate with
+            // first constructor found, filling in constructor values with null or
+            // defaults for primitives.
+            return tryOtherConstruction(c, errorHandler);
+        }
+    }
+
+    private static Object[] tryOtherConstruction(Class c, ErrorHandler errorHandler) throws IOException
+    {
+        Constructor[] constructors = c.getDeclaredConstructors();
+        if (constructors.length == 0)
+        {
+            errorHandler.error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
+        }
+
+        // Try each constructor (private, protected, or public) with null values for non-primitives.
+        for (Constructor constructor : constructors)
+        {
+            constructor.setAccessible(true);
+            Class[] argTypes = constructor.getParameterTypes();
+            Object[] values = MetaUtils.fillArgs(argTypes, true, errorHandler);
+            try
+            {
+                return new Object[] {constructor.newInstance(values), constructor, true};
+            }
+            catch (Exception ignored)
+            { }
+        }
+
+        // Try each constructor (private, protected, or public) with non-null values for primitives.
+        for (Constructor constructor : constructors)
+        {
+            constructor.setAccessible(true);
+            Class[] argTypes = constructor.getParameterTypes();
+            Object[] values = MetaUtils.fillArgs(argTypes, false, errorHandler);
+            try
+            {
+                return new Object[] {constructor.newInstance(values), constructor, false};
+            }
+            catch (Exception ignored)
+            { }
+        }
+
+        // Try instantiation via unsafe
+        // This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
+        // Thats why we try ordinary constructors first
+        if (useUnsafe)
+        {
+            try
+            {
+                return new Object[]{unsafe.allocateInstance(c), null, null};
+            }
+            catch (Exception ignored)
+            { }
+        }
+
+        errorHandler.error("Could not instantiate " + c.getName() + " using any constructor");
+        return null;
+    }
+
+    private static Object[] fillArgs(Class[] argTypes, boolean useNull, ErrorHandler errorHandler) throws IOException
+    {
+        final Object[] values = new Object[argTypes.length];
+        for (int i = 0; i < argTypes.length; i++)
+        {
+            final Class argType = argTypes[i];
+            if (MetaUtils.isPrimitive(argType))
+            {
+                values[i] = MetaUtils.newPrimitiveWrapper(argType, null, errorHandler);
+            }
+            else if (useNull)
+            {
+                values[i] = null;
+            }
+            else
+            {
+                if (argType == String.class)
+                {
+                    values[i] = "";
+                }
+                else if (argType == Date.class)
+                {
+                    values[i] = new Date();
+                }
+                else if (List.class.isAssignableFrom(argType))
+                {
+                    values[i] = new ArrayList();
+                }
+                else if (SortedSet.class.isAssignableFrom(argType))
+                {
+                    values[i] = new TreeSet();
+                }
+                else if (Set.class.isAssignableFrom(argType))
+                {
+                    values[i] = new LinkedHashSet();
+                }
+                else if (SortedMap.class.isAssignableFrom(argType))
+                {
+                    values[i] = new TreeMap();
+                }
+                else if (Map.class.isAssignableFrom(argType))
+                {
+                    values[i] = new LinkedHashMap();
+                }
+                else if (Collection.class.isAssignableFrom(argType))
+                {
+                    values[i] = new ArrayList();
+                }
+                else if (Calendar.class.isAssignableFrom(argType))
+                {
+                    values[i] = Calendar.getInstance();
+                }
+                else if (TimeZone.class.isAssignableFrom(argType))
+                {
+                    values[i] = TimeZone.getDefault();
+                }
+                else if (argType == BigInteger.class)
+                {
+                    values[i] = BigInteger.TEN;
+                }
+                else if (argType == BigDecimal.class)
+                {
+                    values[i] = BigDecimal.TEN;
+                }
+                else if (argType == StringBuilder.class)
+                {
+                    values[i] = new StringBuilder();
+                }
+                else if (argType == StringBuffer.class)
+                {
+                    values[i] = new StringBuffer();
+                }
+                else if (argType == Locale.class)
+                {
+                    values[i] = Locale.FRANCE;  // overwritten
+                }
+                else if (argType == Class.class)
+                {
+                    values[i] = String.class;
+                }
+                else if (argType == java.sql.Timestamp.class)
+                {
+                    values[i] = new Timestamp(System.currentTimeMillis());
+                }
+                else if (argType == java.sql.Date.class)
+                {
+                    values[i] = new java.sql.Date(System.currentTimeMillis());
+                }
+                else if (argType == java.net.URL.class)
+                {
+                    values[i] = new URL("http://localhost"); // overwritten
+                }
+                else if (argType == Object.class)
+                {
+                    values[i] = new Object();
+                }
+                else
+                {
+                    values[i] = null;
+                }
+            }
+        }
+
+        return values;
+    }
+
+    static Object newPrimitiveWrapper(Class c, Object rhs, ErrorHandler errorHandler) throws IOException
+    {
+        final String cname;
+        try
+        {
+            cname = c.getName();
+            switch(cname)
+            {
+                case "boolean":
+                case "java.lang.Boolean":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "false";
+                        }
+                        return Boolean.parseBoolean((String)rhs);
+                    }
+                    return rhs != null ? rhs : Boolean.FALSE;
+                case "byte":
+                case "java.lang.Byte":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0";
+                        }
+                        return Byte.parseByte((String)rhs);
+                    }
+                    return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+                case "char":
+                case "java.lang.Character":
+                    if (rhs == null)
+                    {
+                        return '\u0000';
+                    }
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "\u0000";
+                        }
+                        return valueOf(((String) rhs).charAt(0));
+                    }
+                    if (rhs instanceof Character)
+                    {
+                        return rhs;
+                    }
+                    break;
+                case "double":
+                case "java.lang.Double":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0.0";
+                        }
+                        return Double.parseDouble((String)rhs);
+                    }
+                    return rhs != null ? rhs : 0.0d;
+                case "float":
+                case "java.lang.Float":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0.0f";
+                        }
+                        return Float.parseFloat((String)rhs);
+                    }
+                    return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+                case "int":
+                case "java.lang.Integer":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0";
+                        }
+                        return Integer.parseInt((String)rhs);
+                    }
+                    return rhs != null ? ((Number) rhs).intValue() : 0;
+                case "long":
+                case "java.lang.Long":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0";
+                        }
+                        return Long.parseLong((String)rhs);
+                    }
+                    return rhs != null ? rhs : 0L;
+                case "short":
+                case "java.lang.Short":
+                    if (rhs instanceof String)
+                    {
+                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                        if ("".equals(rhs))
+                        {
+                            rhs = "0";
+                        }
+                        return Short.parseShort((String)rhs);
+                    }
+                    return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+            }
+        }
+        catch (Exception e)
+        {
+            return errorHandler.error("Error creating primitive wrapper instance", e);
+        }
+
+        return errorHandler.error("Class '" + cname + "' does not have primitive wrapper.");
+    }
+
+    /**
+     * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
+     * @author Kai Hufenback
+     */
+    static final class Unsafe
+    {
+        private final Object sunUnsafe;
+        private final Method allocateInstance;
+
+        /**
+         * Constructs unsafe object, acting as a wrapper.
+         * @throws ReflectiveOperationException
+         */
+        public Unsafe() throws ReflectiveOperationException
+        {
+            try
+            {
+                Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe").getDeclaredConstructor();
+                unsafeConstructor.setAccessible(true);
+                sunUnsafe = unsafeConstructor.newInstance();
+                allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);
+                allocateInstance.setAccessible(true);
+            }
+            catch(Exception e)
+            {
+                throw new ReflectiveOperationException(e);
+            }
+        }
+
+        /**
+         * Creates an object without invoking constructor or initializing variables.
+         * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
+         * @param clazz to instantiate
+         * @return allocated Object
+         */
+        public Object allocateInstance(Class clazz)
+        {
+            try
+            {
+                return allocateInstance.invoke(sunUnsafe, clazz);
+            }
+            catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
 }
