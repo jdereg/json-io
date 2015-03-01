@@ -13,6 +13,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This utility class is used to retrieve the fields from a Class.  It uses reflection
@@ -39,6 +41,9 @@ public class MetaUtils
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();
     private static final Map<String, Class> nameToClass = new HashMap<>();
+    private static final Byte[] byteCache = new Byte[256];
+    private static final Character[] charCache = new Character[128];
+    private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     static final ThreadLocal<SimpleDateFormat> dateFormat = new ThreadLocal<SimpleDateFormat>()
     {
         public SimpleDateFormat initialValue()
@@ -69,6 +74,18 @@ public class MetaUtils
         nameToClass.put("double", double.class);
         nameToClass.put("date", Date.class);
         nameToClass.put("class", Class.class);
+
+        // Save memory by re-using all byte instances (Bytes are immutable)
+        for (int i = 0; i < byteCache.length; i++)
+        {
+            byteCache[i] = (byte) (i - 128);
+        }
+
+        // Save memory by re-using common Characters (Characters are immutable)
+        for (int i = 0; i < charCache.length; i++)
+        {
+            charCache[i] = (char) i;
+        }
     }
 
     /**
@@ -313,5 +330,141 @@ public class MetaUtils
             }
         }
         return currentClass;
+    }
+
+    /**
+     * This is a performance optimization.  The lowest 128 characters are re-used.
+     *
+     * @param c char to match to a Character.
+     * @return a Character that matches the passed in char.  If the value is
+     *         less than 127, then the same Character instances are re-used.
+     */
+    static Character valueOf(char c)
+    {
+        return c <= 127 ? charCache[(int) c] : c;
+    }
+
+    static String removeLeadingAndTrailingQuotes(String s)
+    {
+        Matcher m = extraQuotes.matcher(s);
+        if (m.find())
+        {
+            s = m.group(2);
+        }
+        return s;
+    }
+
+    static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
+    {
+        final String cname = c.getName();
+        switch(cname)
+        {
+            case "boolean":
+            case "java.lang.Boolean":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "false";
+                    }
+                    return Boolean.parseBoolean((String)rhs);
+                }
+                return rhs != null ? rhs : Boolean.FALSE;
+            case "byte":
+            case "java.lang.Byte":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Byte.parseByte((String)rhs);
+                }
+                return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+            case "char":
+            case "java.lang.Character":
+                if (rhs == null)
+                {
+                    return '\u0000';
+                }
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "\u0000";
+                    }
+                    return valueOf(((String) rhs).charAt(0));
+                }
+                if (rhs instanceof Character)
+                {
+                    return rhs;
+                }
+                break;
+            case "double":
+            case "java.lang.Double":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0.0";
+                    }
+                    return Double.parseDouble((String)rhs);
+                }
+                return rhs != null ? rhs : 0.0d;
+            case "float":
+            case "java.lang.Float":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0.0f";
+                    }
+                    return Float.parseFloat((String)rhs);
+                }
+                return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+            case "int":
+            case "java.lang.Integer":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Integer.parseInt((String)rhs);
+                }
+                return rhs != null ? ((Number) rhs).intValue() : 0;
+            case "long":
+            case "java.lang.Long":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Long.parseLong((String)rhs);
+                }
+                return rhs != null ? rhs : 0L;
+            case "short":
+            case "java.lang.Short":
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
+                    {
+                        rhs = "0";
+                    }
+                    return Short.parseShort((String)rhs);
+                }
+                return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+        }
+
+        throw new IllegalArgumentException("Class '" + cname + "' requested for special instantiation - isPrimitive() does not match newPrimitiveWrapper()");
     }
 }

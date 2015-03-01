@@ -43,15 +43,15 @@ class TestInternalAPIs
     @Test
     void testCleanString()
     {
-        String s = JsonReader.removeLeadingAndTrailingQuotes('"Foo"')
+        String s = MetaUtils.removeLeadingAndTrailingQuotes('"Foo"')
         assert "Foo" == s
-        s = JsonReader.removeLeadingAndTrailingQuotes("Foo")
+        s = MetaUtils.removeLeadingAndTrailingQuotes("Foo")
         assert "Foo" == s
-        s = JsonReader.removeLeadingAndTrailingQuotes('"Foo')
+        s = MetaUtils.removeLeadingAndTrailingQuotes('"Foo')
         assert "Foo" == s
-        s = JsonReader.removeLeadingAndTrailingQuotes('Foo"')
+        s = MetaUtils.removeLeadingAndTrailingQuotes('Foo"')
         assert "Foo" == s
-        s = JsonReader.removeLeadingAndTrailingQuotes('""Foo""')
+        s = MetaUtils.removeLeadingAndTrailingQuotes('""Foo""')
         assert "Foo" == s
     }
 
