@@ -1,9 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import java.io.IOException;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -35,6 +38,7 @@ public class MetaUtils
 {
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();
+    private static final Map<String, Class> nameToClass = new HashMap<>();
     static final ThreadLocal<SimpleDateFormat> dateFormat = new ThreadLocal<SimpleDateFormat>()
     {
         public SimpleDateFormat initialValue()
@@ -53,6 +57,18 @@ public class MetaUtils
         prims.add(Float.class);
         prims.add(Boolean.class);
         prims.add(Short.class);
+
+        nameToClass.put("string", String.class);
+        nameToClass.put("boolean", boolean.class);
+        nameToClass.put("char", char.class);
+        nameToClass.put("byte", byte.class);
+        nameToClass.put("short", short.class);
+        nameToClass.put("int", int.class);
+        nameToClass.put("long", long.class);
+        nameToClass.put("float", float.class);
+        nameToClass.put("double", double.class);
+        nameToClass.put("date", Date.class);
+        nameToClass.put("class", Class.class);
     }
 
     /**
@@ -218,5 +234,84 @@ public class MetaUtils
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
                 c.equals(Class.class);
+    }
+
+    static Class classForName(String name) throws IOException
+    {
+        if (name == null || name.isEmpty())
+        {
+            throw new IllegalArgumentException("Class name cannot be null or empty.");
+        }
+        Class c = nameToClass.get(name);
+        try
+        {
+            return c == null ? loadClass(name) : c;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new IOException("Class not found: " + name, e);
+        }
+    }
+
+    // loadClass() provided by: Thomas Margreiter
+    private static Class loadClass(String name) throws ClassNotFoundException
+    {
+        String className = name;
+        boolean arrayType = false;
+        Class primitiveArray = null;
+
+        while (className.startsWith("["))
+        {
+            arrayType = true;
+            if (className.endsWith(";"))
+            {
+                className = className.substring(0, className.length() - 1);
+            }
+            switch (className)
+            {
+                case "[B":
+                    primitiveArray = byte[].class;
+                    break;
+                case "[S":
+                    primitiveArray = short[].class;
+                    break;
+                case "[I":
+                    primitiveArray = int[].class;
+                    break;
+                case "[J":
+                    primitiveArray = long[].class;
+                    break;
+                case "[F":
+                    primitiveArray = float[].class;
+                    break;
+                case "[D":
+                    primitiveArray = double[].class;
+                    break;
+                case "[Z":
+                    primitiveArray = boolean[].class;
+                    break;
+                case "[C":
+                    primitiveArray = char[].class;
+                    break;
+            }
+            int startpos = className.startsWith("[L") ? 2 : 1;
+            className = className.substring(startpos);
+        }
+        Class currentClass = null;
+        if (null == primitiveArray)
+        {
+            currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
+        }
+
+        if (arrayType)
+        {
+            currentClass = (null != primitiveArray) ? primitiveArray : Array.newInstance(currentClass, 0).getClass();
+            while (name.startsWith("[["))
+            {
+                currentClass = Array.newInstance(currentClass, 0).getClass();
+                name = name.substring(1);
+            }
+        }
+        return currentClass;
     }
 }

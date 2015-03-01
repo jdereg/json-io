@@ -57,9 +57,9 @@ class TestMapOfMaps
         }
         catch (IOException e)
         {
+            assertTrue(e.message.toLowerCase().contains("unable"))
+            assertTrue(e.message.toLowerCase().contains("create"))
             assertTrue(e.message.toLowerCase().contains("class"))
-            assertTrue(e.message.toLowerCase().contains("not"))
-            assertTrue(e.message.toLowerCase().contains("created"))
         }
         Map map = JsonReader.jsonToMaps(json)
         assertEquals('Hello', map._name)

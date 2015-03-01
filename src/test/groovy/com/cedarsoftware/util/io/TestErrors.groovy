@@ -375,9 +375,9 @@ class TestErrors
         }
         catch (IOException e)
         {
-            assertTrue(e.message.contains("class"))
-            assertTrue(e.message.contains("not"))
-            assertTrue(e.message.contains("created"))
+            assertTrue(e.message.toLowerCase().contains("unable"))
+            assertTrue(e.message.toLowerCase().contains("create"))
+            assertTrue(e.message.toLowerCase().contains("class"))
         }
 
         // Bad class inside a Collection

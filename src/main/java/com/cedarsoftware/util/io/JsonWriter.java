@@ -1360,7 +1360,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            arrayClass = JsonReader.classForName(type);
+            arrayClass = MetaUtils.classForName(type);
         }
 
         final Writer output = this.out;
@@ -1478,7 +1478,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         String type = jObj.type;
-        Class colClass = JsonReader.classForName(type);
+        Class colClass = MetaUtils.classForName(type);
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
         int len = jObj.getLength();
@@ -1566,7 +1566,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = JsonReader.classForName(type);
+                Class mapClass = MetaUtils.classForName(type);
                 output.write("\"@type\":\"");
                 output.write(mapClass.getName());
                 output.write('"');
@@ -1662,7 +1662,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = JsonReader.classForName(type);
+                Class mapClass = MetaUtils.classForName(type);
                 output.write("\"@type\":\"");
                 output.write(mapClass.getName());
                 output.write('"');
@@ -1719,7 +1719,7 @@ public class JsonWriter implements Closeable, Flushable
             output.write("\"@type\":\"");
             output.write(jObj.type);
             output.write('"');
-            try  { type = JsonReader.classForName(jObj.type); } catch(Exception ignored) { type = null; }
+            try  { type = MetaUtils.classForName(jObj.type); } catch(Exception ignored) { type = null; }
         }
 
         if (jObj.isEmpty())
