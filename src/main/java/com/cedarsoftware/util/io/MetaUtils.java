@@ -765,7 +765,8 @@ public class MetaUtils
         }
         catch (Exception e)
         {
-            return errorHandler.error("Error creating primitive wrapper instance", e);
+            String className = c == null ? "null" : c.getName();
+            return errorHandler.error("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
         return errorHandler.error("Class '" + cname + "' does not have primitive wrapper.");
