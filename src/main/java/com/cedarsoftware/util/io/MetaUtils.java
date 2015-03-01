@@ -35,8 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * This utility class is used to retrieve the fields from a Class.  It uses reflection
- * to do so, allowing it to obtain the non-public fields.
+ * This utility class has the methods mostly related to reflection related code.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>

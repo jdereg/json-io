@@ -3,11 +3,9 @@ package com.cedarsoftware.util.io;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.io.FilterReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -90,7 +88,6 @@ public class JsonReader implements Closeable
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
-    private static final int SNIPPET_LENGTH = 200;
     private static final String EMPTY_ARRAY = "~!a~";  // compared with ==
     private static final String EMPTY_OBJECT = "~!o~";  // compared with ==
     private static final Map<String, String> stringCache = new HashMap<>();
@@ -2578,10 +2575,10 @@ public class JsonReader implements Closeable
         return isNeg ? -n : n;
     }
 
-    static final int STATE_STRING_START = 0;
-    static final int STATE_STRING_SLASH = 1;
-    static final int STATE_HEX_DIGITS_START = 2;
-    static final int STATE_HEX_DIGITS = 3;
+    private static final int STATE_STRING_START = 0;
+    private static final int STATE_STRING_SLASH = 1;
+    private static final int STATE_HEX_DIGITS_START = 2;
+    private static final int STATE_HEX_DIGITS = 3;
 
     /**
      * Read a JSON string
@@ -2952,119 +2949,6 @@ public class JsonReader implements Closeable
             return threadInput.get().getLastSnippet();
         }
         return "";
-    }
-
-    /**
-     * This class adds significant performance increase over using the JDK
-     * PushbackReader.  This is due to this class not using synchronization
-     * as it is not needed.
-     */
-    private static final class FastPushbackReader extends FilterReader
-    {
-        private final int[] buf;
-        private final int[] snippet;
-        private int idx;
-        private int line;
-        private int col;
-        private int snippetLoc = 0;
-
-        private FastPushbackReader(Reader reader, int size)
-        {
-            super(reader);
-            if (size <= 0)
-            {
-                throw new IllegalArgumentException("size <= 0");
-            }
-            buf = new int[size];
-            idx = size;
-            snippet = new int[SNIPPET_LENGTH];
-            line = 1;
-            col = 0;
-        }
-
-        private FastPushbackReader(Reader r)
-        {
-            this(r, 1);
-        }
-
-        private String getLastSnippet()
-        {
-            StringBuilder s = new StringBuilder();
-            for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
-            {
-                if (appendChar(s, i))
-                {
-                    break;
-                }
-            }
-            for (int i=0; i < snippetLoc; i++)
-            {
-                if (appendChar(s, i))
-                {
-                    break;
-                }
-            }
-            return s.toString();
-        }
-
-        private boolean appendChar(StringBuilder s, int i)
-        {
-            try
-            {
-                s.appendCodePoint(snippet[i]);
-            }
-            catch (Exception e)
-            {
-                return true;
-            }
-            return false;
-        }
-
-        public int read() throws IOException
-        {
-            final int ch = idx < buf.length ? buf[idx++] : in.read();
-            if (ch >= 0)
-            {
-                if (ch == 0x0a)
-                {
-                    line++;
-                    col = 0;
-                }
-                else
-                {
-                    col++;
-                }
-                snippet[snippetLoc++] = ch;
-                if (snippetLoc >= SNIPPET_LENGTH)
-                {
-                    snippetLoc = 0;
-                }
-            }
-            return ch;
-        }
-
-        public void unread(int c) throws IOException
-        {
-            if (idx == 0)
-            {
-                error("unread(int c) called more than buffer size (" + buf.length + ")");
-            }
-            if (c == 0x0a)
-            {
-                line--;
-            }
-            else
-            {
-                col--;
-            }
-            buf[--idx] = c;
-            snippetLoc--;
-            if (snippetLoc < 0)
-            {
-                snippetLoc = SNIPPET_LENGTH - 1;
-            }
-            snippet[snippetLoc] = c;
-        }
     }
 
     static class ReaderErrorHandler implements ErrorHandler
