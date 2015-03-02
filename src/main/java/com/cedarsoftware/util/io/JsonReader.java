@@ -84,13 +84,6 @@ import java.util.regex.Pattern;
  */
 public class JsonReader implements Closeable
 {
-    private static final int STATE_READ_START_OBJECT = 0;
-    private static final int STATE_READ_FIELD = 1;
-    private static final int STATE_READ_VALUE = 2;
-    private static final int STATE_READ_POST_VALUE = 3;
-    private static final String EMPTY_ARRAY = "~!a~";  // compared with ==
-    private static final String EMPTY_OBJECT = "~!o~";  // compared with ==
-    private static final Map<String, String> stringCache = new HashMap<>();
     private static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Map<String, String> months = new LinkedHashMap<>();
@@ -111,56 +104,16 @@ public class JsonReader implements Closeable
     private static final NullClass nullReader = new NullClass();
     private static final ReaderErrorHandler errorHandler = new ReaderErrorHandler();
 
-    private final Map<Long, JsonObject> _objsRead = new LinkedHashMap<>();
+    private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final FastPushbackReader input;
     private boolean useMaps = false;
-    private final char[] numBuf = new char[256];
-    private final StringBuilder strBuf = new StringBuilder();
-    private final StringBuilder hexBuf = new StringBuilder();
 
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
 
     static
     {
-        // Save heap memory by re-using common strings (String's immutable)
-        stringCache.put("", "");
-        stringCache.put("true", "true");
-        stringCache.put("True", "True");
-        stringCache.put("TRUE", "TRUE");
-        stringCache.put("false", "false");
-        stringCache.put("False", "False");
-        stringCache.put("FALSE", "FALSE");
-        stringCache.put("null", "null");
-        stringCache.put("yes", "yes");
-        stringCache.put("Yes", "Yes");
-        stringCache.put("YES", "YES");
-        stringCache.put("no", "no");
-        stringCache.put("No", "No");
-        stringCache.put("NO", "NO");
-        stringCache.put("on", "on");
-        stringCache.put("On", "On");
-        stringCache.put("ON", "ON");
-        stringCache.put("off", "off");
-        stringCache.put("Off", "Off");
-        stringCache.put("OFF", "OFF");
-        stringCache.put("@id", "@id");
-        stringCache.put("@ref", "@ref");
-        stringCache.put("@items", "@items");
-        stringCache.put("@type", "@type");
-        stringCache.put("@keys", "@keys");
-        stringCache.put("0", "0");
-        stringCache.put("1", "1");
-        stringCache.put("2", "2");
-        stringCache.put("3", "3");
-        stringCache.put("4", "4");
-        stringCache.put("5", "5");
-        stringCache.put("6", "6");
-        stringCache.put("7", "7");
-        stringCache.put("8", "8");
-        stringCache.put("9", "9");
-
         addReader(String.class, new StringReader());
         addReader(Date.class, new DateReader());
         addReader(BigInteger.class, new BigIntegerReader());
@@ -1212,9 +1165,9 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Finite State Machine (FSM) used to parse the JSON input into
-     * JsonObject's (Maps).  Then, if requested, the JsonObjects are
-     * converted into Java instances.
+     * Read JSON input from the stream that was set up in the constructor, turning it into
+     * Java Maps (JsonObject's).  Then, if requested, the JsonObjects can be converted
+     * into Java instances.
      *
      * @return Java Object graph constructed from InputStream supplying
      *         JSON serialized content.
@@ -1222,9 +1175,10 @@ public class JsonReader implements Closeable
      */
     public Object readObject() throws IOException
     {
+        JsonParser parser = new JsonParser(input, objsRead, useMaps, errorHandler);
         JsonObject root = new JsonObject();
-        Object o = readValue(root);
-        if (o == EMPTY_OBJECT)
+        Object o = parser.readValue(root);
+        if (o == JsonParser.EMPTY_OBJECT)
         {
             return new JsonObject();
         }
@@ -1282,7 +1236,7 @@ public class JsonReader implements Closeable
         Object graph = convertMapsToObjects((JsonObject<String, Object>) root);
         patchUnresolvedReferences();
         rehashMaps();
-        _objsRead.clear();
+        objsRead.clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
         return graph;
@@ -1395,7 +1349,7 @@ public class JsonReader implements Closeable
             {
                 Array.set(array, i, null);
             }
-            else if (element == EMPTY_OBJECT)
+            else if (element == JsonParser.EMPTY_OBJECT)
             {    // Use either explicitly defined type in ObjectMap associated to JSON, or array component type.
                 Object arrayElement = createJavaObjectInstance(compType, new JsonObject());
                 Array.set(array, i, arrayElement);
@@ -1482,7 +1436,7 @@ public class JsonReader implements Closeable
 
     private JsonObject getReferencedObj(Long ref) throws IOException
     {
-        JsonObject refObject = _objsRead.get(ref);
+        JsonObject refObject = objsRead.get(ref);
         if (refObject == null)
         {
             error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
@@ -1514,7 +1468,7 @@ public class JsonReader implements Closeable
 
         for (Object element : items)
         {
-            if (element == EMPTY_OBJECT)
+            if (element == JsonParser.EMPTY_OBJECT)
             {
                 copy.add(new JsonObject());
                 continue;
@@ -1581,7 +1535,7 @@ public class JsonReader implements Closeable
             {
                 col.add(null);
             }
-            else if (element == EMPTY_OBJECT)
+            else if (element == JsonParser.EMPTY_OBJECT)
             {   // Handles {}
                 col.add(new JsonObject());
             }
@@ -1707,7 +1661,7 @@ public class JsonReader implements Closeable
             {
                 jsonObj.put(fieldName, null);
             }
-            else if (rhs == EMPTY_OBJECT)
+            else if (rhs == JsonParser.EMPTY_OBJECT)
             {
                 jsonObj.put(fieldName, new JsonObject());
             }
@@ -1859,7 +1813,7 @@ public class JsonReader implements Closeable
             }
 
             Object special;
-            if (rhs == EMPTY_OBJECT)
+            if (rhs == JsonParser.EMPTY_OBJECT)
             {
                 final JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
@@ -2303,410 +2257,6 @@ public class JsonReader implements Closeable
         }
     }
 
-    // Parser code
-
-    private Object readJsonObject() throws IOException
-    {
-        boolean done = false;
-        String field = null;
-        JsonObject<String, Object> object = new JsonObject<>();
-        int state = STATE_READ_START_OBJECT;
-        final FastPushbackReader in = input;
-
-        while (!done)
-        {
-            int c;
-            switch (state)
-            {
-                case STATE_READ_START_OBJECT:
-                    c = skipWhitespaceRead();
-                    if (c == '{')
-                    {
-                        object.line = in.line;
-                        object.col = in.col;
-                        c = skipWhitespaceRead();
-                        if (c == '}')
-                        {    // empty object
-                            return EMPTY_OBJECT;
-                        }
-                        in.unread(c);
-                        state = STATE_READ_FIELD;
-                    }
-                    else
-                    {
-                        error("Input is invalid JSON; object does not start with '{', c=" + c);
-                    }
-                    break;
-
-                case STATE_READ_FIELD:
-                    c = skipWhitespaceRead();
-                    if (c == '"')
-                    {
-                        field = readString();
-                        c = skipWhitespaceRead();
-                        if (c != ':')
-                        {
-                            error("Expected ':' between string field and value");
-                        }
-                        skipWhitespace();
-                        state = STATE_READ_VALUE;
-                    }
-                    else
-                    {
-                        error("Expected quote");
-                    }
-                    break;
-
-                case STATE_READ_VALUE:
-                    if (field == null)
-                    {	// field is null when you have an untyped Object[], so we place
-                        // the JsonArray on the @items field.
-                        field = "@items";
-                    }
-
-                    Object value = readValue(object);
-                    object.put(field, value);
-
-                    // If object is referenced (has @id), then put it in the _objsRead table.
-                    if ("@id".equals(field))
-                    {
-                        _objsRead.put((Long) value, object);
-                    }
-                    state = STATE_READ_POST_VALUE;
-                    break;
-
-                case STATE_READ_POST_VALUE:
-                    c = skipWhitespaceRead();
-                    if (c == -1)
-                    {
-                        error("EOF reached before closing '}'");
-                    }
-                    if (c == '}')
-                    {
-                        done = true;
-                    }
-                    else if (c == ',')
-                    {
-                        state = STATE_READ_FIELD;
-                    }
-                    else
-                    {
-                        error("Object not ended with '}'");
-                    }
-                    break;
-            }
-        }
-
-        if (useMaps && object.isPrimitive())
-        {
-            return object.getPrimitiveValue();
-        }
-
-        return object;
-    }
-
-    private Object readValue(JsonObject object) throws IOException
-    {
-        final int c = input.read();
-        switch(c)
-        {
-            case '"':
-                return readString();
-            case '{':
-                input.unread('{');
-                return readJsonObject();
-            case '[':
-                return readArray(object);
-            case ']':   // empty array
-                input.unread(']');
-                return EMPTY_ARRAY;
-            case 'f':
-            case 'F':
-                input.unread(c);
-                readToken("false");
-                return Boolean.FALSE;
-            case 'n':
-            case 'N':
-                input.unread(c);
-                readToken("null");
-                return null;
-            case 't':
-            case 'T':
-                input.unread(c);
-                readToken("true");
-                return Boolean.TRUE;
-            case -1:
-                error("EOF reached prematurely");
-        }
-
-        if (c >= '0' && c <= '9' || c == '-')
-        {
-            return readNumber(c);
-        }
-        return error("Unknown JSON value type");
-    }
-
-    /**
-     * Read a JSON array
-     */
-    private Object readArray(JsonObject object) throws IOException
-    {
-        final Collection array = new ArrayList();
-
-        while (true)
-        {
-            skipWhitespace();
-            final Object o = readValue(object);
-            if (o != EMPTY_ARRAY)
-            {
-                array.add(o);
-            }
-            final int c = skipWhitespaceRead();
-
-            if (c == ']')
-            {
-                break;
-            }
-            else if (c != ',')
-            {
-                error("Expected ',' or ']' inside array");
-            }
-        }
-
-        return array.toArray();
-    }
-
-    /**
-     * Return the specified token from the reader.  If it is not found,
-     * throw an IOException indicating that.  Converting to c to
-     * (char) c is acceptable because the 'tokens' allowed in a
-     * JSON input stream (true, false, null) are all ASCII.
-     */
-    private void readToken(String token) throws IOException
-    {
-        final int len = token.length();
-
-        for (int i = 0; i < len; i++)
-        {
-            int c = input.read();
-            if (c == -1)
-            {
-                error("EOF reached while reading token: " + token);
-            }
-            c = Character.toLowerCase((char) c);
-            int loTokenChar = token.charAt(i);
-
-            if (loTokenChar != c)
-            {
-                error("Expected token: " + token);
-            }
-        }
-    }
-
-    /**
-     * Read a JSON number
-     *
-     * @param c int a character representing the first digit of the number that
-     *          was already read.
-     * @return a Number (a Long or a Double) depending on whether the number is
-     *         a decimal number or integer.  This choice allows all smaller types (Float, int, short, byte)
-     *         to be represented as well.
-     * @throws IOException for stream errors or parsing errors.
-     */
-    private Number readNumber(int c) throws IOException
-    {
-        final FastPushbackReader in = input;
-        final char[] buffer = this.numBuf;
-        buffer[0] = (char) c;
-        int len = 1;
-        boolean isFloat = false;
-
-        try
-        {
-            while (true)
-            {
-                c = in.read();
-                if ((c >= '0' && c <= '9') || c == '-' || c == '+')     // isDigit() inlined for speed here
-                {
-                    buffer[len++] = (char) c;
-                }
-                else if (c == '.' || c == 'e' || c == 'E')
-                {
-                    buffer[len++] = (char) c;
-                    isFloat = true;
-                }
-                else if (c == -1)
-                {
-                    break;
-                }
-                else
-                {
-                    in.unread(c);
-                    break;
-                }
-            }
-        }
-        catch (ArrayIndexOutOfBoundsException e)
-        {
-            error("Too many digits in number: " + new String(buffer));
-        }
-
-        if (isFloat)
-        {   // Floating point number needed
-            String num = new String(buffer, 0, len);
-            try
-            {
-                return Double.parseDouble(num);
-            }
-            catch (NumberFormatException e)
-            {
-                error("Invalid floating point number: " + num, e);
-            }
-        }
-        boolean isNeg = buffer[0] == '-';
-        long n = 0;
-        for (int i = (isNeg ? 1 : 0); i < len; i++)
-        {
-            n = (buffer[i] - '0') + n * 10;
-        }
-        return isNeg ? -n : n;
-    }
-
-    private static final int STATE_STRING_START = 0;
-    private static final int STATE_STRING_SLASH = 1;
-    private static final int STATE_HEX_DIGITS_START = 2;
-    private static final int STATE_HEX_DIGITS = 3;
-
-    /**
-     * Read a JSON string
-     * This method assumes the initial quote has already been read.
-     *
-     * @return String read from JSON input stream.
-     * @throws IOException for stream errors or parsing errors.
-     */
-    private String readString() throws IOException
-    {
-        final StringBuilder str = this.strBuf;
-        str.setLength(0);
-        boolean done = false;
-        int state = STATE_STRING_START;
-
-        while (!done)
-        {
-            final int c = input.read();
-            if (c == -1)
-            {
-                error("EOF reached while reading JSON string");
-            }
-
-            switch (state)
-            {
-                case STATE_STRING_START:
-                    if (c == '"')
-                    {
-                        done = true;
-                    }
-                    else if (c == '\\')
-                    {
-                        state = STATE_STRING_SLASH;
-                    }
-                    else
-                    {
-                        str.appendCodePoint(c);
-                    }
-                    break;
-
-                case STATE_STRING_SLASH:
-                    switch(c)
-                    {
-                        case '\\':
-                            str.append('\\');
-                            break;
-                        case '/':
-                            str.append('/');
-                            break;
-                        case '"':
-                            str.append('"');
-                            break;
-                        case '\'':
-                            str.append('\'');
-                            break;
-                        case 'b':
-                            str.append('\b');
-                            break;
-                        case 'f':
-                            str.append('\f');
-                            break;
-                        case 'n':
-                            str.append('\n');
-                            break;
-                        case 'r':
-                            str.append('\r');
-                            break;
-                        case 't':
-                            str.append('\t');
-                            break;
-                        case 'u':
-                            state = STATE_HEX_DIGITS_START;
-                            break;
-                        default:
-                            error("Invalid character escape sequence specified: " + c);
-                    }
-
-                    if (c != 'u')
-                    {
-                        state = STATE_STRING_START;
-                    }
-                    break;
-
-                case STATE_HEX_DIGITS_START:
-                    hexBuf.setLength(0);
-                    state = STATE_HEX_DIGITS;   // intentional 'fall-thru'
-                case STATE_HEX_DIGITS:
-                    switch(c)
-                    {
-                        case '0':
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '5':
-                        case '6':
-                        case '7':
-                        case '8':
-                        case '9':
-                        case 'A':
-                        case 'B':
-                        case 'C':
-                        case 'D':
-                        case 'E':
-                        case 'F':
-                        case 'a':
-                        case 'b':
-                        case 'c':
-                        case 'd':
-                        case 'e':
-                        case 'f':
-                            hexBuf.append((char) c);
-                            if (hexBuf.length() == 4)
-                            {
-                                int value = Integer.parseInt(hexBuf.toString(), 16);
-                                str.append(MetaUtils.valueOf((char) value));
-                                state = STATE_STRING_START;
-                            }
-                            break;
-                        default:
-                            error("Expected hexadecimal digits");
-                    }
-                    break;
-            }
-        }
-
-        final String s = str.toString();
-        final String cacheHit = stringCache.get(s);
-        return cacheHit == null ? s : cacheHit;
-    }
-
     public static Object newInstance(Class c) throws IOException
     {
         if (factory.containsKey(c))
@@ -2727,39 +2277,6 @@ public class JsonReader implements Closeable
             error("Unable to create class: " + name, e);
             return null;
         }
-    }
-
-    /**
-     * Read until non-whitespace character and then return it.
-     * This saves extra read/pushback.
-     *
-     * @return int representing the next non-whitespace character in the stream.
-     * @throws IOException for stream errors or parsing errors.
-     */
-    private int skipWhitespaceRead() throws IOException
-    {
-        final FastPushbackReader in = input;
-        int c = in.read();
-        while (true)
-        {
-            switch (c)
-            {
-                case '\t':
-                case '\n':
-                case '\r':
-                case ' ':
-                    break;
-                default:
-                    return c;
-            }
-
-            c = in.read();
-        }
-    }
-
-    private void skipWhitespace() throws IOException
-    {
-        input.unread(skipWhitespaceRead());
     }
 
     public void close()
@@ -2787,7 +2304,7 @@ public class JsonReader implements Closeable
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.target;
-            JsonObject objReferenced = _objsRead.get(ref.refId);
+            JsonObject objReferenced = objsRead.get(ref.refId);
 
             if (objReferenced == null)
             {
