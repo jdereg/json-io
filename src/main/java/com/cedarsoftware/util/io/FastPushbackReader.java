@@ -9,7 +9,7 @@ import java.io.Reader;
  * PushbackReader.  This is due to this class not using synchronization
  * as it is not needed.
  */
-final class FastPushbackReader extends FilterReader
+public class FastPushbackReader extends FilterReader
 {
     private static final int SNIPPET_LENGTH = 200;
     private final int[] buf;

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -25,6 +26,7 @@ import static org.junit.Assert.fail
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestBigInteger
 {
     class TestBigIntegerField
@@ -172,12 +174,12 @@ class TestBigInteger
     @Test
     void testBigNumberParsers() throws Exception
     {
-        assertNull(JsonReader.bigIntegerFrom(null))
-        assertNull(JsonReader.bigDecimalFrom(null))
+        assertNull(Readers.bigIntegerFrom(null))
+        assertNull(Readers.bigDecimalFrom(null))
 
         try
         {
-            JsonReader.bigIntegerFrom("Glock")
+            Readers.bigIntegerFrom("Glock")
             fail()
         }
         catch(Exception ignored)
@@ -185,7 +187,7 @@ class TestBigInteger
 
         try
         {
-            JsonReader.bigDecimalFrom("Glock")
+            Readers.bigDecimalFrom("Glock")
             fail()
         }
         catch(Exception ignored)
@@ -193,7 +195,7 @@ class TestBigInteger
 
         try
         {
-            JsonReader.bigIntegerFrom(new Date())
+            Readers.bigIntegerFrom(new Date())
             fail()
         }
         catch(Exception ignored)
@@ -201,13 +203,13 @@ class TestBigInteger
 
         try
         {
-            JsonReader.bigDecimalFrom(new Date())
+            Readers.bigDecimalFrom(new Date())
             fail()
         }
         catch(Exception ignored)
         { }
 
-        BigInteger bi = JsonReader.bigIntegerFrom(3.14)
+        BigInteger bi = Readers.bigIntegerFrom(3.14)
         assertEquals(3, bi.intValue())
     }
 }
