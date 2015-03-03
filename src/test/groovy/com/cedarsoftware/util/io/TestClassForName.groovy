@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.fail
@@ -21,12 +22,13 @@ import static org.junit.Assert.fail
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestClassForName
 {
     @Test
     void testInstantiation()
     {
-        Class testObjectClass = JsonReader.classForName('com.cedarsoftware.util.io.TestObject')
+        Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject')
         assert testObjectClass instanceof Class
         assert 'com.cedarsoftware.util.io.TestObject' == testObjectClass.name
     }
@@ -36,7 +38,7 @@ class TestClassForName
     {
         try
         {
-            JsonReader.classForName(null)
+            MetaUtils.classForName(null)
             fail()
         }
         catch (IOException e)
@@ -44,7 +46,7 @@ class TestClassForName
         }
         try
         {
-            JsonReader.classForName('Smith&Wesson')
+            MetaUtils.classForName('Smith&Wesson')
             fail()
         }
         catch (IOException e)

@@ -59,7 +59,7 @@ class TestCustomClassHandler
         }
     }
 
-    public class WeirdDateReader implements JsonReader.JsonClassReader
+    public class WeirdDateReader implements JsonTypeReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {

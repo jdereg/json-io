@@ -297,18 +297,26 @@ public class MetaUtils
 
     static Class classForName(String name) throws IOException
     {
-        if (name == null || name.isEmpty())
-        {
-            throw new IllegalArgumentException("Class name cannot be null or empty.");
-        }
-        Class c = nameToClass.get(name);
         try
         {
-            return c == null ? loadClass(name) : c;
+            if (name == null || name.isEmpty())
+            {
+                throw new IllegalArgumentException("Class name cannot be null or empty.");
+            }
+            Class c = nameToClass.get(name);
+            try
+            {
+                return c == null ? loadClass(name) : c;
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new IOException("Class not found: " + name, e);
+            }
         }
-        catch (ClassNotFoundException e)
+        catch (Exception e)
         {
-            throw new IOException("Class not found: " + name, e);
+            error("Unable to create class: " + name, e);
+            return null;
         }
     }
 
@@ -434,7 +442,7 @@ public class MetaUtils
                 catch (Exception e)
                 {
                     // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    errorHandler.error("Could not instantiate " + c.getName(), e);
+                    error("Could not instantiate " + c.getName(), e);
                 }
             }
 
@@ -448,7 +456,7 @@ public class MetaUtils
                 }
                 catch (Exception e)
                 {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    errorHandler.error("Could not instantiate " + c.getName(), e);
+                    error("Could not instantiate " + c.getName(), e);
                 }
             }
             Object[] values = fillArgs(paramTypes, useNull, errorHandler);
@@ -458,7 +466,7 @@ public class MetaUtils
             }
             catch (Exception e)
             {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                errorHandler.error("Could not instantiate " + c.getName(), e);
+                error("Could not instantiate " + c.getName(), e);
             }
         }
 
@@ -495,7 +503,7 @@ public class MetaUtils
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
         {
-            errorHandler.error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
+            error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
         // Try each constructor (private, protected, or public) with null values for non-primitives.
@@ -539,7 +547,7 @@ public class MetaUtils
             { }
         }
 
-        errorHandler.error("Could not instantiate " + c.getName() + " using any constructor");
+        error("Could not instantiate " + c.getName() + " using any constructor");
         return null;
     }
 
@@ -766,10 +774,10 @@ public class MetaUtils
         catch (Exception e)
         {
             String className = c == null ? "null" : c.getName();
-            return errorHandler.error("Error creating primitive wrapper instance for Class: " + className, e);
+            return error("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
-        return errorHandler.error("Class '" + cname + "' does not have primitive wrapper.");
+        return error("Class '" + cname + "' does not have primitive wrapper.");
     }
 
     /**
@@ -820,4 +828,13 @@ public class MetaUtils
         }
     }
 
+    static Object error(String msg) throws IOException
+    {
+        return JsonReader.error(msg);
+    }
+
+    static Object error(String msg, Exception e) throws IOException
+    {
+        return JsonReader.error(msg, e);
+    }
 }

@@ -82,10 +82,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class JsonReader implements Closeable
 {
-    private static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonTypeReader> readers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
-    private static final Map<Class, JsonClassReader> readerCache = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonTypeReader> readerCache = new ConcurrentHashMap<>();
     private static final NullClass nullReader = new NullClass();
     private static final ReaderErrorHandler errorHandler = new ReaderErrorHandler();
 
@@ -127,14 +127,6 @@ public class JsonReader implements Closeable
     public interface ClassFactory
     {
         Object newInstance(Class c);
-    }
-
-    /**
-     * Interface to implement for custom JSON readers.
-     */
-    public interface JsonClassReader
-    {
-        Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException;
     }
 
     /**
@@ -198,9 +190,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    public static void addReader(Class c, JsonClassReader reader)
+    public static void addReader(Class c, JsonTypeReader reader)
     {
-        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
+        for (Map.Entry<Class, JsonTypeReader> entry : readers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -264,7 +256,7 @@ public class JsonReader implements Closeable
                     if (type != null)
                     {
                         typeStr = (String) type;
-                        c = classForName((String) type);
+                        c = MetaUtils.classForName((String) type);
                     }
                     else
                     {
@@ -294,7 +286,7 @@ public class JsonReader implements Closeable
             c = compType;
         }
 
-        JsonClassReader closestReader = getCustomReader(c);
+        JsonTypeReader closestReader = getCustomReader(c);
 
         if (closestReader == null)
         {
@@ -313,7 +305,7 @@ public class JsonReader implements Closeable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonClassReader
+    static class NullClass implements JsonTypeReader
     {
         public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -321,9 +313,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    private static JsonClassReader getCustomReader(Class c)
+    private static JsonTypeReader getCustomReader(Class c)
     {
-        JsonClassReader reader = readerCache.get(c);
+        JsonTypeReader reader = readerCache.get(c);
         if (reader == null)
         {
             synchronized (readerCache)
@@ -338,12 +330,12 @@ public class JsonReader implements Closeable
         }
         return reader == nullReader ? null : reader;
     }
-	private static JsonClassReader forceGetCustomReader(Class c)
+	private static JsonTypeReader forceGetCustomReader(Class c)
     {
-		JsonClassReader closestReader = nullReader;
+        JsonTypeReader closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
+        for (Map.Entry<Class, JsonTypeReader> entry : readers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -1463,7 +1455,7 @@ public class JsonReader implements Closeable
             Class c;
             try
             {
-                c = classForName(type);
+                c = MetaUtils.classForName(type);
             }
             catch (IOException e)
             {
@@ -1500,7 +1492,7 @@ public class JsonReader implements Closeable
                 }
                 else if (c == Class.class)
                 {
-                    mate = classForName((String) jsonObj.get("value"));
+                    mate = MetaUtils.classForName((String) jsonObj.get("value"));
                 }
                 else if (c.isEnum())
                 {
@@ -1516,7 +1508,7 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-					JsonClassReader customReader = getCustomReader(c);
+					JsonTypeReader customReader = getCustomReader(c);
 					if (customReader != null)
                     {
 						mate = customReader.read(jsonObj,  new ArrayDeque<JsonObject<String, Object>>());
@@ -1592,19 +1584,6 @@ public class JsonReader implements Closeable
             return factory.get(c).newInstance(c);
         }
         return MetaUtils.newInstance(c, errorHandler);
-    }
-
-    static Class classForName(String name) throws IOException
-    {
-        try
-        {
-            return MetaUtils.classForName(name);
-        }
-        catch (Exception e)
-        {
-            error("Unable to create class: " + name, e);
-            return null;
-        }
     }
 
     public void close()

@@ -160,7 +160,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         try
         {
-            Class c = JsonReader.classForName(type);
+            Class c = MetaUtils.classForName(type);
             if (Map.class.isAssignableFrom(c))
             {
                 return true;
@@ -186,7 +186,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         try
         {
-            Class c = JsonReader.classForName(type);
+            Class c = MetaUtils.classForName(type);
             if (Collection.class.isAssignableFrom(c))
             {
                 return true;
