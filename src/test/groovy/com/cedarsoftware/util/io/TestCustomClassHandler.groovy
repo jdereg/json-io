@@ -29,6 +29,7 @@ class TestCustomClassHandler
     public static class WeirdDate extends Date
     {
         public WeirdDate(Date date) { super(date.getTime()) }
+
         public WeirdDate(long millis) { super(millis) }
     }
 
@@ -52,7 +53,7 @@ class TestCustomClassHandler
         @Override
         public void writePrimitiveForm(Object o, Writer out) throws IOException
         {
-            String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date)o)
+            String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
             out.write('"')
             out.write(value)
             out.write('"')
@@ -101,7 +102,7 @@ class TestCustomClassHandler
         WeirdDate now = new WeirdDate(System.currentTimeMillis())
         String json = TestUtil.getJsonString(now)
         TestUtil.printLine("json=" + json)
-        WeirdDate date = (WeirdDate)TestUtil.readJsonObject(json)
+        WeirdDate date = (WeirdDate) TestUtil.readJsonObject(json)
         assertTrue(now.equals(date))
 
         JsonWriter.addNotCustomWriter(WeirdDate.class)
@@ -110,5 +111,4 @@ class TestCustomClassHandler
         TestUtil.printLine("json=" + json)
         assertTrue(now.equals(date))
     }
-
 }

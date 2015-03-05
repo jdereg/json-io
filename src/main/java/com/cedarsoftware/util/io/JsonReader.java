@@ -99,7 +99,6 @@ public class JsonReader implements Closeable
 
     static
     {
-        Readers.setErrorHandler(errorHandler);
         addReader(String.class, new Readers.StringReader());
         addReader(Date.class, new Readers.DateReader());
         addReader(BigInteger.class, new Readers.BigIntegerReader());

@@ -49,7 +49,6 @@ public class Readers
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
-    private static ErrorHandler errorHandler;
     private static final Map<String, String> months = new LinkedHashMap<>();
 
     static
@@ -81,11 +80,6 @@ public class Readers
         months.put("december", "12");
     }
 
-    public static void setErrorHandler(ErrorHandler handler)
-    {
-        errorHandler = handler;
-    }
-
     public static class TimeZoneReader implements JsonTypeReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
@@ -94,7 +88,7 @@ public class Readers
             Object zone = jObj.get("zone");
             if (zone == null)
             {
-                errorHandler.error("java.util.TimeZone must specify 'zone' field");
+                error("java.util.TimeZone must specify 'zone' field");
             }
             return jObj.target = TimeZone.getTimeZone((String) zone);
         }
@@ -108,7 +102,7 @@ public class Readers
             Object language = jObj.get("language");
             if (language == null)
             {
-                errorHandler.error("java.util.Locale must specify 'language' field");
+                error("java.util.Locale must specify 'language' field");
             }
             Object country = jObj.get("country");
             Object variant = jObj.get("variant");
@@ -136,7 +130,7 @@ public class Readers
                 time = (String) jObj.get("time");
                 if (time == null)
                 {
-                    errorHandler.error("Calendar missing 'time' field");
+                    error("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
                 Class c;
@@ -147,10 +141,10 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = MetaUtils.classForName((String) type);
+                    c = classForName((String) type);
                 }
 
-                Calendar calendar = (Calendar) JsonReader.newInstance(c);
+                Calendar calendar = (Calendar) newInstance(c);
                 calendar.setTime(date);
                 jObj.setTarget(calendar);
                 String zone = (String) jObj.get("zone");
@@ -162,7 +156,7 @@ public class Readers
             }
             catch(Exception e)
             {
-                return errorHandler.error("Failed to parse calendar, time: " + time);
+                return error("Failed to parse calendar, time: " + time);
             }
         }
     }
@@ -191,11 +185,11 @@ public class Readers
                 {
                     return parseDate((String) val);
                 }
-                return errorHandler.error("Unable to parse date: " + o);
+                return error("Unable to parse date: " + o);
             }
             else
             {
-                return errorHandler.error("Unable to parse date, encountered unknown object: " + o);
+                return error("Unable to parse date, encountered unknown object: " + o);
             }
         }
 
@@ -268,7 +262,7 @@ public class Readers
                                 matcher = datePattern6.matcher(dateStr);
                                 if (!matcher.find())
                                 {
-                                    errorHandler.error("Unable to parse: " + dateStr);
+                                    error("Unable to parse: " + dateStr);
                                 }
                                 year = matcher.group(5);
                                 mon = matcher.group(2);
@@ -351,7 +345,7 @@ public class Readers
                 remains = remains.trim();
                 if (!remains.equals(",") && (!remains.equals("T")))
                 {
-                    errorHandler.error("Issue parsing data/time, other characters present: " + remains);
+                    error("Issue parsing data/time, other characters present: " + remains);
                 }
             }
 
@@ -376,11 +370,11 @@ public class Readers
 
             if (m < 0 || m > 11)
             {
-                errorHandler.error("Month must be between 1 and 12 inclusive, date: " + dateStr);
+                error("Month must be between 1 and 12 inclusive, date: " + dateStr);
             }
             if (d < 1 || d > 31)
             {
-                errorHandler.error("Day must be between 1 and 31 inclusive, date: " + dateStr);
+                error("Day must be between 1 and 31 inclusive, date: " + dateStr);
             }
 
             if (matcher == null)
@@ -397,15 +391,15 @@ public class Readers
 
                 if (h > 23)
                 {
-                    errorHandler.error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
+                    error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
                 }
                 if (mn > 59)
                 {
-                    errorHandler.error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
+                    error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
                 }
                 if (s > 59)
                 {
-                    errorHandler.error("Second must be between 0 and 59 inclusive, time: " + dateStr);
+                    error("Second must be between 0 and 59 inclusive, time: " + dateStr);
                 }
 
                 // regex enforces millis to number
@@ -443,7 +437,7 @@ public class Readers
             {
                 return jObj.target = jObj.get("value");
             }
-            return errorHandler.error("String missing 'value' field");
+            return error("String missing 'value' field");
         }
     }
 
@@ -453,15 +447,15 @@ public class Readers
         {
             if (o instanceof String)
             {
-                return MetaUtils.classForName((String) o);
+                return classForName((String) o);
             }
 
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = MetaUtils.classForName((String) jObj.get("value"));
+                return jObj.target = classForName((String) jObj.get("value"));
             }
-            return errorHandler.error("Class missing 'value' field");
+            return error("Class missing 'value' field");
         }
     }
 
@@ -480,7 +474,7 @@ public class Readers
                 }
                 else
                 {
-                    return errorHandler.error("BigInteger missing 'value' field");
+                    return error("BigInteger missing 'value' field");
                 }
             }
 
@@ -544,7 +538,7 @@ public class Readers
             }
             catch (Exception e)
             {
-                return (BigInteger) errorHandler.error("Could not parse '" + value + "' as BigInteger.", e);
+                return (BigInteger) error("Could not parse '" + value + "' as BigInteger.", e);
             }
         }
         else if (value instanceof BigDecimal)
@@ -565,7 +559,7 @@ public class Readers
         {
             return new BigInteger(value.toString());
         }
-        return (BigInteger) errorHandler.error("Could not convert value: " + value.toString() + " to BigInteger.");
+        return (BigInteger) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
     public static class BigDecimalReader implements JsonTypeReader
@@ -583,7 +577,7 @@ public class Readers
                 }
                 else
                 {
-                    return errorHandler.error("BigDecimal missing 'value' field");
+                    return error("BigDecimal missing 'value' field");
                 }
             }
 
@@ -644,7 +638,7 @@ public class Readers
             }
             catch (Exception e)
             {
-                return (BigDecimal) errorHandler.error("Could not parse '" + s + "' as BigDecimal.", e);
+                return (BigDecimal) error("Could not parse '" + s + "' as BigDecimal.", e);
             }
         }
         else if (value instanceof BigInteger)
@@ -660,7 +654,7 @@ public class Readers
         {
             return new BigDecimal(value.toString());
         }
-        return (BigDecimal) errorHandler.error("Could not convert value: " + value.toString() + " to BigInteger.");
+        return (BigDecimal) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
     public static class StringBuilderReader implements JsonTypeReader
@@ -677,7 +671,7 @@ public class Readers
             {
                 return jObj.target = new StringBuilder((String) jObj.get("value"));
             }
-            return errorHandler.error("StringBuilder missing 'value' field");
+            return error("StringBuilder missing 'value' field");
         }
     }
 
@@ -695,7 +689,7 @@ public class Readers
             {
                 return jObj.target = new StringBuffer((String) jObj.get("value"));
             }
-            return errorHandler.error("StringBuffer missing 'value' field");
+            return error("StringBuffer missing 'value' field");
         }
     }
 
@@ -707,7 +701,7 @@ public class Readers
             Object time = jObj.get("time");
             if (time == null)
             {
-                errorHandler.error("java.sql.Timestamp must specify 'time' field");
+                error("java.sql.Timestamp must specify 'time' field");
             }
             Object nanos = jObj.get("nanos");
             if (nanos == null)
@@ -719,5 +713,26 @@ public class Readers
             tstamp.setNanos(Integer.valueOf((String) nanos));
             return jObj.target = tstamp;
         }
+    }
+
+    // ========== Maintain dependency knowledge in once place, down here =========
+    static Object error(String msg) throws IOException
+    {
+        return MetaUtils.error(msg);
+    }
+
+    static Object error(String msg, Exception e) throws IOException
+    {
+        return MetaUtils.error(msg, e);
+    }
+
+    static Class classForName(String name) throws IOException
+    {
+        return MetaUtils.classForName(name);
+    }
+
+    static Object newInstance(Class c) throws IOException
+    {
+        return JsonReader.newInstance(c);
     }
 }
