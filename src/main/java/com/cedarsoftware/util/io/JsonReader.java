@@ -87,7 +87,6 @@ public class JsonReader implements Closeable
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private static final Map<Class, JsonTypeReader> readerCache = new ConcurrentHashMap<>();
     private static final NullClass nullReader = new NullClass();
-    private static final ReaderErrorHandler errorHandler = new ReaderErrorHandler();
 
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
@@ -679,7 +678,7 @@ public class JsonReader implements Closeable
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, MetaUtils.newPrimitiveWrapper(compType, element, errorHandler));
+                Array.set(array, i, MetaUtils.newPrimitiveWrapper(compType, element));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays
@@ -996,7 +995,7 @@ public class JsonReader implements Closeable
                 JsonObject<String, Object> jObj = (JsonObject) rhs;
                 if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
                 {
-                    jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value"), errorHandler));
+                    jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value")));
                     continue;
                 }
                 Long ref = (Long) jObj.get("@ref");
@@ -1021,7 +1020,7 @@ public class JsonReader implements Closeable
                 final Class fieldType = field.getType();
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    jsonObj.put(fieldName, MetaUtils.newPrimitiveWrapper(fieldType, rhs, errorHandler));
+                    jsonObj.put(fieldName, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
                 }
                 else if (BigDecimal.class == fieldType)
                 {
@@ -1102,7 +1101,7 @@ public class JsonReader implements Closeable
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0", errorHandler));
+                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0"));
                 }
                 else
                 {
@@ -1198,7 +1197,7 @@ public class JsonReader implements Closeable
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, rhs, errorHandler));
+                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
@@ -1487,7 +1486,7 @@ public class JsonReader implements Closeable
             {    // Handle regular field.object reference
                 if (MetaUtils.isPrimitive(c))
                 {
-                    mate = MetaUtils.newPrimitiveWrapper(c, jsonObj.get("value"), errorHandler);
+                    mate = MetaUtils.newPrimitiveWrapper(c, jsonObj.get("value"));
                 }
                 else if (c == Class.class)
                 {
@@ -1582,7 +1581,7 @@ public class JsonReader implements Closeable
         {
             return factory.get(c).newInstance(c);
         }
-        return MetaUtils.newInstance(c, errorHandler);
+        return MetaUtils.newInstance(c);
     }
 
     public void close()
@@ -1764,18 +1763,5 @@ public class JsonReader implements Closeable
             return threadInput.get().getLastSnippet();
         }
         return "";
-    }
-
-    static class ReaderErrorHandler implements ErrorHandler
-    {
-        public Object error(String msg) throws IOException
-        {
-            return JsonReader.error(msg);
-        }
-
-        public Object error(String msg, Exception e) throws IOException
-        {
-            return JsonReader.error(msg, e);
-        }
     }
 }

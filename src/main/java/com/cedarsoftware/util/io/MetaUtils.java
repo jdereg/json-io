@@ -404,7 +404,7 @@ public class MetaUtils
         return s;
     }
 
-    static Object newInstance(Class c, ErrorHandler errorHandler) throws IOException
+    static Object newInstance(Class c) throws IOException
     {
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
@@ -459,7 +459,7 @@ public class MetaUtils
                     error("Could not instantiate " + c.getName(), e);
                 }
             }
-            Object[] values = fillArgs(paramTypes, useNull, errorHandler);
+            Object[] values = fillArgs(paramTypes, useNull);
             try
             {
                 return constructor.newInstance(values);
@@ -470,7 +470,7 @@ public class MetaUtils
             }
         }
 
-        Object[] ret = newInstanceEx(c, errorHandler);
+        Object[] ret = newInstanceEx(c);
         constructors.put(c, new Object[]{ret[1], ret[2]});
         return ret[0];
     }
@@ -478,7 +478,7 @@ public class MetaUtils
     /**
      * Return constructor and instance as elements 0 and 1, respectively.
      */
-    private static Object[] newInstanceEx(Class c, ErrorHandler errorHandler) throws IOException
+    private static Object[] newInstanceEx(Class c) throws IOException
     {
         try
         {
@@ -487,18 +487,18 @@ public class MetaUtils
             {
                 return new Object[] {constructor.newInstance(), constructor, true};
             }
-            return tryOtherConstruction(c, errorHandler);
+            return tryOtherConstruction(c);
         }
         catch (Exception e)
         {
             // OK, this class does not have a public no-arg constructor.  Instantiate with
             // first constructor found, filling in constructor values with null or
             // defaults for primitives.
-            return tryOtherConstruction(c, errorHandler);
+            return tryOtherConstruction(c);
         }
     }
 
-    private static Object[] tryOtherConstruction(Class c, ErrorHandler errorHandler) throws IOException
+    private static Object[] tryOtherConstruction(Class c) throws IOException
     {
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
@@ -511,7 +511,7 @@ public class MetaUtils
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, true, errorHandler);
+            Object[] values = fillArgs(argTypes, true);
             try
             {
                 return new Object[] {constructor.newInstance(values), constructor, true};
@@ -525,7 +525,7 @@ public class MetaUtils
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, false, errorHandler);
+            Object[] values = fillArgs(argTypes, false);
             try
             {
                 return new Object[] {constructor.newInstance(values), constructor, false};
@@ -551,7 +551,7 @@ public class MetaUtils
         return null;
     }
 
-    private static Object[] fillArgs(Class[] argTypes, boolean useNull, ErrorHandler errorHandler) throws IOException
+    private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
     {
         final Object[] values = new Object[argTypes.length];
         for (int i = 0; i < argTypes.length; i++)
@@ -559,7 +559,7 @@ public class MetaUtils
             final Class argType = argTypes[i];
             if (isPrimitive(argType))
             {
-                values[i] = newPrimitiveWrapper(argType, null, errorHandler);
+                values[i] = newPrimitiveWrapper(argType, null);
             }
             else if (useNull)
             {
@@ -657,7 +657,7 @@ public class MetaUtils
         return values;
     }
 
-    static Object newPrimitiveWrapper(Class c, Object rhs, ErrorHandler errorHandler) throws IOException
+    static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
     {
         final String cname;
         try
