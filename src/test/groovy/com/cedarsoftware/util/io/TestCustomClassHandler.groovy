@@ -33,9 +33,8 @@ class TestCustomClassHandler
         public WeirdDate(long millis) { super(millis) }
     }
 
-    public class WeirdDateWriter implements JsonWriter.JsonClassWriter
+    public class WeirdDateWriter implements JsonTypeWriter
     {
-        @Override
         public void write(Object o, boolean showType, Writer out) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
@@ -44,13 +43,11 @@ class TestCustomClassHandler
             out.write('"')
         }
 
-        @Override
         public boolean hasPrimitiveForm()
         {
             return true;
         }
 
-        @Override
         public void writePrimitiveForm(Object o, Writer out) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
