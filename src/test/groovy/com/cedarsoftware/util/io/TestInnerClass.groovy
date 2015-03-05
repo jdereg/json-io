@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io
 
+import org.junit.FixMethodOrder
 import org.junit.Test
+import org.junit.runners.MethodSorters
 
 import static org.junit.Assert.assertTrue
 
@@ -21,6 +23,7 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class TestInnerClass
 {
     static public class A
@@ -45,6 +48,25 @@ class TestInnerClass
     }
 
     @Test
+    void testChangedClass() throws Exception
+    {
+        Dog dog = new Dog()
+        dog.x = 10
+//        Dog.Leg leg = dog.new Dog.Leg()       // original Java
+        Dog.Leg leg = Dog.createLeg(dog)        // Groovy requires static method on outer class to create non-static inner instance
+        leg.y = 20
+        String json0 = TestUtil.getJsonString(dog)
+        TestUtil.printLine("json0=" + json0)
+        JsonObject job = (JsonObject) JsonReader.jsonToMaps(json0)
+        job.put("phantom", new TestObject("Eddie"))
+        String json1 = TestUtil.getJsonString(job)
+        TestUtil.printLine("json1=" + json1)
+        assertTrue(json1.contains("phantom"))
+        assertTrue(json1.contains("TestObject"))
+        assertTrue(json1.contains("_other"))
+    }
+
+    @Test
     void testInner() throws Exception
     {
         A a = new A()
@@ -62,25 +84,6 @@ class TestInnerClass
         TestUtil.printLine("json = " + json)
         TestInnerClass.A.B o2 = (TestInnerClass.A.B) TestUtil.readJsonObject(json)
         assertTrue(o2.b.equals("bbb"))
-    }
-
-    @Test
-    void testChangedClass() throws Exception
-    {
-        Dog dog = new Dog()
-        dog.x = 10
-//        Dog.Leg leg = dog.new Dog.Leg()       // original Java
-        Dog.Leg leg = Dog.createLeg(dog)        // Groovy requires static method on outer class to create non-static inner instance
-        leg.y = 20
-        String json0 = TestUtil.getJsonString(dog)
-        TestUtil.printLine("json0=" + json0)
-        JsonObject job = (JsonObject) JsonReader.jsonToMaps(json0)
-        job.put("phantom", new TestObject("Eddie"))
-        String json1 = TestUtil.getJsonString(job)
-        TestUtil.printLine("json1=" + json1)
-        assertTrue(json1.contains("phantom"))
-        assertTrue(json1.contains("TestObject"))
-        assertTrue(json1.contains("_other"))
     }
 
     @Test

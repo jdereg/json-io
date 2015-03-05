@@ -95,7 +95,7 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, boolean useMaps, ErrorHandler handler)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, ErrorHandler handler, boolean useMaps)
     {
         input = reader;
         errorHandler = handler;
@@ -144,14 +144,14 @@ class JsonParser
                         c = skipWhitespaceRead();
                         if (c != ':')
                         {
-                            errorHandler.error("Expected ':' between string field and value");
+                            error("Expected ':' between string field and value");
                         }
                         skipWhitespace();
                         state = STATE_READ_VALUE;
                     }
                     else
                     {
-                        errorHandler.error("Expected quote");
+                        error("Expected quote");
                     }
                     break;
 
@@ -177,7 +177,7 @@ class JsonParser
                     c = skipWhitespaceRead();
                     if (c == -1)
                     {
-                        errorHandler.error("EOF reached before closing '}'");
+                        error("EOF reached before closing '}'");
                     }
                     if (c == '}')
                     {
@@ -189,7 +189,7 @@ class JsonParser
                     }
                     else
                     {
-                        errorHandler.error("Object not ended with '}'");
+                        error("Object not ended with '}'");
                     }
                     break;
             }
@@ -234,14 +234,14 @@ class JsonParser
                 readToken("true");
                 return Boolean.TRUE;
             case -1:
-                errorHandler.error("EOF reached prematurely");
+                error("EOF reached prematurely");
         }
 
         if (c >= '0' && c <= '9' || c == '-')
         {
             return readNumber(c);
         }
-        return errorHandler.error("Unknown JSON value type");
+        return error("Unknown JSON value type");
     }
 
     /**
@@ -267,7 +267,7 @@ class JsonParser
             }
             else if (c != ',')
             {
-                errorHandler.error("Expected ',' or ']' inside array");
+                error("Expected ',' or ']' inside array");
             }
         }
 
@@ -289,14 +289,14 @@ class JsonParser
             int c = input.read();
             if (c == -1)
             {
-                errorHandler.error("EOF reached while reading token: " + token);
+                error("EOF reached while reading token: " + token);
             }
             c = Character.toLowerCase((char) c);
             int loTokenChar = token.charAt(i);
 
             if (loTokenChar != c)
             {
-                errorHandler.error("Expected token: " + token);
+                error("Expected token: " + token);
             }
         }
     }
@@ -346,7 +346,7 @@ class JsonParser
         }
         catch (ArrayIndexOutOfBoundsException e)
         {
-            errorHandler.error("Too many digits in number: " + new String(buffer));
+            error("Too many digits in number: " + new String(buffer));
         }
 
         if (isFloat)
@@ -358,7 +358,7 @@ class JsonParser
             }
             catch (NumberFormatException e)
             {
-                errorHandler.error("Invalid floating point number: " + num, e);
+                error("Invalid floating point number: " + num, e);
             }
         }
         boolean isNeg = buffer[0] == '-';
@@ -394,7 +394,7 @@ class JsonParser
             final int c = input.read();
             if (c == -1)
             {
-                errorHandler.error("EOF reached while reading JSON string");
+                error("EOF reached while reading JSON string");
             }
 
             switch (state)
@@ -448,7 +448,7 @@ class JsonParser
                             state = STATE_HEX_DIGITS_START;
                             break;
                         default:
-                            errorHandler.error("Invalid character escape sequence specified: " + c);
+                            error("Invalid character escape sequence specified: " + c);
                     }
 
                     if (c != 'u')
@@ -494,7 +494,7 @@ class JsonParser
                             }
                             break;
                         default:
-                            errorHandler.error("Expected hexadecimal digits");
+                            error("Expected hexadecimal digits");
                     }
                     break;
             }
@@ -536,5 +536,15 @@ class JsonParser
     private void skipWhitespace() throws IOException
     {
         input.unread(skipWhitespaceRead());
+    }
+
+    static Object error(String msg) throws IOException
+    {
+        return MetaUtils.error(msg);
+    }
+
+    static Object error(String msg, Exception e) throws IOException
+    {
+        return MetaUtils.error(msg, e);
     }
 }
