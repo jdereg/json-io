@@ -33,7 +33,7 @@ class TestCustomClassHandler
         public WeirdDate(long millis) { super(millis) }
     }
 
-    public class WeirdDateWriter implements JsonTypeWriter
+    public class WeirdDateWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object o, boolean showType, Writer out) throws IOException
         {
@@ -57,7 +57,7 @@ class TestCustomClassHandler
         }
     }
 
-    public class WeirdDateReader implements JsonTypeReader
+    public class WeirdDateReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {

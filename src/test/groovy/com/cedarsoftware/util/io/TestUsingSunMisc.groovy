@@ -36,7 +36,7 @@ class TestUsingSunMisc
     @Test
     void testCustomTopReaderShoe() throws IOException
     {
-        JsonReader.addReader(Dog.Shoe.class, new JsonTypeReader() {
+        JsonReader.addReader(Dog.Shoe.class, new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
             {
                 // no need to do anything special

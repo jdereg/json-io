@@ -71,7 +71,7 @@ class TestInternalAPIs
     @Test
     void testNoAnalysisForCustomWriter() throws Exception
     {
-        JsonWriter.addWriter(Dog.class, new JsonTypeWriter() {
+        JsonWriter.addWriter(Dog.class, new JsonWriter.JsonClassWriter() {
             public void writePrimitiveForm(Object o, Writer out)  throws IOException
             { }
 
