@@ -494,7 +494,7 @@ public class JsonReader implements Closeable
      */
     public Object readObject() throws IOException
     {
-        JsonParser parser = new JsonParser(input, objsRead, errorHandler, useMaps);
+        JsonParser parser = new JsonParser(input, objsRead, useMaps);
         JsonObject root = new JsonObject();
         Object o = parser.readValue(root);
         if (o == JsonParser.EMPTY_OBJECT)

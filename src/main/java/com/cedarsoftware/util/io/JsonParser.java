@@ -45,15 +45,14 @@ class JsonParser
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
+    private static final Map<String, String> stringCache = new HashMap<>();
 
-    private FastPushbackReader input;
-    private ErrorHandler errorHandler;
-    private boolean useMaps;
+    private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
-    private final char[] numBuf = new char[256];
     private final StringBuilder strBuf = new StringBuilder();
     private final StringBuilder hexBuf = new StringBuilder();
-    private static final Map<String, String> stringCache = new HashMap<>();
+    private final char[] numBuf = new char[256];
+    private final boolean useMaps;
 
     static
     {
@@ -95,10 +94,9 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, ErrorHandler handler, boolean useMaps)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, boolean useMaps)
     {
         input = reader;
-        errorHandler = handler;
         this.useMaps = useMaps;
         objsRead = objectsMap;
     }
@@ -132,7 +130,11 @@ class JsonParser
                     }
                     else
                     {
-                        errorHandler.error("Input is invalid JSON; object does not start with '{', c=" + c);
+                        // The line below is not technically required, however, without it, the tests run
+                        // twice as slow.  It is apparently affectiving a word, or paragraph boundary where
+                        // the generated code sits, making it much faster.
+                        objsRead.size();
+                        error("Input is invalid JSON; object does not start with '{', c=" + c);
                     }
                     break;
 
