@@ -317,14 +317,11 @@ public class JsonReader implements Closeable
             root.put("@items", o);
             graph = convertParsedMapsToJava(root);
         }
-        else if (o instanceof JsonObject)
-        {
-            graph = convertParsedMapsToJava((JsonObject) o);
-        }
         else
         {
-            graph = o;
+            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
         }
+
         // Allow a complete 'Map' return (Javascript style)
         if (useMaps)
         {
@@ -358,7 +355,7 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root) throws IOException
     {
-        Resolver resolver = useMaps ? new MapResolver(objsRead, useMaps) : new ObjectResolver(objsRead, useMaps);
+        Resolver resolver = useMaps ? new MapResolver(objsRead, true) : new ObjectResolver(objsRead, false);
         resolver.createJavaObjectInstance(Object.class, root);
         Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
         resolver.cleanup();

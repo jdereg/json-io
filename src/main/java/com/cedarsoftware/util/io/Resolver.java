@@ -103,14 +103,14 @@ abstract class Resolver
      * of Maps representation (JsonObject root).
      * @throws IOException for stream errors or parsing errors.
      */
-    protected Object convertMapsToObjects(JsonObject<String, Object> root) throws IOException
+    protected Object convertMapsToObjects(final JsonObject<String, Object> root) throws IOException
     {
-        Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
+        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
 
         while (!stack.isEmpty())
         {
-            JsonObject<String, Object> jsonObj = stack.removeFirst();
+            final JsonObject<String, Object> jsonObj = stack.removeFirst();
 
             if (jsonObj.isArray())
             {
@@ -130,7 +130,7 @@ abstract class Resolver
             }
 
             if (!useMaps)
-            {
+            {   // clear memory used by Map instance when converting into Java objects (reduce working set size)
                 jsonObj.clear();
             }
         }
