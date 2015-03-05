@@ -52,7 +52,7 @@ public class MapResolver extends Resolver
         super(objsRead, useMaps);
     }
 
-    protected void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
@@ -147,7 +147,7 @@ public class MapResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws java.io.IOException for stream errors or parsing errors.
      */
-    protected void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
     {
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -156,7 +156,7 @@ public class MapResolver extends Resolver
         }
 
         int idx = 0;
-        List copy = new ArrayList(items.length);
+        final List copy = new ArrayList(items.length);
 
         for (Object element : items)
         {

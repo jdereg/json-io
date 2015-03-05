@@ -70,7 +70,7 @@ class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @throws IOException
      */
-    protected void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
     {
         Object special;
         if ((special = readIfMatching(jsonObj, null, stack)) != null)
@@ -80,14 +80,14 @@ class ObjectResolver extends Resolver
         }
 
         final Object javaMate = jsonObj.target;
-        Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
-        Class cls = javaMate.getClass();
+        final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
+        final Class cls = javaMate.getClass();
 
         while (i.hasNext())
         {
             Map.Entry<String, Object> e = i.next();
             String key = e.getKey();
-            Field field = MetaUtils.getField(cls, key);
+            final Field field = MetaUtils.getField(cls, key);
             Object rhs = e.getValue();
             if (field != null)
             {
@@ -258,7 +258,7 @@ class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    protected void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
     {
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -345,7 +345,7 @@ class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      * @throws java.io.IOException for stream errors or parsing errors.
      */
-    protected void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseArray(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
     {
         final int len = jsonObj.getLength();
         if (len == 0)
@@ -465,7 +465,7 @@ class ObjectResolver extends Resolver
         jsonObj.clearArray();
     }
 
-    protected static Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack) throws IOException
+    protected static Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack) throws IOException
     {
         if (o == null)
         {
@@ -485,7 +485,7 @@ class ObjectResolver extends Resolver
             }
         }
 
-        boolean isJsonObject = o instanceof JsonObject;
+        final boolean isJsonObject = o instanceof JsonObject;
         if (!isJsonObject && compType == null)
         {   // If not a JsonObject (like a Long that represents a date, then compType must be set)
             return null;
@@ -556,21 +556,21 @@ class ObjectResolver extends Resolver
         return closestReader.read(o, stack);
     }
 
-    private static void markUntypedObjects(Type type, Object rhs, Map<String, Field> classFields)
+    private static void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
     {
-        Deque<Object[]> stack = new ArrayDeque<>();
+        final Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
 
         while (!stack.isEmpty())
         {
             Object[] item = stack.removeFirst();
-            Type t = (Type) item[0];
-            Object instance = item[1];
+            final Type t = (Type) item[0];
+            final Object instance = item[1];
             if (t instanceof ParameterizedType)
             {
-                Class clazz = getRawType(t);
-                ParameterizedType pType = (ParameterizedType)t;
-                Type[] typeArgs = pType.getActualTypeArguments();
+                final Class clazz = getRawType(t);
+                final ParameterizedType pType = (ParameterizedType)t;
+                final Type[] typeArgs = pType.getActualTypeArguments();
 
                 if (typeArgs == null || typeArgs.length < 1 || clazz == null)
                 {
@@ -624,7 +624,7 @@ class ObjectResolver extends Resolver
                     }
                     else if (instance instanceof Collection)
                     {
-                        Collection col = (Collection)instance;
+                        final Collection col = (Collection)instance;
                         for (Object o : col)
                         {
                             stack.addFirst(new Object[]{typeArgs[0], o});
@@ -632,8 +632,8 @@ class ObjectResolver extends Resolver
                     }
                     else if (instance instanceof JsonObject)
                     {
-                        JsonObject jObj = (JsonObject) instance;
-                        Object[] array = jObj.getArray();
+                        final JsonObject jObj = (JsonObject) instance;
+                        final Object[] array = jObj.getArray();
                         if (array != null)
                         {
                             for (Object o : array)
@@ -647,7 +647,7 @@ class ObjectResolver extends Resolver
                 {
                     if (instance instanceof JsonObject)
                     {
-                        JsonObject<String, Object> jObj = (JsonObject) instance;
+                        final JsonObject<String, Object> jObj = (JsonObject) instance;
 
                         for (Map.Entry<String, Object> entry : jObj.entrySet())
                         {
@@ -673,7 +673,7 @@ class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(Deque<Object[]> stack, Object[] items, Type type)
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type)
     {
         if (items == null || items.length < 1)
         {
@@ -695,7 +695,7 @@ class ObjectResolver extends Resolver
 
     // Mark 'type' on JsonObject when the type is missing and it is a 'leaf'
     // node (no further subtypes in it's parameterized type definition)
-    private static void stampTypeOnJsonObject(Object o, Type t)
+    private static void stampTypeOnJsonObject(final Object o, final Type t)
     {
         Class clazz = t instanceof Class ? (Class)t : getRawType(t);
 
@@ -709,7 +709,7 @@ class ObjectResolver extends Resolver
         }
     }
 
-    public static Class getRawType(Type t)
+    public static Class getRawType(final Type t)
     {
         if (t instanceof ParameterizedType)
         {
