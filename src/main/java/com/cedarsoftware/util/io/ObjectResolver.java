@@ -29,7 +29,7 @@ import java.util.Map;
  *
  * A similar case as above occurs with specific array types.  If there is a Person[]
  * containing Person and Employee instances, then the Person instances will not have
- * the '@type' but the employee instances will (because it is not an Employee[]).
+ * the '@type' but the employee instances will (because they are more derived than Person).
  *
  * The resolver 'rewires' the original object graph.  It does this by replacing
  * @ref values in the Maps with pointers (on the field of the associated instance of the
