@@ -143,7 +143,7 @@ abstract class Resolver
 
     protected abstract void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException;
 
-    void cleanup() throws IOException
+    protected void cleanup() throws IOException
     {
         patchUnresolvedReferences();
         rehashMaps();
@@ -436,7 +436,7 @@ abstract class Resolver
      *
      * @throws IOException
      */
-    void patchUnresolvedReferences() throws IOException
+    protected void patchUnresolvedReferences() throws IOException
     {
         Iterator i = unresolvedRefs.iterator();
         while (i.hasNext())
@@ -538,7 +538,7 @@ abstract class Resolver
      * as Maps.  If you have a custom built Set, this would not 'treat' it
      * and you would need to provider a custom reader for that set.
      */
-    void rehashMaps()
+    protected void rehashMaps()
     {
         final boolean useMapsLocal = useMaps;
         for (Object[] mapPieces : prettyMaps)
@@ -592,7 +592,7 @@ abstract class Resolver
         return JsonReader.readers;
     }
 
-    static boolean notCustom(Class cls)
+    protected static boolean notCustom(Class cls)
     {
         return JsonReader.notCustom.contains(cls);
     }
