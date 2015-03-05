@@ -129,18 +129,6 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    @Deprecated
-    public static String toJson(Object item)
-    {
-        throw new RuntimeException("Use com.cedarsoftware.util.JsonWriter.objectToJson()");
-    }
-
-    @Deprecated
-    public static String toJson(Object item, Map<String, Object> optionalArgs)
-    {
-        throw new RuntimeException("Use com.cedarsoftware.util.JsonWriter.objectToJson()");
-    }
-
     /**
      * @see JsonWriter#objectToJson(Object, java.util.Map)
      */
@@ -488,7 +476,7 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * Walk object graph and visit each instance, following each field, each Collection, Map and so on.
-     * Tracks visited count to handle cycles and to determine if an item is referenced elsewhere.  If an
+     * Tracks visited to handle cycles and to determine if an item is referenced elsewhere.  If an
      * object is never referenced more than once, no @id field needs to be emitted for it.
      * @param root Object to be deeply traced.  The objVisited and objsReferenced Maps will be written to
      * during the trace.
@@ -499,14 +487,14 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
-        Deque<Object> stack = new ArrayDeque<>();
+        final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
 
         while (!stack.isEmpty())
         {
-            Object obj = stack.removeFirst();
+            final Object obj = stack.removeFirst();
 
             if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
             {
@@ -532,14 +520,13 @@ public class JsonWriter implements Closeable, Flushable
 
             if (clazz.isArray())
             {
-                Class compType = clazz.getComponentType();
-                if (!MetaUtils.isLogicalPrimitive(compType))
+                if (!MetaUtils.isLogicalPrimitive(clazz.getComponentType()))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
                     for (int i = 0; i < len; i++)
                     {
-                        Object o = Array.get(obj, i);
+                        final Object o = Array.get(obj, i);
                         if (o != null)
                         {   // Slight perf gain (null is legal)
                             stack.addFirst(o);
@@ -550,9 +537,9 @@ public class JsonWriter implements Closeable, Flushable
             else if (Map.class.isAssignableFrom(clazz))
             {   // Speed up - logically walk maps, as opposed to following their internal structure.
                 Map map = (Map) obj;
-                for (Object item : map.entrySet())
+                for (final Object item : map.entrySet())
                 {
-                    Map.Entry entry = (Map.Entry) item;
+                    final Map.Entry entry = (Map.Entry) item;
                     if (entry.getValue() != null)
                     {
                         stack.addFirst(entry.getValue());
@@ -565,7 +552,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (Collection.class.isAssignableFrom(clazz))
             {
-                for (Object item : (Collection)obj)
+                for (final Object item : (Collection)obj)
                 {
                     if (item != null)
                     {

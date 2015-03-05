@@ -381,19 +381,6 @@ public class JsonReader implements Closeable
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param json String JSON input
-     * @return Java object graph matching JSON input, or null if an
-     *         error occurred.
-     */
-    @Deprecated
-    public static Object toJava(String json)
-    {
-        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader.jsonToJava()");
-    }
-
-    /**
-     * Convert the passed in JSON string into a Java object graph.
-     *
-     * @param json String JSON input
      * @return Java object graph matching JSON input
      * @throws java.io.IOException If an I/O error occurs
      */
@@ -404,22 +391,6 @@ public class JsonReader implements Closeable
         Object obj = jr.readObject();
         jr.close();
         return obj;
-    }
-
-    /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param json String JSON input
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
-     */
-    @Deprecated
-    public static Map toMaps(String json)
-    {
-        throw new RuntimeException("Use com.cedarsoftware.util.JsonReader.jsonToMaps()");
     }
 
     /**
