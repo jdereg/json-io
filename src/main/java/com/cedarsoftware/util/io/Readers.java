@@ -80,7 +80,7 @@ public class Readers
         months.put("december", "12");
     }
 
-    public static class TimeZoneReader implements JsonTypeReader
+    public static class TimeZoneReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -94,7 +94,7 @@ public class Readers
         }
     }
 
-    public static class LocaleReader implements JsonTypeReader
+    public static class LocaleReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -119,7 +119,7 @@ public class Readers
         }
     }
 
-    public static class CalendarReader implements JsonTypeReader
+    public static class CalendarReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -161,7 +161,7 @@ public class Readers
         }
     }
 
-    public static class DateReader implements JsonTypeReader
+    public static class DateReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -418,7 +418,7 @@ public class Readers
         }
     }
 
-    public static class StringReader implements JsonTypeReader
+    public static class StringReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -441,7 +441,7 @@ public class Readers
         }
     }
 
-    public static class ClassReader implements JsonTypeReader
+    public static class ClassReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -459,7 +459,7 @@ public class Readers
         }
     }
 
-    public static class BigIntegerReader implements JsonTypeReader
+    public static class BigIntegerReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -562,7 +562,7 @@ public class Readers
         return (BigInteger) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
-    public static class BigDecimalReader implements JsonTypeReader
+    public static class BigDecimalReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -657,7 +657,7 @@ public class Readers
         return (BigDecimal) error("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
-    public static class StringBuilderReader implements JsonTypeReader
+    public static class StringBuilderReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -675,7 +675,7 @@ public class Readers
         }
     }
 
-    public static class StringBufferReader implements JsonTypeReader
+    public static class StringBufferReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -693,7 +693,7 @@ public class Readers
         }
     }
 
-    public static class TimestampReader implements JsonTypeReader
+    public static class TimestampReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
         {

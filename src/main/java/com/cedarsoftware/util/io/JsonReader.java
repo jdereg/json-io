@@ -82,10 +82,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class JsonReader implements Closeable
 {
-    private static final Map<Class, JsonTypeReader> readers = new ConcurrentHashMap<>();
-    private static final Set<Class> notCustom = new HashSet<>();
+    protected static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
+    protected static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
-    private static final Map<Class, JsonTypeReader> readerCache = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonClassReader> readerCache = new ConcurrentHashMap<>();
     private static final NullClass nullReader = new NullClass();
 
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
@@ -125,6 +125,11 @@ public class JsonReader implements Closeable
     public interface ClassFactory
     {
         Object newInstance(Class c);
+    }
+
+    public interface JsonClassReader
+    {
+        Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException;
     }
 
     /**
@@ -188,9 +193,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    public static void addReader(Class c, JsonTypeReader reader)
+    public static void addReader(Class c, JsonClassReader reader)
     {
-        for (Map.Entry<Class, JsonTypeReader> entry : readers.entrySet())
+        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -284,7 +289,7 @@ public class JsonReader implements Closeable
             c = compType;
         }
 
-        JsonTypeReader closestReader = getCustomReader(c);
+        JsonClassReader closestReader = getCustomReader(c);
 
         if (closestReader == null)
         {
@@ -303,7 +308,7 @@ public class JsonReader implements Closeable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonTypeReader
+    static class NullClass implements JsonClassReader
     {
         public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
         {
@@ -311,9 +316,9 @@ public class JsonReader implements Closeable
         }
     }
 
-    private static JsonTypeReader getCustomReader(Class c)
+    private static JsonClassReader getCustomReader(Class c)
     {
-        JsonTypeReader reader = readerCache.get(c);
+        JsonClassReader reader = readerCache.get(c);
         if (reader == null)
         {
             synchronized (readerCache)
@@ -328,12 +333,12 @@ public class JsonReader implements Closeable
         }
         return reader == nullReader ? null : reader;
     }
-	private static JsonTypeReader forceGetCustomReader(Class c)
+	private static JsonClassReader forceGetCustomReader(Class c)
     {
-        JsonTypeReader closestReader = nullReader;
+        JsonClassReader closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonTypeReader> entry : readers.entrySet())
+        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -1477,7 +1482,7 @@ public class JsonReader implements Closeable
                 }
                 else
                 {
-					JsonTypeReader customReader = getCustomReader(c);
+					JsonClassReader customReader = getCustomReader(c);
 					if (customReader != null)
                     {
 						mate = customReader.read(jsonObj,  new ArrayDeque<JsonObject<String, Object>>());

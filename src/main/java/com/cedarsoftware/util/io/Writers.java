@@ -36,7 +36,7 @@ import java.util.TimeZone;
  */
 public class Writers
 {
-    public static class TimeZoneWriter implements JsonTypeWriter
+    public static class TimeZoneWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -50,7 +50,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
 
-    public static class CalendarWriter implements JsonTypeWriter
+    public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -67,7 +67,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
 
-    public static class DateWriter implements JsonTypeWriter
+    public static class DateWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -110,7 +110,7 @@ public class Writers
         }
     }
 
-    public static class TimestampWriter implements JsonTypeWriter
+    public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object o, boolean showType, Writer output) throws IOException
         {
@@ -127,7 +127,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException { }
     }
 
-    public static class ClassWriter implements JsonTypeWriter
+    public static class ClassWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -144,7 +144,7 @@ public class Writers
         }
     }
 
-    public static class JsonStringWriter implements JsonTypeWriter
+    public static class JsonStringWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -160,7 +160,7 @@ public class Writers
         }
     }
 
-    public static class LocaleWriter implements JsonTypeWriter
+    public static class LocaleWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -178,7 +178,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException { }
     }
 
-    public static class BigIntegerWriter implements JsonTypeWriter
+    public static class BigIntegerWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -199,7 +199,7 @@ public class Writers
         }
     }
 
-    public static class BigDecimalWriter implements JsonTypeWriter
+    public static class BigDecimalWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -220,7 +220,7 @@ public class Writers
         }
     }
 
-    public static class StringBuilderWriter implements JsonTypeWriter
+    public static class StringBuilderWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
@@ -241,7 +241,7 @@ public class Writers
         }
     }
 
-    public static class StringBufferWriter implements JsonTypeWriter
+    public static class StringBufferWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
