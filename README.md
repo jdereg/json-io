@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>2.9.4</version>
+  <version>3.0.0</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
@@ -119,6 +119,14 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.0.0
+   * Performance improvement: caching the reader associated to a given class.
+   * Ease of use: `json-io` throws a `JsonIoException` (unchecked) instead of checked exception `IOException`.  This allows more flexibility in terms of error handling for the user.
+   * Code cleanup: Moved reflection related code from `JsonReader` into separate `MetaUtils` class.
+   * Code cleanup: Moved `FastPushbackReader` from `JsonReader` into separate class.
+   * Code cleanup: Moved JSON parsing code from `JsonReader` into separate `JsonParser` class.
+   * Code cleanup: Moved built-in readers from `JsonReader` to separate `Readers` class.
+   * Code cleanup: Moved resolver code (marshals map of maps to Java instances) into separate `Resolver` classes.
  * 2.9.4
   * `JsonReader.newInstance()` API made public
   * Bumped version of junit from 4.11 to 4.12
