@@ -9,15 +9,15 @@ import static org.junit.Assert.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,7 +35,7 @@ class TestCustomClassHandler
 
     public class WeirdDateWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer out) throws IOException
+        public void write(Object o, boolean showType, Writer out)
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
             out.write("\"stuff\":\"")
@@ -48,7 +48,7 @@ class TestCustomClassHandler
             return true;
         }
 
-        public void writePrimitiveForm(Object o, Writer out) throws IOException
+        public void writePrimitiveForm(Object o, Writer out)
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
             out.write('"')
@@ -59,7 +59,7 @@ class TestCustomClassHandler
 
     public class WeirdDateReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof String)
             {
@@ -69,7 +69,7 @@ class TestCustomClassHandler
                 }
                 catch (ParseException e)
                 {
-                    throw new IOException("Date format incorrect")
+                    throw new JsonIoException("Date format incorrect")
                 }
             }
 
@@ -82,10 +82,10 @@ class TestCustomClassHandler
                 }
                 catch (ParseException e)
                 {
-                    throw new IOException("Date format incorrect")
+                    throw new JsonIoException("Date format incorrect")
                 }
             }
-            throw new IOException("Date missing 'stuff' field")
+            throw new JsonIoException("Date missing 'stuff' field")
 
         }
     }

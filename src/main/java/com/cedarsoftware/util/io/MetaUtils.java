@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -9,6 +8,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -38,15 +38,15 @@ import java.util.regex.Pattern;
  * This utility class has the methods mostly related to reflection related code.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -205,7 +205,11 @@ public class MetaUtils
     }
 
     /**
-     * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related.
+     * @param a Class source class
+     * @param b Class target class
+     * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related. Each
+     * step upward in the inheritance from one class to the next (calling class.getSuperclass()) is counted
+     * as 1.
      */
     public static int getDistance(Class a, Class b)
     {
@@ -295,7 +299,7 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    static Class classForName(String name) throws IOException
+    static Class classForName(String name)
     {
         try
         {
@@ -308,9 +312,9 @@ public class MetaUtils
             {
                 return c == null ? loadClass(name) : c;
             }
-            catch (ClassNotFoundException e)
+            catch (Exception e)
             {
-                throw new IOException("Class not found: " + name, e);
+                throw new JsonIoException("Class not found: " + name, e);
             }
         }
         catch (Exception e)
@@ -404,7 +408,7 @@ public class MetaUtils
         return s;
     }
 
-    static Object newInstance(Class c) throws IOException
+    static Object newInstance(Class c)
     {
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
@@ -478,7 +482,7 @@ public class MetaUtils
     /**
      * Return constructor and instance as elements 0 and 1, respectively.
      */
-    private static Object[] newInstanceEx(Class c) throws IOException
+    private static Object[] newInstanceEx(Class c)
     {
         try
         {
@@ -498,7 +502,7 @@ public class MetaUtils
         }
     }
 
-    private static Object[] tryOtherConstruction(Class c) throws IOException
+    private static Object[] tryOtherConstruction(Class c)
     {
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
@@ -551,7 +555,7 @@ public class MetaUtils
         return null;
     }
 
-    private static Object[] fillArgs(Class[] argTypes, boolean useNull) throws IOException
+    private static Object[] fillArgs(Class[] argTypes, boolean useNull)
     {
         final Object[] values = new Object[argTypes.length];
         for (int i = 0; i < argTypes.length; i++)
@@ -641,7 +645,14 @@ public class MetaUtils
                 }
                 else if (argType == java.net.URL.class)
                 {
-                    values[i] = new URL("http://localhost"); // overwritten
+                    try
+                    {
+                        values[i] = new URL("http://localhost"); // overwritten
+                    }
+                    catch (MalformedURLException e)
+                    {
+                        values[i] = null;
+                    }
                 }
                 else if (argType == Object.class)
                 {
@@ -657,7 +668,7 @@ public class MetaUtils
         return values;
     }
 
-    static Object newPrimitiveWrapper(Class c, Object rhs) throws IOException
+    static Object newPrimitiveWrapper(Class c, Object rhs)
     {
         final String cname;
         try
@@ -829,12 +840,12 @@ public class MetaUtils
     }
 
     // ========== Maintain relationship info below this line ==========
-    static Object error(String msg) throws IOException
+    static Object error(String msg)
     {
         return JsonReader.error(msg);
     }
 
-    static Object error(String msg, Exception e) throws IOException
+    static Object error(String msg, Exception e)
     {
         return JsonReader.error(msg, e);
     }

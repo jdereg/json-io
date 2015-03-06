@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -20,15 +19,15 @@ import java.util.regex.Pattern;
  * primitive types and other JDK classes simply to allow for a more concise form.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,7 +81,7 @@ public class Readers
 
     public static class TimeZoneReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             JsonObject jObj = (JsonObject)o;
             Object zone = jObj.get("zone");
@@ -96,7 +95,7 @@ public class Readers
 
     public static class LocaleReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             JsonObject jObj = (JsonObject) o;
             Object language = jObj.get("language");
@@ -121,7 +120,7 @@ public class Readers
 
     public static class CalendarReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             String time = null;
             try
@@ -163,7 +162,7 @@ public class Readers
 
     public static class DateReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof Long)
             {
@@ -193,7 +192,7 @@ public class Readers
             }
         }
 
-        private static Date parseDate(String dateStr) throws IOException
+        private static Date parseDate(String dateStr)
         {
             if (dateStr == null)
             {
@@ -412,7 +411,7 @@ public class Readers
 
     public static class SqlDateReader extends DateReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             return new java.sql.Date(((Date) super.read(o, stack)).getTime());
         }
@@ -420,7 +419,7 @@ public class Readers
 
     public static class StringReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof String)
             {
@@ -443,7 +442,7 @@ public class Readers
 
     public static class ClassReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof String)
             {
@@ -461,7 +460,7 @@ public class Readers
 
     public static class BigIntegerReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -507,15 +506,18 @@ public class Readers
     }
 
     /**
+     * @param value to be converted to BigInteger.  Can be a null which will return null.  Can be
+     * BigInteger in which case it will be returned as-is.  Can also be String, BigDecimal,
+     * Boolean (which will be returned as BigInteger.ZERO or .ONE), byte, short, int, long, float,
+     * or double.  If an unknown type is passed in, an exception will be thrown.
      * @return a BigInteger from the given input.  A best attempt will be made to support
      * as many input types as possible.  For example, if the input is a Boolean, a BigInteger of
      * 1 or 0 will be returned.  If the input is a String "", a null will be returned.  If the
      * input is a Double, Float, or BigDecimal, a BigInteger will be returned that retains the
      * integer portion (fractional part is dropped).  The input can be a Byte, Short, Integer,
      * or Long.
-     * @throws IOException if the input is something that cannot be converted to a BigInteger.
      */
-    public static BigInteger bigIntegerFrom(Object value) throws IOException
+    public static BigInteger bigIntegerFrom(Object value)
     {
         if (value == null)
         {
@@ -564,7 +566,7 @@ public class Readers
 
     public static class BigDecimalReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -609,13 +611,17 @@ public class Readers
     }
 
     /**
+     * @param value to be converted to BigDecimal.  Can be a null which will return null.  Can be
+     * BigDecimal in which case it will be returned as-is.  Can also be String, BigInteger,
+     * Boolean (which will be returned as BigDecimal.ZERO or .ONE), byte, short, int, long, float,
+     * or double.  If an unknown type is passed in, an exception will be thrown.
+     *
      * @return a BigDecimal from the given input.  A best attempt will be made to support
      * as many input types as possible.  For example, if the input is a Boolean, a BigDecimal of
      * 1 or 0 will be returned.  If the input is a String "", a null will be returned. The input
      * can be a Byte, Short, Integer, Long, or BigInteger.
-     * @throws IOException if the input is something that cannot be converted to a BigDecimal.
      */
-    public static BigDecimal bigDecimalFrom(Object value) throws IOException
+    public static BigDecimal bigDecimalFrom(Object value)
     {
         if (value == null)
         {
@@ -659,7 +665,7 @@ public class Readers
 
     public static class StringBuilderReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof String)
             {
@@ -677,7 +683,7 @@ public class Readers
 
     public static class StringBufferReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             if (o instanceof String)
             {
@@ -695,7 +701,7 @@ public class Readers
 
     public static class TimestampReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
         {
             JsonObject jObj = (JsonObject) o;
             Object time = jObj.get("time");
@@ -716,22 +722,22 @@ public class Readers
     }
 
     // ========== Maintain dependency knowledge in once place, down here =========
-    static Object error(String msg) throws IOException
+    static Object error(String msg)
     {
         return MetaUtils.error(msg);
     }
 
-    static Object error(String msg, Exception e) throws IOException
+    static Object error(String msg, Exception e)
     {
         return MetaUtils.error(msg, e);
     }
 
-    static Class classForName(String name) throws IOException
+    static Class classForName(String name)
     {
         return MetaUtils.classForName(name);
     }
 
-    static Object newInstance(Class c) throws IOException
+    static Object newInstance(Class c)
     {
         return JsonReader.newInstance(c);
     }

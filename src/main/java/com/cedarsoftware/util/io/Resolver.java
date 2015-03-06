@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -22,15 +21,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * be replaced with the Object (or Map) that had the corresponding @id.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -80,7 +79,7 @@ abstract class Resolver
      */
     static class NullClass implements JsonReader.JsonClassReader
     {
-        public Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException
+        public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
         {
             return null;
         }
@@ -101,9 +100,8 @@ abstract class Resolver
      *             input after it has been completely read.
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
-     * @throws IOException for stream errors or parsing errors.
      */
-    protected Object convertMapsToObjects(final JsonObject<String, Object> root) throws IOException
+    protected Object convertMapsToObjects(final JsonObject<String, Object> root)
     {
         final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
@@ -137,13 +135,13 @@ abstract class Resolver
         return root.target;
     }
 
-    protected abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException;
+    protected abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
-    protected abstract void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException;
+    protected abstract void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
-    protected abstract void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException;
+    protected abstract void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
-    protected void cleanup() throws IOException
+    protected void cleanup()
     {
         patchUnresolvedReferences();
         rehashMaps();
@@ -159,9 +157,8 @@ abstract class Resolver
      *
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
-     * @throws java.io.IOException for stream errors or parsing errors.
      */
-    protected void traverseMap(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseMap(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj)
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
@@ -236,7 +233,7 @@ abstract class Resolver
      * set in the JSON stream.  If the key '@type' does not exist, then the passed in Class
      * is used to create the instance, handling creating an Array or regular Object
      * instance.
-     * <p/>
+     * <br>
      * The '@type' is not often specified in the JSON input stream, as in many
      * cases it can be inferred from a field reference or array component type.
      *
@@ -244,9 +241,8 @@ abstract class Resolver
      * @param jsonObj Map-of-Map representation of object to create.
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
-     * @throws IOException for stream errors or parsing errors.
      */
-    protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj) throws IOException
+    protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj)
     {
         final boolean useMapsLocal = useMaps;
         final String type = jsonObj.type;
@@ -260,7 +256,7 @@ abstract class Resolver
             {
                 c = MetaUtils.classForName(type);
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 if (useMapsLocal)
                 {
@@ -270,7 +266,8 @@ abstract class Resolver
                 }
                 else
                 {
-                    throw e;
+                    String name = clazz == null ? "null" : clazz.getName();
+                    throw new JsonIoException("Unable to create class: " + name, e);
                 }
             }
             if (c.isArray())
@@ -365,7 +362,7 @@ abstract class Resolver
         return jsonObj.target = mate;
     }
 
-    protected JsonObject getReferencedObj(Long ref) throws IOException
+    protected JsonObject getReferencedObj(Long ref)
     {
         JsonObject refObject = objsRead.get(ref);
         if (refObject == null)
@@ -433,10 +430,8 @@ abstract class Resolver
     /**
      * For all fields where the value was "@ref":"n" where 'n' was the id of an object
      * that had not yet been encountered in the stream, make the final substitution.
-     *
-     * @throws IOException
      */
-    protected void patchUnresolvedReferences() throws IOException
+    protected void patchUnresolvedReferences()
     {
         Iterator i = unresolvedRefs.iterator();
         while (i.hasNext())
@@ -530,10 +525,10 @@ abstract class Resolver
      * Process Maps/Sets (fix up their internal indexing structure)
      * This is required because Maps hash items using hashCode(), which will
      * change between VMs.  Rehashing the map fixes this.
-     * <p/>
+     * <br>
      * If useMaps==true, then move @keys to keys and @items to values
      * and then drop these two entries from the map.
-     * <p/>
+     * <br>
      * This hashes both Sets and Maps because the JDK sets are implemented
      * as Maps.  If you have a custom built Set, this would not 'treat' it
      * and you would need to provider a custom reader for that set.
@@ -572,17 +567,17 @@ abstract class Resolver
     }
 
     // ========== Keep relationship knowledge below the line ==========
-    public static Object newInstance(Class c) throws IOException
+    public static Object newInstance(Class c)
     {
         return JsonReader.newInstance(c);
     }
 
-    protected static Object error(String msg) throws IOException
+    protected static Object error(String msg)
     {
         return JsonReader.error(msg);
     }
 
-    protected static Object error(String msg, Exception e) throws IOException
+    protected static Object error(String msg, Exception e)
     {
         return JsonReader.error(msg, e);
     }

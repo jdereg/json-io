@@ -37,37 +37,37 @@ import java.util.concurrent.ConcurrentHashMap;
  * Output a Java object graph in JSON format.  This code handles cyclic
  * references and can serialize any Object graph without requiring a class
  * to be 'Serializeable' or have any specific methods on it.
- * <br/><ul><li>
- * Call the static method: {@code JsonWriter.toJson(employee)}.  This will
+ * <br><ul><li>
+ * Call the static method: {@code JsonWriter.objectToJson(employee)}.  This will
  * convert the passed in 'employee' instance into a JSON String.</li>
  * <li>Using streams:
  * <pre>     JsonWriter writer = new JsonWriter(stream);
  *     writer.write(employee);
  *     writer.close();</pre>
  * This will write the 'employee' object to the passed in OutputStream.
- * </li>
+ * </li></ul>
  * <p>That's it.  This can be used as a debugging tool.  Output an object
  * graph using the above code.  You can copy that JSON output into this site
  * which formats it with a lot of whitespace to make it human readable:
  * http://jsonformatter.curiousconcept.com
- * <br/><br/>
+ * <br>
  * <p>This will output any object graph deeply (or null).  Object references are
- * properly handled.  For example, if you had A->B, B->C, and C->A, then
+ * properly handled.  For example, if you had A-&gt;B, B-&gt;C, and C-&gt;A, then
  * A will be serialized with a B object in it, B will be serialized with a C
  * object in it, and then C will be serialized with a reference to A (ref), not a
  * redefinition of A.</p>
- * <br/>
+ * <br>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -141,8 +141,10 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * @see JsonWriter#objectToJson(Object, java.util.Map)
+     * @param item Object (root) to serialized to JSON String.
+     * @return String of JSON format representing complete object graph rooted by item.
      */
-    public static String objectToJson(Object item) throws IOException
+    public static String objectToJson(Object item)
     {
         return objectToJson(item, new HashMap<String, Object>());
     }
@@ -155,8 +157,14 @@ public class JsonWriter implements Closeable, Flushable
         return _args.get();
     }
 
+    protected static Object getArg(String key)
+    {
+        return _args.get().get(key);
+    }
+
     /**
      * Provide access to subclasses.
+     * @return Map containing all objects that were referenced within input object graph.
      */
     protected Map getObjectsReferenced()
     {
@@ -165,6 +173,7 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * Provide access to subclasses.
+     * @return Map containing all objects that were visited within input object graph
      */
     protected Map getObjectsVisited()
     {
@@ -182,17 +191,22 @@ public class JsonWriter implements Closeable, Flushable
      * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
-     * @return String containing JSON representation of passed
-     *         in object.
-     * @throws java.io.IOException If an I/O error occurs
+     * @return String containing JSON representation of passed in object root.
      */
-    public static String objectToJson(Object item, Map<String, Object> optionalArgs) throws IOException
+    public static String objectToJson(Object item, Map<String, Object> optionalArgs)
     {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        JsonWriter writer = new JsonWriter(stream, optionalArgs);
-        writer.write(item);
-        writer.close();
-        return new String(stream.toByteArray(), "UTF-8");
+        try
+        {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            JsonWriter writer = new JsonWriter(stream, optionalArgs);
+            writer.write(item);
+            writer.close();
+            return new String(stream.toByteArray(), "UTF-8");
+        }
+        catch (Exception e)
+        {
+            throw new JsonIoException("Unable to convert object to JSON", e);
+        }
     }
 
     /**
@@ -200,7 +214,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param json String input JSON
      * @return String containing equivalent JSON, formatted nicely for human readability.
      */
-    public static String formatJson(String json) throws IOException
+    public static String formatJson(String json)
     {
         Map map = JsonReader.jsonToMaps(json);
         Map args = new HashMap();
@@ -210,8 +224,9 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * @see JsonWriter#JsonWriter(java.io.OutputStream, java.util.Map)
+     * @param out OutputStream to which the JSON will be written.
      */
-    public JsonWriter(OutputStream out) throws IOException
+    public JsonWriter(OutputStream out)
     {
         this(out, new HashMap<String, Object>());
     }
@@ -225,11 +240,10 @@ public class JsonWriter implements Closeable, Flushable
      * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
-     * @throws IOException
      */
-    public JsonWriter(OutputStream out, Map<String, Object> optionalArgs) throws IOException
+    public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
-        Map args = _args.get();
+        Map args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
 
@@ -269,18 +283,18 @@ public class JsonWriter implements Closeable, Flushable
         }
         catch (UnsupportedEncodingException e)
         {
-            throw new IOException("Unsupported encoding.  Get a JVM that supports UTF-8", e);
+            throw new JsonIoException("UTF-8 not supported on your JVM.  Unable to convert object to JSON.", e);
         }
     }
 
     public static boolean isPublicEnumsOnly()
     {
-        return isTrue(_args.get().get(ENUM_PUBLIC_ONLY));
+        return isTrue(getArg(ENUM_PUBLIC_ONLY));
     }
 
     public static boolean isPrettyPrint()
     {
-        return isTrue(_args.get().get(PRETTY_PRINT));
+        return isTrue(getArg(PRETTY_PRINT));
     }
 
     private static boolean isTrue(Object setting)
@@ -330,7 +344,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    public boolean writeIfMatching(Object o, boolean showType, Writer output) throws IOException
+    public boolean writeIfMatching(Object o, boolean showType, Writer output)
     {
         Class c = o.getClass();
         if (notCustom.contains(c))
@@ -338,17 +352,31 @@ public class JsonWriter implements Closeable, Flushable
             return false;
         }
 
-        return writeCustom(c, o, showType, output);
+        try
+        {
+            return writeCustom(c, o, showType, output);
+        }
+        catch (IOException e)
+        {
+            throw new JsonIoException("Unable to write custom formatted object:", e);
+        }
     }
 
-    public boolean writeArrayElementIfMatching(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
+    public boolean writeArrayElementIfMatching(Class arrayComponentClass, Object o, boolean showType, Writer output)
     {
         if (!o.getClass().isAssignableFrom(arrayComponentClass) || notCustom.contains(o.getClass()))
         {
             return false;
         }
 
-        return writeCustom(arrayComponentClass, o, showType, output);
+        try
+        {
+            return writeCustom(arrayComponentClass, o, showType, output);
+        }
+        catch (IOException e)
+        {
+            throw new JsonIoException("Unable to write custom formatted object as array element:", e);
+        }
     }
 
     private boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
@@ -472,15 +500,22 @@ public class JsonWriter implements Closeable, Flushable
         notCustom.add(c);
     }
 
-    public void write(Object obj) throws IOException
+    public void write(Object obj)
     {
         traceReferences(obj);
         objVisited.clear();
-        writeImpl(obj, true);
+        try
+        {
+            writeImpl(obj, true);
+        }
+        catch (IOException e)
+        {
+            throw new JsonIoException("Error writing object to JSON:", e);
+        }
         flush();
         objVisited.clear();
         objsReferenced.clear();
-        _args.get().clear();
+        getArgs().clear();
         _args.remove();
     }
 
@@ -497,6 +532,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
+        Map<Class, List<Field>> fieldSpecifiers = (Map) getArg(FIELD_SPECIFIERS);
         final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
@@ -575,7 +611,7 @@ public class JsonWriter implements Closeable, Flushable
 				// Only trace fields if no custom writer is present
 				if (getCustomWriter(obj.getClass()) == null)
                 {
-					traceFields(stack, obj);
+					traceFields(stack, obj, fieldSpecifiers);
 				}
             }
         }
@@ -585,11 +621,14 @@ public class JsonWriter implements Closeable, Flushable
      * Reach-ability trace to visit all objects within the graph to be written.
      * This API will handle any object, using either reflection APIs or by
      * consulting a specified FIELD_SPECIFIERS map if provided.
+     * @param stack Deque used to manage decent into graph (rather than using Java stack.) This allows for
+     * much larger graph processing.
+     * @param obj Object root of graph
+     * @param fieldSpecifiers Map of optional field specifiers, which are used to override the field list returned by
+     * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void traceFields(Deque<Object> stack, Object obj)
+    protected void traceFields(final Deque<Object> stack, final Object obj, final Map<Class, List<Field>> fieldSpecifiers)
     {
-        Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
-
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
         Collection<Field> fields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
@@ -597,7 +636,7 @@ public class JsonWriter implements Closeable, Flushable
         {   // Trace fields using reflection
             fields = MetaUtils.getDeepDeclaredFields(obj.getClass()).values();
         }
-        for (Field field : fields)
+        for (final Field field : fields)
         {
             try
             {
@@ -611,16 +650,17 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private static List<Field> getFieldsUsingSpecifier(Class classBeingWritten, Map<Class, List<Field>> fieldSpecifiers)
+    private static List<Field> getFieldsUsingSpecifier(final Class classBeingWritten, final Map<Class, List<Field>> fieldSpecifiers)
     {
-        Iterator<Map.Entry<Class, List<Field>>> i = fieldSpecifiers.entrySet().iterator();
+        final Iterator<Map.Entry<Class, List<Field>>> i = fieldSpecifiers.entrySet().iterator();
         int minDistance = Integer.MAX_VALUE;
         List<Field> fields = null;
 
         while (i.hasNext())
         {
-            Map.Entry<Class, List<Field>> entry = i.next();
-            Class c = entry.getKey();
+            final Map.Entry<Class, List<Field>> entry = i.next();
+            final Class c = entry.getKey();
+
             if (c == classBeingWritten)
             {
                 return entry.getValue();
@@ -932,7 +972,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     private static boolean alwaysShowType()
     {
-        return Boolean.TRUE.equals(_args.get().containsKey(TYPE));
+        return Boolean.TRUE.equals(getArgs().containsKey(TYPE));
     }
 
     private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException
@@ -1773,7 +1813,7 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        final Map<Class, List<Field>> fieldSpecifiers = (Map) _args.get().get(FIELD_SPECIFIERS);
+        final Map<Class, List<Field>> fieldSpecifiers = (Map) getArg(FIELD_SPECIFIERS);
         final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
         {   // Caller is using associating a class name to a set of fields for the given class (allows field reductions)
@@ -1855,7 +1895,8 @@ public class JsonWriter implements Closeable, Flushable
      * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
      * characters in the range of ASCII space to a '~' as ASCII, and anything higher in UTF-8.
      *
-     * @param s String to be written in utf8 format on the output stream.
+     * @param s String to be written in UTF-8 format on the output stream.
+     * @param output Writer to which the UTF-8 string will be written to
      * @throws IOException if an error occurs writing to the output stream.
      */
     public static void writeJsonUtf8String(String s, final Writer output) throws IOException

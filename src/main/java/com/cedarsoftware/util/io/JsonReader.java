@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
@@ -35,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * in a "Map of Maps." (untyped representation).  This code handles cyclic references
  * and can deserialize any Object graph without requiring a class to be 'Serializeable'
  * or have any specific methods on it.  It will handle classes with non public constructors.
- * <br/><br/>
+ * <br><br>
  * Usages:
  * <ul><li>
  * Call the static method: {@code JsonReader.jsonToJava(String json)}.  This will
@@ -45,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * return an untyped object representation of the JSON String as a Map of Maps, where
  * the fields are the Map keys, and the field values are the associated Map's values.  You can
  * call the JsonWriter.objectToJson() method with the returned Map, and it will serialize
- * the Graph into the identical JSON stream from which it was read.
+ * the Graph into the equivalent JSON stream from which it was read.
  * <li>
  * Instantiate the JsonReader with an InputStream: {@code JsonReader(InputStream in)} and then call
  * {@code readObject()}.  Cast the return value of readObject() to the Java class that was the root of
@@ -54,18 +53,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li>
  * Instantiate the JsonReader with an InputStream: {@code JsonReader(InputStream in, true)} and then call
  * {@code readObject()}.  The return value will be a Map of Maps.
- * </li></ul><br/>
+ * </li></ul><br>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -118,7 +117,7 @@ public class JsonReader implements Closeable
      */
     public interface JsonClassReader
     {
-        Object read(Object jOb, Deque<JsonObject<String, Object>> stack) throws IOException;
+        Object read(Object jOb, Deque<JsonObject<String, Object>> stack);
     }
 
     /**
@@ -176,6 +175,8 @@ public class JsonReader implements Closeable
      * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
      * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
+     * @param c Class to assign an ClassFactory to
+     * @param f ClassFactory that will create 'c' instances
      */
     public static void assignInstantiator(Class c, ClassFactory f)
     {
@@ -189,6 +190,8 @@ public class JsonReader implements Closeable
      * many classes to be associated to the custom reader, you can indicate
      * that json-io should not use a custom reader, by calling the
      * addNotCustomReader() method.
+     * @param c Class to assign a custom JSON reader to
+     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
     public static void addReader(Class c, JsonClassReader reader)
     {
@@ -208,6 +211,10 @@ public class JsonReader implements Closeable
      * Force json-io to use it's internal generic approach to writing the
      * passed in class, even if a Custom JSON reader is specified for its
      * parent class.
+     * @param c Class to which to force no custom JSON reading to occur.
+     * Normally, this is not needed, however, if a reader is assigned to a
+     * parent class of 'c', then calling this method on 'c' will prevent
+     * any custom reader from processing class 'c'
      */
     public static void addNotCustomReader(Class c)
     {
@@ -219,15 +226,21 @@ public class JsonReader implements Closeable
      *
      * @param json String JSON input
      * @return Java object graph matching JSON input
-     * @throws java.io.IOException If an I/O error occurs
      */
-    public static Object jsonToJava(String json) throws IOException
+    public static Object jsonToJava(String json)
     {
-        ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-        JsonReader jr = new JsonReader(ba, false);
-        Object obj = jr.readObject();
-        jr.close();
-        return obj;
+        try
+        {
+            ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
+            JsonReader jr = new JsonReader(ba, false);
+            Object obj = jr.readObject();
+            jr.close();
+            return obj;
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new JsonIoException("Could not convert JSON to Java because your JVM does not support UTF-8", e);
+        }
     }
 
     /**
@@ -239,30 +252,36 @@ public class JsonReader implements Closeable
      * @param json String JSON input
      * @return Java object graph of Maps matching JSON input,
      *         or null if an error occurred.
-     * @throws java.io.IOException If an I/O error occurs
      */
-    public static Map jsonToMaps(String json) throws IOException
+    public static Map jsonToMaps(String json)
     {
-        ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-        JsonReader jr = new JsonReader(ba, true);
-        Object ret = jr.readObject();
-        jr.close();
-
-        if (ret instanceof Map)
+        try
         {
-            return (Map) ret;
-        }
+            ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
+            JsonReader jr = new JsonReader(ba, true);
+            Object ret = jr.readObject();
+            jr.close();
 
-        if (ret != null && ret.getClass().isArray())
-        {
+            if (ret instanceof Map)
+            {
+                return (Map) ret;
+            }
+
+            if (ret != null && ret.getClass().isArray())
+            {
+                JsonObject retMap = new JsonObject();
+                retMap.put("@items", ret);
+                return retMap;
+
+            }
             JsonObject retMap = new JsonObject();
-            retMap.put("@items", ret);
+            retMap.put("@items", new Object[]{ret});
             return retMap;
-
         }
-        JsonObject retMap = new JsonObject();
-        retMap.put("@items", new Object[]{ret});
-        return retMap;
+        catch (UnsupportedEncodingException e)
+        {
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
+        }
     }
 
     public JsonReader()
@@ -297,16 +316,23 @@ public class JsonReader implements Closeable
      *
      * @return Java Object graph constructed from InputStream supplying
      *         JSON serialized content.
-     * @throws IOException for stream errors or parsing errors.
      */
-    public Object readObject() throws IOException
+    public Object readObject()
     {
         JsonParser parser = new JsonParser(input, objsRead, useMaps);
         JsonObject root = new JsonObject();
-        Object o = parser.readValue(root);
-        if (o == JsonParser.EMPTY_OBJECT)
+        Object o;
+        try
         {
-            return new JsonObject();
+            o = parser.readValue(root);
+            if (o == JsonParser.EMPTY_OBJECT)
+            {
+                return new JsonObject();
+            }
+        }
+        catch (Exception e)
+        {
+            throw new JsonIoException("error parsing JSON value", e);
         }
 
         Object graph;
@@ -337,7 +363,7 @@ public class JsonReader implements Closeable
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    public Object jsonObjectsToJava(JsonObject root) throws IOException
+    public Object jsonObjectsToJava(JsonObject root)
     {
         useMaps = false;
         return convertParsedMapsToJava(root);
@@ -353,7 +379,7 @@ public class JsonReader implements Closeable
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    protected Object convertParsedMapsToJava(JsonObject root) throws IOException
+    protected Object convertParsedMapsToJava(JsonObject root)
     {
         Resolver resolver = useMaps ? new MapResolver(objsRead, true) : new ObjectResolver(objsRead, false);
         resolver.createJavaObjectInstance(Object.class, root);
@@ -362,7 +388,7 @@ public class JsonReader implements Closeable
         return graph;
     }
 
-    public static Object newInstance(Class c) throws IOException
+    public static Object newInstance(Class c)
     {
         if (factory.containsKey(c))
         {
@@ -381,7 +407,10 @@ public class JsonReader implements Closeable
                 input.close();
             }
         }
-        catch (IOException ignored) { }
+        catch (Exception e)
+        {
+            throw new JsonIoException("Unable to close input", e);
+        }
     }
 
     private static String getErrorMessage(String msg)
@@ -393,14 +422,14 @@ public class JsonReader implements Closeable
         return msg;
     }
 
-    static Object error(String msg) throws IOException
+    static Object error(String msg)
     {
-        throw new IOException(getErrorMessage(msg));
+        throw new JsonIoException(getErrorMessage(msg));
     }
 
-    static Object error(String msg, Exception e) throws IOException
+    static Object error(String msg, Exception e)
     {
-        throw new IOException(getErrorMessage(msg), e);
+        throw new JsonIoException(getErrorMessage(msg), e);
     }
 
     private static String getLastReadSnippet()

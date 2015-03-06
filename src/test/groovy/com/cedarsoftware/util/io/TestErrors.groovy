@@ -7,15 +7,15 @@ import static org.junit.Assert.fail
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +36,7 @@ class TestErrors
         }
         catch(Exception e)
         {
-            assertTrue(e.message.contains("inside"))
+            assertTrue(e.message.contains("error parsing"))
         }
         assertTrue(o == null)
     }
@@ -65,13 +65,13 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("Expected ':' between string field and value"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
     @Test
-    void testParseInvalid1stChar() throws IOException
+    void testParseInvalid1stChar() throws Exception
     {
         try
         {
@@ -94,14 +94,14 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("nknown JSON value type"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
     @Test
-    void testParseMissingLastBrace() throws IOException
+    void testParseMissingLastBrace() throws Exception
     {
         try
         {
@@ -124,14 +124,14 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("EOF reached before closing '}'"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
     @Test
-    void testParseMissingLastBracket() throws IOException
+    void testParseMissingLastBracket() throws Exception
     {
         String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]'
         JsonReader.jsonToJava(json)
@@ -142,14 +142,14 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("xpected ',' or ']' inside array"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
     @Test
-    void testParseBadValueInArray() throws IOException
+    void testParseBadValueInArray() throws Exception
     {
         String json
 
@@ -159,14 +159,14 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("nknown JSON value type"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
     @Test
-    void testParseObjectWithoutClosingBrace() throws IOException
+    void testParseObjectWithoutClosingBrace() throws Exception
     {
         try
         {
@@ -174,9 +174,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("Object not ended with '}'"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
@@ -189,9 +189,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("Expected hexadecimal digits"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
@@ -204,9 +204,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("nvalid character escape sequence specified"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
@@ -219,9 +219,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("EOF reached while reading JSON string"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
@@ -234,9 +234,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("xpected token: false"))
+            assertTrue(e.message.contains("error parsing"))
         }
     }
 
@@ -249,9 +249,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("EOF reached while reading token"))
+            assertTrue(e.message.toLowerCase().contains("error parsing json"))
         }
     }
 
@@ -264,9 +264,9 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
-            assertTrue(e.message.contains("EOF reached prematurely"))
+            assertTrue(e.message.toLowerCase().contains("error parsing json"))
         }
     }
 
@@ -281,7 +281,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -289,7 +289,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -297,7 +297,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -305,7 +305,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -313,7 +313,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -321,7 +321,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -329,7 +329,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -337,7 +337,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -345,7 +345,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e)  { }
+        catch (Exception e)  { }
 
         try
         {
@@ -353,7 +353,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -361,7 +361,7 @@ class TestErrors
             JsonReader.jsonToMaps(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -373,7 +373,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             assertTrue(e.message.toLowerCase().contains("unable"))
             assertTrue(e.message.toLowerCase().contains("create"))
@@ -387,7 +387,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -401,7 +401,7 @@ class TestErrors
             TestUtil.readJsonObject(str.toString())
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -413,7 +413,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -421,7 +421,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -429,7 +429,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -437,7 +437,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
 
         try
         {
@@ -445,7 +445,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -463,7 +463,7 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -474,7 +474,7 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"class"}]')
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -485,7 +485,7 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"java.util.Calendar"}]')
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -496,7 +496,7 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]')
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 
     @Test
@@ -507,7 +507,7 @@ class TestErrors
             TestUtil.readJsonObject('{"@type":""}')
             fail()
         }
-        catch(IOException e) { }
+        catch(Exception e) { }
     }
 
     @Test
@@ -518,11 +518,11 @@ class TestErrors
             TestUtil.readJsonObject('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}')
             fail()
         }
-        catch(IOException e) { }
+        catch(Exception e) { }
     }
 
     @Test
-    void testErrorReporting() throws IOException
+    void testErrorReporting() throws Exception
     {
         String json = '[{"@type":"funky"},\n{"field:"value"]'
         try
@@ -530,6 +530,6 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (IOException e) { }
+        catch (Exception e) { }
     }
 }

@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -17,15 +16,15 @@ import java.util.Map;
  * @param <V> Value
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -117,7 +116,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
     }
 
-    public Object getPrimitiveValue() throws IOException
+    public Object getPrimitiveValue()
     {
         switch(type)
         {
@@ -166,7 +165,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
                 return true;
             }
         }
-        catch (IOException ignored)  { }
+        catch (Exception ignored)  { }
 
         return false;
 
@@ -192,7 +191,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
                 return true;
             }
         }
-        catch (IOException ignored)  { }
+        catch (Exception ignored) { }
 
         return false;
     }
@@ -232,7 +231,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             Object[] items = (Object[]) get("@items");
             return items == null ? 0 : items.length;
         }
-        throw new IllegalStateException("getLength() called on a non-collection, line " + line + ", col " + col);
+        throw new JsonIoException("getLength() called on a non-collection, line " + line + ", col " + col);
     }
 
     public Class getComponentType()
@@ -270,7 +269,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         else
         {
-            throw new IllegalStateException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
+            throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
         }
     }
 
@@ -309,17 +308,6 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     void clearArray()
     {
         remove("@items");
-    }
-
-    /**
-     * This method is deprecated. Use getLine() and getCol() to determine where this object was read
-     * from in the JSON stream.
-     * @return int line number where this object was read from
-     */
-    @Deprecated
-    public long getPos()
-    {
-        return line;
     }
 
     /**

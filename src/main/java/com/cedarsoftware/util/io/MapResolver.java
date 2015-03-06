@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,7 +11,7 @@ import java.util.Map;
 /**
  * The MapResolver converts the raw Maps created from the JsonParser to higher
  * quality Maps representing the implied object graph.  It does this by replace
- * @ref values with the Map with an @id key with the same value.
+ * <code>@ref</code> values with the Map with an @id key with the same value.
  *
  * This approach 'rewires' the original object graph.  During the resolution process,
  * if 'peer' classes can be found for given Maps (for example, an @type entry is
@@ -30,15 +29,15 @@ import java.util.Map;
  * those maps, and finally this graph can be written out.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br/>
+ *         <br>
  *         Copyright (c) Cedar Software LLC
- *         <br/><br/>
+ *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
- *         <br/><br/>
+ *         <br><br>
  *         http://www.apache.org/licenses/LICENSE-2.0
- *         <br/><br/>
+ *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,7 +51,7 @@ public class MapResolver extends Resolver
         super(objsRead, useMaps);
     }
 
-    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
@@ -145,9 +144,8 @@ public class MapResolver extends Resolver
      * unresolved references are added via .add().
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
-     * @throws java.io.IOException for stream errors or parsing errors.
      */
-    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -199,7 +197,7 @@ public class MapResolver extends Resolver
         }
     }
 
-    protected void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj) throws IOException
+    protected void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj)
     {
         traverseCollection(stack, jsonObj);
     }
