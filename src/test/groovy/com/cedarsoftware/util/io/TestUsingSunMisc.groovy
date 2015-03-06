@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.JsonIOException
 import org.junit.Test
 
 import static org.junit.Assert.assertTrue
@@ -29,7 +30,7 @@ class TestUsingSunMisc
         private x = 0;
         ShouldBeImpossibleToInstantiate()
         {
-            throw new RuntimeException("Go away")
+            throw new JsonIOException("Go away")
         }
     }
 

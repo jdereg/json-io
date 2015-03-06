@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.JsonIOException
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -45,7 +46,7 @@ class TestConstructor
         {
             if (list == null || map == null || string == null || date == null)
             {
-                throw new RuntimeException("Constructor arguments cannot be null")
+                throw new JsonIOException("Constructor arguments cannot be null")
             }
             this.list = list;
             this.map = map;

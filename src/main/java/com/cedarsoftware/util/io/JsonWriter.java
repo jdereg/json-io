@@ -268,7 +268,7 @@ public class JsonWriter implements Closeable, Flushable
                     Field f = classFields.get(field);
                     if (f == null)
                     {
-                        throw new IllegalArgumentException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
+                        throw new JsonIoException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
                     }
                     newList.add(f);
                 }

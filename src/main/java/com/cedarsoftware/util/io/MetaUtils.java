@@ -305,7 +305,7 @@ public class MetaUtils
         {
             if (name == null || name.isEmpty())
             {
-                throw new IllegalArgumentException("Class name cannot be null or empty.");
+                throw new JsonIoException("Class name cannot be null or empty.");
             }
             Class c = nameToClass.get(name);
             try
@@ -834,7 +834,7 @@ public class MetaUtils
             }
             catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
             {
-                throw new RuntimeException(e);
+                throw new JsonIoException(e);
             }
         }
     }

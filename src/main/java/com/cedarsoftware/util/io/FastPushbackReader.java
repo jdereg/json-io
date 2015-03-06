@@ -24,7 +24,7 @@ public class FastPushbackReader extends FilterReader
         super(reader);
         if (size <= 0)
         {
-            throw new IllegalArgumentException("size <= 0");
+            throw new JsonIoException("size <= 0");
         }
         buf = new int[size];
         idx = size;
@@ -98,7 +98,7 @@ public class FastPushbackReader extends FilterReader
     {
         if (idx == 0)
         {
-            throw new IllegalStateException("unread(int c) called more than buffer size (" + buf.length + ").  Increase FastPushbackReader's buffer size.  Currently " + buf.length);
+            throw new JsonIoException("unread(int c) called more than buffer size (" + buf.length + ").  Increase FastPushbackReader's buffer size.  Currently " + buf.length);
         }
         if (c == 0x0a)
         {

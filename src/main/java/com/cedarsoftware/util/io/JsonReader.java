@@ -143,7 +143,7 @@ public class JsonReader implements Closeable
             {
                 return new ArrayList();
             }
-            throw new RuntimeException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
+            throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
         }
     }
 
@@ -162,7 +162,7 @@ public class JsonReader implements Closeable
             {
                 return new LinkedHashMap();
             }
-            throw new RuntimeException("MapFactory handed Class for which it was not expecting: " + c.getName());
+            throw new JsonIoException("MapFactory handed Class for which it was not expecting: " + c.getName());
         }
     }
 
@@ -305,7 +305,7 @@ public class JsonReader implements Closeable
         }
         catch (UnsupportedEncodingException e)
         {
-            throw new RuntimeException("Your JVM does not support UTF-8.  Get a better JVM.", e);
+            throw new JsonIoException("Your JVM does not support UTF-8.  Get a better JVM.", e);
         }
     }
 

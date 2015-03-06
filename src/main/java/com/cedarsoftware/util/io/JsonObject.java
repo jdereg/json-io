@@ -341,7 +341,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             }
             else
             {
-                throw new IllegalStateException("JsonObject with @items, but no array [] associated to it, line " + line + ", col " + col);
+                throw new JsonIoException("JsonObject with @items, but no array [] associated to it, line " + line + ", col " + col);
             }
         }
         else if (containsKey("@ref"))
