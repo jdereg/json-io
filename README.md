@@ -120,7 +120,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 
 Featured on http://json.org.
  * 3.0.0
-   * Performance improvement: caching the reader associated to a given class.
+   * Performance improvement: caching the custom readers and writes associated to given classes.
    * Ease of use: `json-io` throws a `JsonIoException` (unchecked) instead of checked exception `IOException`.  This allows more flexibility in terms of error handling for the user.
    * Code cleanup: Moved reflection related code from `JsonReader` into separate `MetaUtils` class.
    * Code cleanup: Moved `FastPushbackReader` from `JsonReader` into separate class.
