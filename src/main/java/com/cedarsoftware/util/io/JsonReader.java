@@ -442,6 +442,7 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * @param c Class to check
      * @return boolean true if the passed in class is a Java primitive.
      * @deprecated Use MetaUtils.isPrimitive(c) instead.
      */
@@ -452,6 +453,7 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * @param c Class to check
      * @return boolean true if the passed in class is a Logical Java primitive.  This adds
      * Class, Date, String, and the primitive wrappers to the list.
      * @deprecated Use MetaUtils.isLogicalPrimitive(c) instead.
