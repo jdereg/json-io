@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>3.0.0</version>
+  <version>3.0.1</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
