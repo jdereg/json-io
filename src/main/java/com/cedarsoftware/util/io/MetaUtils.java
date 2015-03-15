@@ -832,9 +832,15 @@ public class MetaUtils
             {
                 return allocateInstance.invoke(sunUnsafe, clazz);
             }
-            catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+            catch (IllegalAccessException | IllegalArgumentException e)
             {
-                throw new JsonIoException(e);
+                String name = clazz == null ? "null" : clazz.getName();
+                throw new JsonIoException("Unable to create instance of class: " + name, e);
+            }
+            catch (InvocationTargetException e)
+            {
+                String name = clazz == null ? "null" : clazz.getName();
+                throw new JsonIoException("Unable to create instance of class: " + name, e.getCause() != null ? e.getCause() : e);
             }
         }
     }

@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.18.0</version.java-util>
+        <version.java-util>1.18.1</version.java-util>
         <version.junit>4.12</version.junit>
         <version.groovy>2.4.1</version.groovy>
         <version.gson>2.3</version.gson>
@@ -197,21 +197,7 @@
 
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>${version.groovy}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-templates</artifactId>
-            <version>${version.groovy}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-xml</artifactId>
+            <artifactId>groovy-all</artifactId>
             <version>${version.groovy}</version>
             <scope>test</scope>
         </dependency>

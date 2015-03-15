@@ -83,6 +83,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
+    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";       // If set, longs are written in quotes (Javascript safe)
     private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
@@ -295,6 +296,11 @@ public class JsonWriter implements Closeable, Flushable
     public static boolean isPrettyPrint()
     {
         return isTrue(getArg(PRETTY_PRINT));
+    }
+
+    public static boolean getWriteLongsAsStrings()
+    {
+        return isTrue(getArg(WRITE_LONGS_AS_STRINGS));
     }
 
     private static boolean isTrue(Object setting)
@@ -808,7 +814,7 @@ public class JsonWriter implements Closeable, Flushable
         output.write('"');
     }
 
-    private void writePrimitive(final Object obj) throws IOException
+    private void writePrimitive(final Object obj, boolean showType) throws IOException
     {
         if (obj instanceof Character)
         {
@@ -816,7 +822,25 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            out.write(obj.toString());
+            if (obj instanceof Long && getWriteLongsAsStrings())
+            {
+                if (showType)
+                {
+                    out.write("{\"@type\":\"long\",\"value\":\"");
+                    out.write(obj.toString());
+                    out.write("\"}");
+                }
+                else
+                {
+                    out.write('"');
+                    out.write(obj.toString());
+                    out.write('"');
+                }
+            }
+            else
+            {
+                out.write(obj.toString());
+            }
         }
     }
 
@@ -930,11 +954,11 @@ public class JsonWriter implements Closeable, Flushable
                 {
                     output.write("null");
                 }
+                else if (writeArrayElementIfMatching(componentClass, value, false, output)) { }
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
-                    writePrimitive(value);
+                    writePrimitive(value, value.getClass() != componentClass);
                 }
-                else if (writeArrayElementIfMatching(componentClass, value, false, output)) { }
                 else if (isObjectArray)
                 {
                     if (writeIfMatching(value, true, output)) { }
@@ -1010,12 +1034,28 @@ public class JsonWriter implements Closeable, Flushable
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException
     {
         final Writer output = this.out;
-        for (int i = 0; i < lenMinus1; i++)
+        if (getWriteLongsAsStrings())
         {
-            output.write(Long.toString(longs[i]));
-            output.write(',');
+            for (int i = 0; i < lenMinus1; i++)
+            {
+                output.write('"');
+                output.write(Long.toString(longs[i]));
+                output.write('"');
+                output.write(',');
+            }
+            output.write('"');
+            output.write(Long.toString(longs[lenMinus1]));
+            output.write('"');
         }
-        output.write(Long.toString(longs[lenMinus1]));
+        else
+        {
+            for (int i = 0; i < lenMinus1; i++)
+            {
+                output.write(Long.toString(longs[i]));
+                output.write(',');
+            }
+            output.write(Long.toString(longs[lenMinus1]));
+        }
     }
 
     private void writeIntArray(int[] ints, int lenMinus1) throws IOException
@@ -1234,7 +1274,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (value instanceof Boolean || value instanceof Long || value instanceof Double)
             {
-                writePrimitive(value);
+                writePrimitive(value, value.getClass() != componentClass);
             }
             else if (value instanceof String)
             {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
@@ -1755,9 +1795,13 @@ public class JsonWriter implements Closeable, Flushable
         {
             out.write("null");
         }
-        else if (o instanceof Boolean || o instanceof Long || o instanceof Double)
+        else if (o instanceof Boolean || o instanceof Double)
         {
             out.write(o.toString());
+        }
+        else if (o instanceof Long)
+        {
+            writePrimitive(o, getWriteLongsAsStrings());
         }
         else if (o instanceof String)
         {
@@ -1880,7 +1924,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (MetaUtils.isPrimitive(type))
         {
-            writePrimitive(o);
+            writePrimitive(o, false);
         }
         else if (writeIfMatching(o, forceType, out)) { }
         else

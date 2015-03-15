@@ -671,7 +671,7 @@ class TestCollection
         col.add(new Integer(7))
         json = TestUtil.getJsonString(col)
         TestUtil.printLine("json=" + json)
-        assertTrue('{"@type":"java.util.ArrayList","@items":["string",16,3.14159,true,false,null,{"@type":"int","value":7}]}'.equals(json))
+        assertEquals('{"@type":"java.util.ArrayList","@items":["string",16,3.14159,true,false,null,{"@type":"int","value":7}]}', json)
     }
 
     @Test

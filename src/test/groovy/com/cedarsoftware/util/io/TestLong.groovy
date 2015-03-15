@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotSame
 import static org.junit.Assert.assertSame
 import static org.junit.Assert.assertTrue
@@ -53,6 +54,12 @@ class TestLong
         }
     }
 
+    private static class PhysicalAttributes
+    {
+        Long age
+        Object weight
+    }
+
     @Test
     void testLong() throws Exception
     {
@@ -94,4 +101,85 @@ class TestLong
         assertTrue(that._max.equals(Long.MAX_VALUE))
     }
 
+    @Test
+    void testLongAsString() throws Exception
+    {
+        long x = 19
+        String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
+        assert json.contains('"19"')
+
+        Object y = JsonReader.jsonToJava(json)
+        assert y instanceof Long
+        assertEquals(19L, y)
+    }
+
+    @Test
+    void testLongArrayAsString() throws Exception
+    {
+        long[] x = [1L, 2L, 3L]
+        String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
+        assert json.contains('"1"')
+        assert json.contains('"2"')
+        assert json.contains('"3"')
+
+        Object y = JsonReader.jsonToJava(json)
+        assert y instanceof long[]
+        assertEquals(1L, y[0])
+        assertEquals(2L, y[1])
+        assertEquals(3L, y[2])
+    }
+
+    @Test
+    void testObjectArrayOfLongsAsString() throws Exception
+    {
+        Object[] x = [1L, 2L, 3L]
+        String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
+        assert json.contains('"1"')
+        assert json.contains('"2"')
+        assert json.contains('"3"')
+
+        Object y = JsonReader.jsonToJava(json)
+        assert y instanceof Object[]
+        assertEquals(1L, y[0])
+        assertEquals(2L, y[1])
+        assertEquals(3L, y[2])
+    }
+
+    @Test
+    void testLongCollectionAsString() throws Exception
+    {
+        Collection x = new ArrayList()
+        x.add(1L)
+        x.add(2L)
+        x.add(3L)
+        String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
+
+        assert json.contains('"1"')
+        assert json.contains('"2"')
+        assert json.contains('"3"')
+
+        Object y = JsonReader.jsonToJava(json)
+        assert y instanceof Collection
+        assertEquals(1L, y[0])
+        assertEquals(2L, y[1])
+        assertEquals(3L, y[2])
+    }
+
+    @Test
+    void testLongObjectFieldAsString() throws Exception
+    {
+        PhysicalAttributes x = new PhysicalAttributes()
+        x.age = 49L
+        x.weight = 205L
+
+        String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
+
+        assert json.contains('"49"')
+        assert json.contains('"205"')
+
+        Object y = JsonReader.jsonToJava(json)
+        assert y instanceof PhysicalAttributes
+        assertEquals(49L, y.age)
+        assertEquals(205L, y.weight)
+    }
 }

@@ -859,7 +859,7 @@ class TestArrays
         map.toString() // called to prevent compiler optimization that could eliminate map local variable.
         String json1 = TestUtil.getJsonString(map)
         TestUtil.printLine("json1=" + json1)
-        assertTrue(json0.equals(json1))
+        assertEquals(json0, json1)
     }
 
     @Test
