@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import java.lang.annotation.ElementType;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,7 +45,6 @@ class TestCustomReaderIdentity {
 		
 		String json = JsonWriter.objectToJson(elements);
 		
-		System.out.println(json);
 		
 		Object obj = JsonReader.jsonToJava(json);
 		
@@ -66,7 +66,43 @@ class TestCustomReaderIdentity {
 		
 		String json = JsonWriter.objectToJson(elements);
 		
-		System.out.println(json);
+		
+		Object obj = JsonReader.jsonToJava(json);
+	}
+	
+	@Test
+	public void testInSet(){
+		Set<WithoutCustomReaderClass> set = new HashSet<>();
+		
+		CustomReaderClass element = new CustomReaderClass();
+		element.setTest("hallo");
+		
+		WithoutCustomReaderClass e1 = new WithoutCustomReaderClass();
+		e1.setCustomReaderInner(element);
+		
+		WithoutCustomReaderClass e2 = new WithoutCustomReaderClass();
+		e2.setCustomReaderInner(element);
+		
+		set.add(e1);
+		set.add(e2);
+		
+		String json = JsonWriter.objectToJson(set);
+		
+		
+		Object obj = JsonReader.jsonToJava(json);
+	}
+	
+	@Test
+	public void testInArray(){
+		CustomReaderClass[] array = new CustomReaderClass[2];
+		CustomReaderClass element = new CustomReaderClass();
+		element.setTest("hallo");
+		
+		array[0] = element;
+		array[1] = element;
+		
+		String json = JsonWriter.objectToJson(array);
+		
 		
 		Object obj = JsonReader.jsonToJava(json);
 	}
