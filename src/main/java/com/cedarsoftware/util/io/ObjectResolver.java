@@ -279,6 +279,9 @@ class ObjectResolver extends Resolver
             else if ((special = readIfMatching(element, null, stack)) != null)
             {
                 col.add(special);
+                if(element instanceof JsonObject){
+                	((JsonObject) element).setTarget(special);
+                }
             }
             else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long)
             {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
