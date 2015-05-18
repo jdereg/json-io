@@ -83,7 +83,8 @@ public class JsonWriter implements Closeable, Flushable
     public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
-    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";       // If set, longs are written in quotes (Javascript safe)
+    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
@@ -94,6 +95,7 @@ public class JsonWriter implements Closeable, Flushable
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
+    private Map<String, String> typeNameMap = null;
     long identity = 1;
     private int depth = 0;
     // _args is using ThreadLocal so that static inner classes can have access to them
@@ -181,6 +183,25 @@ public class JsonWriter implements Closeable, Flushable
         return objVisited;
     }
 
+    protected String getSubstituteTypeNameIfExists(String typeName)
+    {
+        if (typeNameMap == null)
+        {
+            return null;
+        }
+        return typeNameMap.get(typeName);
+    }
+
+    protected String getSubstituteTypeName(String typeName)
+    {
+        if (typeNameMap == null)
+        {
+            return typeName;
+        }
+        String shortName = typeNameMap.get(typeName);
+        return shortName == null ? typeName : shortName;
+    }
+
     /**
      * Convert a Java Object to a JSON String.
      *
@@ -247,6 +268,7 @@ public class JsonWriter implements Closeable, Flushable
         Map args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
+        typeNameMap = (Map<String, String>) optionalArgs.get(TYPE_NAME_MAP);
 
         if (!optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
@@ -767,10 +789,20 @@ public class JsonWriter implements Closeable, Flushable
         out.write(id == null ? "0" : id);
     }
 
-    private static void writeType(Object obj, Writer output) throws IOException
+    private void writeType(Object obj, Writer output) throws IOException
     {
         output.write("\"@type\":\"");
         final Class c = obj.getClass();
+        String typeName = c.getName();
+        String shortName = getSubstituteTypeNameIfExists(typeName);
+
+        if (shortName != null)
+        {
+            output.write(shortName);
+            output.write('"');
+            return;
+        }
+
         switch (c.getName())
         {
             case "java.lang.Boolean":
@@ -826,7 +858,9 @@ public class JsonWriter implements Closeable, Flushable
             {
                 if (showType)
                 {
-                    out.write("{\"@type\":\"long\",\"value\":\"");
+                    out.write("{\"@type\":\"");
+                    out.write(getSubstituteTypeName("long"));
+                    out.write("\",\"value\":\"");
                     out.write(obj.toString());
                     out.write("\"}");
                 }
@@ -1227,7 +1261,7 @@ public class JsonWriter implements Closeable, Flushable
         if (typeWritten)
         {
             output.write("\"@type\":\"");
-            output.write(arrayClass.getName());
+            output.write(getSubstituteTypeName(arrayClass.getName()));
             output.write("\",");
             newLine();
         }
@@ -1344,7 +1378,7 @@ public class JsonWriter implements Closeable, Flushable
                 newLine();
             }
             output.write("\"@type\":\"");
-            output.write(colClass.getName());
+            output.write(getSubstituteTypeName(colClass.getName()));
             output.write('"');
         }
 
@@ -1410,7 +1444,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 Class mapClass = MetaUtils.classForName(type);
                 output.write("\"@type\":\"");
-                output.write(mapClass.getName());
+                output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
             }
             else
@@ -1506,7 +1540,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 Class mapClass = MetaUtils.classForName(type);
                 output.write("\"@type\":\"");
-                output.write(mapClass.getName());
+                output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
             }
             else
@@ -1559,7 +1593,7 @@ public class JsonWriter implements Closeable, Flushable
                 newLine();
             }
             output.write("\"@type\":\"");
-            output.write(jObj.type);
+            output.write(getSubstituteTypeName(jObj.type));
             output.write('"');
             try  { type = MetaUtils.classForName(jObj.type); } catch(Exception ignored) { type = null; }
         }

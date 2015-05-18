@@ -53,6 +53,7 @@ class JsonParser
     private final StringBuilder hexBuf = new StringBuilder();
     private final char[] numBuf = new char[256];
     private final boolean useMaps;
+    private Map typeNameMap = null;
 
     static
     {
@@ -94,11 +95,12 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, boolean useMaps)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, boolean useMaps, Map typeNamesMap)
     {
         input = reader;
         this.useMaps = useMaps;
         objsRead = objectsMap;
+        typeNameMap = typeNamesMap;
     }
 
     private Object readJsonObject() throws IOException
@@ -165,6 +167,14 @@ class JsonParser
                     }
 
                     Object value = readValue(object);
+                    if ("@type".equals(field) && typeNameMap != null)
+                    {
+                        final String substitute = (String) typeNameMap.get(value);
+                        if (substitute != null)
+                        {
+                            value = substitute;
+                        }
+                    }
                     object.put(field, value);
 
                     // If object is referenced (has @id), then put it in the _objsRead table.
