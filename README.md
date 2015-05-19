@@ -93,7 +93,7 @@ Both the `JsonWriter` and `JsonReader` allow you to pass in an optional argument
         
 In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
 
-## All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
+#### All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
     DATE_FORMAT             // Set this to the date format string you wish dates to be written.  
                             // Can also be a DateFormat instance.  
