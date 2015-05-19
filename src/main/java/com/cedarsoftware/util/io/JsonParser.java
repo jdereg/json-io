@@ -98,7 +98,7 @@ class JsonParser
     JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
     {
         input = reader;
-        this.useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
+        useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
         objsRead = objectsMap;
         typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
     }
@@ -151,6 +151,30 @@ class JsonParser
                             error("Expected ':' between string field and value");
                         }
                         skipWhitespace();
+
+                        if (field.startsWith("@"))
+                        {   // Expand short-hand meta keys
+                            if ("@t".equals(field))
+                            {
+                                field = stringCache.get("@type");
+                            }
+                            else if ("@i".equals(field))
+                            {
+                                field = stringCache.get("@id");
+                            }
+                            else if ("@e".equals(field))
+                            {
+                                field = stringCache.get("@items");
+                            }
+                            else if ("@k".equals(field))
+                            {
+                                field = stringCache.get("@keys");
+                            }
+                            else if ("@r".equals(field))
+                            {
+                                field = stringCache.get("@ref");
+                            }
+                        }
                         state = STATE_READ_VALUE;
                     }
                     else

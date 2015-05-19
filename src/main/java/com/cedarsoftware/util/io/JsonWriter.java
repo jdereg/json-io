@@ -85,6 +85,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
     private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
@@ -96,6 +97,7 @@ public class JsonWriter implements Closeable, Flushable
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
+    private boolean shortMetaKeys = false;
     long identity = 1;
     private int depth = 0;
     // _args is using ThreadLocal so that static inner classes can have access to them
@@ -269,16 +271,13 @@ public class JsonWriter implements Closeable, Flushable
         args.clear();
         args.putAll(optionalArgs);
         typeNameMap = (Map<String, String>) getArg(TYPE_NAME_MAP);
+        shortMetaKeys = Boolean.TRUE.equals(args.get(SHORT_META_KEYS));
 
-        if (!optionalArgs.containsKey(FIELD_SPECIFIERS))
-        {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
-            args.put(FIELD_SPECIFIERS, new HashMap());
-        }
-        else
+        if (optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
             Map<Class, List<Field>> copy = new HashMap<>();
-            for (Map.Entry<Class, List<String>> entry : specifiers.entrySet())
+            for (Entry<Class, List<String>> entry : specifiers.entrySet())
             {
                 Class c = entry.getKey();
                 List<String> fields = entry.getValue();
@@ -298,6 +297,10 @@ public class JsonWriter implements Closeable, Flushable
                 copy.put(c, newList);
             }
             args.put(FIELD_SPECIFIERS, copy);
+        }
+        else
+        {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
+            args.put(FIELD_SPECIFIERS, new HashMap());
         }
 
         try
@@ -720,7 +723,7 @@ public class JsonWriter implements Closeable, Flushable
             {   // Test for null because of Weak/Soft references being gc'd during serialization.
                 return false;
             }
-            output.write("{\"@ref\":");
+            output.write(shortMetaKeys ? "{\"@r\":" : "{\"@ref\":");
             output.write(id);
             output.write('}');
             return true;
@@ -785,13 +788,13 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeId(final String id) throws IOException
     {
-        out.write("\"@id\":");
+        out.write(shortMetaKeys ? "\"@i\":" : "\"@id\":");
         out.write(id == null ? "0" : id);
     }
 
     private void writeType(Object obj, Writer output) throws IOException
     {
-        output.write("\"@type\":\"");
+        output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
         final Class c = obj.getClass();
         String typeName = c.getName();
         String shortName = getSubstituteTypeNameIfExists(typeName);
@@ -858,7 +861,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 if (showType)
                 {
-                    out.write("{\"@type\":\"");
+                    out.write(shortMetaKeys ? "{\"@t\":\"" : "{\"@type\":\"");
                     out.write(getSubstituteTypeName("long"));
                     out.write("\",\"value\":\"");
                     out.write(obj.toString());
@@ -916,7 +919,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             if (typeWritten || referenced)
             {
-                output.write("\"@items\":[]");
+                output.write(shortMetaKeys ? "\"@e\":[]" : "\"@items\":[]");
                 tabOut();
                 output.write('}');
             }
@@ -929,7 +932,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (typeWritten || referenced)
         {
-            output.write("\"@items\":[");
+            output.write(shortMetaKeys ? "\"@i\":[" : "\"@items\":[");
         }
         else
         {
@@ -1210,7 +1213,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             out.write(',');
             newLine();
-            out.write("\"@items\":[");
+            out.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
         }
         else
         {
@@ -1260,7 +1263,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (typeWritten)
         {
-            output.write("\"@type\":\"");
+            output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
             output.write(getSubstituteTypeName(arrayClass.getName()));
             output.write("\",");
             newLine();
@@ -1270,7 +1273,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             if (typeWritten || referenced)
             {
-                output.write("\"@items\":[]");
+                output.write(shortMetaKeys ? "\"@e\":[]" : "\"@items\":[]");
                 tabOut();
                 output.write("}");
             }
@@ -1283,7 +1286,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (typeWritten || referenced)
         {
-            output.write("\"@items\":[");
+            output.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
         }
         else
         {
@@ -1377,7 +1380,7 @@ public class JsonWriter implements Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            output.write("\"@type\":\"");
+            output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
             output.write(getSubstituteTypeName(colClass.getName()));
             output.write('"');
         }
@@ -1443,7 +1446,7 @@ public class JsonWriter implements Closeable, Flushable
             if (type != null)
             {
                 Class mapClass = MetaUtils.classForName(type);
-                output.write("\"@type\":\"");
+                output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
                 output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
             }
@@ -1466,7 +1469,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        output.write("\"@keys\":[");
+        output.write(shortMetaKeys ? "\"@k\":[" : "\"@keys\":[");
         tabIn();
         Iterator i = jObj.keySet().iterator();
 
@@ -1484,7 +1487,7 @@ public class JsonWriter implements Closeable, Flushable
         tabOut();
         output.write("],");
         newLine();
-        output.write("\"@items\":[");
+        output.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
         tabIn();
         i =jObj.values().iterator();
 
@@ -1539,7 +1542,7 @@ public class JsonWriter implements Closeable, Flushable
             if (type != null)
             {
                 Class mapClass = MetaUtils.classForName(type);
-                output.write("\"@type\":\"");
+                output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
                 output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
             }
@@ -1592,7 +1595,7 @@ public class JsonWriter implements Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            output.write("\"@type\":\"");
+            output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
             output.write(getSubstituteTypeName(jObj.type));
             output.write('"');
             try  { type = MetaUtils.classForName(jObj.type); } catch(Exception ignored) { type = null; }
@@ -1707,7 +1710,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        output.write("\"@keys\":[");
+        output.write(shortMetaKeys ? "\"@k\":[" : "\"@keys\":[");
         tabIn();
         Iterator i = map.keySet().iterator();
 
@@ -1725,7 +1728,7 @@ public class JsonWriter implements Closeable, Flushable
         tabOut();
         output.write("],");
         newLine();
-        output.write("\"@items\":[");
+        output.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
         tabIn();
         i = map.values().iterator();
 

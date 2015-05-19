@@ -75,7 +75,7 @@ public class JsonReader implements Closeable
 {
     public static final String USE_MAPS = "USE_MAPS";               // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
-    public static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
     protected static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();

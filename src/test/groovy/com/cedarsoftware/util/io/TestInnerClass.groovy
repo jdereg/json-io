@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io
 
 import org.junit.FixMethodOrder
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runners.MethodSorters
 
@@ -48,7 +47,7 @@ class TestInnerClass
         }
     }
 
-    @Ignore
+    @Test
     void testChangedClass() throws Exception
     {
         Dog dog = new Dog()
@@ -67,7 +66,7 @@ class TestInnerClass
         assertTrue(json1.contains("_other"))
     }
 
-    @Ignore
+    @Test
     void testInner() throws Exception
     {
         A a = new A()
