@@ -53,7 +53,7 @@ class JsonParser
     private final StringBuilder hexBuf = new StringBuilder();
     private final char[] numBuf = new char[256];
     private final boolean useMaps;
-    private Map<String, String> typeNameMap = null;
+    private final Map<String, String> typeNameMap;
 
     static
     {
