@@ -116,7 +116,7 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 #### All of the values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
-    USE_MAPS        // If set to boolean true or 'true', the read-in JSON will be 
+    USE_MAPS        // If set to boolean true, the read-in JSON will be 
                     // turned into a Map of Maps (JsonObject) representation. 
     TYPE_NAME_MAP   // If set, this map will be used when writing @type values. 
                     // Allows short-hand abbreviations of type names.
