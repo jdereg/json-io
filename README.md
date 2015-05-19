@@ -95,15 +95,15 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 #### All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
-    DATE_FORMAT             // Set this to the date format string you wish dates to be written.  
-                            // Can also be a DateFormat instance.  
-                            // Can also be the constant JsonWriter.ISO_DATE_FORMAT, 
-                            // or JsonWriter.ISO_DATE_TIME_FORMAT 
-    TYPE                    // Set to boolean true or "true" to force all data types to be output, 
-                            // even where they could have been omitted.
+    DATE_FORMAT             // Set this to the date format string you wish dates to be 
+                            // written. Example: `yyyy/MM/dd HH:mm`.  Can also be a 
+                            // DateFormat instance.  Can also be the constant 
+                            // JsonWriter.ISO_DATE_FORMAT or JsonWriter.ISO_DATE_TIME_FORMAT 
+    TYPE                    // Set to boolean true or "true" to force all data types to be 
+                            // output, even where they could have been omitted.
     PRETTY_PRINT            // Force nicely formatted JSON output 
                             // (See http://jsoneditoronline.org for example format)
-    FIELD_SPECIFIERS        // Set value to a Map<Class, List<String>> which will be used to control 
+    FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which will be used to control 
                             // which fields on a class are output. This allows you to reduce the 
                             // fields that will be written for a given class.
     ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not serialized
@@ -120,17 +120,17 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
     TYPE_NAME_MAP   // If set, this map will be used when writing @type values. 
                     // Allows short-hand abbreviations type names
       
+      #### Dates
+      To specify an alternative date format for `JsonWriter`:
+      
+          Map args = new HashMap();
+          args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME);
+          String json = JsonWriter.objectToJson(root, args);
+      
+      In this example, the ISO `yyyy/MM/ddTHH:mm:ss` format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be `JsonWriter.ISO_DATE_TIME`, `JsonWriter.ISO_DATE`, a date format String pattern (eg. `yyyy/MM/dd HH:mm`), or a `java.text.Format` instance.
+
 ### Customization
-New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0 approach allows you to customize the JSON format for classes for which you do not have the source code.
-
-#### Dates
-To specify an alternative date format for `JsonWriter`:
-
-    Map args = new HashMap();
-    args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME);
-    String json = JsonWriter.objectToJson(root, args);
-
-In this example, the ISO `yyyy/MM/ddTHH:mm:ss` format is used to format dates in the JSON output. The 'value' associated to the 'DATE_FORMAT' key can be `JsonWriter.ISO_DATE_TIME`, `JsonWriter.ISO_DATE`, a date format String pattern (eg. `yyyy/MM/dd HH:mm`), or a `java.text.Format` instance.
+New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
 
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
