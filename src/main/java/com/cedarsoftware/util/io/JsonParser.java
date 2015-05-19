@@ -53,7 +53,7 @@ class JsonParser
     private final StringBuilder hexBuf = new StringBuilder();
     private final char[] numBuf = new char[256];
     private final boolean useMaps;
-    private Map typeNameMap = null;
+    private Map<String, String> typeNameMap = null;
 
     static
     {
@@ -95,12 +95,12 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, boolean useMaps, Map typeNamesMap)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
     {
         input = reader;
-        this.useMaps = useMaps;
+        this.useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
         objsRead = objectsMap;
-        typeNameMap = typeNamesMap;
+        typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
     }
 
     private Object readJsonObject() throws IOException
@@ -169,7 +169,7 @@ class JsonParser
                     Object value = readValue(object);
                     if ("@type".equals(field) && typeNameMap != null)
                     {
-                        final String substitute = (String) typeNameMap.get(value);
+                        final String substitute = typeNameMap.get(value);
                         if (substitute != null)
                         {
                             value = substitute;

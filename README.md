@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>3.0.2</version>
+  <version>3.1.0</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
@@ -119,6 +119,9 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.1.0
+  * New Feature: Short class names to reduce the size of the output JSON. This allows you to, for example, substitute `java.util.HashMap` with `hmap` so that it will appear in the JSON as `"@type":"hmap"`, which is much shorter.  The same map can be passed to the `JsonReader` and it will properly read the substituted types.  Pass the substitution map to the `JsonWriter` (or reader) as a `Map` with the Key of `JsonWriter.TYPE_NAME_MAP` and the value as a `Map` with class names as the keys and short-names as the values.
+  * New Feature: Short meta-key names to reduce the size of the output JSON.  The `@type` key name will be shortened to `@t`, `@keys` becomes `@k`, and `@items` becomes `@i`.  Put a key in the `args` `Map` as `JsonWriter.SHORT_META_KEYS` with the value `true`.   
  * 3.0.2
   * Bug fix: Using a CustomReader in a Collection with at least two identical elements causes an exception (submitted by @KaiHufenbach).    
  * 3.0.1

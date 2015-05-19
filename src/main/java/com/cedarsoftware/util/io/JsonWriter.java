@@ -268,7 +268,7 @@ public class JsonWriter implements Closeable, Flushable
         Map args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
-        typeNameMap = (Map<String, String>) optionalArgs.get(TYPE_NAME_MAP);
+        typeNameMap = (Map<String, String>) getArg(TYPE_NAME_MAP);
 
         if (!optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry

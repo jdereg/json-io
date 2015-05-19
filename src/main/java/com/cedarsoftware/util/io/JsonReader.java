@@ -73,6 +73,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class JsonReader implements Closeable
 {
+    public static final String USE_MAPS = "USE_MAPS";               // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    public static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     protected static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
     protected static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
@@ -80,6 +83,14 @@ public class JsonReader implements Closeable
     private final FastPushbackReader input;
     private boolean useMaps = false;
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
+    // _args is using ThreadLocal so that static inner classes can have access to them
+    static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
+    {
+        public Map<String, Object> initialValue()
+        {
+            return new HashMap<>();
+        }
+    };
 
     static
     {
@@ -222,6 +233,14 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * @return The arguments used to configure the JsonReader.  These are thread local.
+     */
+    protected static Map getArgs()
+    {
+        return _args.get();
+    }
+
+    /**
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param json String JSON input
@@ -229,10 +248,22 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(String json)
     {
+        return jsonToJava(json, new HashMap<String, Object>());
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     *
+     * @param json String JSON input
+     * @return Java object graph matching JSON input
+     */
+    public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
+    {
         try
         {
+            optionalArgs.put(USE_MAPS, false);
             ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            JsonReader jr = new JsonReader(ba, false);
+            JsonReader jr = new JsonReader(ba, optionalArgs);
             Object obj = jr.readObject();
             jr.close();
             return obj;
@@ -255,10 +286,27 @@ public class JsonReader implements Closeable
      */
     public static Map jsonToMaps(String json)
     {
+        return jsonToMaps(json, new HashMap<String, Object>());
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph
+     * that consists solely of Java Maps where the keys are the
+     * fields and the values are primitives or other Maps (in the
+     * case of objects).
+     *
+     * @param json String JSON input
+     * @param optionalArgs Map used to turn on / off additional features.
+     * @return Java object graph of Maps matching JSON input,
+     *         or null if an error occurred.
+     */
+    public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
+    {
         try
         {
+            optionalArgs.put(USE_MAPS, true);
             ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            JsonReader jr = new JsonReader(ba, true);
+            JsonReader jr = new JsonReader(ba, optionalArgs);
             Object ret = jr.readObject();
             jr.close();
 
@@ -269,12 +317,11 @@ public class JsonReader implements Closeable
 
             if (ret != null && ret.getClass().isArray())
             {
-                JsonObject retMap = new JsonObject();
+                JsonObject<String, Object> retMap = new JsonObject<>();
                 retMap.put("@items", ret);
                 return retMap;
-
             }
-            JsonObject retMap = new JsonObject();
+            JsonObject<String, Object> retMap = new JsonObject<>();
             retMap.put("@items", new Object[]{ret});
             return retMap;
         }
@@ -295,9 +342,37 @@ public class JsonReader implements Closeable
         this(inp, false);
     }
 
+    // This method is needed to get around the fact that 'this()' has to be the first method of a constructor.
+    static Map makeArgMap(Map<String, Object> args, boolean useMaps)
+    {
+        args.put(USE_MAPS, useMaps);
+        return args;
+    }
+
     public JsonReader(InputStream inp, boolean useMaps)
     {
-        this.useMaps = useMaps;
+        this(inp, makeArgMap(new HashMap<String, Object>(), useMaps));
+    }
+
+    public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
+    {
+        Map<String, Object> args = getArgs();
+        args.clear();
+        args.putAll(optionalArgs);
+        Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
+        if (typeNames != null)
+        {   // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
+            // and not keep a 2nd map from short-hand name to type.
+            Map<String, String> typeNameMap = new HashMap<>();
+            for (Map.Entry<String, String> entry : typeNames.entrySet())
+            {
+                typeNameMap.put(entry.getValue(), entry.getKey());
+            }
+            args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
+        }
+
+        this.useMaps = Boolean.TRUE.equals(args.get(USE_MAPS));
+
         try
         {
             input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
@@ -319,7 +394,7 @@ public class JsonReader implements Closeable
      */
     public Object readObject()
     {
-        JsonParser parser = new JsonParser(input, objsRead, useMaps);
+        JsonParser parser = new JsonParser(input, objsRead, getArgs());
         JsonObject root = new JsonObject();
         Object o;
         try
