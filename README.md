@@ -95,7 +95,7 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 #### All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
-    DATE_FORMAT             // Set this to the date format string you wish dates to be 
+    DATE_FORMAT             // Set this format string to control the format dates are 
                             // written. Example: `yyyy/MM/dd HH:mm`.  Can also be a 
                             // DateFormat instance.  Can also be the constant 
                             // JsonWriter.ISO_DATE_FORMAT or 
@@ -104,9 +104,8 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
                             // be output, even where they could have been omitted.
     PRETTY_PRINT            // Force nicely formatted JSON output 
                             // (See http://jsoneditoronline.org for example format)
-    FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which is used to control 
-                            // which fields on a class are output. This allows you to 
-                            // reduce the fields that will be written for a given class.
+    FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which is used to 
+                            // control which fields of a class are output. 
     ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not 
                             // serialized.
     WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe)
