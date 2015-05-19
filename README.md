@@ -79,7 +79,7 @@ This 'Maps' representation can be re-written to a JSON String or Stream and _the
 
 ### Optional Arguments (Features)
 
-Both the JsonWriter and JsonReader allow you to pass in a Map<String, Object> optionalArgs.  This Map has well known keys (constants from JsonWriter / JsonWriter).  To enable the respective feature, first create a Map.  Then place the well known key in the Map and associate the appropriate setting as the value.  Below is a complete list of features and some example usages.  Shown in Groovy for brevity.
+Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is a complete list of features and some example usages.  Shown in Groovy for brevity.
 
     Map args = [
             (JsonWriter.SHORT_META_KEYS):true,
@@ -87,7 +87,7 @@ Both the JsonWriter and JsonReader allow you to pass in a Map<String, Object> op
     ]
     String json = JsonWriter.objectToJson(list, args)
         
-In this example, we create an 'args' Map, set the key JsonWriter.SHORT_META_KEYS to true and set the JsonWriter.TYPE_NAME_MAP to a Map that will be used to substitute class names for short-hand names.         
+In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
 
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0 approach allows you to customize the JSON format for classes for which you do not have the source code.
