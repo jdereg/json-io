@@ -83,11 +83,29 @@ Both the `JsonWriter` and `JsonReader` allow you to pass in an optional argument
 
     Map args = [
             (JsonWriter.SHORT_META_KEYS):true,
-            (JsonWriter.TYPE_NAME_MAP):['java.util.ArrayList':'al', 'java.util.LinkedHashMap':'lmap', (TestObject.class.getName()):'to']
+            (JsonWriter.TYPE_NAME_MAP):[
+                'java.util.ArrayList':'alist', 
+                'java.util.LinkedHashMap':'lmap', 
+                (TestObject.class.getName()):'testO'
+            ]
     ]
     String json = JsonWriter.objectToJson(list, args)
         
 In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
+
+All of the values below are public constants from JsonWriter, used by placing them as keys in the arguments map.
+
+    DATE_FORMAT             // Set this to the date format you wish dates to be written.  
+                            // Can also be a DateFormat instance.  
+                            // Can also be the constant JsonWriter.ISO_DATE_FORMAT, or ISO_DATE_TIME_FORMAT 
+    TYPE                    // Set to boolean true or "true" to force all data types to be output, even where they could have been omitted.
+    PRETTY_PRINT            // Force nicely formatted JSON output (See http://jsoneditoronline.com for example format)
+    FIELD_SPECIFIERS        // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output.  
+                            // This allows you to reduce the fields that will be written for a given class.
+    ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not to be serialized
+    WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe)
+    TYPE_NAME_MAP           // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e, @ref => @r, and @id => @i 
 
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0 approach allows you to customize the JSON format for classes for which you do not have the source code.
