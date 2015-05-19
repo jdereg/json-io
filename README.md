@@ -96,30 +96,32 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 #### All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
     DATE_FORMAT             // Set this format string to control the format dates are 
-                            // written. Example: `yyyy/MM/dd HH:mm`.  Can also be a 
+                            // written. Example: "yyyy/MM/dd HH:mm".  Can also be a 
                             // DateFormat instance.  Can also be the constant 
                             // JsonWriter.ISO_DATE_FORMAT or 
                             // JsonWriter.ISO_DATE_TIME_FORMAT 
-    TYPE                    // Set to boolean true or "true" to force all data types to 
-                            // be output, even where they could have been omitted.
+    TYPE                    // Set to boolean true to force all data types to be 
+                            // output, even where they could have been omitted.
     PRETTY_PRINT            // Force nicely formatted JSON output 
                             // (See http://jsoneditoronline.org for example format)
     FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which is used to 
                             // control which fields of a class are output. 
     ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not 
                             // serialized.
-    WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe)
+    WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe).
                             // JsonReader will automatically convert Strings back
-                            // to longs.
+                            // to longs.  Any Number can be set from a String.
     TYPE_NAME_MAP           // If set, this map will be used when writing @type values.
-                            // Allows short-hand abbreviations for type names
+                            // Allows short-hand abbreviations for type names.
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i 
 
 #### All of the values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
     USE_MAPS        // If set to boolean true, the read-in JSON will be 
-                    // turned into a Map of Maps (JsonObject) representation. 
+                    // turned into a Map of Maps (JsonObject) representation. Note
+                    // that calling the JsonWriter on this root Map will indeed
+                    // write the equivalent JSON stream as was read.
     TYPE_NAME_MAP   // If set, this map will be used when writing @type values. 
                     // Allows short-hand abbreviations of type names.
       
