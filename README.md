@@ -109,6 +109,8 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
     ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not 
                             // serialized.
     WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe)
+                            // JsonReader will automatically convert Strings back
+                            // to longs.
     TYPE_NAME_MAP           // If set, this map will be used when writing @type values.
                             // Allows short-hand abbreviations for type names
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
