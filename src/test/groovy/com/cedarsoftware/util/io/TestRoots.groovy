@@ -126,7 +126,7 @@ class TestRoots
 
         Object[] oa = (Object[]) TestUtil.readJsonObject('[{},{}]')
         assert oa.length == 2
-        assert Object.class == oa[0].getClass()
-        assert Object.class == oa[1].getClass()
+        assert JsonObject.class == oa[0].getClass()
+        assert JsonObject.class == oa[1].getClass()
     }
 }

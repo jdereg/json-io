@@ -56,9 +56,9 @@ import java.util.Map;
  */
 class ObjectResolver extends Resolver
 {
-    protected ObjectResolver(Map<Long, JsonObject> objsRead, boolean useMaps)
+    protected ObjectResolver(Map<Long, JsonObject> objsRead, Map<String, Object> args)
     {
-        super(objsRead, useMaps);
+        super(objsRead, args);
     }
 
     /**

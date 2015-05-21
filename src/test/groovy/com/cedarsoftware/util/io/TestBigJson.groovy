@@ -55,4 +55,13 @@ class TestBigJson
         println ((stop - start) / 1000000L)
     }
 
+    @Test
+    void testReadVeryLargeJson()
+    {
+        String json = TestUtil.fetchResource('veryLarge.json')
+        long start = System.nanoTime()
+        JsonReader.jsonToMaps(json)
+        long stop = System.nanoTime()
+        println ((stop - start) / 1000000L)
+    }
 }

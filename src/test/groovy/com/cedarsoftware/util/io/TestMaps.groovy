@@ -107,7 +107,7 @@ class TestMaps
     }
 
     @Test
-    void testMap() throws Exception
+    void testMap()
     {
         ManyMaps obj = new ManyMaps()
         obj.init()
@@ -188,7 +188,7 @@ class TestMaps
     }
 
     @Test
-    void testReconstituteMap() throws Exception
+    void testReconstituteMap()
     {
         ManyMaps testMap = new ManyMaps()
         testMap.init()
@@ -205,7 +205,7 @@ class TestMaps
     }
 
     @Test
-    void testMap2() throws Exception
+    void testMap2()
     {
         TestObject a = new TestObject("A")
         TestObject b = new TestObject("B")
@@ -228,7 +228,7 @@ class TestMaps
     }
 
     @Test
-    void testMap3() throws Exception
+    void testMap3()
     {
         Map map = new HashMap()
         map.put("a", "b")
@@ -240,7 +240,7 @@ class TestMaps
     }
 
     @Test
-    void testMapArrayKey() throws Exception
+    void testMapArrayKey()
     {
         MapArrayKey m = new MapArrayKey()
         m.content = new LinkedHashMap<>()
@@ -271,7 +271,7 @@ class TestMaps
     }
 
     @Test
-    void testMapSetKey() throws Exception
+    void testMapSetKey()
     {
         MapSetKey m = new MapSetKey()
         m.content = new LinkedHashMap<>()
@@ -305,7 +305,7 @@ class TestMaps
     }
 
     @Test
-    void testMapToMapCompatibility() throws Exception
+    void testMapToMapCompatibility()
     {
         String json0 = '{"rows":[{"columns":[{"name":"FOO","value":"9000"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]},{"columns":[{"name":"FOO","value":"9713"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]}],"selectedRows":"110"}'
         JsonObject root = (JsonObject) JsonReader.jsonToMaps(json0)
@@ -319,7 +319,7 @@ class TestMaps
     }
 
     @Test
-    void testMapWithAtType() throws Exception
+    void testMapWithAtType()
     {
         AssignToList atl = new AssignToList()
         String json = '{"@id":1,"@type":"java.util.LinkedHashMap","@keys":["1000004947","0000020985","0000029443","0000020994"],"@items":["Me","Fox, James","Renewals, CORE","Gade, Raja"]}'
@@ -331,7 +331,7 @@ class TestMaps
     }
 
     @Test
-    void testMapWithParameterizedTypes() throws Exception
+    void testMapWithParameterizedTypes()
     {
         String json = '{"@type":"' + ParameterizedMap.class.getName() + '", "content":{"foo":{"one":{"x":1,"y":2},"two":{"x":10,"y":20}},"bar":{"ten":{"x":3,"y":4},"twenty":{"x":30,"y":40}}}}'
         ParameterizedMap pCol = (ParameterizedMap) JsonReader.jsonToJava(json)
@@ -349,7 +349,7 @@ class TestMaps
     }
 
     @Test
-    void testOddMaps() throws Exception
+    void testOddMaps()
     {
         String json = '{"@type":"java.util.HashMap","@keys":null,"@items":null}'
         Map map = (Map)TestUtil.readJsonObject(json)
@@ -386,7 +386,7 @@ class TestMaps
     }
 
     @Test
-    void testReconstituteMapEmpty() throws Exception
+    void testReconstituteMapEmpty()
     {
         Map map = new LinkedHashMap()
         String json0 = TestUtil.getJsonString(map)
@@ -403,7 +403,7 @@ class TestMaps
     }
 
     @Test
-    void testReconstituteRefMap() throws Exception
+    void testReconstituteRefMap()
     {
         Map m1 = new HashMap()
         Object[] root = [m1, m1] as Object[]
@@ -424,7 +424,7 @@ class TestMaps
     }
 
     @Test
-    void testReconstituteMapSimple() throws Exception
+    void testReconstituteMapSimple()
     {
         SimpleMapTest smt = new SimpleMapTest()
         smt.map.put("a", "alpha")
@@ -440,4 +440,27 @@ class TestMaps
         assertTrue(json0.equals(json1))
     }
 
+    @Test
+    void testMapFromUnknown()
+    {
+        Map map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):"java.util.concurrent.ConcurrentHashMap"]);
+        assert map instanceof ConcurrentHashMap
+        assert map.size() == 2
+        assert map.a == 'alpha'
+        assert map.b == 'beta'
+
+        map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}');
+        assert map instanceof JsonObject
+        assert map.size() == 2
+        assert map.a == 'alpha'
+        assert map.b == 'beta'
+
+        try
+        {
+            map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):false]);
+            fail()
+        }
+        catch (JsonIoException expected)
+        { }
+    }
 }

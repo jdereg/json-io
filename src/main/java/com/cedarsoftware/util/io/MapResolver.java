@@ -46,9 +46,9 @@ import java.util.Map;
  */
 public class MapResolver extends Resolver
 {
-    protected MapResolver(Map<Long, JsonObject> objsRead, boolean useMaps)
+    protected MapResolver(Map<Long, JsonObject> objsRead, Map<String, Object> args)
     {
-        super(objsRead, useMaps);
+        super(objsRead, args);
     }
 
     protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)

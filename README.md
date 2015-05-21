@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>3.1.0</version>
+  <version>3.1.1</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
@@ -124,6 +124,12 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
                     // write the equivalent JSON stream as was read.
     TYPE_NAME_MAP   // If set, this map will be used when writing @type values. 
                     // Allows short-hand abbreviations of type names.
+    UNKNOWN_TYPE    // Set to null (or leave out), unknown objects are returned as Maps.
+                    // Set to String class name, and unknown objects will be created
+                    // as with this class name, and the fields will be set on it.
+                    // Set to false, and an exception will be thrown when an unknown
+                    // object type is encountered.  The location in the JSON will
+                    // be given.
       
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
@@ -158,6 +164,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.1.1 
+  * `JsonReader.UNKNOWN_OBJECT` added as an option to indicate what to do when an unknown object is encountered in the JSON.  Default is a `Map` will be created.  However, you can set this argument to a `String` class name to instantiate, or set it to false to force an exception to be thrown.
  * 3.1.0
   * **New Feature**: Short class names to reduce the size of the output JSON. This allows you to, for example, substitute `java.util.HashMap` with `hmap` so that it will appear in the JSON as `"@type":"hmap"`.  Pass the substitution map to the `JsonWriter` (or reader) as an entry in the args `Map` with the key of `JsonWriter.TYPE_NAME_MAP` and the value as a `Map` instance with String class names as the keys and short-names as the values. The same map can be passed to the `JsonReader` and it will properly read the substituted types.
   * **New Feature**: Short meta-key names to reduce the size of the output JSON.  The `@type` key name will be shortened to `@t`, `@id` => `@i`, `@ref` => `@r`, `@keys` => `@k`, `@items` => `@e`.  Put a key in the `args` `Map` as `JsonWriter.SHORT_META_KEYS` with the value `true`.   
