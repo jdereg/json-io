@@ -438,13 +438,13 @@ public class JsonReader implements Closeable
      */
     public Object jsonObjectsToJava(JsonObject root)
     {
-        getArgs().put(JsonReader.USE_MAPS, false);
+        getArgs().put(USE_MAPS, false);
         return convertParsedMapsToJava(root);
     }
 
     protected boolean useMaps()
     {
-        return Boolean.TRUE.equals(getArgs().get(JsonReader.USE_MAPS));
+        return Boolean.TRUE.equals(getArgs().get(USE_MAPS));
     }
     /**
      * This method converts a root Map, (which contains nested Maps
