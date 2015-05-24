@@ -336,6 +336,7 @@ public class JsonReader implements Closeable
     {
         useMaps = false;
         input = null;
+        getArgs().put(USE_MAPS, false);
     }
 
     public JsonReader(InputStream inp)
@@ -353,6 +354,7 @@ public class JsonReader implements Closeable
     public JsonReader(InputStream inp, boolean useMaps)
     {
         this(inp, makeArgMap(new HashMap<String, Object>(), useMaps));
+        this.useMaps = useMaps;
     }
 
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
@@ -442,6 +444,7 @@ public class JsonReader implements Closeable
     public Object jsonObjectsToJava(JsonObject root)
     {
         useMaps = false;
+        getArgs().put(JsonReader.USE_MAPS, false);
         return convertParsedMapsToJava(root);
     }
 
