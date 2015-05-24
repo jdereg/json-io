@@ -82,7 +82,6 @@ public class JsonReader implements Closeable
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
-    private boolean useMaps = false;
     static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
     // _args is using ThreadLocal so that static inner classes can have access to them
     static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
@@ -334,7 +333,6 @@ public class JsonReader implements Closeable
 
     public JsonReader()
     {
-        useMaps = false;
         input = null;
         getArgs().put(USE_MAPS, false);
     }
@@ -354,7 +352,6 @@ public class JsonReader implements Closeable
     public JsonReader(InputStream inp, boolean useMaps)
     {
         this(inp, makeArgMap(new HashMap<String, Object>(), useMaps));
-        this.useMaps = useMaps;
     }
 
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
@@ -373,8 +370,6 @@ public class JsonReader implements Closeable
             }
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
         }
-
-        this.useMaps = Boolean.TRUE.equals(args.get(USE_MAPS));
 
         try
         {
@@ -427,7 +422,7 @@ public class JsonReader implements Closeable
         }
 
         // Allow a complete 'Map' return (Javascript style)
-        if (useMaps)
+        if (useMaps())
         {
             return o;
         }
@@ -443,11 +438,14 @@ public class JsonReader implements Closeable
      */
     public Object jsonObjectsToJava(JsonObject root)
     {
-        useMaps = false;
         getArgs().put(JsonReader.USE_MAPS, false);
         return convertParsedMapsToJava(root);
     }
 
+    protected boolean useMaps()
+    {
+        return Boolean.TRUE.equals(getArgs().get(JsonReader.USE_MAPS));
+    }
     /**
      * This method converts a root Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
@@ -460,7 +458,7 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root)
     {
-        Resolver resolver = useMaps ? new MapResolver(objsRead, getArgs()) : new ObjectResolver(objsRead, getArgs());
+        Resolver resolver = useMaps() ? new MapResolver(objsRead, getArgs()) : new ObjectResolver(objsRead, getArgs());
         resolver.createJavaObjectInstance(Object.class, root);
         Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
         resolver.cleanup();
