@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>3.1.1</version>
+  <version>3.1.2</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
@@ -164,6 +164,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.1.2
+  * Bug fix: Version 3.1.1 introduced a bug where it would always run as though it was in JSON to Java mode always (as opposed to supporting JSON to Maps).  This has been fixed.
  * 3.1.1 
   * `JsonReader.UNKNOWN_OBJECT` added as an option to indicate what to do when an unknown object is encountered in the JSON.  Default is a `Map` will be created.  However, you can set this argument to a `String` class name to instantiate, or set it to false to force an exception to be thrown.
  * 3.1.0
