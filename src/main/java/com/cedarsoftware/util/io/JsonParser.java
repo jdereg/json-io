@@ -154,25 +154,23 @@ class JsonParser
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
-                            if ("@t".equals(field))
+                            switch(field)
                             {
-                                field = stringCache.get("@type");
-                            }
-                            else if ("@i".equals(field))
-                            {
-                                field = stringCache.get("@id");
-                            }
-                            else if ("@e".equals(field))
-                            {
-                                field = stringCache.get("@items");
-                            }
-                            else if ("@k".equals(field))
-                            {
-                                field = stringCache.get("@keys");
-                            }
-                            else if ("@r".equals(field))
-                            {
-                                field = stringCache.get("@ref");
+                                case "@t":
+                                    field = stringCache.get("@type");
+                                    break;
+                                case "@i":
+                                    field = stringCache.get("@id");
+                                    break;
+                                case "@r":
+                                    field = stringCache.get("@ref");
+                                    break;
+                                case "@k":
+                                    field = stringCache.get("@keys");
+                                    break;
+                                case "@e":
+                                    field = stringCache.get("@items");
+                                    break;
                             }
                         }
                         state = STATE_READ_VALUE;

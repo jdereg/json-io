@@ -148,27 +148,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     // Map APIs
     public boolean isMap()
     {
-        if (isMap || target instanceof Map)
-        {
-            return true;
-        }
-
-        if (type == null)
-        {
-            return false;
-        }
-        try
-        {
-            Class c = MetaUtils.classForName(type);
-            if (Map.class.isAssignableFrom(c))
-            {
-                return true;
-            }
-        }
-        catch (Exception ignored)  { }
-
-        return false;
-
+        return isMap || target instanceof Map;
     }
 
     // Collection APIs
@@ -179,21 +159,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             return ((target instanceof Collection) || (type != null && !type.contains("[")));
         }
 
-        if (type == null)
-        {
-            return false;
-        }
-        try
-        {
-            Class c = MetaUtils.classForName(type);
-            if (Collection.class.isAssignableFrom(c))
-            {
-                return true;
-            }
-        }
-        catch (Exception ignored) { }
-
-        return false;
+        return target instanceof Collection;
     }
 
     // Array APIs

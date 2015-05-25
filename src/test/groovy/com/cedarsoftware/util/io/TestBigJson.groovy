@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io
 
 import com.google.gson.Gson
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -25,6 +26,7 @@ import static org.junit.Assert.assertNotNull
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestBigJson
 {
     @Test
@@ -59,6 +61,7 @@ class TestBigJson
     void testReadVeryLargeJson()
     {
         String json = TestUtil.fetchResource('veryLarge.json')
+
         long start = System.nanoTime()
         JsonReader.jsonToMaps(json)
         long stop = System.nanoTime()

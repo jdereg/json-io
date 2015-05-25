@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import java.awt.Point
@@ -29,6 +30,7 @@ import static org.junit.Assert.fail
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestMaps
 {
     static class MapArrayKey
@@ -443,13 +445,13 @@ class TestMaps
     @Test
     void testMapFromUnknown()
     {
-        Map map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):"java.util.concurrent.ConcurrentHashMap"]);
+        Map map = (Map) JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)"java.util.concurrent.ConcurrentHashMap"]);
         assert map instanceof ConcurrentHashMap
         assert map.size() == 2
         assert map.a == 'alpha'
         assert map.b == 'beta'
 
-        map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}');
+        map = (Map) JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}');
         assert map instanceof JsonObject
         assert map.size() == 2
         assert map.a == 'alpha'
@@ -457,7 +459,7 @@ class TestMaps
 
         try
         {
-            map = JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):false]);
+            map = (Map) JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)Boolean.FALSE]);
             fail()
         }
         catch (JsonIoException expected)
