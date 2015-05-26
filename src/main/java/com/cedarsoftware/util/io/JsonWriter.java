@@ -150,13 +150,13 @@ public class JsonWriter implements Closeable, Flushable
      */
     public interface JsonClassWriterEx extends JsonClassWriter
     {
-        static final String JSON_WRITER = "JSON_WRITER";
+        String JSON_WRITER = "JSON_WRITER";
 
         void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException;
 
-        static class Support
+        class Support
         {
-            JsonWriter getWriter(Map<String, Object> args)
+            static JsonWriter getWriter(Map<String, Object> args)
             {
                 return (JsonWriter) args.get(JSON_WRITER);
             }
