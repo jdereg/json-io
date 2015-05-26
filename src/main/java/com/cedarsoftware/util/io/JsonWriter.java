@@ -97,6 +97,7 @@ public class JsonWriter implements Closeable, Flushable
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
+    private final Map<String, Object> customArgs = new HashMap<>();
     private boolean shortMetaKeys = false;
     long identity = 1;
     private int depth = 0;
@@ -142,6 +143,24 @@ public class JsonWriter implements Closeable, Flushable
         void write(Object o, boolean showType, Writer output) throws IOException;
         boolean hasPrimitiveForm();
         void writePrimitiveForm(Object o, Writer output) throws IOException;
+    }
+
+    /**
+     * Implement this interface to custom the JSON output for a given class.
+     */
+    public interface JsonClassWriterEx extends JsonClassWriter
+    {
+        static final String JSON_WRITER = "JSON_WRITER";
+
+        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException;
+
+        static class Support
+        {
+            JsonWriter getWriter(Map<String, Object> args)
+            {
+                return (JsonWriter) args.get(JSON_WRITER);
+            }
+        }
     }
 
     /**
@@ -267,6 +286,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
+        customArgs.put(JsonClassWriterEx.JSON_WRITER, this);
         Map args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
@@ -410,7 +430,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
+    protected boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
     {
 		JsonClassWriter closestWriter = getCustomWriter(arrayComponentClass);
 
@@ -455,7 +475,14 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        closestWriter.write(o, showType || referenced, output);
+        if (closestWriter instanceof JsonClassWriterEx)
+        {
+            ((JsonClassWriterEx)closestWriter).write(o, showType || referenced, output, customArgs);
+        }
+        else
+        {
+            closestWriter.write(o, showType || referenced, output);
+        }
         tabOut();
         output.write('}');
         return true;
@@ -734,7 +761,7 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    protected void writeImpl(Object obj, boolean showType) throws IOException
+    public void writeImpl(Object obj, boolean showType) throws IOException
     {
         if (obj == null)
         {

@@ -164,6 +164,9 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.2.0
+  * New `JsonCustomWriterEx` interface which adds the `JsonWriter` access to the implementing class so that it can call back and use `jsonWriter.writeImpl()` API.
+  * Change `JsonWriter.writeImpl()` from protected to public
  * 3.1.3
   * Performance improvement: No longer using .classForName() inside JsonObject to determine isMap() or isCollection().  Reading JSON into Map of Maps mode significantly faster.
  * 3.1.2
