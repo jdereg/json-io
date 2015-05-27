@@ -86,12 +86,12 @@ public class JsonWriter implements Closeable, Flushable
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
-    private static final Map<Class, JsonClassWriter> writers = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    private static final Map<Class, JsonClassWriter> writerCache = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
     private static final NullClass nullWriter = new NullClass();
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
@@ -135,10 +135,13 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
+    public interface JsonClassWriterBase
+    { }
+
     /**
      * Implement this interface to custom the JSON output for a given class.
      */
-    public interface JsonClassWriter
+    public interface JsonClassWriter extends JsonClassWriterBase
     {
         void write(Object o, boolean showType, Writer output) throws IOException;
         boolean hasPrimitiveForm();
@@ -148,7 +151,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Implement this interface to custom the JSON output for a given class.
      */
-    public interface JsonClassWriterEx extends JsonClassWriter
+    public interface JsonClassWriterEx extends JsonClassWriterBase
     {
         String JSON_WRITER = "JSON_WRITER";
 
@@ -156,7 +159,7 @@ public class JsonWriter implements Closeable, Flushable
 
         class Support
         {
-            static JsonWriter getWriter(Map<String, Object> args)
+            public static JsonWriter getWriter(Map<String, Object> args)
             {
                 return (JsonWriter) args.get(JSON_WRITER);
             }
@@ -432,7 +435,7 @@ public class JsonWriter implements Closeable, Flushable
 
     protected boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
     {
-		JsonClassWriter closestWriter = getCustomWriter(arrayComponentClass);
+		JsonClassWriterBase closestWriter = getCustomWriter(arrayComponentClass);
 
         if (closestWriter == null)
         {
@@ -446,10 +449,17 @@ public class JsonWriter implements Closeable, Flushable
 
         boolean referenced = objsReferenced.containsKey(o);
 
-        if ((!referenced && !showType && closestWriter.hasPrimitiveForm()) || closestWriter instanceof Writers.JsonStringWriter)
+        if (closestWriter instanceof JsonClassWriter)
         {
-            closestWriter.writePrimitiveForm(o, output);
-            return true;
+            JsonClassWriter writer = (JsonClassWriter) closestWriter;
+            if (writer.hasPrimitiveForm())
+            {
+                if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter)
+                {
+                    writer.writePrimitiveForm(o, output);
+                    return true;
+                }
+            }
         }
 
         output.write('{');
@@ -481,7 +491,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            closestWriter.write(o, showType || referenced, output);
+            ((JsonClassWriter)closestWriter).write(o, showType || referenced, output);
         }
         tabOut();
         output.write('}');
@@ -493,16 +503,13 @@ public class JsonWriter implements Closeable, Flushable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonClassWriter
+    static class NullClass implements JsonClassWriterBase
     {
-        public void write(Object o, boolean showType, Writer output) throws IOException { }
-        public boolean hasPrimitiveForm()  { return false; }
-        public void writePrimitiveForm(Object o, Writer output) throws IOException { }
     }
 
-    private static JsonClassWriter getCustomWriter(Class c)
+    private static JsonClassWriterBase getCustomWriter(Class c)
     {
-        JsonClassWriter writer = writerCache.get(c);
+        JsonClassWriterBase writer = writerCache.get(c);
         if (writer == null)
         {
             synchronized (writerCache)
@@ -517,12 +524,12 @@ public class JsonWriter implements Closeable, Flushable
         }
         return writer == nullWriter ? null : writer;
     }
-    private static JsonClassWriter forceGetCustomWriter(Class c)
+    private static JsonClassWriterBase forceGetCustomWriter(Class c)
     {
-        JsonClassWriter closestWriter = nullWriter;
+        JsonClassWriterBase closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonClassWriter> entry : writers.entrySet())
+        for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -539,9 +546,9 @@ public class JsonWriter implements Closeable, Flushable
         return closestWriter;
     }
 
-    public static void addWriter(Class c, JsonClassWriter writer)
+    public static void addWriter(Class c, JsonClassWriterBase writer)
     {
-        for (Map.Entry<Class, JsonClassWriter> entry : writers.entrySet())
+        for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
