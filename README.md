@@ -134,7 +134,8 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
 
-    Example:
+    Example (in Groovy). Note the Person has a List of pets, and in this case, it re-uses JsonWriter to write that part
+    of the class out (not need to customize it):
     
     static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
     {
@@ -145,6 +146,8 @@ New APIs have been added to allow you to associate a custom reader / writer clas
             output.write(p.getFirstName())
             output.write('","last":"')
             output.write(p.getLastName())
+            JsonWriter writer = Support.getWriter(args)
+            writer.writeImpl(p.getPets(), true)
         }
     }
 
