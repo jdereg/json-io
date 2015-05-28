@@ -93,7 +93,7 @@ class TestCustomWriter
         Person p = createTestPerson()
         JsonWriter.addWriter(Person.class, new CustomPersonWriter())
         String json = JsonWriter.objectToJson(p)
-        println json
+
         Map obj = JsonReader.jsonToMaps(json)
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
