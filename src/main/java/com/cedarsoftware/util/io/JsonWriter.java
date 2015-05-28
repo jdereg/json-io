@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -86,12 +87,12 @@ public class JsonWriter implements Closeable, Flushable
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
-    private static final Map<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
     private static final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    private static final Map<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
     private static final NullClass nullWriter = new NullClass();
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
@@ -512,18 +513,16 @@ public class JsonWriter implements Closeable, Flushable
         JsonClassWriterBase writer = writerCache.get(c);
         if (writer == null)
         {
-            synchronized (writerCache)
+            writer = forceGetCustomWriter(c);
+            JsonClassWriterBase writerRef = writerCache.putIfAbsent(c, writer);
+            if (writerRef != null)
             {
-                writer = writerCache.get(c);
-                if (writer == null)
-                {
-                    writer = forceGetCustomWriter(c);
-                    writerCache.put(c, writer);
-                }
+                writer = writerRef;
             }
         }
         return writer == nullWriter ? null : writer;
     }
+
     private static JsonClassWriterBase forceGetCustomWriter(Class c)
     {
         JsonClassWriterBase closestWriter = nullWriter;

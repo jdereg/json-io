@@ -384,14 +384,11 @@ abstract class Resolver
         JsonReader.JsonClassReader reader = readerCache.get(c);
         if (reader == null)
         {
-            synchronized (readerCache)
+            reader = forceGetCustomReader(c);
+            JsonReader.JsonClassReader readerRef = readerCache.put(c, reader);
+            if (readerRef != null)
             {
-                reader = readerCache.get(c);
-                if (reader == null)
-                {
-                    reader = forceGetCustomReader(c);
-                    readerCache.put(c, reader);
-                }
+                reader = readerRef;
             }
         }
         return reader == nullReader ? null : reader;
