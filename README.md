@@ -134,6 +134,19 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
 
+Example:
+    static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
+    {
+        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        {
+            Person p = (Person) o
+            output.write('"first":"')
+            output.write(p.getFirstName())
+            output.write('","last":"')
+            output.write(p.getLastName())
+        }
+    }
+
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
 
