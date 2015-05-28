@@ -63,6 +63,8 @@ class TestCustomWriter
                 }
             }
             output.write(']');
+
+            assert JsonWriter.JsonClassWriterEx.Support.getWriter(args) instanceof JsonWriter
         }
     }
 
@@ -95,8 +97,17 @@ class TestCustomWriter
         Map obj = JsonReader.jsonToMaps(json)
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
-        // Left off here
-//        List<Pet> pets = obj.p
-//        assert 2 == pets.size()
+        Map pets = obj.p
+        List items = pets['@items']
+        assert 2 == items.size()
+        Map ed = items[0]
+        assert 'Eddie' == ed.n
+        assert 'Terrier' == ed.t
+        assert 6 == ed.a
+
+        Map bella = items[1]
+        assert 'Bella' == bella.n
+        assert 'Chi hua hua' == bella.t
+        assert 3 == bella.a
     }
 }
