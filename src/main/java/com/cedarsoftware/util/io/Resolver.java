@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -40,7 +41,7 @@ abstract class Resolver
 {
     protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private static final NullClass nullReader = new NullClass();
-    private static final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final Map<Long, JsonObject> objsRead;
     private final boolean useMaps;

@@ -28,6 +28,7 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -78,7 +79,7 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";         // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
-    protected static final Map<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
+    protected static final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
     protected static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
