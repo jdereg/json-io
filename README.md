@@ -2,13 +2,13 @@ json-io
 =======
 
 Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
-```
-<dependency>
-  <groupId>com.cedarsoftware</groupId>
-  <artifactId>json-io</artifactId>
-  <version>3.2.2</version>
-</dependency>
-```
+
+    <dependency>
+      <groupId>com.cedarsoftware</groupId>
+      <artifactId>json-io</artifactId>
+      <version>3.2.3</version>
+    </dependency>
+
 [Donations welcome](https://coinbase.com/jdereg)
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
@@ -181,6 +181,8 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.2.3
+  * Cache Map's for custom reader's updated to be `ConcurrentMap` instead of `Map`.
  * 3.2.2
   * `JsonCustomReaderEx` added, which passes the 'args' `Map` through to the custom reader.
   * Both `JsonCustomReaderEx` and `JsonCustomWriterEx` have a `Map` as the last argument in their single method that is implemented by the custom reader / writer.  This `Map` is the same as the 'args' `Ma` passed into to the `JsonReader` / `JsonWriter`, with the added `JSON_READER` or `JSON_WRITER` key and associated value of the calling `JsonReader` / `JsonWriter` instance.
