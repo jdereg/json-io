@@ -68,6 +68,28 @@ class TestCustomWriter
         }
     }
 
+    static class CustomPersonReader implements JsonReader.JsonClassReaderEx
+    {
+        Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            JsonObject map = (JsonObject) jOb
+            Person p = new Person()
+            p.firstName = map.f
+            p.lastName = map.l
+            p.pets = []
+            Object[] petz = map.p
+            for (Map pet : petz)
+            {
+                Pet petObj = new Pet()
+                petObj.age = pet.a
+                petObj.name = pet.n
+                petObj.type = pet.t
+                p.pets.add(petObj)
+            }
+            return p
+        }
+    }
+
     Person createTestPerson()
     {
         Person p = new Person()
@@ -92,6 +114,7 @@ class TestCustomWriter
     {
         Person p = createTestPerson()
         JsonWriter.addWriter(Person.class, new CustomPersonWriter())
+        JsonReader.addReader(Person.class, new CustomPersonReader());
         String json = JsonWriter.objectToJson(p)
 
         Map obj = JsonReader.jsonToMaps(json)
@@ -109,5 +132,17 @@ class TestCustomWriter
         assert 'Bella' == bella.n
         assert 'Chi hua hua' == bella.t
         assert 3 == bella.a
+
+        Person p2 = JsonReader.jsonToJava(json)
+        assert p2.firstName == 'Michael'
+        assert p2.lastName == 'Bolton'
+        List petz = p2.pets
+        assert 'Eddie' == petz[0].name
+        assert 'Terrier' == petz[0].type
+        assert 6 == petz[0].age
+
+        assert 'Bella' == petz[1].name
+        assert 'Chi hua hua' == petz[1].type
+        assert 3 == petz[1].age
     }
 }

@@ -398,7 +398,7 @@ abstract class Resolver
         JsonReader.JsonClassReaderBase closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonReader.JsonClassReader> entry : getReaders().entrySet())
+        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : getReaders().entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -585,7 +585,7 @@ abstract class Resolver
         return JsonReader.error(msg, e);
     }
 
-    protected static Map<Class, JsonReader.JsonClassReader> getReaders()
+    protected static Map<Class, JsonReader.JsonClassReaderBase> getReaders()
     {
         return JsonReader.readers;
     }

@@ -78,7 +78,7 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";         // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
-    protected static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
+    protected static final Map<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
     protected static final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
@@ -226,9 +226,9 @@ public class JsonReader implements Closeable
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
-    public static void addReader(Class c, JsonClassReader reader)
+    public static void addReader(Class c, JsonClassReaderBase reader)
     {
-        for (Map.Entry<Class, JsonClassReader> entry : readers.entrySet())
+        for (Map.Entry<Class, JsonClassReaderBase> entry : readers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
