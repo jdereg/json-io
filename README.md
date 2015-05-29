@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-io</artifactId>
-  <version>3.2.1</version>
+  <version>3.2.2</version>
 </dependency>
 ```
 [Donations welcome](https://coinbase.com/jdereg)
@@ -181,6 +181,9 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.2.2
+  * `JsonCustomReaderEx` added, which passes the 'args' `Map` through to the custom reader.
+  * Both `JsonCustomReaderEx` and `JsonCustomWriterEx` have a `Map` as the last argument in their single method that is implemented by the custom reader / writer.  This `Map` is the same as the 'args' `Ma` passed into to the `JsonReader` / `JsonWriter`, with the added `JSON_READER` or `JSON_WRITER` key and associated value of the calling `JsonReader` / `JsonWriter` instance.
  * 3.2.1
   * Made `Support.getWriter()` method `public static` so that CustomWriters can easily use it
   * Changed `JsonCustomWriterEx` to no longer inherit from `JsonCustomWriter` and instead added a common parent (`JsonCustomWriterBase`).  This allows only one method to be overridden to create a `JsonCustomWriterEx`.
