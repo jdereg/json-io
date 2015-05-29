@@ -75,6 +75,7 @@ public class JsonReader implements Closeable
 {
     public static final String USE_MAPS = "USE_MAPS";               // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
     public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";   // What to do when an object is found and 'type' cannot be determined.
+    public static final String JSON_READER = "JSON_READER";         // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected static final Map<Class, JsonClassReader> readers = new ConcurrentHashMap<>();
@@ -126,9 +127,30 @@ public class JsonReader implements Closeable
     /**
      * Implement this interface to add a custom JSON reader.
      */
-    public interface JsonClassReader
+    public interface JsonClassReaderBase  { }
+
+    /**
+     * Implement this interface to add a custom JSON reader.
+     */
+    public interface JsonClassReader extends JsonClassReaderBase
     {
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack);
+    }
+
+    /**
+     * Implement this interface to add a custom JSON reader.
+     */
+    public interface JsonClassReaderEx extends JsonClassReaderBase
+    {
+        Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args);
+
+        class Support
+        {
+            public static JsonReader getReader(Map<String, Object> args)
+            {
+                return (JsonReader) args.get(JSON_READER);
+            }
+        }
     }
 
     /**
@@ -359,7 +381,9 @@ public class JsonReader implements Closeable
         Map<String, Object> args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
+        args.put(JSON_READER, this);
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
+
         if (typeNames != null)
         {   // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
             // and not keep a 2nd map from short-hand name to type.
@@ -458,7 +482,7 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root)
     {
-        Resolver resolver = useMaps() ? new MapResolver(objsRead, getArgs()) : new ObjectResolver(objsRead, getArgs());
+        Resolver resolver = useMaps() ? new MapResolver(objsRead) : new ObjectResolver(objsRead);
         resolver.createJavaObjectInstance(Object.class, root);
         Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
         resolver.cleanup();

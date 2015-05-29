@@ -40,7 +40,7 @@ abstract class Resolver
 {
     protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private static final NullClass nullReader = new NullClass();
-    private static final Map<Class, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>();
+    private static final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final Map<Long, JsonObject> objsRead;
     private final boolean useMaps;
@@ -78,19 +78,14 @@ abstract class Resolver
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonReader.JsonClassReader
-    {
-        public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
-        {
-            return null;
-        }
-    }
+    static class NullClass implements JsonReader.JsonClassReaderBase  { }
 
-    protected Resolver(Map<Long, JsonObject> objsRead, Map<String, Object> args)
+    protected Resolver(Map<Long, JsonObject> objsRead)
     {
         this.objsRead = objsRead;
-        useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
-        unknownClass = args.containsKey(JsonReader.UNKNOWN_OBJECT) ? args.get(JsonReader.UNKNOWN_OBJECT) : null;
+        Map optionalArgs = JsonReader.getArgs();
+        useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
+        unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
     }
 
     /**
@@ -310,10 +305,14 @@ abstract class Resolver
                 }
                 else
                 {
-                    JsonReader.JsonClassReader customReader = getCustomReader(c);
-                    if (customReader != null)
+                    JsonReader.JsonClassReaderBase customReader = getCustomReader(c);
+                    if (customReader instanceof JsonReader.JsonClassReaderEx)
                     {
-                        mate = customReader.read(jsonObj, new ArrayDeque<JsonObject<String, Object>>());
+                        mate = ((JsonReader.JsonClassReaderEx)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>(), JsonReader.getArgs());
+                    }
+                    else if (customReader instanceof JsonReader.JsonClassReader)
+                    {
+                        mate = ((JsonReader.JsonClassReader)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>());
                     }
                     else
                     {
@@ -379,13 +378,13 @@ abstract class Resolver
         return refObject;
     }
 
-    protected static JsonReader.JsonClassReader getCustomReader(Class c)
+    protected static JsonReader.JsonClassReaderBase getCustomReader(Class c)
     {
-        JsonReader.JsonClassReader reader = readerCache.get(c);
+        JsonReader.JsonClassReaderBase reader = readerCache.get(c);
         if (reader == null)
         {
             reader = forceGetCustomReader(c);
-            JsonReader.JsonClassReader readerRef = readerCache.put(c, reader);
+            JsonReader.JsonClassReaderBase readerRef = readerCache.putIfAbsent(c, reader);
             if (readerRef != null)
             {
                 reader = readerRef;
@@ -394,9 +393,9 @@ abstract class Resolver
         return reader == nullReader ? null : reader;
     }
 
-    private static JsonReader.JsonClassReader forceGetCustomReader(Class c)
+    private static JsonReader.JsonClassReaderBase forceGetCustomReader(Class c)
     {
-        JsonReader.JsonClassReader closestReader = nullReader;
+        JsonReader.JsonClassReaderBase closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
         for (Map.Entry<Class, JsonReader.JsonClassReader> entry : getReaders().entrySet())

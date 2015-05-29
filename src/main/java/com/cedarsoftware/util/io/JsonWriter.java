@@ -98,7 +98,6 @@ public class JsonWriter implements Closeable, Flushable
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
-    private final Map<String, Object> customArgs = new HashMap<>();
     private boolean shortMetaKeys = false;
     long identity = 1;
     private int depth = 0;
@@ -290,10 +289,10 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
-        customArgs.put(JsonClassWriterEx.JSON_WRITER, this);
         Map args = getArgs();
         args.clear();
         args.putAll(optionalArgs);
+        args.put(JsonClassWriterEx.JSON_WRITER, this);
         typeNameMap = (Map<String, String>) getArg(TYPE_NAME_MAP);
         shortMetaKeys = Boolean.TRUE.equals(args.get(SHORT_META_KEYS));
 
@@ -488,7 +487,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (closestWriter instanceof JsonClassWriterEx)
         {
-            ((JsonClassWriterEx)closestWriter).write(o, showType || referenced, output, customArgs);
+            ((JsonClassWriterEx)closestWriter).write(o, showType || referenced, output, getArgs());
         }
         else
         {
@@ -504,9 +503,7 @@ public class JsonWriter implements Closeable, Flushable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonClassWriterBase
-    {
-    }
+    static class NullClass implements JsonClassWriterBase { }
 
     private static JsonClassWriterBase getCustomWriter(Class c)
     {
