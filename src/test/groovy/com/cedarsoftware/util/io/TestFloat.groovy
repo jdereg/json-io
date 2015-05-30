@@ -26,6 +26,11 @@ import static org.junit.Assert.assertTrue
  */
 class TestFloat
 {
+    private static class Simple
+    {
+        float x
+    }
+
     private static class ManyFloats implements Serializable
     {
         private final Float _arrayElement
@@ -98,5 +103,19 @@ class TestFloat
 
         assertTrue(that._min.equals(Float.MIN_VALUE))
         assertTrue(that._max.equals(Float.MAX_VALUE))
+    }
+
+    @Test
+    void parseBadFloat()
+    {
+        String json = '[123.45.67]'
+        try
+        {
+            JsonReader.jsonToMaps(json)
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('error parsing json value')
+        }
     }
 }

@@ -482,7 +482,7 @@ public class MetaUtils
     /**
      * Return constructor and instance as elements 0 and 1, respectively.
      */
-    private static Object[] newInstanceEx(Class c)
+    static Object[] newInstanceEx(Class c)
     {
         try
         {
@@ -502,7 +502,7 @@ public class MetaUtils
         }
     }
 
-    private static Object[] tryOtherConstruction(Class c)
+    static Object[] tryOtherConstruction(Class c)
     {
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
@@ -555,7 +555,7 @@ public class MetaUtils
         return null;
     }
 
-    private static Object[] fillArgs(Class[] argTypes, boolean useNull)
+    static Object[] fillArgs(Class[] argTypes, boolean useNull)
     {
         final Object[] values = new Object[argTypes.length];
         for (int i = 0; i < argTypes.length; i++)

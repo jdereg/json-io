@@ -72,6 +72,8 @@ class TestCustomWriter
     {
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
+            JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args)
+            assert reader instanceof JsonReader
             JsonObject map = (JsonObject) jOb
             Person p = new Person()
             p.firstName = map.f

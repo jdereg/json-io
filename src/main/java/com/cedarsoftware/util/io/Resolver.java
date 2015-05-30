@@ -444,24 +444,6 @@ abstract class Resolver
             Object objToFix = ref.referencingObj.target;
             JsonObject objReferenced = objsRead.get(ref.refId);
 
-            if (objReferenced == null)
-            {
-                // System.err.println("Back reference (" + ref.refId + ") does not match any object id in input, field '" + ref.field + '\'');
-                continue;
-            }
-
-            if (objReferenced.target == null)
-            {
-                // System.err.println("Back referenced object does not exist,  @ref " + ref.refId + ", field '" + ref.field + '\'');
-                continue;
-            }
-
-            if (objToFix == null)
-            {
-                // System.err.println("Referencing object is null, back reference, @ref " + ref.refId + ", field '" + ref.field + '\'');
-                continue;
-            }
-
             if (ref.index >= 0)
             {    // Fix []'s and Collections containing a forward reference.
                 if (objToFix instanceof List)
@@ -496,32 +478,6 @@ abstract class Resolver
             }
 
             i.remove();
-        }
-
-        int count = unresolvedRefs.size();
-        if (count > 0)
-        {
-            StringBuilder out = new StringBuilder();
-            out.append(count);
-            out.append(" unresolved references:\n");
-            i = unresolvedRefs.iterator();
-            count = 1;
-
-            while (i.hasNext())
-            {
-                UnresolvedReference ref = (UnresolvedReference) i.next();
-                out.append("    Unresolved reference ");
-                out.append(count);
-                out.append('\n');
-                out.append("        @ref ");
-                out.append(ref.refId);
-                out.append('\n');
-                out.append("        field ");
-                out.append(ref.field);
-                out.append("\n\n");
-                count++;
-            }
-            error(out.toString());
         }
     }
 

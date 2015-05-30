@@ -58,4 +58,42 @@ class TestJsonObject
         catch (NullPointerException ignored)
         { }
     }
+
+    @Test
+    void testGetId()
+    {
+        JsonObject jObj = new JsonObject()
+        assert -1L == jObj.getId()
+    }
+
+    @Test
+    void testGetPrimitiveValue()
+    {
+        JsonObject jObj = new JsonObject()
+        jObj.setType('long')
+        jObj.value = 10L
+        assert 10L == jObj.getPrimitiveValue()
+
+        jObj.setType('phoney')
+        try
+        {
+            jObj.getPrimitiveValue()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('invalid primitive type')
+        }
+
+        try
+        {
+            jObj.getLength()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('called')
+            assert e.message.toLowerCase().contains('non-collection')
+        }
+
+        jObj.moveCharsToMate()
+    }
 }

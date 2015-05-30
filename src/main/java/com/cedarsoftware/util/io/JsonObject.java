@@ -188,7 +188,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             if (target == null)
             {
                 Object[] items = (Object[]) get("@items");
-                return items.length;
+                return items == null ? 0 : items.length;
             }
             return Array.getLength(target);
         }
