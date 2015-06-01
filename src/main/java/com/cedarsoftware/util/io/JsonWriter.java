@@ -741,10 +741,16 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
+        if (obj == null)
+        {
+            return false;
+        }
+
         if (obj != null && MetaUtils.isLogicalPrimitive(obj.getClass()))
         {
             return false;
         }
+
         final Writer output = this.out;
         if (objVisited.containsKey(obj))
         {    // Only write (define) an object once in the JSON stream, otherwise emit a @ref
@@ -764,6 +770,17 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
+    /**
+     * Main entry point (mostly used internally, but may be called from a Custom JSON writer).
+     * This method will write out whatever object type it is given, including JsonObject's.
+     * It will handle null, detecting if a custom writer should be called, array, array of
+     * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
+     * object, or a JsonObject representing a regular object.
+     * @param obj Object to be written
+     * @param showType if set to true, the @type tag will be output.  If false, it will be
+     * dropped.
+     * @throws IOException
+     */
     public void writeImpl(Object obj, boolean showType) throws IOException
     {
         if (obj == null)
@@ -782,6 +799,11 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
+        writeGeneric(obj, showType);
+    }
+
+    public void writeGeneric(Object obj, boolean showType) throws IOException
+    {
         if (obj.getClass().isArray())
         {
             writeArray(obj, showType);
@@ -1016,7 +1038,6 @@ public class JsonWriter implements Closeable, Flushable
         {
             final Class componentClass = array.getClass().getComponentType();
             final boolean isPrimitiveArray = MetaUtils.isPrimitive(componentClass);
-            final boolean isObjectArray = Object[].class == arrayType;
 
             for (int i = 0; i < len; i++)
             {
@@ -1030,14 +1051,6 @@ public class JsonWriter implements Closeable, Flushable
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
                     writePrimitive(value, value.getClass() != componentClass);
-                }
-                else if (isObjectArray)
-                {
-                    if (writeIfMatching(value, true, output)) { }
-                    else
-                    {
-                        writeImpl(value, true);
-                    }
                 }
                 else
                 {   // Specific Class-type arrays - only force type when
@@ -1341,14 +1354,6 @@ public class JsonWriter implements Closeable, Flushable
             else if (value instanceof String)
             {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
                 writeJsonUtf8String((String) value, output);
-            }
-            else if (isObjectArray)
-            {
-                if (writeIfMatching(value, true, output)) { }
-                else
-                {
-                    writeImpl(value, true);
-                }
             }
             else if (writeArrayElementIfMatching(componentClass, value, false, output)) { }
             else
@@ -1836,7 +1841,7 @@ public class JsonWriter implements Closeable, Flushable
             writePrimitive(o, getWriteLongsAsStrings());
         }
         else if (o instanceof String)
-        {
+        {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
             writeJsonUtf8String((String) o, out);
         }
         else
@@ -1948,7 +1953,6 @@ public class JsonWriter implements Closeable, Flushable
         {
             writePrimitive(o, false);
         }
-        else if (writeIfMatching(o, forceType, out)) { }
         else
         {
             writeImpl(o, forceType || alwaysShowType());
