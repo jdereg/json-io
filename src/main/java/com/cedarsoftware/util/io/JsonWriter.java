@@ -772,6 +772,16 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
+        if (writeIfMatching(obj, showType, out))
+        {
+            return;
+        }
+
+        if (writeOptionalReference(obj))
+        {
+            return;
+        }
+
         if (obj.getClass().isArray())
         {
             writeArray(obj, showType);
@@ -913,11 +923,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeArray(final Object array, final boolean showType) throws IOException
     {
-        if (writeOptionalReference(array))
-        {
-            return;
-        }
-
         Class arrayType = array.getClass();
         int len = Array.getLength(array);
         boolean referenced = objsReferenced.containsKey(array);
@@ -1161,11 +1166,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeCollection(Collection col, boolean showType) throws IOException
     {
-        if (writeOptionalReference(col))
-        {
-            return;
-        }
-
         final Writer output = this.out;
         boolean referenced = objsReferenced.containsKey(col);
         boolean isEmpty = col.isEmpty();
@@ -1254,11 +1254,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException
     {
-        if (writeOptionalReference(jObj))
-        {
-            return;
-        }
-
         int len = jObj.getLength();
         String type = jObj.type;
         Class arrayClass;
@@ -1381,11 +1376,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeJsonObjectCollection(JsonObject jObj, boolean showType) throws IOException
     {
-        if (writeOptionalReference(jObj))
-        {
-            return;
-        }
-
         String type = jObj.type;
         Class colClass = MetaUtils.classForName(type);
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
@@ -1450,11 +1440,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeJsonObjectMap(JsonObject jObj, boolean showType) throws IOException
     {
-        if (writeOptionalReference(jObj))
-        {
-            return;
-        }
-
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
 
@@ -1546,11 +1531,6 @@ public class JsonWriter implements Closeable, Flushable
             return false;
         }
 
-        if (writeOptionalReference(jObj))
-        {
-            return true;
-        }
-
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
         output.write('{');
@@ -1601,11 +1581,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeJsonObjectObject(JsonObject jObj, boolean showType) throws IOException
     {
-        if (writeOptionalReference(jObj))
-        {
-            return;
-        }
-
         final Writer output = this.out;
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         showType = showType && jObj.type != null;
@@ -1702,11 +1677,6 @@ public class JsonWriter implements Closeable, Flushable
 
     private void writeMap(Map map, boolean showType) throws IOException
     {
-        if (writeOptionalReference(map))
-        {
-            return;
-        }
-
         final Writer output = this.out;
         boolean referenced = objsReferenced.containsKey(map);
 
@@ -1785,11 +1755,6 @@ public class JsonWriter implements Closeable, Flushable
         if (!ensureJsonPrimitiveKeys(map))
         {
             return false;
-        }
-
-        if (writeOptionalReference(map))
-        {
-            return true;
         }
 
         boolean referenced = objsReferenced.containsKey(map);
@@ -1889,16 +1854,6 @@ public class JsonWriter implements Closeable, Flushable
      */
     private void writeObject(final Object obj, final boolean showType) throws IOException
     {
-        if (writeIfMatching(obj, showType, out))
-        {
-            return;
-        }
-
-        if (writeOptionalReference(obj))
-        {
-            return;
-        }
-
         out.write('{');
         tabIn();
         final boolean referenced = objsReferenced.containsKey(obj);
