@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>3.2.3</version>
+      <version>3.3.0</version>
     </dependency>
 
 [Donations welcome](https://coinbase.com/jdereg)
@@ -181,6 +181,11 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.3.0
+  * Consolidate all 3.2.x changes
+  * Last snippet read no longer shows 'boxes' for unused internal buffer characters.
+  * `JsonWriter` - moved reference check 'up' to `writeImpl()` so that each specific 'write' routine did not have to test / call `writeOptionalReference()`.
+  * If you have a custom reader that does not bother to resolve references from 'deeper' internal `JsonObject` maps, an exception will no longer be thrown.  It is OK for a custom reader not to 'care' about internal deeper fields if it wants to ignore them.
  * 3.2.3
   * Cache Map's for custom reader's updated to be `ConcurrentMap` instead of `Map`.
  * 3.2.2
