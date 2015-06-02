@@ -783,6 +783,23 @@ public class JsonWriter implements Closeable, Flushable
      */
     public void writeImpl(Object obj, boolean showType) throws IOException
     {
+        writeImpl(obj, showType, true);
+    }
+
+    /**
+     * Main entry point (mostly used internally, but may be called from a Custom JSON writer).
+     * This method will write out whatever object type it is given, including JsonObject's.
+     * It will handle null, detecting if a custom writer should be called, array, array of
+     * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
+     * object, or a JsonObject representing a regular object.
+     * @param obj Object to be written
+     * @param showType if set to true, the @type tag will be output.  If false, it will be
+     * @param allowRef if set to true, @ref will be used, otherwise 2+ occurrence will be
+     * output as full object.
+     * @throws IOException
+     */
+    public void writeImpl(Object obj, boolean showType, boolean allowRef) throws IOException
+    {
         if (obj == null)
         {
             out.write("null");
@@ -794,16 +811,11 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        if (writeOptionalReference(obj))
+        if (allowRef && writeOptionalReference(obj))
         {
             return;
         }
 
-        writeGeneric(obj, showType);
-    }
-
-    public void writeGeneric(Object obj, boolean showType) throws IOException
-    {
         if (obj.getClass().isArray())
         {
             writeArray(obj, showType);
