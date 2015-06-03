@@ -101,7 +101,7 @@ public class Readers
             Object language = jObj.get("language");
             if (language == null)
             {
-                Support.getReader(args).error("java.util.Locale must specify 'language' field");
+                throw new JsonIoException("java.util.Locale must specify 'language' field");
             }
             Object country = jObj.get("country");
             Object variant = jObj.get("variant");
@@ -129,7 +129,7 @@ public class Readers
                 time = (String) jObj.get("time");
                 if (time == null)
                 {
-                    Support.getReader(args).error("Calendar missing 'time' field");
+                    throw new JsonIoException("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
                 Class c;
@@ -155,7 +155,7 @@ public class Readers
             }
             catch(Exception e)
             {
-                return Support.getReader(args).error("Failed to parse calendar, time: " + time);
+                throw new JsonIoException("Failed to parse calendar, time: " + time);
             }
         }
     }
@@ -170,7 +170,7 @@ public class Readers
             }
             else if (o instanceof String)
             {
-                return parseDate((String) o, Support.getReader(args));
+                return parseDate((String) o);
             }
             else if (o instanceof JsonObject)
             {
@@ -182,17 +182,17 @@ public class Readers
                 }
                 else if (val instanceof String)
                 {
-                    return parseDate((String) val, Support.getReader(args));
+                    return parseDate((String) val);
                 }
-                return Support.getReader(args).error("Unable to parse date: " + o);
+                throw new JsonIoException("Unable to parse date: " + o);
             }
             else
             {
-                return Support.getReader(args).error("Unable to parse date, encountered unknown object: " + o);
+                throw new JsonIoException("Unable to parse date, encountered unknown object: " + o);
             }
         }
 
-        private Date parseDate(String dateStr, JsonReader reader)
+        private Date parseDate(String dateStr)
         {
             if (dateStr == null)
             {
@@ -261,7 +261,7 @@ public class Readers
                                 matcher = datePattern6.matcher(dateStr);
                                 if (!matcher.find())
                                 {
-                                    reader.error("Unable to parse: " + dateStr);
+                                    throw new JsonIoException("Unable to parse: " + dateStr);
                                 }
                                 year = matcher.group(5);
                                 mon = matcher.group(2);
@@ -344,7 +344,7 @@ public class Readers
                 remains = remains.trim();
                 if (!remains.equals(",") && (!remains.equals("T")))
                 {
-                    reader.error("Issue parsing data/time, other characters present: " + remains);
+                    throw new JsonIoException("Issue parsing data/time, other characters present: " + remains);
                 }
             }
 
@@ -369,11 +369,11 @@ public class Readers
 
             if (m < 0 || m > 11)
             {
-                reader.error("Month must be between 1 and 12 inclusive, date: " + dateStr);
+                throw new JsonIoException("Month must be between 1 and 12 inclusive, date: " + dateStr);
             }
             if (d < 1 || d > 31)
             {
-                reader.error("Day must be between 1 and 31 inclusive, date: " + dateStr);
+                throw new JsonIoException("Day must be between 1 and 31 inclusive, date: " + dateStr);
             }
 
             if (matcher == null)
@@ -390,15 +390,15 @@ public class Readers
 
                 if (h > 23)
                 {
-                    reader.error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
+                    throw new JsonIoException("Hour must be between 0 and 23 inclusive, time: " + dateStr);
                 }
                 if (mn > 59)
                 {
-                    reader.error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
+                    throw new JsonIoException("Minute must be between 0 and 59 inclusive, time: " + dateStr);
                 }
                 if (s > 59)
                 {
-                    reader.error("Second must be between 0 and 59 inclusive, time: " + dateStr);
+                    throw new JsonIoException("Second must be between 0 and 59 inclusive, time: " + dateStr);
                 }
 
                 // regex enforces millis to number
