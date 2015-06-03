@@ -478,14 +478,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            if (closestWriter instanceof Writers.DateWriter)
-            {
-                ((Writers.DateWriter)closestWriter).write(o, showType || referenced, output, args);
-            }
-            else
-            {
-                ((JsonClassWriter)closestWriter).write(o, showType || referenced, output);
-            }
+            ((JsonClassWriter)closestWriter).write(o, showType || referenced, output);
         }
         tabOut();
         output.write('}');

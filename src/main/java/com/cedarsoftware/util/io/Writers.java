@@ -67,7 +67,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
 
-    public static class DateWriter implements JsonWriter.JsonClassWriter
+    public static class DateWriter implements JsonWriter.JsonClassWriter, JsonWriter.JsonClassWriterEx
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
