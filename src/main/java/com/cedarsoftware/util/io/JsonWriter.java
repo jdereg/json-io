@@ -438,13 +438,12 @@ public class JsonWriter implements Closeable, Flushable
                     if (writer instanceof Writers.DateWriter)
                     {
                         ((Writers.DateWriter)writer).writePrimitiveForm(o, output, args);
-                        return true;
                     }
                     else
                     {
                         writer.writePrimitiveForm(o, output);
-                        return true;
                     }
+                    return true;
                 }
             }
         }
@@ -563,7 +562,6 @@ public class JsonWriter implements Closeable, Flushable
         flush();
         objVisited.clear();
         objsReferenced.clear();
-        args.clear();
     }
 
     /**

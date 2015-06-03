@@ -172,7 +172,7 @@ abstract class Resolver
         {
             if (keys != items)
             {
-                reader.error("Map written where one of @keys or @items is empty");
+                throw new JsonIoException("Map written where one of @keys or @items is empty");
             }
             return;
         }
@@ -180,7 +180,7 @@ abstract class Resolver
         final int size = keys.length;
         if (size != items.length)
         {
-            reader.error("Map written with @keys and @items entries of different sizes");
+            throw new JsonIoException("Map written with @keys and @items entries of different sizes");
         }
 
         Object[] mapKeys = buildCollection(stack, keys, size);
@@ -379,7 +379,7 @@ abstract class Resolver
         JsonObject refObject = reader.getObjectsRead().get(ref);
         if (refObject == null)
         {
-            reader.error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
+            throw new JsonIoException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
         }
         return refObject;
     }
@@ -477,7 +477,7 @@ abstract class Resolver
                     }
                     catch (Exception e)
                     {
-                        reader.error("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
+                        throw new JsonIoException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
                     }
                 }
             }

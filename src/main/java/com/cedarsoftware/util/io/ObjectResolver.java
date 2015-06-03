@@ -225,7 +225,7 @@ class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            reader.error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
+            throw new JsonIoException(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
         }
     }
 
@@ -464,7 +464,7 @@ class ObjectResolver extends Resolver
     {
         if (o == null)
         {
-            reader.error("Bug in json-io, null must be checked before calling this method.");
+            throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
         if (notCustom(o.getClass()))
@@ -524,7 +524,7 @@ class ObjectResolver extends Resolver
                 }
                 catch(Exception e)
                 {
-                    return reader.error("Class listed in @type [" + typeStr + "] is not found", e);
+                    throw new JsonIoException("Class listed in @type [" + typeStr + "] is not found", e);
                 }
             }
             else

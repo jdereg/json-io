@@ -85,7 +85,7 @@ public class JsonReader implements Closeable
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
     // _args is using ThreadLocal so that static inner classes can have access to them
-    private final Map<String, Object> _args = new HashMap<>();
+    private final Map<String, Object> args = new HashMap<>();
 
     static
     {
@@ -253,7 +253,7 @@ public class JsonReader implements Closeable
      */
     public Map getArgs()
     {
-        return _args;
+        return args;
     }
 
     /**
