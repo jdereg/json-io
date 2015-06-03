@@ -141,7 +141,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
                 return s.shortValue();
 
             default:
-                return JsonReader.error("Invalid primitive type");
+                throw new JsonIoException("Invalid primitive type");
         }
     }
 

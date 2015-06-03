@@ -40,10 +40,10 @@ import java.util.concurrent.ConcurrentMap;
 abstract class Resolver
 {
     protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
+    protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
     private static final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
-    private final Map<Long, JsonObject> objsRead;
     private final boolean useMaps;
     private final Object unknownClass;
 
@@ -81,12 +81,17 @@ abstract class Resolver
      */
     static class NullClass implements JsonReader.JsonClassReaderBase  { }
 
-    protected Resolver(Map<Long, JsonObject> objsRead)
+    protected Resolver(JsonReader reader)
     {
-        this.objsRead = objsRead;
-        Map optionalArgs = JsonReader.getArgs();
+        this.reader = reader;
+        Map optionalArgs = reader.getArgs();
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
+    }
+
+    protected JsonReader getReader()
+    {
+        return reader;
     }
 
     /**
@@ -143,7 +148,7 @@ abstract class Resolver
     {
         patchUnresolvedReferences();
         rehashMaps();
-        objsRead.clear();
+        reader.getObjectsRead().clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
     }
@@ -167,7 +172,7 @@ abstract class Resolver
         {
             if (keys != items)
             {
-                error("Map written where one of @keys or @items is empty");
+                reader.error("Map written where one of @keys or @items is empty");
             }
             return;
         }
@@ -175,7 +180,7 @@ abstract class Resolver
         final int size = keys.length;
         if (size != items.length)
         {
-            error("Map written with @keys and @items entries of different sizes");
+            reader.error("Map written with @keys and @items entries of different sizes");
         }
 
         Object[] mapKeys = buildCollection(stack, keys, size);
@@ -309,7 +314,7 @@ abstract class Resolver
                     JsonReader.JsonClassReaderBase customReader = getCustomReader(c);
                     if (customReader instanceof JsonReader.JsonClassReaderEx)
                     {
-                        mate = ((JsonReader.JsonClassReaderEx)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>(), JsonReader.getArgs());
+                        mate = ((JsonReader.JsonClassReaderEx)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>(), reader.getArgs());
                     }
                     else if (customReader instanceof JsonReader.JsonClassReader)
                     {
@@ -371,10 +376,10 @@ abstract class Resolver
 
     protected JsonObject getReferencedObj(Long ref)
     {
-        JsonObject refObject = objsRead.get(ref);
+        JsonObject refObject = reader.getObjectsRead().get(ref);
         if (refObject == null)
         {
-            error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
+            reader.error("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
         }
         return refObject;
     }
@@ -442,7 +447,7 @@ abstract class Resolver
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.target;
-            JsonObject objReferenced = objsRead.get(ref.refId);
+            JsonObject objReferenced = reader.getObjectsRead().get(ref.refId);
 
             if (ref.index >= 0)
             {    // Fix []'s and Collections containing a forward reference.
@@ -472,7 +477,7 @@ abstract class Resolver
                     }
                     catch (Exception e)
                     {
-                        error("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
+                        reader.error("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
                     }
                 }
             }
@@ -530,16 +535,6 @@ abstract class Resolver
     public static Object newInstance(Class c)
     {
         return JsonReader.newInstance(c);
-    }
-
-    protected static Object error(String msg)
-    {
-        return JsonReader.error(msg);
-    }
-
-    protected static Object error(String msg, Exception e)
-    {
-        return JsonReader.error(msg, e);
     }
 
     protected static Map<Class, JsonReader.JsonClassReaderBase> getReaders()

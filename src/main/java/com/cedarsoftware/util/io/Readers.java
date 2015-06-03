@@ -79,29 +79,29 @@ public class Readers
         months.put("december", "12");
     }
 
-    public static class TimeZoneReader implements JsonReader.JsonClassReader
+    public static class TimeZoneReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject)o;
             Object zone = jObj.get("zone");
             if (zone == null)
             {
-                error("java.util.TimeZone must specify 'zone' field");
+                Support.getReader(args).error("java.util.TimeZone must specify 'zone' field");
             }
             return jObj.target = TimeZone.getTimeZone((String) zone);
         }
     }
 
-    public static class LocaleReader implements JsonReader.JsonClassReader
+    public static class LocaleReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject) o;
             Object language = jObj.get("language");
             if (language == null)
             {
-                error("java.util.Locale must specify 'language' field");
+                Support.getReader(args).error("java.util.Locale must specify 'language' field");
             }
             Object country = jObj.get("country");
             Object variant = jObj.get("variant");
@@ -118,9 +118,9 @@ public class Readers
         }
     }
 
-    public static class CalendarReader implements JsonReader.JsonClassReader
+    public static class CalendarReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             String time = null;
             try
@@ -129,7 +129,7 @@ public class Readers
                 time = (String) jObj.get("time");
                 if (time == null)
                 {
-                    error("Calendar missing 'time' field");
+                    Support.getReader(args).error("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
                 Class c;
@@ -155,14 +155,14 @@ public class Readers
             }
             catch(Exception e)
             {
-                return error("Failed to parse calendar, time: " + time);
+                return Support.getReader(args).error("Failed to parse calendar, time: " + time);
             }
         }
     }
 
-    public static class DateReader implements JsonReader.JsonClassReader
+    public static class DateReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             if (o instanceof Long)
             {
@@ -170,7 +170,7 @@ public class Readers
             }
             else if (o instanceof String)
             {
-                return parseDate((String) o);
+                return parseDate((String) o, Support.getReader(args));
             }
             else if (o instanceof JsonObject)
             {
@@ -182,17 +182,17 @@ public class Readers
                 }
                 else if (val instanceof String)
                 {
-                    return parseDate((String) val);
+                    return parseDate((String) val, Support.getReader(args));
                 }
-                return error("Unable to parse date: " + o);
+                return Support.getReader(args).error("Unable to parse date: " + o);
             }
             else
             {
-                return error("Unable to parse date, encountered unknown object: " + o);
+                return Support.getReader(args).error("Unable to parse date, encountered unknown object: " + o);
             }
         }
 
-        private static Date parseDate(String dateStr)
+        private Date parseDate(String dateStr, JsonReader reader)
         {
             if (dateStr == null)
             {
@@ -261,7 +261,7 @@ public class Readers
                                 matcher = datePattern6.matcher(dateStr);
                                 if (!matcher.find())
                                 {
-                                    error("Unable to parse: " + dateStr);
+                                    reader.error("Unable to parse: " + dateStr);
                                 }
                                 year = matcher.group(5);
                                 mon = matcher.group(2);
@@ -344,7 +344,7 @@ public class Readers
                 remains = remains.trim();
                 if (!remains.equals(",") && (!remains.equals("T")))
                 {
-                    error("Issue parsing data/time, other characters present: " + remains);
+                    reader.error("Issue parsing data/time, other characters present: " + remains);
                 }
             }
 
@@ -369,11 +369,11 @@ public class Readers
 
             if (m < 0 || m > 11)
             {
-                error("Month must be between 1 and 12 inclusive, date: " + dateStr);
+                reader.error("Month must be between 1 and 12 inclusive, date: " + dateStr);
             }
             if (d < 1 || d > 31)
             {
-                error("Day must be between 1 and 31 inclusive, date: " + dateStr);
+                reader.error("Day must be between 1 and 31 inclusive, date: " + dateStr);
             }
 
             if (matcher == null)
@@ -390,15 +390,15 @@ public class Readers
 
                 if (h > 23)
                 {
-                    error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
+                    reader.error("Hour must be between 0 and 23 inclusive, time: " + dateStr);
                 }
                 if (mn > 59)
                 {
-                    error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
+                    reader.error("Minute must be between 0 and 59 inclusive, time: " + dateStr);
                 }
                 if (s > 59)
                 {
-                    error("Second must be between 0 and 59 inclusive, time: " + dateStr);
+                    reader.error("Second must be between 0 and 59 inclusive, time: " + dateStr);
                 }
 
                 // regex enforces millis to number
@@ -411,15 +411,15 @@ public class Readers
 
     public static class SqlDateReader extends DateReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
-            return new java.sql.Date(((Date) super.read(o, stack)).getTime());
+            return new java.sql.Date(((Date) super.read(o, stack, args)).getTime());
         }
     }
 
-    public static class StringReader implements JsonReader.JsonClassReader
+    public static class StringReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -436,13 +436,13 @@ public class Readers
             {
                 return jObj.target = jObj.get("value");
             }
-            return error("String missing 'value' field");
+            return Support.getReader(args).error("String missing 'value' field");
         }
     }
 
-    public static class ClassReader implements JsonReader.JsonClassReader
+    public static class ClassReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -454,13 +454,13 @@ public class Readers
             {
                 return jObj.target = classForName((String) jObj.get("value"));
             }
-            return error("Class missing 'value' field");
+            return Support.getReader(args).error("Class missing 'value' field");
         }
     }
 
-    public static class BigIntegerReader implements JsonReader.JsonClassReader
+    public static class BigIntegerReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -473,7 +473,7 @@ public class Readers
                 }
                 else
                 {
-                    return error("BigInteger missing 'value' field");
+                    return Support.getReader(args).error("BigInteger missing 'value' field");
                 }
             }
 
@@ -483,11 +483,11 @@ public class Readers
                 if ("java.math.BigDecimal".equals(valueObj.type))
                 {
                     BigDecimalReader reader = new BigDecimalReader();
-                    value = reader.read(value, stack);
+                    value = reader.read(value, stack, args);
                 }
                 else if ("java.math.BigInteger".equals(valueObj.type))
                 {
-                    value = read(value, stack);
+                    value = read(value, stack, args);
                 }
                 else
                 {
@@ -540,7 +540,7 @@ public class Readers
             }
             catch (Exception e)
             {
-                return (BigInteger) error("Could not parse '" + value + "' as BigInteger.", e);
+                throw new JsonIoException("Could not parse '" + value + "' as BigInteger.", e);
             }
         }
         else if (value instanceof BigDecimal)
@@ -561,12 +561,12 @@ public class Readers
         {
             return new BigInteger(value.toString());
         }
-        return (BigInteger) error("Could not convert value: " + value.toString() + " to BigInteger.");
+        throw new JsonIoException("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
-    public static class BigDecimalReader implements JsonReader.JsonClassReader
+    public static class BigDecimalReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -579,7 +579,7 @@ public class Readers
                 }
                 else
                 {
-                    return error("BigDecimal missing 'value' field");
+                    return Support.getReader(args).error("BigDecimal missing 'value' field");
                 }
             }
 
@@ -589,11 +589,11 @@ public class Readers
                 if ("java.math.BigInteger".equals(valueObj.type))
                 {
                     BigIntegerReader reader = new BigIntegerReader();
-                    value = reader.read(value, stack);
+                    value = reader.read(value, stack, args);
                 }
                 else if ("java.math.BigDecimal".equals(valueObj.type))
                 {
-                    value = read(value, stack);
+                    value = read(value, stack, args);
                 }
                 else
                 {
@@ -644,7 +644,7 @@ public class Readers
             }
             catch (Exception e)
             {
-                return (BigDecimal) error("Could not parse '" + s + "' as BigDecimal.", e);
+                throw new JsonIoException("Could not parse '" + s + "' as BigDecimal.", e);
             }
         }
         else if (value instanceof BigInteger)
@@ -660,12 +660,12 @@ public class Readers
         {
             return new BigDecimal(value.toString());
         }
-        return (BigDecimal) error("Could not convert value: " + value.toString() + " to BigInteger.");
+        throw new JsonIoException("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
-    public static class StringBuilderReader implements JsonReader.JsonClassReader
+    public static class StringBuilderReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -677,13 +677,13 @@ public class Readers
             {
                 return jObj.target = new StringBuilder((String) jObj.get("value"));
             }
-            return error("StringBuilder missing 'value' field");
+            return Support.getReader(args).error("StringBuilder missing 'value' field");
         }
     }
 
-    public static class StringBufferReader implements JsonReader.JsonClassReader
+    public static class StringBufferReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -695,19 +695,19 @@ public class Readers
             {
                 return jObj.target = new StringBuffer((String) jObj.get("value"));
             }
-            return error("StringBuffer missing 'value' field");
+            return Support.getReader(args).error("StringBuffer missing 'value' field");
         }
     }
 
-    public static class TimestampReader implements JsonReader.JsonClassReader
+    public static class TimestampReader implements JsonReader.JsonClassReaderEx
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject) o;
             Object time = jObj.get("time");
             if (time == null)
             {
-                error("java.sql.Timestamp must specify 'time' field");
+                Support.getReader(args).error("java.sql.Timestamp must specify 'time' field");
             }
             Object nanos = jObj.get("nanos");
             if (nanos == null)
@@ -722,16 +722,6 @@ public class Readers
     }
 
     // ========== Maintain dependency knowledge in once place, down here =========
-    static Object error(String msg)
-    {
-        return MetaUtils.error(msg);
-    }
-
-    static Object error(String msg, Exception e)
-    {
-        return MetaUtils.error(msg, e);
-    }
-
     static Class classForName(String name)
     {
         return MetaUtils.classForName(name);

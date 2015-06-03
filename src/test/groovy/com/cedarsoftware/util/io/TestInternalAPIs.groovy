@@ -62,10 +62,8 @@ class TestInternalAPIs
         DerivedWriter writer = new DerivedWriter(bao)
         Map ref = writer.objectsReferenced
         Map vis = writer.objectsVisited
-        Map args = DerivedWriter.args
         assertNotNull(ref)
         assertNotNull(vis)
-        assertNotNull(args)
     }
 
     @Test

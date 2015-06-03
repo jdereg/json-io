@@ -71,12 +71,17 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
+            throw new JsonIoException("Should never be called.");
+        }
+
+        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        {
             Date date = (Date)obj;
-            Object dateFormat = getArgs().get(DATE_FORMAT);
+            Object dateFormat = args.get(DATE_FORMAT);
             if (dateFormat instanceof String)
             {   // Passed in as String, turn into a SimpleDateFormat instance to be used throughout this stream write.
                 dateFormat = new SimpleDateFormat((String) dateFormat, Locale.ENGLISH);
-                getArgs().put(DATE_FORMAT, dateFormat);
+                args.put(DATE_FORMAT, dateFormat);
             }
             if (showType)
             {
@@ -99,9 +104,14 @@ public class Writers
 
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
-            if (getArgs().containsKey(DATE_FORMAT))
+            throw new JsonIoException("Should never be called.");
+        }
+
+        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
+        {
+            if (args.containsKey(DATE_FORMAT))
             {
-                write(o, false, output);
+                write(o, false, output, args);
             }
             else
             {
@@ -268,10 +278,5 @@ public class Writers
     protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
     {
         JsonWriter.writeJsonUtf8String(s, output);
-    }
-
-    protected static Map getArgs()
-    {
-        return JsonWriter.getArgs();
     }
 }

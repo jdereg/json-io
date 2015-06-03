@@ -574,11 +574,11 @@ class JsonParser
 
     static Object error(String msg)
     {
-        return MetaUtils.error(msg);
+        throw new JsonIoException(msg);
     }
 
     static Object error(String msg, Exception e)
     {
-        return MetaUtils.error(msg, e);
+        throw new JsonIoException(msg, e);
     }
 }

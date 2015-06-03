@@ -102,13 +102,7 @@ public class JsonWriter implements Closeable, Flushable
     long identity = 1;
     private int depth = 0;
     // _args is using ThreadLocal so that static inner classes can have access to them
-    static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
-    {
-        public Map<String, Object> initialValue()
-        {
-            return new HashMap<>();
-        }
-    };
+    final Map<String, Object> args = new HashMap<>();
 
     static
     {   // Add customer writers (these make common classes more succinct)
@@ -174,19 +168,6 @@ public class JsonWriter implements Closeable, Flushable
     public static String objectToJson(Object item)
     {
         return objectToJson(item, new HashMap<String, Object>());
-    }
-
-    /**
-     * @return The arguments used to configure the JsonWriter.  These are thread local.
-     */
-    protected static Map getArgs()
-    {
-        return _args.get();
-    }
-
-    protected static Object getArg(String key)
-    {
-        return _args.get().get(key);
     }
 
     /**
@@ -289,11 +270,9 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
-        Map args = getArgs();
-        args.clear();
         args.putAll(optionalArgs);
         args.put(JsonClassWriterEx.JSON_WRITER, this);
-        typeNameMap = (Map<String, String>) getArg(TYPE_NAME_MAP);
+        typeNameMap = (Map<String, String>) args.get(TYPE_NAME_MAP);
         shortMetaKeys = Boolean.TRUE.equals(args.get(SHORT_META_KEYS));
 
         if (optionalArgs.containsKey(FIELD_SPECIFIERS))
@@ -336,19 +315,19 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    public static boolean isPublicEnumsOnly()
+    public boolean isPublicEnumsOnly()
     {
-        return isTrue(getArg(ENUM_PUBLIC_ONLY));
+        return isTrue(args.get(ENUM_PUBLIC_ONLY));
     }
 
-    public static boolean isPrettyPrint()
+    public boolean isPrettyPrint()
     {
-        return isTrue(getArg(PRETTY_PRINT));
+        return isTrue(args.get(PRETTY_PRINT));
     }
 
-    public static boolean getWriteLongsAsStrings()
+    public boolean getWriteLongsAsStrings()
     {
-        return isTrue(getArg(WRITE_LONGS_AS_STRINGS));
+        return isTrue(args.get(WRITE_LONGS_AS_STRINGS));
     }
 
     private static boolean isTrue(Object setting)
@@ -456,8 +435,16 @@ public class JsonWriter implements Closeable, Flushable
             {
                 if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter)
                 {
-                    writer.writePrimitiveForm(o, output);
-                    return true;
+                    if (writer instanceof Writers.DateWriter)
+                    {
+                        ((Writers.DateWriter)writer).writePrimitiveForm(o, output, args);
+                        return true;
+                    }
+                    else
+                    {
+                        writer.writePrimitiveForm(o, output);
+                        return true;
+                    }
                 }
             }
         }
@@ -487,11 +474,18 @@ public class JsonWriter implements Closeable, Flushable
 
         if (closestWriter instanceof JsonClassWriterEx)
         {
-            ((JsonClassWriterEx)closestWriter).write(o, showType || referenced, output, getArgs());
+            ((JsonClassWriterEx)closestWriter).write(o, showType || referenced, output, args);
         }
         else
         {
-            ((JsonClassWriter)closestWriter).write(o, showType || referenced, output);
+            if (closestWriter instanceof Writers.DateWriter)
+            {
+                ((Writers.DateWriter)closestWriter).write(o, showType || referenced, output, args);
+            }
+            else
+            {
+                ((JsonClassWriter)closestWriter).write(o, showType || referenced, output);
+            }
         }
         tabOut();
         output.write('}');
@@ -576,8 +570,7 @@ public class JsonWriter implements Closeable, Flushable
         flush();
         objVisited.clear();
         objsReferenced.clear();
-        getArgs().clear();
-        _args.remove();
+        args.clear();
     }
 
     /**
@@ -593,7 +586,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
-        Map<Class, List<Field>> fieldSpecifiers = (Map) getArg(FIELD_SPECIFIERS);
+        Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
         final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
@@ -1091,9 +1084,9 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * @return true if the user set the 'TYPE' flag to true, indicating to always show type.
      */
-    private static boolean alwaysShowType()
+    private boolean alwaysShowType()
     {
-        return Boolean.TRUE.equals(getArgs().containsKey(TYPE));
+        return Boolean.TRUE.equals(args.containsKey(TYPE));
     }
 
     private void writeBooleanArray(boolean[] booleans, int lenMinus1) throws IOException
@@ -1896,7 +1889,7 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        final Map<Class, List<Field>> fieldSpecifiers = (Map) getArg(FIELD_SPECIFIERS);
+        final Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
         final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
         {   // Caller is using associating a class name to a set of fields for the given class (allows field reductions)

@@ -84,15 +84,8 @@ public class JsonReader implements Closeable
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
-    static final ThreadLocal<FastPushbackReader> threadInput = new ThreadLocal<>();
     // _args is using ThreadLocal so that static inner classes can have access to them
-    static final ThreadLocal<Map<String, Object>> _args = new ThreadLocal<Map<String, Object>>()
-    {
-        public Map<String, Object> initialValue()
-        {
-            return new HashMap<>();
-        }
-    };
+    private final Map<String, Object> _args = new HashMap<>();
 
     static
     {
@@ -258,9 +251,9 @@ public class JsonReader implements Closeable
     /**
      * @return The arguments used to configure the JsonReader.  These are thread local.
      */
-    protected static Map getArgs()
+    public Map getArgs()
     {
-        return _args.get();
+        return _args;
     }
 
     /**
@@ -282,19 +275,20 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
     {
+        optionalArgs.put(USE_MAPS, false);
+        ByteArrayInputStream ba = null;
         try
         {
-            optionalArgs.put(USE_MAPS, false);
-            ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-            JsonReader jr = new JsonReader(ba, optionalArgs);
-            Object obj = jr.readObject();
-            jr.close();
-            return obj;
+            ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
         }
         catch (UnsupportedEncodingException e)
         {
-            throw new JsonIoException("Could not convert JSON to Java because your JVM does not support UTF-8", e);
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
         }
+        JsonReader jr = new JsonReader(ba, optionalArgs);
+        Object obj = jr.readObject();
+        jr.close();
+        return obj;
     }
 
     /**
@@ -380,7 +374,6 @@ public class JsonReader implements Closeable
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
     {
         Map<String, Object> args = getArgs();
-        args.clear();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
@@ -399,12 +392,16 @@ public class JsonReader implements Closeable
         try
         {
             input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
-            threadInput.set(input);
         }
         catch (UnsupportedEncodingException e)
         {
             throw new JsonIoException("Your JVM does not support UTF-8.  Get a better JVM.", e);
         }
+    }
+
+    Map<Long, JsonObject> getObjectsRead()
+    {
+        return objsRead;
     }
 
     /**
@@ -417,41 +414,55 @@ public class JsonReader implements Closeable
      */
     public Object readObject()
     {
-        JsonParser parser = new JsonParser(input, objsRead, getArgs());
-        JsonObject root = new JsonObject();
-        Object o;
         try
         {
-            o = parser.readValue(root);
-            if (o == JsonParser.EMPTY_OBJECT)
+            JsonParser parser = new JsonParser(input, objsRead, getArgs());
+            JsonObject root = new JsonObject();
+            Object o;
+            try
             {
-                return new JsonObject();
+                o = parser.readValue(root);
+                if (o == JsonParser.EMPTY_OBJECT)
+                {
+                    return new JsonObject();
+                }
             }
-        }
-        catch (Exception e)
-        {
-            throw new JsonIoException("error parsing JSON value", e);
-        }
+            catch (Exception e)
+            {
+                throw new JsonIoException("error parsing JSON value", e);
+            }
 
-        Object graph;
-        if (o instanceof Object[])
-        {
-            root.setType(Object[].class.getName());
-            root.setTarget(o);
-            root.put("@items", o);
-            graph = convertParsedMapsToJava(root);
-        }
-        else
-        {
-            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
-        }
+            Object graph;
+            if (o instanceof Object[])
+            {
+                root.setType(Object[].class.getName());
+                root.setTarget(o);
+                root.put("@items", o);
+                graph = convertParsedMapsToJava(root);
+            }
+            else
+            {
+                graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
+            }
 
-        // Allow a complete 'Map' return (Javascript style)
-        if (useMaps())
-        {
-            return o;
+            // Allow a complete 'Map' return (Javascript style)
+            if (useMaps())
+            {
+                return o;
+            }
+            return graph;
         }
-        return graph;
+        catch (JsonIoException e)
+        {
+            try
+            {
+                close();
+            }
+            catch (Exception ignored)
+            {   // Exception handled in close()
+            }
+            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
+        }
     }
 
     /**
@@ -483,11 +494,18 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root)
     {
-        Resolver resolver = useMaps() ? new MapResolver(objsRead) : new ObjectResolver(objsRead);
-        resolver.createJavaObjectInstance(Object.class, root);
-        Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
-        resolver.cleanup();
-        return graph;
+        try
+        {
+            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
+            resolver.createJavaObjectInstance(Object.class, root);
+            Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
+            resolver.cleanup();
+            return graph;
+        }
+        catch (Exception e)
+        {
+            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
+        }
     }
 
     public static Object newInstance(Class c)
@@ -503,7 +521,6 @@ public class JsonReader implements Closeable
     {
         try
         {
-            threadInput.remove();
             if (input != null)
             {
                 input.close();
@@ -515,30 +532,30 @@ public class JsonReader implements Closeable
         }
     }
 
-    private static String getErrorMessage(String msg)
+    private String getErrorMessage(String msg)
     {
-        if (threadInput.get() != null)
+        if (input != null)
         {
-            return msg + "\nLast read: " + getLastReadSnippet() + "\nline: " + threadInput.get().line + ", col: " + threadInput.get().col;
+            return msg + "\nLast read: " + getLastReadSnippet() + "\nline: " + input.line + ", col: " + input.col;
         }
         return msg;
     }
 
-    static Object error(String msg)
+    Object error(String msg)
     {
         throw new JsonIoException(getErrorMessage(msg));
     }
 
-    static Object error(String msg, Exception e)
+    Object error(String msg, Exception e)
     {
         throw new JsonIoException(getErrorMessage(msg), e);
     }
 
-    private static String getLastReadSnippet()
+    private String getLastReadSnippet()
     {
-        if (threadInput.get() != null)
+        if (input != null)
         {
-            return threadInput.get().getLastSnippet();
+            return input.getLastSnippet();
         }
         return "";
     }

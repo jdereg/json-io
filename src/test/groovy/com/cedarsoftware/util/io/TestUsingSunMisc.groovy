@@ -68,26 +68,27 @@ class TestUsingSunMisc
         MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe shoe = Dog.OtherShoe.construct()
-        Dog.OtherShoe oShoe = (Dog.OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
+        Dog.OtherShoe oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
         assertTrue(shoe.equals(oShoe))
-        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
+        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
         assertTrue(shoe.equals(oShoe))
 
         try
         {
             MetaUtils.useUnsafe = false;
             shoe = Dog.OtherShoe.construct()
-            JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
+            JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
             fail()
         }
-        catch (NullPointerException ignored)
+        catch (JsonIoException e)
         {
+            assert e.message.toLowerCase().contains('no constructor found')
         }
 
         MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe.construct()
-        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava((JsonWriter.objectToJson(shoe)))
+        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
         assertTrue(shoe.equals(oShoe))
     }
 

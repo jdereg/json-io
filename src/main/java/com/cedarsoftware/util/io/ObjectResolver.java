@@ -56,9 +56,9 @@ import java.util.Map;
  */
 class ObjectResolver extends Resolver
 {
-    protected ObjectResolver(Map<Long, JsonObject> objsRead)
+    protected ObjectResolver(JsonReader reader)
     {
-        super(objsRead);
+        super(reader);
     }
 
     /**
@@ -225,7 +225,7 @@ class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
+            reader.error(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
         }
     }
 
@@ -464,7 +464,7 @@ class ObjectResolver extends Resolver
     {
         if (o == null)
         {
-            error("Bug in json-io, null must be checked before calling this method.");
+            reader.error("Bug in json-io, null must be checked before calling this method.");
         }
 
         if (notCustom(o.getClass()))
@@ -524,7 +524,7 @@ class ObjectResolver extends Resolver
                 }
                 catch(Exception e)
                 {
-                    return error("Class listed in @type [" + typeStr + "] is not found", e);
+                    return reader.error("Class listed in @type [" + typeStr + "] is not found", e);
                 }
             }
             else
@@ -552,7 +552,7 @@ class ObjectResolver extends Resolver
         Object read;
         if (closestReader instanceof JsonReader.JsonClassReaderEx)
         {
-            read = ((JsonReader.JsonClassReaderEx)closestReader).read(o, stack, JsonReader.getArgs());
+            read = ((JsonReader.JsonClassReaderEx)closestReader).read(o, stack, getReader().getArgs());
         }
         else
         {

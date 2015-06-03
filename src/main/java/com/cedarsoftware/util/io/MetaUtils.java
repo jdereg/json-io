@@ -31,6 +31,7 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,7 +63,7 @@ public class MetaUtils
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final Map<Class, Object[]> constructors = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
     private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
@@ -319,8 +320,7 @@ public class MetaUtils
         }
         catch (Exception e)
         {
-            error("Unable to create class: " + name, e);
-            return null;
+            throw new JsonIoException("Unable to create class: " + name, e);
         }
     }
 
@@ -446,8 +446,13 @@ public class MetaUtils
                 catch (Exception e)
                 {
                     // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    error("Could not instantiate " + c.getName(), e);
+                    throw new JsonIoException("Could not instantiate " + c.getName(), e);
                 }
+            }
+
+            if (constructor == null)
+            {
+                throw new JsonIoException("No constructor found to instantiate " + c.getName());
             }
 
             Boolean useNull = (Boolean) constructorInfo[1];
@@ -460,7 +465,7 @@ public class MetaUtils
                 }
                 catch (Exception e)
                 {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    error("Could not instantiate " + c.getName(), e);
+                    throw new JsonIoException("Could not instantiate " + c.getName(), e);
                 }
             }
             Object[] values = fillArgs(paramTypes, useNull);
@@ -470,7 +475,7 @@ public class MetaUtils
             }
             catch (Exception e)
             {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                error("Could not instantiate " + c.getName(), e);
+                throw new JsonIoException("Could not instantiate " + c.getName(), e);
             }
         }
 
@@ -507,7 +512,7 @@ public class MetaUtils
         Constructor[] constructors = c.getDeclaredConstructors();
         if (constructors.length == 0)
         {
-            error("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
+            throw new JsonIoException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
         // Try each constructor (private, protected, or public) with null values for non-primitives.
@@ -551,8 +556,7 @@ public class MetaUtils
             { }
         }
 
-        error("Could not instantiate " + c.getName() + " using any constructor");
-        return null;
+        throw new JsonIoException("Could not instantiate " + c.getName() + " using any constructor");
     }
 
     static Object[] fillArgs(Class[] argTypes, boolean useNull)
@@ -785,10 +789,10 @@ public class MetaUtils
         catch (Exception e)
         {
             String className = c == null ? "null" : c.getName();
-            return error("Error creating primitive wrapper instance for Class: " + className, e);
+            throw new JsonIoException("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
-        return error("Class '" + cname + "' does not have primitive wrapper.");
+        throw new JsonIoException("Class '" + cname + "' does not have primitive wrapper.");
     }
 
     /**
@@ -843,16 +847,5 @@ public class MetaUtils
                 throw new JsonIoException("Unable to create instance of class: " + name, e.getCause() != null ? e.getCause() : e);
             }
         }
-    }
-
-    // ========== Maintain relationship info below this line ==========
-    static Object error(String msg)
-    {
-        return JsonReader.error(msg);
-    }
-
-    static Object error(String msg, Exception e)
-    {
-        return JsonReader.error(msg, e);
     }
 }
