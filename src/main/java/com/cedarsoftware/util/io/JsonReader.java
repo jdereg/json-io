@@ -494,18 +494,11 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root)
     {
-        try
-        {
-            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
-            resolver.createJavaObjectInstance(Object.class, root);
-            Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
-            resolver.cleanup();
-            return graph;
-        }
-        catch (Exception e)
-        {
-            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
-        }
+        Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
+        resolver.createJavaObjectInstance(Object.class, root);
+        Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
+        resolver.cleanup();
+        return graph;
     }
 
     public static Object newInstance(Class c)
