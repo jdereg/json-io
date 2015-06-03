@@ -87,7 +87,7 @@ public class Readers
             Object zone = jObj.get("zone");
             if (zone == null)
             {
-                Support.getReader(args).error("java.util.TimeZone must specify 'zone' field");
+                throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
             return jObj.target = TimeZone.getTimeZone((String) zone);
         }
@@ -436,7 +436,7 @@ public class Readers
             {
                 return jObj.target = jObj.get("value");
             }
-            return Support.getReader(args).error("String missing 'value' field");
+            throw new JsonIoException("String missing 'value' field");
         }
     }
 
@@ -454,7 +454,7 @@ public class Readers
             {
                 return jObj.target = classForName((String) jObj.get("value"));
             }
-            return Support.getReader(args).error("Class missing 'value' field");
+            throw new JsonIoException("Class missing 'value' field");
         }
     }
 
@@ -473,7 +473,7 @@ public class Readers
                 }
                 else
                 {
-                    return Support.getReader(args).error("BigInteger missing 'value' field");
+                    throw new JsonIoException("BigInteger missing 'value' field");
                 }
             }
 
@@ -579,7 +579,7 @@ public class Readers
                 }
                 else
                 {
-                    return Support.getReader(args).error("BigDecimal missing 'value' field");
+                    throw new JsonIoException("BigDecimal missing 'value' field");
                 }
             }
 
@@ -677,7 +677,7 @@ public class Readers
             {
                 return jObj.target = new StringBuilder((String) jObj.get("value"));
             }
-            return Support.getReader(args).error("StringBuilder missing 'value' field");
+            throw new JsonIoException("StringBuilder missing 'value' field");
         }
     }
 
@@ -695,7 +695,7 @@ public class Readers
             {
                 return jObj.target = new StringBuffer((String) jObj.get("value"));
             }
-            return Support.getReader(args).error("StringBuffer missing 'value' field");
+            throw new JsonIoException("StringBuffer missing 'value' field");
         }
     }
 
@@ -707,7 +707,7 @@ public class Readers
             Object time = jObj.get("time");
             if (time == null)
             {
-                Support.getReader(args).error("java.sql.Timestamp must specify 'time' field");
+                throw new JsonIoException("java.sql.Timestamp must specify 'time' field");
             }
             Object nanos = jObj.get("nanos");
             if (nanos == null)
