@@ -182,7 +182,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 
 Featured on http://json.org.
  * 3.3.1
-  * Re-entrancy issue fixed.  If a CustomReader (or CustomWriter) insteaded another copy of JsonReader or JsonWriter (indirectly, through recursion, for example), the 2nd instance of JsonReader or JsonWriter would clobber the ThreadLocal values inside JsonReader / JsonWriter.  Those ThreadLocal values have been removed and converted to per-instance member variables.
+  * Re-entrancy issue fixed.  If a CustomReader (or CustomWriter) instantiated another copy of JsonReader or JsonWriter (indirectly, through recursion, for example), the 2nd instance of JsonReader or JsonWriter would clobber the ThreadLocal values inside JsonReader / JsonWriter.  Those ThreadLocal values have been removed and converted to per-instance member variables.
  * 3.3.0
   * Consolidate all 3.2.x changes
   * Last snippet read no longer shows 'boxes' for unused internal buffer characters.
