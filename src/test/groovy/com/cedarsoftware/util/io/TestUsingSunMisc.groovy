@@ -60,6 +60,7 @@ class TestUsingSunMisc
         // -once for analysis + Stack
         // -deserialization with Stack
         JsonReader.jsonToJava(json)
+        JsonReader.removeReader(Dog.Shoe.class);
     }
 
     @Test

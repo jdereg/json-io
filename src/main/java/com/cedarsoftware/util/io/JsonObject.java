@@ -145,6 +145,14 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
     }
 
+    /**
+     * @return boolean true if this object references another object, false otherwise.
+     */
+    public boolean isReference()
+    {
+        return containsKey("@ref");
+    }
+
     // Map APIs
     public boolean isMap()
     {

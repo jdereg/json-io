@@ -26,6 +26,44 @@ class TestCustomWriter
         int age
         String type
         String name
+
+        boolean equals(o)
+        {
+            if (this.is(o))
+            {
+                return true
+            }
+            if (!(o instanceof Pet))
+            {
+                return false
+            }
+
+            Pet pet = (Pet) o
+
+            if (age != pet.age)
+            {
+                return false
+            }
+            if (name != pet.name)
+            {
+                return false
+            }
+            if (type != pet.type)
+            {
+                return false
+            }
+
+            return true
+        }
+
+        int hashCode()
+        {
+            int result
+            result = age
+            result = 31 * result + type.hashCode()
+            result = 31 * result + name.hashCode()
+            return result
+        }
     }
 
     static class Person
@@ -33,6 +71,54 @@ class TestCustomWriter
         String firstName
         String lastName
         List<Pet> pets = new ArrayList<>()
+
+        boolean equals(o)
+        {
+            if (this.is(o))
+            {
+                return true
+            }
+            if (!(o instanceof Person))
+            {
+                return false
+            }
+
+            Person person = (Person) o
+
+            if (firstName != person.firstName)
+            {
+                return false
+            }
+            if (lastName != person.lastName)
+            {
+                return false
+            }
+
+            if (pets.size() != person.pets.size())
+            {
+                return false
+            }
+
+            int len = pets.size()
+            for (int i=0; i < len; i++)
+            {
+                if (pets[i] != person.pets[i])
+                {
+                    return false
+                }
+            }
+
+            return true
+        }
+
+        int hashCode()
+        {
+            int result
+            result = firstName.hashCode()
+            result = 31 * result + lastName.hashCode()
+            result = 31 * result + pets.hashCode()
+            return result
+        }
     }
 
     static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
@@ -117,9 +203,9 @@ class TestCustomWriter
         Person p = createTestPerson()
         JsonWriter.addWriter(Person.class, new CustomPersonWriter())
         JsonReader.addReader(Person.class, new CustomPersonReader());
-        String json = JsonWriter.objectToJson(p)
+        String jsonCustom = JsonWriter.objectToJson(p)
 
-        Map obj = JsonReader.jsonToMaps(json)
+        Map obj = JsonReader.jsonToMaps(jsonCustom)
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
         Map pets = obj.p
@@ -135,10 +221,10 @@ class TestCustomWriter
         assert 'Chi hua hua' == bella.t
         assert 3 == bella.a
 
-        Person p2 = JsonReader.jsonToJava(json)
-        assert p2.firstName == 'Michael'
-        assert p2.lastName == 'Bolton'
-        List petz = p2.pets
+        Person personCustom = JsonReader.jsonToJava(jsonCustom)
+        assert personCustom.firstName == 'Michael'
+        assert personCustom.lastName == 'Bolton'
+        List petz = personCustom.pets
         assert 'Eddie' == petz[0].name
         assert 'Terrier' == petz[0].type
         assert 6 == petz[0].age
@@ -146,5 +232,25 @@ class TestCustomWriter
         assert 'Bella' == petz[1].name
         assert 'Chi hua hua' == petz[1].type
         assert 3 == petz[1].age
+
+        JsonWriter.addNotCustomWriter(Person.class)
+        String jsonOrig = JsonWriter.objectToJson(p)
+        assert jsonCustom != jsonOrig
+        assert jsonCustom.length() < jsonOrig.length()
+        JsonWriter.removeNotCustomWriter(Person.class)
+        String jsonCustom2 = JsonWriter.objectToJson(p)
+        JsonWriter.removeWriter(Person.class)
+        String jsonOrig2 = JsonWriter.objectToJson(p)
+        assert jsonCustom == jsonCustom2
+        assert jsonOrig == jsonOrig2
+
+        JsonReader.addNotCustomReader(Person.class)
+        Person personOrig = JsonReader.jsonToJava(jsonOrig)
+        assert personOrig == personCustom
+
+        JsonReader.removeReader(Person.class)
+        p = JsonReader.jsonToJava(jsonCustom)
+        assert null == p.firstName
+        JsonWriter.removeWriter(Person.class)
     }
 }

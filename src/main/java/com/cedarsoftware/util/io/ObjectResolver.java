@@ -467,11 +467,6 @@ class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (notCustom(o.getClass()))
-        {
-            return null;
-        }
-
         if (compType != null)
         {
             if (notCustom(compType))
@@ -493,7 +488,7 @@ class ObjectResolver extends Resolver
         if (isJsonObject)
         {
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("@ref"))
+            if (jObj.isReference())
             {
                 return null;
             }
@@ -535,6 +530,11 @@ class ObjectResolver extends Resolver
         else
         {
             c = compType;
+        }
+
+        if (notCustom(c))
+        {
+            return null;
         }
 
         JsonReader.JsonClassReaderBase closestReader = getCustomReader(c);

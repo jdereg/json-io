@@ -42,7 +42,7 @@ abstract class Resolver
     protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    private static final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
+    static final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
