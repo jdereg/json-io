@@ -767,7 +767,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public void writeImpl(Object obj, boolean showType) throws IOException
     {
-        writeImpl(obj, showType, true);
+        writeImpl(obj, showType, true, true);
     }
 
     /**
@@ -780,9 +780,11 @@ public class JsonWriter implements Closeable, Flushable
      * @param showType if set to true, the @type tag will be output.  If false, it will be
      * @param allowRef if set to true, @ref will be used, otherwise 2+ occurrence will be
      * output as full object.
+     * @param ignoreCustom if set to true, the object being called will not be checked for custom.
+     * This does not affect subobjects, just the top-level 'obj' being passed in.
      * @throws IOException
      */
-    public void writeImpl(Object obj, boolean showType, boolean allowRef) throws IOException
+    public void writeImpl(Object obj, boolean showType, boolean allowRef, boolean ignoreCustom) throws IOException
     {
         if (obj == null)
         {
@@ -790,7 +792,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        if (writeIfMatching(obj, showType, out))
+        if (ignoreCustom && writeIfMatching(obj, showType, out))
         {
             return;
         }
