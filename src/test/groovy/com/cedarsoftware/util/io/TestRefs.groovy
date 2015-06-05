@@ -115,4 +115,34 @@ class TestRefs
         assert 'cat@house.com' == kid2._email
         assert 'shortie' == kid3._name
         assert '\ufbfc' == root._big
-    }}
+    }
+
+    @Test
+    void testRefResolution()
+    {
+        TestObject a = new TestObject('a')
+        TestObject b = new TestObject('b')
+        a._other = b
+        b._other = a
+        String json = JsonWriter.objectToJson(a)
+
+        JsonReader.addReader(TestObject.class, new JsonReader.JsonClassReaderEx() {
+            Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+            {
+                JsonObject jObj = (JsonObject) jOb
+                TestObject x = new TestObject(jObj.name)
+                JsonObject b1 = jObj._other
+                JsonObject aRef = b1._other
+                assert aRef.isReference()
+                JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args)
+                JsonObject aTarget = reader.getRefTarget(aRef)
+                assert aRef != aTarget
+                assert aTarget._name == 'a'
+                return x
+            }
+        })
+
+        TestObject aa = JsonReader.jsonToJava(json)
+        JsonReader.removeReader(TestObject.class)
+    }
+}

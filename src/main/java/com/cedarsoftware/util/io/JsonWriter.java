@@ -528,6 +528,17 @@ public class JsonWriter implements Closeable, Flushable
         return closestWriter;
     }
 
+    /**
+     * Add a custom writer which will manage writing objects of the
+     * passed in Class in JSON format.  The custom writer will be
+     * called for objects of the passed in class, including subclasses.
+     * If this is not desired, call addNotCustomWriter(c) which will
+     * force objects of the passed in Class to be written by the standard
+     * JSON writer.
+     * @param c Class to associate a custom JSON writer too
+     * @param writer JsonClassWriterBase which implements the appropriate
+     * subclass of JsonClassWriterBase (JsonClassWriter or JsonClassWriterEx).
+     */
     public static void addWriter(Class c, JsonClassWriterBase writer)
     {
         for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
@@ -542,11 +553,35 @@ public class JsonWriter implements Closeable, Flushable
         writers.put(c, writer);
     }
 
+    /**
+     * For no custom writing to occur for the passed in Class.
+     */
     public static void addNotCustomWriter(Class c)
     {
         notCustom.add(c);
     }
 
+    /**
+     * Remove any custom writer associated to the passed in Class.
+     */
+    public static void removeWriter(Class c)
+    {
+        writers.remove(c);
+        writerCache.remove(c);
+    }
+
+    /**
+     * Allow the passed in Class to have custom writers to be associated to it.
+     */
+    public static void removeNotCustomWriter(Class c)
+    {
+        notCustom.remove(c);
+    }
+
+    /**
+     * Write the passed in Java object in JSON format.
+     * @param obj Object any Java Object or JsonObject.
+     */
     public void write(Object obj)
     {
         traceReferences(obj);

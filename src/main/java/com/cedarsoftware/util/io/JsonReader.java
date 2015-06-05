@@ -235,6 +235,19 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * Remove the association (if one exists) between the passed in Class and a
+     * CustomReader.
+     * @param c Class to ensure that a CustomReader is not associated to it.
+     * Note: A customReader could still be used for the class because of inheritance,
+     * in which case use the 'addNotCustomReader()' API to break the association.
+     */
+    public static void removeReader(Class c)
+    {
+        readers.remove(c);
+        Resolver.readerCache.remove(c);
+    }
+
+    /**
      * Force json-io to use it's internal generic approach to writing the
      * passed in class, even if a Custom JSON reader is specified for its
      * parent class.
@@ -248,6 +261,20 @@ public class JsonReader implements Closeable
         notCustom.add(c);
     }
 
+    /**
+     * If a 'notCustom' reader is indicated for the class, remove this,
+     * essentially allowing a custom reader to be used for the class.
+     * The 'notCustom' reader capability is used to prevent a custom reader
+     * being used due to inheritance.  Adding a class as notCustom will
+     * prevent a custom reader from being used on the class, even it if
+     * would have due to inheritance (or if a reader was directly associated
+     * to the class).
+     * @param c Class to prevent a custom reader being used upon
+     */
+    public static void removeNotCustomReader(Class c)
+    {
+        notCustom.remove(c);
+    }
     /**
      * @return The arguments used to configure the JsonReader.  These are thread local.
      */
@@ -359,6 +386,17 @@ public class JsonReader implements Closeable
         this(inp, false);
     }
 
+    /**
+     * Use this constructor if you already have a JsonObject graph and want to parse it into
+     * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
+     * the JsonReader.
+     * @param optionalArgs Map of optional arguments for the JsonReader.
+     */
+    public JsonReader(Map<String, Object> optionalArgs)
+    {
+        this(new ByteArrayInputStream(new byte[]{}), optionalArgs);
+    }
+
     // This method is needed to get around the fact that 'this()' has to be the first method of a constructor.
     static Map makeArgMap(Map<String, Object> args, boolean useMaps)
     {
@@ -404,6 +442,18 @@ public class JsonReader implements Closeable
         return objsRead;
     }
 
+    public Object getRefTarget(JsonObject jObj)
+    {
+        if (!jObj.isReference())
+        {
+            return jObj;
+        }
+
+        Long id = (Long) jObj.get("@ref");
+        JsonObject target = objsRead.get(id);
+        return getRefTarget(target);
+    }
+
     /**
      * Read JSON input from the stream that was set up in the constructor, turning it into
      * Java Maps (JsonObject's).  Then, if requested, the JsonObjects can be converted
@@ -414,55 +464,41 @@ public class JsonReader implements Closeable
      */
     public Object readObject()
     {
+        JsonParser parser = new JsonParser(input, objsRead, getArgs());
+        JsonObject root = new JsonObject();
+        Object o;
         try
         {
-            JsonParser parser = new JsonParser(input, objsRead, getArgs());
-            JsonObject root = new JsonObject();
-            Object o;
-            try
+            o = parser.readValue(root);
+            if (o == JsonParser.EMPTY_OBJECT)
             {
-                o = parser.readValue(root);
-                if (o == JsonParser.EMPTY_OBJECT)
-                {
-                    return new JsonObject();
-                }
+                return new JsonObject();
             }
-            catch (Exception e)
-            {
-                throw new JsonIoException("error parsing JSON value", e);
-            }
-
-            Object graph;
-            if (o instanceof Object[])
-            {
-                root.setType(Object[].class.getName());
-                root.setTarget(o);
-                root.put("@items", o);
-                graph = convertParsedMapsToJava(root);
-            }
-            else
-            {
-                graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
-            }
-
-            // Allow a complete 'Map' return (Javascript style)
-            if (useMaps())
-            {
-                return o;
-            }
-            return graph;
         }
-        catch (JsonIoException e)
+        catch (Exception e)
         {
-            try
-            {
-                close();
-            }
-            catch (Exception ignored)
-            {   // Exception handled in close()
-            }
-            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
+            throw new JsonIoException("error parsing JSON value", e);
         }
+
+        Object graph;
+        if (o instanceof Object[])
+        {
+            root.setType(Object[].class.getName());
+            root.setTarget(o);
+            root.put("@items", o);
+            graph = convertParsedMapsToJava(root);
+        }
+        else
+        {
+            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
+        }
+
+        // Allow a complete 'Map' return (Javascript style)
+        if (useMaps())
+        {
+            return o;
+        }
+        return graph;
     }
 
     /**
@@ -494,11 +530,25 @@ public class JsonReader implements Closeable
      */
     protected Object convertParsedMapsToJava(JsonObject root)
     {
-        Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
-        resolver.createJavaObjectInstance(Object.class, root);
-        Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
-        resolver.cleanup();
-        return graph;
+        try
+        {
+            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
+            resolver.createJavaObjectInstance(Object.class, root);
+            Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
+            resolver.cleanup();
+            return graph;
+        }
+        catch (Exception e)
+        {
+            try
+            {
+                close();
+            }
+            catch (Exception ignored)
+            {   // Exception handled in close()
+            }
+            throw new JsonIoException(getErrorMessage(e.getMessage()), e);
+        }
     }
 
     public static Object newInstance(Class c)

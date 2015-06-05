@@ -107,5 +107,8 @@ class TestCustomClassHandler
         json = TestUtil.getJsonString(now)
         TestUtil.printLine("json=" + json)
         assertTrue(now.equals(date))
+
+        JsonWriter.removeWriter(WeirdDate.class)
+        JsonReader.removeReader(WeirdDate.class)
     }
 }

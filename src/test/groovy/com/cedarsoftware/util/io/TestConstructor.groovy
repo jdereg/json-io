@@ -348,4 +348,14 @@ class TestConstructor
         assertEquals(new URL("http://acme.com"), addr2.url)
     }
 
+    @Test
+    void testMapConstructor()
+    {
+        String json = JsonWriter.objectToJson(new Canine('Bella'))
+        JsonObject root = JsonReader.jsonToMaps(json)
+
+        JsonReader reader = new JsonReader([:])
+        Canine bella = reader.jsonObjectsToJava(root)
+        assert bella.name == 'Bella'
+    }
 }

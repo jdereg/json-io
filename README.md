@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>3.3.1</version>
+      <version>3.3.2</version>
     </dependency>
 
 [Donations welcome](https://coinbase.com/jdereg)
@@ -181,6 +181,14 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 3.3.2
+  * Added new `JsonObject.isReference()` API which will return 'true' if the `JsonObject` is currently representing a reference `@ref`
+  * Added new `JsonReader.getRefTarget(jsonObject)` API which will follow the `@ref` links until it resolves to the referenced (target) instance.
+  * Added new `JsonReader()` constructor that only takes the args (`Map`).  It is expected that you will call `JsonReader.jsonObjectsToJava(rootJsonObject)` which will parse the passed in JsonObject graph.
+  * Added new `JsonReader.removeReader()` API to remove a custom reader association to a given class.
+  * Added new `JsonWriter.removeWriter()` API to remove a custom writer association to a given class.
+  * Added new `JsonReader.removeNotCustomReader()` API to remove a `not custom` reader - if a `notCustom()` reader has been added (preventing inherited object from using custom reader), the association can be eliminated using this API.
+  * Added new `JsonWriter.removeNotCustomWriter()` API to remove a `not custom` writer - if a `notCustom()` writer has been added (preventing inherited object from using custom writer), the association can be eliminated using this API.
  * 3.3.1
   * Re-entrancy issue fixed.  If a CustomReader (or CustomWriter) instantiated another copy of JsonReader or JsonWriter (indirectly, through recursion, for example), the 2nd instance of JsonReader or JsonWriter would clobber the ThreadLocal values inside JsonReader / JsonWriter.  Those ThreadLocal values have been removed and converted to per-instance member variables.
  * 3.3.0
