@@ -37,20 +37,20 @@ class TestUsingSunMisc
     @Test
     void testCustomTopReaderShoe()
     {
-        JsonReader.addReader(Dog.Shoe.class, new JsonReader.JsonClassReader() {
-            public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
-            {
-                // no need to do anything special
-                return Dog.Shoe.construct()
-            }
-        })
         Dog.Shoe shoe = Dog.Shoe.construct()
 
         // Dirty Workaround otherwise
         Object[] array = new Object[1]
         array[0] = shoe;
         String workaroundString = JsonWriter.objectToJson(array)
-        JsonReader.jsonToJava(workaroundString)// shoe can be accessed by
+        TestUtil.readJsonObject(workaroundString, [(Dog.Shoe.class):new JsonReader.JsonClassReader() {
+            public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
+            {
+                // no need to do anything special
+                return Dog.Shoe.construct()
+            }
+        }])
+        // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
 
@@ -59,8 +59,13 @@ class TestUsingSunMisc
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        JsonReader.jsonToJava(json)
-        JsonReader.removeReader(Dog.Shoe.class);
+        TestUtil.readJsonObject(json, [(Dog.Shoe.class):new JsonReader.JsonClassReader() {
+            public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
+            {
+                // no need to do anything special
+                return Dog.Shoe.construct()
+            }
+        }])
     }
 
     @Test

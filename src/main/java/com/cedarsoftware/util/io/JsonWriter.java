@@ -87,12 +87,12 @@ public class JsonWriter implements Closeable, Flushable
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
-    private static final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
-    private static final Set<Class> notCustom = new HashSet<>();
+    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
+    private final Set<Class> notCustom = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    private static final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
     private static final NullClass nullWriter = new NullClass();
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
@@ -104,7 +104,6 @@ public class JsonWriter implements Closeable, Flushable
     // _args is using ThreadLocal so that static inner classes can have access to them
     final Map<String, Object> args = new HashMap<>();
 
-    static
     {   // Add customer writers (these make common classes more succinct)
         addWriter(String.class, new Writers.JsonStringWriter());
         addWriter(Date.class, new Writers.DateWriter());
@@ -491,7 +490,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     static class NullClass implements JsonClassWriterBase { }
 
-    private static JsonClassWriterBase getCustomWriter(Class c)
+    private JsonClassWriterBase getCustomWriter(Class c)
     {
         JsonClassWriterBase writer = writerCache.get(c);
         if (writer == null)
@@ -506,7 +505,7 @@ public class JsonWriter implements Closeable, Flushable
         return writer == nullWriter ? null : writer;
     }
 
-    private static JsonClassWriterBase forceGetCustomWriter(Class c)
+    private JsonClassWriterBase forceGetCustomWriter(Class c)
     {
         JsonClassWriterBase closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;
@@ -539,7 +538,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param writer JsonClassWriterBase which implements the appropriate
      * subclass of JsonClassWriterBase (JsonClassWriter or JsonClassWriterEx).
      */
-    public static void addWriter(Class c, JsonClassWriterBase writer)
+    public void addWriter(Class c, JsonClassWriterBase writer)
     {
         for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
         {
@@ -556,7 +555,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * For no custom writing to occur for the passed in Class.
      */
-    public static void addNotCustomWriter(Class c)
+    public void addNotCustomWriter(Class c)
     {
         notCustom.add(c);
     }
@@ -564,7 +563,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Remove any custom writer associated to the passed in Class.
      */
-    public static void removeWriter(Class c)
+    public void removeWriter(Class c)
     {
         writers.remove(c);
         writerCache.remove(c);
@@ -573,7 +572,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Allow the passed in Class to have custom writers to be associated to it.
      */
-    public static void removeNotCustomWriter(Class c)
+    public void removeNotCustomWriter(Class c)
     {
         notCustom.remove(c);
     }

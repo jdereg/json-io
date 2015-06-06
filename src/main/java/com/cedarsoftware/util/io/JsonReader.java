@@ -79,15 +79,14 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";         // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
-    protected static final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
-    protected static final Set<Class> notCustom = new HashSet<>();
+    protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
+    protected final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
     // _args is using ThreadLocal so that static inner classes can have access to them
     private final Map<String, Object> args = new HashMap<>();
 
-    static
     {
         addReader(String.class, new Readers.StringReader());
         addReader(Date.class, new Readers.DateReader());
@@ -101,7 +100,10 @@ public class JsonReader implements Closeable
         addReader(Class.class, new Readers.ClassReader());
         addReader(StringBuilder.class, new Readers.StringBuilderReader());
         addReader(StringBuffer.class, new Readers.StringBufferReader());
+    }
 
+    static
+    {
         ClassFactory colFactory = new CollectionFactory();
         assignInstantiator(Collection.class, colFactory);
         assignInstantiator(List.class, colFactory);
@@ -220,7 +222,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
-    public static void addReader(Class c, JsonClassReaderBase reader)
+    public void addReader(Class c, JsonClassReaderBase reader)
     {
         for (Map.Entry<Class, JsonClassReaderBase> entry : readers.entrySet())
         {
@@ -235,19 +237,6 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Remove the association (if one exists) between the passed in Class and a
-     * CustomReader.
-     * @param c Class to ensure that a CustomReader is not associated to it.
-     * Note: A customReader could still be used for the class because of inheritance,
-     * in which case use the 'addNotCustomReader()' API to break the association.
-     */
-    public static void removeReader(Class c)
-    {
-        readers.remove(c);
-        Resolver.readerCache.remove(c);
-    }
-
-    /**
      * Force json-io to use it's internal generic approach to writing the
      * passed in class, even if a Custom JSON reader is specified for its
      * parent class.
@@ -256,25 +245,11 @@ public class JsonReader implements Closeable
      * parent class of 'c', then calling this method on 'c' will prevent
      * any custom reader from processing class 'c'
      */
-    public static void addNotCustomReader(Class c)
+    public void addNotCustomReader(Class c)
     {
         notCustom.add(c);
     }
 
-    /**
-     * If a 'notCustom' reader is indicated for the class, remove this,
-     * essentially allowing a custom reader to be used for the class.
-     * The 'notCustom' reader capability is used to prevent a custom reader
-     * being used due to inheritance.  Adding a class as notCustom will
-     * prevent a custom reader from being used on the class, even it if
-     * would have due to inheritance (or if a reader was directly associated
-     * to the class).
-     * @param c Class to prevent a custom reader being used upon
-     */
-    public static void removeNotCustomReader(Class c)
-    {
-        notCustom.remove(c);
-    }
     /**
      * @return The arguments used to configure the JsonReader.  These are thread local.
      */

@@ -43,10 +43,18 @@ class TestUtil
 
     }
 
-    static String getJsonString(Object obj) throws Exception
+    static String getJsonString(Object obj, Map<Class, JsonWriter.JsonClassWriterBase> writers, List<Class> notCustom)
     {
         ByteArrayOutputStream bout = new ByteArrayOutputStream()
         JsonWriter jsonWriter = new JsonWriter(bout)
+        for (Map.Entry<Class, JsonWriter.JsonClassWriterBase> entry : writers)
+        {
+            jsonWriter.addWriter(entry.getKey(), entry.getValue())
+        }
+        for (Class c : notCustom)
+        {
+            jsonWriter.addNotCustomWriter(c)
+        }
         long startWrite1 = System.nanoTime()
         jsonWriter.write(obj)
         jsonWriter.flush()
@@ -82,10 +90,111 @@ class TestUtil
         return json;
     }
 
-    static Object readJsonObject(String json) throws Exception
+    static String getJsonString(Object obj, Map<Class, JsonWriter.JsonClassWriterBase> writers)
+    {
+        getJsonString(obj, writers, [])
+    }
+
+    static String getJsonString(Object obj)
+    {
+        return getJsonString(obj, [:]);
+    }
+
+    static Object readJsonObject(String json)
+    {
+        return readJsonObject(json, [:])
+    }
+
+    static Object readJsonObject(String json, Map<Class, JsonReader.JsonClassReaderBase> readers)
+    {
+        return readJsonObject(json, readers, [])
+    }
+
+    static Object readJsonObject(String json, Map<Class, JsonReader.JsonClassReaderBase> readers, List<Class> notCustom)
     {
         long startRead1 = System.nanoTime()
-        Object o = JsonReader.jsonToJava(json)
+
+        ByteArrayInputStream ba;
+        try
+        {
+            ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
+        }
+        JsonReader jr = new JsonReader(ba, [:]);
+        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : readers)
+        {
+            jr.addReader(entry.getKey(), entry.getValue())
+        }
+        for (Class c : notCustom)
+        {
+            jr.addNotCustomReader(c)
+        }
+        Object o = jr.readObject();
+        jr.close();
+
+        long endRead1 = System.nanoTime()
+
+        try
+        {
+            ByteArrayOutputStream bout = new ByteArrayOutputStream()
+            ObjectOutputStream out = new ObjectOutputStream(bout)
+            out.writeObject(o)
+            out.flush()
+            out.close()
+
+            long startRead2 = System.nanoTime()
+            ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray())
+            ObjectInputStream input = new ObjectInputStream(bin)
+            input.readObject()
+            input.close()
+            long endRead2 = System.nanoTime()
+
+            totalJsonRead += endRead1 - startRead1;
+            totalObjRead += endRead2 - startRead2;
+            double t1 = (endRead1 - startRead1) / 1000000.0;
+            double t2 = (endRead2 - startRead2) / 1000000.0;
+            if (debug)
+            {
+                println("JSON  read time  = " + t1 + " ms")
+                println("ObjectInputStream time = " + t2 + " ms")
+            }
+        }
+        catch (Exception e)
+        {
+            outputStreamFailCount++;
+        }
+
+        return o;
+    }
+
+    static Map readJsonMap(String json, Map<Class, JsonReader.JsonClassReaderBase> readers, List<Class> notCustom)
+    {
+        long startRead1 = System.nanoTime()
+        ByteArrayInputStream ba
+
+        try
+        {
+            ba = new ByteArrayInputStream(json.getBytes("UTF-8"))
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e)
+        }
+        JsonReader jr = new JsonReader(ba, [(JsonReader.USE_MAPS):true])
+        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : readers)
+        {
+            jr.addReader(entry.getKey(), entry.getValue())
+        }
+        for (Class c : notCustom)
+        {
+            jr.addNotCustomReader(c)
+        }
+        Object o = jr.readObject();
+        jr.close();
+
         long endRead1 = System.nanoTime()
 
         try

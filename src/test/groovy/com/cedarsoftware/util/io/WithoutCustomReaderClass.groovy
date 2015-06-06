@@ -2,21 +2,21 @@ package com.cedarsoftware.util.io
 
 class WithoutCustomReaderClass {
 	private String test;
-	private CustomReaderClass customReaderInner;
-	
+	private CustomDataClass customReaderInner;
+
 	public void setTest(String test) {
 		this.test = test;
 	}
-	
+
 	public String getTest() {
 		return test;
 	}
-	
-	public void setCustomReaderInner(CustomReaderClass customReaderInner) {
+
+	public void setCustomReaderInner(CustomDataClass customReaderInner) {
 		this.customReaderInner = customReaderInner;
 	}
-	
-	public CustomReaderClass getCustomReaderInner() {
+
+	public CustomDataClass getCustomReaderInner() {
 		return customReaderInner;
 	}
 }

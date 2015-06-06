@@ -42,7 +42,7 @@ abstract class Resolver
     protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    static final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
+    final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
@@ -384,7 +384,7 @@ abstract class Resolver
         return refObject;
     }
 
-    protected static JsonReader.JsonClassReaderBase getCustomReader(Class c)
+    protected JsonReader.JsonClassReaderBase getCustomReader(Class c)
     {
         JsonReader.JsonClassReaderBase reader = readerCache.get(c);
         if (reader == null)
@@ -399,7 +399,7 @@ abstract class Resolver
         return reader == nullReader ? null : reader;
     }
 
-    private static JsonReader.JsonClassReaderBase forceGetCustomReader(Class c)
+    private JsonReader.JsonClassReaderBase forceGetCustomReader(Class c)
     {
         JsonReader.JsonClassReaderBase closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
@@ -537,13 +537,13 @@ abstract class Resolver
         return JsonReader.newInstance(c);
     }
 
-    protected static Map<Class, JsonReader.JsonClassReaderBase> getReaders()
+    protected Map<Class, JsonReader.JsonClassReaderBase> getReaders()
     {
-        return JsonReader.readers;
+        return reader.readers;
     }
 
-    protected static boolean notCustom(Class cls)
+    protected boolean notCustom(Class cls)
     {
-        return JsonReader.notCustom.contains(cls);
+        return reader.notCustom.contains(cls);
     }
 }

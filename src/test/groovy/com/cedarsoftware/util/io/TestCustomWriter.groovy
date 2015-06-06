@@ -201,11 +201,8 @@ class TestCustomWriter
     void testCustomWriter()
     {
         Person p = createTestPerson()
-        JsonWriter.addWriter(Person.class, new CustomPersonWriter())
-        JsonReader.addReader(Person.class, new CustomPersonReader());
-        String jsonCustom = JsonWriter.objectToJson(p)
-
-        Map obj = JsonReader.jsonToMaps(jsonCustom)
+        String jsonCustom = TestUtil.getJsonString(p, [(Person.class):new CustomPersonWriter()])
+        Map obj = TestUtil.readJsonMap(jsonCustom, [(Person.class):new CustomPersonReader()], [])
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
         Map pets = obj.p
@@ -221,7 +218,7 @@ class TestCustomWriter
         assert 'Chi hua hua' == bella.t
         assert 3 == bella.a
 
-        Person personCustom = JsonReader.jsonToJava(jsonCustom)
+        Person personCustom = TestUtil.readJsonObject(jsonCustom, [(Person.class):new CustomPersonReader()])
         assert personCustom.firstName == 'Michael'
         assert personCustom.lastName == 'Bolton'
         List petz = personCustom.pets
@@ -233,24 +230,19 @@ class TestCustomWriter
         assert 'Chi hua hua' == petz[1].type
         assert 3 == petz[1].age
 
-        JsonWriter.addNotCustomWriter(Person.class)
-        String jsonOrig = JsonWriter.objectToJson(p)
+        String jsonOrig = TestUtil.getJsonString(p, [(Person.class):new CustomPersonWriter()],[Person.class])
         assert jsonCustom != jsonOrig
         assert jsonCustom.length() < jsonOrig.length()
-        JsonWriter.removeNotCustomWriter(Person.class)
-        String jsonCustom2 = JsonWriter.objectToJson(p)
-        JsonWriter.removeWriter(Person.class)
+
+        String jsonCustom2 = TestUtil.getJsonString(p, [(Person.class):new CustomPersonWriter()])
         String jsonOrig2 = JsonWriter.objectToJson(p)
         assert jsonCustom == jsonCustom2
         assert jsonOrig == jsonOrig2
 
-        JsonReader.addNotCustomReader(Person.class)
-        Person personOrig = JsonReader.jsonToJava(jsonOrig)
+        Person personOrig = TestUtil.readJsonObject(jsonOrig, [(Person.class):new CustomPersonReader()],[Person.class])
         assert personOrig == personCustom
 
-        JsonReader.removeReader(Person.class)
         p = JsonReader.jsonToJava(jsonCustom)
         assert null == p.firstName
-        JsonWriter.removeWriter(Person.class)
     }
 }

@@ -66,20 +66,4 @@ class TestInternalAPIs
         assertNotNull(vis)
     }
 
-    @Test
-    void testNoAnalysisForCustomWriter() throws Exception
-    {
-        JsonWriter.addWriter(Dog.class, new JsonWriter.JsonClassWriter() {
-            public void writePrimitiveForm(Object o, Writer out)
-            { }
-
-            public void write(Object o, boolean showType, Writer out)
-            { }
-
-            public boolean hasPrimitiveForm()
-            {
-                false
-            }
-        })
-    }
 }
