@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>3.3.2</version>
+      <version>4.0.0</version>
     </dependency>
 
 [Donations welcome](https://coinbase.com/jdereg)
@@ -93,8 +93,12 @@ Both the `JsonWriter` and `JsonReader` allow you to pass in an optional argument
         
 In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
 
-#### All of the values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
+#### All of the optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
+    CUSTOM_WRITER_MAP       // Set to Map<Class, JsonWriter.JsonClassWriterEx> to
+                            // override the default JSON output for a given class. 
+    NOT_CUSTOM_WRITER_MAP   // Set to Collection<Class> to indicate classes that should
+                            // not be written by a custom writer.
     DATE_FORMAT             // Set this format string to control the format dates are 
                             // written. Example: "yyyy/MM/dd HH:mm".  Can also be a 
                             // DateFormat instance.  Can also be the constant 
@@ -116,20 +120,24 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i 
 
-#### All of the values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
+#### All of the optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
-    USE_MAPS        // If set to boolean true, the read-in JSON will be 
-                    // turned into a Map of Maps (JsonObject) representation. Note
-                    // that calling the JsonWriter on this root Map will indeed
-                    // write the equivalent JSON stream as was read.
-    TYPE_NAME_MAP   // If set, this map will be used when writing @type values. 
-                    // Allows short-hand abbreviations of type names.
-    UNKNOWN_TYPE    // Set to null (or leave out), unknown objects are returned as Maps.
-                    // Set to String class name, and unknown objects will be created
-                    // as with this class name, and the fields will be set on it.
-                    // Set to false, and an exception will be thrown when an unknown
-                    // object type is encountered.  The location in the JSON will
-                    // be given.
+    CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReaderEx> to
+                            // override the default JSON reader for a given class. 
+    NOT_CUSTOM_READER_MAP   // Set to Collection<Class> to indicate classes that should
+                            // not be read by a custom reader.
+    USE_MAPS                // If set to boolean true, the read-in JSON will be 
+                            // turned into a Map of Maps (JsonObject) representation. Note
+                            // that calling the JsonWriter on this root Map will indeed
+                            // write the equivalent JSON stream as was read.
+    TYPE_NAME_MAP           // If set, this map will be used when writing @type values. 
+                            // Allows short-hand abbreviations of type names.
+    UNKNOWN_TYPE            // Set to null (or leave out), unknown objects are returned
+                            // as Maps.  Set to String class name, and unknown objects 
+                            // will be created as with this class name, and the fields 
+                            // will be set on it. Set to false, and an exception will be 
+                            // thrown when an unknown object type is encountered.  The 
+                            // location in the JSON will be given.
       
 ### Customization
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
@@ -181,6 +189,12 @@ Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, h
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
+ * 4.4.0
+  * Custom readers / writers are set now per-instance of `JsonReader` / `JsonWriter`, not static.  This allows using different customization for cloning, for example, than for serialization to client.
+  * `JsonReader.jsonToJava()` and `JsonReader.jsonToMaps()` now allow an `InputStream` to be used.
+  * Custom readers / writers can now be set all-at-once through the optional 'args' `Map`.
+  * 'notCustom' readers / writers can now be set all-at-once through the optional 'args' `Map`.
+  * The `removeReader()`, `removeWriter()`, `removeNotCustomReader()`, and `removeNotCustomWriter()` APIs have been removed since customizers are set per-instance. 
  * 3.3.2
   * Added new `JsonObject.isReference()` API which will return 'true' if the `JsonObject` is currently representing a reference `@ref`
   * Added new `JsonReader.getRefTarget(jsonObject)` API which will follow the `@ref` links until it resolves to the referenced (target) instance.
