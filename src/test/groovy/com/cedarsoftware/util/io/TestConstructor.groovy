@@ -358,4 +358,18 @@ class TestConstructor
         Canine bella = reader.jsonObjectsToJava(root)
         assert bella.name == 'Bella'
     }
+
+    @Test
+    void testReaderInputStreamConstructor()
+    {
+        Canine dog = new Canine('Eddie')
+        String json = JsonWriter.objectToJson(dog)
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes())
+        Canine eddie = JsonReader.jsonToJava(inputStream, null)
+        assert eddie.name == 'Eddie'
+
+        inputStream = new ByteArrayInputStream(json.getBytes())
+        Map dogMap = JsonReader.jsonToMaps(inputStream, null)
+        assert dogMap.name == 'Eddie'
+    }
 }

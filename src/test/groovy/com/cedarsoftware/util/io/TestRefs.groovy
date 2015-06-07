@@ -126,7 +126,7 @@ class TestRefs
         b._other = a
         String json = JsonWriter.objectToJson(a)
 
-        TestObject aa = TestUtil.readJsonObject(json,[(TestObject.class):new JsonReader.JsonClassReaderEx() {
+        TestObject aa = TestUtil.readJsonObject(json,[(JsonReader.CUSTOM_READER_MAP):[(TestObject.class):new JsonReader.JsonClassReaderEx() {
             Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
             {
                 JsonObject jObj = (JsonObject) jOb
@@ -139,6 +139,6 @@ class TestRefs
                 assert aRef != aTarget
                 assert aTarget._name == 'a'
                 return x
-            }}])
+            }}]])
     }
 }

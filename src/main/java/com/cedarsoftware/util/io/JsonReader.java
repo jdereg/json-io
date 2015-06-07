@@ -74,11 +74,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class JsonReader implements Closeable
 {
-    public static final String USE_MAPS = "USE_MAPS";               // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
-    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";   // What to do when an object is found and 'type' cannot be determined.
-    public static final String JSON_READER = "JSON_READER";         // Pointer to 'this' (automatically placed in the Map)
-    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
-    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE"; // This map is the reverse of the TYPE_NAME_MAP (value -> key)
+    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
+    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
+    public static final String USE_MAPS = "USE_MAPS";                   // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
+    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";       // What to do when an object is found and 'type' cannot be determined.
+    public static final String JSON_READER = "JSON_READER";             // Pointer to 'this' (automatically placed in the Map)
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";         // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
     protected final Set<Class> notCustom = new HashSet<>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
@@ -217,22 +219,13 @@ public class JsonReader implements Closeable
      * associate the Class 'c' to the reader you pass in.  The readers are
      * found with isAssignableFrom().  If this is too broad, causing too
      * many classes to be associated to the custom reader, you can indicate
-     * that json-io should not use a custom reader, by calling the
-     * addNotCustomReader() method.
+     * that json-io should not use a custom reader for a particular class,
+     * by calling the addNotCustomReader() method.
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
     public void addReader(Class c, JsonClassReaderBase reader)
     {
-        for (Map.Entry<Class, JsonClassReaderBase> entry : readers.entrySet())
-        {
-            Class clz = entry.getKey();
-            if (clz == c)
-            {
-                entry.setValue(reader);
-                return;
-            }
-        }
         readers.put(c, reader);
     }
 
@@ -278,7 +271,7 @@ public class JsonReader implements Closeable
     public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
     {
         optionalArgs.put(USE_MAPS, false);
-        ByteArrayInputStream ba = null;
+        ByteArrayInputStream ba;
         try
         {
             ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
@@ -288,6 +281,25 @@ public class JsonReader implements Closeable
             throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
         }
         JsonReader jr = new JsonReader(ba, optionalArgs);
+        Object obj = jr.readObject();
+        jr.close();
+        return obj;
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     *
+     * @param inputStream InputStream containing JSON input
+     * @return Java object graph matching JSON input
+     */
+    public static Object jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs)
+    {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap();
+        }
+        optionalArgs.put(USE_MAPS, false);
+        JsonReader jr = new JsonReader(inputStream, optionalArgs);
         Object obj = jr.readObject();
         jr.close();
         return obj;
@@ -323,31 +335,65 @@ public class JsonReader implements Closeable
     {
         try
         {
+            if (optionalArgs == null)
+            {
+                optionalArgs = new HashMap();
+            }
             optionalArgs.put(USE_MAPS, true);
             ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
             JsonReader jr = new JsonReader(ba, optionalArgs);
             Object ret = jr.readObject();
             jr.close();
 
-            if (ret instanceof Map)
-            {
-                return (Map) ret;
-            }
-
-            if (ret != null && ret.getClass().isArray())
-            {
-                JsonObject<String, Object> retMap = new JsonObject<>();
-                retMap.put("@items", ret);
-                return retMap;
-            }
-            JsonObject<String, Object> retMap = new JsonObject<>();
-            retMap.put("@items", new Object[]{ret});
-            return retMap;
+            return adjustOutputMap(ret);
         }
         catch (UnsupportedEncodingException e)
         {
             throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
         }
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph
+     * that consists solely of Java Maps where the keys are the
+     * fields and the values are primitives or other Maps (in the
+     * case of objects).
+     *
+     * @param inputStream Stream containing JSON input
+     * @param optionalArgs Map used to turn on / off additional features.
+     * @return Java object graph of Maps matching JSON input,
+     *         or null if an error occurred.
+     */
+    public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
+    {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap();
+        }
+        optionalArgs.put(USE_MAPS, true);
+        JsonReader jr = new JsonReader(inputStream, optionalArgs);
+        Object ret = jr.readObject();
+        jr.close();
+
+        return adjustOutputMap(ret);
+    }
+
+    private static Map adjustOutputMap(Object ret)
+    {
+        if (ret instanceof Map)
+        {
+            return (Map) ret;
+        }
+
+        if (ret != null && ret.getClass().isArray())
+        {
+            JsonObject<String, Object> retMap = new JsonObject<>();
+            retMap.put("@items", ret);
+            return retMap;
+        }
+        JsonObject<String, Object> retMap = new JsonObject<>();
+        retMap.put("@items", new Object[]{ret});
+        return retMap;
     }
 
     public JsonReader()
@@ -386,6 +432,10 @@ public class JsonReader implements Closeable
 
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
     {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap();
+        }
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
@@ -400,6 +450,24 @@ public class JsonReader implements Closeable
                 typeNameMap.put(entry.getValue(), entry.getKey());
             }
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
+        }
+
+        Map<Class, JsonReader.JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
+        if (customReaders != null)
+        {
+            for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : customReaders.entrySet())
+            {
+                addReader(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Collection<Class> notCustomReaders = (Collection) args.get(NOT_CUSTOM_READER_MAP);
+        if (notCustomReaders != null)
+        {
+            for (Class c : notCustomReaders)
+            {
+                addNotCustomReader(c);
+            }
         }
 
         try
@@ -511,6 +579,7 @@ public class JsonReader implements Closeable
             resolver.createJavaObjectInstance(Object.class, root);
             Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
             resolver.cleanup();
+            readers.clear();
             return graph;
         }
         catch (Exception e)
@@ -559,16 +628,6 @@ public class JsonReader implements Closeable
         return msg;
     }
 
-    Object error(String msg)
-    {
-        throw new JsonIoException(getErrorMessage(msg));
-    }
-
-    Object error(String msg, Exception e)
-    {
-        throw new JsonIoException(getErrorMessage(msg), e);
-    }
-
     private String getLastReadSnippet()
     {
         if (input != null)
@@ -576,28 +635,5 @@ public class JsonReader implements Closeable
             return input.getLastSnippet();
         }
         return "";
-    }
-
-    /**
-     * @param c Class to check
-     * @return boolean true if the passed in class is a Java primitive.
-     * @deprecated Use MetaUtils.isPrimitive(c) instead.
-     */
-    @Deprecated
-    public static boolean isPrimitive(Class c)
-    {
-        return MetaUtils.isPrimitive(c);
-    }
-
-    /**
-     * @param c Class to check
-     * @return boolean true if the passed in class is a Logical Java primitive.  This adds
-     * Class, Date, String, and the primitive wrappers to the list.
-     * @deprecated Use MetaUtils.isLogicalPrimitive(c) instead.
-     */
-    @Deprecated
-    public static boolean isLogicalPrimitive(Class c)
-    {
-        return MetaUtils.isLogicalPrimitive(c);
     }
 }

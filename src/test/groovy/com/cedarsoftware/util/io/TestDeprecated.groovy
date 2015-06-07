@@ -24,9 +24,6 @@ class TestDeprecated
     @Test
     void testDeprecatedMethods()
     {
-        assert JsonReader.isLogicalPrimitive(Byte.TYPE)
-        assert JsonReader.isPrimitive(Byte.TYPE)
-        assert JsonReader.isLogicalPrimitive(String.class)
-        assert !JsonReader.isPrimitive(String.class)
+        // Add calls to execute deprecated methods here
     }
 }

@@ -77,6 +77,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class JsonWriter implements Closeable, Flushable
 {
+    public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
+    public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
     public static final String DATE_FORMAT = "DATE_FORMAT";         // Set the date format to use within the JSON output
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";      // Constant for use as DATE_FORMAT value
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";  // Constant for use as DATE_FORMAT value
@@ -160,16 +162,6 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * @see JsonWriter#objectToJson(Object, java.util.Map)
-     * @param item Object (root) to serialized to JSON String.
-     * @return String of JSON format representing complete object graph rooted by item.
-     */
-    public static String objectToJson(Object item)
-    {
-        return objectToJson(item, new HashMap<String, Object>());
-    }
-
-    /**
      * Provide access to subclasses.
      * @return Map containing all objects that were referenced within input object graph.
      */
@@ -204,6 +196,16 @@ public class JsonWriter implements Closeable, Flushable
         }
         String shortName = typeNameMap.get(typeName);
         return shortName == null ? typeName : shortName;
+    }
+
+    /**
+     * @see JsonWriter#objectToJson(Object, java.util.Map)
+     * @param item Object (root) to serialized to JSON String.
+     * @return String of JSON format representing complete object graph rooted by item.
+     */
+    public static String objectToJson(Object item)
+    {
+        return objectToJson(item, null);
     }
 
     /**
@@ -254,7 +256,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out)
     {
-        this(out, new HashMap<String, Object>());
+        this(out, null);
     }
 
     /**
@@ -269,10 +271,32 @@ public class JsonWriter implements Closeable, Flushable
      */
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap();
+        }
         args.putAll(optionalArgs);
         args.put(JsonClassWriterEx.JSON_WRITER, this);
         typeNameMap = (Map<String, String>) args.get(TYPE_NAME_MAP);
         shortMetaKeys = Boolean.TRUE.equals(args.get(SHORT_META_KEYS));
+
+        Map<Class, JsonClassWriterBase> customWriters = (Map<Class, JsonClassWriterBase>) args.get(CUSTOM_WRITER_MAP);
+        if (customWriters != null)
+        {
+            for (Map.Entry<Class, JsonClassWriterBase> entry : customWriters.entrySet())
+            {
+                addWriter(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Collection<Class> notCustomClasses = (Collection<Class>) args.get(NOT_CUSTOM_WRITER_MAP);
+        if (notCustomClasses != null)
+        {
+            for (Class c : notCustomClasses)
+            {
+                addNotCustomWriter(c);
+            }
+        }
 
         if (optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
@@ -561,23 +585,6 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * Remove any custom writer associated to the passed in Class.
-     */
-    public void removeWriter(Class c)
-    {
-        writers.remove(c);
-        writerCache.remove(c);
-    }
-
-    /**
-     * Allow the passed in Class to have custom writers to be associated to it.
-     */
-    public void removeNotCustomWriter(Class c)
-    {
-        notCustom.remove(c);
-    }
-
-    /**
      * Write the passed in Java object in JSON format.
      * @param obj Object any Java Object or JsonObject.
      */
@@ -589,13 +596,15 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeImpl(obj, true);
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             throw new JsonIoException("Error writing object to JSON:", e);
         }
         flush();
         objVisited.clear();
         objsReferenced.clear();
+        writerCache.clear();
+        writers.clear();
     }
 
     /**

@@ -43,18 +43,15 @@ class TestUtil
 
     }
 
-    static String getJsonString(Object obj, Map<Class, JsonWriter.JsonClassWriterBase> writers, List<Class> notCustom)
+    static String getJsonString(Object obj)
+    {
+        return getJsonString(obj, [:]);
+    }
+
+    static String getJsonString(Object obj, Map<String, Object> args)
     {
         ByteArrayOutputStream bout = new ByteArrayOutputStream()
-        JsonWriter jsonWriter = new JsonWriter(bout)
-        for (Map.Entry<Class, JsonWriter.JsonClassWriterBase> entry : writers)
-        {
-            jsonWriter.addWriter(entry.getKey(), entry.getValue())
-        }
-        for (Class c : notCustom)
-        {
-            jsonWriter.addNotCustomWriter(c)
-        }
+        JsonWriter jsonWriter = new JsonWriter(bout, args)
         long startWrite1 = System.nanoTime()
         jsonWriter.write(obj)
         jsonWriter.flush()
@@ -90,27 +87,12 @@ class TestUtil
         return json;
     }
 
-    static String getJsonString(Object obj, Map<Class, JsonWriter.JsonClassWriterBase> writers)
-    {
-        getJsonString(obj, writers, [])
-    }
-
-    static String getJsonString(Object obj)
-    {
-        return getJsonString(obj, [:]);
-    }
-
     static Object readJsonObject(String json)
     {
         return readJsonObject(json, [:])
     }
 
-    static Object readJsonObject(String json, Map<Class, JsonReader.JsonClassReaderBase> readers)
-    {
-        return readJsonObject(json, readers, [])
-    }
-
-    static Object readJsonObject(String json, Map<Class, JsonReader.JsonClassReaderBase> readers, List<Class> notCustom)
+    static Object readJsonObject(String json, Map<String, Object> args)
     {
         long startRead1 = System.nanoTime()
 
@@ -123,15 +105,7 @@ class TestUtil
         {
             throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
         }
-        JsonReader jr = new JsonReader(ba, [:]);
-        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : readers)
-        {
-            jr.addReader(entry.getKey(), entry.getValue())
-        }
-        for (Class c : notCustom)
-        {
-            jr.addNotCustomReader(c)
-        }
+        JsonReader jr = new JsonReader(ba, args);
         Object o = jr.readObject();
         jr.close();
 
@@ -170,8 +144,12 @@ class TestUtil
         return o;
     }
 
-    static Map readJsonMap(String json, Map<Class, JsonReader.JsonClassReaderBase> readers, List<Class> notCustom)
+    static Map readJsonMap(String json, Map<String, Object> args)
     {
+        if (args == null)
+        {
+            args = []
+        }
         long startRead1 = System.nanoTime()
         ByteArrayInputStream ba
 
@@ -183,15 +161,8 @@ class TestUtil
         {
             throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e)
         }
-        JsonReader jr = new JsonReader(ba, [(JsonReader.USE_MAPS):true])
-        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : readers)
-        {
-            jr.addReader(entry.getKey(), entry.getValue())
-        }
-        for (Class c : notCustom)
-        {
-            jr.addNotCustomReader(c)
-        }
+        args[(JsonReader.USE_MAPS)] = true
+        JsonReader jr = new JsonReader(ba, args)
         Object o = jr.readObject();
         jr.close();
 

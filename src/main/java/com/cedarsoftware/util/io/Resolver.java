@@ -151,6 +151,7 @@ abstract class Resolver
         reader.getObjectsRead().clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
+        readerCache.clear();
     }
 
     /**

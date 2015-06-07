@@ -94,12 +94,22 @@ class TestCustomClassHandler
     void testCustomClassReaderWriter() throws Exception
     {
         WeirdDate now = new WeirdDate(System.currentTimeMillis())
-        String json = TestUtil.getJsonString(now, [(WeirdDate.class):new WeirdDateWriter()])
+        String json = TestUtil.getJsonString(now,
+                [
+                        (JsonWriter.CUSTOM_WRITER_MAP):[(WeirdDate.class):new WeirdDateWriter()]
+                ])
         TestUtil.printLine("json=" + json)
-        WeirdDate date = (WeirdDate) TestUtil.readJsonObject(json, [(WeirdDate.class):new WeirdDateReader()])
+        WeirdDate date = (WeirdDate) TestUtil.readJsonObject(json,
+                [
+                        (JsonReader.CUSTOM_READER_MAP):[(WeirdDate.class):new WeirdDateReader()]
+                ])
         assertTrue(now.equals(date))
 
-        json = TestUtil.getJsonString(now, [(WeirdDate.class):new WeirdDateWriter()], [WeirdDate.class])
+        json = TestUtil.getJsonString(now,
+                [
+                    (JsonWriter.CUSTOM_WRITER_MAP):[(WeirdDate.class):new WeirdDateWriter()],
+                    (JsonWriter.NOT_CUSTOM_WRITER_MAP):[WeirdDate.class]
+                ])
         TestUtil.printLine("json=" + json)
         assertTrue(now.equals(date))
     }
