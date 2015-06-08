@@ -142,7 +142,7 @@ class TestTemplateFields
 
     // This test was provided by Github user: reuschling
     @Test
-    void testTemplateClassField() throws Exception
+    void testTemplateClassField()
     {
         Test1 container = new Test1()
         Test1 container2 = new Test1()
@@ -156,7 +156,7 @@ class TestTemplateFields
     }
 
     @Test
-    void testTemplateNonClassFields() throws Exception
+    void testTemplateNonClassFields()
     {
         Test3 container = new Test3()
         String json = JsonWriter.objectToJson(container)
@@ -226,7 +226,7 @@ class TestTemplateFields
     }
 
     @Test
-    void test3TypeGeneric() throws Exception
+    void test3TypeGeneric()
     {
         String json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":{"x":1,"y":2},"u":"Sochi","v":{"x":10,"y":20}}}'
         GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json)

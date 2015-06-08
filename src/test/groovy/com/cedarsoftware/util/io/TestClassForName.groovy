@@ -34,7 +34,7 @@ class TestClassForName
     }
 
     @Test
-    void testClassForNameErrorHandling() throws Exception
+    void testClassForNameErrorHandling()
     {
         try
         {

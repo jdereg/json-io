@@ -33,7 +33,7 @@ class TestInternalAPIs
     }
 
     @Test
-    void testDistanceToInterface() throws Exception
+    void testDistanceToInterface()
     {
         assertEquals(1, MetaUtils.getDistanceToInterface(Serializable.class, LinkedList.class))
         assertEquals(3, MetaUtils.getDistanceToInterface(Iterable.class, LinkedList.class))
@@ -56,7 +56,7 @@ class TestInternalAPIs
     }
 
     @Test
-    void testProtectedAPIs() throws Exception
+    void testProtectedAPIs()
     {
         ByteArrayOutputStream bao = new ByteArrayOutputStream()
         DerivedWriter writer = new DerivedWriter(bao)

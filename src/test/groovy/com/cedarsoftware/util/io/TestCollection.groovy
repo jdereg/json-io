@@ -204,7 +204,7 @@ class TestCollection
     }
 
     @Test
-    void testCollection() throws Exception
+    void testCollection()
     {
         TestUtil.printLine("\nTestJsonReaderWriter.testCollection()")
         ManyCollections obj = new ManyCollections()
@@ -358,7 +358,7 @@ class TestCollection
     }
 
     @Test
-    void testReconstituteCollection2() throws Exception
+    void testReconstituteCollection2()
     {
         ManyCollections testCol = new ManyCollections()
         testCol.init()
@@ -375,7 +375,7 @@ class TestCollection
     }
 
     @Test
-    void testAlwaysShowType() throws Exception
+    void testAlwaysShowType()
     {
 		ManyCollections tc = new ManyCollections()
 		tc.init()
@@ -388,7 +388,7 @@ class TestCollection
     }
 
     @Test
-    void testCollectionWithEmptyElement() throws Exception
+    void testCollectionWithEmptyElement()
     {
         List list = new ArrayList()
         list.add("a")
@@ -407,7 +407,7 @@ class TestCollection
     }
 
     @Test
-    void testCollectionWithReferences() throws Exception
+    void testCollectionWithReferences()
     {
         TestObject o = new TestObject("JSON")
         List list = new ArrayList()
@@ -428,7 +428,7 @@ class TestCollection
     }
 
     @Test
-    void testCollectionWithNonJsonPrimitives() throws Exception
+    void testCollectionWithNonJsonPrimitives()
     {
         Collection col = new ArrayList()
         col.add(new Integer(7))
@@ -440,7 +440,7 @@ class TestCollection
     }
 
     @Test
-    void testCollectionWithParameterizedTypes() throws Exception
+    void testCollectionWithParameterizedTypes()
     {
         String json = '{"@type":"' + ParameterizedCollection.class.getName() + '", "content":{"foo":[{"x":1,"y":2},{"x":10,"y":20}],"bar":[{"x":3,"y":4}, {"x":30,"y":40}]}}'
         ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json)
@@ -476,7 +476,7 @@ class TestCollection
     }
 
     @Test
-    void testEmptyCollections() throws Exception
+    void testEmptyCollections()
     {
         EmptyCols emptyCols;
         String className = TestCollection.class.getName()
@@ -499,7 +499,7 @@ class TestCollection
     }
 
     @Test
-    void testEnumWithPrivateMembersInCollection() throws Exception
+    void testEnumWithPrivateMembersInCollection()
     {
         TestEnum4 x = TestEnum4.B;
         List list = new ArrayList()
@@ -519,7 +519,7 @@ class TestCollection
     }
 
     @Test
-    void testGenericInfoCollection() throws Exception
+    void testGenericInfoCollection()
     {
         String className = PointList.class.getName()
         String json = '{"@type":"' + className + '","points":{"@type":"java.util.ArrayList","@items":[{"x":1,"y":2}]}}'
@@ -530,7 +530,7 @@ class TestCollection
     }
 
     @Test
-    void testLocaleInCollection() throws Exception
+    void testLocaleInCollection()
     {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry())
         List list = new ArrayList()
@@ -543,7 +543,7 @@ class TestCollection
     }
 
     @Test
-    void testMapOfMapsCollection() throws Exception
+    void testMapOfMapsCollection()
     {
         List stuff = new ArrayList()
         stuff.add("Hello")
@@ -577,7 +577,7 @@ class TestCollection
     }
 
     @Test
-    void testReconstituteCollection() throws Exception
+    void testReconstituteCollection()
     {
         TestObject to = new TestObject("football")
         Collection objs = new ArrayList()
@@ -622,7 +622,7 @@ class TestCollection
     }
 
     @Test
-    void testReconstituteEmptyCollection() throws Exception
+    void testReconstituteEmptyCollection()
     {
         Collection empty = new ArrayList()
         String json0 = TestUtil.getJsonString(empty)
@@ -655,7 +655,7 @@ class TestCollection
     }
 
     @Test
-    void testUntypedCollections() throws Exception
+    void testUntypedCollections()
     {
         Object[] poly = ["Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"] as Object[];
         String json = TestUtil.getJsonString(poly)
@@ -675,7 +675,7 @@ class TestCollection
     }
 
     @Test
-    void testEmptyArrayList() throws Exception
+    void testEmptyArrayList()
     {
         EmptyArrayList x = new EmptyArrayList()
         String json = TestUtil.getJsonString(x)

@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue
 class TestRoots
 {
     @Test
-    void testStringRoot() throws Exception
+    void testStringRoot()
     {
         Gson gson = new Gson()
         String g = gson.toJson("root should not be a string")
@@ -35,7 +35,7 @@ class TestRoots
     }
 
     @Test
-    void testRoots() throws Exception
+    void testRoots()
     {
         // Test Object[] as root element passed in
         Object[] foo = [new TestObject("alpha"), new TestObject("beta")] as Object[];
@@ -78,7 +78,7 @@ class TestRoots
     }
 
     @Test
-    void testRootTypes() throws Exception
+    void testRootTypes()
     {
         assertEquals(25L, TestUtil.readJsonObject("25"))
         assertEquals(25.0d, TestUtil.readJsonObject("25.0"), 0.00001d)
@@ -88,7 +88,7 @@ class TestRoots
     }
 
     @Test
-    void testRoots2() throws Exception
+    void testRoots2()
     {
         // Test root JSON type as [ ]
         Object array = ['Hello'] as Object[]
@@ -111,7 +111,7 @@ class TestRoots
     }
 
     @Test
-    void testNull() throws Exception
+    void testNull()
     {
         String json = JsonWriter.objectToJson(null)
         TestUtil.printLine('json=' + json)
@@ -119,7 +119,7 @@ class TestRoots
     }
 
     @Test
-    void testEmptyObject() throws Exception
+    void testEmptyObject()
     {
         Object o = TestUtil.readJsonObject('{}')
         assert JsonObject.class == o.getClass()

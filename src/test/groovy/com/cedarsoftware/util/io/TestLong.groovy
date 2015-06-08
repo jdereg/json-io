@@ -61,7 +61,7 @@ class TestLong
     }
 
     @Test
-    void testLong() throws Exception
+    void testLong()
     {
         ManyLongs test = new ManyLongs()
         String json = TestUtil.getJsonString(test)
@@ -102,7 +102,7 @@ class TestLong
     }
 
     @Test
-    void testLongAsString() throws Exception
+    void testLongAsString()
     {
         long x = 19
         String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
@@ -114,7 +114,7 @@ class TestLong
     }
 
     @Test
-    void testLongArrayAsString() throws Exception
+    void testLongArrayAsString()
     {
         long[] x = [1L, 2L, 3L]
         String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
@@ -130,7 +130,7 @@ class TestLong
     }
 
     @Test
-    void testObjectArrayOfLongsAsString() throws Exception
+    void testObjectArrayOfLongsAsString()
     {
         Object[] x = [1L, 2L, 3L]
         String json = JsonWriter.objectToJson(x, [(JsonWriter.WRITE_LONGS_AS_STRINGS):true])
@@ -146,7 +146,7 @@ class TestLong
     }
 
     @Test
-    void testLongCollectionAsString() throws Exception
+    void testLongCollectionAsString()
     {
         Collection x = new ArrayList()
         x.add(1L)
@@ -166,7 +166,7 @@ class TestLong
     }
 
     @Test
-    void testLongObjectFieldAsString() throws Exception
+    void testLongObjectFieldAsString()
     {
         PhysicalAttributes x = new PhysicalAttributes()
         x.age = 49L

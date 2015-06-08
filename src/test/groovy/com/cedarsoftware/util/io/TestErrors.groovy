@@ -25,7 +25,7 @@ import static org.junit.Assert.fail
 class TestErrors
 {
     @Test
-    void testBadJson() throws Exception
+    void testBadJson()
     {
         Object o = null;
 
@@ -42,7 +42,7 @@ class TestErrors
     }
 
     @Test
-    void testParseMissingQuote() throws Exception
+    void testParseMissingQuote()
     {
         try
         {
@@ -71,7 +71,7 @@ class TestErrors
         }
     }
     @Test
-    void testParseInvalid1stChar() throws Exception
+    void testParseInvalid1stChar()
     {
         try
         {
@@ -101,7 +101,7 @@ class TestErrors
     }
 
     @Test
-    void testParseMissingLastBrace() throws Exception
+    void testParseMissingLastBrace()
     {
         try
         {
@@ -131,7 +131,7 @@ class TestErrors
     }
 
     @Test
-    void testParseMissingLastBracket() throws Exception
+    void testParseMissingLastBracket()
     {
         String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]'
         JsonReader.jsonToJava(json)
@@ -149,7 +149,7 @@ class TestErrors
     }
 
     @Test
-    void testParseBadValueInArray() throws Exception
+    void testParseBadValueInArray()
     {
         String json
 
@@ -166,7 +166,7 @@ class TestErrors
     }
 
     @Test
-    void testParseObjectWithoutClosingBrace() throws Exception
+    void testParseObjectWithoutClosingBrace()
     {
         try
         {
@@ -271,7 +271,7 @@ class TestErrors
     }
 
     @Test
-    void testMalformedJson() throws Exception
+    void testMalformedJson()
     {
         String json;
 
@@ -365,7 +365,7 @@ class TestErrors
     }
 
     @Test
-    void testBadType() throws Exception
+    void testBadType()
     {
         try
         {
@@ -391,7 +391,7 @@ class TestErrors
     }
 
     @Test
-    void testBadHexNumber() throws Exception
+    void testBadHexNumber()
     {
         StringBuilder str = new StringBuilder()
         str.append("[\"\\")
@@ -405,7 +405,7 @@ class TestErrors
     }
 
     @Test
-    void testBadValue() throws Exception
+    void testBadValue()
     {
         try
         {
@@ -449,7 +449,7 @@ class TestErrors
     }
 
     @Test
-    void testStringEscape() throws Exception
+    void testStringEscape()
     {
         String json = '["escaped slash \\\' should result in a single /"]'
         TestUtil.readJsonObject(json)
@@ -467,7 +467,7 @@ class TestErrors
     }
 
     @Test
-    void testClassMissingValue() throws Exception
+    void testClassMissingValue()
     {
         try
         {
@@ -478,7 +478,7 @@ class TestErrors
     }
 
     @Test
-    void testCalendarMissingValue() throws Exception
+    void testCalendarMissingValue()
     {
         try
         {
@@ -489,7 +489,7 @@ class TestErrors
     }
 
     @Test
-    void testBadFormattedCalendar() throws Exception
+    void testBadFormattedCalendar()
     {
         try
         {
@@ -500,7 +500,7 @@ class TestErrors
     }
 
     @Test
-    void testEmptyClassName() throws Exception
+    void testEmptyClassName()
     {
         try
         {
@@ -511,7 +511,7 @@ class TestErrors
     }
 
     @Test
-    void testBadBackRef() throws Exception
+    void testBadBackRef()
     {
         try
         {
@@ -522,7 +522,7 @@ class TestErrors
     }
 
     @Test
-    void testErrorReporting() throws Exception
+    void testErrorReporting()
     {
         String json = '[{"@type":"funky"},\n{"field:"value"]'
         try

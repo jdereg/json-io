@@ -91,7 +91,7 @@ class TestCustomClassHandler
     }
 
     @Test
-    void testCustomClassReaderWriter() throws Exception
+    void testCustomClassReaderWriter()
     {
         WeirdDate now = new WeirdDate(System.currentTimeMillis())
         String json = TestUtil.getJsonString(now,

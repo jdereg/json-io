@@ -304,7 +304,7 @@ class TestFields
     }
 
     @Test
-    void testFields() throws Exception
+    void testFields()
     {
         ManyFields obj = new ManyFields()
         obj.init()
@@ -443,7 +443,7 @@ class TestFields
     }
 
     @Test
-    void testReconstituteFields() throws Exception
+    void testReconstituteFields()
     {
         ManyFields testFields = new ManyFields()
         testFields.init()
@@ -460,7 +460,7 @@ class TestFields
     }
 
     @Test
-    void testAssignToObjectField() throws Exception
+    void testAssignToObjectField()
     {
         String json = '{"@type":"' + TestVanillaFields.class.getName() + '","name":"Nakamoto","salary":100.45,"age":48,"alive":true,"garbage":null}'
         TestVanillaFields vanilla = (TestVanillaFields) TestUtil.readJsonObject(json)
@@ -472,7 +472,7 @@ class TestFields
     }
 
     @Test
-    void testExternalFieldSpecifiedBadName() throws Exception
+    void testExternalFieldSpecifiedBadName()
     {
         Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>()
         List<String> fields = new ArrayList<String>()
@@ -496,7 +496,7 @@ class TestFields
     }
 
     @Test
-    void testExternalFieldSpecifier() throws Exception
+    void testExternalFieldSpecifier()
     {
         Map<Class, List<String>> fieldSpecifiers = new HashMap<>()
         List<String> fields = new ArrayList<>()
@@ -515,7 +515,7 @@ class TestFields
     }
 
     @Test
-    void testExternalFieldSpecifierInheritance() throws Exception
+    void testExternalFieldSpecifierInheritance()
     {
         Map<Class, List<String>> fieldSpecifiers = [(PainfulToSerialize.class):['name']]
         MorePainfulToSerialize painful = new MorePainfulToSerialize()
@@ -540,7 +540,7 @@ class TestFields
     }
 
     @Test
-    void testLocaleAsField() throws Exception
+    void testLocaleAsField()
     {
         Locale locale = Locale.getDefault()
         TestLocale tl = new TestLocale()

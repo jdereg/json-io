@@ -130,7 +130,7 @@ class TestDates
     }
 
     @Test
-    void testAssignDateFromEmptyString() throws Exception
+    void testAssignDateFromEmptyString()
     {
         String thisClass = TestDateField.class.name
         String json = '{"@type":"' + thisClass + '","fromString":""}'
@@ -155,7 +155,7 @@ class TestDates
     }
 
     @Test
-    void testDateParse() throws Exception
+    void testDateParse()
     {
         String json = '{"@type":"date","value":"2014 July 9"}'
         Date date = (Date) JsonReader.jsonToJava(json)
@@ -179,7 +179,7 @@ class TestDates
     }
 
     @Test
-    void testDate() throws Exception
+    void testDate()
     {
         TestDate test = new TestDate()
         String json = TestUtil.getJsonString(test)
@@ -227,7 +227,7 @@ class TestDates
     }
 
     @Test
-    void testCustomDateFormat() throws Exception
+    void testCustomDateFormat()
     {
         DateTest dt = new DateTest()
         Calendar c = Calendar.instance
@@ -402,7 +402,7 @@ class TestDates
      * per date.  (Date's are more than 8 bytes, longs are 8).
      */
     @Test
-    void testDateLongSubstitution() throws Exception
+    void testDateLongSubstitution()
     {
         long now = System.currentTimeMillis()
         DateTrick d = new DateTrick()
@@ -421,7 +421,7 @@ class TestDates
     }
 
     @Test
-    void testDateMissingValue() throws Exception
+    void testDateMissingValue()
     {
         try
         {
@@ -432,7 +432,7 @@ class TestDates
     }
 
     @Test
-    void testDates() throws Exception
+    void testDates()
     {
         // As root
         long now = System.currentTimeMillis()
@@ -542,7 +542,7 @@ class TestDates
     }
 
     @Test
-    void testSqlDate() throws Exception
+    void testSqlDate()
     {
         long now = System.currentTimeMillis()
         Date[] dates = [new Date(now), new java.sql.Date(now), new Timestamp(now) ] as Date[]

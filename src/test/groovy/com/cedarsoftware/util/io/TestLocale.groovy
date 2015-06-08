@@ -26,7 +26,7 @@ import static org.junit.Assert.fail
 class TestLocale
 {
     @Test
-    void testLocale() throws Exception
+    void testLocale()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString(locale)
@@ -65,7 +65,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleArray() throws Exception
+    void testLocaleArray()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString([locale] as Object[])
@@ -84,7 +84,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleInMapValue() throws Exception
+    void testLocaleInMapValue()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         Map map = new HashMap()
@@ -97,7 +97,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleInMapKey() throws Exception
+    void testLocaleInMapKey()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         Map map = new HashMap()
@@ -111,7 +111,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleInMapOfMaps() throws Exception
+    void testLocaleInMapOfMaps()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString(locale)
@@ -122,7 +122,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleRef() throws Exception
+    void testLocaleRef()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.getJsonString([locale, locale] as Object[])
@@ -135,7 +135,7 @@ class TestLocale
     }
 
     @Test
-    void testLocaleInMap() throws Exception
+    void testLocaleInMap()
     {
         def map = [
                 (Locale.US):'United States of America',

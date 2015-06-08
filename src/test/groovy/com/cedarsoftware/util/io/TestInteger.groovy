@@ -53,7 +53,7 @@ class TestInteger
     }
 
     @Test
-    void testInteger() throws Exception
+    void testInteger()
     {
         ManyIntegers test = new ManyIntegers()
         String json = TestUtil.getJsonString(test)

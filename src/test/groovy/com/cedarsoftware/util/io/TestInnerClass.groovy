@@ -48,7 +48,7 @@ class TestInnerClass
     }
 
     @Test
-    void testChangedClass() throws Exception
+    void testChangedClass()
     {
         Dog dog = new Dog()
         dog.x = 10
@@ -67,7 +67,7 @@ class TestInnerClass
     }
 
     @Test
-    void testInner() throws Exception
+    void testInner()
     {
         A a = new A()
         a.a = "aaa"
@@ -87,7 +87,7 @@ class TestInnerClass
     }
 
     @Test
-    void testInnerInstance() throws Exception
+    void testInnerInstance()
     {
         Dog dog = new Dog()
         dog.x = 10;

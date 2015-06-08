@@ -57,7 +57,7 @@ class TestPrimitives
     }
 
     @Test
-    void testPrimitivesSetWithStrings() throws Exception
+    void testPrimitivesSetWithStrings()
     {
         String json = '{"@type":"' + AllPrimitives.class.getName() + '","b":"true","bb":"true","by":"9","bby":"9","c":"B","cc":"B","d":"9.0","dd":"9.0","f":"9.0","ff":"9.0","i":"9","ii":"9","l":"9","ll":"9","s":"9","ss":"9"}'
         AllPrimitives ap = (AllPrimitives) TestUtil.readJsonObject(json)
@@ -80,7 +80,7 @@ class TestPrimitives
     }
 
     @Test
-    void testAbilityToNullPrimitivesWithEmptyString() throws Exception
+    void testAbilityToNullPrimitivesWithEmptyString()
     {
         String json = '{"@type":"' + AllPrimitives.class.getName() + '","b":"","bb":"","by":"","bby":"","c":"","cc":"","d":"","dd":"","f":"","ff":"","i":"","ii":"","l":"","ll":"","s":"","ss":""}'
         AllPrimitives ap = (AllPrimitives) TestUtil.readJsonObject(json)
@@ -103,7 +103,7 @@ class TestPrimitives
     }
 
     @Test
-    void testEmptyPrimitives() throws Exception
+    void testEmptyPrimitives()
     {
         String json = '{"@type":"byte"}'
         Byte b = (Byte) JsonReader.jsonToJava(json)
@@ -159,7 +159,7 @@ class TestPrimitives
     }
 
     @Test
-    void testAssignPrimitiveToString() throws Exception
+    void testAssignPrimitiveToString()
     {
         String json = '{"@type":"' + TestStringField.class.getName() + '","intField":16,"booleanField":true,"doubleField":345.12321,"nullField":null,"values":[10,true,3.14159,null]}'
         TestStringField tsf = (TestStringField) TestUtil.readJsonObject(json)

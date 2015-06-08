@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue
 class TestByteArray
 {
     @Test
-    void testPerformance() throws Exception
+    void testPerformance()
     {
         byte[] bytes = new byte[128 * 1024]
         Random r = new Random()

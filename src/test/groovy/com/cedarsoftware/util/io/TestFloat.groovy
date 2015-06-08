@@ -59,7 +59,7 @@ class TestFloat
     }
 
     @Test
-    void testFloat() throws Exception
+    void testFloat()
     {
         ManyFloats test = new ManyFloats()
         String json = TestUtil.getJsonString(test)

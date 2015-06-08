@@ -46,7 +46,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testMapOfMapsWithUnknownClasses() throws Exception
+    void testMapOfMapsWithUnknownClasses()
     {
         String json = '{"@type":"com.foo.bar.baz.Qux","_name":"Hello","_other":null}'
 
@@ -88,7 +88,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testForwardRefNegId() throws Exception
+    void testForwardRefNegId()
     {
         Map doc = JsonReader.jsonToMaps(TestUtil.fetchResource("forwardRefNegId.json"))
         Object[] items = doc['@items']
@@ -119,7 +119,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testGenericInfoMap() throws Exception
+    void testGenericInfoMap()
     {
         String className = PointMap.class.name
         String json = '{"@type":"' + className + '","points":{"@type":"java.util.HashMap","@keys":[{"x":10,"y":20}],"@items":[{"x":1,"y":2}]}}'
@@ -146,7 +146,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testGenericMap() throws Exception
+    void testGenericMap()
     {
         String json = '{"traits":{"ui:attributes":{"type":"text","label":"Risk Type","maxlength":"30"},"v:max":"1","v:min":"1","v:regex":"[[0-9][a-z][A-Z]]","db:attributes":{"selectColumn":"QR.RISK_TYPE_REF_ID","table":"QUOTE_RISK","tableAlias":"QR","column":"QUOTE_ID","columnName":"QUOTE_ID","columnAlias":"c:riskType","joinTable":"QUOTE","joinAlias":"Q","joinColumn":"QUOTE_ID"},"r:exists":true,"r:value":"risk"}}'
         TestUtil.printLine("json = " + json)
@@ -163,7 +163,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testGenericArrayWithMap() throws Exception
+    void testGenericArrayWithMap()
     {
         String json = '[{"traits":{"ui:attributes":{"type":"text","label":"Risk Type","maxlength":"30"},"v:max":"1","v:min":"1","v:regex":"[[0-9][a-z][A-Z]]","db:attributes":{"selectColumn":"QR.RISK_TYPE_REF_ID","table":"QUOTE_RISK","tableAlias":"QR","column":"QUOTE_ID","columnName":"QUOTE_ID","columnAlias":"c:riskType","joinTable":"QUOTE","joinAlias":"Q","joinColumn":"QUOTE_ID"},"r:exists":true,"r:value":"risk"}},{"key1":1,"key2":2}]'
         TestUtil.printLine("json = " + json)
@@ -217,7 +217,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testMapOfMapsSimpleArray() throws Exception
+    void testMapOfMapsSimpleArray()
     {
         String s = '[{"@ref":1},{"name":"Jack","age":21,"@id":1}]'
         Map map = JsonReader.jsonToMaps(s)
@@ -226,7 +226,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testMapOfMapsWithFieldAndArray() throws Exception
+    void testMapOfMapsWithFieldAndArray()
     {
         String s = '''[
  {"name":"Jack","age":21,"@id":1},
@@ -267,7 +267,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testMapOfMapsMap() throws Exception
+    void testMapOfMapsMap()
     {
         Map stuff = new TreeMap()
         stuff.put("a", "alpha")
@@ -292,7 +292,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testMapOfMapsPrimitivesInArray() throws Exception
+    void testMapOfMapsPrimitivesInArray()
     {
         Date date = new Date()
         Calendar cal = Calendar.instance
@@ -311,7 +311,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testBadInputForMapAPI() throws Exception
+    void testBadInputForMapAPI()
     {
         Object o = null;
         try
@@ -327,7 +327,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testToMaps() throws Exception
+    void testToMaps()
     {
         JsonObject map = (JsonObject) JsonReader.jsonToMaps('{"num":0,"nullValue":null,"string":"yo"}')
         assertTrue(map != null)
@@ -341,7 +341,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testUntyped() throws Exception
+    void testUntyped()
     {
         String json = '{"age":46,"name":"jack","married":false,"salary":125000.07,"notes":null,"address1":{"@ref":77},"address2":{"@id":77,"street":"1212 Pennsylvania ave","city":"Washington"}}'
         Map map = JsonReader.jsonToMaps(json)
@@ -359,7 +359,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void writeJsonObjectMapWithStringKeys() throws Exception
+    void writeJsonObjectMapWithStringKeys()
     {
         String json = '{\n  "@type":"java.util.LinkedHashMap",\n  "age":"36",\n  "name":"chris"\n}'
         Map map = [age:'36', name:'chris']
@@ -373,7 +373,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void writeMapWithStringKeys() throws Exception
+    void writeMapWithStringKeys()
     {
         String json = '{"@type":"java.util.LinkedHashMap","age":"36","name":"chris"}'
         Map map = [age:'36', name:'chris']
@@ -386,7 +386,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testJsonObjectToJava() throws Exception
+    void testJsonObjectToJava()
     {
         TestObject test = new TestObject("T.O.")
         TestObject child = new TestObject("child")
@@ -401,7 +401,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testLongKeyedMap() throws Exception
+    void testLongKeyedMap()
     {
         Map simple = [
                 0L:'alpha',
@@ -418,7 +418,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testBooleanKeyedMap() throws Exception
+    void testBooleanKeyedMap()
     {
         Map simple = [
                 (false):'alpha',
@@ -432,7 +432,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testDoubleKeyedMap() throws Exception
+    void testDoubleKeyedMap()
     {
         Map simple = [
                 0.0d:'alpha',
@@ -448,7 +448,7 @@ class TestMapOfMaps
     }
 
     @Test
-    void testStringKeyedMap() throws Exception
+    void testStringKeyedMap()
     {
         Map simple = [
                 alpha:0L,

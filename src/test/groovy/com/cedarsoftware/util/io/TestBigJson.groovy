@@ -30,7 +30,7 @@ import static org.junit.Assert.assertNotNull
 class TestBigJson
 {
     @Test
-    void testBigJsonToMaps() throws Exception
+    void testBigJsonToMaps()
     {
         String json = TestUtil.fetchResource('big5D.json')
         def map = JsonReader.jsonToMaps(json)

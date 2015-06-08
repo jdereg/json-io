@@ -69,7 +69,7 @@ class TestSet
     }
 
     @Test
-    void testSet() throws Exception
+    void testSet()
     {
         ManySets set = new ManySets()
         set.init()

@@ -156,7 +156,7 @@ class TestUnmodifiableCollection
     }
 
     @Test
-    void testUnmodifiableMapHolder() throws Exception
+    void testUnmodifiableMapHolder()
     {
         UnmodifiableMapHolder holder = new UnmodifiableMapHolder()
         String json = JsonWriter.objectToJson(holder)

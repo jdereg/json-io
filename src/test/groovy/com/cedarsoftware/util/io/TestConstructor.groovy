@@ -177,7 +177,7 @@ class TestConstructor
     }
 
     @Test
-    void testNoDefaultConstructor() throws Exception
+    void testNoDefaultConstructor()
     {
         Calendar c = Calendar.instance
         c.set(2010, 5, 5, 5, 5, 5)
@@ -207,7 +207,7 @@ class TestConstructor
     }
 
     @Test
-    void testReconstitutePrimitives() throws Exception
+    void testReconstitutePrimitives()
     {
         Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0d, new Double(66.0d), true, Boolean.TRUE,'J' as char, new Character('K' as char), ["john","adams"] as String[], [2,6] as int[], new BigDecimal("2.71828"))
         String json0 = TestUtil.getJsonString(foo)
@@ -240,7 +240,7 @@ class TestConstructor
     }
 
     @Test
-    void testReconstituteNullablePrimitives() throws Exception
+    void testReconstituteNullablePrimitives()
     {
         Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", new Date(), (byte) 1, null, (short) 2, null, 3, null, 4L, null, 5.0f, null, 6.0d, null, true, null,'J' as char, null, ["john","adams"] as String[], [2,6] as int[], null)
         String json = TestUtil.getJsonString(foo)
@@ -286,7 +286,7 @@ class TestConstructor
     }
 
     @Test
-    void testConstructorWithObjectArg() throws Exception
+    void testConstructorWithObjectArg()
     {
         Canine bella = new Canine('Bella')
         String json = TestUtil.getJsonString(bella)
@@ -296,7 +296,7 @@ class TestConstructor
     }
 
     @Test
-    void testNoNullConstructor() throws Exception
+    void testNoNullConstructor()
     {
         NoNullConstructor noNull = new NoNullConstructor(new ArrayList(), [:], "", new Date())
         noNull.list = null;
@@ -314,7 +314,7 @@ class TestConstructor
     }
 
     @Test
-    void testJsonReaderConstructor() throws Exception
+    void testJsonReaderConstructor()
     {
         String json = '{"@type":"sun.util.calendar.ZoneInfo","zone":"EST"}'
         JsonReader jr = new JsonReader(new ByteArrayInputStream(json.bytes))
@@ -324,7 +324,7 @@ class TestConstructor
     }
 
     @Test
-    void testWriterObjectAPI() throws Exception
+    void testWriterObjectAPI()
     {
         String json = "[1,true,null,3.14,[]]"
         Object o = JsonReader.jsonToJava(json)
@@ -339,7 +339,7 @@ class TestConstructor
     }
 
     @Test
-    void testUrlInConstructor() throws Exception
+    void testUrlInConstructor()
     {
         Web addr = new Web(new URL("http://acme.com"))
         String json = TestUtil.getJsonString(addr)

@@ -69,7 +69,7 @@ class TestOverlappingMemberVariableNames
     }
 
     @Test
-    void testNestedWithSameMemberName() throws Exception
+    void testNestedWithSameMemberName()
     {
         Outer outer = new Outer()
         outer.name = "Joe Outer"
@@ -87,7 +87,7 @@ class TestOverlappingMemberVariableNames
     }
 
     @Test
-    void testSameMemberName() throws Exception
+    void testSameMemberName()
     {
         Child child = new Child()
         child.childName = 'child'

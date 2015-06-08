@@ -71,7 +71,7 @@ class TestClass
     }
 
     @Test
-    void testClassAtRoot() throws Exception
+    void testClassAtRoot()
     {
         Class c = Double.class;
         String json = TestUtil.getJsonString(c)
@@ -81,7 +81,7 @@ class TestClass
     }
 
     @Test
-    void testClass() throws Exception
+    void testClass()
     {
         ManyClasses test = new ManyClasses()
         String json = TestUtil.getJsonString(test)

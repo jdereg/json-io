@@ -43,7 +43,7 @@ class TestBigInteger
     }
 
     @Test
-    void testAssignBigInteger() throws Exception
+    void testAssignBigInteger()
     {
         String json = '{"@type":"' + TestBigIntegerField.class.name + '","fromString":"314159","fromLong":314159,"fromBoolean":true,"fromStringObj":{"@type":"java.math.BigInteger","value":"314159"},"fromLongObj":{"@type":"java.math.BigInteger","value":314159},"fromBooleanObj":{"@type":"java.math.BigInteger","value":false},"fromBigDecObj":{"@type":"java.math.BigInteger","value":{"@type":"java.math.BigDecimal","value":9}},"fromBigIntObj":{"@type":"java.math.BigInteger","value":{"@type":"java.math.BigInteger","value":99}},"values":["314159",314159,true,{"@type":"java.math.BigInteger","value":"314159"},{"@type":"java.math.BigInteger","value":314159},{"@type":"java.math.BigInteger","value":true},{"@type":"java.math.BigInteger","value":{"@type":"java.math.BigInteger","value":999}}]}'
         TestBigIntegerField tbi = (TestBigIntegerField) TestUtil.readJsonObject(json)
@@ -90,7 +90,7 @@ class TestBigInteger
     }
 
     @Test
-    void testAssignBigIntegerStringToMaps() throws Exception
+    void testAssignBigIntegerStringToMaps()
     {
         String json = '{"@type":"' + TestBigIntegerField.class.name + '","fromString":""}'
         Map map = JsonReader.jsonToMaps(json)
@@ -98,7 +98,7 @@ class TestBigInteger
     }
 
     @Test
-    void testBigInteger() throws Exception
+    void testBigInteger()
     {
         String s = "123456789012345678901234567890"
         BigInteger bigInt = new BigInteger(s)
@@ -109,7 +109,7 @@ class TestBigInteger
     }
 
     @Test
-    void testBigIntegerInArray() throws Exception
+    void testBigIntegerInArray()
     {
         String s = "123456789012345678901234567890"
         BigInteger bigInt = new BigInteger(s)
@@ -129,7 +129,7 @@ class TestBigInteger
     }
 
     @Test
-    void testBigIntegerInCollection() throws Exception
+    void testBigIntegerInCollection()
     {
         String s = "123456789012345678901234567890"
         BigInteger bigInt = new BigInteger(s)
@@ -145,7 +145,7 @@ class TestBigInteger
     }
 
     @Test
-    void testNumTooBig() throws Exception
+    void testNumTooBig()
     {
         String json = '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
                 '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
@@ -161,7 +161,7 @@ class TestBigInteger
     }
 
     @Test
-    void testHugeBigInteger() throws Exception
+    void testHugeBigInteger()
     {
         String json = '{"@type":"java.math.BigInteger","value":"' +
                 '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
@@ -172,7 +172,7 @@ class TestBigInteger
     }
 
     @Test
-    void testBigNumberParsers() throws Exception
+    void testBigNumberParsers()
     {
         assertNull(Readers.bigIntegerFrom(null))
         assertNull(Readers.bigDecimalFrom(null))

@@ -32,7 +32,7 @@ class TestPrettyPrint
     }
 
     @Test
-    void testPrettyPrint() throws Exception
+    void testPrettyPrint()
     {
         Nice nice = new Nice()
         nice.name = "Louie"

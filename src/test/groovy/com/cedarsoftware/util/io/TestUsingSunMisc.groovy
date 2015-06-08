@@ -69,7 +69,7 @@ class TestUsingSunMisc
     }
 
     @Test
-    void testDirectCreation() throws Exception
+    void testDirectCreation()
     {
         MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
@@ -99,7 +99,7 @@ class TestUsingSunMisc
     }
 
     @Test
-    void testImpossibleClass() throws Exception
+    void testImpossibleClass()
     {
         try
         {

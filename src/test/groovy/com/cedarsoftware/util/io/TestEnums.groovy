@@ -64,7 +64,7 @@ class TestEnums
     }
 
     @Test
-    void testEnums() throws Exception
+    void testEnums()
     {
 
         Collection<Object> collection = new LinkedList<Object>()
@@ -104,7 +104,7 @@ class TestEnums
     }
 
     @Test
-    void testEnumWithPrivateMembersAsField() throws Exception
+    void testEnumWithPrivateMembersAsField()
     {
         TestEnum4 x = TestEnum4.B;
         String json = TestUtil.getJsonString(x)

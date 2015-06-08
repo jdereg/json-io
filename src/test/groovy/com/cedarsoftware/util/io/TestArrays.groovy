@@ -307,7 +307,7 @@ class TestArrays
     }
 
     @Test
-    void testArray() throws Exception
+    void testArray()
     {
         ManyArrays obj = new ManyArrays()
         obj.init()
@@ -703,7 +703,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteObjectArray() throws Exception
+    void testReconstituteObjectArray()
     {
         Date now = new Date()
         TestObject to = new TestObject("football")
@@ -758,7 +758,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteObjectArrayTypes() throws Exception
+    void testReconstituteObjectArrayTypes()
     {
         TestUtil.printLine("testReconstituteObjectArrayTypes")
         Object[] bytes = [_CONST_BYTE,  _CONST_BYTE] as Object[]
@@ -849,7 +849,7 @@ class TestArrays
         testReconstituteArrayHelper(calendarz)
     }
 
-    private void testReconstituteArrayHelper(Object foo) throws Exception
+    private void testReconstituteArrayHelper(Object foo)
     {
         assertTrue(Array.getLength(foo) == 2)
         String json0 = TestUtil.getJsonString(foo)
@@ -863,7 +863,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteEmptyArray() throws Exception
+    void testReconstituteEmptyArray()
     {
         Object[] empty = [] as Object[]
         String json0 = TestUtil.getJsonString(empty)
@@ -898,7 +898,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteTypedArray() throws Exception
+    void testReconstituteTypedArray()
     {
         String[] strs = ["tom", "dick", "harry"] as String[]
         Object[] objs = [strs, "a", strs] as Object[]
@@ -925,7 +925,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteArray() throws Exception
+    void testReconstituteArray()
     {
         ManyArrays testArray = new ManyArrays()
         testArray.init()
@@ -942,7 +942,7 @@ class TestArrays
     }
 
     @Test
-    void testReconstituteEmptyObject() throws Exception
+    void testReconstituteEmptyObject()
     {
         Empty empty = new Empty()
         String json0 = TestUtil.getJsonString(empty)
@@ -957,7 +957,7 @@ class TestArrays
     }
 
     @Test
-    void testAlwaysShowType() throws Exception
+    void testAlwaysShowType()
     {
         ManyArrays ta = new ManyArrays()
         ta.init()
@@ -971,7 +971,7 @@ class TestArrays
     }
 
     @Test
-    void testArraysAsList() throws Exception
+    void testArraysAsList()
     {
         List strs = ['alpha', 'bravo', 'charlie']
         String json = TestUtil.getJsonString(strs)
@@ -983,7 +983,7 @@ class TestArrays
 
     // Currently allows , at end.  Future, may drop this support.
     @Test
-    void testBadArray() throws Exception
+    void testBadArray()
     {
         String json = "[1, 10, 100,]"
         Object[] array = (Object[]) TestUtil.readJsonObject(json)
@@ -994,7 +994,7 @@ class TestArrays
     }
 
     @Test
-    void testCharArray() throws Exception
+    void testCharArray()
     {
         CharArrayTest cat = new CharArrayTest()
         cat.chars_a = ['a' as char, '\t' as char, '\u0005' as char] as char[]
@@ -1034,7 +1034,7 @@ class TestArrays
     }
 
     @Test
-    void testEmptyArray() throws Exception
+    void testEmptyArray()
     {
         String json = '{"@type":"[Ljava.lang.String;"}'
         String[] s = (String[])JsonReader.jsonToJava(json)
@@ -1043,7 +1043,7 @@ class TestArrays
     }
 
     @Test
-    void testMultiDimensionalArrays() throws Exception
+    void testMultiDimensionalArrays()
     {
         int[][][][] x = [[[[0,1],[0,1]],[[0,1],[0,1]]],[[[0,1],[0,1]],[[0,1],[0,1]]]] as int[][][][]
         for (int a=0; a < 2; a++)
@@ -1112,7 +1112,7 @@ class TestArrays
     }
 
     @Test
-    void testObjectArrayStringReference() throws Exception
+    void testObjectArrayStringReference()
     {
         String s = "dogs"
         String json = TestUtil.getJsonString([s, s] as Object[])
@@ -1124,7 +1124,7 @@ class TestArrays
     }
 
     @Test
-    void testStringArrayStringReference() throws Exception
+    void testStringArrayStringReference()
     {
         String s = "dogs"
         String json = TestUtil.getJsonString([s, s] as String[])
@@ -1136,7 +1136,7 @@ class TestArrays
     }
 
     @Test
-    void testReferencedEmptyArray() throws Exception
+    void testReferencedEmptyArray()
     {
         String[] array = [] as String[]
         Object[] refArray = [array] as Object[]
@@ -1148,7 +1148,7 @@ class TestArrays
     }
 
     @Test
-    void testUntypedArray() throws Exception
+    void testUntypedArray()
     {
         Object[] args = (Object[]) TestUtil.readJsonObject('["string",17, null, true, false, [], -1273123,32131, 1e6, 3.14159, -9223372036854775808, 9223372036854775807]')
 

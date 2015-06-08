@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue
 class TestAlwaysShowType
 {
     @Test
-    void testAlwaysShowType() throws Exception
+    void testAlwaysShowType()
     {
         TestObject btc = new TestObject("Bitcoin")
         btc._other = new TestObject("Satoshi")

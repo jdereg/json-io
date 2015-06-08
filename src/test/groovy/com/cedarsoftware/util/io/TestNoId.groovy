@@ -29,7 +29,7 @@ class TestNoId
     }
 
     @Test
-    void testShouldNotNeedId() throws Exception
+    void testShouldNotNeedId()
     {
         NoId noId = new NoId()
         String json = JsonWriter.objectToJson(noId)
@@ -37,7 +37,7 @@ class TestNoId
     }
 
     @Test
-    void testNoIdNeeded() throws Exception
+    void testNoIdNeeded()
     {
         TestObject alpha = new TestObject('alpha')
         TestObject beta = new TestObject('beta')

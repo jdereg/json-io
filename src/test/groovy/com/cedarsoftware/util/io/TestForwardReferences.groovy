@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue
 class TestForwardReferences
 {
     @Test
-    void testForwardRefs() throws Exception
+    void testForwardRefs()
     {
         TestObject one = new TestObject("One")
         TestObject two = new TestObject("Two")

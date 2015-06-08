@@ -37,7 +37,7 @@ class TestTransient
     }
 
     @Test
-    void testSkipsTransient() throws Exception
+    void testSkipsTransient()
     {
         Transient1 person = new Transient1()
         person.fname = "John"
@@ -52,7 +52,7 @@ class TestTransient
     }
 
     @Test
-    void testForceTransientSerialize() throws Exception
+    void testForceTransientSerialize()
     {
         Transient1 person = new Transient1()
         person.fname = "John"
@@ -73,7 +73,7 @@ class TestTransient
     }
 
     @Test
-    void testTransient2() throws Exception
+    void testTransient2()
     {
         Transient2 trans = new Transient2()
         trans.backup = new TestObject("Roswell")

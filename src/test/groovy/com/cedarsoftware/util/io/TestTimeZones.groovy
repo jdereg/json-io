@@ -29,7 +29,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneAsField() throws Exception
+    void testTimeZoneAsField()
     {
         TimeZone zone = TimeZone.default
         TestTimeZone tz = new TestTimeZone()
@@ -42,7 +42,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZone() throws Exception
+    void testTimeZone()
     {
         TimeZone est = TimeZone.getTimeZone("EST")
         String json = TestUtil.getJsonString(est)
@@ -66,7 +66,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneInArray() throws Exception
+    void testTimeZoneInArray()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst] as Object[])
@@ -87,7 +87,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneInCollection() throws Exception
+    void testTimeZoneInCollection()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         List col = new ArrayList()
@@ -102,7 +102,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneInMapValue() throws Exception
+    void testTimeZoneInMapValue()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         Map map = new HashMap()
@@ -115,7 +115,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneInMapKey() throws Exception
+    void testTimeZoneInMapKey()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         Map map = new HashMap()
@@ -129,7 +129,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneInMapofMaps() throws Exception
+    void testTimeZoneInMapofMaps()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst] as Object[])
@@ -143,7 +143,7 @@ class TestTimeZones
     }
 
     @Test
-    void testTimeZoneRef() throws Exception
+    void testTimeZoneRef()
     {
         TimeZone pst = TimeZone.getTimeZone("PST")
         String json = TestUtil.getJsonString([pst, pst] as Object[])
