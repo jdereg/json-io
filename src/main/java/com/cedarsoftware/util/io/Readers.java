@@ -194,10 +194,6 @@ public class Readers
 
         private Date parseDate(String dateStr)
         {
-            if (dateStr == null)
-            {
-                return null;
-            }
             dateStr = dateStr.trim();
             if (dateStr.isEmpty())
             {

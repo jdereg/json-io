@@ -545,15 +545,184 @@ class TestDates
     void testSqlDate() throws Exception
     {
         long now = System.currentTimeMillis()
-        Date[] dates = [new Date(now), new java.sql.Date(now), new Timestamp(now) ] as Date[];
+        Date[] dates = [new Date(now), new java.sql.Date(now), new Timestamp(now) ] as Date[]
         String json = TestUtil.getJsonString(dates)
         TestUtil.printLine('json=' + json)
         Date[] dates2 = (Date[]) TestUtil.readJsonObject(json)
         assertTrue(dates2.length == 3)
         assertTrue(dates2[0].equals(new Date(now)))
         assertTrue(dates2[1].equals(new java.sql.Date(now)))
-        Timestamp stamp = (Timestamp) dates2[2];
+        Timestamp stamp = (Timestamp) dates2[2]
         assertTrue(stamp.time == dates[0].time)
         assertTrue(stamp.time == now)
+    }
+
+    @Test
+    void testNullDateHandling()
+    {
+        DateField dateField = new DateField(new Date())
+        dateField.date = null
+        String json = TestUtil.getJsonString(dateField)
+        DateField df = TestUtil.readJsonObject(json)
+        assert df.date == null
+    }
+
+    @Test
+    void testDateReaderNullHandling()
+    {
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(null, new ArrayDeque<JsonObject<String,Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('unable to parse')
+            assert e.message.toLowerCase().contains('null')
+        }
+    }
+
+    @Test
+    void testJavaDefaultTimeFormatParsing()
+    {
+        Date now = new Date()
+        String nowStr = now.toString()
+        Readers.DateReader reader = new Readers.DateReader()
+        Date now2 = reader.read(nowStr, new ArrayDeque<JsonObject<String,Object>>(), [:])
+        assert nowStr == now2.toString()
+    }
+
+    @Test
+    void testDateWithTimeZoneOffsetParsing()
+    {
+        String date = "9 July 1930 11:02-05:00"
+        Readers.DateReader reader = new Readers.DateReader()
+        Date then = reader.read(date, new ArrayDeque<JsonObject<String,Object>>(), [:])
+
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
+        cal.clear()
+        cal.set(1930, 6, 9, 16, 2, 0)
+        println cal.getTime()
+        assert then == cal.getTime()
+    }
+
+    @Test
+    void testDayRemainderRemoval()
+    {
+        String date = "sat 6 Jun 2015"
+        Readers.DateReader reader = new Readers.DateReader()
+        Date date1 = reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+
+        Calendar c = Calendar.getInstance()
+        c.setTime(date1)
+        assert c.get(Calendar.YEAR) == 2015
+        assert c.get(Calendar.MONTH) == 5
+        assert c.get(Calendar.DAY_OF_MONTH) == 6
+    }
+
+    @Test
+    void testBadDayOfWeek()
+    {
+        String date = "crunchy 6 Jun 2015"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('crunchy')
+        }
+    }
+
+    @Test
+    void testBadMonth()
+    {
+        String date = "2015/13/1"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('between 1 and 12')
+        }
+    }
+
+    @Test
+    void testBadDay()
+    {
+        String date = "2015/9/34"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('between 1 and 31')
+        }
+    }
+
+    @Test
+    void testBadHour()
+    {
+        String date = "2015/9/30 25:30"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('between 0 and 23')
+        }
+    }
+
+    @Test
+    void testBadMinute()
+    {
+        String date = "2015/9/30 20:65"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('between 0 and 59')
+        }
+    }
+
+    @Test
+    void testBadSecond()
+    {
+        String date = "2015/9/30 20:55:70"
+        Readers.DateReader reader = new Readers.DateReader()
+        try
+        {
+            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('between 0 and 59')
+        }
+    }
+
+    @Test
+    void testZForGMT()
+    {
+        String date = "2015/9/30 20:55Z"
+        Readers.DateReader reader = new Readers.DateReader()
+        Date date1 = reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+        // Not having exception while including the 'Z' is the test (no assertion)
     }
 }

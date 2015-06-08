@@ -259,7 +259,7 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(String json)
     {
-        return jsonToJava(json, new HashMap<String, Object>());
+        return jsonToJava(json, null);
     }
 
     /**
@@ -270,6 +270,10 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
     {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap();
+        }
         optionalArgs.put(USE_MAPS, false);
         ByteArrayInputStream ba;
         try
@@ -317,7 +321,7 @@ public class JsonReader implements Closeable
      */
     public static Map jsonToMaps(String json)
     {
-        return jsonToMaps(json, new HashMap<String, Object>());
+        return jsonToMaps(json, null);
     }
 
     /**
@@ -623,17 +627,8 @@ public class JsonReader implements Closeable
     {
         if (input != null)
         {
-            return msg + "\nLast read: " + getLastReadSnippet() + "\nline: " + input.line + ", col: " + input.col;
+            return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.line + ", col: " + input.col;
         }
         return msg;
-    }
-
-    private String getLastReadSnippet()
-    {
-        if (input != null)
-        {
-            return input.getLastSnippet();
-        }
-        return "";
     }
 }

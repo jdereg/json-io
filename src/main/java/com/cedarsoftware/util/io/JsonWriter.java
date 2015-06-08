@@ -564,15 +564,6 @@ public class JsonWriter implements Closeable, Flushable
      */
     public void addWriter(Class c, JsonClassWriterBase writer)
     {
-        for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
-        {
-            Class clz = entry.getKey();
-            if (clz == c)
-            {
-                entry.setValue(writer);
-                return;
-            }
-        }
         writers.put(c, writer);
     }
 
