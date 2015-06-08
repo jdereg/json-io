@@ -126,6 +126,8 @@ class TestString
     @Test
     void testStringAsObject()
     {
-
+        String json = '{"@type":"string","value":"Sledge Hammer"}'
+        String x = TestUtil.readJsonObject(json)
+        assert x == 'Sledge Hammer'
     }
 }

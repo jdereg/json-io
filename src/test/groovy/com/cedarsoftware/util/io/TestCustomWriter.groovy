@@ -100,7 +100,7 @@ class TestCustomWriter
             }
 
             int len = pets.size()
-            for (int i=0; i < len; i++)
+            for (int i = 0; i < len; i++)
             {
                 if (pets[i] != person.pets[i])
                 {
@@ -178,6 +178,14 @@ class TestCustomWriter
         }
     }
 
+    static class BadCustomPWriter implements JsonWriter.JsonClassWriterEx
+    {
+        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        {
+            throw new RuntimeException('Bad custom writer')
+        }
+    }
+
     Person createTestPerson()
     {
         Person p = new Person()
@@ -201,8 +209,8 @@ class TestCustomWriter
     void testCustomWriter()
     {
         Person p = createTestPerson()
-        String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP):[(Person.class):new CustomPersonWriter()]])
-        Map obj = TestUtil.readJsonMap(jsonCustom, [(JsonReader.CUSTOM_READER_MAP):[(Person.class):new CustomPersonReader()], (JsonReader.NOT_CUSTOM_READER_MAP):[]])
+        String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriter()]])
+        Map obj = TestUtil.readJsonMap(jsonCustom, [(JsonReader.CUSTOM_READER_MAP): [(Person.class): new CustomPersonReader()], (JsonReader.NOT_CUSTOM_READER_MAP): []])
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
         Map pets = obj.p
@@ -251,5 +259,20 @@ class TestCustomWriter
 
         p = JsonReader.jsonToJava(jsonCustom)
         assert null == p.firstName
+    }
+
+    @Test
+    void testCustomWriterException()
+    {
+        Person p = createTestPerson()
+        try
+        {
+            TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new BadCustomPWriter()]])
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('error writing object')
+        }
     }
 }

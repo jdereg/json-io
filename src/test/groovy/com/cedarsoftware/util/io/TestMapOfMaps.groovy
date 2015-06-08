@@ -464,4 +464,24 @@ class TestMapOfMaps
         assert back.beta == 1L
         assert back.charlie == 2L
     }
+
+    @Test
+    void testCircularReference()
+    {
+        TestObject a = new TestObject("a")
+        TestObject b = new TestObject("b")
+        a._other = b
+        b._other = a
+
+        String json = JsonWriter.objectToJson(a)
+        JsonObject aa = JsonReader.jsonToMaps(json)
+        assert aa._name == 'a'
+        JsonObject bb = aa._other
+        assert bb._name == 'b'
+        assert bb._other.is(aa)
+        assert aa._other.is(bb)
+
+        String json1 = JsonWriter.objectToJson(aa)
+        assert json == json1
+    }
 }

@@ -2,6 +2,9 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import static org.junit.Assert.assertFalse
+import static org.junit.Assert.assertTrue
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -38,5 +41,26 @@ class TestWriters
 
         Writers.JsonStringWriter jsw = new Writers.JsonStringWriter()
         jsw.write("", false, new StringWriter())
+    }
+
+    @Test
+    void testNumericTruth()
+    {
+        assertFalse JsonWriter.isTrue(new BigInteger(0))
+        assertTrue JsonWriter.isTrue(new BigInteger(1))
+        assertFalse JsonWriter.isTrue(new BigDecimal(0.0))
+        assertTrue JsonWriter.isTrue(new BigDecimal(1.1))
+        assertFalse JsonWriter.isTrue(0.0d)
+        assertTrue JsonWriter.isTrue(1.1d)
+        assertFalse JsonWriter.isTrue(0.0f)
+        assertTrue JsonWriter.isTrue(1.1f)
+        assertFalse JsonWriter.isTrue(0 as byte)
+        assertTrue JsonWriter.isTrue(1 as byte)
+        assertFalse JsonWriter.isTrue(0 as short)
+        assertTrue JsonWriter.isTrue(1 as short)
+        assertFalse JsonWriter.isTrue(0 as int)
+        assertTrue JsonWriter.isTrue(1 as int)
+        assertFalse JsonWriter.isTrue(0L)
+        assertTrue JsonWriter.isTrue(1L)
     }
 }
