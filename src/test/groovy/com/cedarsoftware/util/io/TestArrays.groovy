@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import java.lang.reflect.Array
@@ -29,6 +30,7 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestArrays
 {
     public static Date _testDate = new Date()
@@ -37,7 +39,7 @@ class TestArrays
 	public static Short _CONST_SHORT = new Short((short) 26)
 	public static Integer _CONST_INT = new Integer(36)
 	public static Long _CONST_LONG = new Long(46)
-	public static Float _CONST_FLOAT = new Float(56.56)
+	public static Float _CONST_FLOAT = new Float(56.56f)
 	public static Double _CONST_DOUBLE = new Double(66.66)
 
     static class CharArrayTest
@@ -340,7 +342,7 @@ class TestArrays
         assertTrue(root._empty_f[2].length == 0)
         assertTrue(root._empty_f[3].length == 1)
 
-        assertTrue(root._booleans_a.getClass().equals(boolean[].class))
+        assertTrue(root._booleans_a.getClass().equals(([] as boolean[]).class))
         assertTrue(root._booleans_a.length == 3)
         assertTrue(root._booleans_a[0])
         assertFalse(root._booleans_a[1])
@@ -632,7 +634,7 @@ class TestArrays
         assertTrue(root._hetero_a[3].equals(new Short((short) 9)))
         assertTrue(root._hetero_a[4].equals(new Integer(9)))
         assertTrue(root._hetero_a[5].equals(new Long(9)))
-        assertTrue(root._hetero_a[6].equals(new Float(9.9)))
+        assertTrue(root._hetero_a[6].equals(new Float(9.9f)))
         assertTrue(root._hetero_a[7].equals(new Double(9.9)))
         assertTrue(root._hetero_a[8].equals("getStartupInfo"))
         assertTrue(root._hetero_a[9].equals(_testDate))
@@ -828,7 +830,7 @@ class TestArrays
         Date[] Dates = [now, now] as Date[]
         testReconstituteArrayHelper(Dates)
 
-        BigDecimal pi = new BigDecimal(3.1415926535897932384626433)
+        BigDecimal pi = new BigDecimal(3.1415926535897932384626433d)
         Object[] bigDecimals = [pi, pi] as Object[]
         testReconstituteArrayHelper(bigDecimals)
         BigDecimal[] BigDecimals = [pi, pi] as BigDecimal[]
@@ -961,10 +963,10 @@ class TestArrays
     {
         ManyArrays ta = new ManyArrays()
         ta.init()
-        def json0 = JsonWriter.objectToJson(ta, [(JsonWriter.TYPE): true])
+        String json0 = JsonWriter.objectToJson(ta, [(JsonWriter.TYPE): (Object)true])
         ManyArrays thatTa = (ManyArrays) TestUtil.readJsonObject(json0)
         assertTrue(DeepEquals.deepEquals(ta, thatTa))
-        def json1 = JsonWriter.objectToJson(ta)
+        String json1 = JsonWriter.objectToJson(ta)
         TestUtil.printLine("json0 = " + json0)
         TestUtil.printLine("json1 = " + json1)
         assertTrue(json0.length() > json1.length())
@@ -1000,7 +1002,7 @@ class TestArrays
         cat.chars_a = ['a' as char, '\t' as char, '\u0005' as char] as char[]
         cat.chars_b = ['b' as char, '\t' as char, '\u0002' as char] as Character[]
 
-        String json0 = JsonWriter.objectToJson(cat, [(JsonWriter.TYPE):true])
+        String json0 = JsonWriter.objectToJson(cat, [(JsonWriter.TYPE):(Object)true])
         TestUtil.printLine(json0)
 
         CharArrayTest cat2 = (CharArrayTest) TestUtil.readJsonObject(json0)
@@ -1143,7 +1145,7 @@ class TestArrays
         String json = JsonWriter.objectToJson(refArray)
         TestUtil.printLine("json=" + json)
         Object[] oa = (Object[]) JsonReader.jsonToJava(json)
-        assertTrue(oa[0].getClass().equals(String[].class))
+        assertTrue(oa[0].getClass().equals(([] as String[]).class))
         assertTrue(((String[])oa[0]).length == 0)
     }
 

@@ -133,7 +133,7 @@ class JsonParser
                     else
                     {
                         // The line below is not technically required, however, without it, the tests run
-                        // twice as slow.  It is apparently affectiving a word, or paragraph boundary where
+                        // twice as slow.  It is apparently affecting a word, or paragraph boundary where
                         // the generated code sits, making it much faster.
                         objsRead.size();
                         error("Input is invalid JSON; object does not start with '{', c=" + c);
