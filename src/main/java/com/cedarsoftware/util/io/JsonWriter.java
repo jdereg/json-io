@@ -353,7 +353,7 @@ public class JsonWriter implements Closeable, Flushable
         return isTrue(args.get(WRITE_LONGS_AS_STRINGS));
     }
 
-    private static boolean isTrue(Object setting)
+    static boolean isTrue(Object setting)
     {
         if (setting instanceof Boolean)
         {
