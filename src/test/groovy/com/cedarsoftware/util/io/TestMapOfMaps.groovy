@@ -366,6 +366,7 @@ class TestMapOfMaps
 
         //in formatJson, the json will be parsed into a map, which checks both jsonReader and writeJsonObjectMap
         String jsonGenerated = JsonWriter.formatJson(JsonWriter.objectToJson(map))
+        jsonGenerated = jsonGenerated.replaceAll("[\\r]","");
         assert json == jsonGenerated
 
         Map clone = (Map) JsonReader.jsonToJava(jsonGenerated)
