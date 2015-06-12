@@ -2,14 +2,9 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import java.awt.Point
+import java.awt.*
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertSame
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.Assert.*
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -366,6 +361,7 @@ class TestMapOfMaps
 
         //in formatJson, the json will be parsed into a map, which checks both jsonReader and writeJsonObjectMap
         String jsonGenerated = JsonWriter.formatJson(JsonWriter.objectToJson(map))
+        jsonGenerated = jsonGenerated.replaceAll("[\\r]","");
         assert json == jsonGenerated
 
         Map clone = (Map) JsonReader.jsonToJava(jsonGenerated)
