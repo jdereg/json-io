@@ -191,7 +191,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 
 ### Sponsors
-![Alt text](https://www.yourkit.com/images/yklogo.png "Yourkit")
+![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")
 
 YourKit supports open source projects with its full-featured Java Profiler.
 YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
