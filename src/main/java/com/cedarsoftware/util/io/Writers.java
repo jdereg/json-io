@@ -192,10 +192,17 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
-            BigInteger big = (BigInteger) obj;
-            output.write("\"value\":\"");
-            output.write(big.toString(10));
-            output.write('"');
+            if (showType)
+            {
+                BigInteger big = (BigInteger) obj;
+                output.write("\"value\":\"");
+                output.write(big.toString(10));
+                output.write('"');
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
         }
 
         public boolean hasPrimitiveForm() { return true; }
@@ -213,10 +220,17 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
-            BigDecimal big = (BigDecimal) obj;
-            output.write("\"value\":\"");
-            output.write(big.toPlainString());
-            output.write('"');
+            if (showType)
+            {
+                BigDecimal big = (BigDecimal) obj;
+                output.write("\"value\":\"");
+                output.write(big.toPlainString());
+                output.write('"');
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
         }
 
         public boolean hasPrimitiveForm() { return true; }

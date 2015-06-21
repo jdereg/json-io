@@ -113,8 +113,7 @@ class TestEnums
         assert '{"@type":"' + className + '","internal":6,"age":21,"foo":"bar","name":"B","ordinal":1}' == json
 
         ByteArrayOutputStream ba = new ByteArrayOutputStream()
-        JsonWriter writer = new JsonWriter(ba)
-        writer.args.put(JsonWriter.ENUM_PUBLIC_ONLY, true)
+        JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY): true])
         writer.write(x)
         json = new String(ba.toByteArray())
         TestUtil.printLine(json)

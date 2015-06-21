@@ -510,8 +510,7 @@ class TestCollection
         assertEquals('{"@type":"java.util.ArrayList","@items":[{"@type":"' + className + '$TestEnum4","internal":6,"age":21,"foo":"bar","name":"B","ordinal":1}]}', json)
 
         ByteArrayOutputStream ba = new ByteArrayOutputStream()
-        JsonWriter writer = new JsonWriter(ba)
-        writer.args.put(JsonWriter.ENUM_PUBLIC_ONLY, true)
+        JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY):true])
         writer.write(list)
         json = new String(ba.toByteArray())
         TestUtil.printLine(json)
@@ -671,6 +670,7 @@ class TestCollection
         col.add(new Integer(7))
         json = TestUtil.getJsonString(col)
         TestUtil.printLine("json=" + json)
+        println json
         assertEquals('{"@type":"java.util.ArrayList","@items":["string",16,3.14159,true,false,null,{"@type":"int","value":7}]}', json)
     }
 

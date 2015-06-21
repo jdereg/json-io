@@ -71,7 +71,7 @@ class TestPrettyPrint
     }
   }
 }'''
-        String json = JsonWriter.objectToJson(nice, [(JsonWriter.PRETTY_PRINT):'true'])
+        String json = JsonWriter.objectToJson(nice, [(JsonWriter.PRETTY_PRINT):true])
         json = json.replaceAll("[\\r]","");
         assertEquals(target, json)
 

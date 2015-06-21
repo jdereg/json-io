@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.0.0</version>
+      <version>4.0.1</version>
     </dependency>
 
 [Donations welcome](https://coinbase.com/jdereg)
@@ -105,7 +105,9 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
                             // JsonWriter.ISO_DATE_FORMAT or 
                             // JsonWriter.ISO_DATE_TIME_FORMAT 
     TYPE                    // Set to boolean true to force all data types to be 
-                            // output, even where they could have been omitted.
+                            // output, even where they could have been omitted. Set
+                            // to false to prevent @type to be written. Do not set
+                            // in order to minimize the number of @type's emitted.
     PRETTY_PRINT            // Force nicely formatted JSON output 
                             // (See http://jsoneditoronline.org for example format)
     FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which is used to 
@@ -201,6 +203,8 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 
 ### Revision History
+ * 4.0.1
+  * To prevent @type from being written, set the optional argument JsonWriter.TYPE = false. This is generally not recommended, as the output JSON may not be able to be re-read into Java objects.  However, if the JSON is destined for a non-Java system, this can be useful.
  * 4.0.0
   * Custom readers / writers are set now per-instance of `JsonReader` / `JsonWriter`, not static.  This allows using different customization for cloning, for example, than for serialization to client.
   * `JsonReader.jsonToJava()` and `JsonReader.jsonToMaps()` now allow an `InputStream` to be used.
