@@ -9,7 +9,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
       <version>4.0.1</version>
     </dependency>
 
-[Donations welcome](https://coinbase.com/jdereg)
+Like json-io and find it useful? Donate some Bitcoin: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
 
