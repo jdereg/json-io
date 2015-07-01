@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.0.1</version>
+      <version>4.1.0</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
