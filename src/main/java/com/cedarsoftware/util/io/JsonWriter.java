@@ -573,6 +573,8 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * For no custom writing to occur for the passed in Class.
+     * @param c Class which should NOT have any custom writer associated to it.  Use this
+     * to prevent a custom writer from being used due to inheritance.
      */
     public void addNotCustomWriter(Class c)
     {
@@ -801,7 +803,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param obj Object to be written
      * @param showType if set to true, the @type tag will be output.  If false, it will be
      * dropped.
-     * @throws IOException
+     * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType) throws IOException
     {
@@ -821,7 +823,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param allowCustom if set to true, the object being called will allowed to be checked for a matching
      * custom writer to be used. This does not affect subobjects, just the top-level 'obj'
      * being passed in.
-     * @throws IOException
+     * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType, boolean allowRef, boolean allowCustom) throws IOException
     {

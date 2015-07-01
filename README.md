@@ -203,6 +203,8 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 
 ### Revision History
+ * 4.1.0
+  * JDK 1.6 support restored. Keeping 1.6 support for Android developers.  Submitted by @kkalisz
  * 4.0.1
   * To prevent @type from being written, set the optional argument JsonWriter.TYPE = false. This is generally not recommended, as the output JSON may not be able to be re-read into Java objects.  However, if the JSON is destined for a non-Java system, this can be useful.
  * 4.0.0

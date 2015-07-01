@@ -44,7 +44,6 @@ class TestNoType
         j.namesToAge.Hercules = 2489 as int
         j.namesToAge.Poseidon = 2502 as BigInteger
         j.namesToAge.Aphrodite = 2499.0
-        println cal.getTime()
         j.namesToAge.Zeus = cal.getTime()
 
         String json = TestUtil.getJsonString(j)

@@ -603,7 +603,6 @@ class TestDates
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
         cal.clear()
         cal.set(1930, 6, 9, 16, 2, 0)
-        println cal.getTime()
         assert then == cal.getTime()
     }
 

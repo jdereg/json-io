@@ -266,6 +266,7 @@ public class JsonReader implements Closeable
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param json String JSON input
+     * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @return Java object graph matching JSON input
      */
     public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
@@ -294,6 +295,7 @@ public class JsonReader implements Closeable
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param inputStream InputStream containing JSON input
+     * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @return Java object graph matching JSON input
      */
     public static Object jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs)
