@@ -81,67 +81,52 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             return false;
         }
-        switch (type)
-        {
-            case "boolean":
-            case "byte":
-            case "char":
-            case "double":
-            case "float":
-            case "int":
-            case "long":
-            case "short":
-                return true;
-            default:
-                return false;
-        }
+        return type.equals("boolean") || type.equals("byte") || type.equals("char") || type.equals("double") || type.equals("float") ||
+                type.equals("int") || type.equals("long") || type.equals("short");
     }
 
     public static boolean isPrimitiveWrapper(Class c)
     {
         final String cname = c.getName();
-        switch (cname)
-        {
-            case "java.lang.Boolean":
-            case "java.lang.Byte":
-            case "java.lang.Character":
-            case "java.lang.Double":
-            case "java.lang.Float":
-            case "java.lang.Integer":
-            case "java.lang.Long":
-            case "java.lang.Short":
-                return true;
-            default:
-                return false;
-        }
+        return cname.equals("java.lang.Boolean") || cname.equals("java.lang.Byte") || cname.equals("java.lang.Character") ||
+                cname.equals("java.lang.Double") || cname.equals("java.lang.Float") || cname.equals("java.lang.Integer") ||
+                cname.equals("java.lang.Long") || cname.equals("java.lang.Short");
     }
 
     public Object getPrimitiveValue()
     {
-        switch(type)
+        if (type.equals("byte"))
         {
-            case "byte":
-                Number b = (Number) get("value");
-                return b.byteValue();
-            case "char":
-                String c = (String) get("value");
-                return c.charAt(0);
-            case "boolean":
-            case "double":
-            case "long":
-                return get("value");
-            case "float":
-                Number f = (Number) get("value");
-                return f.floatValue();
-            case "int":
-                Number integer = (Number) get("value");
-                return integer.intValue();
-            case "short":
-                Number s = (Number) get("value");
-                return s.shortValue();
-
-            default:
-                throw new JsonIoException("Invalid primitive type");
+            Number b = (Number) get("value");
+            return b.byteValue();
+        }
+        else if (type.equals("char"))
+        {
+            String c = (String) get("value");
+            return c.charAt(0);
+        }
+        else if (type.equals("boolean") || type.equals("double") || type.equals("long"))
+        {
+            return get("value");
+        }
+        else if (type.equals("float"))
+        {
+            Number f = (Number) get("value");
+            return f.floatValue();
+        }
+        else if (type.equals("int"))
+        {
+            Number integer = (Number) get("value");
+            return integer.intValue();
+        }
+        else if (type.equals("short"))
+        {
+            Number s = (Number) get("value");
+            return s.shortValue();
+        }
+        else
+        {
+            throw new JsonIoException("Invalid primitive type");
         }
     }
 

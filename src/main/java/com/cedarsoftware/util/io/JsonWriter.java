@@ -89,15 +89,15 @@ public class JsonWriter implements Closeable, Flushable
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
-    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<>();
-    private final Set<Class> notCustom = new HashSet<>();
+    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>();
+    private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
+    private final Set<Class> notCustom = new HashSet<Class>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
     private static final NullClass nullWriter = new NullClass();
-    private final Map<Object, Long> objVisited = new IdentityHashMap<>();
-    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
+    private final Map<Object, Long> objVisited = new IdentityHashMap<Object, Long>();
+    private final Map<Object, Long> objsReferenced = new IdentityHashMap<Object, Long>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
     private boolean shortMetaKeys = false;
@@ -109,7 +109,7 @@ public class JsonWriter implements Closeable, Flushable
     long identity = 1;
     private int depth = 0;
     // _args is using ThreadLocal so that static inner classes can have access to them
-    final Map<String, Object> args = new HashMap<>();
+    final Map<String, Object> args = new HashMap<String, Object>();
 
     {   // Add customer writers (these make common classes more succinct)
         addWriter(String.class, new Writers.JsonStringWriter());
@@ -312,7 +312,7 @@ public class JsonWriter implements Closeable, Flushable
         if (optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
-            Map<Class, List<Field>> copy = new HashMap<>();
+            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
             for (Entry<Class, List<String>> entry : specifiers.entrySet())
             {
                 Class c = entry.getKey();
@@ -616,7 +616,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
         Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
-        final Deque<Object> stack = new ArrayDeque<>();
+        final Deque<Object> stack = new ArrayDeque<Object>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
@@ -913,44 +913,66 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
 
-        switch (c.getName())
+        String s = c.getName();
+        if (s.equals("java.lang.Boolean"))
         {
-            case "java.lang.Boolean":
-                output.write("boolean");
-                break;
-            case "java.lang.Byte":
-                output.write("byte");
-                break;
-            case "java.lang.Character":
-                output.write("char");
-                break;
-            case "java.lang.Class":
-                output.write("class");
-                break;
-            case "java.lang.Double":
-                output.write("double");
-                break;
-            case "java.lang.Float":
-                output.write("float");
-                break;
-            case "java.lang.Integer":
-                output.write("int");
-                break;
-            case "java.lang.Long":
-                output.write("long");
-                break;
-            case "java.lang.Short":
-                output.write("short");
-                break;
-            case "java.lang.String":
-                output.write("string");
-                break;
-            case "java.util.Date":
-                output.write("date");
-                break;
-            default:
-                output.write(c.getName());
-                break;
+            output.write("boolean");
+
+        }
+        else if (s.equals("java.lang.Byte"))
+        {
+            output.write("byte");
+
+        }
+        else if (s.equals("java.lang.Character"))
+        {
+            output.write("char");
+
+        }
+        else if (s.equals("java.lang.Class"))
+        {
+            output.write("class");
+
+        }
+        else if (s.equals("java.lang.Double"))
+        {
+            output.write("double");
+
+        }
+        else if (s.equals("java.lang.Float"))
+        {
+            output.write("float");
+
+        }
+        else if (s.equals("java.lang.Integer"))
+        {
+            output.write("int");
+
+        }
+        else if (s.equals("java.lang.Long"))
+        {
+            output.write("long");
+
+        }
+        else if (s.equals("java.lang.Short"))
+        {
+            output.write("short");
+
+        }
+        else if (s.equals("java.lang.String"))
+        {
+            output.write("string");
+
+        }
+        else if (s.equals("java.util.Date"))
+        {
+            output.write("date");
+
+        }
+        else
+        {
+            output.write(c.getName());
+
         }
 
         output.write('"');

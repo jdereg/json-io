@@ -39,11 +39,11 @@ import java.util.concurrent.ConcurrentMap;
  */
 abstract class Resolver
 {
-    protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
+    protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<>();
-    private final Collection<Object[]> prettyMaps = new ArrayList<>();
+    final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<Class, JsonReader.JsonClassReaderBase>();
+    private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
     private final boolean useMaps;
     private final Object unknownClass;
 
@@ -106,7 +106,7 @@ abstract class Resolver
      */
     protected Object convertMapsToObjects(final JsonObject<String, Object> root)
     {
-        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
+        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<JsonObject<String, Object>>();
         stack.addFirst(root);
 
         while (!stack.isEmpty())

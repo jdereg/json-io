@@ -56,14 +56,14 @@ import java.util.regex.Pattern;
  */
 public class MetaUtils
 {
-    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
-    private static final Set<Class> prims = new HashSet<>();
-    private static final Map<String, Class> nameToClass = new HashMap<>();
+    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
+    private static final Set<Class> prims = new HashSet<Class>();
+    private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<Class, Object[]>();
     private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
     private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
@@ -155,7 +155,7 @@ public class MetaUtils
             return classFields;
         }
 
-        classFields = new LinkedHashMap<>();
+        classFields = new LinkedHashMap<String, Field>();
         Class curr = c;
 
         while (curr != null)
@@ -236,7 +236,7 @@ public class MetaUtils
 
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
+        Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
 
         Class<?>[] interfaces = from.getInterfaces();
         // is the interface direct inherited or via interfaces extends interface?
@@ -338,32 +338,45 @@ public class MetaUtils
             {
                 className = className.substring(0, className.length() - 1);
             }
-            switch (className)
+            if (className.equals("[B"))
             {
-                case "[B":
-                    primitiveArray = byte[].class;
-                    break;
-                case "[S":
-                    primitiveArray = short[].class;
-                    break;
-                case "[I":
-                    primitiveArray = int[].class;
-                    break;
-                case "[J":
-                    primitiveArray = long[].class;
-                    break;
-                case "[F":
-                    primitiveArray = float[].class;
-                    break;
-                case "[D":
-                    primitiveArray = double[].class;
-                    break;
-                case "[Z":
-                    primitiveArray = boolean[].class;
-                    break;
-                case "[C":
-                    primitiveArray = char[].class;
-                    break;
+                primitiveArray = byte[].class;
+
+            }
+            else if (className.equals("[S"))
+            {
+                primitiveArray = short[].class;
+
+            }
+            else if (className.equals("[I"))
+            {
+                primitiveArray = int[].class;
+
+            }
+            else if (className.equals("[J"))
+            {
+                primitiveArray = long[].class;
+
+            }
+            else if (className.equals("[F"))
+            {
+                primitiveArray = float[].class;
+
+            }
+            else if (className.equals("[D"))
+            {
+                primitiveArray = double[].class;
+
+            }
+            else if (className.equals("[Z"))
+            {
+                primitiveArray = boolean[].class;
+
+            }
+            else if (className.equals("[C"))
+            {
+                primitiveArray = char[].class;
+
             }
             int startpos = className.startsWith("[L") ? 2 : 1;
             className = className.substring(startpos);
@@ -678,112 +691,117 @@ public class MetaUtils
         try
         {
             cname = c.getName();
-            switch(cname)
+            if (cname.equals("boolean") || cname.equals("java.lang.Boolean"))
             {
-                case "boolean":
-                case "java.lang.Boolean":
-                    if (rhs instanceof String)
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "false";
-                        }
-                        return Boolean.parseBoolean((String)rhs);
+                        rhs = "false";
                     }
-                    return rhs != null ? rhs : Boolean.FALSE;
-                case "byte":
-                case "java.lang.Byte":
-                    if (rhs instanceof String)
+                    return Boolean.parseBoolean((String) rhs);
+                }
+                return rhs != null ? rhs : Boolean.FALSE;
+            }
+            else if (cname.equals("byte") || cname.equals("java.lang.Byte"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0";
-                        }
-                        return Byte.parseByte((String)rhs);
+                        rhs = "0";
                     }
-                    return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
-                case "char":
-                case "java.lang.Character":
-                    if (rhs == null)
+                    return Byte.parseByte((String) rhs);
+                }
+                return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+            }
+            else if (cname.equals("char") || cname.equals("java.lang.Character"))
+            {
+                if (rhs == null)
+                {
+                    return '\u0000';
+                }
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        return '\u0000';
+                        rhs = "\u0000";
                     }
-                    if (rhs instanceof String)
+                    return valueOf(((String) rhs).charAt(0));
+                }
+                if (rhs instanceof Character)
+                {
+                    return rhs;
+                }
+
+            }
+            else if (cname.equals("double") || cname.equals("java.lang.Double"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "\u0000";
-                        }
-                        return valueOf(((String) rhs).charAt(0));
+                        rhs = "0.0";
                     }
-                    if (rhs instanceof Character)
+                    return Double.parseDouble((String) rhs);
+                }
+                return rhs != null ? rhs : 0.0d;
+            }
+            else if (cname.equals("float") || cname.equals("java.lang.Float"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        return rhs;
+                        rhs = "0.0f";
                     }
-                    break;
-                case "double":
-                case "java.lang.Double":
-                    if (rhs instanceof String)
+                    return Float.parseFloat((String) rhs);
+                }
+                return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+            }
+            else if (cname.equals("int") || cname.equals("java.lang.Integer"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0.0";
-                        }
-                        return Double.parseDouble((String)rhs);
+                        rhs = "0";
                     }
-                    return rhs != null ? rhs : 0.0d;
-                case "float":
-                case "java.lang.Float":
-                    if (rhs instanceof String)
+                    return Integer.parseInt((String) rhs);
+                }
+                return rhs != null ? ((Number) rhs).intValue() : 0;
+            }
+            else if (cname.equals("long") || cname.equals("java.lang.Long"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0.0f";
-                        }
-                        return Float.parseFloat((String)rhs);
+                        rhs = "0";
                     }
-                    return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
-                case "int":
-                case "java.lang.Integer":
-                    if (rhs instanceof String)
+                    return Long.parseLong((String) rhs);
+                }
+                return rhs != null ? rhs : 0L;
+            }
+            else if (cname.equals("short") || cname.equals("java.lang.Short"))
+            {
+                if (rhs instanceof String)
+                {
+                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                    if ("".equals(rhs))
                     {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0";
-                        }
-                        return Integer.parseInt((String)rhs);
+                        rhs = "0";
                     }
-                    return rhs != null ? ((Number) rhs).intValue() : 0;
-                case "long":
-                case "java.lang.Long":
-                    if (rhs instanceof String)
-                    {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0";
-                        }
-                        return Long.parseLong((String)rhs);
-                    }
-                    return rhs != null ? rhs : 0L;
-                case "short":
-                case "java.lang.Short":
-                    if (rhs instanceof String)
-                    {
-                        rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                        if ("".equals(rhs))
-                        {
-                            rhs = "0";
-                        }
-                        return Short.parseShort((String)rhs);
-                    }
-                    return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+                    return Short.parseShort((String) rhs);
+                }
+                return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
             }
         }
         catch (Exception e)
@@ -836,7 +854,12 @@ public class MetaUtils
             {
                 return allocateInstance.invoke(sunUnsafe, clazz);
             }
-            catch (IllegalAccessException | IllegalArgumentException e)
+            catch (IllegalAccessException e )
+            {
+                String name = clazz == null ? "null" : clazz.getName();
+                throw new JsonIoException("Unable to create instance of class: " + name, e);
+            }
+            catch (IllegalArgumentException e)
             {
                 String name = clazz == null ? "null" : clazz.getName();
                 throw new JsonIoException("Unable to create instance of class: " + name, e);

@@ -81,13 +81,13 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";             // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";         // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
-    protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<>();
-    protected final Set<Class> notCustom = new HashSet<>();
-    private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<>();
-    private final Map<Long, JsonObject> objsRead = new HashMap<>();
+    protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
+    protected final Set<Class> notCustom = new HashSet<Class>();
+    private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<Class, ClassFactory>();
+    private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
     // _args is using ThreadLocal so that static inner classes can have access to them
-    private final Map<String, Object> args = new HashMap<>();
+    private final Map<String, Object> args = new HashMap<String, Object>();
 
     {
         addReader(String.class, new Readers.StringReader());
@@ -391,11 +391,11 @@ public class JsonReader implements Closeable
 
         if (ret != null && ret.getClass().isArray())
         {
-            JsonObject<String, Object> retMap = new JsonObject<>();
+            JsonObject<String, Object> retMap = new JsonObject<String, Object>();
             retMap.put("@items", ret);
             return retMap;
         }
-        JsonObject<String, Object> retMap = new JsonObject<>();
+        JsonObject<String, Object> retMap = new JsonObject<String, Object>();
         retMap.put("@items", new Object[]{ret});
         return retMap;
     }
@@ -448,7 +448,7 @@ public class JsonReader implements Closeable
         if (typeNames != null)
         {   // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
             // and not keep a 2nd map from short-hand name to type.
-            Map<String, String> typeNameMap = new HashMap<>();
+            Map<String, String> typeNameMap = new HashMap<String, String>();
             for (Map.Entry<String, String> entry : typeNames.entrySet())
             {
                 typeNameMap.put(entry.getValue(), entry.getKey());
