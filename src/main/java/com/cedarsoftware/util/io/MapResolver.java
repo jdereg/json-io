@@ -76,7 +76,7 @@ public class MapResolver extends Resolver
             }
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object (Map)
-                JsonObject<String, Object> jsonArray = new JsonObject<>();
+                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
                 jsonArray.put("@items", rhs);
                 stack.addFirst(jsonArray);
                 jsonObj.put(fieldName, jsonArray);
@@ -168,7 +168,7 @@ public class MapResolver extends Resolver
 
             if (element instanceof Object[])
             {   // array element inside Collection
-                JsonObject<String, Object> jsonObject = new JsonObject<>();
+                JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
                 jsonObject.put("@items", element);
                 stack.addFirst(jsonObject);
             }

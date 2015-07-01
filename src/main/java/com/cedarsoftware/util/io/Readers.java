@@ -48,7 +48,7 @@ public class Readers
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
-    private static final Map<String, String> months = new LinkedHashMap<>();
+    private static final Map<String, String> months = new LinkedHashMap<String, String>();
 
     static
     {

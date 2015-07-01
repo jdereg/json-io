@@ -159,7 +159,7 @@ class ObjectResolver extends Resolver
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 final Object[] elements = (Object[]) rhs;
-                JsonObject<String, Object> jsonArray = new JsonObject<>();
+                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
                 if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF8 strings for compactness and speed.
@@ -412,7 +412,7 @@ class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    JsonObject<String, Object> jsonObject = new JsonObject<>();
+                    JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
                     jsonObject.put("@items", element);
                     Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
@@ -568,7 +568,7 @@ class ObjectResolver extends Resolver
 
     private static void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
     {
-        final Deque<Object[]> stack = new ArrayDeque<>();
+        final Deque<Object[]> stack = new ArrayDeque<Object[]>();
         stack.addFirst(new Object[] {type, rhs});
 
         while (!stack.isEmpty())

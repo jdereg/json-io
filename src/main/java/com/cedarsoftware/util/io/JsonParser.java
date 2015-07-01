@@ -45,7 +45,7 @@ class JsonParser
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
-    private static final Map<String, String> stringCache = new HashMap<>();
+    private static final Map<String, String> stringCache = new HashMap<String, String>();
 
     private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
@@ -107,7 +107,7 @@ class JsonParser
     {
         boolean done = false;
         String field = null;
-        JsonObject<String, Object> object = new JsonObject<>();
+        JsonObject<String, Object> object = new JsonObject<String, Object>();
         int state = STATE_READ_START_OBJECT;
         final FastPushbackReader in = input;
 
@@ -154,23 +154,30 @@ class JsonParser
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
-                            switch(field)
+                            if (field.equals("@t"))
                             {
-                                case "@t":
-                                    field = stringCache.get("@type");
-                                    break;
-                                case "@i":
-                                    field = stringCache.get("@id");
-                                    break;
-                                case "@r":
-                                    field = stringCache.get("@ref");
-                                    break;
-                                case "@k":
-                                    field = stringCache.get("@keys");
-                                    break;
-                                case "@e":
-                                    field = stringCache.get("@items");
-                                    break;
+                                field = stringCache.get("@type");
+
+                            }
+                            else if (field.equals("@i"))
+                            {
+                                field = stringCache.get("@id");
+
+                            }
+                            else if (field.equals("@r"))
+                            {
+                                field = stringCache.get("@ref");
+
+                            }
+                            else if (field.equals("@k"))
+                            {
+                                field = stringCache.get("@keys");
+
+                            }
+                            else if (field.equals("@e"))
+                            {
+                                field = stringCache.get("@items");
+
                             }
                         }
                         state = STATE_READ_VALUE;
