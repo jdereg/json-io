@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -33,12 +34,27 @@ import java.util.Map;
  */
 public class JsonObject<K, V> extends LinkedHashMap<K, V>
 {
+    static Map<String,String> primitiveWrappers = new HashMap<String, String>();
+
     Object target;
     boolean isMap = false;
     String type;
     long id = -1;
     int line;
     int col;
+
+    static
+    {
+        primitiveWrappers.put("boolean","java.lang.Boolean");
+        primitiveWrappers.put("byte","java.lang.Byte");
+        primitiveWrappers.put("char","java.lang.Character");
+        primitiveWrappers.put("double","java.lang.Double");
+        primitiveWrappers.put("float","java.lang.Float");
+        primitiveWrappers.put("int","java.lang.Integer");
+        primitiveWrappers.put("long","java.lang.Long");
+        primitiveWrappers.put("short","java.lang.Short");
+    }
+
 
     public long getId()
     {
@@ -81,16 +97,13 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             return false;
         }
-        return type.equals("boolean") || type.equals("byte") || type.equals("char") || type.equals("double") || type.equals("float") ||
-                type.equals("int") || type.equals("long") || type.equals("short");
+        return primitiveWrappers.containsKey(type);
     }
 
     public static boolean isPrimitiveWrapper(Class c)
     {
         final String cname = c.getName();
-        return cname.equals("java.lang.Boolean") || cname.equals("java.lang.Byte") || cname.equals("java.lang.Character") ||
-                cname.equals("java.lang.Double") || cname.equals("java.lang.Float") || cname.equals("java.lang.Integer") ||
-                cname.equals("java.lang.Long") || cname.equals("java.lang.Short");
+        return primitiveWrappers.containsValue(cname);
     }
 
     public Object getPrimitiveValue()
