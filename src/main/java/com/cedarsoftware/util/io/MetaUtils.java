@@ -88,7 +88,7 @@ public class MetaUtils
             {
                 unsafe = new Unsafe();
             }
-            catch (ReflectiveOperationException e)
+            catch (InvocationTargetException e)
             {
                 useUnsafe = false;
             }
@@ -824,9 +824,9 @@ public class MetaUtils
 
         /**
          * Constructs unsafe object, acting as a wrapper.
-         * @throws ReflectiveOperationException
+         * @throws InvocationTargetException
          */
-        public Unsafe() throws ReflectiveOperationException
+        public Unsafe() throws InvocationTargetException
         {
             try
             {
@@ -838,7 +838,7 @@ public class MetaUtils
             }
             catch(Exception e)
             {
-                throw new ReflectiveOperationException(e);
+                throw new InvocationTargetException(e);
             }
         }
 
