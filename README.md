@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.0</version>
+      <version>4.1.1</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
@@ -203,6 +203,8 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 
 ### Revision History
+ * 4.1.1
+  * JDK 1.6 support - Use of ReflectiveOperationException changed to InvocationTargetException.
  * 4.1.0
   * JDK 1.6 support restored. Keeping 1.6 support for Android developers.  Submitted by @kkalisz
  * 4.0.1

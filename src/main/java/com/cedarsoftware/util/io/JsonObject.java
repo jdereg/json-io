@@ -2,9 +2,10 @@ package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -34,7 +35,8 @@ import java.util.Map;
  */
 public class JsonObject<K, V> extends LinkedHashMap<K, V>
 {
-    static Map<String,String> primitiveWrappers = new HashMap<String, String>();
+    static Set<String> primitives = new HashSet<String>();
+    static Set<String> primitiveWrappers = new HashSet<String>();
 
     Object target;
     boolean isMap = false;
@@ -45,14 +47,23 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     static
     {
-        primitiveWrappers.put("boolean","java.lang.Boolean");
-        primitiveWrappers.put("byte","java.lang.Byte");
-        primitiveWrappers.put("char","java.lang.Character");
-        primitiveWrappers.put("double","java.lang.Double");
-        primitiveWrappers.put("float","java.lang.Float");
-        primitiveWrappers.put("int","java.lang.Integer");
-        primitiveWrappers.put("long","java.lang.Long");
-        primitiveWrappers.put("short","java.lang.Short");
+        primitives.add("boolean");
+        primitives.add("byte");
+        primitives.add("char");
+        primitives.add("double");
+        primitives.add("float");
+        primitives.add("int");
+        primitives.add("long");
+        primitives.add("short");
+
+        primitiveWrappers.add("java.lang.Boolean");
+        primitiveWrappers.add("java.lang.Byte");
+        primitiveWrappers.add("java.lang.Character");
+        primitiveWrappers.add("java.lang.Double");
+        primitiveWrappers.add("java.lang.Float");
+        primitiveWrappers.add("java.lang.Integer");
+        primitiveWrappers.add("java.lang.Long");
+        primitiveWrappers.add("java.lang.Short");
     }
 
 
@@ -93,17 +104,13 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public boolean isPrimitive()
     {
-        if (type == null)
-        {
-            return false;
-        }
-        return primitiveWrappers.containsKey(type);
+        return type != null && primitiveWrappers.contains(type);
     }
 
     public static boolean isPrimitiveWrapper(Class c)
     {
         final String cname = c.getName();
-        return primitiveWrappers.containsValue(cname);
+        return primitiveWrappers.contains(cname);
     }
 
     public Object getPrimitiveValue()
