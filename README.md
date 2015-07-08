@@ -201,7 +201,7 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profi
 innovative and intelligent tools for profiling Java and .NET applications.
 
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
----
+===
 ### Revision History
  * 4.1.2
   * All objects in the graph are 'traced' (JsonWriter.traceReferences) except references.  The code used to not trace fields on objects that were handled by custom writers.
