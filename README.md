@@ -1,6 +1,6 @@
 json-io
 =======
-___
+
 Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
 
     <dependency>
