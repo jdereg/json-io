@@ -692,9 +692,8 @@ public class JsonWriter implements Closeable, Flushable
                 }
             }
             else
-            {
-				// Only trace fields if no custom writer is present
-				if (getCustomWriter(obj.getClass()) == null)
+            {   // Speed up: do not traceReferences of primitives, they cannot reference anything
+				if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
                 {
 					traceFields(stack, obj, fieldSpecifiers);
 				}

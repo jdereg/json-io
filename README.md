@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.1</version>
+      <version>4.1.2</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
@@ -201,14 +201,16 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profi
 innovative and intelligent tools for profiling Java and .NET applications.
 
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
-
+---
 ### Revision History
+ * 4.1.2
+  * All objects in the graph are 'traced' (JsonWriter.traceReferences) except references.  The code used to not trace fields on objects that were handled by custom writers.
  * 4.1.1
-  * JDK 1.6 support - Use of ReflectiveOperationException changed to InvocationTargetException.
+  * JDK 1.6 support - Use of `ReflectiveOperationException` changed to `InvocationTargetException`.
  * 4.1.0
   * JDK 1.6 support restored. Keeping 1.6 support for Android developers.  Submitted by @kkalisz
  * 4.0.1
-  * To prevent @type from being written, set the optional argument JsonWriter.TYPE = false. This is generally not recommended, as the output JSON may not be able to be re-read into Java objects.  However, if the JSON is destined for a non-Java system, this can be useful.
+  * To prevent @type from being written, set the optional argument `JsonWriter.TYPE = false`. This is generally not recommended, as the output JSON may not be able to be re-read into Java objects.  However, if the JSON is destined for a non-Java system, this can be useful.
  * 4.0.0
   * Custom readers / writers are set now per-instance of `JsonReader` / `JsonWriter`, not static.  This allows using different customization for cloning, for example, than for serialization to client.
   * `JsonReader.jsonToJava()` and `JsonReader.jsonToMaps()` now allow an `InputStream` to be used.
