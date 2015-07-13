@@ -312,19 +312,7 @@ abstract class Resolver
                 }
                 else
                 {
-                    JsonReader.JsonClassReaderBase customReader = getCustomReader(c);
-                    if (customReader instanceof JsonReader.JsonClassReaderEx)
-                    {
-                        mate = ((JsonReader.JsonClassReaderEx)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>(), reader.getArgs());
-                    }
-                    else if (customReader instanceof JsonReader.JsonClassReader)
-                    {
-                        mate = ((JsonReader.JsonClassReader)customReader).read(jsonObj, new ArrayDeque<JsonObject<String, Object>>());
-                    }
-                    else
-                    {
-                        mate = newInstance(c);
-                    }
+                    mate = newInstance(c);
                 }
             }
         }

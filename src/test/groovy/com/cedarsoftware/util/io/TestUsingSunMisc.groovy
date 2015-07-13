@@ -59,6 +59,12 @@ class TestUsingSunMisc
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
+        JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
+            Object newInstance(Class c)
+            {
+                return Dog.Shoe.construct()
+            }
+        })
         TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
             {
