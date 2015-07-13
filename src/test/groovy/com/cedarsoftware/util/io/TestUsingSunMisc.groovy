@@ -68,8 +68,7 @@ class TestUsingSunMisc
         TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
             {
-                // no need to do anything special
-                return Dog.Shoe.construct()
+                return jOb
             }
         }]])
     }
