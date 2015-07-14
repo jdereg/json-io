@@ -170,7 +170,7 @@ public class JsonWriter implements Closeable, Flushable
      * Provide access to subclasses.
      * @return Map containing all objects that were referenced within input object graph.
      */
-    protected Map getObjectsReferenced()
+    public Map getObjectsReferenced()
     {
         return objsReferenced;
     }
@@ -179,7 +179,7 @@ public class JsonWriter implements Closeable, Flushable
      * Provide access to subclasses.
      * @return Map containing all objects that were visited within input object graph
      */
-    protected Map getObjectsVisited()
+    public Map getObjectsVisited()
     {
         return objVisited;
     }

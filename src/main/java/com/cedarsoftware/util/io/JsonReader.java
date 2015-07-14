@@ -486,7 +486,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    Map<Long, JsonObject> getObjectsRead()
+    public Map<Long, JsonObject> getObjectsRead()
     {
         return objsRead;
     }
