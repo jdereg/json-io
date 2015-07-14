@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.2</version>
+      <version>4.1.3</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
@@ -203,6 +203,9 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.1.3
+  * Made `JsonReader / JsonWriter getObjectsReferenced()` API `public` (allows custom reader / writers access to these)
+  * `Resolver.createJavaObjectInstance()`, used to create the correct Java object for a `JsonObject` peer, no longer calls the .read() API for objects's with custom readers.
  * 4.1.2
   * All objects in the graph are 'traced' (JsonWriter.traceReferences) except references.  The code used to not trace fields on objects that were handled by custom writers.
  * 4.1.1
