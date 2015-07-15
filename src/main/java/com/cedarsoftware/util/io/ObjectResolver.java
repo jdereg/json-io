@@ -516,6 +516,7 @@ class ObjectResolver extends Resolver
                             return null;
                         }
                     }
+                    createJavaObjectInstance(c, jObj);
                 }
                 catch(Exception e)
                 {
@@ -557,11 +558,6 @@ class ObjectResolver extends Resolver
         else
         {
             read = ((JsonReader.JsonClassReader)closestReader).read(o, stack);
-        }
-
-        if (isJsonObject)
-        {
-        	((JsonObject)o).setTarget(read);
         }
 		return read;
     }
