@@ -545,7 +545,7 @@ class ObjectResolver extends Resolver
             return null;
         }
 
-        if (needsType && isJsonObject)
+        if (needsType)
         {
             ((JsonObject)o).setType(c.getName());
         }
