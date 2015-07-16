@@ -204,7 +204,7 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ___
 ### Revision History
  * 4.1.4
-  * Bug fix: Custom readers will now always have the .target field set if a JsonObject is passed to them.  This was being set after the reading was called, not before it.
+  * Bug fix: Custom readers will now always have the .target field set if a `JsonObject` is passed to them.  The custom reader's `read()` method was being called before the `.target` field was set on the `JsonObject`.
  * 4.1.3
   * Made `JsonReader / JsonWriter getObjectsReferenced()` API `public` (allows custom reader / writers access to these)
   * `Resolver.createJavaObjectInstance()`, used to create the correct Java object for a `JsonObject` peer, no longer calls the .read() API for objects's with custom readers.
