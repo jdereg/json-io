@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.4</version>
+      <version>4.1.5</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
@@ -203,6 +203,10 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.1.5
+  * Tests updated to use Groovy 2.4.4
+  * Deserialization updated to handle objects where the referencing class uses an Object pointer and writes the value out as single primitive value, using the 'value' key. (submitted by @KaiHufenbach)
+  * pom filed updated to use a maven bundle plugin (Apache Felix) to generate OSGI headers (submitted by @KaiHufenbach)
  * 4.1.4
   * Bug fix: Custom readers will now always have the .target field set if a `JsonObject` is passed to them.  The custom reader's `read()` method was being called before the `.target` field was set on the `JsonObject`.
  * 4.1.3
