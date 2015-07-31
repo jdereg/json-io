@@ -250,15 +250,17 @@ abstract class Resolver
     {
         final boolean useMapsLocal = useMaps;
         String type = jsonObj.type;
-        
-        //We cant set values to an Object, so well try to use the contained type instead
-		if("java.lang.Object".equals(type)){
+
+        // We can't set values to an Object, so well try to use the contained type instead
+		if ("java.lang.Object".equals(type))
+        {
 			Object value = jsonObj.get("value");
-        	if(jsonObj.keySet().size()==1 && value!=null){
+        	if (jsonObj.keySet().size() == 1 && value != null)
+            {
         		type = value.getClass().getName();
         	}
         }
-        
+
         Object mate;
 
         // @type always takes precedence over inferred Java (clazz) type.

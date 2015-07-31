@@ -35,7 +35,7 @@
     <properties>
         <version.java-util>1.19.3</version.java-util>
         <version.junit>4.12</version.junit>
-        <version.groovy>2.4.3</version.groovy>
+        <version.groovy>2.4.4</version.groovy>
         <version.gson>2.3</version.gson>
         <version.plugin.compiler>3.2</version.plugin.compiler>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
@@ -107,7 +107,7 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>${version.plugin.deploy}</version>
             </plugin>
-            
+
             <plugin>
     			<groupId>org.apache.felix</groupId>
     			<artifactId>maven-bundle-plugin</artifactId>
