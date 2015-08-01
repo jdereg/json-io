@@ -2075,7 +2075,8 @@ public class JsonWriter implements Closeable, Flushable
         Class type = field.getType();
         boolean forceType = o.getClass() != type;     // If types are not exactly the same, write "@type" field
 
-        if (MetaUtils.isPrimitive(type))
+        //When no type is written we can check the Object itself not the declaration
+        if (MetaUtils.isPrimitive(type) || (neverShowType && MetaUtils.isPrimitive(o.getClass())))
         {
             writePrimitive(o, false);
         }
