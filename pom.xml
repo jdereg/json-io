@@ -46,6 +46,8 @@
         <version.plugin.surefire>2.18.1</version.plugin.surefire>
         <version.plugin.groovy.eclipse.compiler>2.9.2-01</version.plugin.groovy.eclipse.compiler>
         <version.plugin.groovy.eclipse.batch>2.4.3-01</version.plugin.groovy.eclipse.batch>
+        <version.plugin.felix.scr>1.7.4</version.plugin.felix.scr>
+        <version.plugin.felix.bundle>2.5.3</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -79,6 +81,34 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+                <version>${version.plugin.felix.scr}</version>
+            </plugin>
+
+            <plugin>
+    			<groupId>org.apache.felix</groupId>
+    			<artifactId>maven-bundle-plugin</artifactId>
+                <version>${version.plugin.felix.bundle}</version>
+    			<extensions>true</extensions>
+    			<configuration>
+					<instructions>
+        				<Export-Package>com.cedarsoftware.util.io</Export-Package>
+      				</instructions>
+    			</configuration>
+    			<executions>
+    				<execution>
+    					<id>bundle-manifest</id>
+    					<goals>
+    						<goal>
+    							manifest
+    						</goal>
+    					</goals>
+    				</execution>
+    			</executions>
+  			</plugin>
+
+            <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
@@ -104,33 +134,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>${version.plugin.deploy}</version>
-            </plugin>
-
-            <plugin>
-    			<groupId>org.apache.felix</groupId>
-    			<artifactId>maven-bundle-plugin</artifactId>
-    			<extensions>true</extensions>
-    			<configuration>
-					<instructions>
-        				<Export-Package>com.cedarsoftware.util.io</Export-Package>
-      				</instructions>
-    			</configuration>
-    			<executions>
-    				<execution>
-    					<id>bundle-manifest</id>
-    					<goals>
-    						<goal>
-    							manifest
-    						</goal>
-    					</goals>
-    				</execution>
-    			</executions>
-  			</plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>${version.plugin.source}</version>
                 <executions>
@@ -141,6 +144,12 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>${version.plugin.deploy}</version>
             </plugin>
 
             <plugin>
