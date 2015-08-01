@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.5</version>
+      <version>4.1.6</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1KEXSz6GYti1KbJJdHznE8Sd5PwjSs5pCo
@@ -203,6 +203,8 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.1.6
+  * Better support for primitive output when 'never show type' is set. (submitted by @KaiHufenbach)
  * 4.1.5
   * Tests updated to use Groovy 2.4.4
   * Deserialization updated to handle objects where the referencing class uses an Object pointer and writes the value out as single primitive value, using the 'value' key. (submitted by @KaiHufenbach)
