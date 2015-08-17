@@ -116,6 +116,18 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+					<archive>
+						<manifestEntries>
+							<Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+							<Bundle-Name>${name}</Bundle-Name>
+							<Bundle-SymbolicName>${groupId}.${artifactId}.source</Bundle-SymbolicName>
+							<Bundle-Vendor>${organization.name}</Bundle-Vendor>
+							<Bundle-Version>${version}</Bundle-Version>
+							<Eclipse-SourceBundle>${groupId}.${artifactId};version="${version}";roots:="."</Eclipse-SourceBundle>
+						</manifestEntries>
+					</archive>
+				</configuration>
             </plugin>
 
             <plugin>
