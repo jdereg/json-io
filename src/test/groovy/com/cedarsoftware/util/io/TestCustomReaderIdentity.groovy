@@ -25,7 +25,7 @@ class TestCustomReaderIdentity
 	{
 		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
 		{
-			CustomDataClass customClass = new CustomDataClass();
+			CustomDataClass customClass = new CustomDataClass(5);
 			customClass.setTest("blab");
 			return customClass;
 		}
