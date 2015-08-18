@@ -39,7 +39,7 @@ class TestCustomReaderIdentity
 	public void testCustomReaderSerialization()
 	{
 		List<CustomDataClass> elements = new LinkedList<>();
-		CustomDataClass element = new CustomDataClass();
+		CustomDataClass element = new CustomDataClass(5);
 		element.setTest("hallo");
 
 		elements.add(element);
