@@ -650,7 +650,7 @@ public class JsonWriter implements Closeable, Flushable
             final Class clazz = obj.getClass();
             
             //If we have a customWriter we do not need to traverse references as the writer is responsible for writing the entire subtree
-            if(getCustomWriter(clazz)!=null){
+            if(!notCustom.contains(clazz) && getCustomWriter(clazz)!=null){
             	continue;
             }
 

@@ -487,8 +487,8 @@ class ObjectResolver extends Resolver
         boolean needsType = false;
 
         // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)      
-		if (isJsonObject)
-        {
+		if (isJsonObject){
+			
             JsonObject jObj = (JsonObject) o;
             if (jObj.isReference())
             {
@@ -519,7 +519,7 @@ class ObjectResolver extends Resolver
                         }
                     }
                     //Use a custom reader, if applicable
-					if( getCustomReader(c)== null){
+					if(notCustom(c) || getCustomReader(c)== null){
                     	createJavaObjectInstance(c, jObj);                    	
                     }
                     
