@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.io.JsonReader.JsonClassReaderBase;
+
 /**
  * The ObjectResolver converts the raw Maps created from the JsonParser to Java
  * objects (a graph of Java instances).  The Maps have an optional type entry associated
@@ -484,9 +486,9 @@ class ObjectResolver extends Resolver
         Class c;
         boolean needsType = false;
 
-        // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)
-        if (isJsonObject)
-        {
+        // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)      
+		if (isJsonObject){
+			
             JsonObject jObj = (JsonObject) o;
             if (jObj.isReference())
             {
@@ -516,7 +518,11 @@ class ObjectResolver extends Resolver
                             return null;
                         }
                     }
-                    createJavaObjectInstance(c, jObj);
+                    //Use a custom reader, if applicable
+					if(notCustom(c) || getCustomReader(c)== null){
+                    	createJavaObjectInstance(c, jObj);                    	
+                    }
+                    
                 }
                 catch(Exception e)
                 {

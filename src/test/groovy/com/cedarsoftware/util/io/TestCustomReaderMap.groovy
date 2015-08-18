@@ -25,6 +25,10 @@ class TestCustomReaderMap
 {
     private static class CustomPoint
     {
+		public CustomPoint(){
+			int i = 1+1;
+		}
+		
         public long x
         public long y
     }
@@ -35,12 +39,10 @@ class TestCustomReaderMap
         {
             JsonObject jObj = (JsonObject) obj
 
-            CustomPoint point = (CustomPoint) jObj.getTarget()
-            if (point == null)
-            {
-                throw new IllegalStateException("target must be specified on JsonObject passed to CustomPointReader")
-            }
-
+            CustomPoint point = new CustomPoint();
+            //We expect the target to be null as it is the duty of the Reader to instantiate the target incl. Subgraph
+			assertEquals(null, jObj.getTarget());
+			
             point.x = (long) jObj.x
             point.y = (long) jObj.y
             return point

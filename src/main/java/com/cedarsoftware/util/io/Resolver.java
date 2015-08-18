@@ -323,7 +323,12 @@ abstract class Resolver
                 }
                 else
                 {
-                    mate = newInstance(c);
+                	//Only Create an Instance if not CustomReader is given, as it is the duty of the custom reader
+                	if(notCustom(c) || getCustomReader(c) ==null){
+                		mate = newInstance(c);                		
+                	}else{
+                		mate = null;
+                	}
                 }
             }
         }
@@ -368,7 +373,8 @@ abstract class Resolver
             }
             else
             {
-                mate = newInstance(clazz);
+          
+            		mate = newInstance(clazz);            		
             }
         }
         return jsonObj.target = mate;

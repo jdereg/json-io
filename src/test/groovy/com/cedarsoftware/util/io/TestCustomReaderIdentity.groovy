@@ -25,7 +25,7 @@ class TestCustomReaderIdentity
 	{
 		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
 		{
-			CustomDataClass customClass = new CustomDataClass();
+			CustomDataClass customClass = new CustomDataClass(5);
 			customClass.setTest("blab");
 			return customClass;
 		}
@@ -39,7 +39,7 @@ class TestCustomReaderIdentity
 	public void testCustomReaderSerialization()
 	{
 		List<CustomDataClass> elements = new LinkedList<>();
-		CustomDataClass element = new CustomDataClass();
+		CustomDataClass element = new CustomDataClass(5);
 		element.setTest("hallo");
 
 		elements.add(element);
@@ -48,7 +48,7 @@ class TestCustomReaderIdentity
 		String json = JsonWriter.objectToJson(elements);
 
 
-		Object obj = TestUtil.readJsonObject(json, [(CustomDataClass.class):new CustomDataReader()])
+		Object obj = TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP) : [(CustomDataClass.class):new CustomDataReader()]])
 		assert obj != null
 	}
 
@@ -68,7 +68,7 @@ class TestCustomReaderIdentity
 
 		String json = JsonWriter.objectToJson(elements);
 
-		Object obj = TestUtil.readJsonObject(json, [(CustomDataClass.class):new CustomDataReader()])
+		Object obj = TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP) : [(CustomDataClass.class):new CustomDataReader()]])
 		assert obj != null
 	}
 
@@ -76,7 +76,7 @@ class TestCustomReaderIdentity
 	public void testInSet(){
 		Set<WithoutCustomReaderClass> set = new HashSet<>();
 
-		CustomDataClass element = new CustomDataClass();
+		CustomDataClass element = new CustomDataClass(5);
 		element.setTest("hallo");
 
 		WithoutCustomReaderClass e1 = new WithoutCustomReaderClass();
@@ -90,14 +90,14 @@ class TestCustomReaderIdentity
 
 		String json = JsonWriter.objectToJson(set);
 
-		Object obj = TestUtil.readJsonObject(json, [(CustomDataClass.class):new CustomDataReader()])
+		Object obj = TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP) : [(CustomDataClass.class):new CustomDataReader()]])
 		assert obj != null
 	}
 
 	@Test
 	public void testInArray(){
 		CustomDataClass[] array = new CustomDataClass[2];
-		CustomDataClass element = new CustomDataClass();
+		CustomDataClass element = new CustomDataClass(5);
 		element.setTest("hallo");
 
 		array[0] = element;
@@ -105,7 +105,7 @@ class TestCustomReaderIdentity
 
 		String json = JsonWriter.objectToJson(array);
 
-		Object obj = TestUtil.readJsonObject(json, [(CustomDataClass.class):new CustomDataReader()])
+		Object obj = TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP) : [(CustomDataClass.class):new CustomDataReader()]])
 		assert obj != null
 	}
 }
