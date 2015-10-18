@@ -2,9 +2,12 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import java.lang.reflect.Field
+
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertFalse
 import static org.junit.Assert.assertTrue
+import static org.junit.Assert.fail
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,11 +30,10 @@ class TestTransient
 {
     static class Transient1
     {
-        String fname;
-        String lname;
-        transient String fullname;
+        String fname
+        String lname
+        transient String fullname
         transient Map map = new HashMap() {
-            @Override
             Set entrySet() {
                 throw new UnsupportedOperationException();
             }
@@ -41,11 +43,41 @@ class TestTransient
 
         void setLname(String l) { lname = l; buildFull() }
 
-        void buildFull() { fullname = fname + " " + lname; }
+        void buildFull() { fullname = fname + " " + lname }
     }
 
     @Test
-    void testSkipsTransient() {
+    void testTraceTransientWhenListedInFieldSpecifiers()
+    {
+        Transient1 person = new Transient1()
+        person.fname = "John"
+        person.lname = "DeRegnaucourt"
+        person.buildFull()
+
+        String json = TestUtil.getJsonString(person)
+        assert json.contains('fname')
+        assert json.contains('lname')
+        assert !json.contains('fullname')
+
+        json = TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'fullname']]])
+        assert json.contains('fname')
+        assert json.contains('lname')
+        assert json.contains('fullname')
+
+        try
+        {
+            TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'map']]])
+            fail()
+        }
+        catch (UnsupportedOperationException e)
+        {
+            // blows up because we told it to include the 'map' field, which means it will get trace even though it is a transient field.
+        }
+    }
+
+    @Test
+    void testSkipsTransient()
+    {
         Transient1 person = new Transient1()
         person.fname = "John"
         person.lname = "DeRegnaucourt"

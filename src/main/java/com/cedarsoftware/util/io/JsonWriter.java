@@ -716,6 +716,7 @@ public class JsonWriter implements Closeable, Flushable
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
         Collection<Field> fields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
+        Collection<Field> fieldsBySpec = fields;
         if (fields == null)
         {   // Trace fields using reflection
             fields = MetaUtils.getDeepDeclaredFields(obj.getClass()).values();
@@ -723,7 +724,13 @@ public class JsonWriter implements Closeable, Flushable
         for (final Field field : fields)
         {
             if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
-                continue;
+            {
+                if (fieldsBySpec == null || !fieldsBySpec.contains(field))
+                {   // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
+                    // In that case, the field must be traced, even though it is transient.
+                    continue;
+                }
+            }
             try
             {
                 final Object o = field.get(obj);

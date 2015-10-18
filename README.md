@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.6</version>
+      <version>4.1.8</version>
     </dependency>
 
 Like **json-io** and find it useful? Donate some **Bitcoin**: 1MJFgxTVFZZ3EkmdPabsQ5UremUg2HHPe7
@@ -203,6 +203,10 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.1.8
+  * Bug fix: 4.1.7 skipped ALL transient fields.  If a transient field is listed in the field specifiers map, then it must be traced. 
+ * 4.1.7
+  * Bug fix: Transient fields are skipped during reference tracing. (fix submitted by Francis Upton, @francisu).  Some transient fields could cause an exception to be thrown when being trace for references, stopping serialization.   
  * 4.1.6
   * Better support for primitive output when 'never show type' is set. (submitted by @KaiHufenbach)
  * 4.1.5
