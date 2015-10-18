@@ -722,6 +722,8 @@ public class JsonWriter implements Closeable, Flushable
         }
         for (final Field field : fields)
         {
+            if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
+                continue;
             try
             {
                 final Object o = field.get(obj);

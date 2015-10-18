@@ -30,15 +30,22 @@ class TestTransient
         String fname;
         String lname;
         transient String fullname;
+        transient Map map = new HashMap() {
+            @Override
+            Set entrySet() {
+                throw new UnsupportedOperationException();
+            }
+        }
 
         void setFname(String f) { fname = f; buildFull() }
+
         void setLname(String l) { lname = l; buildFull() }
-        void buildFull()        { fullname = fname + " " + lname; }
+
+        void buildFull() { fullname = fname + " " + lname; }
     }
 
     @Test
-    void testSkipsTransient()
-    {
+    void testSkipsTransient() {
         Transient1 person = new Transient1()
         person.fname = "John"
         person.lname = "DeRegnaucourt"
@@ -52,8 +59,7 @@ class TestTransient
     }
 
     @Test
-    void testForceTransientSerialize()
-    {
+    void testForceTransientSerialize() {
         Transient1 person = new Transient1()
         person.fname = "John"
         person.lname = "DeRegnaucourt"
