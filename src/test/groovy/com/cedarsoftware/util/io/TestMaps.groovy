@@ -465,4 +465,26 @@ class TestMaps
         catch (JsonIoException expected)
         { }
     }
+
+    @Test
+    void testMapWithQuoteInKey()
+    {
+        Map variableKeys = [0L: 0L, '"one"':1L, '"two"':2L]
+        String json = TestUtil.getJsonString(variableKeys)
+        Map ret = TestUtil.readJsonMap(json, [:])
+        assert ret.size() == 3
+
+        assert ret[0L] == 0L
+        assert ret['"one"'] == 1L
+        assert ret['"two"'] == 2L
+
+        Map stringKeys = ['"zero"': 0L, '"one"':1L, '"two"':2L]
+        json = TestUtil.getJsonString(stringKeys)
+        ret = TestUtil.readJsonMap(json, [:])
+        assert ret.size() == 3
+
+        assert ret['"zero"'] == 0L
+        assert ret['"one"'] == 1L
+        assert ret['"two"'] == 2L
+    }
 }
