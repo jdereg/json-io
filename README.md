@@ -9,7 +9,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
       <version>4.1.9</version>
     </dependency>
 
-Like **json-io** and find it useful? Donate some **Bitcoin**: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
+Like **json-io** and find it useful? <div class="changetip_tipme_button" data-bid="cecb6da7-a09d-4b62-8e65-f65807baae27" data-uid="4f4172795102426cb8d4bdc9c4db03f5"></div><script>(function(document,script,id){var js,r=document.getElementsByTagName(script)[0],protocol=/^http:/.test(document.location)?'http':'https';if(!document.getElementById(id)){js=document.createElement(script);js.id=id;js.src=protocol+'://widgets.changetip.com/public/js/widgets.js';r.parentNode.insertBefore(js,r)}}(document,'script','changetip_w_0'));</script>
 
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
 
