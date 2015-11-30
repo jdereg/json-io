@@ -26,8 +26,12 @@ class TestSet
 {
     static class ManySets implements Serializable
     {
+        private enum EnumValues { E1, E2, E3 };
+
+
         private Set _hashSet;
         private Set _treeSet;
+        private EnumSet<EnumValues> _enumSet;
 
         private void init()
         {
@@ -61,6 +65,8 @@ class TestSet
 
             _treeSet = new TreeSet()
             _treeSet.addAll(_hashSet)
+
+            _enumSet = EnumSet.allOf(EnumValues);
         }
 
         private ManySets()
@@ -83,5 +89,6 @@ class TestSet
         assertTrue(testSet._treeSet.containsAll(testSet._hashSet))
         assertTrue(testSet._hashSet.containsAll(testSet._treeSet))
         assertEquals("alpha", testSet._treeSet.iterator().next())
+        assertTrue(testSet._enumSet.containsAll(EnumSet.allOf(ManySets.EnumValues)));
     }
 }

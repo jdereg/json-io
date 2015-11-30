@@ -2,13 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -317,6 +311,10 @@ abstract class Resolver
                 {
                     mate = getEnum(c.getSuperclass(), jsonObj);
                 }
+                else if (EnumSet.class.isAssignableFrom(c))
+                {
+                    mate = getEnumSet(c, jsonObj);
+                }
                 else if ("java.util.Arrays$ArrayList".equals(c.getName()))
                 {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
                     mate = new ArrayList();
@@ -433,6 +431,36 @@ abstract class Resolver
         catch (Exception e)
         {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
             return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
+        }
+    }
+
+    /**
+     * Create the EnumSet with its values (it must be created this way)
+     */
+    private static Object getEnumSet(Class c, JsonObject jsonObj)
+    {
+        try
+        {
+            Object[] items = jsonObj.getArray();
+            if (items.length == 0)
+                return newInstance(c);
+            JsonObject item = (JsonObject) items[0];
+            String type = item.getType();
+            Class enumClass = MetaUtils.classForName(type);
+            EnumSet result = null;
+            for (Object objectItem : items) {
+                item = (JsonObject) objectItem;
+                Enum enumItem = (Enum) getEnum(enumClass, item);
+                if (result == null)
+                    result = EnumSet.of(enumItem);
+                else
+                    result.add(enumItem);
+            }
+            return result;
+        }
+        catch (Exception e)
+        {
+            return newInstance(c);
         }
     }
 
