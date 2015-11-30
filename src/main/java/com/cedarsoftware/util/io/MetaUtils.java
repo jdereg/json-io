@@ -498,7 +498,12 @@ public class MetaUtils
     }
 
     /**
-     * Return constructor and instance as elements 0 and 1, respectively.
+     * Returns an array with the following:
+     * <ol>
+     *     <li>object instance</li>
+     *     <li>constructor</li>
+     *     <li>a Boolean, true if all constructor arguments are to be "null"</li>
+     * </ol>
      */
     static Object[] newInstanceEx(Class c)
     {
