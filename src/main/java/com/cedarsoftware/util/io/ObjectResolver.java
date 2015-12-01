@@ -90,6 +90,18 @@ class ObjectResolver extends Resolver
             if (field != null)
             {
                 assignField(stack, jsonObj, field, rhs);
+                FieldReplacer fr = reader.getFieldReplacerMap().get(field);
+                if (fr != null)
+                {
+                    try
+                    {
+                        field.set(jsonObj.target, fr.replace(field, field.get(jsonObj.target)));
+                    }
+                    catch (IllegalAccessException e1)
+                    {
+                        throw new JsonIoException("Error accessing field '" + field.getName() + "' on target: " + safeToString(jsonObj.target), e1);
+                    }
+                }
             }
         }
         jsonObj.clear();    // Reduce memory required during processing
