@@ -78,6 +78,7 @@ import java.util.concurrent.ConcurrentMap;
 public class JsonWriter implements Closeable, Flushable
 {
     public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
+    public static final String CUSTOM_FIELD_REPLACER_MAP = "CUSTOM_FIELD_REPLACERS";  // If set, this map specifies Field to FieldReplacer
     public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
     public static final String DATE_FORMAT = "DATE_FORMAT";         // Set the date format to use within the JSON output
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";      // Constant for use as DATE_FORMAT value
@@ -91,6 +92,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
     private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
+    private final ConcurrentMap<Field, FieldReplacer> fieldReplacers = new ConcurrentHashMap<Field, FieldReplacer>();
     private final Set<Class> notCustom = new HashSet<Class>();
     private static final Object[] byteStrings = new Object[256];
     private static final String newLine = System.getProperty("line.separator");
@@ -309,6 +311,8 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
 
+        setupFieldReplacerMap(fieldReplacers, args);
+
         if (optionalArgs.containsKey(FIELD_SPECIFIERS))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
@@ -346,6 +350,19 @@ public class JsonWriter implements Closeable, Flushable
         catch (UnsupportedEncodingException e)
         {
             throw new JsonIoException("UTF-8 not supported on your JVM.  Unable to convert object to JSON.", e);
+        }
+    }
+
+    static void setupFieldReplacerMap(Map<Field, FieldReplacer> frMap, Map<String, Object> args)
+    {
+        Map<Field, FieldReplacer> fieldReplacersMap = (Map<Field, FieldReplacer>) args
+                .get(CUSTOM_FIELD_REPLACER_MAP);
+        if (fieldReplacersMap != null)
+        {
+            for (Map.Entry<Field, FieldReplacer> entry : fieldReplacersMap.entrySet())
+            {
+                frMap.put(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -2068,6 +2085,9 @@ public class JsonWriter implements Closeable, Flushable
         try
         {
             o = field.get(obj);
+            FieldReplacer fr = fieldReplacers.get(field);
+            if (fr != null)
+                o = fr.replace(field, o);
         }
         catch (Exception ignored)
         {

@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.lang.reflect.Field;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -75,6 +76,7 @@ import java.util.concurrent.ConcurrentMap;
 public class JsonReader implements Closeable
 {
     public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
+    public static final String CUSTOM_FIELD_REPLACER_MAP = JsonWriter.CUSTOM_FIELD_REPLACER_MAP;  // If set, this map specifies Field to FieldReplacer
     public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
     public static final String USE_MAPS = "USE_MAPS";                   // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
     public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";       // What to do when an object is found and 'type' cannot be determined.
@@ -83,6 +85,7 @@ public class JsonReader implements Closeable
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected final Set<Class> notCustom = new HashSet<Class>();
+    private final ConcurrentMap<Field, FieldReplacer> fieldReplacers = new ConcurrentHashMap<Field, FieldReplacer>();
     private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<Class, ClassFactory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
@@ -476,6 +479,8 @@ public class JsonReader implements Closeable
             }
         }
 
+        JsonWriter.setupFieldReplacerMap(fieldReplacers, args);
+
         try
         {
             input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
@@ -489,6 +494,11 @@ public class JsonReader implements Closeable
     public Map<Long, JsonObject> getObjectsRead()
     {
         return objsRead;
+    }
+
+    Map<Field, FieldReplacer> getFieldReplacerMap()
+    {
+        return fieldReplacers;
     }
 
     public Object getRefTarget(JsonObject jObj)
