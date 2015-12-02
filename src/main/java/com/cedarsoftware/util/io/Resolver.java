@@ -344,6 +344,10 @@ abstract class Resolver
             {
                 mate = getEnum(clazz.getSuperclass(), jsonObj);
             }
+            else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an enum
+            {
+                mate = getEnumSet(clazz, jsonObj);
+            }
             else if ("java.util.Arrays$ArrayList".equals(clazz.getName()))
             {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
@@ -422,7 +426,7 @@ abstract class Resolver
     /**
      * Fetch enum value (may need to try twice, due to potential 'name' field shadowing by enum subclasses
      */
-    private static Object getEnum(Class c, JsonObject jsonObj)
+    private Object getEnum(Class c, JsonObject jsonObj)
     {
         try
         {
@@ -437,31 +441,31 @@ abstract class Resolver
     /**
      * Create the EnumSet with its values (it must be created this way)
      */
-    private static Object getEnumSet(Class c, JsonObject jsonObj)
+    private Object getEnumSet(Class c, JsonObject jsonObj)
     {
-        try
-        {
-            Object[] items = jsonObj.getArray();
-            if (items.length == 0)
-                return newInstance(c);
-            JsonObject item = (JsonObject) items[0];
-            String type = item.getType();
-            Class enumClass = MetaUtils.classForName(type);
-            EnumSet result = null;
-            for (Object objectItem : items) {
-                item = (JsonObject) objectItem;
-                Enum enumItem = (Enum) getEnum(enumClass, item);
-                if (result == null)
-                    result = EnumSet.of(enumItem);
-                else
-                    result.add(enumItem);
-            }
-            return result;
-        }
-        catch (Exception e)
+        Object[] items = jsonObj.getArray();
+        if (items == null || items.length == 0)
         {
             return newInstance(c);
         }
+        JsonObject item = (JsonObject) items[0];
+        String type = item.getType();
+        Class enumClass = MetaUtils.classForName(type);
+        EnumSet enumSet = null;
+        for (Object objectItem : items)
+        {
+            item = (JsonObject) objectItem;
+            Enum enumItem = (Enum) getEnum(enumClass, item);
+            if (enumSet == null)
+            {   // Lazy init the EnumSet
+                enumSet = EnumSet.of(enumItem);
+            }
+            else
+            {
+                enumSet.add(enumItem);
+            }
+        }
+        return enumSet;
     }
 
     /**

@@ -4,7 +4,6 @@ import org.junit.Test
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertTrue
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -26,12 +25,14 @@ class TestSet
 {
     static class ManySets implements Serializable
     {
-        private enum EnumValues { E1, E2, E3 };
+        private enum EnumValues { E1, E2, E3 }
+        private enum EmptyValues {  }
 
-
-        private Set _hashSet;
-        private Set _treeSet;
-        private EnumSet<EnumValues> _enumSet;
+        private Set _hashSet
+        private Set _treeSet
+        private EnumSet<EnumValues> _enumSet
+        private EnumSet<EmptyValues> _emptyEnumSet
+        private EnumSet<EnumValues> _setOfEnums
 
         private void init()
         {
@@ -66,7 +67,9 @@ class TestSet
             _treeSet = new TreeSet()
             _treeSet.addAll(_hashSet)
 
-            _enumSet = EnumSet.allOf(EnumValues);
+            _enumSet = EnumSet.allOf(EnumValues)
+            _emptyEnumSet = EnumSet.allOf(EmptyValues)
+            _setOfEnums = EnumSet.allOf(EnumValues)
         }
 
         private ManySets()
@@ -89,6 +92,8 @@ class TestSet
         assertTrue(testSet._treeSet.containsAll(testSet._hashSet))
         assertTrue(testSet._hashSet.containsAll(testSet._treeSet))
         assertEquals("alpha", testSet._treeSet.iterator().next())
-        assertTrue(testSet._enumSet.containsAll(EnumSet.allOf(ManySets.EnumValues)));
+        assertTrue(testSet._enumSet.containsAll(EnumSet.allOf(ManySets.EnumValues)))
+        assertTrue(testSet._emptyEnumSet.containsAll(EnumSet.allOf(ManySets.EmptyValues)))
+        assertTrue(testSet._setOfEnums.containsAll(EnumSet.allOf(ManySets.EnumValues)))
     }
 }
