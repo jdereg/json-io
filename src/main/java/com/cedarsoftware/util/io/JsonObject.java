@@ -1,11 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -156,6 +152,11 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     public boolean isReference()
     {
         return containsKey("@ref");
+    }
+
+    public Long getReferenceId()
+    {
+        return (Long) get("@ref");
     }
 
     // Map APIs

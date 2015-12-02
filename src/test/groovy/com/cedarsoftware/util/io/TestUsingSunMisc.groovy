@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io
 
-import com.google.gson.JsonIOException
 import org.junit.Test
 
 import static org.junit.Assert.assertTrue
@@ -30,7 +29,7 @@ class TestUsingSunMisc
         private x = 0;
         ShouldBeImpossibleToInstantiate()
         {
-            throw new JsonIOException("Go away")
+            throw new JsonIoException("Go away")
         }
     }
 
@@ -43,8 +42,8 @@ class TestUsingSunMisc
         Object[] array = new Object[1]
         array[0] = shoe;
         String workaroundString = JsonWriter.objectToJson(array)
-        JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
-            Object newInstance(Class c)
+        JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory2() {
+            Object newInstance(Class c, JsonObject jsonObject)
             {
                 return Dog.Shoe.construct()
             }

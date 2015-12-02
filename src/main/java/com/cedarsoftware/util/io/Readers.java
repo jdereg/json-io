@@ -3,13 +3,7 @@ package com.cedarsoftware.util.io;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -143,7 +137,7 @@ public class Readers
                     c = classForName((String) type);
                 }
 
-                Calendar calendar = (Calendar) newInstance(c);
+                Calendar calendar = (Calendar) newInstance(c, jObj);
                 calendar.setTime(date);
                 jObj.setTarget(calendar);
                 String zone = (String) jObj.get("zone");
@@ -723,8 +717,8 @@ public class Readers
         return MetaUtils.classForName(name);
     }
 
-    static Object newInstance(Class c)
+    static Object newInstance(Class c, JsonObject jsonObject)
     {
-        return JsonReader.newInstance(c);
+        return JsonReader.newInstance(c, jsonObject);
     }
 }

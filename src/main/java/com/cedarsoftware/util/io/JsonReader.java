@@ -1,32 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -83,7 +61,7 @@ public class JsonReader implements Closeable
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected final Set<Class> notCustom = new HashSet<Class>();
-    private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<Class, ClassFactory>();
+    private static final Map<Class, Factory> factory = new ConcurrentHashMap<Class, Factory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
     // _args is using ThreadLocal so that static inner classes can have access to them
@@ -117,9 +95,18 @@ public class JsonReader implements Closeable
         assignInstantiator(SortedMap.class, mapFactory);
     }
 
-    public interface ClassFactory
+    public interface Factory
+    {
+    }
+
+    public interface ClassFactory extends Factory
     {
         Object newInstance(Class c);
+    }
+
+    public interface ClassFactory2 extends Factory
+    {
+        Object newInstance(Class c, JsonObject jsonObject);
     }
 
     /**
@@ -209,7 +196,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
      */
-    public static void assignInstantiator(Class c, ClassFactory f)
+    public static void assignInstantiator(Class c, Factory f)
     {
         factory.put(c, f);
     }
@@ -567,6 +554,7 @@ public class JsonReader implements Closeable
     {
         return Boolean.TRUE.equals(getArgs().get(USE_MAPS));
     }
+
     /**
      * This method converts a root Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
@@ -605,7 +593,26 @@ public class JsonReader implements Closeable
     {
         if (factory.containsKey(c))
         {
-            return factory.get(c).newInstance(c);
+            ClassFactory cf = (ClassFactory) factory.get(c);
+            return cf.newInstance(c);
+        }
+        return MetaUtils.newInstance(c);
+    }
+
+    public static Object newInstance(Class c, JsonObject jsonObject)
+    {
+        if (factory.containsKey(c))
+        {
+            Factory cf = factory.get(c);
+            if (cf instanceof ClassFactory2)
+            {
+                return ((ClassFactory2)cf).newInstance(c, jsonObject);
+            }
+            if (cf instanceof ClassFactory)
+            {
+                return ((ClassFactory)cf).newInstance(c);
+            }
+            throw new JsonIoException("Unknown instantiator (Factory) class.  Must subclass ClassFactory2 or ClassFactory, found: " + cf.getClass().getName());
         }
         return MetaUtils.newInstance(c);
     }

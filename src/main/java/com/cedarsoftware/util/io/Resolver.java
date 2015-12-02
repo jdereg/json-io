@@ -124,10 +124,11 @@ abstract class Resolver
                 traverseFields(stack, jsonObj);
             }
 
-            if (!useMaps)
-            {   // clear memory used by Map instance when converting into Java objects (reduce working set size)
-                jsonObj.clear();
-            }
+            // This can make it more difficult to write customer readers
+//            if (!useMaps)
+//            {   // clear memory used by Map instance when converting into Java objects (reduce working set size)
+//                jsonObj.clear();
+//            }
         }
         return root.target;
     }
@@ -204,10 +205,10 @@ abstract class Resolver
      */
     protected static void convertMapToKeysItems(final JsonObject map)
     {
-        if (!map.containsKey("@keys") && !map.containsKey("@ref"))
+        if (!map.containsKey("@keys") && !map.isReference())
         {
-            final Object[] keys = new Object[map.keySet().size()];
-            final Object[] values = new Object[map.keySet().size()];
+            final Object[] keys = new Object[map.size()];
+            final Object[] values = new Object[map.size()];
             int i = 0;
 
             for (Object e : map.entrySet())
@@ -321,7 +322,7 @@ abstract class Resolver
                 }
                 else
                 {
-                    mate = newInstance(c);
+                    mate = newInstance(c, jsonObj);
                 }
             }
         }
@@ -361,7 +362,7 @@ abstract class Resolver
                 }
                 else if (unknownClass instanceof String)
                 {
-                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()));
+                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()), jsonObj);
                 }
                 else
                 {
@@ -370,7 +371,7 @@ abstract class Resolver
             }
             else
             {
-                mate = newInstance(clazz);
+                mate = newInstance(clazz, jsonObj);
             }
         }
         return jsonObj.target = mate;
@@ -446,7 +447,7 @@ abstract class Resolver
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-            return newInstance(c);
+            return newInstance(c, jsonObj);
         }
         JsonObject item = (JsonObject) items[0];
         String type = item.getType();
@@ -567,6 +568,11 @@ abstract class Resolver
     public static Object newInstance(Class c)
     {
         return JsonReader.newInstance(c);
+    }
+
+    public static Object newInstance(Class c, JsonObject jsonObject)
+    {
+        return JsonReader.newInstance(c, jsonObject);
     }
 
     protected Map<Class, JsonReader.JsonClassReaderBase> getReaders()

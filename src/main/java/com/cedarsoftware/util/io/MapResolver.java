@@ -89,11 +89,11 @@ public class MapResolver extends Resolver
                     jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value")));
                     continue;
                 }
-                Long ref = (Long) jObj.get("@ref");
+                Long refId = jObj.getReferenceId();
 
-                if (ref != null)
+                if (refId != null)
                 {    // Correct field references
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = getReferencedObj(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -175,11 +175,11 @@ public class MapResolver extends Resolver
             else if (element instanceof JsonObject)
             {
                 JsonObject<String, Object> jsonObject = (JsonObject<String, Object>) element;
-                Long ref = (Long) jsonObject.get("@ref");
+                Long refId = jsonObject.getReferenceId();
 
-                if (ref != null)
+                if (refId != null)
                 {    // connect reference
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = getReferencedObj(refId);
                     copy.set(idx, refObject);
                 }
                 else
