@@ -485,7 +485,7 @@ public class JsonReader implements Closeable
             return jObj;
         }
 
-        Long id = (Long) jObj.get("@ref");
+        Long id = jObj.getReferenceId();
         JsonObject target = objsRead.get(id);
         return getRefTarget(target);
     }
