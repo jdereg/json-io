@@ -123,12 +123,6 @@ abstract class Resolver
             {
                 traverseFields(stack, jsonObj);
             }
-
-            // This can make it more difficult to write customer readers
-//            if (!useMaps)
-//            {   // clear memory used by Map instance when converting into Java objects (reduce working set size)
-//                jsonObj.clear();
-//            }
         }
         return root.target;
     }

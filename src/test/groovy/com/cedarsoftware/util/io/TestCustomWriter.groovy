@@ -213,15 +213,14 @@ class TestCustomWriter
         Map obj = TestUtil.readJsonMap(jsonCustom, [(JsonReader.CUSTOM_READER_MAP): [(Person.class): new CustomPersonReader()], (JsonReader.NOT_CUSTOM_READER_MAP): []])
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
-        Map pets = obj.p
-        List items = pets['@items']
-        assert 2 == items.size()
-        Map ed = items[0]
+        List pets = obj.p
+        assert 2 == pets.size()
+        Map ed = pets[0]
         assert 'Eddie' == ed.n
         assert 'Terrier' == ed.t
         assert 6 == ed.a
 
-        Map bella = items[1]
+        Map bella = pets[1]
         assert 'Bella' == bella.n
         assert 'Chi hua hua' == bella.t
         assert 3 == bella.a

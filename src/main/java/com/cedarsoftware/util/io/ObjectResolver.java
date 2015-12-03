@@ -82,7 +82,6 @@ class ObjectResolver extends Resolver
                 assignField(stack, jsonObj, field, rhs);
             }
         }
-        jsonObj.clear();    // Reduce memory required during processing
     }
 
     /**

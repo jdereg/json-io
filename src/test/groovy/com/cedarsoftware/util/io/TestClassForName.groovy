@@ -41,16 +41,10 @@ class TestClassForName
             MetaUtils.classForName(null)
             fail()
         }
-        catch (Exception e)
+        catch (JsonIoException e)
         {
         }
-        try
-        {
-            MetaUtils.classForName('Smith&Wesson')
-            fail()
-        }
-        catch (Exception e)
-        {
-        }
+
+        assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson'))
     }
 }

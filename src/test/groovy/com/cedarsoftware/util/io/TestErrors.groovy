@@ -367,27 +367,17 @@ class TestErrors
     @Test
     void testBadType()
     {
-        try
-        {
-            String json = '{"@type":"non.existent.class.Non"}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unable"))
-            assertTrue(e.message.toLowerCase().contains("create"))
-            assertTrue(e.message.toLowerCase().contains("class"))
-        }
+        String json = '{"@type":"non.existent.class.Non"}'
+        Map map = TestUtil.readJsonObject(json)
+        assert map.size() == 0
 
         // Bad class inside a Collection
-        try
-        {
-            String json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name"}]}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e) { }
+        json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name", "fingers":5}]}'
+        List list = TestUtil.readJsonObject(json)
+        assert list.size() == 3
+        assert list[0] == null
+        assert list[1]
+        assert list[2].fingers == 5
     }
 
     @Test

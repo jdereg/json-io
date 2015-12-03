@@ -2,7 +2,8 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import java.awt.Point
+import java.awt.*
+import java.util.List
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotSame
@@ -49,18 +50,11 @@ class TestMapOfMaps
     void testMapOfMapsWithUnknownClasses()
     {
         String json = '{"@type":"com.foo.bar.baz.Qux","_name":"Hello","_other":null}'
+        Map stuff = JsonReader.jsonToJava(json)
+        assert stuff.size() == 2
+        assert stuff._name == 'Hello'
+        assert stuff._other == null
 
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unable"))
-            assertTrue(e.message.toLowerCase().contains("create"))
-            assertTrue(e.message.toLowerCase().contains("class"))
-        }
         Map map = JsonReader.jsonToMaps(json)
         assertEquals('Hello', map._name)
         assertNull(map._other)
@@ -76,7 +70,7 @@ class TestMapOfMaps
         }
         catch (Exception e)
         {
-            assertTrue(e.message.toLowerCase().contains('ioexception setting field'))
+            assertTrue(e.message.toLowerCase().contains('setting field \'_other\''))
         }
 
         map = JsonReader.jsonToMaps(json)
@@ -253,14 +247,12 @@ class TestMapOfMaps
         map = (Map) items[4]
         assertTrue(map.get("wife") == wife)
         map = (Map) items[5]
-        map = (Map) map.get("attendees")
-        Object[] attendees = (Object[]) map.get("@items")
+        Object[] attendees = map.attendees
         assertTrue(attendees.length == 2)
         assertTrue(attendees[0] == husband)
         assertTrue(attendees[1] == wife)
         map = (Map) items[7]
-        map = (Map) map.get("witnesses")
-        Object[] witnesses = (Object[]) map.get("@items")
+        Object[] witnesses = map.witnesses
         assertTrue(witnesses.length == 2)
         assertTrue(witnesses[0] == husband)
         assertTrue(witnesses[1] == wife)
@@ -484,5 +476,62 @@ class TestMapOfMaps
 
         String json1 = JsonWriter.objectToJson(aa)
         assert json == json1
+    }
+
+    @Test
+    void testRefsInMapOfMaps()
+    {
+        Person p = new Person()
+        p.name = 'Charlize Theron'
+        p.age = 39
+        p.birthYear = 1975
+        p.iq = 140
+
+        Person pCopy = new Person()
+        pCopy.name = 'Charlize Theron'
+        pCopy.age = 39
+        pCopy.birthYear = 1975
+        pCopy.iq = 140
+
+        List list = [p, p, pCopy]
+        String json = JsonWriter.objectToJson(list, [(JsonWriter.TYPE):false])
+
+        Map map = JsonReader.jsonToMaps(json)
+        def array = map['@items']
+        assert array[0].is(array[1])
+        assert !array[0].is(array[2])   // identical object
+        assert array[2] == array[1]     // contents match
+    }
+
+    @Test
+    void testRefToArrayInMapOfMaps()
+    {
+        Person p = new Person()
+        p.name = 'Charlize Theron'
+        p.age = 39
+        p.birthYear = 1975
+        p.iq = 140
+
+        Person pCopy = new Person()
+        pCopy.name = 'Charlize Theron'
+        pCopy.age = 39
+        pCopy.birthYear = 1975
+        pCopy.iq = 140
+
+        List list = [p, p, pCopy]
+        List holder = [list, list]
+        String json = JsonWriter.objectToJson(holder, [(JsonWriter.TYPE):false])
+
+        Map map = JsonReader.jsonToMaps(json)
+        def array = map['@items']
+        assert array[0] == array[1]     // Identical array
+        Map objList1 = array[0]
+        List list1 = objList1['@items']
+        assert list1[0].is(list1[1])
+        assert !list1[0].is(list1[2])   // identical object
+        assert list1[2] == list1[1]
+
+        Map objList2 = array[1]
+        assert objList2.is(objList1)
     }
 }

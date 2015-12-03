@@ -51,5 +51,25 @@ class TestNoType
         assert json != json2
         assert json2 == '{"name":"Zeus","things":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"],"namesToAge":{"Appollo":2500,"Hercules":2489,"Poseidon":"2502","Aphrodite":"2499.0","Zeus":-84243801600000},"stuff":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"]}'
     }
+
+    @Test
+    public void testItems() 
+    {
+        String json = '{"groups":["one","two","three"],"search":{"datalist":[]}}'
+
+        Map map = JsonReader.jsonToJava(json)
+        assert !(map.groups instanceof Map)
+        assert map.groups[0] == "one"
+        assert map.groups[1] == "two"
+        assert map.groups[2] == "three"
+        assert map.search.datalist.length == 0
+
+        map = JsonReader.jsonToMaps(json)
+        assert !(map.groups instanceof Map)
+        assert map.groups[0] == "one"
+        assert map.groups[1] == "two"
+        assert map.groups[2] == "three"
+        assert map.search.datalist.length == 0
+    }
 }
 

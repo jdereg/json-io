@@ -294,7 +294,7 @@ public class MetaUtils
             }
             catch (Exception e)
             {
-                throw new JsonIoException("Class not found: " + name, e);
+                return LinkedHashMap.class;
             }
         }
         catch (Exception e)

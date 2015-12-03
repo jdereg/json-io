@@ -104,7 +104,7 @@ public class JsonReader implements Closeable
         Object newInstance(Class c);
     }
 
-    public interface ClassFactory2 extends Factory
+    public interface ClassFactoryEx extends Factory
     {
         Object newInstance(Class c, JsonObject jsonObject);
     }
@@ -487,6 +487,10 @@ public class JsonReader implements Closeable
 
         Long id = jObj.getReferenceId();
         JsonObject target = objsRead.get(id);
+        if (target == null)
+        {
+            throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
+        }
         return getRefTarget(target);
     }
 
@@ -604,15 +608,15 @@ public class JsonReader implements Closeable
         if (factory.containsKey(c))
         {
             Factory cf = factory.get(c);
-            if (cf instanceof ClassFactory2)
+            if (cf instanceof ClassFactoryEx)
             {
-                return ((ClassFactory2)cf).newInstance(c, jsonObject);
+                return ((ClassFactoryEx)cf).newInstance(c, jsonObject);
             }
             if (cf instanceof ClassFactory)
             {
                 return ((ClassFactory)cf).newInstance(c);
             }
-            throw new JsonIoException("Unknown instantiator (Factory) class.  Must subclass ClassFactory2 or ClassFactory, found: " + cf.getClass().getName());
+            throw new JsonIoException("Unknown instantiator (Factory) class.  Must subclass ClassFactoryEx or ClassFactory, found: " + cf.getClass().getName());
         }
         return MetaUtils.newInstance(c);
     }
