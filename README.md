@@ -155,7 +155,7 @@ In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to a
 #### Customization technique 3. Handling a class that has some fields you do not want written out.
 Let's say a class that your are serialize has a field on it that you do not want written out, like a ClassLoader reference.  Use the JsonWriter.FIELD_SPECIFIERS to associate a List of String field names to a particular Class C.  When the class is being written out, only the fields you list will be written out.
 
-#### Customization technique 4. Substitute your names for the class names written in the @type field.  Optional, use shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @i)
+#### Customization technique 4. Substitute your names for the class names written in the @type field.  Optional, use shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)
   
 Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is a complete list of features and some example usages.  Shown in Groovy for brevity.
   
