@@ -31,17 +31,17 @@ class TestWithAtSignInData
         try
         {
             Map map = (Map) JsonReader.jsonToJava(json)
-            assert (map.CurrentManagementResponsibility instanceof List || map.CurrentManagementResponsibility instanceof Object[])
+            assert (map.CurrentManagementResponsibility instanceof Object[])
             assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
             assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226
         }
-        catch (JsonIoException e)
+        catch (JsonIoException ignore)
         {
             fail('should not fail with an unknown @type')
         }
 
         Map map = JsonReader.jsonToMaps(json)
-        assert (map.CurrentManagementResponsibility instanceof List || map.CurrentManagementResponsibility instanceof Object[])
+        assert (map.CurrentManagementResponsibility instanceof Object[])
         assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
         assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226
     }
