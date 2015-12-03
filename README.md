@@ -203,6 +203,10 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.2.0-SNAPSHOT
+  * Enhancement: In Map of Maps mode, all fields are kept, even if they start with @.  In the past fields starting with @ were skipped.
+  * Ehancement: No longer throws ClassNotFound exception when the class associated to the @type is not found.  Instead it returns a LinkedHashMap, which works well in Map of Maps mode.  In Object mode, it *may* work if the field can have the Map set into it, otherwise an error will be thrown indicating that a Map cannot be set into field of type 'x'.
+  * Bug fix: In Map of Maps mode, Object[] were being added with an @items field.  The object[] is now stored directly in the field holding it.  If an Object[] is 'pointed to' (re-used), then it will be written as an object { } with an @id identifying the object, and an @items field containing the array's elements.
  * 4.1.10
   * Enhancement: Java's EnumSet support added (submitted by @francisu) without need for using custom instantiator.
   * Enhancement: Added support for additional instantiator, ClassFactory2 that takes the Class (c) and the JsonObject which the instance will be filled from.  Useful for custom readers.
