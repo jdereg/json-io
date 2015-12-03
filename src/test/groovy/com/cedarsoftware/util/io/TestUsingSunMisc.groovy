@@ -43,7 +43,7 @@ class TestUsingSunMisc
         array[0] = shoe;
         String workaroundString = JsonWriter.objectToJson(array)
         JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactoryEx() {
-            Object newInstance(Class c, JsonObject jsonObject)
+            Object newInstance(Class c, Map args)
             {
                 return Dog.Shoe.construct()
             }

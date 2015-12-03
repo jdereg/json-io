@@ -99,14 +99,33 @@ public class JsonReader implements Closeable
     {
     }
 
+    /**
+     * Subclass this interface and create a class that will return a new instance of the
+     * passed in Class (c).  Your subclass will be called when json-io encounters an
+     * the new to instantiate an instance of (c).
+     *
+     * Make json-io aware that it needs to call your class by calling the public
+     * JsonReader.assignInstantiator() API.
+     */
     public interface ClassFactory extends Factory
     {
         Object newInstance(Class c);
     }
 
+    /**
+     * Subclass this interface and create a class that will return a new instance of the
+     * passed in Class (c).  Your subclass will be called when json-io encounters an
+     * the new to instantiate an instance of (c).  The 'args' Map passed in will
+     * contain a 'jsonObj' key that holds the JsonObject (Map) representing the
+     * object being converted.  If you need values from the fields of this object
+     * in order to instantiate your class, you can grab them from the JsonObject (Map).
+     *
+     * Make json-io aware that it needs to call your class by calling the public
+     * JsonReader.assignInstantiator() API.
+     */
     public interface ClassFactoryEx extends Factory
     {
-        Object newInstance(Class c, JsonObject jsonObject);
+        Object newInstance(Class c, Map args);
     }
 
     /**
@@ -186,9 +205,9 @@ public class JsonReader implements Closeable
 
     /**
      * For difficult to instantiate classes, you can add your own ClassFactory
-     * which will be called when the passed in class 'c' is encountered.  Your
-     * ClassFactory will be called with newInstance(c) and your factory is expected
-     * to return a new instance of 'c'.
+     * or ClassFactoryEx which will be called when the passed in class 'c' is
+     * encountered.  Your ClassFactory will be called with newInstance(c) and
+     * your factory is expected to return a new instance of 'c'.
      *
      * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
@@ -610,7 +629,9 @@ public class JsonReader implements Closeable
             Factory cf = factory.get(c);
             if (cf instanceof ClassFactoryEx)
             {
-                return ((ClassFactoryEx)cf).newInstance(c, jsonObject);
+                Map args = new HashMap();
+                args.put("jsonObj", jsonObject);
+                return ((ClassFactoryEx)cf).newInstance(c, args);
             }
             if (cf instanceof ClassFactory)
             {

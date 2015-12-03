@@ -31,4 +31,12 @@ class TestUnknownObjectType
         assert json2.length() > 100
     }
 
+    @Test
+    void testUnknownClassType()
+    {
+        def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
+        def java = JsonReader.jsonToJava(json)
+        assert java instanceof Map
+        assert java.name == 'Joe'
+    }
 }
