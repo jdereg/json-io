@@ -127,7 +127,6 @@ class TestErrors
         }
         catch (Exception e)
         {
-            e.printStackTrace()
             assertTrue(e.message.toLowerCase().contains("eof reached before closing '}'"))
         }
     }

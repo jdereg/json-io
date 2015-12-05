@@ -217,6 +217,9 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.2.1-SNAPSHOT 
+  * Bug fix: The error message showing any parsing errors put the first character of the message at the end of the message (off by one error on a ring buffer).
+  * Parsing exceptions include the line number and column number.
  * 4.2.0
   * Enhancement: In Map of Maps mode, all fields are kept, even if they start with @.  In the past fields starting with @ were skipped.
   * Ehancement: No longer throws ClassNotFound exception when the class associated to the @type is not found.  Instead it returns a LinkedHashMap, which works well in Map of Maps mode.  In Object mode, it *may* work if the field can have the Map set into it, otherwise an error will be thrown indicating that a Map cannot be set into field of type 'x'.
