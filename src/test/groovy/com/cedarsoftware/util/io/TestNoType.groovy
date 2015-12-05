@@ -29,6 +29,12 @@ class TestNoType
         Object[] stuff
     }
 
+    static class CollectionTest
+    {
+        Collection foos
+        Object[] bars
+    }
+
     @Test
     void testNoType()
     {
@@ -70,6 +76,33 @@ class TestNoType
         assert map.groups[1] == "two"
         assert map.groups[2] == "three"
         assert map.search.datalist.length == 0
+    }
+
+    @Test
+    public void testCollections()
+    {
+        CollectionTest cols = new CollectionTest()
+        cols.foos = new ArrayList()
+        cols.foos.addAll([1,2,"4",8])
+        cols.bars = [1,3,"5",7] as Object[]
+
+        String json = JsonWriter.objectToJson(cols, [(JsonWriter.TYPE): false])
+        Map map = JsonReader.jsonToMaps(json)
+        assert map.foos[0] == 1
+        assert map.foos[1] == 2
+        assert map.foos[2] == "4"
+        assert map.foos[3] == 8
+
+        assert map.bars[0] == 1
+        assert map.bars[1] == 3
+        assert map.bars[2] == "5"
+        assert map.bars[3] == 7
+
+        json = JsonWriter.objectToJson([1, 2, 3, 4], [(JsonWriter.TYPE): false])
+        assert '[1,2,3,4]' == json
+
+        json = JsonWriter.objectToJson([1, 2, 3, 4] as Object[], [(JsonWriter.TYPE): false])
+        assert '[1,2,3,4]' == json
     }
 }
 

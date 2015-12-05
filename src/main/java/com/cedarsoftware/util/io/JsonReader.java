@@ -534,6 +534,10 @@ public class JsonReader implements Closeable
                 return new JsonObject();
             }
         }
+        catch (JsonIoException e)
+        {
+            throw e;
+        }
         catch (Exception e)
         {
             throw new JsonIoException("error parsing JSON value", e);
@@ -607,6 +611,10 @@ public class JsonReader implements Closeable
             }
             catch (Exception ignored)
             {   // Exception handled in close()
+            }
+            if (e instanceof JsonIoException)
+            {
+                throw (JsonIoException)e;
             }
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         }

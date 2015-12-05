@@ -153,10 +153,11 @@ class TestBigInteger
         try
         {
             TestUtil.readJsonObject(json)
+            fail()
         }
         catch (Exception e)
         {
-            assert e.message.toLowerCase().contains("error parsing json value")
+            assert e.message.toLowerCase().contains("too many digits in number")
         }
     }
 

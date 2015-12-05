@@ -313,7 +313,7 @@ class TestMapOfMaps
         }
         catch (Exception e)
         {
-            assertTrue(e.message.toLowerCase().contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected token: true"))
         }
         assertTrue(o == null)
     }

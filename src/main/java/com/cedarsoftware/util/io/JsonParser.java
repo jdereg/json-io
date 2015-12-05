@@ -579,13 +579,18 @@ class JsonParser
         input.unread(skipWhitespaceRead());
     }
 
-    static Object error(String msg)
+    Object error(String msg)
     {
-        throw new JsonIoException(msg);
+        throw new JsonIoException(getMessage(msg));
     }
 
-    static Object error(String msg, Exception e)
+    Object error(String msg, Exception e)
     {
-        throw new JsonIoException(msg, e);
+        throw new JsonIoException(getMessage(msg), e);
+    }
+
+    String getMessage(String msg)
+    {
+        return msg + "\nline: " + input.line + ", col: " + input.col + "\n" + input.getLastSnippet();
     }
 }
