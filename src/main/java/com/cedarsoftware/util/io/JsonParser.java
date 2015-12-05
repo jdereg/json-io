@@ -261,17 +261,14 @@ class JsonParser
                 return EMPTY_ARRAY;
             case 'f':
             case 'F':
-                input.unread(c);
                 readToken("false");
                 return Boolean.FALSE;
             case 'n':
             case 'N':
-                input.unread(c);
                 readToken("null");
                 return null;
             case 't':
             case 'T':
-                input.unread(c);
                 readToken("true");
                 return Boolean.TRUE;
             case -1:
@@ -325,7 +322,7 @@ class JsonParser
     {
         final int len = token.length();
 
-        for (int i = 0; i < len; i++)
+        for (int i = 1; i < len; i++)
         {
             int c = input.read();
             if (c == -1)

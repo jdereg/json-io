@@ -142,7 +142,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         else
         {
-            throw new JsonIoException("Invalid primitive type");
+            throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }
     }
 
