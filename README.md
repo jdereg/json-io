@@ -175,7 +175,7 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 When reading JSON from external sources, you may want to start with:
  
-    JsonReader.jsonToMaps(String json, Map args)
+    Map graph = JsonReader.jsonToMaps(String json, Map args)
     
 This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 
 This will get you going right away.
@@ -184,13 +184,13 @@ To write 'generic' JSON (without `@type` or `@items`, etc.) entries, use:
 
 in Groovy:
 
-    JsonWriter.objectToJson(objToWrite, [(JsonWriter.TYPE):false])
+    String json = JsonWriter.objectToJson(objToWrite, [(JsonWriter.TYPE):false])
 
 In Java:
 
     Map args = new HashMap();
     args.put(JsonWriter.TYPE, false);
-    JsonWriter.objectToJson(objToWrite, args);
+    String json = JsonWriter.objectToJson(objToWrite, args);
     
 Objects will not include the `@type` flags or `@items`.  This JSON passes well to non-Java receivers, like Javascript. 
 Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  If 
@@ -204,6 +204,9 @@ reference will write the actual object, the 2nd and later references will write 
 This will read in just fine with `JsonReader.jsonToMaps()`, and the appropriate `Map` reference will be placed in all 
 referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js` to parse the read in JSON
 so that it can perform the substitutions of the `@ref`'s.
+
+Also, important to note that these examples use the APIs that work with the entire String of JSON.  Often, it is more
+efficient to use the Stream version of these APIs to minimize the amount of RAM used in a web-server.
 
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
