@@ -173,7 +173,37 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 #### Customization technique 5. Processing JSON from external sources.
 
-When reading JSON from external sources, you may want to start with `JsonReader.jsonToMaps(String json, Map args)`.  This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript.  This will get you going right away.  If you want the JSON read in as proper objects, use `JsonReader.jsonToJava()`, however, it will likely only work if one of your systems is writing the JSON with **json-io**.  
+When reading JSON from external sources, you may want to start with:
+ 
+    JsonReader.jsonToMaps(String json, Map args)
+    
+This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 
+This will get you going right away.
+  
+To write 'generic' JSON (without `@type` or `@items`, etc.) entries, use:
+
+in Groovy:
+
+    JsonWriter.objectToJson(objToWrite, [(JsonWriter.TYPE):false])
+
+In Java:
+
+    Map args = new HashMap();
+    args.put(JsonWriter.TYPE, false);
+    JsonWriter.objectToJson(objToWrite, args);
+    
+Objects will not include the `@type` flags or `@items`.  This JSON passes well to non-Java receivers, like Javascript. 
+Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  If 
+the root object is an `array`, you will get one (1) `@items` entry in the root `Map` and the associated value will be 
+the `array`, as `JsonReader.jsonToMaps()` returns a `Map` (not an array). May add separate API in future (`fromJson()`) 
+which would return `Object`, allowing the returned value to be either a `Map` or an `array`.
+
+Please note that if you write your object graph out with `JsonWriter.TYPE: false`, the shape of the graph will be 
+maintained.  What this means, is that if two different places in your object graph point to the same object, the first 
+reference will write the actual object, the 2nd and later references will write a reference (`@ref`) to the first instance.
+This will read in just fine with `JsonReader.jsonToMaps()`, and the appropriate `Map` reference will be placed in all 
+referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js` to parse the read in JSON
+so that it can perform the substitutions of the `@ref`'s.
 
 ### Javascript
 Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
