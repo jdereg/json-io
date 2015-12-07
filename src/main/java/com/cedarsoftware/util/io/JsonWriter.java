@@ -1017,6 +1017,10 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
+            else if (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)) 
+            {
+            	out.write("null");
+            }
             else
             {
                 out.write(obj.toString());
