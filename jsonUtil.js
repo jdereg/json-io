@@ -3,7 +3,7 @@
  * traverse JSON object tree in two passes, once to record @id's of objects, and
  * a second pass to replace @ref fields with objects identified by @id fields.
  *
- * Copyright 2010 John DeRegnaucourt
+ * Copyright 2010-2015 John DeRegnaucourt
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,9 @@
 
 function resolveRefs(jObj)
 {
+    if (!jObj)
+        return;
+
     var idsToObjs = [];
 
     // First pass, store all objects that have an @ID field, mapped to their instance (self)
@@ -33,14 +36,24 @@ function resolveRefs(jObj)
 
 function walk(jObj, idsToObjs)
 {
-    for (var field in jObj)
+    if (!jObj)
+        return;
+
+    var keys = Object.keys(jObj); // will return an array of own properties
+
+    for (var i = 0, len = keys.length; i < len; i++)
     {
+        var field = keys[i];
         var value = jObj[field];
-        if (field == "@id")
+
+        if (!value)
+            continue;
+
+        if (field === "@id")
         {
             idsToObjs[value] = jObj;
         }
-        else if (typeof(value) == "object")
+        else if (typeof(value) === "object")
         {
             walk(value, idsToObjs);
         }
@@ -49,17 +62,24 @@ function walk(jObj, idsToObjs)
 
 function substitute(parent, fieldName, jObj, idsToObjs)
 {
-    for (var field in jObj)
+    if (!jObj)
+        return;
+
+    var keys = Object.keys(jObj); // will return an array of own properties
+
+    for (var i = 0, len = keys.length; i < len; i++)
     {
+        var field = keys[i];
         var value = jObj[field];
-        if (field == "@ref")
+
+        if (field === "@ref")
         {
-            if (parent != null && fieldName != null)
+            if (parent && fieldName)
             {
                 parent[fieldName] = idsToObjs[jObj["@ref"]];
             }
         }
-        else if (typeof(value) == "object")
+        else if (typeof(value) === "object")
         {
             substitute(jObj, field, value, idsToObjs);
         }
