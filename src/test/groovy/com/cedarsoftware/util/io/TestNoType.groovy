@@ -104,5 +104,23 @@ class TestNoType
         json = JsonWriter.objectToJson([1, 2, 3, 4] as Object[], [(JsonWriter.TYPE): false])
         assert '[1,2,3,4]' == json
     }
+
+    @Test
+    public void testObjectArray()
+    {
+        def array = [[1L,2L,3L] as Object[], ['a', 'b', 'c'] as Object[]] as Object[]
+        String json = JsonWriter.objectToJson(array)
+        Map map = JsonReader.jsonToMaps(json)
+        Object[] list = map.'@items'
+        println list
+        assert list[0] instanceof Object[]
+        assert list[0][0] == 1L
+        assert list[0][1] == 2L
+        assert list[0][2] == 3L
+        assert list[1] instanceof Object[]
+        assert list[1][0] == 'a'
+        assert list[1][1] == 'b'
+        assert list[1][2] == 'c'
+    }
 }
 
