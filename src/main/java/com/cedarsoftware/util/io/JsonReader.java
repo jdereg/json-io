@@ -280,8 +280,12 @@ public class JsonReader implements Closeable
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap();
+            optionalArgs.put(USE_MAPS, false);
         }
-        optionalArgs.put(USE_MAPS, false);
+        if (!optionalArgs.containsKey(USE_MAPS))
+        {
+            optionalArgs.put(USE_MAPS, false);
+        }
         ByteArrayInputStream ba;
         try
         {
@@ -309,8 +313,12 @@ public class JsonReader implements Closeable
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap();
+            optionalArgs.put(USE_MAPS, false);
         }
-        optionalArgs.put(USE_MAPS, false);
+        if (!optionalArgs.containsKey(USE_MAPS))
+        {
+            optionalArgs.put(USE_MAPS, false);
+        }
         JsonReader jr = new JsonReader(inputStream, optionalArgs);
         Object obj = jr.readObject();
         jr.close();

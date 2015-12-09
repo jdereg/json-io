@@ -17,6 +17,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Use resolveRefs to process the JSON return from a server that uses json-io.
+ * json-io maintains the proper shape of a graph of objects by ensuring that
+ * if an object is referenced (pointed to) from more than one place, that the
+ * pointed-to object is created once and all apporpriate places 'point-to' it.
+ *
+ * json-io does this by marking the first occurrence of the object with a
+ * JSON key of {"@id": n} where n is a number.  Any other places in the object
+ * graph point-to this location with an {"@ref":n}.
+ *
+ * Calling resolveRefs(obj) will update all the {"@ref":n} nodes in the graph
+ * to be replaced with the reference to the actual object.  This is similar to
+ * how ID/IDREF is used in XML.
+ *
+ * @param jObj the returned object after being received in Javascript from a
+ * a json-io sender.  This parameter is fixed, in-place.
+ *
+ * Example usage:
+ *
+ * var result = call('someController.method', [args])
+ * if (result.status === true)
+ * {
+ *    resolveRef(result.data);
+ *    // after the above line, any @ref tags will replaced with the reference
+ *    // to the object identified by the {"@ref":n} number.
+ * }
+ */
 var resolveRefs = function(jObj)
 {
     if (!jObj)
@@ -29,7 +57,6 @@ var resolveRefs = function(jObj)
 
     // Replace all @ref objects with the object from the association above.
     substitute(null, null, jObj, idsToObjs);
-
     idsToObjs = null;
 };
 

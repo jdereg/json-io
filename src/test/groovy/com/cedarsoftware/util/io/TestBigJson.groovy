@@ -1,13 +1,10 @@
 package com.cedarsoftware.util.io
-
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
-import org.junit.Ignore
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
-
 /**
  * Test cases for JsonReader / JsonWriter
  *
@@ -70,7 +67,7 @@ class TestBigJson
         println ((stop - start) / 1000000L)
 
         start = System.nanoTime()
-        JsonReader.jsonToMaps(json, [(JsonReader.USE_MAPS):true] as Map)
+        JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         stop = System.nanoTime()
         println ((stop - start) / 1000000L)
     }
