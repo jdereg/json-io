@@ -61,13 +61,16 @@ _Example 2: Java object to JSON String_
     // Emp fetched from database
     String json = JsonWriter.objectToJson(emp);     // optional 2nd 'options' argument (see below)
 
-This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, it would reconstitute a Java `Employee` instance.
+This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, 
+it would reconstitute a Java `Employee` instance.
 
 _Example 3: `InputStream` to Java object_
 
     Employee emp = (Employee) = JsonReader.jsonToJava(stream);  // optional 2nd 'options' argument (see below)
 
-In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.  The `JsonReader` is used to wrap the stream to parse it, and return the Java object graph it represents.
+In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.
+If you want, you can use the `JsonReader` to wrap the stream to parse it, and return the Java object graph it 
+represents. See constructors that take a Stream argument.
 
 _Example 4: Java Object to `OutputStream`_
 
