@@ -193,11 +193,11 @@ Let's say a class that your are serialize has a field on it that you do not want
 Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
 is being written out, only the fields you list will be written out.
 
-#### Customization technique 4. Substitute your names for the class names written in the @type field.  Optional, use shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
-Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has 
-well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  
-Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is an example usage.  
-Shown in Groovy for brevity.
+#### Customization technique 4. Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
+Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
+to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
+`alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
+
   
       Map args = [
               (JsonWriter.SHORT_META_KEYS):true,
