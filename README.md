@@ -34,7 +34,7 @@ If an object is referenced more than once, or references an object that has not 
 
 _Example 1: String to Java object_
 
-    Object obj = JsonReader.jsonToJava("[\"Hello, World\"]");
+    Object obj = JsonReader.jsonToJava("[\"Hello, World\"]");     // optional 2nd 'options' argument (see below)
 
 This will convert the JSON String to a Java Object graph.  In this case, it would consist of an `Object[]` of one `String` element.
 
@@ -42,14 +42,13 @@ _Example 2: Java object to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonWriter.objectToJson(emp);
+    String json = JsonWriter.objectToJson(emp);     // optional 2nd 'options' argument (see below)
 
 This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, it would reconstitute a Java `Employee` instance.
 
 _Example 3: `InputStream` to Java object_
 
-    JsonReader jr = new JsonReader(inputStream);
-    Employee emp = (Employee) jr.readObject();
+    Employee emp = (Employee) = JsonReader.jsonToJava(stream);  // optional 2nd 'options' argument (see below)
 
 In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.  The `JsonReader` is used to wrap the stream to parse it, and return the Java object graph it represents.
 
@@ -57,7 +56,8 @@ _Example 4: Java Object to `OutputStream`_
 
     Employee emp;
     // emp obtained from database
-    JsonWriter jw = new JsonWriter(outputStream);
+    JsonWriter.objectToJson(
+    JsonWriter jw = new JsonWriter(outputStream);       // optional 2nd 'options' argument (see below)
     jw.write(emp);
     jw.close();
 
@@ -66,12 +66,7 @@ In this example, a Java object is written to an output stream in JSON format.
 ### Non-typed Usage
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript associative array.  When reading from a JSON String or `InputStream` of JSON, the `JsonReader` can be constructed like this:
 
-    Map graph = JsonReader.jsonToMaps(String json);
-
--- or --
-
-    JsonReader jr = new JsonReader(InputStream, true);
-    Map map = (Map) jr.readObject();
+    Object obj = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true)]);    // shown using Groovy short-hand for Map of options.  See options below.
 
 This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the `Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within the JSON stream, and other information.
 
@@ -175,7 +170,7 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
 
 When reading JSON from external sources, you may want to start with:
  
-    Map graph = JsonReader.jsonToMaps(String json, Map args)
+    Object data = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true])
     
 This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 
 This will get you going right away.
@@ -209,7 +204,12 @@ Also, important to note that these examples use the APIs that work with the enti
 efficient to use the Stream version of these APIs to minimize the amount of RAM used in a web-server.
 
 ### Javascript
-Included is a small Javascript utility (`jsonUtil.js` in the resourec folder) that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
+Included is a small Javascript utility (`jsonUtil.js` in the src/test/resources folder) that will take a JSON output 
+stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
+call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  
+In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a 
+Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  
+This will maintain the proper graph-shape when sending it from the client back to the server.
 
 ### What's next?
 Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
@@ -251,6 +251,11 @@ innovative and intelligent tools for profiling Java and .NET applications.
 
 ___
 ### Revision History
+ * 4.3.0
+  * Double / Float Nan and inifinity are now written as null, per RFC 4627
+  * JsonReader.jsonToJava() can now be used to read input into Maps only (as opposed to attempting to create specific Java objects.
+    Using this API allows the return value to support an array [], object, string, double, long, null as opposed to the JsonReader.jsonToMaps()
+    API which forces the return value to be a Map.  May deprecate JsonReader.jsonToMaps() in the future.
  * 4.2.1
   * Bug fix: The error message showing any parsing errors put the first character of the message at the end of the message (off by one error on a ring buffer).
   * Parsing exceptions always include the line number and column number (there were a couple of places in the code that did not do this).
