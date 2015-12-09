@@ -238,9 +238,9 @@ Keep in mind, you will be working with the JSON as generic `object.field` and `o
 Please note that if you write your object graph out with `JsonWriter.TYPE: false`, the shape of the graph will be 
 maintained.  What this means, is that if two different places in your object graph point to the same object, the first 
 reference will write the actual object, the 2nd and later references will write a reference (`@ref`) to the first instance.
-This will read in just fine with `JsonReader.jsonToMaps()`, and the appropriate `Map` reference will be placed in all 
+This will read in just fine with `JsonReader.jsonToJava()`, and the appropriate `Map` reference will be placed in all 
 referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js` to parse the read in JSON
-so that it can perform the substitutions of the `@ref`'s. (See `resource` folder for `jsonUtil.js`).
+so that it can perform the substitutions of the `@ref`'s. (See `src/test/resource` folder for `jsonUtil.js`).
 
 Also, important to note that these examples use the APIs that work with the entire String of JSON.  Often, it is more
 efficient to use the Stream version of these APIs to minimize the amount of RAM used in a web-server.
@@ -249,9 +249,6 @@ efficient to use the Stream version of these APIs to minimize the amount of RAM 
 Included is a small Javascript utility (`jsonUtil.js` in the `src/test/resources` folder) that will take a JSON output 
 stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
 call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  
-In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a 
-Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  
-This will maintain the proper graph-shape when sending it from the client back to the server.
 
 ### What's next?
 Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
