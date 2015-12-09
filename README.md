@@ -83,10 +83,11 @@ In this example, a Java object is written to an output stream in JSON format.
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript associative array.  When reading from a JSON String or `InputStream` of JSON, the `JsonReader` can be constructed like this:
 
     // shown using Groovy short-hand for Map of options.  See options below.
-    Object obj = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true)])    
+    String json = // some JSON obtained from wherever
+    Object obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true)])    
 
 This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the
-`Map` keys (Strings), and the field values are the associated `Map`'s values. In this representation the `Map` instance 
+`Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance 
 returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface
 permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within 
 the JSON stream, and other information.  Note: The root object return can be a String, long, double, array, or object 
@@ -150,7 +151,9 @@ can be read, modified, and then re-written by a JVM that does not contain any of
 ### Customization
 
 #### Customization technique 1. Custom serializer
-New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
+New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it 
+to be read / written specially in the JSON output.  The **json-io** approach allows you to customize the JSON format for 
+classes for which you do not have the source code.
 
     Example (in Groovy). Note the Person has a List of pets, and in this case, it re-uses 
     JsonWriter to write that part of the class out (not need to customize it):
@@ -170,16 +173,31 @@ New APIs have been added to allow you to associate a custom reader / writer clas
     }
 
 #### Customization technique 2. Custom instantiator ( `JsonReader.assignInstantiator(Class c, ClassFactoryEx)` )
-There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception if particular parameters are not passed into it.
+There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
+a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
+However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
+if particular parameters are not passed into it.
                                                                                   
-In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to assign a `ClassFactory` or `ClassFactoryEx` that you implement to instantiate the class. **json-io** will call your `ClassFactory.newInstance(Class c)` (or `ClassFactoryEx.newInstance(Class c, Map args)`) to create the class that it could not construct.  Your `ClassFactory` will be called to create the instance.  In case you need values from the object being instantiated in order to construct it, use the `ClassFactoryEx` to instantiate it.  This class factory has the API `newInstance(Class c, Map args)` which will be called with the Class to instantiate and the JSON object that represents it (already read in).  In the args `Map`, the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currently being read.  You can pull field values from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
+In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to assign a `ClassFactory` or `ClassFactoryEx` 
+that you implement to instantiate the class. **json-io** will call your `ClassFactory.newInstance(Class c)` 
+(or `ClassFactoryEx.newInstance(Class c, Map args)`) to create the class that it could not construct.  Your `ClassFactory` 
+will be called to create the instance.  In case you need values from the object being instantiated in order to construct it,
+use the `ClassFactoryEx` to instantiate it.  This class factory has the API `newInstance(Class c, Map args)` which will
+be called with the Class to instantiate and the JSON object that represents it (already read in).  In the args `Map`, 
+the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currently being read.  You can pull field values
+from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
+stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
 #### Customization technique 3. Handling a class that has some fields you do not want written out.
-Let's say a class that your are serialize has a field on it that you do not want written out, like a ClassLoader reference.  Use the JsonWriter.FIELD_SPECIFIERS to associate a List of String field names to a particular Class C.  When the class is being written out, only the fields you list will be written out.
+Let's say a class that your are serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
+is being written out, only the fields you list will be written out.
 
-#### Customization technique 4. Substitute your names for the class names written in the @type field.  Optional, use shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)
-  
-Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is a complete list of features and some example usages.  Shown in Groovy for brevity.
+#### Customization technique 4. Substitute your names for the class names written in the @type field.  Optional, use shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
+Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has 
+well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  
+Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is an example usage.  
+Shown in Groovy for brevity.
   
       Map args = [
               (JsonWriter.SHORT_META_KEYS):true,
@@ -191,10 +209,10 @@ Both the `JsonWriter` and `JsonReader` allow you to pass in an optional argument
       ]
       String json = JsonWriter.objectToJson(list, args)
           
-In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
+In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the
+`JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
 
 #### Customization technique 5. Processing JSON from external sources.
-
 When reading JSON from external sources, you may want to start with:
  
     Object data = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true])
@@ -231,7 +249,7 @@ Also, important to note that these examples use the APIs that work with the enti
 efficient to use the Stream version of these APIs to minimize the amount of RAM used in a web-server.
 
 ### Javascript
-Included is a small Javascript utility (`jsonUtil.js` in the src/test/resources folder) that will take a JSON output 
+Included is a small Javascript utility (`jsonUtil.js` in the `src/test/resources` folder) that will take a JSON output 
 stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
 call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  
 In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a 
@@ -254,13 +272,18 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
     }
 
 ### Debugging
-Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It will reveal the object in all it's glory.
+Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It
+will reveal the object in all it's glory.
 
 ### Pretty-Printing JSON
-Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a `Map` with a key of `JsonWriter.PRETTY_PRINT` and a value of 'true' (`boolean` or `String`).  When run this way, the JSON written by the `JsonWriter` will be formatted in a nice, human readable format.
+Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing
+JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a `Map` with a key of `JsonWriter.PRETTY_PRINT`
+and a value of 'true' (`boolean` or `String`).  When run this way, the JSON written by the `JsonWriter` will be formatted
+in a nice, human readable format.
 
 ### RESTful support
-**json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
+**json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server
+in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
 
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
