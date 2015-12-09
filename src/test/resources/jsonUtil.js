@@ -17,8 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-function resolveRefs(jObj)
+var resolveRefs = function(jObj)
 {
     if (!jObj)
         return;
@@ -32,7 +31,7 @@ function resolveRefs(jObj)
     substitute(null, null, jObj, idsToObjs);
 
     idsToObjs = null;
-}
+};
 
 function walk(jObj, idsToObjs)
 {
@@ -86,5 +85,13 @@ function substitute(parent, fieldName, jObj, idsToObjs)
         {
             substitute(jObj, field, value, idsToObjs);
         }
+    }
+}
+
+function assert(truth)
+{
+    if (!truth)
+    {
+        throw 'assertion failed';
     }
 }

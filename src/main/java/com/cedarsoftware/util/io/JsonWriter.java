@@ -1,36 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.Flushable;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -1017,9 +995,13 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
-            else if (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)) 
+            else if (obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
             	out.write("null");
+            }
+            else if (obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
+            {
+                out.write("null");
             }
             else
             {

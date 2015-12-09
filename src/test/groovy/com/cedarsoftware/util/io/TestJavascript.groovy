@@ -1,11 +1,8 @@
 package com.cedarsoftware.util.io
-
 import org.junit.Test
 
-import javax.script.Invocable
 import javax.script.ScriptEngine
 import javax.script.ScriptEngineManager
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -25,13 +22,6 @@ import javax.script.ScriptEngineManager
  */
 class TestJavascript
 {
-    class Person
-    {
-        String fname
-        String lname
-        int hotness
-    }
-
     @Test
     void testJsonUtilRefInsideArray()
     {
@@ -40,21 +30,90 @@ class TestJavascript
 
         String jsonUtil = TestUtil.fetchResource('jsonUtil.js')
         engine.eval(jsonUtil)
+        engine.eval("""\
+var json = '[{"@id":1,"_name":"Charlize","_other":null},{"@ref":1}]';
+var array = JSON.parse(json)
+assert(array[0]._name == 'Charlize');
+assert(!array[1]._name);
 
-        Person star = new Person()
-        star.fname = 'Charlize'
-        star.lname = 'Theron'
-        star.hotness = 10
+resolveRefs(array);
 
-        def causeRef = [star, star] as Object[]
-        String json = JsonWriter.objectToJson(causeRef, [(JsonWriter.TYPE): false])
-        println json
-
-        Invocable invocable = (Invocable) engine
-        invocable.invokeFunction("resolveRefs", [star as Map] as Object[])
+assert(array[0]._name == 'Charlize');
+assert(array[1]._name == 'Charlize');
+assert(array[0] === array[1]);   // Exactly the same instance
+""")
     }
 
-    // TODO: test reference as field
-    // TODO: test forward reference in array
-    // TODO: test forward reference in field
+    @Test
+    void testJsonUtilForwardRefInsideArray()
+    {
+        ScriptEngineManager factory = new ScriptEngineManager()
+        ScriptEngine engine = factory.getEngineByName("JavaScript")
+
+        String jsonUtil = TestUtil.fetchResource('jsonUtil.js')
+        engine.eval(jsonUtil)
+        engine.eval("""\
+var json = '[{"@ref":1}, {"@id":1,"_name":"Charlize","_other":null}]';
+var array = JSON.parse(json)
+assert(!array[0]._name);
+assert(array[1]._name == 'Charlize');
+
+resolveRefs(array);
+
+assert(array[0]._name == 'Charlize');
+assert(array[1]._name == 'Charlize');
+assert(array[0] === array[1]);   // Exactly the same instance
+""")
+    }
+
+    @Test
+    void testJsonUtilRefInsideObject()
+    {
+        ScriptEngineManager factory = new ScriptEngineManager()
+        ScriptEngine engine = factory.getEngineByName("JavaScript")
+
+        String jsonUtil = TestUtil.fetchResource('jsonUtil.js')
+        engine.eval(jsonUtil)
+        engine.eval("""\
+var json = '{"@id":1,"_name":"Alpha","_other":{"_name":"Bravo","_other":{"@ref":1}}}';
+var testObj = JSON.parse(json)
+assert(testObj._name == 'Alpha');
+assert(testObj._other._name == 'Bravo');
+assert(testObj._other._other['@ref'] == 1);
+assert(!testObj._other._other._name);
+
+resolveRefs(testObj);
+
+assert(testObj._other._other === testObj);
+assert(testObj._other._name == 'Bravo');
+assert(testObj._other._other._name == 'Alpha');
+assert(!testObj._other._other['@ref']);
+""")
+    }
+
+    @Test
+    void testJsonUtilRefCycle()
+    {
+        ScriptEngineManager factory = new ScriptEngineManager()
+        ScriptEngine engine = factory.getEngineByName("JavaScript")
+
+        String jsonUtil = TestUtil.fetchResource('jsonUtil.js')
+        engine.eval(jsonUtil)
+        engine.eval("""\
+var json = '[{"@id":1,"_name":"Alpha","_other":{"@ref":2}},{"@id":2,"_name":"Bravo","_other":{"@ref":1}}]';
+var array = JSON.parse(json);
+var testObj1 = array[0];
+var testObj2 = array[1];
+assert(testObj1._name == 'Alpha');
+assert(testObj1._other['@ref'] == 2);
+assert(testObj2._name == 'Bravo');
+assert(testObj2._other['@ref'] == 1);
+
+resolveRefs(array);
+
+assert(testObj1._other._name == 'Bravo');
+assert(testObj1._other._other._name == 'Alpha');
+assert(testObj1._other === testObj2);
+""")
+    }
 }
