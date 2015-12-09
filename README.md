@@ -82,7 +82,8 @@ In this example, a Java object is written to an output stream in JSON format.
 ### Non-typed Usage
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript associative array.  When reading from a JSON String or `InputStream` of JSON, the `JsonReader` can be constructed like this:
 
-    Object obj = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true)]);    // shown using Groovy short-hand for Map of options.  See options below.
+    // shown using Groovy short-hand for Map of options.  See options below.
+    Object obj = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true)])    
 
 This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the `Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within the JSON stream, and other information.
 
