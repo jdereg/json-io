@@ -172,7 +172,7 @@ classes for which you do not have the source code.
         }
     }
 
-#### Customization technique 2. Custom instantiator ( `JsonReader.assignInstantiator(Class c, ClassFactoryEx)` )
+#### Customization technique 2. Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
 There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
 a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
 However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
@@ -188,7 +188,7 @@ the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currentl
 from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
 stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
-#### Customization technique 3. Handling a class that has some fields you do not want written out.
+#### Customization technique 3. Drop unwanted fields
 Let's say a class that your are serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
 Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
 is being written out, only the fields you list will be written out.
