@@ -1945,7 +1945,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (o instanceof Boolean || o instanceof Double)
         {
-            out.write(o.toString());
+            writePrimitive(o, false);
         }
         else if (o instanceof Long)
         {

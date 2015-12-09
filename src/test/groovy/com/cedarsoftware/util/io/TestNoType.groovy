@@ -112,7 +112,7 @@ class TestNoType
         String json = JsonWriter.objectToJson(array)
         Map map = JsonReader.jsonToMaps(json)
         Object[] list = map.'@items'
-        println list
+
         assert list[0] instanceof Object[]
         assert list[0][0] == 1L
         assert list[0][1] == 2L

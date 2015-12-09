@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
+import org.junit.Ignore
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
