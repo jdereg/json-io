@@ -233,10 +233,7 @@ In Java:
     String json = JsonWriter.objectToJson(objToWrite, args);
     
 Objects will not include the `@type` flags or `@items`.  This JSON passes well to non-Java receivers, like Javascript. 
-Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  If 
-the root object is an `array`, you will get one (1) `@items` entry in the root `Map` and the associated value will be 
-the `array`, as `JsonReader.jsonToMaps()` returns a `Map` (not an array). May add separate API in future (`fromJson()`) 
-which would return `Object`, allowing the returned value to be either a `Map` or an `array`.
+Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  
 
 Please note that if you write your object graph out with `JsonWriter.TYPE: false`, the shape of the graph will be 
 maintained.  What this means, is that if two different places in your object graph point to the same object, the first 
