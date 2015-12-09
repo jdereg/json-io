@@ -11,32 +11,49 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
 
-**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
+**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates 
+the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There 
+is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
 
-**json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes (static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the ObjectOutputStream behavior.
+**json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, 
+unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain 
+complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes 
+(static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have 
+public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the 
+ObjectOutputStream behavior.
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
 _For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
 ### Format
-**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as possible.  When an object's class can be inferred from a field type or array type, the object's type information is left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
+**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
+possible.  When an object's class can be inferred from a field type or array type, the object's type information is 
+left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
 
-When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  When read, this tells the JsonReader what class to instantiate.
+When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  
+When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see options below).
 
-If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON output, reducing the JSON String length.
+If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, 
+and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a 
+corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON 
+output, reducing the JSON String length.
 
 ### Performance
-**json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's `ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static variable `_debug` is `true` in `TestUtil`).
+**json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's
+ `ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to 
+ serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static 
+ variable `_debug` is `true` in `TestUtil`).
 
 ### Usage
 **json-io** can be used directly on JSON Strings or with Java's Streams.
 
 _Example 1: String to Java object_
 
-    Object obj = JsonReader.jsonToJava("[\"Hello, World\"]");     // optional 2nd 'options' argument (see below)
+    String json = // some JSON content
+    Object obj = JsonReader.jsonToJava(json);     // optional 2nd 'options' argument (see below)
 
-This will convert the JSON String to a Java Object graph.  In this case, it would consist of an `Object[]` of one `String` element.
+This will convert the JSON String to a Java Object graph.
 
 _Example 2: Java object to JSON String_
 
@@ -56,7 +73,6 @@ _Example 4: Java Object to `OutputStream`_
 
     Employee emp;
     // emp obtained from database
-    JsonWriter.objectToJson(
     JsonWriter jw = new JsonWriter(outputStream);       // optional 2nd 'options' argument (see below)
     jw.write(emp);
     jw.close();
