@@ -24,7 +24,7 @@ ObjectOutputStream behavior.
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-_For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
+_For useful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
