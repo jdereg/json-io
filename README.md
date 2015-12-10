@@ -90,18 +90,16 @@ In this example, a Java object is written to an output stream in JSON format.
     Object obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true)])    
 
 This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the
-`Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance 
-returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface
-permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within 
-the JSON stream, and other information.  Note: The root object return can be a String, long, double, array, or object 
-with the updated JSON spec.  If an object, or there are objects within the array (or sub-objects, etc.) those will all be
-`Map` instances.
+`Map` keys (Strings), and the field values are the associated Map's values. In this representation the returned data consists
+of Maps, Arrays (Object[]), and JSON values.  The Maps are actually a `JsonObject` instance (from **json-io**).  This 
+`JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see 
+the type information, position within the JSON stream, and other information.  
 
 This 'Maps' representation can be re-written to a JSON String or Stream and _the output JSON will exactly match the
 original input JSON stream_.  This permits a JVM receiving JSON strings / streams that contain class references which 
 do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can 
 be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
-can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data!_
+can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 
 #### All of the optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
