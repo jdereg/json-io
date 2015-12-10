@@ -151,7 +151,7 @@ can be read, modified, and then re-written by a JVM that does not contain any of
       
 ### Customization
 
-#### Customization technique 1. Custom serializer
+#### Customization technique 1: Custom serializer
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it 
 to be read / written specially in the JSON output.  The **json-io** approach allows you to customize the JSON format for 
 classes for which you do not have the source code.
@@ -173,7 +173,7 @@ classes for which you do not have the source code.
         }
     }
 
-#### Customization technique 2. Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
+#### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
 There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
 a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
 However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
@@ -189,12 +189,12 @@ the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currentl
 from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
 stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
-#### Customization technique 3. Drop unwanted fields
+#### Customization technique 3: Drop unwanted fields
 Let's say a class that your are serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
 Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
 is being written out, only the fields you list will be written out.
 
-#### Customization technique 4. Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
+#### Customization technique 4: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
 Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
 to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
 `alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
@@ -213,11 +213,20 @@ to the shorter meta keys, you can and a list of substitutions of your own to use
 In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the
 `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
 
-#### Customization technique 5. Processing JSON from external sources.
+#### Customization technique 5: Processing JSON from external sources.
 When reading JSON from external sources, you may want to start with:
+
+ in Groovy:
  
-    Object data = JsonReader.jsonToJava(String json, [(JsonReader.USE_MAPS): true])
+    Object data = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true])
     
+In Java:
+
+    Map args = new HashMap();
+    args.put(JsonReader.USE_MAPS, true);
+    Object data = JsonReader.jsonToJava(json, args);
+
+
 This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 
 This will get you going right away.
   
@@ -233,7 +242,7 @@ In Java:
     args.put(JsonWriter.TYPE, false);
     String json = JsonWriter.objectToJson(objToWrite, args);
     
-Objects will not include the `@type` flags or `@items`.  This JSON passes well to non-Java receivers, like Javascript. 
+Objects will not include the `@type` flags or `@items`.  This JSON passes nicely to non-Java receivers, like Javascript. 
 Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  
 
 Please note that if you write your object graph out with `JsonWriter.TYPE: false`, the shape of the graph will be 
