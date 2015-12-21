@@ -66,7 +66,7 @@ it would reconstitute a Java `Employee` instance.
 
 _Example 3: `InputStream` to Java object_
 
-    Employee emp = (Employee) = JsonReader.jsonToJava(stream);  // optional 2nd 'options' argument (see below)
+    Employee emp = (Employee) JsonReader.jsonToJava(stream);  // optional 2nd 'options' argument (see below)
 
 In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.
 If you want, you can use the `JsonReader` to wrap the stream to parse it, and return the Java object graph it 
@@ -87,7 +87,7 @@ In this example, a Java object is written to an output stream in JSON format.
 
     // shown using Groovy short-hand for Map of options.  See options below.
     String json = // some JSON obtained from wherever
-    Object obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true)])    
+    Object obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true])    
 
 This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the
 `Map` keys (Strings), and the field values are the associated Map's values. In this representation the returned data consists
