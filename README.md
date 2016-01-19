@@ -130,7 +130,7 @@ can be read, modified, and then re-written by a JVM that does not contain any of
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i 
 
-#### All of the optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
+#### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
     CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReaderEx> to
                             // override the default JSON reader for a given class. 
