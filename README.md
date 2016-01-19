@@ -157,7 +157,7 @@ to be read / written specially in the JSON output.  The **json-io** approach all
 classes for which you do not have the source code.
 
     Example (in Groovy). Note the Person has a List of pets, and in this case, it re-uses 
-    JsonWriter to write that part of the class out (not need to customize it):
+    JsonWriter to write that part of the class out (no need to customize it):
     
     static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
     {
