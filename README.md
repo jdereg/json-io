@@ -252,9 +252,6 @@ This will read in just fine with `JsonReader.jsonToJava()`, and the appropriate 
 referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js` to parse the read in JSON
 so that it can perform the substitutions of the `@ref`'s. (See `src/test/resource` folder for `jsonUtil.js`).
 
-Also, important to note that these examples use the APIs that work with the entire String of JSON.  Often, it is more
-efficient to use the Stream version of these APIs to minimize the amount of RAM used in a web-server.
-
 ### Javascript
 Included is a small Javascript utility (`jsonUtil.js` in the `src/test/resources` folder) that will take a JSON output 
 stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
