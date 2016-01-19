@@ -101,7 +101,7 @@ do not exist in the JVM that is parsing the JSON, to completely read / write the
 be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
 can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 
-#### All of the optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
+#### The optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
     CUSTOM_WRITER_MAP       // Set to Map<Class, JsonWriter.JsonClassWriterEx> to
                             // override the default JSON output for a given class. 
