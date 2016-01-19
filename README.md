@@ -190,7 +190,7 @@ from this object to create and return the instance.  After your code creates the
 stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
 #### Customization technique 3: Drop unwanted fields
-Let's say a class that your are serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
 Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
 is being written out, only the fields you list will be written out.
 
