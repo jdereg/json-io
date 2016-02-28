@@ -368,7 +368,8 @@ abstract class Resolver
                 mate = newInstance(clazz, jsonObj);
             }
         }
-        return jsonObj.target = mate;
+        jsonObj.target = mate;
+        return jsonObj.target;
     }
 
     protected JsonObject getReferencedObj(Long ref)
