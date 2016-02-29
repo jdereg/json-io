@@ -71,7 +71,7 @@ public class JsonWriter implements Closeable, Flushable
     private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final Set<Class> notCustom = new HashSet<Class>();
     private static final Object[] byteStrings = new Object[256];
-    private static final String newLine = System.getProperty("line.separator");
+    private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
     private static final NullClass nullWriter = new NullClass();
     private final Map<Object, Long> objVisited = new IdentityHashMap<Object, Long>();
@@ -366,7 +366,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
-        output.write(newLine);
+        output.write(NEW_LINE);
         depth += delta;
         for (int i=0; i < depth; i++)
         {
