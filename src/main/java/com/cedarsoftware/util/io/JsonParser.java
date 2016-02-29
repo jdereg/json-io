@@ -401,7 +401,7 @@ class JsonParser
         }
         boolean isNeg = buffer[0] == '-';
         long n = 0;
-        for (int i = (isNeg ? 1 : 0); i < len; i++)
+        for (int i = isNeg ? 1 : 0; i < len; i++)
         {
             n = (buffer[i] - '0') + n * 10;
         }

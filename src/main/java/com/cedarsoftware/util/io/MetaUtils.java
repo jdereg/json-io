@@ -34,6 +34,8 @@ import java.util.regex.Pattern;
  */
 public class MetaUtils
 {
+    private MetaUtils () {}
+    
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
     private static final Set<Class> prims = new HashSet<Class>();
     private static final Map<String, Class> nameToClass = new HashMap<String, Class>();

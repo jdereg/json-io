@@ -170,7 +170,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     {
         if (containsKey("@items") && !containsKey("@keys"))
         {
-            return ((target instanceof Collection) || (type != null && !type.contains("[")));
+            return (target instanceof Collection || (type != null && !type.contains("[")));
         }
 
         return target instanceof Collection;
