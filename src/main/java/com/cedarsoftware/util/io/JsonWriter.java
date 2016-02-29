@@ -756,7 +756,7 @@ public class JsonWriter implements Closeable, Flushable
             return false;
         }
 
-        if (obj != null && MetaUtils.isLogicalPrimitive(obj.getClass()))
+        if (MetaUtils.isLogicalPrimitive(obj.getClass()))
         {
             return false;
         }
