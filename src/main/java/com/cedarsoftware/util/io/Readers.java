@@ -83,7 +83,8 @@ public class Readers
             {
                 throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
-            return jObj.target = TimeZone.getTimeZone((String) zone);
+            jObj.target = TimeZone.getTimeZone((String) zone);                  
+            return jObj.target;
         }
     }
 
@@ -101,14 +102,17 @@ public class Readers
             Object variant = jObj.get("variant");
             if (country == null)
             {
-                return jObj.target = new Locale((String) language);
+                jObj.target = new Locale((String) language);
+                return jObj.target;
             }
             if (variant == null)
             {
-                return jObj.target = new Locale((String) language, (String) country);
+                jObj.target = new Locale((String) language, (String) country);
+                return jObj.target;
             }
 
-            return jObj.target = new Locale((String) language, (String) country, (String) variant);
+            jObj.target = new Locale((String) language, (String) country, (String) variant);
+            return jObj.target;
         }
     }
 
@@ -424,7 +428,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = jObj.get("value");
+                jObj.target = jObj.get("value");
+                return jObj.target;
             }
             throw new JsonIoException("String missing 'value' field");
         }
@@ -442,7 +447,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = classForName((String) jObj.get("value"));
+                jObj.target = classForName((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("Class missing 'value' field");
         }
@@ -665,7 +671,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = new StringBuilder((String) jObj.get("value"));
+                jObj.target = new StringBuilder((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("StringBuilder missing 'value' field");
         }
@@ -683,7 +690,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = new StringBuffer((String) jObj.get("value"));
+                jObj.target = new StringBuffer((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("StringBuffer missing 'value' field");
         }
@@ -702,12 +710,14 @@ public class Readers
             Object nanos = jObj.get("nanos");
             if (nanos == null)
             {
-                return jObj.target = new Timestamp(Long.valueOf((String) time));
+                jObj.target = new Timestamp(Long.valueOf((String) time));
+                return jObj.target;
             }
 
             Timestamp tstamp = new Timestamp(Long.valueOf((String) time));
             tstamp.setNanos(Integer.valueOf((String) nanos));
-            return jObj.target = tstamp;
+            jObj.target = tstamp;
+            return jObj.target;
         }
     }
 
