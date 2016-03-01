@@ -36,6 +36,8 @@ import java.util.TimeZone;
  */
 public class Writers
 {
+    private Writers () {}
+    
     public static class TimeZoneWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException

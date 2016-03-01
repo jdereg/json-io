@@ -708,7 +708,7 @@ class ObjectResolver extends Resolver
     {
         if (t instanceof ParameterizedType)
         {
-            ParameterizedType pType = ((ParameterizedType) t);
+            ParameterizedType pType = (ParameterizedType) t;
 
             if (pType.getRawType() instanceof Class)
             {
