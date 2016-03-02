@@ -552,7 +552,7 @@ public class Readers
         }
         else if (value instanceof Double || value instanceof Float)
         {
-            return BigDecimal.valueOf(((Number)value).doubleValue()).toBigInteger();
+            return new BigDecimal(((Number)value).doubleValue()).toBigInteger();
         }
         else if (value instanceof Long || value instanceof Integer ||
                 value instanceof Short || value instanceof Byte)

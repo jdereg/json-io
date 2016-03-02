@@ -534,4 +534,55 @@ class TestMapOfMaps
         Map objList2 = array[1]
         assert objList2.is(objList1)
     }
+
+    @Test
+    void testSkipNullFieldsMapOfMaps()
+    {
+        String json = '''\
+{
+   "first":"Sam",
+   "middle":null,
+   "last":"Adams"
+}
+'''
+        Map person = JsonReader.jsonToMaps(json)
+        json = JsonWriter.objectToJson(person)
+
+        Map map = JsonReader.jsonToJava(json)
+        assert map.size() == 3
+        assert map.first == 'Sam'
+        assert map.middle == null
+        assert map.last == 'Adams'
+
+        json = JsonWriter.objectToJson(person, [(JsonWriter.SKIP_NULL_FIELDS):true])
+
+        map = JsonReader.jsonToJava(json)
+        assert map.size() == 2
+        assert map.first == 'Sam'
+        assert map.last == 'Adams'
+    }
+
+    @Test
+    void testSkipNullFieldsTyped()
+    {
+        Person p = new Person()
+        p.name = "Sam Adams"
+        p.age = null
+        p.iq = null
+        p.birthYear = 1984
+
+        String json = JsonWriter.objectToJson(p)
+        Person p1 = JsonReader.jsonToJava(json)
+        assert p.name == 'Sam Adams'
+        assert p.age == null
+        assert p.iq == null
+        assert p.birthYear == 1984
+
+        json = JsonWriter.objectToJson(p, [(JsonWriter.SKIP_NULL_FIELDS):true])
+        assert !json.contains('age')
+        assert !json.contains('iq')
+        p1 = JsonReader.jsonToJava(json)
+        assert p1.name == 'Sam Adams'
+        assert p1.birthYear == 1984
+    }
 }

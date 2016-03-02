@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.3.0</version>
+      <version>4.3.1</version>
     </dependency>
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
@@ -138,7 +138,8 @@ can be read, modified, and then re-written by a JVM that does not contain any of
     TYPE_NAME_MAP           // If set, this map will be used when writing @type values.
                             // Allows short-hand abbreviations for type names.
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
-                            // @ref => @r, and @id => @i 
+                            // @ref => @r, and @id => @i
+    SKIP_NULL_FIELDS        // Do not write fields that have null as their value                             
 
 #### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
@@ -301,6 +302,8 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.3.1
+  * Enhancement: Skip null fields.  When this flag is set on the `JsonWriter` optional arguments, fields which have a null value are not written in the JSON output.
  * 4.3.0
   * Double / Float Nan and inifinity are now written as null, per RFC 4627
   * JsonReader.jsonToJava() can now be used to read input into Maps only (as opposed to attempting to create specific Java objects.
