@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.20.0</version.java-util>           <!-- only test dependency -->
+        <version.java-util>1.20.1</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
         <version.groovy>2.4.6</version.groovy>                  <!-- only test dependency -->
         <version.gson>2.3</version.gson>                        <!-- only test dependency -->
@@ -140,7 +140,7 @@
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
