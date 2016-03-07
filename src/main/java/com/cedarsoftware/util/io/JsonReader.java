@@ -84,13 +84,13 @@ public class JsonReader implements Closeable
 
     static
     {
-        ClassFactory colFactory = new CollectionFactory();
+        Factory colFactory = new CollectionFactory();
         assignInstantiator(Collection.class, colFactory);
         assignInstantiator(List.class, colFactory);
         assignInstantiator(Set.class, colFactory);
         assignInstantiator(SortedSet.class, colFactory);
 
-        ClassFactory mapFactory = new MapFactory();
+        Factory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
     }
@@ -326,31 +326,22 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param json String JSON input
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      */
+    @Deprecated
     public static Map jsonToMaps(String json)
     {
         return jsonToMaps(json, null);
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param json String JSON input
-     * @param optionalArgs Map used to turn on / off additional features.
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      */
+    @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
         try
@@ -374,16 +365,11 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param inputStream Stream containing JSON input
-     * @param optionalArgs Map used to turn on / off additional features.
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(inputStream, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      */
+    @Deprecated
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {
         if (optionalArgs == null)
@@ -472,16 +458,16 @@ public class JsonReader implements Closeable
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
         }
 
-        Map<Class, JsonReader.JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
+        Map<Class, JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
         if (customReaders != null)
         {
-            for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : customReaders.entrySet())
+            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet())
             {
                 addReader(entry.getKey(), entry.getValue());
             }
         }
 
-        Collection<Class> notCustomReaders = (Collection) args.get(NOT_CUSTOM_READER_MAP);
+        Iterable<Class> notCustomReaders = (Iterable<Class>) args.get(NOT_CUSTOM_READER_MAP);
         if (notCustomReaders != null)
         {
             for (Class c : notCustomReaders)

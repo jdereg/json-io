@@ -279,7 +279,7 @@ class TestErrors
         try
         {
             json = '{"field"0}'  // colon expected between fields
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -290,7 +290,7 @@ class TestErrors
         try
         {
             json = "{field:0}"  // not quoted field name
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -301,7 +301,7 @@ class TestErrors
         try
         {
             json = '{"field":0'  // object not terminated correctly (ending in number)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -312,7 +312,7 @@ class TestErrors
         try
         {
             json = '{"field":true'  // object not terminated correctly (ending in token)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -323,7 +323,7 @@ class TestErrors
         try
         {
             json = '{"field":"test"'  // object not terminated correctly (ending in string)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -334,7 +334,7 @@ class TestErrors
         try
         {
             json = '{"field":{}'  // object not terminated correctly (ending in another object)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -345,7 +345,7 @@ class TestErrors
         try
         {
             json = '{"field":[]'  // object not terminated correctly (ending in an array)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -356,7 +356,7 @@ class TestErrors
         try
         {
             json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -367,7 +367,7 @@ class TestErrors
         try
         {
             json = '[1,2,3'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -378,7 +378,7 @@ class TestErrors
         try
         {
             json = "[false,true,false"
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -389,7 +389,7 @@ class TestErrors
         try
         {
             json = '["unclosed string]'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -563,7 +563,7 @@ class TestErrors
         try
         {
             String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, field2: "no quotes"}, 11, 12, 13]'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (JsonIoException e)
@@ -578,7 +578,7 @@ class TestErrors
         try
         {
             String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, "field2": "no quotes"}, 11, 12.14a, 13]'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (JsonIoException e)

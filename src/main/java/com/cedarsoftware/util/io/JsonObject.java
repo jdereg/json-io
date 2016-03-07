@@ -190,6 +190,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return target.getClass().isArray();
     }
 
+    // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
+    // represented in the JSON.  This also occurs if a specified array type is used (not Object[], but Integer[], for
+    // example).
     public Object[] getArray()
     {
         return (Object[]) get("@items");

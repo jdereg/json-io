@@ -449,7 +449,7 @@ class TestFields
         testFields.init()
         String json0 = TestUtil.getJsonString(testFields)
         TestUtil.printLine("json0=" + json0)
-        Map testFields2 = JsonReader.jsonToMaps(json0)
+        Map testFields2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
         String json1 = TestUtil.getJsonString(testFields2)
         TestUtil.printLine("json1=" + json1)
@@ -509,7 +509,7 @@ class TestFields
         Map args = new HashMap()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
         String json = JsonWriter.objectToJson(painful, args)
-        Map check = JsonReader.jsonToMaps(json)
+        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
     }
@@ -524,7 +524,7 @@ class TestFields
 
         def args = [(JsonWriter.FIELD_SPECIFIERS):fieldSpecifiers]
         String json = JsonWriter.objectToJson(painful, args)
-        Map check = JsonReader.jsonToMaps(json)
+        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
 
@@ -533,7 +533,7 @@ class TestFields
         fields2.add("name")
         fieldSpecifiers.put(MorePainfulToSerialize.class, fields2)
         json = JsonWriter.objectToJson(painful, args)
-        check = JsonReader.jsonToMaps(json)
+        check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 2)
         assertTrue(check.containsKey("name"))
         assertTrue(check.containsKey("age"))

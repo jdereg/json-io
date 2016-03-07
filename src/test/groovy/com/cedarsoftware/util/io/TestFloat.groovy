@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotEquals
 import static org.junit.Assert.assertNotSame
 import static org.junit.Assert.assertTrue
+import static org.junit.Assert.fail
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -111,7 +112,8 @@ class TestFloat
         String json = '[123.45.67]'
         try
         {
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+            fail()
         }
         catch (JsonIoException e)
         {

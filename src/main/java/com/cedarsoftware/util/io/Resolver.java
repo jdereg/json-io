@@ -560,11 +560,6 @@ abstract class Resolver
     }
 
     // ========== Keep relationship knowledge below the line ==========
-    public static Object newInstance(Class c)
-    {
-        return JsonReader.newInstance(c);
-    }
-
     public static Object newInstance(Class c, JsonObject jsonObject)
     {
         return JsonReader.newInstance(c, jsonObject);

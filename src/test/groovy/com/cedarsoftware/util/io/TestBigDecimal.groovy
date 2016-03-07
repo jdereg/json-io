@@ -70,7 +70,7 @@ class TestBigDecimal
         assertEquals((Object)new BigDecimal(1), tbd.values[7])
         assertEquals((Object)new BigDecimal("72.72"), tbd.values[8])
 
-        Map map = JsonReader.jsonToMaps(json)
+        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         json = TestUtil.getJsonString(map)
         tbd = (TestBigDecimalField) TestUtil.readJsonObject(json)
         assertEquals((Object)new BigDecimal("3.14159"), tbd.fromString)

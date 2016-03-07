@@ -229,10 +229,12 @@ public class JsonWriter implements Closeable, Flushable
      */
     public static String formatJson(String json)
     {
-        Map map = JsonReader.jsonToMaps(json);
         Map args = new HashMap();
+        args.put(JsonReader.USE_MAPS, true);
+        Object obj = JsonReader.jsonToJava(json, args);
+        args.clear();
         args.put(PRETTY_PRINT, true);
-        return objectToJson(map, args);
+        return objectToJson(obj, args);
     }
 
     /**
@@ -686,7 +688,7 @@ public class JsonWriter implements Closeable, Flushable
      * Reach-ability trace to visit all objects within the graph to be written.
      * This API will handle any object, using either reflection APIs or by
      * consulting a specified FIELD_SPECIFIERS map if provided.
-     * @param stack Deque used to manage decent into graph (rather than using Java stack.) This allows for
+     * @param stack Deque used to manage descent into graph (rather than using Java stack.) This allows for
      * much larger graph processing.
      * @param obj Object root of graph
      * @param fieldSpecifiers Map of optional field specifiers, which are used to override the field list returned by

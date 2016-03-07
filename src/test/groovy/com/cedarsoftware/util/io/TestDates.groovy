@@ -137,14 +137,14 @@ class TestDates
         TestDateField tdf = (TestDateField) TestUtil.readJsonObject(json)
         assertNull(tdf.fromString)
 
-        Map jObj = JsonReader.jsonToMaps(json)
+        Map jObj = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertNull(jObj.fromString)
 
         json = '{"@type":"' + thisClass + '","fromString":null,"dates":[""]}'
         tdf = (TestDateField) TestUtil.readJsonObject(json)
         assertNull(tdf.dates[0])
 
-        jObj = JsonReader.jsonToMaps(json)
+        jObj = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         json = TestUtil.getJsonString(jObj)
         tdf = (TestDateField) TestUtil.readJsonObject(json)
         assertNull(tdf.dates[0])

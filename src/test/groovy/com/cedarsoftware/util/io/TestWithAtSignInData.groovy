@@ -40,7 +40,7 @@ class TestWithAtSignInData
             fail('should not fail with an unknown @type')
         }
 
-        Map map = JsonReader.jsonToMaps(json)
+        Map map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert (map.CurrentManagementResponsibility instanceof Object[])
         assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
         assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226

@@ -112,13 +112,8 @@ class TestString
     void testRootString()
     {
         String s = '"root string"'
-        Object o = JsonReader.jsonToMaps(s)
-        assertTrue(o instanceof JsonObject)
-        JsonObject jo = (JsonObject) o
-        assertTrue(jo.containsKey("@items"))
-        Object[] items = (Object[]) jo.get("@items")
-        assertTrue(items.length == 1)
-        assertEquals("root string", items[0])
+        Object o = JsonReader.jsonToJava(s, [(JsonReader.USE_MAPS):true] as Map)
+        assertEquals("root string", o)
         o = TestUtil.readJsonObject(s)
         assertEquals("root string", o)
     }

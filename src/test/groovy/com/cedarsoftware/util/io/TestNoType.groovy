@@ -70,7 +70,7 @@ class TestNoType
         assert map.groups[2] == "three"
         assert map.search.datalist.length == 0
 
-        map = JsonReader.jsonToMaps(json)
+        map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
         assert !(map.groups instanceof Map)
         assert map.groups[0] == "one"
         assert map.groups[1] == "two"
@@ -87,7 +87,7 @@ class TestNoType
         cols.bars = [1,3,"5",7] as Object[]
 
         String json = JsonWriter.objectToJson(cols, [(JsonWriter.TYPE): false])
-        Map map = JsonReader.jsonToMaps(json)
+        Map map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert map.foos[0] == 1
         assert map.foos[1] == 2
         assert map.foos[2] == "4"
@@ -110,8 +110,7 @@ class TestNoType
     {
         def array = [[1L,2L,3L] as Object[], ['a', 'b', 'c'] as Object[]] as Object[]
         String json = JsonWriter.objectToJson(array)
-        Map map = JsonReader.jsonToMaps(json)
-        Object[] list = map.'@items'
+        Object[] list = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
 
         assert list[0] instanceof Object[]
         assert list[0][0] == 1L

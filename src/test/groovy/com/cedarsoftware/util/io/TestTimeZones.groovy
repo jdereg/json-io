@@ -135,8 +135,7 @@ class TestTimeZones
         String json = TestUtil.getJsonString([pst] as Object[])
         TestUtil.printLine("json=" + json)
 
-        Map map = JsonReader.jsonToMaps(json)
-        Object[] items = (Object[]) map["@items"]
+        Object[] items = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         Map item = (Map) items[0]
         assertTrue(item.containsKey("zone"))
         assertTrue("PST".equals(item.zone))

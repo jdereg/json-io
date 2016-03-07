@@ -32,7 +32,7 @@ class TestBigJson
     void testBigJsonToMaps()
     {
         String json = TestUtil.fetchResource('big5D.json')
-        def map = JsonReader.jsonToMaps(json)
+        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
         assertEquals('big5D', map.ncube)
         assertEquals(0L, map.defaultCellValue)
         assertNotNull(map.axes)
@@ -51,7 +51,7 @@ class TestBigJson
         println ((stop - start) / 1000000L)
 
         start = System.nanoTime()
-        JsonReader.jsonToMaps(json)
+        JsonReader.jsonToJava(json)
         stop = System.nanoTime()
         println ((stop - start) / 1000000L)
     }
