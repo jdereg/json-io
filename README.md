@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.3.1</version>
+      <version>4.4.0</version>
     </dependency>
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
@@ -302,6 +302,8 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.4.0
+  * JsonReader.jsonToMaps() API deprecated.  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
  * 4.3.1
   * Enhancement: Skip null fields.  When this flag is set on the `JsonWriter` optional arguments, fields which have a null value are not written in the JSON output.
  * 4.3.0
