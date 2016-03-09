@@ -329,8 +329,8 @@ public class JsonReader implements Closeable
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
-    @Deprecated
     public static Map jsonToMaps(String json)
     {
         return jsonToMaps(json, null);
@@ -340,8 +340,8 @@ public class JsonReader implements Closeable
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
-    @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
         try
@@ -368,8 +368,8 @@ public class JsonReader implements Closeable
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(inputStream, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
-    @Deprecated
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {
         if (optionalArgs == null)
