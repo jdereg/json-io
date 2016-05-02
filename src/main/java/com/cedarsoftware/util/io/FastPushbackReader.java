@@ -41,14 +41,14 @@ public class FastPushbackReader extends FilterReader
     String getLastSnippet()
     {
         StringBuilder s = new StringBuilder();
-        for (int i=snippetLoc + 1; i < SNIPPET_LENGTH; i++)
+        for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
         {
             if (appendChar(s, i))
             {
                 break;
             }
         }
-        for (int i=0; i <= snippetLoc; i++)
+        for (int i=0; i < snippetLoc; i++)
         {
             if (appendChar(s, i))
             {

@@ -57,12 +57,6 @@ public class MapResolver extends Resolver
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
         {
             final String fieldName = e.getKey();
-
-            if (fieldName.charAt(0) == '@')
-            {   // Skip our own meta fields
-                continue;
-            }
-
             final Field field = (target != null) ? MetaUtils.getField(target.getClass(), fieldName) : null;
             final Object rhs = e.getValue();
 
@@ -75,11 +69,14 @@ public class MapResolver extends Resolver
                 jsonObj.put(fieldName, new JsonObject());
             }
             else if (rhs.getClass().isArray())
-            {    // LHS of assignment is an [] field or RHS is an array and LHS is Object (Map)
+            {   // RHS is an array
+                // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
                 jsonArray.put("@items", rhs);
                 stack.addFirst(jsonArray);
-                jsonObj.put(fieldName, jsonArray);
+
+                // Assign the array directly to the Map key (field name)
+                jsonObj.put(fieldName, rhs);
             }
             else if (rhs instanceof JsonObject)
             {
@@ -89,11 +86,11 @@ public class MapResolver extends Resolver
                     jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value")));
                     continue;
                 }
-                Long ref = (Long) jObj.get("@ref");
+                Long refId = jObj.getReferenceId();
 
-                if (ref != null)
+                if (refId != null)
                 {    // Correct field references
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = getReferencedObj(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -135,6 +132,7 @@ public class MapResolver extends Resolver
         }
         jsonObj.target = null;  // don't waste space (used for typed return, not for Map return)
     }
+
     /**
      * Process java.util.Collection and it's derivatives.  Collections are written specially
      * so that the serialization does not expose the Collection's internal structure, for
@@ -175,11 +173,11 @@ public class MapResolver extends Resolver
             else if (element instanceof JsonObject)
             {
                 JsonObject<String, Object> jsonObject = (JsonObject<String, Object>) element;
-                Long ref = (Long) jsonObject.get("@ref");
+                Long refId = jsonObject.getReferenceId();
 
-                if (ref != null)
+                if (refId != null)
                 {    // connect reference
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = getReferencedObj(refId);
                     copy.set(idx, refObject);
                 }
                 else

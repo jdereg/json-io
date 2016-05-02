@@ -1,35 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
@@ -56,6 +34,8 @@ import java.util.regex.Pattern;
  */
 public class MetaUtils
 {
+    private MetaUtils () {}
+    
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
     private static final Set<Class> prims = new HashSet<Class>();
     private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
@@ -297,6 +277,7 @@ public class MetaUtils
                 String.class.isAssignableFrom(c) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
+                c.isEnum() ||
                 c.equals(Class.class);
     }
 
@@ -315,7 +296,7 @@ public class MetaUtils
             }
             catch (Exception e)
             {
-                throw new JsonIoException("Class not found: " + name, e);
+                return LinkedHashMap.class;
             }
         }
         catch (Exception e)
@@ -498,7 +479,12 @@ public class MetaUtils
     }
 
     /**
-     * Return constructor and instance as elements 0 and 1, respectively.
+     * Returns an array with the following:
+     * <ol>
+     *     <li>object instance</li>
+     *     <li>constructor</li>
+     *     <li>a Boolean, true if all constructor arguments are to be "null"</li>
+     * </ol>
      */
     static Object[] newInstanceEx(Class c)
     {

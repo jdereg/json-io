@@ -123,11 +123,6 @@ abstract class Resolver
             {
                 traverseFields(stack, jsonObj);
             }
-
-            if (!useMaps)
-            {   // clear memory used by Map instance when converting into Java objects (reduce working set size)
-                jsonObj.clear();
-            }
         }
         return root.target;
     }
@@ -204,10 +199,10 @@ abstract class Resolver
      */
     protected static void convertMapToKeysItems(final JsonObject map)
     {
-        if (!map.containsKey("@keys") && !map.containsKey("@ref"))
+        if (!map.containsKey("@keys") && !map.isReference())
         {
-            final Object[] keys = new Object[map.keySet().size()];
-            final Object[] values = new Object[map.keySet().size()];
+            final Object[] keys = new Object[map.size()];
+            final Object[] values = new Object[map.size()];
             int i = 0;
 
             for (Object e : map.entrySet())
@@ -321,7 +316,7 @@ abstract class Resolver
                 }
                 else
                 {
-                    mate = newInstance(c);
+                    mate = newInstance(c, jsonObj);
                 }
             }
         }
@@ -344,6 +339,10 @@ abstract class Resolver
             {
                 mate = getEnum(clazz.getSuperclass(), jsonObj);
             }
+            else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an enum
+            {
+                mate = getEnumSet(clazz, jsonObj);
+            }
             else if ("java.util.Arrays$ArrayList".equals(clazz.getName()))
             {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
                 mate = new ArrayList();
@@ -357,7 +356,7 @@ abstract class Resolver
                 }
                 else if (unknownClass instanceof String)
                 {
-                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()));
+                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()), jsonObj);
                 }
                 else
                 {
@@ -366,10 +365,11 @@ abstract class Resolver
             }
             else
             {
-                mate = newInstance(clazz);
+                mate = newInstance(clazz, jsonObj);
             }
         }
-        return jsonObj.target = mate;
+        jsonObj.target = mate;
+        return jsonObj.target;
     }
 
     protected JsonObject getReferencedObj(Long ref)
@@ -422,7 +422,7 @@ abstract class Resolver
     /**
      * Fetch enum value (may need to try twice, due to potential 'name' field shadowing by enum subclasses
      */
-    private static Object getEnum(Class c, JsonObject jsonObj)
+    private Object getEnum(Class c, JsonObject jsonObj)
     {
         try
         {
@@ -437,31 +437,31 @@ abstract class Resolver
     /**
      * Create the EnumSet with its values (it must be created this way)
      */
-    private static Object getEnumSet(Class c, JsonObject jsonObj)
+    private Object getEnumSet(Class c, JsonObject jsonObj)
     {
-        try
+        Object[] items = jsonObj.getArray();
+        if (items == null || items.length == 0)
         {
-            Object[] items = jsonObj.getArray();
-            if (items.length == 0)
-                return newInstance(c);
-            JsonObject item = (JsonObject) items[0];
-            String type = item.getType();
-            Class enumClass = MetaUtils.classForName(type);
-            EnumSet result = null;
-            for (Object objectItem : items) {
-                item = (JsonObject) objectItem;
-                Enum enumItem = (Enum) getEnum(enumClass, item);
-                if (result == null)
-                    result = EnumSet.of(enumItem);
-                else
-                    result.add(enumItem);
+            return newInstance(c, jsonObj);
+        }
+        JsonObject item = (JsonObject) items[0];
+        String type = item.getType();
+        Class enumClass = MetaUtils.classForName(type);
+        EnumSet enumSet = null;
+        for (Object objectItem : items)
+        {
+            item = (JsonObject) objectItem;
+            Enum enumItem = (Enum) getEnum(enumClass, item);
+            if (enumSet == null)
+            {   // Lazy init the EnumSet
+                enumSet = EnumSet.of(enumItem);
             }
-            return result;
+            else
+            {
+                enumSet.add(enumItem);
+            }
         }
-        catch (Exception e)
-        {
-            return newInstance(c);
-        }
+        return enumSet;
     }
 
     /**
@@ -560,9 +560,9 @@ abstract class Resolver
     }
 
     // ========== Keep relationship knowledge below the line ==========
-    public static Object newInstance(Class c)
+    public static Object newInstance(Class c, JsonObject jsonObject)
     {
-        return JsonReader.newInstance(c);
+        return JsonReader.newInstance(c, jsonObject);
     }
 
     protected Map<Class, JsonReader.JsonClassReaderBase> getReaders()

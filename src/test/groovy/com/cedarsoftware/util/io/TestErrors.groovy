@@ -36,7 +36,7 @@ class TestErrors
         }
         catch(Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected ',' or ']' inside array"))
         }
         assertTrue(o == null)
     }
@@ -67,9 +67,10 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected ':' between string field and value"))
         }
     }
+
     @Test
     void testParseInvalid1stChar()
     {
@@ -96,7 +97,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("unknown json value type"))
         }
     }
 
@@ -107,9 +108,9 @@ class TestErrors
         {
             String json = """{
   "array": [
-    1,
-    2,
-    3
+    1,1,1,1,1,1,1,1,1,1,
+    2,0,0,0,0,0,0,0,0,0,0,0,0,
+    3,4,5,6,7,8,9,10
   ],
   "boolean": true,
   "null": null,
@@ -126,7 +127,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("eof reached before closing '}'"))
         }
     }
 
@@ -144,7 +145,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected ',' or ']' inside array"))
         }
     }
 
@@ -161,7 +162,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("unknown json value type"))
         }
     }
 
@@ -176,7 +177,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("object not ended with '}'"))
         }
     }
 
@@ -191,7 +192,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected hexadecimal digits"))
         }
     }
 
@@ -206,7 +207,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("invalid character escape sequence"))
         }
     }
 
@@ -221,7 +222,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("eof reached"))
         }
     }
 
@@ -236,7 +237,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.contains("error parsing"))
+            assertTrue(e.message.toLowerCase().contains("expected token: false"))
         }
     }
 
@@ -251,7 +252,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.toLowerCase().contains("error parsing json"))
+            assertTrue(e.message.toLowerCase().contains("eof reached while reading token: true"))
         }
     }
 
@@ -266,7 +267,7 @@ class TestErrors
         }
         catch (Exception e)
         {
-            assertTrue(e.message.toLowerCase().contains("error parsing json"))
+            assertTrue(e.message.toLowerCase().contains("eof reached prematurely"))
         }
     }
 
@@ -278,116 +279,139 @@ class TestErrors
         try
         {
             json = '{"field"0}'  // colon expected between fields
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("expected ':' between string field and value")
+        }
 
         try
         {
             json = "{field:0}"  // not quoted field name
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("expected quote")
+        }
 
         try
         {
             json = '{"field":0'  // object not terminated correctly (ending in number)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '{"field":true'  // object not terminated correctly (ending in token)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '{"field":"test"'  // object not terminated correctly (ending in string)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '{"field":{}'  // object not terminated correctly (ending in another object)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '{"field":[]'  // object not terminated correctly (ending in an array)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached before closing '}'")
+        }
 
         try
         {
             json = '[1,2,3'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e)  { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("expected ',' or ']' inside array")
+        }
 
         try
         {
             json = "[false,true,false"
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("expected ',' or ']' inside array")
+        }
 
         try
         {
             json = '["unclosed string]'
-            JsonReader.jsonToMaps(json)
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.toLowerCase().contains("eof reached while reading json string")
+        }
     }
 
     @Test
     void testBadType()
     {
-        try
-        {
-            String json = '{"@type":"non.existent.class.Non"}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unable"))
-            assertTrue(e.message.toLowerCase().contains("create"))
-            assertTrue(e.message.toLowerCase().contains("class"))
-        }
+        String json = '{"@type":"non.existent.class.Non"}'
+        Map map = TestUtil.readJsonObject(json)
+        assert map.size() == 0
 
         // Bad class inside a Collection
-        try
-        {
-            String json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name"}]}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e) { }
+        json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name", "fingers":5}]}'
+        List list = TestUtil.readJsonObject(json)
+        assert list.size() == 3
+        assert list[0] == null
+        assert list[1]
+        assert list[2].fingers == 5
     }
 
     @Test
@@ -531,5 +555,35 @@ class TestErrors
             fail()
         }
         catch (Exception e) { }
+    }
+
+    @Test
+    void testFieldMissingQuotes()
+    {
+        try
+        {
+            String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, field2: "no quotes"}, 11, 12, 13]'
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.contains('"field":25, f')
+        }
+    }
+
+    @Test
+    void testBadFloatingPointNumber()
+    {
+        try
+        {
+            String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, "field2": "no quotes"}, 11, 12.14a, 13]'
+            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+            fail()
+        }
+        catch (JsonIoException e)
+        {
+            assert e.message.toLowerCase().contains('expected \',\' or \']\' inside array')
+        }
     }
 }

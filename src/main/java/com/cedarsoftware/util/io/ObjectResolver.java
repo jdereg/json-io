@@ -1,17 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.*;
+import java.util.*;
 
 /**
  * The ObjectResolver converts the raw Maps created from the JsonParser to Java
@@ -92,7 +82,6 @@ class ObjectResolver extends Resolver
                 assignField(stack, jsonObj, field, rhs);
             }
         }
-        jsonObj.clear();    // Reduce memory required during processing
     }
 
     /**
@@ -183,7 +172,7 @@ class ObjectResolver extends Resolver
             else if (rhs instanceof JsonObject)
             {
                 final JsonObject<String, Object> jObj = (JsonObject) rhs;
-                final Long ref = (Long) jObj.get("@ref");
+                final Long ref = jObj.getReferenceId();
 
                 if (ref != null)
                 {    // Correct field references
@@ -295,7 +284,7 @@ class ObjectResolver extends Resolver
             else // if (element instanceof JsonObject)
             {
                 final JsonObject jObj = (JsonObject) element;
-                final Long ref = (Long) jObj.get("@ref");
+                final Long ref = jObj.getReferenceId();
 
                 if (ref != null)
                 {
@@ -421,17 +410,17 @@ class ObjectResolver extends Resolver
             else if (element instanceof JsonObject)
             {
                 JsonObject<String, Object> jsonObject = (JsonObject<String, Object>) element;
-                Long ref = (Long) jsonObject.get("@ref");
+                Long ref = jsonObject.getReferenceId();
 
                 if (ref != null)
                 {    // Connect reference
                     JsonObject refObject = getReferencedObj(ref);
                     if (refObject.target != null)
-                    {   // Array element with @ref to existing object
+                    {   // Array element with reference to existing object
                         Array.set(array, i, refObject.target);
                     }
                     else
-                    {    // Array with a forward @ref as an element
+                    {    // Array with a forward reference as an element
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
                 }
@@ -719,7 +708,7 @@ class ObjectResolver extends Resolver
     {
         if (t instanceof ParameterizedType)
         {
-            ParameterizedType pType = ((ParameterizedType) t);
+            ParameterizedType pType = (ParameterizedType) t;
 
             if (pType.getRawType() instanceof Class)
             {

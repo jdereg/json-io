@@ -196,7 +196,7 @@ class TestMaps
         testMap.init()
         String json0 = TestUtil.getJsonString(testMap)
         TestUtil.printLine("json0=" + json0)
-        Map testMap2 = JsonReader.jsonToMaps(json0)
+        Map testMap2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
         String json1 = TestUtil.getJsonString(testMap2)
         TestUtil.printLine("json1=" + json1)
@@ -310,9 +310,9 @@ class TestMaps
     void testMapToMapCompatibility()
     {
         String json0 = '{"rows":[{"columns":[{"name":"FOO","value":"9000"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]},{"columns":[{"name":"FOO","value":"9713"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]}],"selectedRows":"110"}'
-        JsonObject root = (JsonObject) JsonReader.jsonToMaps(json0)
+        Map root = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         String json1 = TestUtil.getJsonString(root)
-        JsonObject root2 = (JsonObject) JsonReader.jsonToMaps(json1)
+        Map root2 = (Map) JsonReader.jsonToJava(json1, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(DeepEquals.deepEquals(root, root2))
 
         // Will be different because @keys and @items get inserted during processing
@@ -394,7 +394,7 @@ class TestMaps
         String json0 = TestUtil.getJsonString(map)
         TestUtil.printLine("json0=" + json0)
 
-        map = JsonReader.jsonToMaps(json0)
+        map = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         String json1 = TestUtil.getJsonString(map)
         TestUtil.printLine("json1=" + json1)
 
@@ -412,8 +412,8 @@ class TestMaps
         String json0 = TestUtil.getJsonString(root)
         TestUtil.printLine("json0=" + json0)
 
-        Map map = JsonReader.jsonToMaps(json0)
-        String json1 = TestUtil.getJsonString(map)
+        Object[] array = (Object[]) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
+        String json1 = TestUtil.getJsonString(array)
         TestUtil.printLine("json1=" + json1)
 
         root = (Object[]) TestUtil.readJsonObject(json1)
@@ -433,7 +433,7 @@ class TestMaps
         String json0 = TestUtil.getJsonString(smt)
         TestUtil.printLine("json0=" + json0)
 
-        Map result = JsonReader.jsonToMaps(json0)
+        Map result = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         String json1 = TestUtil.getJsonString(result)
         TestUtil.printLine("json1=" + json1)
 

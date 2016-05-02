@@ -364,7 +364,7 @@ class TestCollection
         testCol.init()
         String json0 = TestUtil.getJsonString(testCol)
         TestUtil.printLine("json0=" + json0)
-        Map testCol2 = JsonReader.jsonToMaps(json0)
+        Map testCol2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
         String json1 = TestUtil.getJsonString(testCol2)
         TestUtil.printLine("json1=" + json1)
@@ -553,9 +553,8 @@ class TestCollection
         String json = TestUtil.getJsonString(stuff)
         TestUtil.printLine("json=" + json)
 
-        Map map = JsonReader.jsonToMaps(json)
-        TestUtil.printLine("map=" + map)
-        Object[] items = (Object[]) map.get("@items")
+        JsonObject map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] items = map.getArray()
         assertTrue(items.length == 4)
         assertTrue("Hello".equals(items[0]))
         assertTrue(items[1] == items[2])
@@ -564,8 +563,8 @@ class TestCollection
         list.add([123L, null, true, "Hello"] as Object[])
         json = TestUtil.getJsonString(list)
         TestUtil.printLine("json=" + json)
-        map = JsonReader.jsonToMaps(json)
-        items = (Object[]) map.get("@items")
+        map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        items = (Object[]) map.getArray()
         assertTrue(items.length == 1)
         Object[] oa = (Object[]) items[0];
         assertTrue(oa.length == 4)
@@ -594,7 +593,7 @@ class TestCollection
 
         String json0 = TestUtil.getJsonString(two)
         TestUtil.printLine("json0=" + json0)
-        Map map = JsonReader.jsonToMaps(json0)
+        Map map = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         map.hashCode()
         String json1 = TestUtil.getJsonString(map)
         TestUtil.printLine("json1=" + json1)
@@ -627,7 +626,7 @@ class TestCollection
         String json0 = TestUtil.getJsonString(empty)
         TestUtil.printLine("json0=" + json0)
 
-        Map map = JsonReader.jsonToMaps(json0)
+        Map map = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(map != null)
         assertTrue(map.isEmpty())
         String json1 = TestUtil.getJsonString(map)
@@ -637,20 +636,16 @@ class TestCollection
 
         Object[] list = [empty, empty];
         json0 = TestUtil.getJsonString(list)
-        TestUtil.printLine("json=" + json0)
+        TestUtil.printLine("json0=" + json0)
 
-        map = JsonReader.jsonToMaps(json0)
-        assertTrue(map != null)
-        list = (Object[]) map.get("@items")
+        Object[] array = (Object[]) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
+        assertTrue(array != null)
+        list = array
         assertTrue(list.length == 2)
         Map e1 = (Map) list[0];
         Map e2 = (Map) list[1];
         assertTrue(e1.isEmpty())
         assertTrue(e2.isEmpty())
-
-        json1 = TestUtil.getJsonString(map)
-        TestUtil.printLine("json1=" + json1)
-        assertTrue(json0.equals(json1))
     }
 
     @Test
@@ -681,7 +676,7 @@ class TestCollection
         TestUtil.printLine(json)
         assertTrue(json.contains('list":[]'))
 
-        Map obj = JsonReader.jsonToMaps(json)
+        Map obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         json = TestUtil.getJsonString(obj)
         TestUtil.printLine(json)
         assertTrue(json.contains('list":[]'))

@@ -1,32 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -83,7 +61,7 @@ public class JsonReader implements Closeable
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected final Set<Class> notCustom = new HashSet<Class>();
-    private static final Map<Class, ClassFactory> factory = new ConcurrentHashMap<Class, ClassFactory>();
+    private static final Map<Class, Factory> factory = new ConcurrentHashMap<Class, Factory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
     // _args is using ThreadLocal so that static inner classes can have access to them
@@ -106,20 +84,48 @@ public class JsonReader implements Closeable
 
     static
     {
-        ClassFactory colFactory = new CollectionFactory();
+        Factory colFactory = new CollectionFactory();
         assignInstantiator(Collection.class, colFactory);
         assignInstantiator(List.class, colFactory);
         assignInstantiator(Set.class, colFactory);
         assignInstantiator(SortedSet.class, colFactory);
 
-        ClassFactory mapFactory = new MapFactory();
+        Factory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
     }
 
-    public interface ClassFactory
+    public interface Factory
+    {
+    }
+
+    /**
+     * Subclass this interface and create a class that will return a new instance of the
+     * passed in Class (c).  Your subclass will be called when json-io encounters an
+     * the new to instantiate an instance of (c).
+     *
+     * Make json-io aware that it needs to call your class by calling the public
+     * JsonReader.assignInstantiator() API.
+     */
+    public interface ClassFactory extends Factory
     {
         Object newInstance(Class c);
+    }
+
+    /**
+     * Subclass this interface and create a class that will return a new instance of the
+     * passed in Class (c).  Your subclass will be called when json-io encounters an
+     * the new to instantiate an instance of (c).  The 'args' Map passed in will
+     * contain a 'jsonObj' key that holds the JsonObject (Map) representing the
+     * object being converted.  If you need values from the fields of this object
+     * in order to instantiate your class, you can grab them from the JsonObject (Map).
+     *
+     * Make json-io aware that it needs to call your class by calling the public
+     * JsonReader.assignInstantiator() API.
+     */
+    public interface ClassFactoryEx extends Factory
+    {
+        Object newInstance(Class c, Map args);
     }
 
     /**
@@ -199,9 +205,9 @@ public class JsonReader implements Closeable
 
     /**
      * For difficult to instantiate classes, you can add your own ClassFactory
-     * which will be called when the passed in class 'c' is encountered.  Your
-     * ClassFactory will be called with newInstance(c) and your factory is expected
-     * to return a new instance of 'c'.
+     * or ClassFactoryEx which will be called when the passed in class 'c' is
+     * encountered.  Your ClassFactory will be called with newInstance(c) and
+     * your factory is expected to return a new instance of 'c'.
      *
      * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
@@ -209,7 +215,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
      */
-    public static void assignInstantiator(Class c, ClassFactory f)
+    public static void assignInstantiator(Class c, Factory f)
     {
         factory.put(c, f);
     }
@@ -274,8 +280,12 @@ public class JsonReader implements Closeable
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap();
+            optionalArgs.put(USE_MAPS, false);
         }
-        optionalArgs.put(USE_MAPS, false);
+        if (!optionalArgs.containsKey(USE_MAPS))
+        {
+            optionalArgs.put(USE_MAPS, false);
+        }
         ByteArrayInputStream ba;
         try
         {
@@ -303,8 +313,12 @@ public class JsonReader implements Closeable
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap();
+            optionalArgs.put(USE_MAPS, false);
         }
-        optionalArgs.put(USE_MAPS, false);
+        if (!optionalArgs.containsKey(USE_MAPS))
+        {
+            optionalArgs.put(USE_MAPS, false);
+        }
         JsonReader jr = new JsonReader(inputStream, optionalArgs);
         Object obj = jr.readObject();
         jr.close();
@@ -312,14 +326,10 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param json String JSON input
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
     public static Map jsonToMaps(String json)
     {
@@ -327,15 +337,10 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param json String JSON input
-     * @param optionalArgs Map used to turn on / off additional features.
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
@@ -360,15 +365,10 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Convert the passed in JSON string into a Java object graph
-     * that consists solely of Java Maps where the keys are the
-     * fields and the values are primitives or other Maps (in the
-     * case of objects).
-     *
-     * @param inputStream Stream containing JSON input
-     * @param optionalArgs Map used to turn on / off additional features.
-     * @return Java object graph of Maps matching JSON input,
-     *         or null if an error occurred.
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(inputStream, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
      */
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {
@@ -458,16 +458,16 @@ public class JsonReader implements Closeable
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
         }
 
-        Map<Class, JsonReader.JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
+        Map<Class, JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
         if (customReaders != null)
         {
-            for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : customReaders.entrySet())
+            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet())
             {
                 addReader(entry.getKey(), entry.getValue());
             }
         }
 
-        Collection<Class> notCustomReaders = (Collection) args.get(NOT_CUSTOM_READER_MAP);
+        Iterable<Class> notCustomReaders = (Iterable<Class>) args.get(NOT_CUSTOM_READER_MAP);
         if (notCustomReaders != null)
         {
             for (Class c : notCustomReaders)
@@ -498,8 +498,12 @@ public class JsonReader implements Closeable
             return jObj;
         }
 
-        Long id = (Long) jObj.get("@ref");
+        Long id = jObj.getReferenceId();
         JsonObject target = objsRead.get(id);
+        if (target == null)
+        {
+            throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
+        }
         return getRefTarget(target);
     }
 
@@ -523,6 +527,10 @@ public class JsonReader implements Closeable
             {
                 return new JsonObject();
             }
+        }
+        catch (JsonIoException e)
+        {
+            throw e;
         }
         catch (Exception e)
         {
@@ -567,6 +575,7 @@ public class JsonReader implements Closeable
     {
         return Boolean.TRUE.equals(getArgs().get(USE_MAPS));
     }
+
     /**
      * This method converts a root Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
@@ -597,6 +606,10 @@ public class JsonReader implements Closeable
             catch (Exception ignored)
             {   // Exception handled in close()
             }
+            if (e instanceof JsonIoException)
+            {
+                throw (JsonIoException)e;
+            }
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         }
     }
@@ -605,7 +618,28 @@ public class JsonReader implements Closeable
     {
         if (factory.containsKey(c))
         {
-            return factory.get(c).newInstance(c);
+            ClassFactory cf = (ClassFactory) factory.get(c);
+            return cf.newInstance(c);
+        }
+        return MetaUtils.newInstance(c);
+    }
+
+    public static Object newInstance(Class c, JsonObject jsonObject)
+    {
+        if (factory.containsKey(c))
+        {
+            Factory cf = factory.get(c);
+            if (cf instanceof ClassFactoryEx)
+            {
+                Map args = new HashMap();
+                args.put("jsonObj", jsonObject);
+                return ((ClassFactoryEx)cf).newInstance(c, args);
+            }
+            if (cf instanceof ClassFactory)
+            {
+                return ((ClassFactory)cf).newInstance(c);
+            }
+            throw new JsonIoException("Unknown instantiator (Factory) class.  Must subclass ClassFactoryEx or ClassFactory, found: " + cf.getClass().getName());
         }
         return MetaUtils.newInstance(c);
     }

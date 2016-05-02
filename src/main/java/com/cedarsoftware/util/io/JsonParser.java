@@ -262,17 +262,14 @@ class JsonParser
                 return EMPTY_ARRAY;
             case 'f':
             case 'F':
-                input.unread(c);
                 readToken("false");
                 return Boolean.FALSE;
             case 'n':
             case 'N':
-                input.unread(c);
                 readToken("null");
                 return null;
             case 't':
             case 'T':
-                input.unread(c);
                 readToken("true");
                 return Boolean.TRUE;
             case -1:
@@ -326,7 +323,7 @@ class JsonParser
     {
         final int len = token.length();
 
-        for (int i = 0; i < len; i++)
+        for (int i = 1; i < len; i++)
         {
             int c = input.read();
             if (c == -1)
@@ -405,7 +402,7 @@ class JsonParser
         }
         boolean isNeg = buffer[0] == '-';
         long n = 0;
-        for (int i = (isNeg ? 1 : 0); i < len; i++)
+        for (int i = isNeg ? 1 : 0; i < len; i++)
         {
             n = (buffer[i] - '0') + n * 10;
         }
@@ -580,13 +577,18 @@ class JsonParser
         input.unread(skipWhitespaceRead());
     }
 
-    static Object error(String msg)
+    Object error(String msg)
     {
-        throw new JsonIoException(msg);
+        throw new JsonIoException(getMessage(msg));
     }
 
-    static Object error(String msg, Exception e)
+    Object error(String msg, Exception e)
     {
-        throw new JsonIoException(msg, e);
+        throw new JsonIoException(getMessage(msg), e);
+    }
+
+    String getMessage(String msg)
+    {
+        return msg + "\nline: " + input.line + ", col: " + input.col + "\n" + input.getLastSnippet();
     }
 }

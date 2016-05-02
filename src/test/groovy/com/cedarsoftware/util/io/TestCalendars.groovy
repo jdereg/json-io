@@ -116,8 +116,7 @@ class TestCalendars
         String json = TestUtil.getJsonString([now] as Object[])
         TestUtil.printLine("json=" + json)
 
-        Map map = JsonReader.jsonToMaps(json)
-        Object[] items = (Object[]) map['@items']
+        Object[] items = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         Map item = (Map) items[0]
         assertTrue(item.containsKey("time"))
         assertTrue(item.containsKey("zone"))

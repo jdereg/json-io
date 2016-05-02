@@ -57,7 +57,7 @@ class TestInnerClass
         leg.y = 20
         String json0 = TestUtil.getJsonString(dog)
         TestUtil.printLine("json0=" + json0)
-        JsonObject job = (JsonObject) JsonReader.jsonToMaps(json0)
+        JsonObject job = (JsonObject) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         job.put("phantom", new TestObject("Eddie"))
         String json1 = TestUtil.getJsonString(job)
         TestUtil.printLine("json1=" + json1)

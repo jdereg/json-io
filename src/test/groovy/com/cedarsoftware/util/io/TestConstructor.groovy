@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io
 
-import com.google.gson.JsonIOException
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -46,7 +45,7 @@ class TestConstructor
         {
             if (list == null || map == null || string == null || date == null)
             {
-                throw new JsonIOException("Constructor arguments cannot be null")
+                throw new JsonIoException("Constructor arguments cannot be null")
             }
             this.list = list;
             this.map = map;
@@ -213,7 +212,7 @@ class TestConstructor
         String json0 = TestUtil.getJsonString(foo)
         TestUtil.printLine("json0=" + json0)
 
-        Map map = JsonReader.jsonToMaps(json0)
+        Map map = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals((byte)1, map.get("_byte") )
         assertEquals((short)2, map.get("_short"))
         assertEquals(3, map.get("_int"))
@@ -246,7 +245,7 @@ class TestConstructor
         String json = TestUtil.getJsonString(foo)
         TestUtil.printLine("json0=" + json)
 
-        Map map = JsonReader.jsonToMaps(json)
+        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals((byte)1, map.get("_byte"))
         assertEquals((short)2, map.get("_short"))
         assertEquals(3, map.get("_int"))
@@ -279,7 +278,7 @@ class TestConstructor
         TestUtil.printLine("json1=" + json1)
         assertTrue(json.equals(json1))
 
-        map = JsonReader.jsonToMaps(json1)
+        map = (Map) JsonReader.jsonToJava(json1, [(JsonReader.USE_MAPS):true] as Map)
         json = TestUtil.getJsonString(map)
         TestUtil.printLine("json2=" + json)
         assertTrue(json.equals(json1))
@@ -352,10 +351,10 @@ class TestConstructor
     void testMapConstructor()
     {
         String json = JsonWriter.objectToJson(new Canine('Bella'))
-        JsonObject root = JsonReader.jsonToMaps(json)
+        Map root = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
 
         JsonReader reader = new JsonReader([:])
-        Canine bella = reader.jsonObjectsToJava(root)
+        Canine bella = (Canine) reader.jsonObjectsToJava(root)
         assert bella.name == 'Bella'
     }
 
@@ -369,7 +368,7 @@ class TestConstructor
         assert eddie.name == 'Eddie'
 
         inputStream = new ByteArrayInputStream(json.getBytes())
-        Map dogMap = JsonReader.jsonToMaps(inputStream, null)
+        Map dogMap = JsonReader.jsonToJava(inputStream, [(JsonReader.USE_MAPS):true] as Map)
         assert dogMap.name == 'Eddie'
     }
 }

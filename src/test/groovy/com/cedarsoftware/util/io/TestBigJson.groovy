@@ -1,12 +1,11 @@
 package com.cedarsoftware.util.io
-
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
+import org.junit.Ignore
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
-
 /**
  * Test cases for JsonReader / JsonWriter
  *
@@ -33,7 +32,7 @@ class TestBigJson
     void testBigJsonToMaps()
     {
         String json = TestUtil.fetchResource('big5D.json')
-        def map = JsonReader.jsonToMaps(json)
+        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
         assertEquals('big5D', map.ncube)
         assertEquals(0L, map.defaultCellValue)
         assertNotNull(map.axes)
@@ -41,7 +40,7 @@ class TestBigJson
     }
 
     @Test
-    void testJsonIoVersusJsonSlurper()
+    void testJsonIoVersusGson()
     {
         String json = TestUtil.fetchResource('big5D.json')
 
@@ -52,19 +51,25 @@ class TestBigJson
         println ((stop - start) / 1000000L)
 
         start = System.nanoTime()
-        def map = JsonReader.jsonToMaps(json)
+        JsonReader.jsonToJava(json)
         stop = System.nanoTime()
         println ((stop - start) / 1000000L)
     }
 
-    @Test
-    void testReadVeryLargeJson()
+    @Ignore
+    void testJsonIoVersusGsonOnHugeFile()
     {
-        String json = TestUtil.fetchResource('veryLarge.json')
+        String json = TestUtil.fetchResource('big.json')
 
+        Gson gson = new Gson()
         long start = System.nanoTime()
-        JsonReader.jsonToMaps(json)
+        gson.fromJson(json, Object.class)
         long stop = System.nanoTime()
+        println ((stop - start) / 1000000L)
+
+        start = System.nanoTime()
+        JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        stop = System.nanoTime()
         println ((stop - start) / 1000000L)
     }
 }

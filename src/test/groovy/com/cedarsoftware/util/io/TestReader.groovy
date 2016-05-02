@@ -3,8 +3,6 @@ package com.cedarsoftware.util.io
 import groovy.transform.CompileStatic
 import org.junit.Test
 
-import static org.junit.Assert.fail
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -23,28 +21,20 @@ import static org.junit.Assert.fail
  *         limitations under the License.
  */
 @CompileStatic
-class TestClassForName
+class TestReader
 {
     @Test
-    void testInstantiation()
+    void testNewInstance()
     {
-        Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject')
-        assert testObjectClass instanceof Class
-        assert 'com.cedarsoftware.util.io.TestObject' == testObjectClass.name
-    }
+        Date d = JsonReader.newInstance(Date.class, new JsonObject()) as Date
+        Integer a = JsonReader.newInstance(Integer.class, new JsonObject()) as Integer
+        String x = JsonReader.newInstance(String.class, new JsonObject())
 
-    @Test
-    void testClassForNameErrorHandling()
-    {
-        try
-        {
-            MetaUtils.classForName(null)
-            fail()
-        }
-        catch (JsonIoException e)
-        {
-        }
+        assert d instanceof Date
+        assert a instanceof Integer
+        assert x instanceof String
 
-        assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson'))
+        assert "" == x
+        assert 0 == a
     }
 }

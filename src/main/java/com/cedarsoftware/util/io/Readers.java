@@ -3,13 +3,7 @@ package com.cedarsoftware.util.io;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,18 +30,20 @@ import java.util.regex.Pattern;
  */
 public class Readers
 {
-    private static final String days = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
-    private static final String mos = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
+    private Readers () {}
+    
+    private static final String DAYS = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
+    private static final String MOS = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
     private static final Pattern datePattern1 = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
     private static final Pattern datePattern2 = Pattern.compile("(\\d{1,2})[./-](\\d{1,2})[./-](\\d{4})");
-    private static final Pattern datePattern3 = Pattern.compile(mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern datePattern4 = Pattern.compile("(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
-    private static final Pattern datePattern5 = Pattern.compile("(\\d{4})[ ]*[,]?[ ]*" + mos + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern datePattern6 = Pattern.compile(days + "[ ]+" + mos + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,4}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern3 = Pattern.compile(MOS + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern4 = Pattern.compile("(\\d{1,2})(st|nd|rd|th|)[ ]*[,]?[ ]*" + MOS + "[ ]*[,]?[ ]*(\\d{4})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern5 = Pattern.compile("(\\d{4})[ ]*[,]?[ ]*" + MOS + "[ ]*[,]?[ ]*(\\d{1,2})(st|nd|rd|th|)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern datePattern6 = Pattern.compile(DAYS + "[ ]+" + MOS + "[ ]+(\\d{1,2})[ ]+(\\d{2}:\\d{2}:\\d{2})[ ]+[A-Z]{1,4}\\s+(\\d{4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern timePattern1 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})[.](\\d{1,10})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
-    private static final Pattern dayPattern = Pattern.compile(days, Pattern.CASE_INSENSITIVE);
+    private static final Pattern dayPattern = Pattern.compile(DAYS, Pattern.CASE_INSENSITIVE);
     private static final Map<String, String> months = new LinkedHashMap<String, String>();
 
     static
@@ -89,7 +85,8 @@ public class Readers
             {
                 throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
-            return jObj.target = TimeZone.getTimeZone((String) zone);
+            jObj.target = TimeZone.getTimeZone((String) zone);                  
+            return jObj.target;
         }
     }
 
@@ -107,14 +104,17 @@ public class Readers
             Object variant = jObj.get("variant");
             if (country == null)
             {
-                return jObj.target = new Locale((String) language);
+                jObj.target = new Locale((String) language);
+                return jObj.target;
             }
             if (variant == null)
             {
-                return jObj.target = new Locale((String) language, (String) country);
+                jObj.target = new Locale((String) language, (String) country);
+                return jObj.target;
             }
 
-            return jObj.target = new Locale((String) language, (String) country, (String) variant);
+            jObj.target = new Locale((String) language, (String) country, (String) variant);
+            return jObj.target;
         }
     }
 
@@ -143,7 +143,7 @@ public class Readers
                     c = classForName((String) type);
                 }
 
-                Calendar calendar = (Calendar) newInstance(c);
+                Calendar calendar = (Calendar) newInstance(c, jObj);
                 calendar.setTime(date);
                 jObj.setTarget(calendar);
                 String zone = (String) jObj.get("zone");
@@ -430,7 +430,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = jObj.get("value");
+                jObj.target = jObj.get("value");
+                return jObj.target;
             }
             throw new JsonIoException("String missing 'value' field");
         }
@@ -448,7 +449,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = classForName((String) jObj.get("value"));
+                jObj.target = classForName((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("Class missing 'value' field");
         }
@@ -671,7 +673,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = new StringBuilder((String) jObj.get("value"));
+                jObj.target = new StringBuilder((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("StringBuilder missing 'value' field");
         }
@@ -689,7 +692,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                return jObj.target = new StringBuffer((String) jObj.get("value"));
+                jObj.target = new StringBuffer((String) jObj.get("value"));
+                return jObj.target;
             }
             throw new JsonIoException("StringBuffer missing 'value' field");
         }
@@ -708,12 +712,14 @@ public class Readers
             Object nanos = jObj.get("nanos");
             if (nanos == null)
             {
-                return jObj.target = new Timestamp(Long.valueOf((String) time));
+                jObj.target = new Timestamp(Long.valueOf((String) time));
+                return jObj.target;
             }
 
             Timestamp tstamp = new Timestamp(Long.valueOf((String) time));
             tstamp.setNanos(Integer.valueOf((String) nanos));
-            return jObj.target = tstamp;
+            jObj.target = tstamp;
+            return jObj.target;
         }
     }
 
@@ -723,8 +729,8 @@ public class Readers
         return MetaUtils.classForName(name);
     }
 
-    static Object newInstance(Class c)
+    static Object newInstance(Class c, JsonObject jsonObject)
     {
-        return JsonReader.newInstance(c);
+        return JsonReader.newInstance(c, jsonObject);
     }
 }

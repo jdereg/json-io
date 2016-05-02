@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.1.11-SNAPSHOT</version>
+    <version>4.4.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -33,18 +33,19 @@
     </developers>
 
     <properties>
-        <version.java-util>1.19.3</version.java-util>           <!-- only test dependency -->
+        <version.java-util>1.22.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.4</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.3</version.gson>                        <!-- only test dependency -->
-        <version.plugin.compiler>3.2</version.plugin.compiler>
+        <version.groovy>2.4.6</version.groovy>                  <!-- only test dependency -->
+        <version.gson>2.6.2</version.gson>                        <!-- only test dependency -->
+        <version.java>1.6</version.java>
+        <version.plugin.compiler>3.5.1</version.plugin.compiler>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
         <version.plugin.nexus>1.6.6</version.plugin.nexus>
-        <version.plugin.source>2.4</version.plugin.source>
-        <version.plugin.javadoc>2.10.1</version.plugin.javadoc>
-        <version.plugin.gpg>1.5</version.plugin.gpg>
-        <version.plugin.release>2.5.1</version.plugin.release>
-        <version.plugin.surefire>2.18.1</version.plugin.surefire>
+        <version.plugin.source>3.0.0</version.plugin.source>
+        <version.plugin.javadoc>2.10.3</version.plugin.javadoc>
+        <version.plugin.gpg>1.6</version.plugin.gpg>
+        <version.plugin.release>2.5.3</version.plugin.release>
+        <version.plugin.surefire>2.19.1</version.plugin.surefire>
         <version.plugin.groovy.eclipse.compiler>2.9.2-01</version.plugin.groovy.eclipse.compiler>
         <version.plugin.groovy.eclipse.batch>2.4.3-01</version.plugin.groovy.eclipse.batch>
         <version.plugin.felix.scr>1.7.4</version.plugin.felix.scr>
@@ -112,8 +113,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>${version.java}</source>
+                    <target>${version.java}</target>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
@@ -140,7 +141,7 @@
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -223,7 +224,7 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>${version.gson}</version>
-            <scope>test</scope>
+            <scope>test</scope>     <!-- only test scope dependency -->
         </dependency>
 
         <dependency>

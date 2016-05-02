@@ -1,11 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -146,7 +142,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
         else
         {
-            throw new JsonIoException("Invalid primitive type");
+            throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }
     }
 
@@ -156,6 +152,11 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     public boolean isReference()
     {
         return containsKey("@ref");
+    }
+
+    public Long getReferenceId()
+    {
+        return (Long) get("@ref");
     }
 
     // Map APIs
@@ -169,7 +170,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     {
         if (containsKey("@items") && !containsKey("@keys"))
         {
-            return ((target instanceof Collection) || (type != null && !type.contains("[")));
+            return (target instanceof Collection || (type != null && !type.contains("[")));
         }
 
         return target instanceof Collection;
@@ -189,6 +190,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return target.getClass().isArray();
     }
 
+    // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
+    // represented in the JSON.  This also occurs if a specified array type is used (not Object[], but Integer[], for
+    // example).
     public Object[] getArray()
     {
         return (Object[]) get("@items");

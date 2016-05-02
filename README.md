@@ -6,58 +6,87 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.1.9</version>
+      <version>4.4.0</version>
     </dependency>
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
 
-**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
+### Sponsors
+[![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
 
-**json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes (static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the ObjectOutputStream behavior.
+YourKit supports open source projects with its full-featured Java Profiler.
+YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
+and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profiler</a>,
+innovative and intelligent tools for profiling Java and .NET applications.
+
+[![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")](https://www.jetbrains.com/idea/)
+
+**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates 
+the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There 
+is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
+
+**json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, 
+unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain 
+complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes 
+(static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have 
+public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the 
+ObjectOutputStream behavior.
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-_For useful and powerful Java utilities, check out java-util at http://github.com/jdereg/java-util_
+_For useful Java utilities, check out java-util at http://github.com/jdereg/java-util_
 
 ### Format
-**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as possible.  When an object's class can be inferred from a field type or array type, the object's type information is left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
+**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
+possible.  When an object's class can be inferred from a field type or array type, the object's type information is 
+left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
 
-When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  When read, this tells the JsonReader what class to instantiate.
+When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  
+When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see options below).
 
-If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON output, reducing the JSON String length.
+If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, 
+and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a 
+corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON 
+output, reducing the JSON String length.
 
 ### Performance
-**json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's `ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static variable `_debug` is `true` in `TestUtil`).
+**json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's
+ `ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to 
+ serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static 
+ variable `_debug` is `true` in `TestUtil`).
 
 ### Usage
 **json-io** can be used directly on JSON Strings or with Java's Streams.
 
 _Example 1: String to Java object_
 
-    Object obj = JsonReader.jsonToJava("[\"Hello, World\"]");
+    String json = // some JSON content
+    Object obj = JsonReader.jsonToJava(json);     // optional 2nd 'options' argument (see below)
 
-This will convert the JSON String to a Java Object graph.  In this case, it would consist of an `Object[]` of one `String` element.
+This will convert the JSON String to a Java Object graph.
 
 _Example 2: Java object to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonWriter.objectToJson(emp);
+    String json = JsonWriter.objectToJson(emp);     // optional 2nd 'options' argument (see below)
 
-This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, it would reconstitute a Java `Employee` instance.
+This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, 
+it would reconstitute a Java `Employee` instance.
 
 _Example 3: `InputStream` to Java object_
 
-    JsonReader jr = new JsonReader(inputStream);
-    Employee emp = (Employee) jr.readObject();
+    Employee emp = (Employee) JsonReader.jsonToJava(stream);  // optional 2nd 'options' argument (see below)
 
-In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.  The `JsonReader` is used to wrap the stream to parse it, and return the Java object graph it represents.
+In this example, an `InputStream` (could be from a File, the Network, etc.) is supplying an unknown amount of JSON.
+If you want, you can use the `JsonReader` to wrap the stream to parse it, and return the Java object graph it 
+represents. See constructors that take a Stream argument.
 
 _Example 4: Java Object to `OutputStream`_
 
     Employee emp;
     // emp obtained from database
-    JsonWriter jw = new JsonWriter(outputStream);
+    JsonWriter jw = new JsonWriter(outputStream);       // optional 2nd 'options' argument (see below)
     jw.write(emp);
     jw.close();
 
@@ -66,34 +95,23 @@ In this example, a Java object is written to an output stream in JSON format.
 ### Non-typed Usage
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript associative array.  When reading from a JSON String or `InputStream` of JSON, the `JsonReader` can be constructed like this:
 
-    Map graph = JsonReader.jsonToMaps(String json);
+    // shown using Groovy short-hand for Map of options.  See options below.
+    String json = // some JSON obtained from wherever
+    Object obj = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true])    
 
--- or --
+This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the
+`Map` keys (Strings), and the field values are the associated Map's values. In this representation the returned data consists
+of Maps, Arrays (Object[]), and JSON values.  The Maps are actually a `JsonObject` instance (from **json-io**).  This 
+`JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see 
+the type information, position within the JSON stream, and other information.  
 
-    JsonReader jr = new JsonReader(InputStream, true);
-    Map map = (Map) jr.readObject();
+This 'Maps' representation can be re-written to a JSON String or Stream and _the output JSON will exactly match the
+original input JSON stream_.  This permits a JVM receiving JSON strings / streams that contain class references which 
+do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can 
+be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
+can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 
-This will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the `Map` keys (Strings), and the field values are the associated Map's values. In this representation the `Map` instance returned is actually a `JsonObject` instance (from **json-io**).  This `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see the type information, position within the JSON stream, and other information.
-
-This 'Maps' representation can be re-written to a JSON String or Stream and _the output JSON will exactly match the original input JSON stream_.  This permits a JVM receiving JSON strings / streams that contain class references which do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data!_
-
-### Optional Arguments (Features)
-
-Both the `JsonWriter` and `JsonReader` allow you to pass in an optional arguments `Map<String, Object>`.  This `Map` has well known keys (constants from `JsonWriter` / `JsonWriter`).  To enable the respective feature, first create a `Map`.  Then place the well known key in the `Map` and associate the appropriate setting as the value.  Below is a complete list of features and some example usages.  Shown in Groovy for brevity.
-
-    Map args = [
-            (JsonWriter.SHORT_META_KEYS):true,
-            (JsonWriter.TYPE_NAME_MAP):[
-                'java.util.ArrayList':'alist', 
-                'java.util.LinkedHashMap':'lmap', 
-                (TestObject.class.getName()):'testO'
-            ]
-    ]
-    String json = JsonWriter.objectToJson(list, args)
-        
-In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the `JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
-
-#### All of the optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
+#### The optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
     CUSTOM_WRITER_MAP       // Set to Map<Class, JsonWriter.JsonClassWriterEx> to
                             // override the default JSON output for a given class. 
@@ -120,9 +138,10 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
     TYPE_NAME_MAP           // If set, this map will be used when writing @type values.
                             // Allows short-hand abbreviations for type names.
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
-                            // @ref => @r, and @id => @i 
+                            // @ref => @r, and @id => @i
+    SKIP_NULL_FIELDS        // Do not write fields that have null as their value                             
 
-#### All of the optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
+#### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
     CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReaderEx> to
                             // override the default JSON reader for a given class. 
@@ -142,10 +161,14 @@ In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_K
                             // location in the JSON will be given.
       
 ### Customization
-New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it to be read / written specially in the JSON output.  **json-io** 1.x required a custom method be implemented on the object which was having its JSON format customized.  This support has been removed.  That approach required access to the source code for the class being customized.  The new **json-io** 2.0+ approach allows you to customize the JSON format for classes for which you do not have the source code.
+
+#### Customization technique 1: Custom serializer
+New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it 
+to be read / written specially in the JSON output.  The **json-io** approach allows you to customize the JSON format for 
+classes for which you do not have the source code.
 
     Example (in Groovy). Note the Person has a List of pets, and in this case, it re-uses 
-    JsonWriter to write that part of the class out (not need to customize it):
+    JsonWriter to write that part of the class out (no need to customize it):
     
     static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
     {
@@ -161,8 +184,89 @@ New APIs have been added to allow you to associate a custom reader / writer clas
         }
     }
 
+#### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
+There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
+a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
+However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
+if particular parameters are not passed into it.
+                                                                                  
+In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to assign a `ClassFactory` or `ClassFactoryEx` 
+that you implement to instantiate the class. **json-io** will call your `ClassFactory.newInstance(Class c)` 
+(or `ClassFactoryEx.newInstance(Class c, Map args)`) to create the class that it could not construct.  Your `ClassFactory` 
+will be called to create the instance.  In case you need values from the object being instantiated in order to construct it,
+use the `ClassFactoryEx` to instantiate it.  This class factory has the API `newInstance(Class c, Map args)` which will
+be called with the Class to instantiate and the JSON object that represents it (already read in).  In the args `Map`, 
+the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currently being read.  You can pull field values
+from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
+stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
+ 
+#### Customization technique 3: Drop unwanted fields
+Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
+is being written out, only the fields you list will be written out.
+
+#### Customization technique 4: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
+Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
+to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
+`alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
+
+  
+      Map args = [
+              (JsonWriter.SHORT_META_KEYS):true,
+              (JsonWriter.TYPE_NAME_MAP):[
+                  'java.util.ArrayList':'alist', 
+                  'java.util.LinkedHashMap':'lmap', 
+                  (TestObject.class.getName()):'testO'
+              ]
+      ]
+      String json = JsonWriter.objectToJson(list, args)
+          
+In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the
+`JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
+
+#### Customization technique 5: Processing JSON from external sources.
+When reading JSON from external sources, you may want to start with:
+
+ in Groovy:
+ 
+    Object data = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true])
+    
+In Java:
+
+    Map args = new HashMap();
+    args.put(JsonReader.USE_MAPS, true);
+    Object data = JsonReader.jsonToJava(json, args);
+
+
+This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 
+This will get you going right away.
+  
+To write 'generic' JSON (without `@type` or `@items`, etc.) entries, use:
+
+in Groovy:
+
+    String json = JsonWriter.objectToJson(objToWrite, [(JsonWriter.TYPE):false])
+
+In Java:
+
+    Map args = new HashMap();
+    args.put(JsonWriter.TYPE, false);
+    String json = JsonWriter.objectToJson(objToWrite, args);
+    
+Objects will not include the `@type` flags or `@items`.  This JSON passes nicely to non-Java receivers, like Javascript. 
+Keep in mind, you will be working with the JSON as generic `object.field` and `object[index]` with this approach.  
+
+Please note that if you write your object graph out with `JsonWriter.TYPE: false`, the shape of the graph will be 
+maintained.  What this means, is that if two different places in your object graph point to the same object, the first 
+reference will write the actual object, the 2nd and later references will write a reference (`@ref`) to the first instance.
+This will read in just fine with `JsonReader.jsonToJava()`, and the appropriate `Map` reference will be placed in all 
+referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js` to parse the read in JSON
+so that it can perform the substitutions of the `@ref`'s. (See `src/test/resource` folder for `jsonUtil.js`).
+
 ### Javascript
-Included is a small Javascript utility that will take a JSON output stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  In addition, the `@keys` / `@items` will also be converted into Javascript Maps and Arrays.  Finally, there is a Javascript API that will convert a full Javascript object graph to JSON, (even if it has cycles within the graph).  This will maintain the proper graph-shape when sending it from the client back to the server.
+Included is a small Javascript utility (`jsonUtil.js` in the `src/test/resources` folder) that will take a JSON output 
+stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
+call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  
 
 ### What's next?
 Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
@@ -180,29 +284,43 @@ Many projects use `JsonWriter` to write an object to JSON, then use the `JsonRea
     }
 
 ### Debugging
-Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It will reveal the object in all it's glory.
+Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It
+will reveal the object in all it's glory.
 
 ### Pretty-Printing JSON
-Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a `Map` with a key of `JsonWriter.PRETTY_PRINT` and a value of 'true' (`boolean` or `String`).  When run this way, the JSON written by the `JsonWriter` will be formatted in a nice, human readable format.
+Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing
+JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a `Map` with a key of `JsonWriter.PRETTY_PRINT`
+and a value of 'true' (`boolean` or `String`).  When run this way, the JSON written by the `JsonWriter` will be formatted
+in a nice, human readable format.
 
 ### RESTful support
-**json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
+**json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server
+in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
 
 See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes Ajax / XHR calls.
 
 Featured on http://json.org.
-
-### Sponsors
-![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")
-
-YourKit supports open source projects with its full-featured Java Profiler.
-YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
-and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profiler</a>,
-innovative and intelligent tools for profiling Java and .NET applications.
-
-![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")
 ___
 ### Revision History
+ * 4.4.0
+  * JsonReader.jsonToMaps() API is no longer recommended (not yet deprecated).  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
+ * 4.3.1
+  * Enhancement: Skip null fields.  When this flag is set on the `JsonWriter` optional arguments, fields which have a null value are not written in the JSON output.
+ * 4.3.0
+  * Double / Float Nan and inifinity are now written as null, per RFC 4627
+  * JsonReader.jsonToJava() can now be used to read input into Maps only (as opposed to attempting to create specific Java objects.
+    Using this API allows the return value to support an array [], object, string, double, long, null as opposed to the JsonReader.jsonToMaps()
+    API which forces the return value to be a Map.  May deprecate JsonReader.jsonToMaps() in the future.
+ * 4.2.1
+  * Bug fix: The error message showing any parsing errors put the first character of the message at the end of the message (off by one error on a ring buffer).
+  * Parsing exceptions always include the line number and column number (there were a couple of places in the code that did not do this).
+ * 4.2.0
+  * Enhancement: In Map of Maps mode, all fields are kept, even if they start with @.  In the past fields starting with @ were skipped.
+  * Ehancement: No longer throws ClassNotFound exception when the class associated to the @type is not found.  Instead it returns a LinkedHashMap, which works well in Map of Maps mode.  In Object mode, it *may* work if the field can have the Map set into it, otherwise an error will be thrown indicating that a Map cannot be set into field of type 'x'.
+  * Bug fix: In Map of Maps mode, Object[] were being added with an @items field.  The object[] is now stored directly in the field holding it.  If an Object[] is 'pointed to' (re-used), then it will be written as an object { } with an @id identifying the object, and an @items field containing the array's elements.
+ * 4.1.10
+  * Enhancement: Java's EnumSet support added (submitted by @francisu) without need for using custom instantiator.
+  * Enhancement: Added support for additional instantiator, ClassFactory2 that takes the Class (c) and the JsonObject which the instance will be filled from.  Useful for custom readers.
  * 4.1.9
   * Bug fix: When writing a Map that has all String keys, the keys were not being escaped for quotes (UTF-8 characters in general).
  * 4.1.8

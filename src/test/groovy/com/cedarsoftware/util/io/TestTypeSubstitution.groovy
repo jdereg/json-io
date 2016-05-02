@@ -52,7 +52,8 @@ class TestTypeSubstitution
         ]
         Map args = [(JsonWriter.TYPE_NAME_MAP):types]
         String json = JsonWriter.objectToJson(p, args)
-        Person clone = JsonReader.jsonToMaps(json, args)
+        args[(JsonReader.USE_MAPS)] = true
+        Person clone = JsonReader.jsonToJava(json, args)
         assert clone.name == 'John'
         assert clone.pets.equals(p.pets)
     }
