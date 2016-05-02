@@ -32,6 +32,7 @@ class TestSet
         private Set _hashSet;
         private Set _treeSet;
         private EnumSet<EnumValues> _enumSet;
+        SetRef _setRef;
 
         private void init()
         {
@@ -67,11 +68,27 @@ class TestSet
             _treeSet.addAll(_hashSet)
 
             _enumSet = EnumSet.allOf(EnumValues);
+
         }
 
         private ManySets()
         {
         }
+    }
+
+    static class SetRef
+    {
+        EnumSet _enumSet;
+    }
+
+    protected void checkSet(ManySets testSet)
+    {
+        assertTrue(testSet._treeSet.size() == 26)
+        assertTrue(testSet._hashSet.size() == 26)
+        assertTrue(testSet._treeSet.containsAll(testSet._hashSet))
+        assertTrue(testSet._hashSet.containsAll(testSet._treeSet))
+        assertEquals("alpha", testSet._treeSet.iterator().next())
+        assertTrue(testSet._enumSet.containsAll(EnumSet.allOf(ManySets.EnumValues)));
     }
 
     @Test
@@ -83,12 +100,23 @@ class TestSet
 
         ManySets testSet = (ManySets) TestUtil.readJsonObject(json)
         TestUtil.printLine("json = " + json)
+        checkSet(testSet);
+    }
 
-        assertTrue(testSet._treeSet.size() == 26)
-        assertTrue(testSet._hashSet.size() == 26)
-        assertTrue(testSet._treeSet.containsAll(testSet._hashSet))
-        assertTrue(testSet._hashSet.containsAll(testSet._treeSet))
-        assertEquals("alpha", testSet._treeSet.iterator().next())
-        assertTrue(testSet._enumSet.containsAll(EnumSet.allOf(ManySets.EnumValues)));
+    @Test
+    void testSetRef()
+    {
+        ManySets set = new ManySets()
+        set.init()
+
+        SetRef setRef = new SetRef();
+        setRef._enumSet = set._enumSet;
+        set._setRef = setRef;
+
+        String json = TestUtil.getJsonString(set)
+
+        ManySets testSet = (ManySets) TestUtil.readJsonObject(json)
+        TestUtil.printLine("json = " + json)
+        checkSet(testSet);
     }
 }
