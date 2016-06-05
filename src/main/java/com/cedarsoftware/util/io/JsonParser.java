@@ -196,7 +196,6 @@ class JsonParser
                     }
 
                     Object value = readValue(object);
-                    System.out.println("Field: " + field + " value: " + value);
                     if ("@type".equals(field) && typeNameMap != null)
                     {
                         final String substitute = typeNameMap.get(value);
