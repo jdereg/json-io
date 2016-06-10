@@ -165,7 +165,52 @@ can be read, modified, and then re-written by a JVM that does not contain any of
       
 ### Customization
 
-#### Customization technique 1: Custom serializer
+#### Customization technique 1: Drop unwanted fields
+* **White-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
+is being written, only the fields you list will be written.
+
+* **Black-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Use the `JsonWriter.FIELD_NAME_BLACK_LIST` to associate a `List` of `String` field names to a particular `Class` C.  When the class
+is being written, any field listed here will not be written.  Black-listed fields take priority over white listed
+fields.
+
+#### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
+There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
+a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
+However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
+if particular parameters are not passed into it.
+                                                                                  
+In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to assign a `ClassFactory` or `ClassFactoryEx` 
+that you implement to instantiate the class. **json-io** will call your `ClassFactory.newInstance(Class c)` 
+(or `ClassFactoryEx.newInstance(Class c, Map args)`) to create the class that it could not construct.  Your `ClassFactory` 
+will be called to create the instance.  In case you need values from the object being instantiated in order to construct it,
+use the `ClassFactoryEx` to instantiate it.  This class factory has the API `newInstance(Class c, Map args)` which will
+be called with the Class to instantiate and the JSON object that represents it (already read in).  In the args `Map`, 
+the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currently being read.  You can pull field values
+from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
+stuff the values from the `jsonObj` (`JsonObject`) into the instance you create.
+ 
+#### Customization technique 3: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
+Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
+to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
+`alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
+
+  
+      Map args = [
+              (JsonWriter.SHORT_META_KEYS):true,
+              (JsonWriter.TYPE_NAME_MAP):[
+                  'java.util.ArrayList':'alist', 
+                  'java.util.LinkedHashMap':'lmap', 
+                  (TestObject.class.getName()):'testO'
+              ]
+      ]
+      String json = JsonWriter.objectToJson(list, args)
+          
+In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the
+`JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.
+         
+#### Customization technique 4: Custom serializer
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it 
 to be read / written specially in the JSON output.  The **json-io** approach allows you to customize the JSON format for 
 classes for which you do not have the source code.
@@ -186,53 +231,7 @@ classes for which you do not have the source code.
             writer.writeImpl(p.getPets(), true)
         }
     }
-
-#### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactoryEx)`
-There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
-a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
-However, sometimes a class just cannot be constructed, for example, one that has a constructor that throws an exception 
-if particular parameters are not passed into it.
-                                                                                  
-In these instances, use the `JsonReader.assignInstantiator(class, Factory)` to assign a `ClassFactory` or `ClassFactoryEx` 
-that you implement to instantiate the class. **json-io** will call your `ClassFactory.newInstance(Class c)` 
-(or `ClassFactoryEx.newInstance(Class c, Map args)`) to create the class that it could not construct.  Your `ClassFactory` 
-will be called to create the instance.  In case you need values from the object being instantiated in order to construct it,
-use the `ClassFactoryEx` to instantiate it.  This class factory has the API `newInstance(Class c, Map args)` which will
-be called with the Class to instantiate and the JSON object that represents it (already read in).  In the args `Map`, 
-the key 'jsonObj' will have the associated `JsonObject` (`Map`) that is currently being read.  You can pull field values
-from this object to create and return the instance.  After your code creates the instance, **json-io** will reflectively
-stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
-#### Customization technique 3: Drop unwanted fields
-* **White-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
-Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
-is being written, only the fields you list will be written.
-
-* **Black-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
-Use the `JsonWriter.FIELD_NAME_BLACK_LIST` to associate a `List` of `String` field names to a particular `Class` C.  When the class
-is being written, any field listed here will not be written.  Black-listed fields take priority over white listed
-fields.
-
-
-#### Customization technique 4: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
-Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
-to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
-`alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
-
-  
-      Map args = [
-              (JsonWriter.SHORT_META_KEYS):true,
-              (JsonWriter.TYPE_NAME_MAP):[
-                  'java.util.ArrayList':'alist', 
-                  'java.util.LinkedHashMap':'lmap', 
-                  (TestObject.class.getName()):'testO'
-              ]
-      ]
-      String json = JsonWriter.objectToJson(list, args)
-          
-In this example, we create an 'args' `Map`, set the key `JsonWriter.SHORT_META_KEYS` to `true` and set the
-`JsonWriter.TYPE_NAME_MAP` to a `Map` that will be used to substitute class names for short-hand names.         
-
 #### Customization technique 5: Processing JSON from external sources.
 When reading JSON from external sources, you may want to start with:
 
@@ -312,7 +311,8 @@ Featured on http://json.org.
 ___
 ### Revision History
  * 4.5.0
-  * Black-list support for excluding fields.  Submitted by @sgandon 
+  * Black-list support for excluding fields.  Submitted by @sgandon
+  * Pretty-print with support for options.  Submitted by @dtracers
  * 4.4.0
   * JsonReader.jsonToMaps() API is no longer recommended (not yet deprecated).  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
  * 4.3.1

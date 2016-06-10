@@ -231,26 +231,28 @@ public class JsonWriter implements Closeable, Flushable
      */
     public static String formatJson(String json)
     {
-        formatJson(json, null, null)
+        return formatJson(json, null, null);
     }
     
     /**
      * Format the passed in JSON string in a nice, human readable format.
      * @param json String input JSON
-     * @param readingArgs (optional) Map of extra arguments for parsing json.
-     * @param writingArgs (optional) Map of extra arguments for writing out json.
+     * @param readingArgs (optional) Map of extra arguments for parsing json.  Can be null.
+     * @param writingArgs (optional) Map of extra arguments for writing out json.  Can be null.
      * @return String containing equivalent JSON, formatted nicely for human readability.
      */
     public static String formatJson(String json, Map readingArgs, Map writingArgs)
     {
         Map args = new HashMap();
-        if (readingArgs != null) {
+        if (readingArgs != null)
+        {
             args.putAll(readingArgs);
         }
         args.put(JsonReader.USE_MAPS, true);
         Object obj = JsonReader.jsonToJava(json, args);
         args.clear();
-        if (writingArgs != null) {
+        if (writingArgs != null)
+        {
             args.putAll(writingArgs);
         }
         args.put(PRETTY_PRINT, true);
