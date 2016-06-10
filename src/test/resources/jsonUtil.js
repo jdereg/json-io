@@ -75,7 +75,7 @@ function walk(jObj, idsToObjs)
         if (!value)
             continue;
 
-        if (field === "@id")
+        if (field === "@id" || field === '$id')
         {
             idsToObjs[value] = jObj;
         }
@@ -106,6 +106,13 @@ function substitute(parent, fieldName, jObj, idsToObjs)
             if (parent && fieldName)
             {
                 parent[fieldName] = idsToObjs[jObj["@ref"]];
+            }
+        }
+        else if (field === "$ref")
+        {
+            if (parent && fieldName)
+            {
+                parent[fieldName] = idsToObjs[jObj["$ref"]];
             }
         }
         else if (typeof(value) === "object")

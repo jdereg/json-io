@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.4.0</version>
+      <version>4.5.0</version>
     </dependency>
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
@@ -129,7 +129,10 @@ can be read, modified, and then re-written by a JVM that does not contain any of
     PRETTY_PRINT            // Force nicely formatted JSON output 
                             // (See http://jsoneditoronline.org for example format)
     FIELD_SPECIFIERS        // Set to a Map<Class, List<String>> which is used to 
-                            // control which fields of a class are output. 
+                            // control which fields of a class are output.
+    FIELD_NAME_BLACK_LIST   // Set value to a Map<Class, List<String>> which will be used
+                            // to control which fields on a class are not output. Black 
+                            // list has always priority to FIELD_SPECIFIERS                         
     ENUM_PUBLIC_ONLY        // If set, indicates that private variables of ENUMs are not 
                             // serialized.
     WRITE_LONGS_AS_STRINGS  // If set, longs are written in quotes (Javascript safe).
@@ -201,9 +204,15 @@ from this object to create and return the instance.  After your code creates the
 stuff the values from the `jsonObj` (`JsonObject`) into the instance you create. 
  
 #### Customization technique 3: Drop unwanted fields
-Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+* **White-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
 Use the `JsonWriter.FIELD_SPECIFIERS` to associate a `List` of `String` field names to a particular `Class` C.  When the class
-is being written out, only the fields you list will be written out.
+is being written, only the fields you list will be written.
+
+* **Black-List support**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
+Use the `JsonWriter.FIELD_NAME_BLACK_LIST` to associate a `List` of `String` field names to a particular `Class` C.  When the class
+is being written, any field listed here will not be written.  Black-listed fields take priority over white listed
+fields.
+
 
 #### Customization technique 4: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
 Set `JsonWriter.SHORT_META_KEYS` to `true` to see the single-letter meta keys used in the outputted JSON.  In addition
@@ -302,6 +311,8 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.5.0
+  * Black-list support for excluding fields.  Submitted by @sgandon 
  * 4.4.0
   * JsonReader.jsonToMaps() API is no longer recommended (not yet deprecated).  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
  * 4.3.1
