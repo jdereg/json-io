@@ -63,6 +63,8 @@ public class JsonWriter implements Closeable, Flushable
     public static final String TYPE = "TYPE";                       // Force @type always
     public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
+    public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS 
+    private static final String FIELD_BLACK_LIST = "FIELD_BLACK_LIST"; // same as above only internal for storing Field instances instead of strings. This avoid the initial argument content to be modified.
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
@@ -320,6 +322,35 @@ public class JsonWriter implements Closeable, Flushable
         else
         {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
             args.put(FIELD_SPECIFIERS, new HashMap());
+        }
+        if (optionalArgs.containsKey(FIELD_NAME_BLACK_LIST))
+        {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
+            Map<Class, List<String>> blackList = (Map<Class, List<String>>) args.get(FIELD_NAME_BLACK_LIST);
+            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
+            for (Entry<Class, List<String>> entry : blackList.entrySet())
+            {
+                Class c = entry.getKey();
+                List<String> fields = entry.getValue();
+                List<Field> newList = new ArrayList(fields.size());
+
+                Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
+
+                for (String field : fields)
+                {
+                    Field f = classFields.get(field);
+                    if (f == null)
+                    {
+                        throw new JsonIoException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_NAME_BLACK_LIST map existing on the associated class.");
+                    }
+                    newList.add(f);
+                }
+                copy.put(c, newList);
+            }
+            args.put(FIELD_BLACK_LIST, copy);
+        }
+        else
+        {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
+            args.put(FIELD_BLACK_LIST, new HashMap());
         }
 
         try
@@ -2019,12 +2050,16 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         final Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
+        final List<Field> fieldBlackListForClass = getFieldsUsingSpecifier(obj.getClass(), (Map) args.get(FIELD_BLACK_LIST));
         final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
-        {   // Caller is associating a class name to a set of fields for the given class (allows subset of fields to be written)
+        {   
             for (Field field : externallySpecifiedFields)
-            {   // Not currently supporting overwritten field names in hierarchy when using external field specifier
-                first = writeField(obj, first, field.getName(), field, true);
+            {   //output field if not on the blacklist
+                if (fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)){
+                    // Not currently supporting overwritten field names in hierarchy when using external field specifier
+                    first = writeField(obj, first, field.getName(), field, true);
+                }//else field is black listed.
             }
         }
         else
@@ -2034,7 +2069,10 @@ public class JsonWriter implements Closeable, Flushable
             {
                 final String fieldName = entry.getKey();
                 final Field field = entry.getValue();
-                first = writeField(obj, first, fieldName, field, false);
+                //output field if not on the blacklist
+                if (fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)){
+                    first = writeField(obj, first, fieldName, field, false);
+                }//else field is black listed.
             }
         }
 

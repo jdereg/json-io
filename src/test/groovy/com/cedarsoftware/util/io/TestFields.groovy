@@ -551,4 +551,53 @@ class TestFields
         tl = (TestLocale) TestUtil.readJsonObject(json)
         assertTrue(locale.equals(tl._loc))
     }
+    
+    @Test
+    void testFieldBlackList()
+    {
+        Map<Class, List<String>> blackLists = [(PainfulToSerialize.class):['classLoader']]
+        PainfulToSerialize painful = new PainfulToSerialize()
+        painful.name = "Android rocks"
+
+        def args = [(JsonWriter.FIELD_NAME_BLACK_LIST):blackLists]
+        String json = JsonWriter.objectToJson(painful, args)
+        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        assertTrue(check.size() == 1)
+        assertTrue(check.containsKey("name"))
+    }
+
+    @Test
+    void testFieldBlackListInheritance()
+    {
+        Map<Class, List<String>> blackLists = [(PainfulToSerialize.class):['classLoader']]
+        MorePainfulToSerialize painful = new MorePainfulToSerialize()
+        painful.name = "Android rocks"
+        painful.age = 50;
+
+        def args = [(JsonWriter.FIELD_NAME_BLACK_LIST):blackLists]
+        String json = JsonWriter.objectToJson(painful, args)
+        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        assertTrue(check.size() == 2)
+        assertTrue(check.containsKey("name"))
+        assertTrue(check.containsKey("age"))
+    }
+
+    @Test
+    void testFieldBlackListPriorityToSpecifier()
+    {
+        Map<Class, List<String>> fieldSpecifiers = [(PainfulToSerialize.class):['name','classLoader']]
+        Map<Class, List<String>> blackLists = [(PainfulToSerialize.class):['classLoader']]
+        
+        PainfulToSerialize painful = new PainfulToSerialize()
+        painful.name = "Android rocks"
+
+        Map args = new HashMap()
+        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
+        args.put(JsonWriter.FIELD_NAME_BLACK_LIST, blackLists)
+        String json = JsonWriter.objectToJson(painful, args)
+        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        assertTrue(check.size() == 1)
+        assertTrue(check.containsKey("name"))
+    }
+
 }
