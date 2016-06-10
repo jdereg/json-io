@@ -927,7 +927,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            writeObject(obj, showType);
+            writeObject(obj, showType, false);
         }
     }
 
@@ -2034,31 +2034,35 @@ public class JsonWriter implements Closeable, Flushable
      * @param showType boolean true means show the "@type" field, false
      *                 eliminates it.  Many times the type can be dropped because it can be
      *                 inferred from the field or array type.
+     * @param bodyOnly write only the body of the object
      * @throws IOException if an error occurs writing to the output stream.
      */
-    private void writeObject(final Object obj, boolean showType) throws IOException
+    public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException
     {
         if (neverShowType)
         {
             showType = false;
         }
-        out.write('{');
-        tabIn();
         final boolean referenced = objsReferenced.containsKey(obj);
-        if (referenced)
+        if (!bodyOnly)
         {
-            writeId(getId(obj));
-        }
+            out.write('{');
+            tabIn();
+            if (referenced)
+            {
+                writeId(getId(obj));
+            }
 
-        if (referenced && showType)
-        {
-            out.write(',');
-            newLine();
-        }
+            if (referenced && showType)
+            {
+                out.write(',');
+                newLine();
+            }
 
-        if (showType)
-        {
-            writeType(obj, out);
+            if (showType)
+            {
+                writeType(obj, out);
+            }
         }
 
         boolean first = !showType;
@@ -2094,8 +2098,11 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
 
-        tabOut();
-        out.write('}');
+        if (!bodyOnly)
+        {
+            tabOut();
+            out.write('}');
+        }
     }
 
     private boolean writeField(Object obj, boolean first, String fieldName, Field field, boolean allowTransient) throws IOException
@@ -2152,7 +2159,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            writeImpl(o, forceType || alwaysShowType);
+            writeImpl(o, forceType || alwaysShowType, true, true);
         }
         return false;
     }

@@ -44,11 +44,16 @@ import java.util.*;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class ObjectResolver extends Resolver
+public class ObjectResolver extends Resolver
 {
+
+    protected JsonReader.MissingFieldHandler missingFieldHandler;
+
+
     protected ObjectResolver(JsonReader reader)
     {
         super(reader);
+        missingFieldHandler = reader.getMissingFieldHandler();
     }
 
     /**
@@ -58,15 +63,8 @@ class ObjectResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
-        Object special;
-        if ((special = readIfMatching(jsonObj, null, stack)) != null)
-        {
-            jsonObj.target = special;
-            return;
-        }
-
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
@@ -80,6 +78,13 @@ class ObjectResolver extends Resolver
             if (field != null)
             {
                 assignField(stack, jsonObj, field, rhs);
+            }
+            else
+            {
+                if (missingFieldHandler != null)
+                {
+                    missingFieldHandler.fieldMissing(javaMate, key, rhs);
+                }
             }
         }
     }
