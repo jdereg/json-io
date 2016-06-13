@@ -231,7 +231,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public static String formatJson(String json)
     {
-        formatJson(json, null, null)
+        return formatJson(json, null, null);
     }
     
     /**
