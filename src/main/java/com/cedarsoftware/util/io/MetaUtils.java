@@ -365,7 +365,7 @@ public class MetaUtils
         Class currentClass = null;
         if (null == primitiveArray)
         {
-            currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
+            currentClass = MetaUtils.class.getClassLoader().loadClass(className);
         }
 
         if (arrayType)
