@@ -414,6 +414,43 @@ class TestErrors
         assert list[2].fingers == 5
     }
 
+    private static class Animal
+    {
+
+    }
+
+    private static class Dog extends Animal
+    {
+
+    }
+
+    private static class AnimalHolder
+    {
+        Animal dog;
+    }
+
+    @Test
+    void testBadTypeObject()
+    {
+        // Unclear and misleading error if the type is not found
+        AnimalHolder h = new AnimalHolder()
+        h.dog = new Dog()
+
+        String json = TestUtil.getJsonString(h)
+        json = json.replace('$Dog', '$BadDog');
+        println(json);
+        try
+        {
+            TestUtil.readJsonObject(json)
+        }
+        catch (Exception e)
+        {
+            println(e);
+            // Should indicate the type that was not found
+            assert e.toString().contains("BadDog");
+        }
+    }
+
     @Test
     void testBadHexNumber()
     {

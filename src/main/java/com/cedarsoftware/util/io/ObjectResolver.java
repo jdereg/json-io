@@ -214,7 +214,12 @@ class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            throw new JsonIoException(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
+            String message = e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs;
+            if (MetaUtils.loadClassException != null)
+            {
+                message += " Caused by: " + MetaUtils.loadClassException + " (which created a LinkedHashMap instead of the desired class)";
+            }
+            throw new JsonIoException(message, e);
         }
     }
 
