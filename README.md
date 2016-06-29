@@ -310,7 +310,7 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
- * 4.5.0
+ * 4.5.0 (still under development)
   * Black-list support for excluding fields.  Submitted by @sgandon
   * Pretty-print with support for options.  Submitted by @dtracers
  * 4.4.0
