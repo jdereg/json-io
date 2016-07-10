@@ -46,9 +46,14 @@ import java.util.*;
  */
 class ObjectResolver extends Resolver
 {
+
+    protected JsonReader.MissingFieldHandler missingFieldHandler;
+
+
     protected ObjectResolver(JsonReader reader)
     {
         super(reader);
+        missingFieldHandler = reader.getMissingFieldHandler();
     }
 
     /**
@@ -80,6 +85,13 @@ class ObjectResolver extends Resolver
             if (field != null)
             {
                 assignField(stack, jsonObj, field, rhs);
+            }
+            else
+            {
+                if (missingFieldHandler != null)
+                {
+                    missingFieldHandler.fieldMissing(javaMate, key, rhs);
+                }
             }
         }
     }
