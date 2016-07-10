@@ -281,6 +281,8 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
+    static Exception loadClassException;
+
     static Class classForName(String name)
     {
         try
@@ -292,10 +294,13 @@ public class MetaUtils
             Class c = nameToClass.get(name);
             try
             {
+                loadClassException = null;
                 return c == null ? loadClass(name) : c;
             }
             catch (Exception e)
             {
+                // Remember why in case later we have a problem
+                loadClassException = e;
                 return LinkedHashMap.class;
             }
         }
