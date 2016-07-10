@@ -79,6 +79,7 @@ abstract class Resolver
     {
         this.reader = reader;
         Map optionalArgs = reader.getArgs();
+        optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
     }
@@ -121,13 +122,23 @@ abstract class Resolver
             }
             else
             {
-                traverseFields(stack, jsonObj);
+                Object special;
+                if ((special = readIfMatching(jsonObj, null, stack)) != null)
+                {
+                    jsonObj.target = special;
+                }
+                else
+                {
+                    traverseFields(stack, jsonObj);
+                }
             }
         }
         return root.target;
     }
 
-    protected abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
+    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack);
+
+    public abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
     protected abstract void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 

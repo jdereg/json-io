@@ -51,7 +51,13 @@ public class MapResolver extends Resolver
         super(reader);
     }
 
-    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    protected Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack)
+    {
+        // No custom reader support for maps
+        return null;
+    }
+
+    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())

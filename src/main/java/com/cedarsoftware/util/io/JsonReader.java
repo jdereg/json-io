@@ -57,6 +57,7 @@ public class JsonReader implements Closeable
     public static final String USE_MAPS = "USE_MAPS";                   // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
     public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";       // What to do when an object is found and 'type' cannot be determined.
     public static final String JSON_READER = "JSON_READER";             // Pointer to 'this' (automatically placed in the Map)
+    public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";     // Pointer to the current ObjectResolver (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";         // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
     public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";         // If set, this object will be called when a field is present in the JSON but missing from the corresponding class
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
