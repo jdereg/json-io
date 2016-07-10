@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.23.0</version.java-util>           <!-- only test dependency -->
+        <version.java-util>1.24.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
         <version.groovy>2.4.7</version.groovy>                  <!-- only test dependency -->
         <version.gson>2.6.2</version.gson>                        <!-- only test dependency -->
