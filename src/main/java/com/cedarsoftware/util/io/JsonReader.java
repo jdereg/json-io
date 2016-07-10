@@ -58,8 +58,10 @@ public class JsonReader implements Closeable
     public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";       // What to do when an object is found and 'type' cannot be determined.
     public static final String JSON_READER = "JSON_READER";             // Pointer to 'this' (automatically placed in the Map)
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";         // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
+    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";         // If set, this object will be called when a field is present in the JSON but missing from the corresponding class
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
+    protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<Class>();
     private static final Map<Class, Factory> factory = new ConcurrentHashMap<Class, Factory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
@@ -126,6 +128,23 @@ public class JsonReader implements Closeable
     public interface ClassFactoryEx extends Factory
     {
         Object newInstance(Class c, Map args);
+    }
+
+    /**
+     * Used to react to fields missing when reading an object.
+     * <p>
+     * Used in conjunction with {@link JsonReader#MISSING_FIELD_HANDLER}.
+     */
+    public interface MissingFieldHandler
+    {
+        /**
+         * Notify that a field is missing
+         * @param object the object that contains the missing field
+         * @param fieldName name of the field to be replaced
+         * @param value current value of the field
+          */
+        void fieldMissing(Object object, String fieldName, Object value);
+
     }
 
     /**
@@ -247,6 +266,16 @@ public class JsonReader implements Closeable
     public void addNotCustomReader(Class c)
     {
         notCustom.add(c);
+    }
+
+    MissingFieldHandler getMissingFieldHandler()
+    {
+        return missingFieldHandler;
+    }
+
+    public void setMissingFieldHandler(MissingFieldHandler handler)
+    {
+        missingFieldHandler = handler;
     }
 
     /**
@@ -457,6 +486,8 @@ public class JsonReader implements Closeable
             }
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
         }
+
+        setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
 
         Map<Class, JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
         if (customReaders != null)
