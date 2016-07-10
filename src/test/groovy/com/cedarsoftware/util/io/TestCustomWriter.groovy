@@ -186,7 +186,7 @@ class TestCustomWriter
         }
     }
 
-    Person createTestPerson()
+    static Person createTestPerson()
     {
         Person p = new Person()
         p.firstName = 'Michael'
@@ -196,7 +196,7 @@ class TestCustomWriter
         return p
     }
 
-    Pet createPet(String name, String type, int age)
+    static Pet createPet(String name, String type, int age)
     {
         Pet pet = new Pet()
         pet.name = name

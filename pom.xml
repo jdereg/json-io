@@ -95,6 +95,7 @@
     			<configuration>
 					<instructions>
         				<Export-Package>com.cedarsoftware.util.io</Export-Package>
+                        <DynamicImport-Package>*</DynamicImport-Package>
       				</instructions>
     			</configuration>
     			<executions>
