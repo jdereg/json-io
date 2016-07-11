@@ -360,6 +360,8 @@ public class JsonReader implements Closeable
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param json String of JSON content
+     * @return Map representing JSON content.  Each object is represented by a Map.
      */
     public static Map jsonToMaps(String json)
     {
@@ -371,6 +373,10 @@ public class JsonReader implements Closeable
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param json String of JSON content
+     * @param optionalArgs Map of optional arguments to control customization.  See readme file for
+     * details on these options.
+     * @return Map where each Map representa an object in the JSON input.
      */
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
@@ -399,6 +405,10 @@ public class JsonReader implements Closeable
      * Use JsonReader.jsonToJava(inputStream, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param inputStream containing JSON content
+     * @param optionalArgs Map of optional arguments to control customization.  See readme file for
+     * details on these options.
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {

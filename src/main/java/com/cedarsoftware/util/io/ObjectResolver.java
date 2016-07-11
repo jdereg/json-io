@@ -9,7 +9,7 @@ import java.util.*;
  * to them to indicate what Java peer instance to create.  The reason type is optional
  * is because it can be inferred in a couple instances.  A non-primitive field that
  * points to an object that is of the same type of the field, does not require the
- * @type because it can be inferred from the field.  This is not always the case.
+ * '@type' because it can be inferred from the field.  This is not always the case.
  * For example, if a Person field points to an Employee object (where Employee is a
  * subclass of Person), then the resolver cannot create an instance of the field type
  * (Person) because this is not the proper type.  (It had an Employee record with more
@@ -21,7 +21,7 @@ import java.util.*;
  * the '@type' but the employee instances will (because they are more derived than Person).
  *
  * The resolver 'rewires' the original object graph.  It does this by replacing
- * @ref values in the Maps with pointers (on the field of the associated instance of the
+ * '@ref' values in the Maps with pointers (on the field of the associated instance of the
  * Map) to the object that has the same ID.  If the object has not yet been read, then
  * an UnresolvedReference is created.  These are back-patched at the end of the resolution
  * process.  UnresolvedReference keeps track of what field or array element the actual value

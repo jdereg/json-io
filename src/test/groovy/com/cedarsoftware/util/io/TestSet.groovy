@@ -98,12 +98,12 @@ class TestSet
         assertTrue(testSet._emptyEnumSet.containsAll(EnumSet.allOf(ManySets.EmptyValues)))
         assertTrue(testSet._setOfEnums.containsAll(EnumSet.allOf(ManySets.EnumValues)))
 
-        testSet._enumSet.remove(ManySets.EnumValues.E1)
-        testSet._enumSet.remove(ManySets.EnumValues.E2)
-        testSet._enumSet.remove(ManySets.EnumValues.E3)
-        json = TestUtil.getJsonString(testSet)
-        println json
-        testSet = (ManySets) TestUtil.readJsonObject(json)
-        testSet._enumSet.add(ManySets.EnumValues.E1)
+//        testSet._enumSet.remove(ManySets.EnumValues.E1)
+//        testSet._enumSet.remove(ManySets.EnumValues.E2)
+//        testSet._enumSet.remove(ManySets.EnumValues.E3)
+//        json = TestUtil.getJsonString(testSet)
+//        println json
+//        testSet = (ManySets) TestUtil.readJsonObject(json)
+//        testSet._enumSet.add(ManySets.EnumValues.E1)
     }
 }
