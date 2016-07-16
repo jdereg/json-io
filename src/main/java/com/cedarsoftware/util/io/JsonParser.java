@@ -552,23 +552,13 @@ class JsonParser
      */
     private int skipWhitespaceRead() throws IOException
     {
-        final FastPushbackReader in = input;
+        FastPushbackReader in = input;
         int c = in.read();
-        while (true)
+        while (c == ' ' || c == '\n' || c == '\r' || c == '\t')
         {
-            switch (c)
-            {
-                case '\t':
-                case '\n':
-                case '\r':
-                case ' ':
-                    break;
-                default:
-                    return c;
-            }
-
             c = in.read();
         }
+        return c;
     }
 
     private void skipWhitespace() throws IOException

@@ -62,11 +62,12 @@ public class FastPushbackReader extends FilterReader
     {
         try
         {
-            if (snippet[i] == 0)
+            final int snip = snippet[i];
+            if (snip == 0)
             {
                 return true;
             }
-            s.appendCodePoint(snippet[i]);
+            s.appendCodePoint(snip);
         }
         catch (Exception e)
         {
@@ -77,7 +78,8 @@ public class FastPushbackReader extends FilterReader
 
     public int read() throws IOException
     {
-        final int ch = idx < buf.length ? buf[idx++] : in.read();
+        final int[] buff = buf;
+        final int ch = idx < buff.length ? buff[idx++] : in.read();
         if (ch >= 0)
         {
             if (ch == 0x0a)
@@ -89,11 +91,13 @@ public class FastPushbackReader extends FilterReader
             {
                 col++;
             }
-            snippet[snippetLoc++] = ch;
-            if (snippetLoc >= SNIPPET_LENGTH)
+            int loc = snippetLoc;
+            snippet[loc++] = ch;
+            if (loc >= SNIPPET_LENGTH)
             {
-                snippetLoc = 0;
+                loc = 0;
             }
+            snippetLoc = loc;
         }
         return ch;
     }
@@ -113,11 +117,13 @@ public class FastPushbackReader extends FilterReader
             col--;
         }
         buf[--idx] = c;
-        snippetLoc--;
-        if (snippetLoc < 0)
+        int loc = snippetLoc;
+        loc--;
+        if (loc < 0)
         {
-            snippetLoc = SNIPPET_LENGTH - 1;
+            loc = SNIPPET_LENGTH - 1;
         }
-        snippet[snippetLoc] = c;
+        snippet[loc] = c;
+        snippetLoc = loc;
     }
 }
