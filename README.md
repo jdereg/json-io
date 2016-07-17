@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.4.0</version>
+      <version>4.5.0</version>
     </dependency>
 
 Like **json-io** and find it useful? **Tip** bitcoin: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
@@ -314,6 +314,9 @@ ___
   * Improved read speed (roughly 50% faster).
   * Black-list support for excluding fields.  Submitted by @sgandon
   * Pretty-print with support for options.  Submitted by @dtracers
+  * Ability to use writeObject() API to write the 'body only'.  Submitted by @francisu
+  * Bug fix: Unclear error sometimes when a class could not be loaded.  Submitted by @francisu
+  * Enhancement: Provide optional notification of missing field. Submitted by @francisu
  * 4.4.0
   * JsonReader.jsonToMaps() API is no longer recommended (not yet deprecated).  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
  * 4.3.1
