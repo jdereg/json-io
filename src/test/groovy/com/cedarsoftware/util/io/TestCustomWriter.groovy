@@ -154,6 +154,16 @@ class TestCustomWriter
         }
     }
 
+    static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriterEx
+    {
+        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        {
+            JsonWriter writer = JsonWriter.JsonClassWriterEx.Support.getWriter(args);
+            output.write("\"_version\":12,");
+            writer.writeObject(o, false, true);
+        }
+    }
+
     static class CustomPersonReader implements JsonReader.JsonClassReaderEx
     {
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
@@ -273,5 +283,14 @@ class TestCustomWriter
         {
             assert e.message.toLowerCase().contains('error writing object')
         }
+    }
+
+    @Test
+    void testCustomWriterAddField()
+    {
+        Person p = createTestPerson()
+        String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriterAddField()]])
+        assert jsonCustom.contains("_version\":12");
+        assert jsonCustom.contains("Michael");
     }
 }
