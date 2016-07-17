@@ -311,6 +311,7 @@ Featured on http://json.org.
 ___
 ### Revision History
  * 4.5.0 (still under development)
+  * Improved read speed (roughly 50% faster).
   * Black-list support for excluding fields.  Submitted by @sgandon
   * Pretty-print with support for options.  Submitted by @dtracers
  * 4.4.0

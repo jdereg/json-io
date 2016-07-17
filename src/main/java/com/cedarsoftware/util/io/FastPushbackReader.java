@@ -11,44 +11,33 @@ import java.io.Reader;
  */
 public class FastPushbackReader extends FilterReader
 {
-    private static final int SNIPPET_LENGTH = 200;
+    private static final int bufsize = 256;
     private final int[] buf;
-    private final int[] snippet;
     private int idx;
+    private int unread = Integer.MAX_VALUE;
     protected int line;
     protected int col;
-    private int snippetLoc = 0;
 
-    FastPushbackReader(Reader reader, int size)
+    FastPushbackReader(Reader reader)
     {
         super(reader);
-        if (size <= 0)
-        {
-            throw new JsonIoException("size <= 0");
-        }
-        buf = new int[size];
-        idx = size;
-        snippet = new int[SNIPPET_LENGTH];
+        buf = new int[bufsize];
+        idx = 0;
         line = 1;
         col = 0;
-    }
-
-    FastPushbackReader(Reader r)
-    {
-        this(r, 1);
     }
 
     String getLastSnippet()
     {
         StringBuilder s = new StringBuilder();
-        for (int i=snippetLoc; i < SNIPPET_LENGTH; i++)
+        for (int i=idx; i < bufsize; i++)
         {
             if (appendChar(s, i))
             {
                 break;
             }
         }
-        for (int i=0; i < snippetLoc; i++)
+        for (int i=0; i < idx; i++)
         {
             if (appendChar(s, i))
             {
@@ -62,7 +51,7 @@ public class FastPushbackReader extends FilterReader
     {
         try
         {
-            final int snip = snippet[i];
+            final int snip = buf[i];
             if (snip == 0)
             {
                 return true;
@@ -78,36 +67,39 @@ public class FastPushbackReader extends FilterReader
 
     public int read() throws IOException
     {
-        final int[] buff = buf;
-        final int ch = idx < buff.length ? buff[idx++] : in.read();
-        if (ch >= 0)
+        int ch = unread == Integer.MAX_VALUE ? in.read() : unread;
+        unread = Integer.MAX_VALUE;
+
+        buf[idx++] = ch;
+        if (idx >= bufsize)
         {
-            if (ch == 0x0a)
-            {
-                line++;
-                col = 0;
-            }
-            else
-            {
-                col++;
-            }
-            int loc = snippetLoc;
-            snippet[loc++] = ch;
-            if (loc >= SNIPPET_LENGTH)
-            {
-                loc = 0;
-            }
-            snippetLoc = loc;
+            idx = 0;
+        }
+
+        if (ch == 0x0a)
+        {
+            line++;
+            col = 0;
+        }
+        else
+        {
+            col++;
         }
         return ch;
     }
 
     public void unread(int c) throws IOException
     {
-        if (idx == 0)
+        unread = c;
+        if (idx < 1)
         {
-            throw new JsonIoException("unread(int c) called more than buffer size (" + buf.length + ").  Increase FastPushbackReader's buffer size.  Currently " + buf.length);
+            idx = bufsize - 1;
         }
+        else
+        {
+            idx--;
+        }
+
         if (c == 0x0a)
         {
             line--;
@@ -116,14 +108,5 @@ public class FastPushbackReader extends FilterReader
         {
             col--;
         }
-        buf[--idx] = c;
-        int loc = snippetLoc;
-        loc--;
-        if (loc < 0)
-        {
-            loc = SNIPPET_LENGTH - 1;
-        }
-        snippet[loc] = c;
-        snippetLoc = loc;
     }
 }
