@@ -12,19 +12,15 @@ import java.io.Reader;
 public class FastPushbackReader extends FilterReader
 {
     private static final int bufsize = 256;
-    private final int[] buf;
-    private int idx;
+    private final int[] buf = new int[bufsize];
+    private int idx = 0;
     private int unread = Integer.MAX_VALUE;
-    protected int line;
-    protected int col;
+    protected int line = 1;
+    protected int col = 0;
 
     FastPushbackReader(Reader reader)
     {
         super(reader);
-        buf = new int[bufsize];
-        idx = 0;
-        line = 1;
-        col = 0;
     }
 
     String getLastSnippet()

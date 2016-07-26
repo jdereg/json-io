@@ -111,7 +111,11 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public Object getPrimitiveValue()
     {
-        if (type.equals("byte"))
+        if (type.equals("boolean") || type.equals("double") || type.equals("long"))
+        {
+            return get("value");
+        }
+        else if (type.equals("byte"))
         {
             Number b = (Number) get("value");
             return b.byteValue();
@@ -120,10 +124,6 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             String c = (String) get("value");
             return c.charAt(0);
-        }
-        else if (type.equals("boolean") || type.equals("double") || type.equals("long"))
-        {
-            return get("value");
         }
         else if (type.equals("float"))
         {

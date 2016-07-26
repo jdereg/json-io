@@ -49,7 +49,7 @@ class JsonParser
 
     private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
-    private final StringBuilder strBuf = new StringBuilder();
+    private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final char[] numBuf = new char[256];
     private final boolean useMaps;
@@ -247,10 +247,16 @@ class JsonParser
     Object readValue(JsonObject object) throws IOException
     {
         final int c = input.read();
+        if (c == '"')
+        {
+            return readString();
+        }
+        else if (c >= '0' && c <= '9' || c == '-')
+        {
+            return readNumber(c);
+        }
         switch(c)
         {
-            case '"':
-                return readString();
             case '{':
                 input.unread('{');
                 return readJsonObject();
@@ -275,10 +281,6 @@ class JsonParser
                 error("EOF reached prematurely");
         }
 
-        if (c >= '0' && c <= '9' || c == '-')
-        {
-            return readNumber(c);
-        }
         return error("Unknown JSON value type");
     }
 
@@ -321,10 +323,11 @@ class JsonParser
     private void readToken(String token) throws IOException
     {
         final int len = token.length();
+        final FastPushbackReader in = input;
 
         for (int i = 1; i < len; i++)
         {
-            int c = input.read();
+            int c = in.read();
             if (c == -1)
             {
                 error("EOF reached while reading token: " + token);
@@ -403,15 +406,15 @@ class JsonParser
         long n = 0;
         for (int i = isNeg ? 1 : 0; i < len; i++)
         {
-            n = (buffer[i] - '0') + n * 10;
+            n *= 10;
+            n += buffer[i] - '0';
         }
         return isNeg ? -n : n;
     }
 
-    private static final int STATE_STRING_START = 0;
-    private static final int STATE_STRING_SLASH = 1;
-    private static final int STATE_HEX_DIGITS_START = 2;
-    private static final int STATE_HEX_DIGITS = 3;
+    private static final int STRING_START = 0;
+    private static final int STRING_SLASH = 1;
+    private static final int HEX_DIGITS = 2;
 
     /**
      * Read a JSON string
@@ -422,119 +425,96 @@ class JsonParser
      */
     private String readString() throws IOException
     {
-        final StringBuilder str = this.strBuf;
+        final StringBuilder str = strBuf;
+        final StringBuilder hex = hexBuf;
         str.setLength(0);
         boolean done = false;
-        int state = STATE_STRING_START;
+        int state = STRING_START;
+        final FastPushbackReader in = input;
 
         while (!done)
         {
-            final int c = input.read();
+            final int c = in.read();
             if (c == -1)
             {
                 error("EOF reached while reading JSON string");
             }
 
-            switch (state)
+            if (state == STRING_START)
             {
-                case STATE_STRING_START:
-                    if (c == '"')
-                    {
-                        done = true;
-                    }
-                    else if (c == '\\')
-                    {
-                        state = STATE_STRING_SLASH;
-                    }
-                    else
-                    {
-                        str.appendCodePoint(c);
-                    }
-                    break;
+                if (c == '"')
+                {
+                    done = true;
+                }
+                else if (c == '\\')
+                {
+                    state = STRING_SLASH;
+                }
+                else
+                {
+                    str.appendCodePoint(c);
+                }
+            }
+            else if (state == STRING_SLASH)
+            {
+                switch(c)
+                {
+                    case '\\':
+                        str.append('\\');
+                        break;
+                    case '/':
+                        str.append('/');
+                        break;
+                    case '"':
+                        str.append('"');
+                        break;
+                    case '\'':
+                        str.append('\'');
+                        break;
+                    case 'b':
+                        str.append('\b');
+                        break;
+                    case 'f':
+                        str.append('\f');
+                        break;
+                    case 'n':
+                        str.append('\n');
+                        break;
+                    case 'r':
+                        str.append('\r');
+                        break;
+                    case 't':
+                        str.append('\t');
+                        break;
+                    case 'u':
+                        hex.setLength(0);
+                        state = HEX_DIGITS;
+                        break;
+                    default:
+                        error("Invalid character escape sequence specified: " + c);
+                }
 
-                case STATE_STRING_SLASH:
-                    switch(c)
+                if (c != 'u')
+                {
+                    state = STRING_START;
+                }
+            }
+            else
+            {
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                {
+                    hex.append((char) c);
+                    if (hex.length() == 4)
                     {
-                        case '\\':
-                            str.append('\\');
-                            break;
-                        case '/':
-                            str.append('/');
-                            break;
-                        case '"':
-                            str.append('"');
-                            break;
-                        case '\'':
-                            str.append('\'');
-                            break;
-                        case 'b':
-                            str.append('\b');
-                            break;
-                        case 'f':
-                            str.append('\f');
-                            break;
-                        case 'n':
-                            str.append('\n');
-                            break;
-                        case 'r':
-                            str.append('\r');
-                            break;
-                        case 't':
-                            str.append('\t');
-                            break;
-                        case 'u':
-                            state = STATE_HEX_DIGITS_START;
-                            break;
-                        default:
-                            error("Invalid character escape sequence specified: " + c);
+                        int value = Integer.parseInt(hex.toString(), 16);
+                        str.append(MetaUtils.valueOf((char) value));
+                        state = STRING_START;
                     }
-
-                    if (c != 'u')
-                    {
-                        state = STATE_STRING_START;
-                    }
-                    break;
-
-                case STATE_HEX_DIGITS_START:
-                    hexBuf.setLength(0);
-                    state = STATE_HEX_DIGITS;   // intentional 'fall-thru'
-                case STATE_HEX_DIGITS:
-                    switch(c)
-                    {
-                        case '0':
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '5':
-                        case '6':
-                        case '7':
-                        case '8':
-                        case '9':
-                        case 'A':
-                        case 'B':
-                        case 'C':
-                        case 'D':
-                        case 'E':
-                        case 'F':
-                        case 'a':
-                        case 'b':
-                        case 'c':
-                        case 'd':
-                        case 'e':
-                        case 'f':
-                            hexBuf.append((char) c);
-                            if (hexBuf.length() == 4)
-                            {
-                                int value = Integer.parseInt(hexBuf.toString(), 16);
-                                str.append(MetaUtils.valueOf((char) value));
-                                state = STATE_STRING_START;
-                            }
-                            break;
-                        default:
-                            error("Expected hexadecimal digits");
-                    }
-                    break;
+                }
+                else
+                {
+                    error("Expected hexadecimal digits");
+                }
             }
         }
 
@@ -553,11 +533,11 @@ class JsonParser
     private int skipWhitespaceRead() throws IOException
     {
         FastPushbackReader in = input;
-        int c = in.read();
-        while (c == ' ' || c == '\n' || c == '\r' || c == '\t')
+        int c;
+        do
         {
             c = in.read();
-        }
+        } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
         return c;
     }
 
