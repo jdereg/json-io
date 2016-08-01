@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import java.io.FilterReader;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 
@@ -9,10 +9,9 @@ import java.io.Reader;
  * PushbackReader.  This is due to this class not using synchronization
  * as it is not needed.
  */
-public class FastPushbackReader extends FilterReader
+public class FastPushbackReader extends BufferedReader
 {
-    private static final int bufsize = 256;
-    private final int[] buf = new int[bufsize];
+    private final int[] buf = new int[256];
     private int idx = 0;
     private int unread = Integer.MAX_VALUE;
     protected int line = 1;
@@ -26,7 +25,7 @@ public class FastPushbackReader extends FilterReader
     String getLastSnippet()
     {
         StringBuilder s = new StringBuilder();
-        for (int i=idx; i < bufsize; i++)
+        for (int i=idx; i < 256; i++)
         {
             if (appendChar(s, i))
             {
@@ -63,16 +62,18 @@ public class FastPushbackReader extends FilterReader
 
     public int read() throws IOException
     {
-        int ch = unread == Integer.MAX_VALUE ? in.read() : unread;
-        unread = Integer.MAX_VALUE;
-
-        buf[idx++] = ch;
-        if (idx >= bufsize)
+        int ch;
+        if (unread == 0x7fffffff)
         {
-            idx = 0;
+            ch = super.read();
+        }
+        else
+        {
+            ch = unread;
+            unread = 0x7fffffff;
         }
 
-        if (ch == 0x0a)
+        if ((buf[idx++] = ch) == 0x0a)
         {
             line++;
             col = 0;
@@ -81,28 +82,32 @@ public class FastPushbackReader extends FilterReader
         {
             col++;
         }
+
+        if (idx >= 256)
+        {
+            idx = 0;
+        }
         return ch;
     }
 
     public void unread(int c) throws IOException
     {
-        unread = c;
-        if (idx < 1)
-        {
-            idx = bufsize - 1;
-        }
-        else
-        {
-            idx--;
-        }
-
-        if (c == 0x0a)
+        if ((unread = c) == 0x0a)
         {
             line--;
         }
         else
         {
             col--;
+        }
+
+        if (idx < 1)
+        {
+            idx = 255;
+        }
+        else
+        {
+            idx--;
         }
     }
 }

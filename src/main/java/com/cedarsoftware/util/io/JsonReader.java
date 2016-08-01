@@ -520,7 +520,7 @@ public class JsonReader implements Closeable
 
         try
         {
-            input = new FastPushbackReader(new BufferedReader(new InputStreamReader(inp, "UTF-8")));
+            input = new FastPushbackReader(new InputStreamReader(inp, "UTF-8"));
         }
         catch (UnsupportedEncodingException e)
         {

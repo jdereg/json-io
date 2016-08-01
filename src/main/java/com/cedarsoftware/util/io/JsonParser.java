@@ -51,7 +51,7 @@ class JsonParser
     private final Map<Long, JsonObject> objsRead;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
-    private final char[] numBuf = new char[256];
+    private final StringBuilder numBuf = new StringBuilder();
     private final boolean useMaps;
     private final Map<String, String> typeNameMap;
 
@@ -355,61 +355,49 @@ class JsonParser
     private Number readNumber(int c) throws IOException
     {
         final FastPushbackReader in = input;
-        final char[] buffer = this.numBuf;
-        buffer[0] = (char) c;
-        int len = 1;
+        final StringBuilder number = numBuf;
+        number.setLength(0);
+        number.appendCodePoint(c);
         boolean isFloat = false;
+
+        while (true)
+        {
+            c = in.read();
+            if ((c >= '0' && c <= '9') || c == '-' || c == '+')
+            {
+                number.appendCodePoint(c);
+            }
+            else if (c == '.' || c == 'e' || c == 'E')
+            {
+                number.appendCodePoint(c);
+                isFloat = true;
+            }
+            else if (c == -1)
+            {
+                break;
+            }
+            else
+            {
+                in.unread(c);
+                break;
+            }
+        }
 
         try
         {
-            while (true)
+            if (isFloat)
+            {   // Floating point number needed
+                return Double.parseDouble(number.toString());
+            }
+            else
             {
-                c = in.read();
-                if ((c >= '0' && c <= '9') || c == '-' || c == '+')     // isDigit() inlined for speed here
-                {
-                    buffer[len++] = (char) c;
-                }
-                else if (c == '.' || c == 'e' || c == 'E')
-                {
-                    buffer[len++] = (char) c;
-                    isFloat = true;
-                }
-                else if (c == -1)
-                {
-                    break;
-                }
-                else
-                {
-                    in.unread(c);
-                    break;
-                }
+                return Long.parseLong(number.toString());
             }
         }
-        catch (ArrayIndexOutOfBoundsException e)
+        catch (Exception e)
         {
-            error("Too many digits in number: " + new String(buffer));
+            return (Number) error("Invalid number: " + number, e);
         }
-
-        if (isFloat)
-        {   // Floating point number needed
-            String num = new String(buffer, 0, len);
-            try
-            {
-                return Double.parseDouble(num);
-            }
-            catch (NumberFormatException e)
-            {
-                error("Invalid floating point number: " + num, e);
-            }
-        }
-        boolean isNeg = buffer[0] == '-';
-        long n = 0;
-        for (int i = isNeg ? 1 : 0; i < len; i++)
-        {
-            n *= 10;
-            n += buffer[i] - '0';
-        }
-        return isNeg ? -n : n;
     }
 
     private static final int STRING_START = 0;
@@ -460,31 +448,31 @@ class JsonParser
                 switch(c)
                 {
                     case '\\':
-                        str.append('\\');
+                        str.appendCodePoint('\\');
                         break;
                     case '/':
-                        str.append('/');
+                        str.appendCodePoint('/');
                         break;
                     case '"':
-                        str.append('"');
+                        str.appendCodePoint('"');
                         break;
                     case '\'':
-                        str.append('\'');
+                        str.appendCodePoint('\'');
                         break;
                     case 'b':
-                        str.append('\b');
+                        str.appendCodePoint('\b');
                         break;
                     case 'f':
-                        str.append('\f');
+                        str.appendCodePoint('\f');
                         break;
                     case 'n':
-                        str.append('\n');
+                        str.appendCodePoint('\n');
                         break;
                     case 'r':
-                        str.append('\r');
+                        str.appendCodePoint('\r');
                         break;
                     case 't':
-                        str.append('\t');
+                        str.appendCodePoint('\t');
                         break;
                     case 'u':
                         hex.setLength(0);
@@ -503,11 +491,11 @@ class JsonParser
             {
                 if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
                 {
-                    hex.append((char) c);
+                    hex.appendCodePoint((char) c);
                     if (hex.length() == 4)
                     {
                         int value = Integer.parseInt(hex.toString(), 16);
-                        str.append(MetaUtils.valueOf((char) value));
+                        str.appendCodePoint(MetaUtils.valueOf((char) value));
                         state = STRING_START;
                     }
                 }
@@ -519,8 +507,15 @@ class JsonParser
         }
 
         final String s = str.toString();
-        final String cacheHit = stringCache.get(s);
-        return cacheHit == null ? s : cacheHit;
+        if (s.length() < 7)
+        {
+            final String cacheHit = stringCache.get(s);
+            return cacheHit == null ? s : cacheHit;
+        }
+        else
+        {
+            return s;
+        }
     }
 
     /**

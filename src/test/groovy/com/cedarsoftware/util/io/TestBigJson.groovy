@@ -70,10 +70,10 @@ class TestBigJson
         long start = System.nanoTime()
         JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         long stop = System.nanoTime()
-        println 'json-io: ' + ((stop - start) / 1000000L)
+        println ((stop - start) / 1000000L)
 
         int i=0
-        while (i++ < 100)
+        while (i++ < 50)
         {
 //            gson = new Gson()
 //            start = System.nanoTime()
@@ -84,7 +84,7 @@ class TestBigJson
             start = System.nanoTime()
             JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
             stop = System.nanoTime()
-            println 'json-io: ' + ((stop - start) / 1000000L)
+            println ((stop - start) / 1000000L)
         }
     }
 }

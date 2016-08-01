@@ -117,7 +117,7 @@ class TestFloat
         }
         catch (JsonIoException e)
         {
-            assert e.message.toLowerCase().contains('invalid floating point number: 123.45.67')
+            assert e.message.toLowerCase().contains('invalid number: 123.45.67')
         }
     }
 
