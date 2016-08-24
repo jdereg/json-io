@@ -150,34 +150,28 @@ class JsonParser
                         {
                             error("Expected ':' between string field and value");
                         }
-                        skipWhitespace();
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
                             if (field.equals("@t"))
                             {
                                 field = stringCache.get("@type");
-
                             }
                             else if (field.equals("@i"))
                             {
                                 field = stringCache.get("@id");
-
                             }
                             else if (field.equals("@r"))
                             {
                                 field = stringCache.get("@ref");
-
                             }
                             else if (field.equals("@k"))
                             {
                                 field = stringCache.get("@keys");
-
                             }
                             else if (field.equals("@e"))
                             {
                                 field = stringCache.get("@items");
-
                             }
                         }
                         state = STATE_READ_VALUE;
@@ -246,7 +240,7 @@ class JsonParser
 
     Object readValue(JsonObject object) throws IOException
     {
-        final int c = input.read();
+        int c = skipWhitespaceRead();
         if (c == '"')
         {
             return readString();
@@ -293,7 +287,6 @@ class JsonParser
 
         while (true)
         {
-            skipWhitespace();
             final Object o = readValue(object);
             if (o != EMPTY_ARRAY)
             {
@@ -534,11 +527,6 @@ class JsonParser
             c = in.read();
         } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
         return c;
-    }
-
-    private void skipWhitespace() throws IOException
-    {
-        input.unread(skipWhitespaceRead());
     }
 
     Object error(String msg)

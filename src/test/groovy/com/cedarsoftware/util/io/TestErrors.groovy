@@ -76,31 +76,24 @@ class TestErrors
     @Test
     void testParseInvalid1stChar()
     {
-        try
-        {
-            String json = '''
-  "array": [
-    1,
-    2,
-    3
-  ],
-  "boolean": true,
-  "null": null,
-  "number": 123,
-  "object": {
-    "a": "b",
-    "c": "d",
-    "e": "f"
-  },
-  "string:" "Hello World"
+        String json = '''
+"array": [
+1,
+2,
+3
+],
+"boolean": true,
+"null": null,
+"number": 123,
+"object": {
+"a": "b",
+"c": "d",
+"e": "f"
+},
+"string:" "Hello World"
 }'''
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unknown json value type"))
-        }
+        def x = JsonReader.jsonToJava(json)
+        assert "array" == x
     }
 
     @Test

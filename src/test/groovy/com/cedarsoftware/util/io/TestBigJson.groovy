@@ -72,6 +72,9 @@ class TestBigJson
         long stop = System.nanoTime()
         println ((stop - start) / 1000000L)
 
+//        println 'num read = ' + FastPushbackReader.numread
+//        println 'num push = ' + FastPushbackReader.numpush
+
         int i=0
         while (i++ < 50)
         {
