@@ -8,7 +8,6 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
       <artifactId>json-io</artifactId>
       <version>4.5.0</version>
     </dependency>
-
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
 
@@ -18,8 +17,8 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profi
 innovative and intelligent tools for profiling Java and .NET applications.
 
 <a href="https://www.jetbrains.com/idea/"><img alt="Intellij IDEA from JetBrains" src="https://s-media-cache-ak0.pinimg.com/236x/bd/f4/90/bdf49052dd79aa1e1fc2270a02ba783c.jpg" data-canonical-src="https://s-media-cache-ak0.pinimg.com/236x/bd/f4/90/bdf49052dd79aa1e1fc2270a02ba783c.jpg" width="100" height="100" /></a>
-**Intellij IDEA**<hr>
-
+**Intellij IDEA**
+___
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates 
 the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There 
 is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
