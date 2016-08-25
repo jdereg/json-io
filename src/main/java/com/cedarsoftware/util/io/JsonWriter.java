@@ -401,17 +401,17 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    protected void tabIn() throws IOException
+    public void tabIn() throws IOException
     {
         tab(out, 1);
     }
 
-    protected void newLine() throws IOException
+    public void newLine() throws IOException
     {
         tab(out, 0);
     }
 
-    protected void tabOut() throws IOException
+    public void tabOut() throws IOException
     {
         tab(out, -1);
     }
