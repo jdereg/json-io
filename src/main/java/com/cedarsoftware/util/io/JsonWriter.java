@@ -634,8 +634,6 @@ public class JsonWriter implements Closeable, Flushable
         flush();
         objVisited.clear();
         objsReferenced.clear();
-        writerCache.clear();
-        writers.clear();
     }
 
     /**
@@ -2247,6 +2245,8 @@ public class JsonWriter implements Closeable, Flushable
             out.close();
         }
         catch (Exception ignore) { }
+        writerCache.clear();
+        writers.clear();
     }
 
     private String getId(Object o)
