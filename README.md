@@ -6,7 +6,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.5.0</version>
+      <version>4.6.0</version>
     </dependency>
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
@@ -308,8 +308,11 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.6.0
+  * Bug fix: custom write serializers were being cleared in the `write()` method, not the `close()` method after full serialization completed.  @darmbrust
+  * Enhancement: Access increased to public for the pretty-print support apis, `tabIn()`, `tabOut()`, and `newLine()`. @darmbrust
  * 4.5.0
-  * Improved read speed (roughly 50% faster).
+  * Improved read speed.
   * Black-list support for excluding fields.  Submitted by @sgandon
   * Pretty-print with support for options.  Submitted by @dtracers
   * Ability to use writeObject() API to write the 'body only'.  Submitted by @francisu
