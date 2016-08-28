@@ -1,5 +1,7 @@
 json-io
 =======
+[![Build Status](https://travis-ci.org/jdereg/json-io.svg?branch=master)](https://travis-ci.org/jdereg/json-io)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io)
 
 Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
 
