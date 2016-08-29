@@ -740,7 +740,7 @@ public class MetaUtils
                     }
                     return Double.parseDouble((String) rhs);
                 }
-                return rhs != null ? rhs : 0.0d;
+                return rhs != null ? ((Number) rhs).doubleValue() : 0.0d;
             }
             else if (cname.equals("float") || cname.equals("java.lang.Float"))
             {
@@ -779,7 +779,7 @@ public class MetaUtils
                     }
                     return Long.parseLong((String) rhs);
                 }
-                return rhs != null ? rhs : 0L;
+                return rhs != null ? ((Number) rhs).longValue() : 0L;
             }
             else if (cname.equals("short") || cname.equals("java.lang.Short"))
             {
