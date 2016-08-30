@@ -13,6 +13,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.lang.reflect.Modifier.isPrivate;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+
 /**
  * This utility class has the methods mostly related to reflection related code.
  *
@@ -407,7 +411,7 @@ public class MetaUtils
         return s;
     }
 
-    static Object newInstance(Class c)
+    public static Object newInstance(Class c)
     {
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
@@ -519,8 +523,42 @@ public class MetaUtils
             throw new JsonIoException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
-        // Try each constructor (private, protected, or public) with null values for non-primitives.
-        for (Constructor constructor : constructors)
+        // Sort constructors - public, protected, private, package-private
+        List<Constructor> constructorList = Arrays.asList(constructors);
+        Collections.sort(constructorList, new Comparator<Constructor>()
+        {
+            public int compare(Constructor c1, Constructor c2)
+            {
+                boolean c1Vis = isPublic(c1.getModifiers());
+                boolean c2Vis = isPublic(c2.getModifiers());
+
+                if (c1Vis != c2Vis)
+                {   // favor 'public' as first
+                    return c1Vis ? -1 : 1;
+                }
+
+                c1Vis = isProtected(c1.getModifiers());
+                c2Vis = isProtected(c2.getModifiers());
+
+                if (c1Vis != c2Vis)
+                {   // favor protected 2nd
+                    return c1Vis ? -1 : 1;
+                }
+
+                c1Vis = isPrivate(c1.getModifiers());
+                c2Vis = isPrivate(c2.getModifiers());
+
+                if (c1Vis != c2Vis)
+                {   //
+                    return c1Vis ? -1 : 1;
+                }
+
+                return 0;
+            }
+        });
+
+        // Try each constructor (public, protected, private, package-private) with null values for non-primitives.
+        for (Constructor constructor : constructorList)
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
@@ -533,8 +571,8 @@ public class MetaUtils
             { }
         }
 
-        // Try each constructor (private, protected, or public) with non-null values for primitives.
-        for (Constructor constructor : constructors)
+        // Try each constructor (public, protected, private, package-private) with non-null values for non-primitives.
+        for (Constructor constructor : constructorList)
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
@@ -643,7 +681,7 @@ public class MetaUtils
                 {
                     values[i] = String.class;
                 }
-                else if (argType == java.sql.Timestamp.class)
+                else if (argType == Timestamp.class)
                 {
                     values[i] = new Timestamp(System.currentTimeMillis());
                 }
@@ -651,7 +689,7 @@ public class MetaUtils
                 {
                     values[i] = new java.sql.Date(System.currentTimeMillis());
                 }
-                else if (argType == java.net.URL.class)
+                else if (argType == URL.class)
                 {
                     try
                     {
@@ -721,13 +759,13 @@ public class MetaUtils
                     {
                         rhs = "\u0000";
                     }
-                    return valueOf(((String) rhs).charAt(0));
+                    return ((CharSequence) rhs).charAt(0);
                 }
                 if (rhs instanceof Character)
                 {
                     return rhs;
                 }
-
+                // Let it throw exception
             }
             else if (cname.equals("double") || cname.equals("java.lang.Double"))
             {

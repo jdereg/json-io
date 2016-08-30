@@ -488,7 +488,7 @@ class JsonParser
                     if (hex.length() == 4)
                     {
                         int value = Integer.parseInt(hex.toString(), 16);
-                        str.appendCodePoint(MetaUtils.valueOf((char) value));
+                        str.appendCodePoint(value);
                         state = STRING_START;
                     }
                 }

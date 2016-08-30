@@ -8,7 +8,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.6.0</version>
+      <version>4.7.0</version>
     </dependency>
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
@@ -310,6 +310,9 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.7.0
+  * Bug fix: failing to set a double field when the JSON from the client contained a whole number (e.g. 300) instead of a decimal (e.g. 300.0). @lordvlad
+  * Enhancement: when instantiating classes, json-io iterates through constructors until it can find one that works.  The order of constructors was non-deterministic.  Now the order is public constructors first, then protected, then private.
  * 4.6.0
   * Bug fix: custom write serializers were being cleared in the `write()` method, not the `close()` method after full serialization completed.  @darmbrust
   * Enhancement: Access increased to public for the pretty-print support apis, `tabIn()`, `tabOut()`, and `newLine()`. @darmbrust
