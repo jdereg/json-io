@@ -52,22 +52,32 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class JsonReader implements Closeable
 {
-    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
-    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";    // If set, this map specifies Class to CustomReader
-    public static final String USE_MAPS = "USE_MAPS";                   // If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation
-    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";       // What to do when an object is found and 'type' cannot be determined.
-    public static final String JSON_READER = "JSON_READER";             // Pointer to 'this' (automatically placed in the Map)
-    public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";     // Pointer to the current ObjectResolver (automatically placed in the Map)
-    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";         // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
-    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";         // If set, this object will be called when a field is present in the JSON but missing from the corresponding class
-    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";// This map is the reverse of the TYPE_NAME_MAP (value -> key)
+    /** If set, this maps class ==> CustomReader */
+    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
+    /** If set, this maps class ==> CustomReader */
+    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";
+    /** If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation */
+    public static final String USE_MAPS = "USE_MAPS";
+    /** What to do when an object is found and 'type' cannot be determined. */
+    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";
+    /** Pointer to 'this' (automatically placed in the Map) */
+    public static final String JSON_READER = "JSON_READER";
+    /** Pointer to the current ObjectResolver (automatically placed in the Map) */
+    public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";
+    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
+    /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
+    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
+    /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
+    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
+
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<Class>();
     private static final Map<Class, Factory> factory = new ConcurrentHashMap<Class, Factory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
-    // _args is using ThreadLocal so that static inner classes can have access to them
+    /** _args is using ThreadLocal so that static inner classes can have access to them */
     private final Map<String, Object> args = new HashMap<String, Object>();
 
     {

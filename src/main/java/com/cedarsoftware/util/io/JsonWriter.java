@@ -55,21 +55,37 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class JsonWriter implements Closeable, Flushable
 {
-    public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
-    public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";    // If set, this map specifies Class to CustomWriter
-    public static final String DATE_FORMAT = "DATE_FORMAT";         // Set the date format to use within the JSON output
-    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";      // Constant for use as DATE_FORMAT value
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";  // Constant for use as DATE_FORMAT value
-    public static final String TYPE = "TYPE";                       // Force @type always
-    public static final String PRETTY_PRINT = "PRETTY_PRINT";       // Force nicely formatted JSON output
-    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output
-    public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";   // Set value to a Map<Class, List<String>> which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS 
-    private static final String FIELD_BLACK_LIST = "FIELD_BLACK_LIST"; // same as above only internal for storing Field instances instead of strings. This avoid the initial argument content to be modified.
-    public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY"; // If set, indicates that private variables of ENUMs are not to be serialized
-    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";     // If set, longs are written in quotes (Javascript safe)
-    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";     // If set, this map will be used when writing @type values - allows short-hand abbreviations type names
-    public static final String SHORT_META_KEYS = "SHORT_META_KEYS"; // If set, then @type -> @t, @keys -> @k, @items -> @i
-    public static final String SKIP_NULL_FIELDS = "SKIP_NULL";      // If set, null fields are not written
+    /** If set, this maps class ==> CustomWriter */
+    public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";
+    /** If set, this maps class ==> CustomWriter */
+    public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";
+    /** Set the date format to use within the JSON output */
+    public static final String DATE_FORMAT = "DATE_FORMAT";
+    /** Constant for use as DATE_FORMAT value */
+    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
+    /** Constant for use as DATE_FORMAT value */
+    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    /** Force @type always */
+    public static final String TYPE = "TYPE";
+    /** Force nicely formatted JSON output */
+    public static final String PRETTY_PRINT = "PRETTY_PRINT";
+    /** Set value to a Map<Class, List<String>> which will be used to control which fields on a class are output */
+    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
+    /** Set value to a Map<Class, List<String>> which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS */
+    public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";
+    /** same as above only internal for storing Field instances instead of strings. This avoid the initial argument content to be modified. */
+    private static final String FIELD_BLACK_LIST = "FIELD_BLACK_LIST";
+    /** If set, indicates that private variables of ENUMs are not to be serialized */
+    public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY";
+    /** If set, longs are written in quotes (Javascript safe) */
+    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";
+    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
+    /** If set, then @type -> @t, @keys -> @k, @items -> @i */
+    public static final String SHORT_META_KEYS = "SHORT_META_KEYS";
+    /** If set, null fields are not written */
+    public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
+
     private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final Set<Class> notCustom = new HashSet<Class>();
@@ -88,9 +104,9 @@ public class JsonWriter implements Closeable, Flushable
     private boolean isEnumPublicOnly = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
-    long identity = 1;
+    private long identity = 1;
     private int depth = 0;
-    // _args is using ThreadLocal so that static inner classes can have access to them
+    /** _args is using ThreadLocal so that static inner classes can have access to them */
     final Map<String, Object> args = new HashMap<String, Object>();
 
     {   // Add customer writers (these make common classes more succinct)
@@ -121,7 +137,7 @@ public class JsonWriter implements Closeable, Flushable
     { }
 
     /**
-     * Implement this interface to custom the JSON output for a given class.
+     * Implement this interface to customize the JSON output for a given class.
      */
     public interface JsonClassWriter extends JsonClassWriterBase
     {
@@ -131,7 +147,7 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * Implement this interface to custom the JSON output for a given class.
+     * Implement this interface to customize the JSON output for a given class.
      */
     public interface JsonClassWriterEx extends JsonClassWriterBase
     {
