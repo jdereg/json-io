@@ -287,7 +287,11 @@ public class MetaUtils
 
     static Exception loadClassException;
 
-    static Class classForName(String name)
+    static Class classForName(String name) {
+        return classForName(name, MetaUtils.class.getClassLoader());
+    }
+
+    static Class classForName(String name, ClassLoader classLoader)
     {
         try
         {
@@ -299,7 +303,7 @@ public class MetaUtils
             try
             {
                 loadClassException = null;
-                return c == null ? loadClass(name) : c;
+                return c == null ? loadClass(name, classLoader) : c;
             }
             catch (Exception e)
             {
@@ -315,7 +319,7 @@ public class MetaUtils
     }
 
     // loadClass() provided by: Thomas Margreiter
-    private static Class loadClass(String name) throws ClassNotFoundException
+    private static Class loadClass(String name, ClassLoader classLoader) throws ClassNotFoundException
     {
         String className = name;
         boolean arrayType = false;
@@ -374,7 +378,7 @@ public class MetaUtils
         Class currentClass = null;
         if (null == primitiveArray)
         {
-            currentClass = MetaUtils.class.getClassLoader().loadClass(className);
+            currentClass = classLoader.loadClass(className);
         }
 
         if (arrayType)
@@ -859,7 +863,7 @@ public class MetaUtils
         {
             try
             {
-                Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe").getDeclaredConstructor();
+                Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe", MetaUtils.class.getClassLoader()).getDeclaredConstructor();
                 unsafeConstructor.setAccessible(true);
                 sunUnsafe = unsafeConstructor.newInstance();
                 allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);

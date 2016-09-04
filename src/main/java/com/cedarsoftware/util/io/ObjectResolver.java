@@ -47,12 +47,14 @@ import java.util.*;
 public class ObjectResolver extends Resolver
 {
 
+    private final ClassLoader classLoader;
     protected JsonReader.MissingFieldHandler missingFieldHandler;
 
 
-    protected ObjectResolver(JsonReader reader)
+    protected ObjectResolver(JsonReader reader, ClassLoader classLoader)
     {
         super(reader);
+        this.classLoader = classLoader;
         missingFieldHandler = reader.getMissingFieldHandler();
     }
 
@@ -501,7 +503,7 @@ public class ObjectResolver extends Resolver
                     if (type != null)
                     {
                         typeStr = (String) type;
-                        c = MetaUtils.classForName((String) type);
+                        c = MetaUtils.classForName((String) type, classLoader);
                     }
                     else
                     {

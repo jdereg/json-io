@@ -68,6 +68,8 @@ public class JsonReader implements Closeable
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
     /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
     public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
+    /** If set, use the specified ClassLoader */
+    public static final String CLASSLOADER = "CLASSLOADER";
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
 
@@ -456,6 +458,7 @@ public class JsonReader implements Closeable
     {
         input = null;
         getArgs().put(USE_MAPS, false);
+        getArgs().put(CLASSLOADER, JsonReader.class.getClassLoader());
     }
 
     public JsonReader(InputStream inp)
@@ -495,6 +498,9 @@ public class JsonReader implements Closeable
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
+        if (!args.containsKey(CLASSLOADER)) {
+            args.put(CLASSLOADER, JsonReader.class.getClassLoader());
+        }
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
 
         if (typeNames != null)
@@ -642,7 +648,7 @@ public class JsonReader implements Closeable
     {
         try
         {
-            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this);
+            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader)args.get(CLASSLOADER));
             resolver.createJavaObjectInstance(Object.class, root);
             Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
             resolver.cleanup();

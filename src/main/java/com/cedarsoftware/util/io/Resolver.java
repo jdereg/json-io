@@ -40,6 +40,7 @@ abstract class Resolver
     private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
     private final boolean useMaps;
     private final Object unknownClass;
+    private final ClassLoader classloader;
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -82,6 +83,7 @@ abstract class Resolver
         optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
+        classloader = (ClassLoader)optionalArgs.get(JsonReader.CLASSLOADER);
     }
 
     protected JsonReader getReader()
@@ -269,7 +271,7 @@ abstract class Resolver
             Class c;
             try
             {
-                c = MetaUtils.classForName(type);
+                c = MetaUtils.classForName(type, classloader);
             }
             catch (Exception e)
             {
@@ -307,7 +309,7 @@ abstract class Resolver
                 }
                 else if (c == Class.class)
                 {
-                    mate = MetaUtils.classForName((String) jsonObj.get("value"));
+                    mate = MetaUtils.classForName((String) jsonObj.get("value"), classloader);
                 }
                 else if (c.isEnum())
                 {
@@ -367,7 +369,7 @@ abstract class Resolver
                 }
                 else if (unknownClass instanceof String)
                 {
-                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()), jsonObj);
+                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim(), classloader), jsonObj);
                 }
                 else
                 {
@@ -457,7 +459,7 @@ abstract class Resolver
         }
         JsonObject item = (JsonObject) items[0];
         String type = item.getType();
-        Class enumClass = MetaUtils.classForName(type);
+        Class enumClass = MetaUtils.classForName(type, classloader);
         EnumSet enumSet = null;
         for (Object objectItem : items)
         {
