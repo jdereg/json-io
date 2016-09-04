@@ -9,7 +9,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.7.0</version>
+      <version>4.8.0</version>
     </dependency>
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
@@ -143,7 +143,8 @@ can be read, modified, and then re-written by a JVM that does not contain any of
                             // Allows short-hand abbreviations for type names.
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i
-    SKIP_NULL_FIELDS        // Do not write fields that have null as their value                             
+    SKIP_NULL_FIELDS        // Do not write field values to output JSON when
+                            // their value is null.                             
     CLASSLOADER             // ClassLoader instance to use when turning String names of     
                             // classes into JVM Class instances.
 
@@ -315,6 +316,9 @@ See https://github.com/jdereg/json-command-servlet for a light-weight servlet th
 Featured on http://json.org.
 ___
 ### Revision History
+ * 4.8.0
+  * Enhancement: Added support for specifying the ClassLoader to be used when mapping JSON to Objects. Useful within OSGI and other frameworks where multiple ClassLoaders are involved. @lightcycle
+  * JavaDoc has been significantly updated / improved.
  * 4.7.0
   * Bug fix: failing to set a double field when the JSON from the client contained a whole number (e.g. 300) instead of a decimal (e.g. 300.0). @lordvlad
   * Enhancement: when instantiating classes, json-io iterates through constructors until it can find one that works.  The order of constructors was non-deterministic.  Now the order is public constructors first, then protected, then private.
