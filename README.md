@@ -144,6 +144,8 @@ can be read, modified, and then re-written by a JVM that does not contain any of
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i
     SKIP_NULL_FIELDS        // Do not write fields that have null as their value                             
+    CLASSLOADER             // ClassLoader instance to use when turning String names of     
+                            // classes into JVM Class instances.
 
 #### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
@@ -163,6 +165,8 @@ can be read, modified, and then re-written by a JVM that does not contain any of
                             // will be set on it. Set to false, and an exception will be 
                             // thrown when an unknown object type is encountered.  The 
                             // location in the JSON will be given.
+    CLASSLOADER             // ClassLoader instance to use when turning String names of     
+                            // classes into JVM Class instances.
       
 ### Customization
 

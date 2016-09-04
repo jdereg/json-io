@@ -4,7 +4,7 @@ import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * The ObjectResolver converts the raw Maps created from the JsonParser to Java
+ * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
  * objects (a graph of Java instances).  The Maps have an optional type entry associated
  * to them to indicate what Java peer instance to create.  The reason type is optional
  * is because it can be inferred in a couple instances.  A non-primitive field that
@@ -15,11 +15,11 @@ import java.util.*;
  * (Person) because this is not the proper type.  (It had an Employee record with more
  * fields in this example). In this case, the writer recognizes that the instance type
  * and field type are not the same and therefore it writes the @type.
- *
+ * </p><p>
  * A similar case as above occurs with specific array types.  If there is a Person[]
  * containing Person and Employee instances, then the Person instances will not have
  * the '@type' but the employee instances will (because they are more derived than Person).
- *
+ * </p><p>
  * The resolver 'rewires' the original object graph.  It does this by replacing
  * '@ref' values in the Maps with pointers (on the field of the associated instance of the
  * Map) to the object that has the same ID.  If the object has not yet been read, then
@@ -27,7 +27,7 @@ import java.util.*;
  * process.  UnresolvedReference keeps track of what field or array element the actual value
  * should be stored within, and then locates the object (by id), and updates the appropriate
  * value.
- *
+ * </p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -46,11 +46,14 @@ import java.util.*;
  */
 public class ObjectResolver extends Resolver
 {
-
     private final ClassLoader classLoader;
     protected JsonReader.MissingFieldHandler missingFieldHandler;
 
-
+    /**
+     * Constructor
+     * @param reader JsonReader instance being used
+     * @param classLoader ClassLoader that was set in the passed in 'options' arguments to JsonReader.
+     */
     protected ObjectResolver(JsonReader reader, ClassLoader classLoader)
     {
         super(reader);
@@ -230,6 +233,10 @@ public class ObjectResolver extends Resolver
         }
     }
 
+    /**
+     * @param o Object to turn into a String
+     * @return .toString() version of o or "null" if o is null.
+     */
     private static String safeToString(Object o)
     {
         if (o == null)
@@ -461,6 +468,15 @@ public class ObjectResolver extends Resolver
         jsonObj.clearArray();
     }
 
+    /**
+     * Convert the passed in object (o) to a proper Java object.  If the passed in object (o) has a custom reader
+     * associated to it, then have it convert the object.  If there is no custom reader, then return null.
+     * @param o Object to read (convert).  Will be either a JsonObject or a JSON primitive String, long, boolean,
+     *          double, or null.
+     * @param compType Class destination type to which the passed in object should be converted to.
+     * @param stack   a Stack (Deque) used to support graph traversal.
+     * @return Java object converted from the passed in object o, or if there is no custom reader.
+     */
     protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack)
     {
         if (o == null)
@@ -716,6 +732,11 @@ public class ObjectResolver extends Resolver
         }
     }
 
+    /**
+     * Given the passed in Type t, return the raw type of it, if the passed in value is a ParameterizedType.
+     * @param t Type to attempt to get raw type from.
+     * @return Raw type obtained from the passed in parameterized type or null if T is not a ParameterizedType
+     */
     public static Class getRawType(final Type t)
     {
         if (t instanceof ParameterizedType)

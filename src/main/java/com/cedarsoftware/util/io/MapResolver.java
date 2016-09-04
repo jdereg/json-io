@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The MapResolver converts the raw Maps created from the JsonParser to higher
+ * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
  * quality Maps representing the implied object graph.  It does this by replace
  * <code>@ref</code> values with the Map with an @id key with the same value.
- *
+ * </p><p>
  * This approach 'rewires' the original object graph.  During the resolution process,
  * if 'peer' classes can be found for given Maps (for example, an @type entry is
  * available which indicates the class that would have been associated to the Map,
@@ -20,14 +20,14 @@ import java.util.Map;
  * values within the map fields.  For example, if the peer class indicated that a field
  * was of type 'short', and the Map had a long value (JSON only returns long's for integer
  * types), then the long would be converted to a short.
- *
+ * </p><p>
  * The final Map representation is a very high-quality graph that represents the original
  * JSON graph.  It can be passed as input to JsonWriter, and the JsonWriter will write
  * out the equivalent JSON to what was originally read.  This technique allows json-io to
  * be used on a machine that does not have any of the Java classes from the original graph,
  * read it in a JSON graph (any JSON graph), return the equivalent maps, allow mutations of
  * those maps, and finally this graph can be written out.
- *
+ * </p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -57,6 +57,15 @@ public class MapResolver extends Resolver
         return null;
     }
 
+    /**
+     * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
+     * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
+     * an @id of an object which can have more than one @ref to it, this code will make sure that each
+     * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
+     * instance.
+     * @param stack   Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     */
     public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object target = jsonObj.target;

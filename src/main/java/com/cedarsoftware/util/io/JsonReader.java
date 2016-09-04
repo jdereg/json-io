@@ -110,6 +110,9 @@ public class JsonReader implements Closeable
         assignInstantiator(SortedMap.class, mapFactory);
     }
 
+    /**
+     * Common ancestor for ClassFactory and ClassFactoryEx.
+     */
     public interface Factory
     {
     }
@@ -161,7 +164,7 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Implement this interface to add a custom JSON reader.
+     * Common ancestor for JsonClassReader and JsonClassReaderEx.
      */
     public interface JsonClassReaderBase  { }
 
@@ -170,6 +173,11 @@ public class JsonReader implements Closeable
      */
     public interface JsonClassReader extends JsonClassReaderBase
     {
+        /**
+         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @return Object you wish to convert the jOb value into.
+         */
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack);
     }
 
@@ -178,10 +186,24 @@ public class JsonReader implements Closeable
      */
     public interface JsonClassReaderEx extends JsonClassReaderBase
     {
+        /**
+         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @param args Map of argument settings that were passed to JsonReader when instantiated.
+         * @return Java Object you wish to convert the the passed in jOb into.
+         */
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args);
 
+        /**
+         * Allow custom readers to have access to the JsonReader
+         */
         class Support
         {
+            /**
+             * Call this method to get an instance of the JsonReader (if needed) inside your custom reader.
+             * @param args Map that was passed to your read(jOb, stack, args) method.
+             * @return JsonReader instance
+             */
             public static JsonReader getReader(Map<String, Object> args)
             {
                 return (JsonReader) args.get(JSON_READER);
@@ -217,10 +239,15 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Use to create new instances of Map interfaces (needed for empty Maps)
+     * Use to create new instances of Map interfaces (needed for empty Maps).  Used
+     * internally to handle Map, SortedMap when they are within parameterized types.
      */
     public static class MapFactory implements ClassFactory
     {
+        /**
+         * @param c Map interface that was requested for instantiation.
+         * @return a concrete Map type.
+         */
         public Object newInstance(Class c)
         {
             if (SortedMap.class.isAssignableFrom(c))
@@ -498,7 +525,8 @@ public class JsonReader implements Closeable
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
-        if (!args.containsKey(CLASSLOADER)) {
+        if (!args.containsKey(CLASSLOADER))
+        {
             args.put(CLASSLOADER, JsonReader.class.getClassLoader());
         }
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
@@ -632,6 +660,14 @@ public class JsonReader implements Closeable
     protected boolean useMaps()
     {
         return Boolean.TRUE.equals(getArgs().get(USE_MAPS));
+    }
+
+    /**
+     * @return ClassLoader to be used by Custom Writers
+     */
+    ClassLoader getClassLoader()
+    {
+        return (ClassLoader) args.get(CLASSLOADER);
     }
 
     /**

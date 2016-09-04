@@ -62,7 +62,13 @@ public class MetaUtils
     };
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
+    static Exception loadClassException;
 
+    /**
+     * Globally turn on (or off) the 'unsafe' option of Class construction.  The unsafe option
+     * is used when all constructors have been tried and the Java class could not be instantiated.
+     * @param state boolean true = on, false = off.
+     */
     public static void setUseUnsafe(boolean state)
     {
         useUnsafe = state;
@@ -194,7 +200,7 @@ public class MetaUtils
      * @param b Class target class
      * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related. Each
      * step upward in the inheritance from one class to the next (calling class.getSuperclass()) is counted
-     * as 1.
+     * as 1. This can be a lot of computational effort, therefore the results of this determination should be cached.
      */
     public static int getDistance(Class a, Class b)
     {
@@ -218,6 +224,11 @@ public class MetaUtils
         return distance;
     }
 
+    /**
+     * @return int distance between two passed in classes.  This method performs an exhaustive
+     * walk up the inheritance chain to compute the distance.  This can be a lot of
+     * computational effort, therefore the results of this determination should be cached internally.
+     */
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
         Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
@@ -285,12 +296,13 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    static Exception loadClassException;
-
-    static Class classForName(String name) {
-        return classForName(name, MetaUtils.class.getClassLoader());
-    }
-
+    /**
+     * Given the passed in String class name, return the named JVM class.
+     * @param name String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @return Class the named JVM class.
+     * @throws JsonIoException if it was unable to locate the named Class.
+     */
     static Class classForName(String name, ClassLoader classLoader)
     {
         try
@@ -318,7 +330,9 @@ public class MetaUtils
         }
     }
 
-    // loadClass() provided by: Thomas Margreiter
+    /**
+     * loadClass() provided by: Thomas Margreiter
+     */
     private static Class loadClass(String name, ClassLoader classLoader) throws ClassNotFoundException
     {
         String className = name;
@@ -335,42 +349,34 @@ public class MetaUtils
             if (className.equals("[B"))
             {
                 primitiveArray = byte[].class;
-
             }
             else if (className.equals("[S"))
             {
                 primitiveArray = short[].class;
-
             }
             else if (className.equals("[I"))
             {
                 primitiveArray = int[].class;
-
             }
             else if (className.equals("[J"))
             {
                 primitiveArray = long[].class;
-
             }
             else if (className.equals("[F"))
             {
                 primitiveArray = float[].class;
-
             }
             else if (className.equals("[D"))
             {
                 primitiveArray = double[].class;
-
             }
             else if (className.equals("[Z"))
             {
                 primitiveArray = boolean[].class;
-
             }
             else if (className.equals("[C"))
             {
                 primitiveArray = char[].class;
-
             }
             int startpos = className.startsWith("[L") ? 2 : 1;
             className = className.substring(startpos);
@@ -405,6 +411,9 @@ public class MetaUtils
         return c <= 127 ? charCache[(int) c] : c;
     }
 
+    /**
+     * Strip leading and trailing double quotes from the passed in String.
+     */
     static String removeLeadingAndTrailingQuotes(String s)
     {
         Matcher m = extraQuotes.matcher(s);
@@ -415,6 +424,26 @@ public class MetaUtils
         return s;
     }
 
+    /**
+     * <p>C language malloc() for Java
+     * </p><p>
+     * Create a new instance of the passed in Class.  This method will make a valiant effort to instance
+     * the passed in Class, including calling trying all of its constructors until successful.  The order
+     * they are tried are public with the fewest arguments first to private with the most arguments.  If, after
+     * exhausting all constructors, then it will attempt using the 'unsafe allocate' from Sun.  This step is
+     * optional - by default it will use this if on a Sun (Oracle) JVM unless MetaUtil.setUseUnsafe(false) is called.
+     * </p><p>
+     * This method will handle common interfaces, such as Collection, Map, etc. which commonly show up in
+     * parameterized types.  Any other interface passed to this method will cause a JsonIoException to be thrown.
+     * </p><p>
+     * To improve performance, when called a 2nd time for the same Class, the constructor that was successfully
+     * used to construct the instance will be retrieved from an internal cache.
+     * </p>
+     * @param c Class to instantiate
+     * @return an instance of the instantiated class.  This instance is intended to have its fields 'stuffed' by
+     * direct assignment, not called via setter methods.
+     * @throws JsonIoException if it cannot instantiate the passed in class.
+     */
     public static Object newInstance(Class c)
     {
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
@@ -436,6 +465,11 @@ public class MetaUtils
         if (unmodifiableCollection.getClass().isAssignableFrom(c))
         {
             return new ArrayList();
+        }
+
+        if (c.isInterface())
+        {
+            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
         }
 
         // Constructor not cached, go find a constructor
@@ -508,6 +542,7 @@ public class MetaUtils
             {
                 return new Object[] {constructor.newInstance(), constructor, true};
             }
+            // No empty arg constructor
             return tryOtherConstruction(c);
         }
         catch (Exception e)
@@ -519,6 +554,15 @@ public class MetaUtils
         }
     }
 
+    /**
+     * Brute force attempt to locate a constructor to construct the passed in Class.  This involves trying all
+     * constructors, public, protected, package-private, and private.  It will try with null arguments as well
+     * as it will make a 2nd attempt with populated values for some known types (Collection classes, Dates, Strings,
+     * primitive wrappers, TimeZone, Calendar).
+     * @param c Class to instantiate
+     * @return an Object[] containing three (3) elements.  Position 0 is the instance of the class, position 1
+     * is the constructor used, and position 2 indicates whether fillArgs was called with useNull or !useNull.
+     */
     static Object[] tryOtherConstruction(Class c)
     {
         Constructor[] constructors = c.getDeclaredConstructors();
@@ -533,28 +577,27 @@ public class MetaUtils
         {
             public int compare(Constructor c1, Constructor c2)
             {
-                boolean c1Vis = isPublic(c1.getModifiers());
-                boolean c2Vis = isPublic(c2.getModifiers());
+                int c1Vis = c1.getModifiers();
+                int c2Vis = c2.getModifiers();
 
-                if (c1Vis != c2Vis)
+                if (c1Vis == c2Vis)
+                {   // both are public, protected, private, etc.  Compare by arguments.
+                    return compareConstructors(c1, c2);
+                }
+
+                if (isPublic(c1Vis) != isPublic(c2Vis))
                 {   // favor 'public' as first
-                    return c1Vis ? -1 : 1;
+                    return isPublic(c1Vis) ? -1 : 1;
                 }
 
-                c1Vis = isProtected(c1.getModifiers());
-                c2Vis = isProtected(c2.getModifiers());
-
-                if (c1Vis != c2Vis)
+                if (isProtected(c1Vis) != isProtected(c2Vis))
                 {   // favor protected 2nd
-                    return c1Vis ? -1 : 1;
+                    return isProtected(c1Vis) ? -1 : 1;
                 }
 
-                c1Vis = isPrivate(c1.getModifiers());
-                c2Vis = isPrivate(c2.getModifiers());
-
-                if (c1Vis != c2Vis)
-                {   //
-                    return c1Vis ? -1 : 1;
+                if (isPrivate(c1Vis) != isPrivate(c2Vis))
+                {   // favor private last
+                    return isPrivate(c1Vis) ? 1 : -1;
                 }
 
                 return 0;
@@ -605,6 +648,44 @@ public class MetaUtils
         throw new JsonIoException("Could not instantiate " + c.getName() + " using any constructor");
     }
 
+    /**
+     * When two constructors have the same access type (both public, both private, etc.)
+     * then compare constructors by parameter length (fewer params comes before more params).
+     * If parameter count is the same, then compare by parameter Class names.  If those are equal,
+     * which should never happen, then the constructurs are equal.
+     */
+    private static int compareConstructors(Constructor c1, Constructor c2)
+    {
+        Class[] c1ParamTypes = c1.getParameterTypes();
+        Class[] c2ParamTypes = c2.getParameterTypes();
+        if (c1ParamTypes.length != c2ParamTypes.length)
+        {   // negative value if c1 has less (less parameters will be chosen ahead of more), positive value otherwise.
+            return c1ParamTypes.length - c2ParamTypes.length;
+        }
+
+        // Has same number of parameters.s
+        int len = c1ParamTypes.length;
+        for (int i=0; i < len; i++)
+        {
+            Class class1 = c1ParamTypes[i];
+            Class class2 = c2ParamTypes[i];
+            int compare = class1.getName().compareTo(class2.getName());
+            if (compare != 0)
+            {
+                return compare;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Return an Object[] of instance values that can be passed into a given Constructor.  This method
+     * will return an array of nulls if useNull is true, otherwise it will return sensible values for
+     * primitive classes, and null for non-known primitive / primitive wrappers.  This class is used
+     * when attempting to call constructors on Java objects to get them instantiated, since there is no
+     * 'malloc' in Java.
+     */
     static Object[] fillArgs(Class[] argTypes, boolean useNull)
     {
         final Object[] values = new Object[argTypes.length];
@@ -718,6 +799,14 @@ public class MetaUtils
         return values;
     }
 
+    /**
+     * @return a new primitive wrapper instance for the given class, using the
+     * rhs parameter as a hint.  For example, newPrimitiveWrapper(long.class, "45")
+     * will return 45L.  However, if null is passed for the rhs, then the value 0L
+     * would be returned in this case.  For boolean, it would return false if null
+     * was passed in.  This method is similar to the GitHub project java-util's
+     * Converter.convert() API.
+     */
     static Object newPrimitiveWrapper(Class c, Object rhs)
     {
         final String cname;

@@ -28,7 +28,7 @@ class TestClassForName
     @Test
     void testInstantiation()
     {
-        Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject')
+        Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject', TestClassForName.class.getClassLoader())
         assert testObjectClass instanceof Class
         assert 'com.cedarsoftware.util.io.TestObject' == testObjectClass.name
     }
@@ -46,14 +46,14 @@ class TestClassForName
     {
         try
         {
-            MetaUtils.classForName(null)
+            MetaUtils.classForName(null, TestClassForName.class.getClassLoader())
             fail()
         }
         catch (JsonIoException e)
         {
         }
 
-        assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson'))
+        assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson', TestClassForName.class.getClassLoader()))
     }
 
     private class AlternateNameClassLoader extends ClassLoader {
