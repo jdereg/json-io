@@ -140,7 +140,7 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = classForName((String) type);
+                    c = classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 }
 
                 Calendar calendar = (Calendar) newInstance(c, jObj);
@@ -443,13 +443,13 @@ public class Readers
         {
             if (o instanceof String)
             {
-                return classForName((String) o);
+                return classForName((String) o, (ClassLoader)args.get(JsonReader.CLASSLOADER));
             }
 
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = classForName((String) jObj.get("value"));
+                jObj.target = classForName((String) jObj.get("value"), (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 return jObj.target;
             }
             throw new JsonIoException("Class missing 'value' field");
@@ -724,9 +724,9 @@ public class Readers
     }
 
     // ========== Maintain dependency knowledge in once place, down here =========
-    static Class classForName(String name)
+    static Class classForName(String name, ClassLoader classLoader)
     {
-        return MetaUtils.classForName(name);
+        return MetaUtils.classForName(name, classLoader);
     }
 
     static Object newInstance(Class c, JsonObject jsonObject)

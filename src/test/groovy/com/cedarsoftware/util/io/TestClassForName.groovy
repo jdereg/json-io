@@ -34,6 +34,14 @@ class TestClassForName
     }
 
     @Test
+    void testInstantiationWithClassloader()
+    {
+        Class testObjectClass = MetaUtils.classForName('ReallyLong', new AlternateNameClassLoader('ReallyLong', Long.class))
+        assert testObjectClass instanceof Class
+        assert 'java.lang.Long' == testObjectClass.name
+    }
+
+    @Test
     void testClassForNameErrorHandling()
     {
         try
@@ -46,5 +54,35 @@ class TestClassForName
         }
 
         assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson'))
+    }
+
+    private class AlternateNameClassLoader extends ClassLoader {
+        private final String alternateName;
+        private final Class<?> clazz;
+
+        public AlternateNameClassLoader(String alternateName, Class<?> clazz) {
+            super(AlternateNameClassLoader.class.getClassLoader());
+            this.alternateName = alternateName;
+            this.clazz = clazz;
+        }
+
+        @Override
+        public Class<?> loadClass(String className) throws ClassNotFoundException {
+            return findClass(className);
+        }
+
+        @Override
+        protected Class<?> findClass(String className) throws ClassNotFoundException {
+            try {
+                return findSystemClass(className);
+            } catch (Exception e) {
+            }
+
+            if (alternateName.equals(className)) {
+                return Long.class;
+            }
+
+            return null;
+        }
     }
 }
