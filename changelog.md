@@ -195,5 +195,3 @@
   * `java.sql.Date` when read in, was instantiated as a `java.util.Date`. This has been corrected.
  * 2.2.29
   * First official release through Maven Central
-
-by John DeRegnaucourt
