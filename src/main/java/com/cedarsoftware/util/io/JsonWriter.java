@@ -2341,14 +2341,7 @@ public class JsonWriter implements Closeable, Flushable
                         output.write("\\t");
                         break;
                     default:
-                        String hex = Integer.toHexString(c);
-                        output.write("\\u");
-                        final int pad = 4 - hex.length();
-                        for (int k = 0; k < pad; k++)
-                        {
-                            output.write('0');
-                        }
-                        output.write(hex);
+                        output.write(String.format("\\u%04X", (int)c));
                         break;
                 }
             }

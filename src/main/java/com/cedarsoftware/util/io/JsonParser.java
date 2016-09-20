@@ -409,11 +409,10 @@ class JsonParser
         final StringBuilder str = strBuf;
         final StringBuilder hex = hexBuf;
         str.setLength(0);
-        boolean done = false;
         int state = STRING_START;
         final FastPushbackReader in = input;
 
-        while (!done)
+        while (true)
         {
             final int c = in.read();
             if (c == -1)
@@ -425,7 +424,7 @@ class JsonParser
             {
                 if (c == '"')
                 {
-                    done = true;
+                    break;
                 }
                 else if (c == '\\')
                 {
@@ -500,15 +499,7 @@ class JsonParser
         }
 
         final String s = str.toString();
-        if (s.length() < 7)
-        {
-            final String cacheHit = stringCache.get(s);
-            return cacheHit == null ? s : cacheHit;
-        }
-        else
-        {
-            return s;
-        }
+        return stringCache.containsKey(s) ? stringCache.get(s) : s;
     }
 
     /**
