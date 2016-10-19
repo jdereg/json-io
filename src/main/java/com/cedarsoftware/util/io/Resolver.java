@@ -40,6 +40,7 @@ abstract class Resolver
     private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
     private final boolean useMaps;
     private final Object unknownClass;
+    private final boolean failOnUnknownType;
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -82,6 +83,7 @@ abstract class Resolver
         optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
+        failOnUnknownType = Boolean.TRUE.equals(optionalArgs.get(JsonReader.FAIL_ON_UNKNOWN_TYPE));
     }
 
     protected JsonReader getReader()
@@ -269,7 +271,7 @@ abstract class Resolver
             Class c;
             try
             {
-                c = MetaUtils.classForName(type, reader.getClassLoader());
+                c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
             }
             catch (Exception e)
             {

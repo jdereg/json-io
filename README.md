@@ -166,6 +166,11 @@ can be read, modified, and then re-written by a JVM that does not contain any of
                             // will be set on it. Set to false, and an exception will be 
                             // thrown when an unknown object type is encountered.  The 
                             // location in the JSON will be given.
+    FAIL_ON_UNKNOWN_TYPE    // Set to Boolean.TRUE to have JSON reader throw JsonIoException
+                            // when a @type value references a class that is not loadable
+                            // from the class loader. Set to any other value (or leave out)
+                            // and JSON parsing will return a Map to represent the unknown
+                            // object defined by the invalid @type value.
     CLASSLOADER             // ClassLoader instance to use when turning String names of     
                             // classes into JVM Class instances.
       

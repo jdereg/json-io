@@ -26,7 +26,7 @@ import static org.junit.Assert.fail
 class TestClassForName
 {
     @Test
-    void testInstantiation()
+    void testClassForName()
     {
         Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject', TestClassForName.class.getClassLoader())
         assert testObjectClass instanceof Class
@@ -34,7 +34,7 @@ class TestClassForName
     }
 
     @Test
-    void testInstantiationWithClassloader()
+    void testClassForNameWithClassloader()
     {
         Class testObjectClass = MetaUtils.classForName('ReallyLong', new AlternateNameClassLoader('ReallyLong', Long.class))
         assert testObjectClass instanceof Class
@@ -42,7 +42,7 @@ class TestClassForName
     }
 
     @Test
-    void testClassForNameErrorHandling()
+    void testClassForNameNullClassErrorHandling()
     {
         try
         {
@@ -54,6 +54,25 @@ class TestClassForName
         }
 
         assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson', TestClassForName.class.getClassLoader()))
+    }
+
+    @Test
+    void testClassForNameFailOnClassLoaderErrorTrue()
+    {
+        try {
+            MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), true)
+            fail()
+        }
+        catch (JsonIoException expected) {
+        }
+    }
+
+    @Test
+    void testClassForNameFailOnClassLoaderErrorFalse()
+    {
+        Class testObjectClass = MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), false)
+        assert testObjectClass instanceof Class
+        assert 'java.util.LinkedHashMap' == testObjectClass.name
     }
 
     private class AlternateNameClassLoader extends ClassLoader {
