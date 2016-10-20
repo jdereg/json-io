@@ -3,7 +3,6 @@ json-io
 [![Build Status](https://travis-ci.org/jdereg/json-io.svg?branch=master)](https://travis-ci.org/jdereg/json-io)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io)
 [![Javadoc](https://javadoc-emblem.rhcloud.com/doc/com.cedarsoftware/json-io/badge.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
-[![Coverage Status](https://coveralls.io/repos/github/jdereg/json-io/badge.svg?branch=master)](https://coveralls.io/github/jdereg/json-io?branch=master)
 
 Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
 
