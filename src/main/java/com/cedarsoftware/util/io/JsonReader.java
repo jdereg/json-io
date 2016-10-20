@@ -60,6 +60,8 @@ public class JsonReader implements Closeable
     public static final String USE_MAPS = "USE_MAPS";
     /** What to do when an object is found and 'type' cannot be determined. */
     public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";
+    /** Will fail JSON parsing if 'type' class defined but is not on classpath. */
+    public static final String FAIL_ON_UNKNOWN_TYPE = "FAIL_ON_UNKNOWN_TYPE";
     /** Pointer to 'this' (automatically placed in the Map) */
     public static final String JSON_READER = "JSON_READER";
     /** Pointer to the current ObjectResolver (automatically placed in the Map) */

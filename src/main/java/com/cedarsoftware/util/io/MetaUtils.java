@@ -300,34 +300,45 @@ public class MetaUtils
      * Given the passed in String class name, return the named JVM class.
      * @param name String name of a JVM class.
      * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @param failOnClassLoadingError If named class is not loadable off classpath: true will raise JsonIoException,
+     * false will return default LinkedHashMap.
      * @return Class the named JVM class.
-     * @throws JsonIoException if it was unable to locate the named Class.
+     * @throws JsonIoException if named Class is invalid or not loadable via the classLoader and failOnClassLoadingError is
+     * true
      */
-    static Class classForName(String name, ClassLoader classLoader)
-    {
+    static Class classForName(String name, ClassLoader classLoader, boolean failOnClassLoadingError) {
+        if (name == null || name.isEmpty())
+        {
+            throw new JsonIoException("Class name cannot be null or empty.");
+        }
+        Class c = nameToClass.get(name);
         try
         {
-            if (name == null || name.isEmpty())
-            {
-                throw new JsonIoException("Class name cannot be null or empty.");
-            }
-            Class c = nameToClass.get(name);
-            try
-            {
-                loadClassException = null;
-                return c == null ? loadClass(name, classLoader) : c;
-            }
-            catch (Exception e)
-            {
-                // Remember why in case later we have a problem
-                loadClassException = e;
-                return LinkedHashMap.class;
-            }
+            loadClassException = null;
+            return c == null ? loadClass(name, classLoader) : c;
         }
         catch (Exception e)
         {
-            throw new JsonIoException("Unable to create class: " + name, e);
+            // Remember why in case later we have a problem
+            loadClassException = e;
+            if(failOnClassLoadingError) {
+                throw new JsonIoException("Unable to create class: " + name, e);
+            }
+            return LinkedHashMap.class;
         }
+    }
+
+
+    /**
+     * Given the passed in String class name, return the named JVM class.
+     * @param name String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @return Class the named JVM class.
+     * @throws JsonIoException if named Class is invalid.
+     */
+    static Class classForName(String name, ClassLoader classLoader)
+    {
+        return classForName(name, classLoader, false);
     }
 
     /**
