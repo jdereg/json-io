@@ -3,7 +3,16 @@ package com.cedarsoftware.util.io;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -85,7 +94,7 @@ public class Readers
             {
                 throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
-            jObj.target = TimeZone.getTimeZone((String) zone);                  
+            jObj.target = TimeZone.getTimeZone((String) zone);
             return jObj.target;
         }
     }
@@ -454,6 +463,99 @@ public class Readers
             }
             throw new JsonIoException("Class missing 'value' field");
         }
+    }
+
+    public static class AtomicBooleanReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicBoolean");
+
+            if (value instanceof String)
+            {
+                String state = (String) value;
+                if ("".equals(state.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicBoolean("true".equalsIgnoreCase(state));
+            }
+            else if (value instanceof Boolean)
+            {
+                return new AtomicBoolean((Boolean) value);
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicBoolean(((Number)value).longValue() != 0);
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicBoolean, value type = " + value.getClass().getName());
+        }
+    }
+
+    public static class AtomicIntegerReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicInteger");
+
+            if (value instanceof String)
+            {
+                String num = (String) value;
+                if ("".equals(num.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicInteger(Integer.parseInt(MetaUtils.removeLeadingAndTrailingQuotes(num)));
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicInteger(((Number)value).intValue());
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicInteger, value type = " + value.getClass().getName());
+        }
+    }
+
+    public static class AtomicLongReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicLong");
+
+            if (value instanceof String)
+            {
+                String num = (String) value;
+                if ("".equals(num.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicLong(Long.parseLong(MetaUtils.removeLeadingAndTrailingQuotes(num)));
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicLong(((Number)value).longValue());
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicLong, value type = " + value.getClass().getName());
+        }
+    }
+
+    private static Object getValueFromJsonObject(Object o, Object value, String typeName)
+    {
+        if (o instanceof JsonObject)
+        {
+            JsonObject jObj = (JsonObject) o;
+            if (jObj.containsKey("value"))
+            {
+                value = jObj.get("value");
+            }
+            else
+            {
+                throw new JsonIoException(typeName + " defined as JSON {} object, missing 'value' field");
+            }
+        }
+        return value;
     }
 
     public static class BigIntegerReader implements JsonReader.JsonClassReaderEx

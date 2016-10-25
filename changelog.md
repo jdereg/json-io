@@ -1,4 +1,6 @@
 ### Revision History
+ * 4.9.0
+  * Enhancement: AtomicInteger, AtomicLong, and AtomicBoolean are now supported.
  * 4.8.0
   * Enhancement: Added support for specifying the ClassLoader to be used when mapping JSON to Objects. Useful within OSGI and other frameworks where multiple ClassLoaders are involved. @lightcycle
   * JavaDoc has been significantly updated / improved.

@@ -11,6 +11,9 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -113,6 +116,9 @@ public class JsonWriter implements Closeable, Flushable
     {   // Add customer writers (these make common classes more succinct)
         addWriter(String.class, new Writers.JsonStringWriter());
         addWriter(Date.class, new Writers.DateWriter());
+        addWriter(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
+        addWriter(AtomicInteger.class, new Writers.AtomicIntegerWriter());
+        addWriter(AtomicLong.class, new Writers.AtomicLongWriter());
         addWriter(BigInteger.class, new Writers.BigIntegerWriter());
         addWriter(BigDecimal.class, new Writers.BigDecimalWriter());
         addWriter(java.sql.Date.class, new Writers.DateWriter());

@@ -7,6 +7,9 @@ import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -87,6 +90,9 @@ public class JsonReader implements Closeable
     {
         addReader(String.class, new Readers.StringReader());
         addReader(Date.class, new Readers.DateReader());
+        addReader(AtomicBoolean.class, new Readers.AtomicBooleanReader());
+        addReader(AtomicInteger.class, new Readers.AtomicIntegerReader());
+        addReader(AtomicLong.class, new Readers.AtomicLongReader());
         addReader(BigInteger.class, new Readers.BigIntegerReader());
         addReader(BigDecimal.class, new Readers.BigDecimalReader());
         addReader(java.sql.Date.class, new Readers.SqlDateReader());

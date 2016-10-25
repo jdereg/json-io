@@ -12,6 +12,9 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * All special writers for json-io are stored here.  Special writers are not needed for handling
@@ -215,6 +218,81 @@ public class Writers
             output.write('"');
             output.write(big.toString(10));
             output.write('"');
+        }
+    }
+
+    public static class AtomicBooleanWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicBoolean value = (AtomicBoolean) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicBoolean value = (AtomicBoolean) o;
+            output.write(value.toString());
+        }
+    }
+
+    public static class AtomicIntegerWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicInteger value = (AtomicInteger) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicInteger value = (AtomicInteger) o;
+            output.write(value.toString());
+        }
+    }
+
+    public static class AtomicLongWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicLong value = (AtomicLong) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicLong value = (AtomicLong) o;
+            output.write(value.toString());
         }
     }
 
