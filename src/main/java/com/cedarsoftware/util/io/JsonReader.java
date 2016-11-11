@@ -81,7 +81,7 @@ public class JsonReader implements Closeable
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<Class>();
-    private static final Map<Class, Factory> factory = new ConcurrentHashMap<Class, Factory>();
+    private static final Map<String, Factory> factory = new ConcurrentHashMap<String, Factory>();
     private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
     private final FastPushbackReader input;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
@@ -279,12 +279,22 @@ public class JsonReader implements Closeable
      * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
      * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
+     * @param n Class name to assign an ClassFactory to
+     * @param f ClassFactory that will create 'c' instances
+     */
+    public static void assignInstantiator(String n, Factory f)
+    {
+        factory.put(n, f);
+    }
+
+    /**
+     * Assign instantiated by Class. Falls back to JsonReader.assignInstantiator(String, Factory)
      * @param c Class to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
      */
     public static void assignInstantiator(Class c, Factory f)
     {
-        factory.put(c, f);
+        assignInstantiator(c.getName(), f);
     }
 
     /**
@@ -718,9 +728,9 @@ public class JsonReader implements Closeable
 
     public static Object newInstance(Class c)
     {
-        if (factory.containsKey(c))
+        if (factory.containsKey(c.getName()))
         {
-            ClassFactory cf = (ClassFactory) factory.get(c);
+            ClassFactory cf = (ClassFactory) factory.get(c.getName());
             return cf.newInstance(c);
         }
         return MetaUtils.newInstance(c);
@@ -728,9 +738,9 @@ public class JsonReader implements Closeable
 
     public static Object newInstance(Class c, JsonObject jsonObject)
     {
-        if (factory.containsKey(c))
+        if (factory.containsKey(c.getName()))
         {
-            Factory cf = factory.get(c);
+            Factory cf = factory.get(c.getName());
             if (cf instanceof ClassFactoryEx)
             {
                 Map args = new HashMap();
