@@ -1,4 +1,6 @@
 ### Revision History
+ * 4.9.1
+  * Enhancement: Make it possible to assign instantiator for package private classes, for example com.google.common.collect.RegularImmutableMap.  Contributed by @mhmx (Richard Kovacs)
  * 4.9.0
   * Enhancement: AtomicInteger, AtomicLong, and AtomicBoolean are now supported.
  * 4.8.0
