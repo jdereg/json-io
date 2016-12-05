@@ -122,6 +122,47 @@ function substitute(parent, fieldName, jObj, idsToObjs)
     }
 }
 
+/**
+ * Get an HTTP GET command URL for use when the Ajax (JSON) command
+ * to be sent to the command servlet has a streaming return type.
+ * @param target String in the form of 'controller.method'
+ * @param args Array of arguments to be passed to the method.
+ */
+function stream(target, args)
+{
+    return buildJsonCmdUrl(target) + '?json=' + buildJsonArgs(args);
+}
+
+function buildJsonCmdUrl(target)
+{
+    var pieces = target.split('.');
+    if (pieces == null || pieces.length != 2)
+    {
+        throw "Error: Use 'Controller.method'";
+    }
+    var controller = pieces[0];
+    var method = pieces[1];
+
+    var regexp = /\/([^\/]+)\//g;
+    var match = regexp.exec(location.pathname);
+    if (match == null || match.length != 2)
+    {
+        return location.protocol + '//' + location.hostname + ":" + location.port + "/cmd/" + controller + "/" + method;
+    }
+    var ctx = match[1];
+    return location.protocol + '//' + location.hostname + ":" + location.port + "/" + ctx + "/cmd/" + controller + "/" + method;
+}
+
+function buildJsonArgs(args)
+{
+    if (!args)
+    {
+        args = [];  // empty args
+    }
+
+    return encodeURI(JSON.stringify(args));
+}
+
 function assert(truth)
 {
     if (!truth)
