@@ -90,6 +90,23 @@ public class JsonWriter implements Closeable, Flushable
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
 
+    private static final Map<Class, JsonClassWriterBase> BASE_WRITERS = Collections.unmodifiableMap(new HashMap<Class, JsonClassWriterBase>(){{
+        put(String.class, new Writers.JsonStringWriter());
+        put(Date.class, new Writers.DateWriter());
+        put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
+        put(AtomicInteger.class, new Writers.AtomicIntegerWriter());
+        put(AtomicLong.class, new Writers.AtomicLongWriter());
+        put(BigInteger.class, new Writers.BigIntegerWriter());
+        put(BigDecimal.class, new Writers.BigDecimalWriter());
+        put(java.sql.Date.class, new Writers.DateWriter());
+        put(Timestamp.class, new Writers.TimestampWriter());
+        put(Calendar.class, new Writers.CalendarWriter());
+        put(TimeZone.class, new Writers.TimeZoneWriter());
+        put(Locale.class, new Writers.LocaleWriter());
+        put(Class.class, new Writers.ClassWriter());
+        put(StringBuilder.class, new Writers.StringBuilderWriter());
+        put(StringBuffer.class, new Writers.StringBufferWriter());
+    }});
     private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final Set<Class> notCustom = new HashSet<Class>();
@@ -114,21 +131,7 @@ public class JsonWriter implements Closeable, Flushable
     final Map<String, Object> args = new HashMap<String, Object>();
 
     {   // Add customer writers (these make common classes more succinct)
-        addWriter(String.class, new Writers.JsonStringWriter());
-        addWriter(Date.class, new Writers.DateWriter());
-        addWriter(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
-        addWriter(AtomicInteger.class, new Writers.AtomicIntegerWriter());
-        addWriter(AtomicLong.class, new Writers.AtomicLongWriter());
-        addWriter(BigInteger.class, new Writers.BigIntegerWriter());
-        addWriter(BigDecimal.class, new Writers.BigDecimalWriter());
-        addWriter(java.sql.Date.class, new Writers.DateWriter());
-        addWriter(Timestamp.class, new Writers.TimestampWriter());
-        addWriter(Calendar.class, new Writers.CalendarWriter());
-        addWriter(TimeZone.class, new Writers.TimeZoneWriter());
-        addWriter(Locale.class, new Writers.LocaleWriter());
-        addWriter(Class.class, new Writers.ClassWriter());
-        addWriter(StringBuilder.class, new Writers.StringBuilderWriter());
-        addWriter(StringBuffer.class, new Writers.StringBufferWriter());
+        writers.putAll(BASE_WRITERS);
     }
 
     static

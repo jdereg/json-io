@@ -78,6 +78,23 @@ public class JsonReader implements Closeable
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
 
+    private static final Map<Class, JsonClassReaderBase> BASE_READERS = Collections.unmodifiableMap(new HashMap<Class, JsonClassReaderBase>() {{
+        put(String.class, new Readers.StringReader());
+        put(Date.class, new Readers.DateReader());
+        put(AtomicBoolean.class, new Readers.AtomicBooleanReader());
+        put(AtomicInteger.class, new Readers.AtomicIntegerReader());
+        put(AtomicLong.class, new Readers.AtomicLongReader());
+        put(BigInteger.class, new Readers.BigIntegerReader());
+        put(BigDecimal.class, new Readers.BigDecimalReader());
+        put(java.sql.Date.class, new Readers.SqlDateReader());
+        put(Timestamp.class, new Readers.TimestampReader());
+        put(Calendar.class, new Readers.CalendarReader());
+        put(TimeZone.class, new Readers.TimeZoneReader());
+        put(Locale.class, new Readers.LocaleReader());
+        put(Class.class, new Readers.ClassReader());
+        put(StringBuilder.class, new Readers.StringBuilderReader());
+        put(StringBuffer.class, new Readers.StringBufferReader());
+    }});
     protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>();
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<Class>();
@@ -88,21 +105,7 @@ public class JsonReader implements Closeable
     private final Map<String, Object> args = new HashMap<String, Object>();
 
     {
-        addReader(String.class, new Readers.StringReader());
-        addReader(Date.class, new Readers.DateReader());
-        addReader(AtomicBoolean.class, new Readers.AtomicBooleanReader());
-        addReader(AtomicInteger.class, new Readers.AtomicIntegerReader());
-        addReader(AtomicLong.class, new Readers.AtomicLongReader());
-        addReader(BigInteger.class, new Readers.BigIntegerReader());
-        addReader(BigDecimal.class, new Readers.BigDecimalReader());
-        addReader(java.sql.Date.class, new Readers.SqlDateReader());
-        addReader(Timestamp.class, new Readers.TimestampReader());
-        addReader(Calendar.class, new Readers.CalendarReader());
-        addReader(TimeZone.class, new Readers.TimeZoneReader());
-        addReader(Locale.class, new Readers.LocaleReader());
-        addReader(Class.class, new Readers.ClassReader());
-        addReader(StringBuilder.class, new Readers.StringBuilderReader());
-        addReader(StringBuffer.class, new Readers.StringBufferReader());
+        readers.putAll(BASE_READERS);
     }
 
     static
@@ -256,6 +259,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
+        @Override
         public Object newInstance(Class c)
         {
             if (SortedMap.class.isAssignableFrom(c))
