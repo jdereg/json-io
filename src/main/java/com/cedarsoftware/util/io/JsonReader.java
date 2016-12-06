@@ -3,6 +3,8 @@ package com.cedarsoftware.util.io;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -374,16 +376,7 @@ public class JsonReader implements Closeable
         {
             optionalArgs.put(USE_MAPS, false);
         }
-        ByteArrayInputStream ba;
-        try
-        {
-            ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
-        }
-        JsonReader jr = new JsonReader(ba, optionalArgs);
+        JsonReader jr = new JsonReader(json, optionalArgs);
         Object obj = jr.readObject();
         jr.close();
         return obj;
@@ -537,57 +530,68 @@ public class JsonReader implements Closeable
 
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
     {
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<String, Object>();
+        initializeFromArgs(optionalArgs);
+
+        try {
+            input = new FastPushbackBufferedReader(new InputStreamReader(inp, "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new JsonIoException("Your JVM does not support UTF-8.  Get a better JVM.", e);
+        }
+    }
+
+    public JsonReader(String inp, Map<String, Object> optionalArgs)
+    {
+        initializeFromArgs(optionalArgs);
+
+        try {
+            input = new FastPushbackBytesReader(inp.getBytes(Charset.forName("UTF-8")));
+        } catch (UnsupportedCharsetException e) {
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
+        }
+    }
+
+    public JsonReader(byte[] inp, Map<String, Object> optionalArgs)
+    {
+        initializeFromArgs(optionalArgs);
+        input = new FastPushbackBytesReader(Arrays.copyOf(inp, inp.length));
+    }
+
+    private void initializeFromArgs(Map<String, Object> optionalArgs)
+    {
+        if (optionalArgs == null) {
+            optionalArgs = new HashMap();
         }
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
-        if (!args.containsKey(CLASSLOADER))
-        {
+        if (!args.containsKey(CLASSLOADER)) {
             args.put(CLASSLOADER, JsonReader.class.getClassLoader());
         }
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
 
-        if (typeNames != null)
-        {   // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
+        if (typeNames != null) { // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
             // and not keep a 2nd map from short-hand name to type.
             Map<String, String> typeNameMap = new HashMap<String, String>();
-            for (Map.Entry<String, String> entry : typeNames.entrySet())
-            {
+            for (Map.Entry<String, String> entry : typeNames.entrySet()) {
                 typeNameMap.put(entry.getValue(), entry.getKey());
             }
-            args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);   // replace with our reversed Map.
+            args.put(TYPE_NAME_MAP_REVERSE, typeNameMap); // replace with our reversed Map.
         }
 
         setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
 
         Map<Class, JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
-        if (customReaders != null)
-        {
-            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet())
-            {
+        if (customReaders != null) {
+            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet()) {
                 addReader(entry.getKey(), entry.getValue());
             }
         }
 
         Iterable<Class> notCustomReaders = (Iterable<Class>) args.get(NOT_CUSTOM_READER_MAP);
-        if (notCustomReaders != null)
-        {
-            for (Class c : notCustomReaders)
-            {
+        if (notCustomReaders != null) {
+            for (Class c : notCustomReaders) {
                 addNotCustomReader(c);
             }
-        }
-
-        try
-        {
-            input = new FastPushbackReader(new InputStreamReader(inp, "UTF-8"));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new JsonIoException("Your JVM does not support UTF-8.  Get a better JVM.", e);
         }
     }
 
@@ -776,7 +780,7 @@ public class JsonReader implements Closeable
     {
         if (input != null)
         {
-            return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.line + ", col: " + input.col;
+            return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.getLine() + ", col: " + input.getCol();
         }
         return msg;
     }
