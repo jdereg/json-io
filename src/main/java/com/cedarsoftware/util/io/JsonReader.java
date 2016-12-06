@@ -340,7 +340,7 @@ public class JsonReader implements Closeable
     /**
      * @return The arguments used to configure the JsonReader.  These are thread local.
      */
-    public Map getArgs()
+    public Map<String, Object> getArgs()
     {
         return args;
     }
@@ -367,7 +367,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<String, Object>();
             optionalArgs.put(USE_MAPS, false);
         }
         if (!optionalArgs.containsKey(USE_MAPS))
@@ -400,7 +400,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<String, Object>();
             optionalArgs.put(USE_MAPS, false);
         }
         if (!optionalArgs.containsKey(USE_MAPS))
@@ -442,7 +442,7 @@ public class JsonReader implements Closeable
         {
             if (optionalArgs == null)
             {
-                optionalArgs = new HashMap();
+                optionalArgs = new HashMap<String, Object>();
             }
             optionalArgs.put(USE_MAPS, true);
             ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
@@ -472,7 +472,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<String, Object>();
         }
         optionalArgs.put(USE_MAPS, true);
         JsonReader jr = new JsonReader(inputStream, optionalArgs);
@@ -539,7 +539,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<String, Object>();
         }
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
@@ -623,7 +623,7 @@ public class JsonReader implements Closeable
     public Object readObject()
     {
         JsonParser parser = new JsonParser(input, objsRead, getArgs());
-        JsonObject root = new JsonObject();
+        JsonObject<String, Object> root = new JsonObject();
         Object o;
         try
         {

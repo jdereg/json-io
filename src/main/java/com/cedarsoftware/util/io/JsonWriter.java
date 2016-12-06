@@ -359,7 +359,7 @@ public class JsonWriter implements Closeable, Flushable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<String, Object>();
         }
         args.putAll(optionalArgs);
         args.put(JsonClassWriterEx.JSON_WRITER, this);
@@ -432,7 +432,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 Class c = entry.getKey();
                 List<String> fields = entry.getValue();
-                List<Field> newList = new ArrayList(fields.size());
+                List<Field> newList = new ArrayList<Field>(fields.size());
 
                 Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
 
@@ -686,7 +686,7 @@ public class JsonWriter implements Closeable, Flushable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonClassWriterBase { }
+    static final class NullClass implements JsonClassWriterBase { }
 
     /**
      * Fetch the customer writer for the passed in Class.  If it is cached (already associated to the
@@ -1476,6 +1476,19 @@ public class JsonWriter implements Closeable, Flushable
         beginCollection(showType, referenced);
         Iterator i = col.iterator();
 
+        writeElements(output, i);
+
+        tabOut();
+        output.write(']');
+        if (showType || referenced)
+        {   // Finished object, as it was output as an object if @id or @type was output
+            tabOut();
+            output.write("}");
+        }
+    }
+
+    private void writeElements(Writer output, Iterator i) throws IOException
+    {
         while (i.hasNext())
         {
             writeCollectionElement(i.next());
@@ -1485,14 +1498,6 @@ public class JsonWriter implements Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-        }
-
-        tabOut();
-        output.write(']');
-        if (showType || referenced)
-        {   // Finished object, as it was output as an object if @id or @type was output
-            tabOut();
-            output.write("}");
         }
     }
 
@@ -1777,16 +1782,7 @@ public class JsonWriter implements Closeable, Flushable
         tabIn();
         Iterator i = jObj.keySet().iterator();
 
-        while (i.hasNext())
-        {
-            writeCollectionElement(i.next());
-
-            if (i.hasNext())
-            {
-                output.write(',');
-                newLine();
-            }
-        }
+        writeElements(output, i);
 
         tabOut();
         output.write("],");
@@ -1795,16 +1791,7 @@ public class JsonWriter implements Closeable, Flushable
         tabIn();
         i =jObj.values().iterator();
 
-        while (i.hasNext())
-        {
-            writeCollectionElement(i.next());
-
-            if (i.hasNext())
-            {
-                output.write(',');
-                newLine();
-            }
-        }
+        writeElements(output, i);
 
         tabOut();
         output.write(']');
@@ -2029,16 +2016,7 @@ public class JsonWriter implements Closeable, Flushable
         tabIn();
         Iterator i = map.keySet().iterator();
 
-        while (i.hasNext())
-        {
-            writeCollectionElement(i.next());
-
-            if (i.hasNext())
-            {
-                output.write(',');
-                newLine();
-            }
-        }
+        writeElements(output, i);
 
         tabOut();
         output.write("],");
@@ -2047,16 +2025,7 @@ public class JsonWriter implements Closeable, Flushable
         tabIn();
         i = map.values().iterator();
 
-        while (i.hasNext())
-        {
-            writeCollectionElement(i.next());
-
-            if (i.hasNext())
-            {
-                output.write(',');
-                newLine();
-            }
-        }
+        writeElements(output, i);
 
         tabOut();
         output.write(']');

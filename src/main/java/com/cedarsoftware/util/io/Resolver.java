@@ -79,7 +79,7 @@ abstract class Resolver
     protected Resolver(JsonReader reader)
     {
         this.reader = reader;
-        Map optionalArgs = reader.getArgs();
+        Map<String, Object> optionalArgs = reader.getArgs();
         optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
@@ -196,7 +196,7 @@ abstract class Resolver
 
     private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
     {
-        final JsonObject jsonCollection = new JsonObject();
+        final JsonObject<String, Object> jsonCollection = new JsonObject<String, Object>();
         jsonCollection.put("@items", items);
         final Object[] javaKeys = new Object[size];
         jsonCollection.target = javaKeys;
@@ -210,7 +210,7 @@ abstract class Resolver
      *
      * @param map Map to convert
      */
-    protected static void convertMapToKeysItems(final JsonObject map)
+    protected static void convertMapToKeysItems(final JsonObject<String, Object> map)
     {
         if (!map.containsKey("@keys") && !map.isReference())
         {
@@ -450,7 +450,7 @@ abstract class Resolver
     /**
      * Create the EnumSet with its values (it must be created this way)
      */
-    private Object getEnumSet(Class c, JsonObject jsonObj)
+    private Object getEnumSet(Class c, JsonObject<String, Object> jsonObj)
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
