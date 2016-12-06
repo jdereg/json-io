@@ -1,9 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
 import static org.junit.Assert.assertTrue;
 
@@ -24,7 +22,6 @@ import static org.junit.Assert.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestJsonIoHandlesNonStaticInnerButGsonFails
 {
     public class A
