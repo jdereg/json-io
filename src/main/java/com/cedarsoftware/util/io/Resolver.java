@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 abstract class Resolver
 {
-    protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
+    final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
     final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<Class, JsonReader.JsonClassReaderBase>();
@@ -47,21 +47,21 @@ abstract class Resolver
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
      * definition.  This can point to a field reference or an array/Collection element reference.
      */
-    protected static final class UnresolvedReference
+    static final class UnresolvedReference
     {
         private final JsonObject referencingObj;
         private String field;
         private final long refId;
         private int index = -1;
 
-        protected UnresolvedReference(JsonObject referrer, String fld, long id)
+        UnresolvedReference(JsonObject referrer, String fld, long id)
         {
             referencingObj = referrer;
             field = fld;
             refId = id;
         }
 
-        protected UnresolvedReference(JsonObject referrer, int idx, long id)
+        UnresolvedReference(JsonObject referrer, int idx, long id)
         {
             referencingObj = referrer;
             index = idx;
@@ -74,7 +74,7 @@ abstract class Resolver
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonReader.JsonClassReaderBase  { }
+    private static final class NullClass implements JsonReader.JsonClassReaderBase  { }
 
     protected Resolver(JsonReader reader)
     {

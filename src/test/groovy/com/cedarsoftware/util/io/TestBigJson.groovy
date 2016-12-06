@@ -76,7 +76,7 @@ class TestBigJson
 //        println 'num push = ' + FastPushbackReader.numpush
 
         int i=0
-        while (i++ < 50)
+        while (i++ < 50i)
         {
 //            gson = new Gson()
 //            start = System.nanoTime()
