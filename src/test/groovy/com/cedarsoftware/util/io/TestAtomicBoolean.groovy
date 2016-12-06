@@ -57,7 +57,6 @@ class TestAtomicBoolean
         assert atom2.values[3].get()
 
         json = JsonWriter.objectToJson(atom2)
-        println json
         assert json == '''{"@type":"com.cedarsoftware.util.io.TestAtomicBoolean$TestAtomicBooleanField","value":true,"nullValue":null,"strValue":true,"emptyStrValue":null,"objValue":false,"values":[false,null,true,true]}'''
 
         json = '''{"@type":"com.cedarsoftware.util.io.TestAtomicBoolean$TestAtomicBooleanField","value":16.5}'''
