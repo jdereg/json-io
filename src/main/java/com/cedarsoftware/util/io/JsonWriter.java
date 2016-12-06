@@ -90,24 +90,8 @@ public class JsonWriter implements Closeable, Flushable
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
 
-    private static final Map<Class, JsonClassWriterBase> BASE_WRITERS = Collections.unmodifiableMap(new HashMap<Class, JsonClassWriterBase>(){{
-        put(String.class, new Writers.JsonStringWriter());
-        put(Date.class, new Writers.DateWriter());
-        put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
-        put(AtomicInteger.class, new Writers.AtomicIntegerWriter());
-        put(AtomicLong.class, new Writers.AtomicLongWriter());
-        put(BigInteger.class, new Writers.BigIntegerWriter());
-        put(BigDecimal.class, new Writers.BigDecimalWriter());
-        put(java.sql.Date.class, new Writers.DateWriter());
-        put(Timestamp.class, new Writers.TimestampWriter());
-        put(Calendar.class, new Writers.CalendarWriter());
-        put(TimeZone.class, new Writers.TimeZoneWriter());
-        put(Locale.class, new Writers.LocaleWriter());
-        put(Class.class, new Writers.ClassWriter());
-        put(StringBuilder.class, new Writers.StringBuilderWriter());
-        put(StringBuffer.class, new Writers.StringBufferWriter());
-    }});
-    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>();
+    private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
+    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
     private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
     private final Set<Class> notCustom = new HashSet<Class>();
     private static final Object[] byteStrings = new Object[256];
@@ -130,10 +114,6 @@ public class JsonWriter implements Closeable, Flushable
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     final Map<String, Object> args = new HashMap<String, Object>();
 
-    {   // Add customer writers (these make common classes more succinct)
-        writers.putAll(BASE_WRITERS);
-    }
-
     static
     {
         for (short i = -128; i <= 127; i++)
@@ -141,6 +121,24 @@ public class JsonWriter implements Closeable, Flushable
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
+
+        Map<Class, JsonClassWriterBase> temp = new HashMap<Class, JsonClassWriterBase>();
+        temp.put(String.class, new Writers.JsonStringWriter());
+        temp.put(Date.class, new Writers.DateWriter());
+        temp.put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
+        temp.put(AtomicInteger.class, new Writers.AtomicIntegerWriter());
+        temp.put(AtomicLong.class, new Writers.AtomicLongWriter());
+        temp.put(BigInteger.class, new Writers.BigIntegerWriter());
+        temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
+        temp.put(java.sql.Date.class, new Writers.DateWriter());
+        temp.put(Timestamp.class, new Writers.TimestampWriter());
+        temp.put(Calendar.class, new Writers.CalendarWriter());
+        temp.put(TimeZone.class, new Writers.TimeZoneWriter());
+        temp.put(Locale.class, new Writers.LocaleWriter());
+        temp.put(Class.class, new Writers.ClassWriter());
+        temp.put(StringBuilder.class, new Writers.StringBuilderWriter());
+        temp.put(StringBuffer.class, new Writers.StringBufferWriter());
+        BASE_WRITERS = Collections.unmodifiableMap(temp);
     }
 
     /**

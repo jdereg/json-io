@@ -50,13 +50,12 @@ class TestArrays
 
     private static class Empty implements Serializable
     {
-        public static double multiply(double x, double y)
+        static double multiply(double x, double y)
         {
             return x * y;
         }
 
-        @Override
-        public boolean equals(Object other)
+        boolean equals(Object other)
         {
             return other instanceof Empty;
         }

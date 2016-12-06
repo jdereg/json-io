@@ -34,14 +34,14 @@ class TestMissingFieldHandler
     private static final String OLD_CUSTOM_POINT = '{\"@type\":\"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPoint\",\"x\":5,\"y\":7}';
 
     @Test
-    public void testMissingHandler()
+    void testMissingHandler()
     {
         CustomPoint pt = new CustomPoint()
         pt.x = 5
 
         JsonReader.MissingFieldHandler missingHandler = new JsonReader.MissingFieldHandler() {
-            @Override
-            void fieldMissing(Object object, String fieldName, Object value) {
+            void fieldMissing(Object object, String fieldName, Object value)
+            {
                 ((CustomPoint)object).newY = (long) value;
             }
         }

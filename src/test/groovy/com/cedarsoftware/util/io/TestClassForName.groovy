@@ -49,9 +49,8 @@ class TestClassForName
             MetaUtils.classForName(null, TestClassForName.class.getClassLoader())
             fail()
         }
-        catch (JsonIoException e)
-        {
-        }
+        catch (JsonIoException ignored)
+        { }
 
         assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson', TestClassForName.class.getClassLoader()))
     }
@@ -63,8 +62,8 @@ class TestClassForName
             MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), true)
             fail()
         }
-        catch (JsonIoException expected) {
-        }
+        catch (JsonIoException ignored)
+        { }
     }
 
     @Test
@@ -75,29 +74,33 @@ class TestClassForName
         assert 'java.util.LinkedHashMap' == testObjectClass.name
     }
 
-    private class AlternateNameClassLoader extends ClassLoader {
+    private class AlternateNameClassLoader extends ClassLoader
+    {
         private final String alternateName;
         private final Class<?> clazz;
 
-        public AlternateNameClassLoader(String alternateName, Class<?> clazz) {
+        AlternateNameClassLoader(String alternateName, Class<?> clazz)
+        {
             super(AlternateNameClassLoader.class.getClassLoader());
             this.alternateName = alternateName;
             this.clazz = clazz;
         }
 
-        @Override
-        public Class<?> loadClass(String className) throws ClassNotFoundException {
+        Class<?> loadClass(String className) throws ClassNotFoundException
+        {
             return findClass(className);
         }
 
-        @Override
-        protected Class<?> findClass(String className) throws ClassNotFoundException {
-            try {
+        protected Class<?> findClass(String className) throws ClassNotFoundException
+        {
+            try
+            {
                 return findSystemClass(className);
-            } catch (Exception e) {
             }
+            catch (Exception ignored) { }
 
-            if (alternateName.equals(className)) {
+            if (alternateName.equals(className))
+            {
                 return Long.class;
             }
 

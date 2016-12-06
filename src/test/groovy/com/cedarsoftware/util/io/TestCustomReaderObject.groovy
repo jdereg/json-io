@@ -21,11 +21,10 @@ import org.junit.Test
  */
 class TestCustomReaderObject
 {
-
-	static class CustomReader implements JsonReader.JsonClassReaderEx {
-
-		@Override
-		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) {
+	static class CustomReader implements JsonReader.JsonClassReaderEx
+	{
+		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+		{
 			ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
 			resolver.traverseFields(stack, (JsonObject<String, Object>) jOb);
 			Object target = ((JsonObject<String, Object>) jOb).getTarget();
