@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <name>json-io</name>
     <groupId>com.cedarsoftware</groupId>
@@ -65,7 +66,7 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <developers>
@@ -80,7 +81,8 @@
         <version.java-util>1.24.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
         <version.groovy>2.4.7</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.6.2</version.gson>                        <!-- only test dependency -->
+        <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
+        <version.jmh>1.17.1</version.jmh>                       <!-- only test dependency -->
         <version.java>1.6</version.java>
         <version.plugin.compiler>3.5.1</version.plugin.compiler>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
@@ -95,6 +97,10 @@
         <version.plugin.felix.scr>1.7.4</version.plugin.felix.scr>
         <version.plugin.felix.bundle>2.5.3</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+            Name of the benchmark Uber-JAR to generate.
+          -->
+        <uberjar.name>benchmarks</uberjar.name>
     </properties>
 
     <pluginRepositories>
@@ -132,27 +138,27 @@
             </plugin>
 
             <plugin>
-    			<groupId>org.apache.felix</groupId>
-    			<artifactId>maven-bundle-plugin</artifactId>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
                 <version>${version.plugin.felix.bundle}</version>
-    			<extensions>true</extensions>
-    			<configuration>
-					<instructions>
-        				<Export-Package>com.cedarsoftware.util.io</Export-Package>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Export-Package>com.cedarsoftware.util.io</Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
-      				</instructions>
-    			</configuration>
-    			<executions>
-    				<execution>
-    					<id>bundle-manifest</id>
-    					<goals>
-    						<goal>
-    							manifest
-    						</goal>
-    					</goals>
-    				</execution>
-    			</executions>
-  			</plugin>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <goals>
+                            <goal>
+                                manifest
+                            </goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -229,6 +235,42 @@
                     <forkCount>1</forkCount>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>${uberjar.name}</finalName>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.openjdk.jmh.Main</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <!--
+                                        Shading signed JARs will fail without this.
+                                        http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
+                                    -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
         </plugins>
     </build>
@@ -263,5 +305,17 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${version.jmh}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${version.jmh}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
