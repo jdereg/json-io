@@ -498,7 +498,8 @@ class JsonParser
         }
 
         final String s = str.toString();
-        return stringCache.containsKey(s) ? stringCache.get(s) : s;
+        final String translate =  stringCache.get(s);
+        return translate == null ? s : translate;
     }
 
     /**
