@@ -820,11 +820,9 @@ public class MetaUtils
      */
     static Object newPrimitiveWrapper(Class c, Object rhs)
     {
-        final String cname;
         try
         {
-            cname = c.getName();
-            if (cname.equals("boolean") || cname.equals("java.lang.Boolean"))
+            if (c == boolean.class || c == Boolean.class)
             {
                 if (rhs instanceof String)
                 {
@@ -837,7 +835,7 @@ public class MetaUtils
                 }
                 return rhs != null ? rhs : Boolean.FALSE;
             }
-            else if (cname.equals("byte") || cname.equals("java.lang.Byte"))
+            else if (c == byte.class || c == Byte.class)
             {
                 if (rhs instanceof String)
                 {
@@ -850,7 +848,7 @@ public class MetaUtils
                 }
                 return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
             }
-            else if (cname.equals("char") || cname.equals("java.lang.Character"))
+            else if (c == char.class || c == Character.class)
             {
                 if (rhs == null)
                 {
@@ -871,7 +869,7 @@ public class MetaUtils
                 }
                 // Let it throw exception
             }
-            else if (cname.equals("double") || cname.equals("java.lang.Double"))
+            else if (c == double.class || c == Double.class)
             {
                 if (rhs instanceof String)
                 {
@@ -884,7 +882,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).doubleValue() : 0.0d;
             }
-            else if (cname.equals("float") || cname.equals("java.lang.Float"))
+            else if (c == float.class || c == Float.class)
             {
                 if (rhs instanceof String)
                 {
@@ -897,7 +895,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
             }
-            else if (cname.equals("int") || cname.equals("java.lang.Integer"))
+            else if (c == int.class || c == Integer.class)
             {
                 if (rhs instanceof String)
                 {
@@ -910,7 +908,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).intValue() : 0;
             }
-            else if (cname.equals("long") || cname.equals("java.lang.Long"))
+            else if (c == long.class || c == Long.class)
             {
                 if (rhs instanceof String)
                 {
@@ -923,7 +921,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).longValue() : 0L;
             }
-            else if (cname.equals("short") || cname.equals("java.lang.Short"))
+            else if (c == short.class|| c == Short.class)
             {
                 if (rhs instanceof String)
                 {
@@ -943,7 +941,7 @@ public class MetaUtils
             throw new JsonIoException("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
-        throw new JsonIoException("Class '" + cname + "' does not have primitive wrapper.");
+        throw new JsonIoException("Class '" + c.getName() + "' does not have primitive wrapper.");
     }
 
     /**
