@@ -2,8 +2,8 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -120,8 +120,8 @@ class JsonParser
                     c = skipWhitespaceRead();
                     if (c == '{')
                     {
-                        object.line = in.line;
-                        object.col = in.col;
+                        object.line = in.getLine();
+                        object.col = in.getCol();
                         c = skipWhitespaceRead();
                         if (c == '}')
                         {    // empty object
@@ -283,7 +283,7 @@ class JsonParser
      */
     private Object readArray(JsonObject object) throws IOException
     {
-        final Collection array = new ArrayList();
+        final List<Object> array = new ArrayList();
 
         while (true)
         {
@@ -316,11 +316,10 @@ class JsonParser
     private void readToken(String token) throws IOException
     {
         final int len = token.length();
-        final FastPushbackReader in = input;
 
         for (int i = 1; i < len; i++)
         {
-            int c = in.read();
+            int c = input.read();
             if (c == -1)
             {
                 error("EOF reached while reading token: " + token);
@@ -499,7 +498,8 @@ class JsonParser
         }
 
         final String s = str.toString();
-        return stringCache.containsKey(s) ? stringCache.get(s) : s;
+        final String translate =  stringCache.get(s);
+        return translate == null ? s : translate;
     }
 
     /**
@@ -532,6 +532,6 @@ class JsonParser
 
     String getMessage(String msg)
     {
-        return msg + "\nline: " + input.line + ", col: " + input.col + "\n" + input.getLastSnippet();
+        return msg + "\nline: " + input.getLine()+ ", col: " + input.getCol()+ "\n" + input.getLastSnippet();
     }
 }
