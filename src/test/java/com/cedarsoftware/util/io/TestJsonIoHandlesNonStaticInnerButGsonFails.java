@@ -54,7 +54,6 @@ public class TestJsonIoHandlesNonStaticInnerButGsonFails
         A.B b = a.new B();
         b.b = "Elon Musk";
         json = TestUtil.getJsonString(b);
-        System.out.println("json = " + json);
         TestUtil.printLine("json = " + json);
         A.B b1 = (A.B) TestUtil.readJsonObject(json);
         assertTrue(b1.b.equals("Elon Musk"));
