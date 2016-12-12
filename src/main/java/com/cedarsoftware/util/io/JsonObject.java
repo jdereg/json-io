@@ -75,7 +75,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public void setType(String type)
     {
-        this.type = type != null ? type.intern() : null;
+        this.type = type;
     }
 
     public String getType()
@@ -100,42 +100,41 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public boolean isPrimitive()
     {
-        return type != null && primitiveWrappers.contains(type);
+        return primitiveWrappers.contains(type);
     }
 
     public static boolean isPrimitiveWrapper(Class c)
     {
-        final String cname = c.getName();
-        return primitiveWrappers.contains(cname);
+        return primitiveWrappers.contains(c.getName());
     }
 
     public Object getPrimitiveValue()
     {
-        if (type.equals("boolean") || type.equals("double") || type.equals("long"))
+        if ("boolean".equals(type) || "double".equals(type) || "long".equals(type))
         {
             return get("value");
         }
-        else if (type.equals("byte"))
+        else if ("byte".equals(type))
         {
             Number b = (Number) get("value");
             return b.byteValue();
         }
-        else if (type.equals("char"))
+        else if ("char".equals(type))
         {
             String c = (String) get("value");
             return c.charAt(0);
         }
-        else if (type.equals("float"))
+        else if ("float".equals(type))
         {
             Number f = (Number) get("value");
             return f.floatValue();
         }
-        else if (type.equals("int"))
+        else if ("int".equals(type))
         {
             Number integer = (Number) get("value");
             return integer.intValue();
         }
-        else if (type.equals("short"))
+        else if ("short".equals(type))
         {
             Number s = (Number) get("value");
             return s.shortValue();
@@ -168,12 +167,15 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     // Collection APIs
     public boolean isCollection()
     {
+        if (target instanceof Collection)
+        {
+            return true;
+        }
         if (containsKey("@items") && !containsKey("@keys"))
         {
-            return (target instanceof Collection || (type != null && !type.contains("[")));
+            return type != null && !type.contains("[");
         }
-
-        return target instanceof Collection;
+        return false;
     }
 
     // Array APIs
