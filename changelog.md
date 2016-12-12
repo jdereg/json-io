@@ -1,4 +1,8 @@
 ### Revision History
+ * 4.9.2
+  * Optimization: When parsing from String, a different (faster) byte[] based pushback reader is used.
+  * Optimization: Built-in Readers and Writers are only instantiated once for all instances of JsonReader / JsonWriter and then re-used.
+  * Optimization: Identical code consolidated to one function.
  * 4.9.1
   * Enhancement: Make it possible to assign instantiator for package private classes, for example com.google.common.collect.RegularImmutableMap.  Contributed by @mhmx (Richard Kovacs)
  * 4.9.0
