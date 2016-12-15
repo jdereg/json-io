@@ -1359,7 +1359,7 @@ public class JsonWriter implements Closeable, Flushable
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++)
         {
-            output.write(Double.toString(doubles[i]));
+            output.write(doubleToString(doubles[i]));
             output.write(',');
         }
         output.write(Double.toString(doubles[lenMinus1]));
@@ -1370,10 +1370,18 @@ public class JsonWriter implements Closeable, Flushable
         final Writer output = this.out;
         for (int i = 0; i < lenMinus1; i++)
         {
-            output.write(Float.toString(floats[i]));
+            output.write(floatToString(floats[i]));
             output.write(',');
         }
         output.write(Float.toString(floats[lenMinus1]));
+    }
+    
+    private String doubleToString(double d) {
+    	return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
+    }
+    
+    private String floatToString(float d) {
+    	return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
     }
 
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException
