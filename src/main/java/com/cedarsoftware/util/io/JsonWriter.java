@@ -1362,7 +1362,7 @@ public class JsonWriter implements Closeable, Flushable
             output.write(doubleToString(doubles[i]));
             output.write(',');
         }
-        output.write(Double.toString(doubles[lenMinus1]));
+        output.write(doubleToString(doubles[lenMinus1]));
     }
 
     private void writeFloatArray(float[] floats, int lenMinus1) throws IOException
@@ -1373,7 +1373,7 @@ public class JsonWriter implements Closeable, Flushable
             output.write(floatToString(floats[i]));
             output.write(',');
         }
-        output.write(Float.toString(floats[lenMinus1]));
+        output.write(floatToString(floats[lenMinus1]));
     }
     
     private String doubleToString(double d) {
