@@ -9,7 +9,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.9.1</version>
+      <version>4.9.2</version>
     </dependency>
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
@@ -27,7 +27,7 @@ the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java an
 is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
 
 **json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, 
-unlike `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain 
+unlike the JDK's `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain 
 complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes 
 (static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have 
 public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the 
@@ -35,7 +35,10 @@ ObjectOutputStream behavior.
 
 The `JsonReader / JsonWriter` code does not depend on any native or 3rd party libraries.
 
-_For useful Java utilities, check out java-util at http://github.com/jdereg/java-util_
+###A few advantages of json-io over Google's gson library:
+* gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
+* gson will cannot handle non-static inner classes. [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
+* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Map`s.  [Illustrated here]()
 
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
@@ -314,12 +317,31 @@ in a nice, human readable format.
 
 ### RESTful support
 **json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server
-in a RESTful fashion. Used this way, you can create more active sites like Google's GMail, MyOtherDrive online backup, etc.
+in a RESTful fashion.
 
-See https://github.com/jdereg/json-command-servlet for a light-weight servlet that processes REST requests.
+See [json-command-servlet](https://github.com/jdereg/json-command-servlet) for a light-weight servlet that processes REST requests.
 
-Featured on http://json.org.
+For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
+
+Featured on [json.org](http://json.org).
 
 See [changelog.md](/changelog.md) for revision history.
+
+###License
+```
+Copyright 2007 Cedar Software LLC.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
 
 by John DeRegnaucourt

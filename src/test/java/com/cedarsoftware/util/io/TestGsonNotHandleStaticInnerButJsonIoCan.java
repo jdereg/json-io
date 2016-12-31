@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestJsonIoHandlesNonStaticInnerButGsonFails
+public class TestGsonNotHandleStaticInnerButJsonIoCan
 {
     public class A
     {

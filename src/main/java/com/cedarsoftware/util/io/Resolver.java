@@ -41,6 +41,23 @@ abstract class Resolver
     private final boolean useMaps;
     private final Object unknownClass;
     private final boolean failOnUnknownType;
+    private final Map<String, Class> coercedTypes = new LinkedHashMap<String, Class>();
+
+    {
+        coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
+        coercedTypes.put("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
+        coercedTypes.put("java.util.HashMap$KeySet", HashSet.class);
+        coercedTypes.put("java.util.HashMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.TreeMap$KeySet", TreeSet.class);
+        coercedTypes.put("java.util.TreeMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
+    }
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -323,9 +340,8 @@ abstract class Resolver
                 {
                     mate = getEnumSet(c, jsonObj);
                 }
-                else if ("java.util.Arrays$ArrayList".equals(c.getName()))
-                {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
-                    mate = new ArrayList();
+                else if ((mate = coerceCertainTypes(c.getName())) != null)
+                {
                 }
                 else
                 {
@@ -356,9 +372,8 @@ abstract class Resolver
             {
                 mate = getEnumSet(clazz, jsonObj);
             }
-            else if ("java.util.Arrays$ArrayList".equals(clazz.getName()))
-            {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
-                mate = new ArrayList();
+            else if ((mate = coerceCertainTypes(clazz.getName())) != null)
+            {
             }
             else if (clazz == Object.class && !useMapsLocal)
             {
@@ -383,6 +398,17 @@ abstract class Resolver
         }
         jsonObj.target = mate;
         return jsonObj.target;
+    }
+
+    protected Object coerceCertainTypes(String type)
+    {
+        Class clazz = coercedTypes.get(type);
+        if (clazz == null)
+        {
+            return null;
+        }
+
+        return MetaUtils.newInstance(clazz);
     }
 
     protected JsonObject getReferencedObj(Long ref)

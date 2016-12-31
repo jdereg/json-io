@@ -61,7 +61,7 @@ class TestArrays
         }
     }
 
-    public static class ManyArrays implements Serializable
+    static class ManyArrays implements Serializable
     {
         private Empty _empty_a;
         private Empty _empty_b;
@@ -1172,5 +1172,4 @@ class TestArrays
         assertTrue(args[10].equals(Long.MIN_VALUE))
         assertTrue(args[11].equals(Long.MAX_VALUE))
     }
-
 }
