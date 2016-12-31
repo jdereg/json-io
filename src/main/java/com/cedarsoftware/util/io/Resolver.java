@@ -41,9 +41,9 @@ abstract class Resolver
     private final boolean useMaps;
     private final Object unknownClass;
     private final boolean failOnUnknownType;
-    private final Map<String, Class> coercedTypes = new LinkedHashMap<String, Class>();
+    private final static Map<String, Class> coercedTypes = new LinkedHashMap<String, Class>();
 
-    {
+    static {
         coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
         coercedTypes.put("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
         coercedTypes.put("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
@@ -343,7 +343,7 @@ abstract class Resolver
                     mate = getEnumSet(c, jsonObj);
                 }
                 else if ((mate = coerceCertainTypes(c.getName())) != null)
-                {
+                {   // if coerceCertainTypes() returns non-null, it did the work
                 }
                 else
                 {
@@ -375,7 +375,7 @@ abstract class Resolver
                 mate = getEnumSet(clazz, jsonObj);
             }
             else if ((mate = coerceCertainTypes(clazz.getName())) != null)
-            {
+            {   // if coerceCertainTypes() returns non-null, it did the work
             }
             else if (clazz == Object.class && !useMapsLocal)
             {

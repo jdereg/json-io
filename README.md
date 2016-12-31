@@ -13,8 +13,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     </dependency>
 ___
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates 
-the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.  There 
-is a 3rd optional class (`JsonObject`) see 'Non-typed Usage' below.
+the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.
 
 **json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized, 
 unlike the JDK's `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain 
@@ -27,7 +26,7 @@ ObjectOutputStream behavior.
 
 ###A few advantages of json-io over Google's gson library:
 * gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
-* gson will cannot handle non-static inner classes. [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
+* gson cannot handle non-static inner classes. [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
 * gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
 
 ### Format
@@ -84,7 +83,7 @@ innovative and intelligent tools for profiling Java and .NET applications.
 ___
 ###License
 ```
-Copyright 2007 Cedar Software LLC.
+Copyright (c) 2007 Cedar Software LLC.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
