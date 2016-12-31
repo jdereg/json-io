@@ -49,8 +49,7 @@ output, reducing the JSON String length.
  serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static 
  variable `_debug` is `true` in `TestUtil`).
  
-### Documentation
-[User Guide](/user-guide.md)
+###[User Guide](/user-guide.md)
 
 ### Pretty-Printing JSON
 Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing
