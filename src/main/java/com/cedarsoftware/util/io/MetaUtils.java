@@ -270,7 +270,7 @@ public class MetaUtils
     /**
      * @param c Class to test
      * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
-     * Integer, Long, Boolean, etc. are consider primitives by this method.
+     * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isPrimitive(Class c)
     {
@@ -306,7 +306,8 @@ public class MetaUtils
      * @throws JsonIoException if named Class is invalid or not loadable via the classLoader and failOnClassLoadingError is
      * true
      */
-    static Class classForName(String name, ClassLoader classLoader, boolean failOnClassLoadingError) {
+    static Class classForName(String name, ClassLoader classLoader, boolean failOnClassLoadingError)
+    {
         if (name == null || name.isEmpty())
         {
             throw new JsonIoException("Class name cannot be null or empty.");
@@ -438,9 +439,9 @@ public class MetaUtils
     /**
      * <p>C language malloc() for Java
      * </p><p>
-     * Create a new instance of the passed in Class.  This method will make a valiant effort to instance
-     * the passed in Class, including calling trying all of its constructors until successful.  The order
-     * they are tried are public with the fewest arguments first to private with the most arguments.  If, after
+     * Create a new instance of the passed in Class.  This method will make a valiant effort to instantiate
+     * the passed in Class, including calling all of its constructors until successful.  The order they
+     * are tried are public with the fewest arguments first to private with the most arguments.  If, after
      * exhausting all constructors, then it will attempt using the 'unsafe allocate' from Sun.  This step is
      * optional - by default it will use this if on a Sun (Oracle) JVM unless MetaUtil.setUseUnsafe(false) is called.
      * </p><p>
