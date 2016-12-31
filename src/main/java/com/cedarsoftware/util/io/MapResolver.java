@@ -10,10 +10,10 @@ import java.util.Map;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
- * quality Maps representing the implied object graph.  It does this by replace
- * <code>@ref</code> values with the Map with an @id key with the same value.
+ * quality Maps representing the implied object graph.  It does this by replacing
+ * <code>@ref</code> values with the Map indicated by the @id key with the same value.
  * </p><p>
- * This approach 'rewires' the original object graph.  During the resolution process,
+ * This approach 'wires' the original object graph.  During the resolution process,
  * if 'peer' classes can be found for given Maps (for example, an @type entry is
  * available which indicates the class that would have been associated to the Map,
  * then the associated class is consulted to help 'improve' the quality of the primitive
