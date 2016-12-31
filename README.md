@@ -23,7 +23,7 @@ complete graph semantics / shape and object types.  This includes supporting pri
 public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the 
 ObjectOutputStream behavior.
 
-The `JsonReader / JsonWriter` code does not depend on any 3rd party libraries.
+**json-io** does not depend on any 3rd party libraries.
 
 ###A few advantages of json-io over Google's gson library:
 * gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
