@@ -9,7 +9,7 @@ Perfect Java serialization to and from JSON format (available on [Maven Central]
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.9.3</version>
+      <version>4.9.4</version>
     </dependency>
 ___
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates 
@@ -22,12 +22,12 @@ complete graph semantics / shape and object types.  This includes supporting pri
 public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the 
 ObjectOutputStream behavior.
 
-**json-io** does not depend on any 3rd party libraries.
+**json-io** does not depend on any 3rd party libraries, has extensive support for Java Generics, and allows extensive customization. 
 
 ###A few advantages of json-io over Google's gson library:
-* gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
-* gson cannot handle non-static inner classes. [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
-* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
+* gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
+* gson cannot handle non-static inner classes. [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
+* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
 
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
