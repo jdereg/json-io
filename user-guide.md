@@ -228,3 +228,22 @@ so that it can perform the substitutions of the `@ref`'s. (See `src/test/resourc
 Included is a small Javascript utility (`jsonUtil.js` in the `src/test/resources` folder) that will take a JSON output 
 stream created by the JSON writer and substitute all `@ref's` for the actual pointed to object.  It's a one-line 
 call - `resolveRefs(json)`.  This will substitute `@ref` tags in the JSON for the actual pointed-to object.  
+
+### Additional uses for json-io
+Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
+
+#### Cloning
+Many projects use `JsonWriter` to write an object to JSON, then use the `JsonReader` to read it in, perfectly cloning the original object graph:
+
+    Employee emp;
+    // emp obtained from database
+    Employee deepCopy = (Employee) cloneObject(emp);
+
+    public Object cloneObject(Object root)
+    {
+        return JsonReader.jsonToJava(JsonWriter.objectToJson(root));
+    }
+
+#### Debugging
+Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It
+will reveal the object in all it's glory.

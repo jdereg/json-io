@@ -36,7 +36,7 @@ possible.  When an object's class can be inferred from a field type or array typ
 left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
 
 When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  
-When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see options below).
+When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see [User Guide](/user-guide.me)).
 
 If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, 
 and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a 
@@ -51,25 +51,6 @@ output, reducing the JSON String length.
  
 ### Documentation
 [User Guide](/user-guide.md)
-
-### What's next?
-Even though **json-io** is perfect for Java / Javascript serialization, there are other great uses for it:
-
-### Cloning
-Many projects use `JsonWriter` to write an object to JSON, then use the `JsonReader` to read it in, perfectly cloning the original object graph:
-
-    Employee emp;
-    // emp obtained from database
-    Employee deepCopy = (Employee) cloneObject(emp);
-
-    public Object cloneObject(Object root)
-    {
-        return JsonReader.jsonToJava(JsonWriter.objectToJson(root));
-    }
-
-### Debugging
-Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It
-will reveal the object in all it's glory.
 
 ### Pretty-Printing JSON
 Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing
