@@ -38,7 +38,7 @@ The `JsonReader / JsonWriter` code does not depend on any native or 3rd party li
 ###A few advantages of json-io over Google's gson library:
 * gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
 * gson will cannot handle non-static inner classes. [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
-* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Map`s.  [Illustrated here]()
+* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
 
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as 
