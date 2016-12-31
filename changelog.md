@@ -1,4 +1,6 @@
 ### Revision History
+* 4.9.3
+  * Enhancement: Double.INF and NAN are output as null.
 * 4.9.2
   * Optimization: When parsing from String, a different (faster) byte[] based pushback reader is used.
   * Optimization: Built-in Readers and Writers are only instantiated once for all instances of JsonReader / JsonWriter and then re-used.
