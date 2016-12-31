@@ -1,4 +1,7 @@
 ### Revision History
+* 4.9.4
+  * Optimization: The coercedTypes Map in the Resolver is built one time now.
+  * Added test case illustrating gson cannot handle writing then reading back Maps correctly when the keys are not Strings.
 * 4.9.3
   * Enhancement: Double.INF and NAN are output as null.
 * 4.9.2
