@@ -59,7 +59,7 @@ public class JsonReader implements Closeable
 {
     /** If set, this maps class ==> CustomReader */
     public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
-    /** If set, this indicates that no customer reader should be used for the specified class ==> CustomReader */
+    /** If set, this indicates that no custom reader should be used for the specified class ==> CustomReader */
     public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";
     /** If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation */
     public static final String USE_MAPS = "USE_MAPS";
