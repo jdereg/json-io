@@ -36,7 +36,7 @@ possible.  When an object's class can be inferred from a field type or array typ
 left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
 
 When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  
-When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see [User Guide](/user-guide.me)).
+When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see [User Guide](/user-guide.md)).
 
 If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B, 
 and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a 
