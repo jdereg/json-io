@@ -51,6 +51,7 @@ abstract class Resolver
         coercedTypes.put("java.util.HashMap$Values", ArrayList.class);
         coercedTypes.put("java.util.TreeMap$KeySet", TreeSet.class);
         coercedTypes.put("java.util.TreeMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySet", LinkedHashSet.class);
         coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
         coercedTypes.put("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
         coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
