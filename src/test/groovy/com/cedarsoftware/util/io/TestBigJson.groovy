@@ -57,15 +57,31 @@ class TestBigJson
     }
 
     @Ignore
-    void testJsonIoVersusGsonOnHugeFile()
+    void testGsonOnHugeFile()
     {
         String json = TestUtil.fetchResource('big.json')
 
-//        Gson gson = new Gson()
-//        long start = System.nanoTime()
-//        gson.fromJson(json, Object.class)
-//        long stop = System.nanoTime()
-//        println 'gson: ' + ((stop - start) / 1000000L)
+        Gson gson = new Gson()
+        long start = System.nanoTime()
+        gson.fromJson(json, Object.class)
+        long stop = System.nanoTime()
+        println 'gson: ' + ((stop - start) / 1000000L)
+
+        int i=0
+        while (i++ < 50i)
+        {
+            gson = new Gson()
+            start = System.nanoTime()
+            gson.fromJson(json, Object.class)
+            stop = System.nanoTime()
+            println 'gson: ' + ((stop - start) / 1000000L)
+        }
+    }
+
+    @Ignore
+    void testJsonOnHugeFile()
+    {
+        String json = TestUtil.fetchResource('big.json')
 
         long start = System.nanoTime()
         JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
@@ -78,12 +94,6 @@ class TestBigJson
         int i=0
         while (i++ < 50i)
         {
-//            gson = new Gson()
-//            start = System.nanoTime()
-//            gson.fromJson(json, Object.class)
-//            stop = System.nanoTime()
-//            println 'gson: ' + ((stop - start) / 1000000L)
-
             start = System.nanoTime()
             JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
             stop = System.nanoTime()

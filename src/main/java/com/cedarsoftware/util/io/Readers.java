@@ -17,7 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * All special readers for json-io are stored here.  Special readers are not needed for handling
+ * All custom readers for json-io subclass this class.  Special readers are not needed for handling
  * user-defined classes.  However, special readers are built/supplied by json-io for many of the
  * primitive types and other JDK classes simply to allow for a more concise form.
  *

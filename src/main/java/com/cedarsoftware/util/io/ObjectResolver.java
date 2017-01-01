@@ -20,7 +20,7 @@ import java.util.*;
  * containing Person and Employee instances, then the Person instances will not have
  * the '@type' but the employee instances will (because they are more derived than Person).
  * </p><p>
- * The resolver 'rewires' the original object graph.  It does this by replacing
+ * The resolver 'wires' the original object graph.  It does this by replacing
  * '@ref' values in the Maps with pointers (on the field of the associated instance of the
  * Map) to the object that has the same ID.  If the object has not yet been read, then
  * an UnresolvedReference is created.  These are back-patched at the end of the resolution
@@ -484,12 +484,9 @@ public class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (compType != null)
+        if (compType != null && notCustom(compType))
         {
-            if (notCustom(compType))
-            {
-                return null;
-            }
+            return null;
         }
 
         final boolean isJsonObject = o instanceof JsonObject;
@@ -511,7 +508,7 @@ public class ObjectResolver extends Resolver
             }
 
             if (jObj.target == null)
-            {   // '@type' parameter used
+            {   // '@type' parameter used (not target instance)
                 String typeStr = null;
                 try
                 {

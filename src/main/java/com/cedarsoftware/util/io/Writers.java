@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * All special writers for json-io are stored here.  Special writers are not needed for handling
+ * All custom writers for json-io subclass this class.  Special writers are not needed for handling
  * user-defined classes.  However, special writers are built/supplied by json-io for many of the
  * primitive types and other JDK classes simply to allow for a more concise form.
  *
