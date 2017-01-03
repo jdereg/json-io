@@ -532,9 +532,12 @@ public class JsonReader implements Closeable
     {
         initializeFromArgs(optionalArgs);
 
-        try {
+        try
+        {
             input = new FastPushbackBufferedReader(new InputStreamReader(inp, "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
+        }
+        catch (UnsupportedEncodingException e)
+        {
             throw new JsonIoException("Your JVM does not support UTF-8.  Get a better JVM.", e);
         }
     }
@@ -560,21 +563,25 @@ public class JsonReader implements Closeable
 
     private void initializeFromArgs(Map<String, Object> optionalArgs)
     {
-        if (optionalArgs == null) {
+        if (optionalArgs == null)
+        {
             optionalArgs = new HashMap();
         }
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);
         args.put(JSON_READER, this);
-        if (!args.containsKey(CLASSLOADER)) {
+        if (!args.containsKey(CLASSLOADER))
+        {
             args.put(CLASSLOADER, JsonReader.class.getClassLoader());
         }
         Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
 
-        if (typeNames != null) { // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
+        if (typeNames != null)
+        { // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
             // and not keep a 2nd map from short-hand name to type.
             Map<String, String> typeNameMap = new HashMap<String, String>();
-            for (Map.Entry<String, String> entry : typeNames.entrySet()) {
+            for (Map.Entry<String, String> entry : typeNames.entrySet())
+            {
                 typeNameMap.put(entry.getValue(), entry.getKey());
             }
             args.put(TYPE_NAME_MAP_REVERSE, typeNameMap); // replace with our reversed Map.
@@ -583,15 +590,19 @@ public class JsonReader implements Closeable
         setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
 
         Map<Class, JsonClassReaderBase> customReaders = (Map<Class, JsonClassReaderBase>) args.get(CUSTOM_READER_MAP);
-        if (customReaders != null) {
-            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet()) {
+        if (customReaders != null)
+        {
+            for (Map.Entry<Class, JsonClassReaderBase> entry : customReaders.entrySet())
+            {
                 addReader(entry.getKey(), entry.getValue());
             }
         }
 
         Iterable<Class> notCustomReaders = (Iterable<Class>) args.get(NOT_CUSTOM_READER_MAP);
-        if (notCustomReaders != null) {
-            for (Class c : notCustomReaders) {
+        if (notCustomReaders != null)
+        {
+            for (Class c : notCustomReaders)
+            {
                 addNotCustomReader(c);
             }
         }

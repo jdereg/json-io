@@ -9,7 +9,8 @@ import java.io.Reader;
  * PushbackReader.  This is due to this class not using synchronization
  * as it is not needed.
  */
-public class FastPushbackBufferedReader extends BufferedReader implements FastPushbackReader {
+public class FastPushbackBufferedReader extends BufferedReader implements FastPushbackReader
+{
     private final int[] buf = new int[256];
     private int idx = 0;
     private int unread = Integer.MAX_VALUE;
@@ -110,13 +111,11 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
         }
     }
 
-    @Override
     public int getCol()
     {
         return col;
     }
 
-    @Override
     public int getLine()
     {
         return col;

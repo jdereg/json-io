@@ -1,4 +1,7 @@
 ### Revision History
+* 4.9.5
+  * Bug fix: The new FastPushBackBytesReader was incorrectly reading a String byte-by-byte ignoring the code point boundaries.  Because of this, it would blow up during parsing Strings with characters outside the ascii range.  New test case added that causes the failure.  For time being, the FastPushBackBytesReader has been removed.
+  * Javadoc updates.
 * 4.9.4
   * Optimization: The coercedTypes Map in the Resolver is built one time now.
   * Added test case illustrating gson cannot handle writing then reading back Maps correctly when the keys are not Strings.
