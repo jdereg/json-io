@@ -542,10 +542,12 @@ public class JsonReader implements Closeable
     public JsonReader(String inp, Map<String, Object> optionalArgs)
     {
         initializeFromArgs(optionalArgs);
-
-        try {
-            input = new FastPushbackBytesReader(inp.getBytes(Charset.forName("UTF-8")));
-        } catch (UnsupportedCharsetException e) {
+        try
+        {
+            input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp.getBytes("UTF-8"))));
+        }
+        catch (UnsupportedEncodingException e)
+        {
             throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
         }
     }
@@ -553,7 +555,7 @@ public class JsonReader implements Closeable
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs)
     {
         initializeFromArgs(optionalArgs);
-        input = new FastPushbackBytesReader(Arrays.copyOf(inp, inp.length));
+        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp)));
     }
 
     private void initializeFromArgs(Map<String, Object> optionalArgs)

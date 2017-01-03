@@ -125,4 +125,12 @@ class TestString
         String x = TestUtil.readJsonObject(json)
         assert x == 'Sledge Hammer'
     }
+
+    @Test
+    void testFrenchChar()
+    {
+        String json = '"Réunion"'
+        String x = TestUtil.readJsonObject(json)
+        assert x == 'Réunion'
+    }
 }
