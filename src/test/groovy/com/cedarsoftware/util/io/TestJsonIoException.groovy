@@ -26,6 +26,5 @@ class TestJsonIoException
     {
         new JsonIoException()
         new JsonIoException(new RuntimeException('Hey'))
-        new JsonIoException('hey', new RuntimeException('ho'), false, true)
     }
 }
