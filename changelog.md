@@ -1,4 +1,6 @@
 ### Revision History
+* 4.9.6
+  * Enhancement: Improved `enum` handling. Updated how enums are detected so that subclasses of enums are detected.  `ordinal` and `internal` fields no longer output.
 * 4.9.5
   * Bug fix: The new FastPushBackBytesReader was incorrectly reading a String byte-by-byte ignoring the code point boundaries.  Because of this, it would blow up during parsing Strings with characters outside the ascii range.  New test case added that causes the failure.  For time being, the FastPushBackBytesReader has been removed.
   * Javadoc updates.
