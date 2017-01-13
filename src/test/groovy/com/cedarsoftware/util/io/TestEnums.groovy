@@ -2,6 +2,9 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+
 import static org.junit.Assert.assertTrue
 
 /**
@@ -110,13 +113,61 @@ class TestEnums
         String json = TestUtil.getJsonString(x)
         TestUtil.printLine(json)
         def className = TestEnum4.class.name
-        assert '{"@type":"' + className + '","internal":6,"age":21,"foo":"bar","name":"B","ordinal":1}' == json
+        assert '{"@type":"' + className + '","age":21,"foo":"bar","name":"B"}' == json
 
         ByteArrayOutputStream ba = new ByteArrayOutputStream()
         JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY): true])
         writer.write(x)
         json = new String(ba.toByteArray())
         TestUtil.printLine(json)
-        assert '{"@type":"' + className + '","name":"B","ordinal":1}' == json
+        assert '{"@type":"' + className + '","name":"B"}' == json
+    }
+
+    enum FederationStrategy
+    {
+        EXCLUDE, FEDERATE_THIS, FEDERATE_ORIGIN;
+
+        static FederationStrategy fromName(String name)
+        {
+            for (FederationStrategy type : values())
+            {
+                if (type.name().equalsIgnoreCase(name))
+                {
+                    return type
+                }
+            }
+            return FEDERATE_THIS
+        }
+
+        boolean exceeds(FederationStrategy type)
+        {
+            return this.ordinal() > type.ordinal()
+        }
+
+        boolean atLeast(FederationStrategy type)
+        {
+            return this.ordinal() >= type.ordinal()
+        }
+
+        String toString()
+        {
+            return name()
+        }
+    }
+
+    @Test
+    void testEnumNoOrdinal()
+    {
+        DateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+        dateformat.setTimeZone(TimeZone.getTimeZone("UTC"))
+        HashMap<String, Object> config = new HashMap<>()
+        config.put(JsonWriter.DATE_FORMAT, dateformat)
+        config.put(JsonWriter.SKIP_NULL_FIELDS, true)
+        config.put(JsonWriter.TYPE, false)
+        config.put(JsonWriter.ENUM_PUBLIC_ONLY, true)
+
+        List list = [FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE]
+        String json = JsonWriter.objectToJson(list, config)
+        assert """[{"name":"FEDERATE_THIS"},{"name":"EXCLUDE"}]""" == json
     }
 }

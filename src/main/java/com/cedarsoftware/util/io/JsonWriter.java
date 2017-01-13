@@ -2236,9 +2236,19 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         int modifiers = field.getModifiers();
-        if (field.getDeclaringClass().isEnum() && !Modifier.isPublic(modifiers) && isEnumPublicOnly)
+        if (Enum.class.isAssignableFrom(field.getDeclaringClass()))
         {
-            return first;
+            if (!"name".equals(field.getName()))
+            {
+                if (!Modifier.isPublic(modifiers) && isEnumPublicOnly)
+                {
+                    return first;
+                }
+                if ("ordinal".equals(field.getName()) || "internal".equals(field.getName()))
+                {
+                    return first;
+                }
+            }
         }
 
         Object o;
