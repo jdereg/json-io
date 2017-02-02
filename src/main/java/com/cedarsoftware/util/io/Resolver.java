@@ -36,7 +36,7 @@ abstract class Resolver
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<Class, JsonReader.JsonClassReaderBase>();
+    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<Class, JsonReader.JsonClassReaderBase>();
     private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
     private final boolean useMaps;
     private final Object unknownClass;
@@ -429,11 +429,7 @@ abstract class Resolver
         if (reader == null)
         {
             reader = forceGetCustomReader(c);
-            JsonReader.JsonClassReaderBase readerRef = readerCache.putIfAbsent(c, reader);
-            if (readerRef != null)
-            {
-                reader = readerRef;
-            }
+            readerCache.put(c, reader);
         }
         return reader == nullReader ? null : reader;
     }

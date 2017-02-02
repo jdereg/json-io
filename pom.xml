@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.9.7-SNAPSHOT</version>
+    <version>4.9.7</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -80,7 +80,7 @@
     <properties>
         <version.java-util>1.26.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.7</version.groovy>                  <!-- only test dependency -->
+        <version.groovy>2.4.8</version.groovy>                  <!-- only test dependency -->
         <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
         <version.jmh>1.17.1</version.jmh>                       <!-- only test dependency -->
         <version.java>1.6</version.java>

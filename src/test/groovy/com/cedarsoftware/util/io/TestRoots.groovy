@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io
 
 import com.google.gson.Gson
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -23,6 +24,7 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestRoots
 {
     @Test
@@ -63,25 +65,25 @@ class TestRoots
         assertTrue("Hello, World".equals(qux[0]))
 
         // Whitespace
-        String pkg = TestObject.class.getName()
+        String pkg = TestObject.class.name
         Object[] fred = (Object[]) JsonReader.jsonToJava('[  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "alpha"  ,  "_other"  :  null  }  ,  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "beta"  ,  "_other" : null  }  ]  ')
         assertTrue(fred != null)
         assertTrue(fred.length == 2)
-        assertTrue(fred[0].equals(new TestObject("alpha")))
-        assertTrue(fred[1].equals(new TestObject("beta")))
+        assertTrue(fred[0] == (new TestObject("alpha")))
+        assertTrue(fred[1] == (new TestObject("beta")))
 
         Object[] wilma = (Object[]) JsonReader.jsonToJava('[{"@type":"' + pkg + '","_name" : "alpha" , "_other":null,"fake":"_typeArray"},{"@type": "' + pkg + '","_name":"beta","_other":null}]')
         assertTrue(wilma != null)
         assertTrue(wilma.length == 2)
-        assertTrue(wilma[0].equals(new TestObject("alpha")))
-        assertTrue(wilma[1].equals(new TestObject("beta")))
+        assertTrue(wilma[0] == (new TestObject("alpha")))
+        assertTrue(wilma[1] == (new TestObject("beta")))
     }
 
     @Test
     void testRootTypes()
     {
         assertEquals(25L, TestUtil.readJsonObject("25"))
-        assertEquals(25.0d, TestUtil.readJsonObject("25.0"), 0.00001d)
+        assertEquals(25.0d, TestUtil.readJsonObject("25.0") as Double, 0.00001d)
         assertEquals(true, TestUtil.readJsonObject("true"))
         assertEquals(false, TestUtil.readJsonObject("false"))
         assertEquals("foo", TestUtil.readJsonObject('"foo"'))

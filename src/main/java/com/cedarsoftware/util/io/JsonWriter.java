@@ -91,8 +91,8 @@ public class JsonWriter implements Closeable, Flushable
     public static final String CLASSLOADER = "CLASSLOADER";
 
     private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
-    private final ConcurrentMap<Class, JsonClassWriterBase> writers = new ConcurrentHashMap<Class, JsonClassWriterBase>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
-    private final ConcurrentMap<Class, JsonClassWriterBase> writerCache = new ConcurrentHashMap<Class, JsonClassWriterBase>();
+    private final Map<Class, JsonClassWriterBase> writers = new HashMap<Class, JsonClassWriterBase>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
+    private final Map<Class, JsonClassWriterBase> writerCache = new HashMap<Class, JsonClassWriterBase>();
     private final Set<Class> notCustom = new HashSet<Class>();
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
@@ -138,7 +138,7 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(StringBuilder.class, new Writers.StringBuilderWriter());
         temp.put(StringBuffer.class, new Writers.StringBufferWriter());
-        BASE_WRITERS = Collections.unmodifiableMap(temp);
+        BASE_WRITERS = temp;
     }
 
     /**
@@ -310,7 +310,7 @@ public class JsonWriter implements Closeable, Flushable
     {
         return formatJson(json, null, null);
     }
-    
+
     /**
      * Format the passed in JSON string in a nice, human readable format.
      * @param json String input JSON
@@ -701,11 +701,7 @@ public class JsonWriter implements Closeable, Flushable
         if (writer == null)
         {
             writer = forceGetCustomWriter(c);
-            JsonClassWriterBase writerRef = writerCache.putIfAbsent(c, writer);
-            if (writerRef != null)
-            {
-                writer = writerRef;
-            }
+            writerCache.put(c, writer);
         }
         return writer == nullWriter ? null : writer;
     }
@@ -754,6 +750,17 @@ public class JsonWriter implements Closeable, Flushable
     public void addWriter(Class c, JsonClassWriterBase writer)
     {
         writers.put(c, writer);
+    }
+
+    /**
+     * Add a permanent Customer Writer (Lifetime of JVM)
+     * @param c Class to associate a custom JSON writer too
+     * @param writer JsonClassWriterBase which implements the appropriate
+     * subclass of JsonClassWriterBase (JsonClassWriter or JsonClassWriterEx).
+     */
+    public static void addWriterPermanent(Class c, JsonClassWriterBase writer)
+    {
+        BASE_WRITERS.put(c, writer);
     }
 
     /**
@@ -1375,12 +1382,14 @@ public class JsonWriter implements Closeable, Flushable
         }
         output.write(floatToString(floats[lenMinus1]));
     }
-    
-    private String doubleToString(double d) {
+
+    private String doubleToString(double d)
+    {
     	return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
     }
-    
-    private String floatToString(float d) {
+
+    private String floatToString(float d)
+    {
     	return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
     }
 
@@ -2198,7 +2207,7 @@ public class JsonWriter implements Closeable, Flushable
         final List<Field> fieldBlackListForClass = getFieldsUsingSpecifier(obj.getClass(), (Map) args.get(FIELD_BLACK_LIST));
         final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
-        {   
+        {
             for (Field field : externallySpecifiedFields)
             {   //output field if not on the blacklist
                 if (fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)){

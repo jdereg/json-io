@@ -81,7 +81,7 @@ public class JsonReader implements Closeable
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
 
     private static Map<Class, JsonClassReaderBase> BASE_READERS;
-    protected final ConcurrentMap<Class, JsonClassReaderBase> readers = new ConcurrentHashMap<Class, JsonClassReaderBase>(BASE_READERS);
+    protected final Map<Class, JsonClassReaderBase> readers = new HashMap<Class, JsonClassReaderBase>(BASE_READERS);
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<Class>();
     private static final Map<String, Factory> factory = new ConcurrentHashMap<String, Factory>();
@@ -118,7 +118,7 @@ public class JsonReader implements Closeable
         temp.put(Class.class, new Readers.ClassReader());
         temp.put(StringBuilder.class, new Readers.StringBuilderReader());
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
-        BASE_READERS = Collections.unmodifiableMap(temp);
+        BASE_READERS = temp;
     }
 
     /**
@@ -301,7 +301,7 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Call this method to add your custom JSON reader to json-io.  It will
+     * Call this method to add a custom JSON reader to json-io.  It will
      * associate the Class 'c' to the reader you pass in.  The readers are
      * found with isAssignableFrom().  If this is too broad, causing too
      * many classes to be associated to the custom reader, you can indicate
@@ -313,6 +313,23 @@ public class JsonReader implements Closeable
     public void addReader(Class c, JsonClassReaderBase reader)
     {
         readers.put(c, reader);
+    }
+
+    /**
+     * Call this method to add a custom JSON reader to json-io.  It will
+     * associate the Class 'c' to the reader you pass in.  The readers are
+     * found with isAssignableFrom().  If this is too broad, causing too
+     * many classes to be associated to the custom reader, you can indicate
+     * that json-io should not use a custom reader for a particular class,
+     * by calling the addNotCustomReader() method.  This method will add
+     * the customer reader such that it will be there permanently, for the
+     * life of the JVM (static).
+     * @param c Class to assign a custom JSON reader to
+     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
+     */
+    public static void addReaderPermanent(Class c, JsonClassReaderBase reader)
+    {
+        BASE_READERS.put(c, reader);
     }
 
     /**
