@@ -68,6 +68,7 @@ public class ObjectResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
+    @Override
     public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object javaMate = jsonObj.target;
@@ -88,7 +89,7 @@ public class ObjectResolver extends Resolver
             {
                 if (missingFieldHandler != null)
                 {
-                    missingFieldHandler.fieldMissing(javaMate, key, rhs);
+                    handleMissingField(stack, jsonObj, rhs, key);
                 }
             }
         }
@@ -233,6 +234,80 @@ public class ObjectResolver extends Resolver
         }
     }
 
+
+    /**
+     * Try to create an java object from the missing field.
+	 * Mosly primitive types and jsonObject that contains @type attribute will
+	 * be candidate for the missing field callback, others will be ignored. 
+	 * All missing field are stored for later notification
+     *
+     * @param stack Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     * @param rhs the JSON value that will be converted and stored in the 'field' on the associated Java target object.
+     * @param missingField name of the missing field in the java object.
+     */
+    protected void handleMissingField(final Deque<JsonObject<String, Object>> stack, final JsonObject jsonObj, final Object rhs,
+            final String missingField) {
+        final Object target = jsonObj.target;
+        try {
+            if (rhs == null) { // Logically clear field (allows null to be set against primitive fields, yielding their
+                               // zero value.
+                storeMissingField(target, missingField, null);
+                return;
+            }
+
+            // we have a jsonobject with a type
+            Object special;
+            if (rhs == JsonParser.EMPTY_OBJECT) {
+                storeMissingField(target, missingField, null);
+            } else if ((special = readIfMatching(rhs, null, stack)) != null) {
+                storeMissingField(target, missingField, special);
+            } else if (rhs.getClass().isArray()) {
+                // impossible to determine the array type.
+                // so ignors it.
+            } else if (rhs instanceof JsonObject) {
+                final JsonObject<String, Object> jObj = (JsonObject) rhs;
+                final Long ref = jObj.getReferenceId();
+
+                if (ref != null) { // Correct field references
+                    final JsonObject refObject = getReferencedObj(ref);
+
+                    if (refObject.target != null) {
+                        storeMissingField(target, missingField, refObject.target);
+                    } // else unresolved ref so ignor it
+                } else { // Assign ObjectMap's to Object (or derived) fields
+                    // check that jObj as a type
+                    if (jObj.getType() != null) {
+                        Object createJavaObjectInstance = createJavaObjectInstance(null, jObj);
+                        if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass())) {
+                            stack.addFirst((JsonObject) rhs);
+                        }
+                        storeMissingField(target, missingField, createJavaObjectInstance);
+                    } // else no type found so ignors it.
+                }
+            } else {
+                storeMissingField(target, missingField, rhs);
+            }
+        } catch (Exception e) {
+            String message = e.getClass().getSimpleName() + " missing field '" + missingField + "' on target: "
+                    + safeToString(target) + " with value: " + rhs;
+            if (MetaUtils.loadClassException != null) {
+                message += " Caused by: " + MetaUtils.loadClassException
+                        + " (which created a LinkedHashMap instead of the desired class)";
+            }
+            throw new JsonIoException(message, e);
+        }
+    }
+
+    /**
+     * stores the missing field and their values to call back the handler at the end of the resolution, cause some
+     * reference may need to be resolved later.
+     */
+    private void storeMissingField(Object target, String missingField, Object value) {
+        missingFields.add(new Missingfields(target, missingField, value));
+    }
+
+
     /**
      * @param o Object to turn into a String
      * @return .toString() version of o or "null" if o is null.
@@ -262,6 +337,7 @@ public class ObjectResolver extends Resolver
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
+    @Override
     protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object[] items = jsonObj.getArray();
@@ -348,6 +424,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
+    @Override
     protected void traverseArray(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final int len = jsonObj.getLength();
@@ -477,6 +554,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
+    @Override
     protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack)
     {
         if (o == null)

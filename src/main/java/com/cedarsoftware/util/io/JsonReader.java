@@ -158,18 +158,23 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Used to react to fields missing when reading an object.
+     * Used to react to fields missing when reading an object. This method will be called after all deserialization has
+     * occured to allow all ref to be resolved.
      * <p>
      * Used in conjunction with {@link JsonReader#MISSING_FIELD_HANDLER}.
      */
     public interface MissingFieldHandler
     {
+        
         /**
-         * Notify that a field is missing
+         * Notify that a field is missing. <br>
+         * Warning : not every type can be deserialized upon missing fields. Arrays and Object type that do not have
+         * serialized @type definition will be ignored.
+         * 
          * @param object the object that contains the missing field
          * @param fieldName name of the field to be replaced
          * @param value current value of the field
-          */
+         */
         void fieldMissing(Object object, String fieldName, Object value);
 
     }

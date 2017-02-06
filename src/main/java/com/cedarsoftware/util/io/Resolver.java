@@ -3,8 +3,8 @@ package com.cedarsoftware.util.io;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -61,6 +61,9 @@ abstract class Resolver
         coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
     }
 
+    // store the missing field found during deserialization to notify any client after the complete resolution is done
+    protected final Collection<Missingfields> missingFields = new ArrayList<Resolver.Missingfields>();
+
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -85,6 +88,24 @@ abstract class Resolver
             referencingObj = referrer;
             index = idx;
             refId = id;
+        }
+    }
+
+    /**
+     * stores missing fields information to notify client after the complete deserialization resolution
+     */
+    protected static class Missingfields {
+
+        private Object target;
+
+        private String fieldName;
+
+        private Object value;
+
+        public Missingfields(Object target, String fieldName, Object value) {
+            this.target = target;
+            this.fieldName = fieldName;
+            this.value = value;
         }
     }
 
@@ -173,6 +194,17 @@ abstract class Resolver
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
+        handleMissingFields();
+    }
+
+    private void handleMissingFields() {
+        MissingFieldHandler missingFieldHandler = reader.getMissingFieldHandler();
+        if (missingFieldHandler != null){
+            for (Missingfields mf : missingFields) {
+                missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
+            }
+        }//else no handler so ignor.
+        
     }
 
     /**
