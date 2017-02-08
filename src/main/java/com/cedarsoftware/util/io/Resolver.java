@@ -2,7 +2,19 @@ package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
 
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
@@ -42,6 +54,8 @@ abstract class Resolver
     private final Object unknownClass;
     private final boolean failOnUnknownType;
     private final static Map<String, Class> coercedTypes = new LinkedHashMap<String, Class>();
+    // store the missing field found during deserialization to notify any client after the complete resolution is done
+    protected final Collection<Missingfields> missingFields = new ArrayList<Resolver.Missingfields>();
 
     static {
         coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
@@ -60,9 +74,6 @@ abstract class Resolver
         coercedTypes.put("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
         coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
     }
-
-    // store the missing field found during deserialization to notify any client after the complete resolution is done
-    protected final Collection<Missingfields> missingFields = new ArrayList<Resolver.Missingfields>();
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -94,15 +105,14 @@ abstract class Resolver
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
-    protected static class Missingfields {
-
+    protected static class Missingfields
+    {
         private Object target;
-
         private String fieldName;
-
         private Object value;
 
-        public Missingfields(Object target, String fieldName, Object value) {
+        public Missingfields(Object target, String fieldName, Object value)
+        {
             this.target = target;
             this.fieldName = fieldName;
             this.value = value;
@@ -197,14 +207,16 @@ abstract class Resolver
         handleMissingFields();
     }
 
-    private void handleMissingFields() {
+    private void handleMissingFields()
+    {
         MissingFieldHandler missingFieldHandler = reader.getMissingFieldHandler();
-        if (missingFieldHandler != null){
-            for (Missingfields mf : missingFields) {
+        if (missingFieldHandler != null)
+        {
+            for (Missingfields mf : missingFields)
+            {
                 missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
             }
-        }//else no handler so ignor.
-        
+        }//else no handler so ignore.
     }
 
     /**
