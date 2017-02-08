@@ -36,7 +36,7 @@ class TestPrimitives
         char c;
         Character cc;
         double d;
-        double dd;
+        Double dd;
         float f;
         Float ff;
         int i;
