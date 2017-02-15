@@ -29,6 +29,17 @@ import static junit.framework.TestCase.fail;
  */
 public class TestGsonNotHandleHeteroCollections
 {
+    static class Node
+    {
+        String name;
+        TestGsonNotHandleCycleButJsonIoCan.Node next;
+
+        Node(String name)
+        {
+            this.name = name;
+        }
+    }
+
     @Test
     public void testGsonFailOnHeteroCollection()
     {
@@ -36,7 +47,7 @@ public class TestGsonNotHandleHeteroCollections
         list.add(1);
         list.add(42L);
         list.add(Math.PI);
-        list.add(new TestObject("Bitcoin"));
+        list.add(new Node("Bitcoin"));
         Gson gson = new Gson();
         String json = gson.toJson(list);
         List newList = gson.fromJson(json, List.class);
@@ -45,9 +56,9 @@ public class TestGsonNotHandleHeteroCollections
         assert !(newList.get(0) instanceof Integer); // Fail - Integer 1 becomes 1.0 (double)
         assert !(newList.get(1) instanceof Long); // FAIL - Long 42 becomes 42.0 (double))
         assert newList.get(2) instanceof Double;
-        assert !(newList.get(3) instanceof TestObject);   // Fail, last element (TestObject) converted to Map
+        assert !(newList.get(3) instanceof Node);   // Fail, last element (Node) converted to Map
         Map map = (Map) newList.get(3);
-        assert "Bitcoin".equals(map.get("_name"));
+        assert "Bitcoin".equals(map.get("name"));
 
         // ---------------------------- json-io maintains types ----------------------------
         json = JsonWriter.objectToJson(list);
@@ -56,8 +67,8 @@ public class TestGsonNotHandleHeteroCollections
         assert newList.get(0) instanceof Integer;
         assert newList.get(1) instanceof Long;
         assert newList.get(2) instanceof Double;
-        assert newList.get(3) instanceof TestObject;
-        TestObject testObj = (TestObject) newList.get(3);
-        assert "Bitcoin".equals(testObj.getName());
+        assert newList.get(3) instanceof Node;
+        Node testObj = (Node) newList.get(3);
+        assert "Bitcoin".equals(testObj.name);
     }
 }

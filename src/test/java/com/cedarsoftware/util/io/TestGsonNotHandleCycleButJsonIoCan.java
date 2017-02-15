@@ -3,6 +3,8 @@ package com.cedarsoftware.util.io;
 import com.google.gson.Gson;
 import org.junit.Test;
 
+import static org.junit.Assert.fail;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -22,33 +24,44 @@ import org.junit.Test;
  */
 public class TestGsonNotHandleCycleButJsonIoCan
 {
+    static class Node
+    {
+        String name;
+        Node next;
+
+        Node(String name)
+        {
+            this.name = name;
+        }
+    }
+
     @Test
     public void testCycle()
     {
-        TestObject alpha = new TestObject("alpha");
-        TestObject beta = new TestObject("beta");
-        alpha._other = beta;
-        beta._other = alpha;
+        Node alpha = new Node("alpha");
+        Node beta = new Node("beta");
+        alpha.next = beta;
+        beta.next = alpha;
 
         // Google blows the stack when there is a cycle in the data
         try
         {
             Gson gson = new Gson();
             String json = gson.toJson(alpha);
-            assert false;
+            fail();
         }
         catch(StackOverflowError e)
         {
-            assert true;
+            // Expected with gson
         }
 
         // json-io handles cycles just fine.
         String json = JsonWriter.objectToJson(alpha);
-        TestObject a2 = (TestObject) JsonReader.jsonToJava(json);
-        assert "alpha".equals(a2.getName());
-        TestObject b2 = a2._other;
-        assert "beta".equals(b2.getName());
-        assert b2._other == a2;
-        assert a2._other == b2;
+        Node a2 = (Node) JsonReader.jsonToJava(json);
+        assert "alpha".equals(a2.name);
+        Node b2 = a2.next;
+        assert "beta".equals(b2.name);
+        assert b2.next == a2;
+        assert a2.next == b2;
     }
 }
