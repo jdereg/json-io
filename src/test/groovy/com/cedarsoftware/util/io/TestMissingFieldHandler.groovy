@@ -65,7 +65,7 @@ class TestMissingFieldHandler
         //        short s
         //        Short ss
         //        public String[] aStringArray
-        //        public Object[] aObjectArray
+        //        public Inner2 inner2WithNoSerializedType
         //those new fields are  only used to store the missing field callback result
         public Inner2 inner2Missing
         public long aLongMissing
@@ -89,8 +89,8 @@ class TestMissingFieldHandler
         Short ssMissing
     }
 
-    private static final String OLD_CUSTOM_POINT = '{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPoint","x":5,"y":7}'
-    private static final String OLD_CUSTOM_POINT2 = '{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef","inner1":{"@id":1},"inner2":{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef$Inner2","inner12":{"@ref":1}},"b":true,"bb":true,"by":9,"bby":9,"c":"9","cc":"9","d":9.0,"dd":9.0,"f":9.0,"ff":9.0,"i":9,"ii":9,"l":9,"ll":9,"s":9,"ss":9,"aStringArray":["foo","bar"],"aObjectArray":[{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef$Inner1"},{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef$Inner2","inner12":null}]}'
+    private static final String OLD_CUSTOM_POINT = '{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPoint","x":5,"y":7}';
+    private static final String OLD_CUSTOM_POINT2 = '{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef","inner1":{"@id":1},"inner2":{"@type":"com.cedarsoftware.util.io.TestMissingFieldHandler$CustomPointWithRef$Inner2","inner12":{"@ref":1}},"b":true,"bb":true,"by":9,"bby":9,"c":"9","cc":"9","d":9.0,"dd":9.0,"f":9.0,"ff":9.0,"i":9,"ii":9,"l":9,"ll":9,"s":9,"ss":9,"aStringArray":["foo","bar"],"inner2WithNoSerializedType":{"inner12":null}}';
 
     @Test
     void testMissingHandler()
@@ -136,9 +136,10 @@ class TestMissingFieldHandler
         //        pt.inner2 = new CustomPointWithRef.Inner2()
         //        pt.inner2.inner12 = pt.inner1
         //        pt.aStringArray = ["foo", "bar"]
+        //        pt.inner2WithNoSerializedType = new CustomPointWithRef.Inner2()
         //        println( JsonWriter.objectToJson(pt))
-        //        println( JsonWriter.objectToJson(pt))
-
+        def isStringArrayOk = false
+        def isInner2WithNoSerializedTypeOk = false
         JsonReader.MissingFieldHandler missingHandler = new JsonReader.MissingFieldHandler() {
             void fieldMissing(Object object, String fieldName, Object value)
             {
@@ -196,7 +197,10 @@ class TestMissingFieldHandler
                         ((CustomPointWithRef) object).ssMissing = (Short) value
                         break
                     case "aStringArray":
-                        ((CustomPointWithRef) object).aStringArrayMissing = (String[]) value
+                        isStringArrayOk = value == null
+                        break
+                    case "inner2WithNoSerializedType" :
+                        isInner2WithNoSerializedTypeOk = value == null
                         break
                 }
             }
@@ -220,6 +224,7 @@ class TestMissingFieldHandler
         assertTrue(clonePoint.llMissing == 9)
         assertTrue(clonePoint.sMissing == 9)
         assertTrue(clonePoint.ssMissing == 9)
-        assertNull(clonePoint.aStringArrayMissing)//arrays cannot be deserialized
+        assertTrue(isStringArrayOk)
+        assertTrue(isInner2WithNoSerializedTypeOk)
     }
 }

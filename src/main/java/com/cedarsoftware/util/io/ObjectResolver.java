@@ -87,7 +87,7 @@ public class ObjectResolver extends Resolver
             else if (missingFieldHandler != null)
             {
                 handleMissingField(stack, jsonObj, rhs, key);
-            }
+            }//else no handler so ignor.
         }
     }
 
@@ -267,7 +267,7 @@ public class ObjectResolver extends Resolver
             else if (rhs.getClass().isArray())
             {
                 // impossible to determine the array type.
-                // so ignore it.
+                storeMissingField(target, missingField, null);
             }
             else if (rhs instanceof JsonObject)
             {
@@ -277,11 +277,7 @@ public class ObjectResolver extends Resolver
                 if (ref != null)
                 { // Correct field references
                     final JsonObject refObject = getReferencedObj(ref);
-
-                    if (refObject.target != null)
-                    {
-                        storeMissingField(target, missingField, refObject.target);
-                    } // else unresolved ref so ignore it
+                    storeMissingField(target, missingField, refObject.target);
                 }
                 else
                 {   // Assign ObjectMap's to Object (or derived) fields
@@ -294,7 +290,11 @@ public class ObjectResolver extends Resolver
                             stack.addFirst((JsonObject) rhs);
                         }
                         storeMissingField(target, missingField, createJavaObjectInstance);
-                    } // else no type found so ignore it.
+                    } 
+                    else //no type found, just notify.
+                    {
+                        storeMissingField(target, missingField, null);
+                    }
                 }
             }
             else

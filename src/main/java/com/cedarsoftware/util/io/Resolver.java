@@ -207,6 +207,7 @@ abstract class Resolver
         handleMissingFields();
     }
 
+    // calls the missing field handler if any for each recorded missing field.
     private void handleMissingFields()
     {
         MissingFieldHandler missingFieldHandler = reader.getMissingFieldHandler();
