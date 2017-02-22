@@ -1,6 +1,8 @@
 ### Revision History
+* 4.9.9
+  * Enhancement: Missing field handler improvements. Submitted by @sgandon
 * 4.9.8
-  * Enhancement: Missing Field handler improvements.
+  * Enhancement: Missing field handler improvements. Submitted by @sgandon
 * 4.9.7
   * Enhancement: Added `JsonReader.addReaderPermanent()` and `JsonWriter.addWriterPermanent()` to allow for a static (lifecycle of JVM) reader / writer to be added.  Now, custom readers and writers can be added that only exist per-instance of `JsonReader` / `JsonWriter` or permanently, so they do not have to be added each instantiation (through args or call `.addReader()` or `.addWriter()`).
 * 4.9.6
