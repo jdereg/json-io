@@ -1,4 +1,6 @@
 ### Revision History
+* 4.9.10
+  * Bug fix: When system property file.encoding was not set to UTF-8, json-io was not correctly handling characters outside the ASCII space.  @rednoah
 * 4.9.9
   * Enhancement: Missing field handler improvements. Submitted by @sgandon
 * 4.9.8
