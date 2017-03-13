@@ -3,12 +3,9 @@ package com.cedarsoftware.util.io;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -569,7 +566,8 @@ public class JsonReader implements Closeable
         initializeFromArgs(optionalArgs);
         try
         {
-            input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp.getBytes("UTF-8"))));
+            byte[] bytes = inp.getBytes("UTF-8");
+            input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes), "UTF-8"));
         }
         catch (UnsupportedEncodingException e)
         {
@@ -580,7 +578,14 @@ public class JsonReader implements Closeable
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs)
     {
         initializeFromArgs(optionalArgs);
-        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp)));
+        try
+        {
+            input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp), "UTF-8"));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
+        }
     }
 
     private void initializeFromArgs(Map<String, Object> optionalArgs)
