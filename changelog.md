@@ -1,4 +1,6 @@
 ### Revision History
+* 4.9.11
+  * Enhancement: Added nice JSON-style argument format method, typically used for logging method calls.  See `MetaUtils.getLogMessage()`. 
 * 4.9.10
   * Bug fix: When system property file.encoding was not set to UTF-8, json-io was not correctly handling characters outside the ASCII space.  @rednoah
 * 4.9.9
@@ -20,7 +22,7 @@
 * 4.9.2
   * Optimization: When parsing from String, a different (faster) byte[] based pushback reader is used.
   * Optimization: Built-in Readers and Writers are only instantiated once for all instances of JsonReader / JsonWriter and then re-used.
-  * Enhancement: Inner 'view' classes generated from .keySet() and .values() are coerced to standard mutable collection classes. 
+  * Enhancement: Inner 'view' classes generated from `.keySet()` and `.values()` are coerced to standard mutable collection classes. 
   * Optimization: Identical code consolidated to one function.
 * 4.9.1
   * Enhancement: Make it possible to assign instantiator for package private classes, for example com.google.common.collect.RegularImmutableMap.  Contributed by @mhmx (Richard Kovacs)
@@ -39,11 +41,11 @@
   * Improved read speed.
   * Black-list support for excluding fields.  Submitted by @sgandon
   * Pretty-print with support for options.  Submitted by @dtracers
-  * Ability to use writeObject() API to write the 'body only'.  Submitted by @francisu
+  * Ability to use `writeObject()` API to write the 'body only'.  Submitted by @francisu
   * Bug fix: Unclear error sometimes when a class could not be loaded.  Submitted by @francisu
   * Enhancement: Provide optional notification of missing field. Submitted by @francisu
 * 4.4.0
-  * JsonReader.jsonToMaps() API is no longer recommended (not yet deprecated).  These can easily be turned into JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true]).  The one difference is the return value will match the return value type of the JSON (not always be a Map).
+  * `JsonReader.jsonToMaps()` API is no longer recommended (not yet deprecated).  These can easily be turned into `JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true])`.  The one difference is the return value will match the return value type of the JSON (not always be a Map).
 * 4.3.1
   * Enhancement: Skip null fields.  When this flag is set on the `JsonWriter` optional arguments, fields which have a null value are not written in the JSON output.
 * 4.3.0

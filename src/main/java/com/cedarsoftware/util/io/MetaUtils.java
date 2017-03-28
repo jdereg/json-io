@@ -13,9 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.isPrivate;
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.*;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -943,6 +941,41 @@ public class MetaUtils
         }
 
         throw new JsonIoException("Class '" + c.getName() + "' does not have primitive wrapper.");
+    }
+
+    /**
+     * Format a nice looking method signature for logging output
+     */
+    public static String getLogMessage(String methodName, Object[] args)
+    {
+        return getLogMessage(methodName, args, 50);
+    }
+
+    public static String getLogMessage(String methodName, Object[] args, int argCharLen)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(methodName);
+        sb.append('(');
+        for (Object arg : args)
+        {
+            sb.append(getJsonStringToMaxLength(arg, argCharLen));
+            sb.append("  ");
+        }
+        sb.append(')');
+        return sb.toString().trim();
+    }
+
+    private static String getJsonStringToMaxLength(Object obj, int argCharLen)
+    {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put(JsonWriter.TYPE, false);
+        args.put(JsonWriter.SHORT_META_KEYS, true);
+        String arg = JsonWriter.objectToJson(obj, args);
+        if (arg.length() > argCharLen)
+        {
+            arg = arg.substring(0, argCharLen) + "...";
+        }
+        return arg;
     }
 
     /**

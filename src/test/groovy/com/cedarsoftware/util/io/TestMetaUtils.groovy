@@ -121,4 +121,17 @@ class TestMetaUtils
         x = MetaUtils.getDistance(Externalizable.class, Serializable.class)
         assert x == Integer.MAX_VALUE
     }
+
+    @Test
+    void testLoggingMessage()
+    {
+        Map data = ['a': 'Alpha', 'b': 'Bravo', 'car': 'McLaren 675LT', 'pi': 3.1415926535897932384]
+        String methodName = 'blame'
+        Object[] args = [17, 34.5, data]
+        String msg = MetaUtils.getLogMessage(methodName, args)
+        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi...  )'
+
+        msg = MetaUtils.getLogMessage(methodName, args, 500)
+        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi":"3.1415926535897932384"}  )'
+    }
 }
