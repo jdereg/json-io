@@ -129,9 +129,9 @@ class TestMetaUtils
         String methodName = 'blame'
         Object[] args = [17, 34.5, data]
         String msg = MetaUtils.getLogMessage(methodName, args)
-        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi...  )'
+        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi...)'
 
         msg = MetaUtils.getLogMessage(methodName, args, 500)
-        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi":"3.1415926535897932384"}  )'
+        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi":"3.1415926535897932384"})'
     }
 }

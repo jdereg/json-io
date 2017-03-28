@@ -961,8 +961,8 @@ public class MetaUtils
             sb.append(getJsonStringToMaxLength(arg, argCharLen));
             sb.append("  ");
         }
-        sb.append(')');
-        return sb.toString().trim();
+        String result = sb.toString().trim();
+        return result + ')';
     }
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
