@@ -1,4 +1,6 @@
 ### Revision History
+* 4.9.12
+  * Bug fix: Line number was incorrectly being reported as column number in error output. 
 * 4.9.11
   * Enhancement: Added nice JSON-style argument format method, typically used for logging method calls.  See `MetaUtils.getLogMessage()`. 
 * 4.9.10

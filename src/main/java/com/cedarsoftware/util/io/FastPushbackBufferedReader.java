@@ -118,6 +118,6 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
 
     public int getLine()
     {
-        return col;
+        return line;
     }
 }
