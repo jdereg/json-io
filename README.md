@@ -24,7 +24,7 @@ ObjectOutputStream behavior.
 
 **json-io** does not depend on any 3rd party libraries, has extensive support for Java Generics, and allows extensive customization. 
 
-###A few advantages of json-io over Google's gson library:
+### A few advantages of json-io over Google's gson library:
 * gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java) 
 * gson cannot handle non-static inner classes. [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
 * gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
