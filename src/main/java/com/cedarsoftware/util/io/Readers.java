@@ -201,7 +201,7 @@ public class Readers
             }
         }
 
-        private Date parseDate(String dateStr)
+        static Date parseDate(String dateStr)
         {
             dateStr = dateStr.trim();
             if (dateStr.isEmpty())

@@ -4,7 +4,8 @@ import com.cedarsoftware.util.DeepEquals
 import groovy.transform.CompileStatic
 import org.junit.Test
 
-import java.awt.Point
+import java.awt.*
+import java.util.List
 import java.util.concurrent.ConcurrentHashMap
 
 import static org.junit.Assert.assertEquals
@@ -486,5 +487,72 @@ class TestMaps
         assert ret['"zero"'] == 0L
         assert ret['"one"'] == 1L
         assert ret['"two"'] == 2L
+    }
+
+    @Test
+    void testMapWithPrimitiveValues()
+    {
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone('GMT'))
+        cal.clear()
+        cal.set(2017, 5, 10,8, 1, 32)
+        final Map<String, Object> map = [:]
+        map['Byte'] = Byte.valueOf((byte)79)
+        map['Integer'] = Integer.valueOf(179)
+        map['Short'] = Short.valueOf((short)179)
+        map['Float'] = Float.valueOf(179.0f)
+        map['date'] = cal.time
+        map['Long'] = Long.valueOf(179)
+        map['Double'] = Double.valueOf(179)
+        map['Character'] = Character.valueOf('z' as char)
+        map['Boolean'] = Boolean.valueOf(false)
+        map['BigInteger'] = new BigInteger("55")
+        map['BigDecimal'] = new BigDecimal("3.33333")
+
+        final Map params = [(JsonWriter.DATE_FORMAT):JsonWriter.ISO_DATE_TIME_FORMAT] as Map
+        final String str = JsonWriter.objectToJson(map, params)
+        
+        // for debugging
+        System.out.println("${str}\n")
+
+        final Map<String, Object> map2 = (Map) JsonReader.jsonToMaps(str)
+
+        // for debugging
+        for (Map.Entry<String, Object> entry : map2.entrySet())
+        {
+            System.out.println("${entry.key} : ${entry.value} {${entry.value.class.simpleName}}")
+        }
+
+        assert map2['Boolean'] instanceof Boolean
+        assert map2['Boolean'] == false
+
+        assert map2['Byte'] instanceof Byte
+        assert map2['Byte'] == 79
+
+        assert map2['Short'] instanceof Short
+        assert map2['Short'] == 179
+
+        assert map2['Integer'] instanceof Integer
+        assert map2['Integer'] == 179
+
+        assert map2['Long'] instanceof Long
+        assert map2['Long'] == 179
+
+        assert map2['Float'] instanceof Float
+        assert map2['Float'] == 179
+
+        assert map2['Double'] instanceof Double
+        assert map2['Double'] == 179
+
+        assert map2['Character'] instanceof Character
+        assert map2['Character'] == 'z'
+
+        assert map2['date'] instanceof Date
+        assert map2['date'] == cal.time
+
+        assert map2['BigInteger'] instanceof BigInteger
+        assert map2['BigInteger'] == 55
+
+        assert map2['BigDecimal'] instanceof BigDecimal
+        assert map2['BigDecimal'] == 3.33333
     }
 }

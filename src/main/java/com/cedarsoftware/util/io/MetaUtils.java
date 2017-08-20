@@ -1,19 +1,45 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.*;
+import static java.lang.reflect.Modifier.isPrivate;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -704,7 +730,7 @@ public class MetaUtils
             final Class argType = argTypes[i];
             if (isPrimitive(argType))
             {
-                values[i] = newPrimitiveWrapper(argType, null);
+                values[i] = convert(argType, null);
             }
             else if (useNull)
             {
@@ -811,13 +837,13 @@ public class MetaUtils
 
     /**
      * @return a new primitive wrapper instance for the given class, using the
-     * rhs parameter as a hint.  For example, newPrimitiveWrapper(long.class, "45")
+     * rhs parameter as a hint.  For example, convert(long.class, "45")
      * will return 45L.  However, if null is passed for the rhs, then the value 0L
      * would be returned in this case.  For boolean, it would return false if null
      * was passed in.  This method is similar to the GitHub project java-util's
      * Converter.convert() API.
      */
-    static Object newPrimitiveWrapper(Class c, Object rhs)
+    static Object convert(Class c, Object rhs)
     {
         try
         {
@@ -920,7 +946,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).longValue() : 0L;
             }
-            else if (c == short.class|| c == Short.class)
+            else if (c == short.class || c == Short.class)
             {
                 if (rhs instanceof String)
                 {
@@ -932,6 +958,25 @@ public class MetaUtils
                     return Short.parseShort((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+            }
+            else if (c == Date.class)
+            {
+                if (rhs instanceof String)
+                {
+                    return Readers.DateReader.parseDate((String) rhs);
+                }
+                else if (rhs instanceof Long)
+                {
+                    return new Date((Long)(rhs));
+                }
+            }
+            else if (c == BigInteger.class)
+            {
+                return Readers.bigIntegerFrom(rhs);
+            }
+            else if (c == BigDecimal.class)
+            {
+                return Readers.bigDecimalFrom(rhs);
             }
         }
         catch (Exception e)
@@ -948,7 +993,7 @@ public class MetaUtils
      */
     public static String getLogMessage(String methodName, Object[] args)
     {
-        return getLogMessage(methodName, args, 50);
+        return getLogMessage(methodName, args, 64);
     }
 
     public static String getLogMessage(String methodName, Object[] args, int argCharLen)

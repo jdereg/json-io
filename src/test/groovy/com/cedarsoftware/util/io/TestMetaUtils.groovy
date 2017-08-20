@@ -79,7 +79,7 @@ class TestMetaUtils
     {
         try
         {
-            MetaUtils.newPrimitiveWrapper(TimeZone.class, "")
+            MetaUtils.convert(TimeZone.class, "")
         }
         catch (JsonIoException e)
         {
@@ -88,14 +88,14 @@ class TestMetaUtils
 
         try
         {
-            MetaUtils.newPrimitiveWrapper(Float.class, "float")
+            MetaUtils.convert(Float.class, "float")
         }
         catch (JsonIoException e)
         {
             assert e.message.toLowerCase().contains('error creating primitive wrapper')
         }
 
-        assert 'G' as char == MetaUtils.newPrimitiveWrapper(Character.class, 'G' as char)
+        assert 'G' as char == MetaUtils.convert(Character.class, 'G' as char)
     }
 
     @Test
@@ -129,7 +129,7 @@ class TestMetaUtils
         String methodName = 'blame'
         Object[] args = [17, 34.5, data]
         String msg = MetaUtils.getLogMessage(methodName, args)
-        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi...)'
+        assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi":"3.141592653...)'
 
         msg = MetaUtils.getLogMessage(methodName, args, 500)
         assert msg == 'blame({"value":17}  "34.5"  {"a":"Alpha","b":"Bravo","car":"McLaren 675LT","pi":"3.1415926535897932384"})'

@@ -1,7 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
@@ -111,7 +121,7 @@ public class ObjectResolver extends Resolver
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0"));
+                    field.set(target, MetaUtils.convert(fieldType, "0"));
                 }
                 else
                 {
@@ -207,7 +217,7 @@ public class ObjectResolver extends Resolver
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
+                    field.set(target, MetaUtils.convert(fieldType, rhs));
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
@@ -486,7 +496,7 @@ public class ObjectResolver extends Resolver
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, MetaUtils.newPrimitiveWrapper(compType, element));
+                Array.set(array, i, MetaUtils.convert(compType, element));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays
@@ -668,7 +678,7 @@ public class ObjectResolver extends Resolver
 		return read;
     }
 
-    private static void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
+    private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
     {
         final Deque<Object[]> stack = new ArrayDeque<Object[]>();
         stack.addFirst(new Object[] {type, rhs});

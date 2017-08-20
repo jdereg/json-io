@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import static org.junit.Assert.assertFalse
 import static org.junit.Assert.assertTrue
 import static org.junit.Assert.fail
 
@@ -28,31 +27,31 @@ class TestJsonObject
     @Test
     void testNewPrimitiveWrapper()
     {
-        assertTrue JsonObject.isPrimitiveWrapper(Byte.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Byte.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Short.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Short.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Integer.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Integer.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Long.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Long.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Float.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Float.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Double.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Double.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Boolean.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Boolean.TYPE)
-        assertTrue JsonObject.isPrimitiveWrapper(Character.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Character.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Byte.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Byte.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Short.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Short.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Integer.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Integer.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Long.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Long.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Float.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Float.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Double.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Double.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Boolean.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Boolean.TYPE)
+        assertTrue MetaUtils.isLogicalPrimitive(Character.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Character.TYPE)
         // quasi-primitives (Date, String, BigInteger, BigDecimal) as defined by json-io (not true primitive wrappers)
-        assertFalse JsonObject.isPrimitiveWrapper(Date.class)
-        assertFalse JsonObject.isPrimitiveWrapper(String.class)
-        assertFalse JsonObject.isPrimitiveWrapper(BigInteger.class)
-        assertFalse JsonObject.isPrimitiveWrapper(BigDecimal.class)
-        assertFalse JsonObject.isPrimitiveWrapper(Number.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Date.class)
+        assertTrue MetaUtils.isLogicalPrimitive(String.class)
+        assertTrue MetaUtils.isLogicalPrimitive(BigInteger.class)
+        assertTrue MetaUtils.isLogicalPrimitive(BigDecimal.class)
+        assertTrue MetaUtils.isLogicalPrimitive(Number.class)
         try
         {
-            JsonObject.isPrimitiveWrapper(null)
+            MetaUtils.isLogicalPrimitive(null)
             fail()
         }
         catch (NullPointerException ignored)

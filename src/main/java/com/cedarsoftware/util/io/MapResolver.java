@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -96,9 +97,10 @@ public class MapResolver extends Resolver
             else if (rhs instanceof JsonObject)
             {
                 JsonObject<String, Object> jObj = (JsonObject) rhs;
-                if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
+
+                if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
                 {
-                    jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value")));
+                    jObj.put("value", MetaUtils.convert(field.getType(), jObj.get("value")));
                     continue;
                 }
                 Long refId = jObj.getReferenceId();
@@ -121,17 +123,9 @@ public class MapResolver extends Resolver
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class fieldType = field.getType();
-                if (MetaUtils.isPrimitive(fieldType))
+                if (MetaUtils.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
-                    jsonObj.put(fieldName, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
-                }
-                else if (BigDecimal.class == fieldType)
-                {
-                    jsonObj.put(fieldName, Readers.bigDecimalFrom(rhs));
-                }
-                else if (BigInteger.class == fieldType)
-                {
-                    jsonObj.put(fieldName, Readers.bigIntegerFrom(rhs));
+                    jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));
                 }
                 else if (rhs instanceof String)
                 {

@@ -86,7 +86,10 @@ can be read, modified, and then re-written by a JVM that does not contain any of
     SHORT_META_KEYS         // If set, then @type => @t, @keys => @k, @items => @e,
                             // @ref => @r, and @id => @i
     SKIP_NULL_FIELDS        // Do not write field values to output JSON when
-                            // their value is null.                             
+                            // their value is null. If you have a constructor that takes
+                            // primitive wrapper arguments (ie., Integer), json-io will
+                            // supply their 'zero' value (0) when looking for constructors
+                            // to choose.                             
     CLASSLOADER             // ClassLoader instance to use when turning String names of     
                             // classes into JVM Class instances.
 

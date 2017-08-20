@@ -1,7 +1,12 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -98,14 +103,10 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return target.getClass();
     }
 
-    public boolean isPrimitive()
+    public boolean isLogicalPrimitive()
     {
-        return primitiveWrappers.contains(type);
-    }
-
-    public static boolean isPrimitiveWrapper(Class c)
-    {
-        return primitiveWrappers.contains(c.getName());
+        return primitiveWrappers.contains(type) || primitives.contains(type) || "date".equals(type) ||
+                "java.math.BigInteger".equals(type) || "java.math.BigDecimal".equals(type);
     }
 
     public Object getPrimitiveValue()
@@ -138,6 +139,32 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             Number s = (Number) get("value");
             return s.shortValue();
+        }
+        else if ("date".equals(type))
+        {
+            Object date = get("value");
+            if (date instanceof Long)
+            {
+                return new Date((Long)(date));
+            }
+            else if (date instanceof String)
+            {
+                return Readers.DateReader.parseDate((String) date);
+            }
+            else
+            {
+                throw new JsonIoException("Unknown date type: " + type);
+            }
+        }
+        else if ("java.math.BigInteger".equals(type))
+        {
+            Object value = get("value");
+            return Readers.bigIntegerFrom(value);
+        }
+        else if ("java.math.BigDecimal".equals(type))
+        {
+            Object value = get("value");
+            return Readers.bigDecimalFrom(value);
         }
         else
         {

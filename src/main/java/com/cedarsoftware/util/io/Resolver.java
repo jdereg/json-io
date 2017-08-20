@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -15,8 +17,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -369,7 +369,7 @@ abstract class Resolver
             {    // Handle regular field.object reference
                 if (MetaUtils.isPrimitive(c))
                 {
-                    mate = MetaUtils.newPrimitiveWrapper(c, jsonObj.get("value"));
+                    mate = MetaUtils.convert(c, jsonObj.get("value"));
                 }
                 else if (c == Class.class)
                 {
