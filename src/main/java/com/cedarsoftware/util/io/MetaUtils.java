@@ -63,7 +63,6 @@ import static java.lang.reflect.Modifier.isPublic;
 public class MetaUtils
 {
     private MetaUtils () {}
-    
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
     private static final Set<Class> prims = new HashSet<Class>();
     private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
@@ -420,7 +419,11 @@ public class MetaUtils
         Class currentClass = null;
         if (null == primitiveArray)
         {
-            currentClass = classLoader.loadClass(className);
+          try {
+              currentClass = classLoader.loadClass(className);
+          } catch (ClassNotFoundException e) {
+              currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
+          }
         }
 
         if (arrayType)
