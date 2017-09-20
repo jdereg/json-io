@@ -419,9 +419,12 @@ public class MetaUtils
         Class currentClass = null;
         if (null == primitiveArray)
         {
-          try {
+          try
+          {
               currentClass = classLoader.loadClass(className);
-          } catch (ClassNotFoundException e) {
+          }
+          catch (ClassNotFoundException e)
+          {
               currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
           }
         }
