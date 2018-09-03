@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -43,43 +42,51 @@ public class Writers
     
     public static class TimeZoneWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             TimeZone cal = (TimeZone) obj;
-            output.write("\"zone\":\"");
-            output.write(cal.getID());
-            output.write('"');
+            output.append("\"zone\":\"");
+            output.append(cal.getID());
+            output.append('"');
         }
 
-        public boolean hasPrimitiveForm() { return false; }
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {}
+        @Override
+		public boolean hasPrimitiveForm() { return false; }
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException {}
     }
 
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             Calendar cal = (Calendar) obj;
             MetaUtils.dateFormat.get().setTimeZone(cal.getTimeZone());
-            output.write("\"time\":\"");
-            output.write(MetaUtils.dateFormat.get().format(cal.getTime()));
-            output.write("\",\"zone\":\"");
-            output.write(cal.getTimeZone().getID());
-            output.write('"');
+            output.append("\"time\":\"");
+            output.append(MetaUtils.dateFormat.get().format(cal.getTime()));
+            output.append("\",\"zone\":\"");
+            output.append(cal.getTimeZone().getID());
+            output.append('"');
         }
 
-        public boolean hasPrimitiveForm() { return false; }
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {}
+        @Override
+		public boolean hasPrimitiveForm() { return false; }
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException {}
     }
 
     public static class DateWriter implements JsonWriter.JsonClassWriter, JsonWriter.JsonClassWriterEx
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             throw new JsonIoException("Should never be called.");
         }
 
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output, Map args) throws IOException
         {
             Date date = (Date)obj;
             Object dateFormat = args.get(DATE_FORMAT);
@@ -90,29 +97,31 @@ public class Writers
             }
             if (showType)
             {
-                output.write("\"value\":");
+                output.append("\"value\":");
             }
 
             if (dateFormat instanceof Format)
             {
-                output.write("\"");
-                output.write(((Format) dateFormat).format(date));
-                output.write("\"");
+                output.append("\"");
+                output.append(((Format) dateFormat).format(date));
+                output.append("\"");
             }
             else
             {
-                output.write(Long.toString(((Date) obj).getTime()));
+                output.append(Long.toString(((Date) obj).getTime()));
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             throw new JsonIoException("Should never be called.");
         }
 
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
+        public void writePrimitiveForm(Object o, final StringBuilder output, Map args) throws IOException
         {
             if (args.containsKey(DATE_FORMAT))
             {
@@ -120,40 +129,46 @@ public class Writers
             }
             else
             {
-                output.write(Long.toString(((Date) o).getTime()));
+                output.append(Long.toString(((Date) o).getTime()));
             }
         }
     }
 
     public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object o, boolean showType, final StringBuilder output) throws IOException
         {
             Timestamp tstamp = (Timestamp) o;
-            output.write("\"time\":\"");
-            output.write(Long.toString((tstamp.getTime() / 1000) * 1000));
-            output.write("\",\"nanos\":\"");
-            output.write(Integer.toString(tstamp.getNanos()));
-            output.write('"');
+            output.append("\"time\":\"");
+            output.append(Long.toString((tstamp.getTime() / 1000) * 1000));
+            output.append("\",\"nanos\":\"");
+            output.append(Integer.toString(tstamp.getNanos()));
+            output.append('"');
         }
 
-        public boolean hasPrimitiveForm() { return false; }
+        @Override
+		public boolean hasPrimitiveForm() { return false; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException { }
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException { }
     }
 
     public static class ClassWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             String value = ((Class) obj).getName();
-            output.write("\"value\":");
+            output.append("\"value\":");
             writeJsonUtf8String(value, output);
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             writeJsonUtf8String(((Class)o).getName(), output);
         }
@@ -161,15 +176,18 @@ public class Writers
 
     public static class JsonStringWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
-            output.write("\"value\":");
+            output.append("\"value\":");
             writeJsonUtf8String((String) obj, output);
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             writeJsonUtf8String((String) o, output);
         }
@@ -177,32 +195,36 @@ public class Writers
 
     public static class LocaleWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             Locale locale = (Locale) obj;
 
-            output.write("\"language\":\"");
-            output.write(locale.getLanguage());
-            output.write("\",\"country\":\"");
-            output.write(locale.getCountry());
-            output.write("\",\"variant\":\"");
-            output.write(locale.getVariant());
-            output.write('"');
+            output.append("\"language\":\"");
+            output.append(locale.getLanguage());
+            output.append("\",\"country\":\"");
+            output.append(locale.getCountry());
+            output.append("\",\"variant\":\"");
+            output.append(locale.getVariant());
+            output.append('"');
         }
-        public boolean hasPrimitiveForm() { return false; }
-        public void writePrimitiveForm(Object o, Writer output) throws IOException { }
+        @Override
+		public boolean hasPrimitiveForm() { return false; }
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException { }
     }
 
     public static class BigIntegerWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             if (showType)
             {
                 BigInteger big = (BigInteger) obj;
-                output.write("\"value\":\"");
-                output.write(big.toString(10));
-                output.write('"');
+                output.append("\"value\":\"");
+                output.append(big.toString(10));
+                output.append('"');
             }
             else
             {
@@ -210,26 +232,29 @@ public class Writers
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             BigInteger big = (BigInteger) o;
-            output.write('"');
-            output.write(big.toString(10));
-            output.write('"');
+            output.append('"');
+            output.append(big.toString(10));
+            output.append('"');
         }
     }
 
     public static class AtomicBooleanWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             if (showType)
             {
                 AtomicBoolean value = (AtomicBoolean) obj;
-                output.write("\"value\":");
-                output.write(value.toString());
+                output.append("\"value\":");
+                output.append(value.toString());
             }
             else
             {
@@ -237,24 +262,27 @@ public class Writers
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             AtomicBoolean value = (AtomicBoolean) o;
-            output.write(value.toString());
+            output.append(value.toString());
         }
     }
 
     public static class AtomicIntegerWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             if (showType)
             {
                 AtomicInteger value = (AtomicInteger) obj;
-                output.write("\"value\":");
-                output.write(value.toString());
+                output.append("\"value\":");
+                output.append(value.toString());
             }
             else
             {
@@ -262,24 +290,27 @@ public class Writers
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             AtomicInteger value = (AtomicInteger) o;
-            output.write(value.toString());
+            output.append(value.toString());
         }
     }
 
     public static class AtomicLongWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             if (showType)
             {
                 AtomicLong value = (AtomicLong) obj;
-                output.write("\"value\":");
-                output.write(value.toString());
+                output.append("\"value\":");
+                output.append(value.toString());
             }
             else
             {
@@ -287,25 +318,28 @@ public class Writers
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             AtomicLong value = (AtomicLong) o;
-            output.write(value.toString());
+            output.append(value.toString());
         }
     }
 
     public static class BigDecimalWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             if (showType)
             {
                 BigDecimal big = (BigDecimal) obj;
-                output.write("\"value\":\"");
-                output.write(big.toPlainString());
-                output.write('"');
+                output.append("\"value\":\"");
+                output.append(big.toPlainString());
+                output.append('"');
             }
             else
             {
@@ -313,63 +347,71 @@ public class Writers
             }
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             BigDecimal big = (BigDecimal) o;
-            output.write('"');
-            output.write(big.toPlainString());
-            output.write('"');
+            output.append('"');
+            output.append(big.toPlainString());
+            output.append('"');
         }
     }
 
     public static class StringBuilderWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             StringBuilder builder = (StringBuilder) obj;
-            output.write("\"value\":\"");
-            output.write(builder.toString());
-            output.write('"');
+            output.append("\"value\":\"");
+            output.append(builder.toString());
+            output.append('"');
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             StringBuilder builder = (StringBuilder) o;
-            output.write('"');
-            output.write(builder.toString());
-            output.write('"');
+            output.append('"');
+            output.append(builder.toString());
+            output.append('"');
         }
     }
 
     public static class StringBufferWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+		public void write(Object obj, boolean showType, final StringBuilder output) throws IOException
         {
             StringBuffer buffer = (StringBuffer) obj;
-            output.write("\"value\":\"");
-            output.write(buffer.toString());
-            output.write('"');
+            output.append("\"value\":\"");
+            output.append(buffer.toString());
+            output.append('"');
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        @Override
+		public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+		public void writePrimitiveForm(Object o, final StringBuilder output) throws IOException
         {
             StringBuffer buffer = (StringBuffer) o;
-            output.write('"');
-            output.write(buffer.toString());
-            output.write('"');
+            output.append('"');
+            output.append(buffer.toString());
+            output.append('"');
         }
     }
 
     // ========== Maintain knowledge about relationships below this line ==========
     static final String DATE_FORMAT = JsonWriter.DATE_FORMAT;
 
-    protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
+    protected static void writeJsonUtf8String(String s, final StringBuilder output) throws IOException
     {
         JsonWriter.writeJsonUtf8String(s, output);
     }
