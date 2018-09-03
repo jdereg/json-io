@@ -117,6 +117,9 @@ public class JsonWriter implements Closeable, Flushable
     private final Map<Object, Long> objVisited = new IdentityHashMap<Object, Long>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<Object, Long>();
     private final StringBuilder out;
+	 // If we want a flat structure, we enclose the map in a JSON object body,
+	 // We need a different ouput to prevent objects from being written in reverse discovering order :
+    private final StringBuilder outFlat;
     private Map<String, String> typeNameMap = null;
     private boolean shortMetaKeys = false;
     private boolean neverShowType = false;
@@ -487,6 +490,7 @@ public class JsonWriter implements Closeable, Flushable
 //       }
 
 		this.out = new StringBuilder();
+		this.outFlat = new StringBuilder();
     }
 
     /**
@@ -815,6 +819,8 @@ public class JsonWriter implements Closeable, Flushable
       	  
       	  if(isFlatStructure){
       		  // If we want a flat structure, we enclose the map in a JSON object body :
+      		  // To prevent objects from being written in reverse discovering order :
+      		  output.append(this.outFlat);
       		  output.insert(0, '{').append('}');
       	  }
         }
@@ -1141,21 +1147,21 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
+      	  
             StringBuilder sb = getWrittenObject(obj, showType, false);
             if(!isFlatStructure){
             	 // Default behavior :
             	output.append(sb);
             }else{
             	// If we want a flat structure :
-            	if(output.length() == 0){
-            		output.insert(0, sb);
+            	// To prevent objects from being written in reverse discovering order :
+             	if(output.length() == 0){
+             		this.outFlat.insert(0, sb);
             	}else{
-            		output.insert(0, sb.append(','));
+            		this.outFlat.insert(0, sb.insert(0,','));
             		writeOptionalReference(obj, output);
             	}
             }
-            
-            
             
         }
     }
