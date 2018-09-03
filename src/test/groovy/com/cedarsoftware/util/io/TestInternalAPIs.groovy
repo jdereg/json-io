@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
-
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
+
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -26,9 +26,11 @@ class TestInternalAPIs
 {
     static class DerivedWriter extends JsonWriter
     {
-        public DerivedWriter(OutputStream out)
+//      public DerivedWriter(OutputStream out)
+		  public DerivedWriter()
         {
-            super(out)
+//         super(out)
+			  super()
         }
     }
 
@@ -58,9 +60,10 @@ class TestInternalAPIs
     @Test
     void testProtectedAPIs()
     {
-        ByteArrayOutputStream bao = new ByteArrayOutputStream()
-        DerivedWriter writer = new DerivedWriter(bao)
-        Map ref = writer.objectsReferenced
+//      ByteArrayOutputStream bao = new ByteArrayOutputStream()
+//      DerivedWriter writer = new DerivedWriter(bao)
+		  DerivedWriter writer = new DerivedWriter()
+		  Map ref = writer.objectsReferenced
         Map vis = writer.objectsVisited
         assertNotNull(ref)
         assertNotNull(vis)

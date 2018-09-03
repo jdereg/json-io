@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import static org.junit.Assert.assertTrue
 
 import java.text.ParseException
 import java.text.SimpleDateFormat
 
-import static org.junit.Assert.assertTrue
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -35,26 +35,31 @@ class TestCustomClassHandler
 
     public class WeirdDateWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer out)
+		  @Override
+//      public void write(Object o, boolean showType, Writer out)
+		  public void write(Object o, boolean showType, final StringBuilder out) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
-            out.write("\"stuff\":\"")
-            out.write(value)
-            out.write('"')
+            out.append("\"stuff\":\"")
+            out.append(value)
+            out.append('"')
         }
 
         public boolean hasPrimitiveForm()
         {
-            return true;
+            return true
         }
 
-        public void writePrimitiveForm(Object o, Writer out)
+		  @Override
+//      public void writePrimitiveForm(Object o, Writer out)
+		  public void writePrimitiveForm(Object o, final StringBuilder out) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o)
-            out.write('"')
-            out.write(value)
-            out.write('"')
+            out.append('"')
+            out.append(value)
+            out.append('"')
         }
+
     }
 
     public class WeirdDateReader implements JsonReader.JsonClassReader

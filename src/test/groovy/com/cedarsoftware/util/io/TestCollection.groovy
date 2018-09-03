@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
-
-import java.awt.Point
-
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
 import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertTrue
+
+import java.awt.Point
+
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -33,10 +33,10 @@ class TestCollection
 
     private static enum TestEnum4
     {
-        A, B, C;
+        A, B, C
 
-        private int internal = 6;
-        protected long age = 21;
+        private int internal = 6
+        protected long age = 21
         String foo = "bar"
     }
 
@@ -57,7 +57,7 @@ class TestCollection
 
     static class PointList
     {
-        List<Point> points;
+        List<Point> points
     }
 
     static class EmptyArrayList
@@ -67,26 +67,26 @@ class TestCollection
 
     private static class ManyCollections implements Serializable
     {
-        private Collection[] _cols;
-        private List _strings_a;
-        private List _strings_b;
-        private List _strings_c;
-        private List _dates_a;
-        private List _dates_b;
-        private List _dates_c;
-        private List _classes_a;
-        private List _classes_b;
-        private List _classes_c;
-        private List _sb_a;
-        private List _sb_b;
-        private List _sb_c;
-        private List _poly_a;
-        private ArrayList _typedCol;
-        private Set _strs_a;
-        private Set _strs_b;
-        private Set _strs_c;
-        private Set _strs_d;
-        private HashSet _typedSet;
+        private Collection[] _cols
+        private List _strings_a
+        private List _strings_b
+        private List _strings_c
+        private List _dates_a
+        private List _dates_b
+        private List _dates_c
+        private List _classes_a
+        private List _classes_b
+        private List _classes_c
+        private List _sb_a
+        private List _sb_b
+        private List _sb_c
+        private List _poly_a
+        private ArrayList _typedCol
+        private Set _strs_a
+        private Set _strs_b
+        private Set _strs_c
+        private Set _strs_d
+        private HashSet _typedSet
 
         private void init()
         {
@@ -108,7 +108,7 @@ class TestCollection
             tree.add(new Integer(Integer.MAX_VALUE))
             tree.add(_CONST_INT)
 
-            _cols = [array, set, tree] as Collection[];
+            _cols = [array, set, tree] as Collection[]
 
             _strings_a = new LinkedList()
             _strings_a.add("Alpha")
@@ -116,7 +116,7 @@ class TestCollection
             _strings_a.add("Charlie")
             _strings_a.add("Delta")
             _strings_b = new LinkedList()
-            _strings_c = null;
+            _strings_c = null
 
             _dates_a = new ArrayList()
             _dates_a.add(new Date(0))
@@ -124,7 +124,7 @@ class TestCollection
             _dates_a.add(new Date(Long.MAX_VALUE))
             _dates_a.add(null)
             _dates_b = new ArrayList()
-            _dates_c = null;
+            _dates_c = null
 
             _classes_a = new ArrayList()
             _classes_a.add(boolean.class)
@@ -140,13 +140,13 @@ class TestCollection
             _classes_a.add(null)
             _classes_a.add(Class.class)
             _classes_b = new ArrayList()
-            _classes_c = null;
+            _classes_c = null
 
             _sb_a = new LinkedList()
             _sb_a.add(new StringBuffer("one"))
             _sb_a.add(new StringBuffer("two"))
             _sb_b = new LinkedList()
-            _sb_c = null;
+            _sb_c = null
 
             _poly_a = new ArrayList()
             _poly_a.add(Boolean.TRUE)
@@ -181,7 +181,7 @@ class TestCollection
             _strs_a.add("Bird")
             _strs_a.add("Goose")
             _strs_b = new HashSet()
-            _strs_c = null;
+            _strs_c = null
             _strs_d = new TreeSet()
             _strs_d.addAll(_strs_a)
 
@@ -216,8 +216,9 @@ class TestCollection
 
         assertCollection(root)
 
-        JsonWriter writer = new JsonWriter(new ByteArrayOutputStream())
-        writer.write(obj)
+//      JsonWriter writer = new JsonWriter(new ByteArrayOutputStream())
+		  JsonWriter writer = new JsonWriter()
+		  writer.write(obj)
         // TODO: Uncomment to test identity counter strategies (currently incremental + only referenced)
 //        System.out.TestUtil.printLine("writer._identity = " + writer._identity)
     }
@@ -229,16 +230,16 @@ class TestCollection
         assertTrue(root._cols[1].getClass().equals(HashSet.class))
         assertTrue(root._cols[2].getClass().equals(TreeSet.class))
 
-        Collection array = root._cols[0];
+        Collection array = root._cols[0]
         assertTrue(array.size() == 4)
         assertTrue(array.getClass().equals(ArrayList.class))
-        List alist = (List) array;
+        List alist = (List) array
         assertTrue(alist.get(0).equals(_testDate))
         assertTrue(alist.get(1).equals("Hello"))
         assertTrue(alist.get(2).equals(new TestObject("fudge")))
         assertTrue(alist.get(3).equals(_CONST_INT))
 
-        Collection set = root._cols[1];
+        Collection set = root._cols[1]
         assertTrue(set.size() == 4)
         assertTrue(set.getClass().equals(HashSet.class))
         assertTrue(set.contains(Map.class))
@@ -246,7 +247,7 @@ class TestCollection
         assertTrue(set.contains(null))
         assertTrue(set.contains(_CONST_INT))
 
-        set = root._cols[2];
+        set = root._cols[2]
         assertTrue(set.size() == 4)
         assertTrue(set.getClass().equals(TreeSet.class))
         assertTrue(set.contains(new Integer(Integer.MIN_VALUE)))
@@ -421,7 +422,7 @@ class TestCollection
         assertTrue(list.equals(list2))
 
         // Forward reference
-        String pkg = TestObject.class.name;
+        String pkg = TestObject.class.name
         json = '{"@type":"java.util.ArrayList","@items":[{"@ref":3},{"@id":3,"@type":"' + pkg + '","_name":"JSON","_other":null}]}'
         list2 = (List) JsonReader.jsonToJava(json)
         assertTrue(list.equals(list2))
@@ -478,7 +479,7 @@ class TestCollection
     @Test
     void testEmptyCollections()
     {
-        EmptyCols emptyCols;
+        EmptyCols emptyCols
         String className = TestCollection.class.getName()
         String json = '{"@type":"' + className + '$EmptyCols","col":{},"list":{},"map":{},"set":{},"sortedSet":{},"sortedMap":{}}'
         TestUtil.printLine("json = " + json)
@@ -501,7 +502,7 @@ class TestCollection
     @Test
     void testEnumWithPrivateMembersInCollection()
     {
-        TestEnum4 x = TestEnum4.B;
+        TestEnum4 x = TestEnum4.B
         List list = new ArrayList()
         list.add(x)
         String json = TestUtil.getJsonString(list)
@@ -509,11 +510,13 @@ class TestCollection
         String className = TestCollection.class.getName()
         assertEquals('{"@type":"java.util.ArrayList","@items":[{"@type":"' + className + '$TestEnum4","age":21,"foo":"bar","name":"B"}]}', json)
 
-        ByteArrayOutputStream ba = new ByteArrayOutputStream()
-        JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY):true])
-        writer.write(list)
-        json = new String(ba.toByteArray())
-        TestUtil.printLine(json)
+//      ByteArrayOutputStream ba = new ByteArrayOutputStream()
+//      JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY):true])
+		  JsonWriter writer = new JsonWriter([(JsonWriter.ENUM_PUBLIC_ONLY):true])
+//		  writer.write(list)
+//      json = new String(ba.toByteArray())
+		  json = writer.write(list)
+		  TestUtil.printLine(json)
         assertEquals('{"@type":"java.util.ArrayList","@items":[{"@type":"' + className + '$TestEnum4","name":"B"}]}', json)
     }
 
@@ -566,7 +569,7 @@ class TestCollection
         map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         items = (Object[]) map.getArray()
         assertTrue(items.length == 1)
-        Object[] oa = (Object[]) items[0];
+        Object[] oa = (Object[]) items[0]
         assertTrue(oa.length == 4)
         assertTrue(oa[0].equals(123L))
         assertTrue(oa[1] == null)
@@ -611,7 +614,7 @@ class TestCollection
         Object[] oa = (Object[]) col1.get(5)
         assertTrue("dog".equals(oa[0]))
         assertTrue(oa[1] instanceof String[])
-        String[] sa = (String[]) oa[1];
+        String[] sa = (String[]) oa[1]
         assertTrue("a".equals(sa[0]))
         assertTrue("b".equals(sa[1]))
         assertTrue("c".equals(sa[2]))
@@ -634,7 +637,7 @@ class TestCollection
 
         assertTrue(json0.equals(json1))
 
-        Object[] list = [empty, empty];
+        Object[] list = [empty, empty]
         json0 = TestUtil.getJsonString(list)
         TestUtil.printLine("json0=" + json0)
 
@@ -642,8 +645,8 @@ class TestCollection
         assertTrue(array != null)
         list = array
         assertTrue(list.length == 2)
-        Map e1 = (Map) list[0];
-        Map e2 = (Map) list[1];
+        Map e1 = (Map) list[0]
+        Map e2 = (Map) list[1]
         assertTrue(e1.isEmpty())
         assertTrue(e2.isEmpty())
     }
@@ -651,7 +654,7 @@ class TestCollection
     @Test
     void testUntypedCollections()
     {
-        Object[] poly = ["Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"] as Object[];
+        Object[] poly = ["Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"] as Object[]
         String json = TestUtil.getJsonString(poly)
         TestUtil.printLine("json=" + json)
         assertTrue('["Road Runner",16,3.1415,true,false,null,{"@type":"int","value":7},"Coyote","Coyote"]'.equals(json))

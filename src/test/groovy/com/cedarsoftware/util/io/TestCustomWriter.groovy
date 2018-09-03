@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -123,44 +124,48 @@ class TestCustomWriter
 
     static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
     {
-        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
-        {
+//      void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+		  public void write(Object o, boolean showType, final StringBuilder output, Map<String, Object> args) throws IOException 
+		  {
             Person p = (Person) o
-            output.write('"f":"')
-            output.write(p.getFirstName())
-            output.write('","l":"')
-            output.write(p.getLastName())
-            output.write('","p":[')
+            output.append('"f":"')
+            output.append(p.getFirstName())
+            output.append('","l":"')
+            output.append(p.getLastName())
+            output.append('","p":[')
 
             Iterator<Pet> i = p.getPets().iterator()
             while (i.hasNext())
             {
                 Pet pet = i.next()
-                output.write('{"n":"')
-                output.write(pet.name)
-                output.write('","t":"')
-                output.write(pet.type)
-                output.write('","a":')
-                output.write(pet.age.toString())
-                output.write('}')
+                output.append('{"n":"')
+                output.append(pet.name)
+                output.append('","t":"')
+                output.append(pet.type)
+                output.append('","a":')
+                output.append(pet.age.toString())
+                output.append('}')
                 if (i.hasNext())
                 {
-                    output.write(',');
+                    output.append(',')
                 }
             }
-            output.write(']');
+            output.append(']')
 
             assert JsonWriter.JsonClassWriterEx.Support.getWriter(args) instanceof JsonWriter
         }
+
     }
 
     static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriterEx
     {
-        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
-        {
-            JsonWriter writer = JsonWriter.JsonClassWriterEx.Support.getWriter(args);
-            output.write("\"_version\":12,");
-            writer.writeObject(o, false, true);
+//      void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+   	  @Override
+        public void write(Object o, boolean showType, final StringBuilder output, Map<String, Object> args) throws IOException 
+   	  {
+            JsonWriter writer = JsonWriter.JsonClassWriterEx.Support.getWriter(args)
+            output.append("\"_version\":12,")
+            output.append(writer.getWrittenObject(o, false, true))
         }
     }
 
@@ -190,10 +195,13 @@ class TestCustomWriter
 
     static class BadCustomPWriter implements JsonWriter.JsonClassWriterEx
     {
-        void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
-        {
-            throw new RuntimeException('Bad custom writer')
-        }
+
+		@Override
+//		void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+		public void write(Object o, boolean showType, final StringBuilder output, Map<String, Object> args) throws IOException 
+		{
+			throw new RuntimeException('Bad custom writer')
+		}
     }
 
     static Person createTestPerson()
@@ -290,7 +298,7 @@ class TestCustomWriter
     {
         Person p = createTestPerson()
         String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriterAddField()]])
-        assert jsonCustom.contains("_version\":12");
-        assert jsonCustom.contains("Michael");
+        assert jsonCustom.contains("_version\":12")
+        assert jsonCustom.contains("Michael")
     }
 }

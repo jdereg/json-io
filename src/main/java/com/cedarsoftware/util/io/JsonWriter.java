@@ -68,6 +68,13 @@ import java.util.concurrent.atomic.AtomicLong;
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
+ * 
+ * 
+ *	2018/09 : Contribution by Jeremie Ratomposon (j.ratompo+jsonio@gmail.com) :
+ * Added a Flat structure serialization mode, to write the output JSON as a flat (single-level nested) associative array.
+ * May be useful for required non-recursive traversing treatments.
+ * 
+ * 
  */
 public class JsonWriter implements Closeable, Flushable
 {
@@ -366,6 +373,15 @@ public class JsonWriter implements Closeable, Flushable
 //    {
 //        this(out, null);
 //    }
+    
+    /**
+     * @see JsonWriter#JsonWriter(OutputStream, Map)
+     * @param out OutputStream to which the JSON will be written.
+     */
+    public JsonWriter()
+    {
+        this(null);
+    }
 
     /**
      * @param out OutputStream to which the JSON output will be written.

@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
-
 import static org.junit.Assert.assertFalse
 import static org.junit.Assert.assertTrue
+
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -28,19 +28,19 @@ class TestWriters
     void testUnusedAPIs()
     {
         Writers.TimeZoneWriter tzw = new Writers.TimeZoneWriter()
-        tzw.writePrimitiveForm("", new StringWriter())
+        tzw.writePrimitiveForm("", new StringBuilder())
 
         Writers.CalendarWriter cw = new Writers.CalendarWriter()
-        cw.writePrimitiveForm("", new StringWriter())
+        cw.writePrimitiveForm("", new StringBuilder())
 
         Writers.TimestampWriter tsw = new Writers.TimestampWriter()
-        tsw.writePrimitiveForm("", new StringWriter())
+        tsw.writePrimitiveForm("", new StringBuilder())
 
         Writers.LocaleWriter lw = new Writers.LocaleWriter()
-        lw.writePrimitiveForm("", new StringWriter())
+        lw.writePrimitiveForm("", new StringBuilder())
 
         Writers.JsonStringWriter jsw = new Writers.JsonStringWriter()
-        jsw.write("", false, new StringWriter())
+        jsw.write("", false, new StringBuilder())
     }
 
     @Test
