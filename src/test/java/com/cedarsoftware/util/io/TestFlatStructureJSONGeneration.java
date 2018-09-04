@@ -105,9 +105,9 @@ public class TestFlatStructureJSONGeneration {
 	@Test
 	public void testCycleWithArrayFlatMapJSONWritingAndBack() {
 
-		FooClassWithCollection foo1 = new FooClassWithCollection(11, "gru chaine 1", new ArrayList<>());
-		FooClassWithCollection foo2 = new FooClassWithCollection(12, "gru chaine 2", new ArrayList<>());
-		FooClassWithCollection foo3 = new FooClassWithCollection(13, "gru chaine 3", new ArrayList<>());
+		FooClassWithCollection foo1 = new FooClassWithCollection(11, "gru chaine 1", new ArrayList<FooClassWithCollection>());
+		FooClassWithCollection foo2 = new FooClassWithCollection(12, "gru chaine 2", new ArrayList<FooClassWithCollection>());
+		FooClassWithCollection foo3 = new FooClassWithCollection(13, "gru chaine 3", new ArrayList<FooClassWithCollection>());
 
 		foo1.addOther(foo2);
 		foo2.addOther(foo3);
