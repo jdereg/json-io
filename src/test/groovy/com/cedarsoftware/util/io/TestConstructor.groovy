@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
-
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertTrue
+
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,7 +27,7 @@ class TestConstructor
 {
     static class Canine
     {
-        String name;
+        String name
         Canine(Object nm)
         {
             name = nm.toString()     // intentionally causes NPE when reflective constructor tries 'null' as arg
@@ -36,10 +36,10 @@ class TestConstructor
 
     static class NoNullConstructor
     {
-        List list;
-        Map map;
-        String string;
-        Date date;
+        List list
+        Map map
+        String string
+        Date date
 
         private NoNullConstructor(List list, Map map, String string, Date date)
         {
@@ -47,19 +47,19 @@ class TestConstructor
             {
                 throw new JsonIoException("Constructor arguments cannot be null")
             }
-            this.list = list;
-            this.map = map;
-            this.string = string;
-            this.date = date;
+            this.list = list
+            this.map = map
+            this.string = string
+            this.date = date
         }
     }
 
     static class Web
     {
-        URL url;
+        URL url
         Web(URL u)
         {
-            url = u;
+            url = u
         }
     }
 
@@ -91,87 +91,87 @@ class TestConstructor
                                                      long l, Long L, float f, Float F, double d, Double D, boolean bool, Boolean Bool,
                                                      char c, Character C, String[] strings, int[] ints, BigDecimal bigD)
         {
-            _str = string;
-            _date = date;
-            _byte = b;
-            _Byte = B;
-            _short = s;
-            _Short = S;
-            _int = i;
-            _Integer = I;
-            _long = l;
-            _Long = L;
-            _float = f;
-            _Float = F;
-            _double = d;
-            _Double = D;
-            _boolean = bool;
-            _Boolean = Bool;
-            _char = c;
-            _Char = C;
-            _strings = strings;
-            _ints = ints;
-            _bigD = bigD;
+            _str = string
+            _date = date
+            _byte = b
+            _Byte = B
+            _short = s
+            _Short = S
+            _int = i
+            _Integer = I
+            _long = l
+            _Long = L
+            _float = f
+            _Float = F
+            _double = d
+            _Double = D
+            _boolean = bool
+            _Boolean = Bool
+            _char = c
+            _Char = C
+            _strings = strings
+            _ints = ints
+            _bigD = bigD
         }
 
         public String getString()
         {
-            return _str;
+            return _str
         }
 
         public Date getDate()
         {
-            return _date;
+            return _date
         }
 
         public byte getByte()
         {
-            return _byte;
+            return _byte
         }
 
         public short getShort()
         {
-            return _short;
+            return _short
         }
 
         public int getInt()
         {
-            return _int;
+            return _int
         }
 
         public long getLong()
         {
-            return _long;
+            return _long
         }
 
         public float getFloat()
         {
-            return _float;
+            return _float
         }
 
         public double getDouble()
         {
-            return _double;
+            return _double
         }
 
         public boolean getBoolean()
         {
-            return _boolean;
+            return _boolean
         }
 
         public char getChar()
         {
-            return _char;
+            return _char
         }
 
         public String[] getStrings()
         {
-            return _strings;
+            return _strings
         }
 
         public int[] getInts()
         {
-            return _ints;
+            return _ints
         }
     }
 
@@ -298,10 +298,10 @@ class TestConstructor
     void testNoNullConstructor()
     {
         NoNullConstructor noNull = new NoNullConstructor(new ArrayList(), [:], "", new Date())
-        noNull.list = null;
-        noNull.map = null;
-        noNull.string = null;
-        noNull.date = null;
+        noNull.list = null
+        noNull.map = null
+        noNull.string = null
+        noNull.date = null
 
         String json = TestUtil.getJsonString(noNull)
         TestUtil.printLine(json)
@@ -329,11 +329,13 @@ class TestConstructor
         Object o = JsonReader.jsonToJava(json)
         assert TestUtil.getJsonString(o) == json
 
-        ByteArrayOutputStream ba = new ByteArrayOutputStream()
-        JsonWriter writer = new JsonWriter(ba)
-        writer.write(o)
+// 	  ByteArrayOutputStream ba = new ByteArrayOutputStream()
+//      JsonWriter writer = new JsonWriter(ba)
+		  JsonWriter writer = new JsonWriter()
+//      writer.write(o)
+		  String s = writer.write(o)
         writer.close()
-        String s = new String(ba.toByteArray(), "UTF-8")
+//      String s = new String(ba.toByteArray(), "UTF-8")
         assert json == s
     }
 

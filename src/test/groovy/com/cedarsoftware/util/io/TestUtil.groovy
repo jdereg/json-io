@@ -25,13 +25,13 @@ import java.nio.file.Paths
  */
 class TestUtil
 {
-    private static long totalJsonWrite;
-    private static long totalObjWrite;
-    private static long totalJsonRead;
-    private static long totalObjRead;
+    private static long totalJsonWrite
+    private static long totalObjWrite
+    private static long totalJsonRead
+    private static long totalObjRead
 
-    private static long outputStreamFailCount;
-    private static boolean debug = false;
+    private static long outputStreamFailCount
+    private static boolean debug = false
 
     static boolean isDebug() { return debug }
 
@@ -45,32 +45,35 @@ class TestUtil
 
     static String getJsonString(Object obj)
     {
-        return getJsonString(obj, [:]);
+        return getJsonString(obj, [:])
     }
 
     static String getJsonString(Object obj, Map<String, Object> args)
     {
-        ByteArrayOutputStream bout = new ByteArrayOutputStream()
-        JsonWriter jsonWriter = new JsonWriter(bout, args)
-        long startWrite1 = System.nanoTime()
-        jsonWriter.write(obj)
+//      ByteArrayOutputStream bout = new ByteArrayOutputStream()
+//      JsonWriter jsonWriter = new JsonWriter(bout, args)
+		  JsonWriter jsonWriter = new JsonWriter(args)
+		  long startWrite1 = System.nanoTime()
+//      jsonWriter.write(obj)
+		  String json = jsonWriter.write(obj)
         jsonWriter.flush()
         jsonWriter.close()
         long endWrite1 = System.nanoTime()
-        String json = new String(bout.toByteArray(), 'UTF-8')
+//      String json = new String(bout.toByteArray(), 'UTF-8')
 
         try
         {
-            bout = new ByteArrayOutputStream()
-            ObjectOutputStream out = new ObjectOutputStream(bout)
+//			   bout = new ByteArrayOutputStream()
+			   ByteArrayOutputStream bout = new ByteArrayOutputStream()
+				ObjectOutputStream out = new ObjectOutputStream(bout)
             long startWrite2 = System.nanoTime()
             out.writeObject(obj)
             out.flush()
             out.close()
             long endWrite2 = System.nanoTime()
 
-            totalJsonWrite += endWrite1 - startWrite1;
-            totalObjWrite += endWrite2 - startWrite2;
+            totalJsonWrite += endWrite1 - startWrite1
+            totalObjWrite += endWrite2 - startWrite2
             double t1 = (endWrite1 - startWrite1) / 1000000.0
             double t2 = (endWrite2 - startWrite2) / 1000000.0
             if (debug)
@@ -81,10 +84,10 @@ class TestUtil
         }
         catch (Exception e)
         {
-            outputStreamFailCount++;
+            outputStreamFailCount++
         }
 
-        return json;
+        return json
     }
 
     static Object readJsonObject(String json)
@@ -96,18 +99,18 @@ class TestUtil
     {
         long startRead1 = System.nanoTime()
 
-        ByteArrayInputStream ba;
+        ByteArrayInputStream ba
         try
         {
-            ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
+            ba = new ByteArrayInputStream(json.getBytes("UTF-8"))
         }
         catch (UnsupportedEncodingException e)
         {
-            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e);
+            throw new JsonIoException("Could not convert JSON to Maps because your JVM does not support UTF-8", e)
         }
-        JsonReader jr = new JsonReader(ba, args);
-        Object o = jr.readObject();
-        jr.close();
+        JsonReader jr = new JsonReader(ba, args)
+        Object o = jr.readObject()
+        jr.close()
 
         long endRead1 = System.nanoTime()
 
@@ -126,10 +129,10 @@ class TestUtil
             input.close()
             long endRead2 = System.nanoTime()
 
-            totalJsonRead += endRead1 - startRead1;
-            totalObjRead += endRead2 - startRead2;
-            double t1 = (endRead1 - startRead1) / 1000000.0;
-            double t2 = (endRead2 - startRead2) / 1000000.0;
+            totalJsonRead += endRead1 - startRead1
+            totalObjRead += endRead2 - startRead2
+            double t1 = (endRead1 - startRead1) / 1000000.0
+            double t2 = (endRead2 - startRead2) / 1000000.0
             if (debug)
             {
                 println("JSON  read time  = " + t1 + " ms")
@@ -138,10 +141,10 @@ class TestUtil
         }
         catch (Exception e)
         {
-            outputStreamFailCount++;
+            outputStreamFailCount++
         }
 
-        return o;
+        return o
     }
 
     static Map readJsonMap(String json, Map<String, Object> args)
@@ -163,8 +166,8 @@ class TestUtil
         }
         args[(JsonReader.USE_MAPS)] = true
         JsonReader jr = new JsonReader(ba, args)
-        Object o = jr.readObject();
-        jr.close();
+        Object o = jr.readObject()
+        jr.close()
 
         long endRead1 = System.nanoTime()
 
@@ -183,10 +186,10 @@ class TestUtil
             input.close()
             long endRead2 = System.nanoTime()
 
-            totalJsonRead += endRead1 - startRead1;
-            totalObjRead += endRead2 - startRead2;
-            double t1 = (endRead1 - startRead1) / 1000000.0;
-            double t2 = (endRead2 - startRead2) / 1000000.0;
+            totalJsonRead += endRead1 - startRead1
+            totalObjRead += endRead2 - startRead2
+            double t1 = (endRead1 - startRead1) / 1000000.0
+            double t2 = (endRead2 - startRead2) / 1000000.0
             if (debug)
             {
                 println("JSON  read time  = " + t1 + " ms")
@@ -195,17 +198,17 @@ class TestUtil
         }
         catch (Exception e)
         {
-            outputStreamFailCount++;
+            outputStreamFailCount++
         }
 
-        return o;
+        return o
     }
 
     static void printLine(String s)
     {
         if (debug)
         {
-            println s;
+            println s
         }
     }
 

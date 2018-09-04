@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import static org.junit.Assert.assertTrue
 
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 
-import static org.junit.Assert.assertTrue
+import org.junit.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -45,13 +45,13 @@ class TestEnums
         },
         C(null) {
             void doXX() {}
-        };
+        }
 
         private final String val
 
         TestEnum3(String val)
         {
-            this.val = val;
+            this.val = val
         }
 
         abstract void doXX()
@@ -59,10 +59,10 @@ class TestEnums
 
     private static enum TestEnum4
     {
-        A, B, C;
+        A, B, C
 
-        private int internal = 6;
-        protected long age = 21;
+        private int internal = 6
+        protected long age = 21
         String foo = "bar"
     }
 
@@ -109,23 +109,25 @@ class TestEnums
     @Test
     void testEnumWithPrivateMembersAsField()
     {
-        TestEnum4 x = TestEnum4.B;
+        TestEnum4 x = TestEnum4.B
         String json = TestUtil.getJsonString(x)
         TestUtil.printLine(json)
         def className = TestEnum4.class.name
         assert '{"@type":"' + className + '","age":21,"foo":"bar","name":"B"}' == json
 
-        ByteArrayOutputStream ba = new ByteArrayOutputStream()
-        JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY): true])
-        writer.write(x)
-        json = new String(ba.toByteArray())
-        TestUtil.printLine(json)
+//      ByteArrayOutputStream ba = new ByteArrayOutputStream()
+//      JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY): true])
+		  JsonWriter writer = new JsonWriter([(JsonWriter.ENUM_PUBLIC_ONLY): true])
+//      writer.write(x)
+//      json = new String(ba.toByteArray())
+		  json = writer.write(x)
+		  TestUtil.printLine(json)
         assert '{"@type":"' + className + '","name":"B"}' == json
     }
 
     enum FederationStrategy
     {
-        EXCLUDE, FEDERATE_THIS, FEDERATE_ORIGIN;
+        EXCLUDE, FEDERATE_THIS, FEDERATE_ORIGIN
 
         static FederationStrategy fromName(String name)
         {
