@@ -17,7 +17,7 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
     protected int line = 1;
     protected int col = 0;
 
-    FastPushbackBufferedReader(Reader reader)
+    public FastPushbackBufferedReader(Reader reader)
     {
         super(reader);
     }
