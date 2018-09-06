@@ -1,4 +1,6 @@
 ### Revision History
+* 4.10.1
+  * Enhancement: Made `FastPushbackBufferedReader` constructor public so that this stream reader can be used anywhere.
 * 4.10.0
   * Bug fix: When reading into `Maps`, logical primitives that are not `long`, `double`, `boolean`, or `null`, were being kept in `JsonObjects` instead of being converted into their respective types (`int`, `float`, `Date`, etc.) 
 * 4.9.12
