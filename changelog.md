@@ -1,4 +1,6 @@
 ### Revision History
+* 4.10.2
+  * 
 * 4.10.1
   * Enhancement: Made `FastPushbackBufferedReader` constructor public so that this stream reader can be used anywhere.
 * 4.10.0
