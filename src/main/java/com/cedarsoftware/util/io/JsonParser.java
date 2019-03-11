@@ -241,7 +241,7 @@ class JsonParser
         {
             return readString();
         }
-        else if (c >= '0' && c <= '9' || c == '-')
+        else if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I')
         {
             return readNumber(c);
         }
@@ -347,7 +347,30 @@ class JsonParser
         number.setLength(0);
         number.appendCodePoint(c);
         boolean isFloat = false;
-
+        
+        if (JsonReader.isLenient() && (c == '-' || c == 'N' || c == 'I') ) {
+            // Handle negativity.
+            final boolean isNeg = (c == '-');
+            if (isNeg) {
+                // Advance to next character.
+                c = input.read();
+            }
+            
+            // Case "-Infinity", "Infinity" or "NaN".
+            if (c == 'I') {
+                // [Out of RFC 4627] accept NaN/Infinity values
+                readToken("infinity");
+                return (isNeg) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+            } else if ('N' == c) {
+                // [Out of RFC 4627] accept NaN/Infinity values
+                readToken("nan");
+                return Double.NaN;
+            } else {
+                // Case this is a number but not "-Infinity", like "-2". We let the normal code process.
+                input.unread('-');
+            }
+        }
+        
         while (true)
         {
             c = in.read();

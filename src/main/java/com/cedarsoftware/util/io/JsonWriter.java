@@ -141,6 +141,22 @@ public class JsonWriter implements Closeable, Flushable
         BASE_WRITERS = temp;
     }
 
+    private static volatile boolean lenient = false;
+    /**
+     * @return the lenient
+     */
+    public static boolean isLenient() {
+        return lenient;
+    }
+
+    /**
+     * Set the writer to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
+     * @param lenient the lenient to set
+     */
+    public static void setLenient(boolean lenient) {
+        JsonWriter.lenient = lenient;
+    }
+    
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriterEx.
      */
@@ -1195,11 +1211,11 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
-            else if (obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
+            else if ( (!isLenient()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
             	out.write("null");
             }
-            else if (obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
+            else if ( (!isLenient()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
             {
                 out.write("null");
             }
@@ -1385,11 +1401,17 @@ public class JsonWriter implements Closeable, Flushable
 
     private String doubleToString(double d)
     {
+        if (isLenient()) {
+            return Double.toString(d);
+        }
     	return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
     }
 
     private String floatToString(float d)
     {
+        if (isLenient()) {
+            return Float.toString(d);
+        }
     	return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
     }
 
