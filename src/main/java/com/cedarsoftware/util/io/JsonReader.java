@@ -77,6 +77,7 @@ public class JsonReader implements Closeable
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
 
+    
     private static Map<Class, JsonClassReaderBase> BASE_READERS;
     protected final Map<Class, JsonClassReaderBase> readers = new HashMap<Class, JsonClassReaderBase>(BASE_READERS);
     protected MissingFieldHandler missingFieldHandler;
@@ -87,6 +88,22 @@ public class JsonReader implements Closeable
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     private final Map<String, Object> args = new HashMap<String, Object>();
 
+    private static volatile boolean lenient = false;
+    /**
+     * @return the lenient
+     */
+    public static boolean isLenient() {
+        return lenient;
+    }
+
+    /**
+     * Set the reader to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
+     * @param lenient the lenient to set
+     */
+    public static void setLenient(boolean lenient) {
+        JsonReader.lenient = lenient;
+    }
+    
     static
     {
         Factory colFactory = new CollectionFactory();
@@ -824,4 +841,5 @@ public class JsonReader implements Closeable
         }
         return msg;
     }
+
 }
