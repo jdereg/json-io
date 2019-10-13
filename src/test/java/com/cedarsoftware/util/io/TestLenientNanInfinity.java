@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -27,10 +28,23 @@ import org.junit.BeforeClass;
  */
 public class TestLenientNanInfinity
 {
+    static boolean readLenient;
+    static boolean writeLenient;
+
     @BeforeClass
-    public static void init() {
+    public static void init()
+    {
+        readLenient = JsonReader.isLenient();
         JsonReader.setLenient(true);
+        writeLenient = JsonWriter.isLenient();
         JsonWriter.setLenient(true);
+    }
+
+    @AfterClass
+    public static void tearDown()
+    {
+        JsonReader.setLenient(readLenient);
+        JsonWriter.setLenient(writeLenient);
     }
     
     public class A

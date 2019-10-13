@@ -1276,7 +1276,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (typeWritten || referenced)
         {
-            output.write(shortMetaKeys ? "\"@i\":[" : "\"@items\":[");
+            output.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
         }
         else
         {

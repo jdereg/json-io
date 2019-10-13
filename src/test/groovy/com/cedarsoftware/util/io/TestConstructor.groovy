@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -23,6 +24,7 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestConstructor
 {
     static class Canine
@@ -182,7 +184,7 @@ class TestConstructor
         c.set(2010, 5, 5, 5, 5, 5)
         String[] strings = ["C", "C++", "Java"] as String[]
         int[] ints = [1, 2, 4, 8, 16, 32, 64, 128] as int[]
-        Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", c.getTime(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0d, new Double(66.0d), true, Boolean.TRUE,'J' as char, new Character('K' as char), strings, ints, new BigDecimal(1.1))
+        Object foo = new TestJsonNoDefaultOrPublicConstructor("Hello, World.", c.getTime(), (byte) 1, new Byte((byte)11), (short) 2, new Short((short)22), 3, new Integer(33), 4L, new Long(44L), 5.0f, new Float(55.0f), 6.0d, new Double(66.0d), true, Boolean.TRUE,'J' as char, new Character('K' as char), strings, ints, new BigDecimal(1.1d))
         String jsonOut = TestUtil.getJsonString(foo)
         TestUtil.printLine(jsonOut)
 
@@ -202,7 +204,7 @@ class TestConstructor
         assertTrue(bar.getStrings().length == strings.length)
         assertTrue(bar.getInts() != null)
         assertTrue(bar.getInts().length == ints.length)
-        assertTrue(bar._bigD.equals(new BigDecimal(1.1)))
+        assertTrue(bar._bigD.equals(new BigDecimal(1.1d)))
     }
 
     @Test
@@ -217,8 +219,8 @@ class TestConstructor
         assertEquals((short)2, map.get("_short"))
         assertEquals(3, map.get("_int"))
         assertEquals(4L, map.get("_long"))
-        assertEquals(5.0f, map.get("_float"), 0.00001f)
-        assertEquals(6.0d, map.get("_double"), 0.00001d)
+        assertEquals(5.0f, (float)map.get("_float"), 0.00001f)
+        assertEquals(6.0d, (double)map.get("_double"), 0.00001d)
         assertEquals(true, map.get("_boolean"))
         assertEquals('J' as char, map.get("_char"))
 
@@ -226,12 +228,12 @@ class TestConstructor
         assertEquals((short)22, map.get("_Short"))
         assertEquals(33, map.get("_Integer"))
         assertEquals(44L, map.get("_Long"))
-        assertEquals(55.0f, map.get("_Float"), 0.0001f)
-        assertEquals(66.0d, map.get("_Double"), 0.0001d)
+        assertEquals(55.0f, (float)map.get("_Float"), 0.0001f)
+        assertEquals(66.0d, (double)map.get("_Double"), 0.0001d)
         assertEquals(true, map.get("_Boolean"))
         assertEquals('K' as char, map.get("_Char"))
         BigDecimal num = (BigDecimal) map.get("_bigD")
-        assertEquals(new BigDecimal("2.71828"), num, 0.00001)
+        assertEquals(new BigDecimal("2.71828"), num)
 
         String json1 = TestUtil.getJsonString(map)
         TestUtil.printLine("json1=" + json1)
@@ -250,8 +252,8 @@ class TestConstructor
         assertEquals((short)2, map.get("_short"))
         assertEquals(3, map.get("_int"))
         assertEquals(4L, map.get("_long"))
-        assertEquals(5.0f, map.get("_float"), 0.0001f)
-        assertEquals(6.0d, map.get("_double"), 0.0001d)
+        assertEquals(5.0f, (float)map.get("_float"), 0.0001f)
+        assertEquals(6.0d, (double)map.get("_double"), 0.0001d)
         assertEquals(true, map.get("_boolean"))
         assertEquals((char)'J', map.get("_char"))
 
@@ -354,7 +356,7 @@ class TestConstructor
         Map root = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
 
         JsonReader reader = new JsonReader([:])
-        Canine bella = (Canine) reader.jsonObjectsToJava(root)
+        Canine bella = (Canine) reader.jsonObjectsToJava(root as JsonObject)
         assert bella.name == 'Bella'
     }
 
@@ -364,11 +366,11 @@ class TestConstructor
         Canine dog = new Canine('Eddie')
         String json = JsonWriter.objectToJson(dog)
         ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes())
-        Canine eddie = JsonReader.jsonToJava(inputStream, null)
+        Canine eddie = (Canine)JsonReader.jsonToJava(inputStream, null)
         assert eddie.name == 'Eddie'
 
         inputStream = new ByteArrayInputStream(json.getBytes())
-        Map dogMap = JsonReader.jsonToJava(inputStream, [(JsonReader.USE_MAPS):true] as Map)
+        Map dogMap = (Map)JsonReader.jsonToJava(inputStream, [(JsonReader.USE_MAPS):true] as Map)
         assert dogMap.name == 'Eddie'
     }
 }

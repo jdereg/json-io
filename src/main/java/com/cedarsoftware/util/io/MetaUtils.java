@@ -488,6 +488,10 @@ public class MetaUtils
      */
     public static Object newInstance(Class c)
     {
+        if (c.equals(ProcessBuilder.class))
+        {
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of the ProcessBuilder class.");
+        }
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
             return new TreeMap();

@@ -78,22 +78,20 @@
     </developers>
 
     <properties>
-        <version.java-util>1.34.0</version.java-util>           <!-- only test dependency -->
+        <version.java-util>1.37.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.12</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.15</version.groovy>                  <!-- only test dependency -->
+        <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
         <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
-        <version.jmh>1.17.1</version.jmh>                       <!-- only test dependency -->
-        <version.java>1.6</version.java>
-        <version.plugin.compiler>3.5.1</version.plugin.compiler>
-        <version.plugin.deploy>2.8.2</version.plugin.deploy>
-        <version.plugin.nexus>1.6.6</version.plugin.nexus>
-        <version.plugin.source>3.0.0</version.plugin.source>
-        <version.plugin.javadoc>2.10.3</version.plugin.javadoc>
+        <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
+        <version.java>1.7</version.java>
+        <version.plugin.compiler>3.8.1</version.plugin.compiler>
+        <version.plugin.nexus>1.6.8</version.plugin.nexus>
+        <version.plugin.source>3.1.0</version.plugin.source>
+        <version.plugin.javadoc>3.1.1</version.plugin.javadoc>
         <version.plugin.gpg>1.6</version.plugin.gpg>
-        <version.plugin.release>2.5.4</version.plugin.release>
-        <version.plugin.surefire>2.19.1</version.plugin.surefire>
-        <version.plugin.groovy.eclipse.compiler>2.9.2-01</version.plugin.groovy.eclipse.compiler>
-        <version.plugin.groovy.eclipse.batch>2.4.3-01</version.plugin.groovy.eclipse.batch>
+        <version.plugin.surefire>2.22.2</version.plugin.surefire>
+        <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
+        <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
         <version.plugin.felix.scr>1.7.4</version.plugin.felix.scr>
         <version.plugin.felix.bundle>2.5.3</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -203,7 +201,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${version.plugin.javadoc}</version>
                 <configuration>
-                    <additionalparam>${javadoc.opts}</additionalparam>
+                    <doclint>none</doclint>
                 </configuration>
                 <executions>
                     <execution>
