@@ -1,6 +1,11 @@
 ### Revision History
-* 4.10.2
-  * 
+* 4.11.0
+  * Enhancement (#137): Allow tolerant/lenient parser of +/- infinity and NaN.  New API added, `JsonReader.setAllowNanAndInfinity(boolean)` and `JsonWriter.setAllowNanAndInfinity(boolean)`.  The default is `false` to match the JSON standard.
+  * Enhancement (#129): `JsonReader.jsonToJava("")` or `JsonReader.jsonToJava(null)` now returns a `null`, rather than throwing an exception.
+  * Bug fix (#123): Removed vulnerability by disallowing `ProcessBuilder` to be serialized.
+  * Bug fix (#124): Illegal Reflective Access warning when using json-io in Java 9 or newer.  This was do to call `isAccessible()` on Java's `Field` class.  This has been removed.
+  * Bug fix (#132, #133): There was instance when @i was written when it should have been @e, indicating items, when using SHORT_META_KEYS flag. 
+  * Bug fix (#135): When reading `{ "@type": "char", "value": "\"" }`, the value was read in as `\u0000`.  It now reads in correctly as a double quote character.
 * 4.10.1
   * Enhancement: Made `FastPushbackBufferedReader` constructor public so that this stream reader can be used anywhere.
 * 4.10.0

@@ -9,11 +9,11 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -91,15 +91,16 @@ public class JsonWriter implements Closeable, Flushable
     public static final String CLASSLOADER = "CLASSLOADER";
 
     private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
-    private final Map<Class, JsonClassWriterBase> writers = new HashMap<Class, JsonClassWriterBase>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
-    private final Map<Class, JsonClassWriterBase> writerCache = new HashMap<Class, JsonClassWriterBase>();
-    private final Set<Class> notCustom = new HashSet<Class>();
+    private final Map<Class, JsonClassWriterBase> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
+    private final Map<Class, JsonClassWriterBase> writerCache = new HashMap<>();
+    private final Set<Class> notCustom = new HashSet<>();
+
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
     private static final NullClass nullWriter = new NullClass();
-    private final Map<Object, Long> objVisited = new IdentityHashMap<Object, Long>();
-    private final Map<Object, Long> objsReferenced = new IdentityHashMap<Object, Long>();
+    private final Map<Object, Long> objVisited = new IdentityHashMap<>();
+    private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
     private boolean shortMetaKeys = false;
@@ -112,7 +113,7 @@ public class JsonWriter implements Closeable, Flushable
     private long identity = 1;
     private int depth = 0;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
-    final Map<String, Object> args = new HashMap<String, Object>();
+    final Map<String, Object> args = new HashMap<>();
 
     static
     {
@@ -122,7 +123,7 @@ public class JsonWriter implements Closeable, Flushable
             byteStrings[i + 128] = chars;
         }
 
-        Map<Class, JsonClassWriterBase> temp = new HashMap<Class, JsonClassWriterBase>();
+        Map<Class, JsonClassWriterBase> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
         temp.put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
@@ -141,22 +142,23 @@ public class JsonWriter implements Closeable, Flushable
         BASE_WRITERS = temp;
     }
 
-    private static volatile boolean lenient = false;
+    private static volatile boolean allowNanAndInfinity = false;
+
     /**
-     * @return the lenient
+     * @return boolean the allowsNanAndInifnity flag
      */
-    public static boolean isLenient() {
-        return lenient;
+    public static boolean isAllowNanAndInfinity() {
+        return allowNanAndInfinity;
     }
 
     /**
      * Set the writer to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
-     * @param lenient the lenient to set
+     * @param lenient boolean true allows Nan and Inifinity, -Infinity to be used within JSON.
      */
-    public static void setLenient(boolean lenient) {
-        JsonWriter.lenient = lenient;
+    public static void setAllowNanAndInfinity(boolean lenient) {
+        JsonWriter.allowNanAndInfinity = lenient;
     }
-    
+
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriterEx.
      */
@@ -1211,11 +1213,11 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
-            else if ( (!isLenient()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
+            else if ( (!isAllowNanAndInfinity()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
             	out.write("null");
             }
-            else if ( (!isLenient()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
+            else if ( (!isAllowNanAndInfinity()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
             {
                 out.write("null");
             }
@@ -1401,7 +1403,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private String doubleToString(double d)
     {
-        if (isLenient()) {
+        if (isAllowNanAndInfinity()) {
             return Double.toString(d);
         }
     	return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
@@ -1409,7 +1411,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private String floatToString(float d)
     {
-        if (isLenient()) {
+        if (isAllowNanAndInfinity()) {
             return Float.toString(d);
         }
     	return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
@@ -1648,7 +1650,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         tabIn();
 
-        Object[] items = (Object[]) jObj.get("@items");
+        Object[] items = (Object[]) jObj.get(ITEMS);
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++)
@@ -1743,7 +1745,7 @@ public class JsonWriter implements Closeable, Flushable
 
         beginCollection(showType, referenced);
 
-        Object[] items = (Object[]) jObj.get("@items");
+        Object[] items = (Object[]) jObj.get(ITEMS);
         final int itemsLen = items.length;
         final int itemsLenMinus1 = itemsLen - 1;
 

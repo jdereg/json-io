@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -24,6 +25,7 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestString
 {
     private static class ManyStrings implements Serializable
@@ -132,5 +134,19 @@ class TestString
         String json = '"Réunion"'
         String x = TestUtil.readJsonObject(json)
         assert x == 'Réunion'
+    }
+
+    @Test
+    void testEmptyString()
+    {
+        // Ensure no exception is thrown
+        JsonReader.jsonToJava("");
+    }
+
+    @Test
+    void testNullInput()
+    {
+        // Ensure no exception is thrown
+        JsonReader.jsonToJava(null);
     }
 }

@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.10.2-SNAPSHOT</version>
+    <version>4.11.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -92,8 +92,8 @@
         <version.plugin.surefire>2.22.2</version.plugin.surefire>
         <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
         <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
-        <version.plugin.felix.scr>1.7.4</version.plugin.felix.scr>
-        <version.plugin.felix.bundle>2.5.3</version.plugin.felix.bundle>
+        <version.plugin.felix.scr>1.26.2</version.plugin.felix.scr>
+        <version.plugin.felix.bundle>4.2.1</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--
             Name of the benchmark Uber-JAR to generate.

@@ -520,7 +520,7 @@ class TestCollection
     @Test
     void testGenericInfoCollection()
     {
-        String className = PointList.class.getName()
+        String className = PointList.class.name
         String json = '{"@type":"' + className + '","points":{"@type":"java.util.ArrayList","@items":[{"x":1,"y":2}]}}'
         PointList list = (PointList) TestUtil.readJsonObject(json)
         assertTrue(list.points.size() == 1)

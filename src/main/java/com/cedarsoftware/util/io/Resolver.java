@@ -4,19 +4,11 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
+import java.lang.reflect.Modifier;
+import java.util.*;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -45,17 +37,18 @@ import java.util.TreeSet;
  */
 abstract class Resolver
 {
-    final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
+    final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<Class, JsonReader.JsonClassReaderBase>();
-    private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
+    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
+    private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
     private final boolean failOnUnknownType;
-    private final static Map<String, Class> coercedTypes = new LinkedHashMap<String, Class>();
+    private final static Map<String, Class> coercedTypes = new LinkedHashMap<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
-    protected final Collection<Missingfields> missingFields = new ArrayList<Resolver.Missingfields>();
+    protected final Collection<Missingfields> missingFields = new ArrayList<>();
+    Class singletonMap = Collections.singletonMap("foo", "bar").getClass();
 
     static {
         coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
@@ -232,14 +225,14 @@ abstract class Resolver
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
-        final Object[] keys = (Object[]) jsonObj.get("@keys");
+        final Object[] keys = (Object[]) jsonObj.get(KEYS);
         final Object[] items = jsonObj.getArray();
 
         if (keys == null || items == null)
         {
             if (keys != items)
             {
-                throw new JsonIoException("Map written where one of @keys or @items is empty");
+                throw new JsonIoException("Map written where one of " + KEYS + " or @items is empty");
             }
             return;
         }
@@ -247,7 +240,7 @@ abstract class Resolver
         final int size = keys.length;
         if (size != items.length)
         {
-            throw new JsonIoException("Map written with @keys and @items entries of different sizes");
+            throw new JsonIoException("Map written with " + KEYS + " and @items entries of different sizes");
         }
 
         Object[] mapKeys = buildCollection(stack, keys, size);
@@ -261,7 +254,7 @@ abstract class Resolver
     private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
     {
         final JsonObject<String, Object> jsonCollection = new JsonObject<String, Object>();
-        jsonCollection.put("@items", items);
+        jsonCollection.put(ITEMS, items);
         final Object[] javaKeys = new Object[size];
         jsonCollection.target = javaKeys;
         stack.addFirst(jsonCollection);
@@ -276,7 +269,7 @@ abstract class Resolver
      */
     protected static void convertMapToKeysItems(final JsonObject<String, Object> map)
     {
-        if (!map.containsKey("@keys") && !map.isReference())
+        if (!map.containsKey(KEYS) && !map.isReference())
         {
             final Object[] keys = new Object[map.size()];
             final Object[] values = new Object[map.size()];
@@ -292,8 +285,8 @@ abstract class Resolver
             String saveType = map.getType();
             map.clear();
             map.setType(saveType);
-            map.put("@keys", keys);
-            map.put("@items", values);
+            map.put(KEYS, keys);
+            map.put(ITEMS, values);
         }
     }
 
@@ -402,7 +395,7 @@ abstract class Resolver
 
             // if @items is specified, it must be an [] type.
             // if clazz.isArray(), then it must be an [] type.
-            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey("@keys")))
+            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
             {
                 int size = (items == null) ? 0 : items.length;
                 mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
@@ -620,8 +613,8 @@ abstract class Resolver
             if (useMapsLocal)
             {   // Make the @keys be the actual keys of the map.
                 map = jObj;
-                javaKeys = (Object[]) jObj.remove("@keys");
-                javaValues = (Object[]) jObj.remove("@items");
+                javaKeys = (Object[]) jObj.remove(KEYS);
+                javaValues = (Object[]) jObj.remove(ITEMS);
             }
             else
             {
@@ -631,12 +624,42 @@ abstract class Resolver
                 jObj.clear();
             }
 
-            int j = 0;
-
-            while (javaKeys != null && j < javaKeys.length)
+            if (singletonMap.isAssignableFrom(map.getClass()))
+            {   // Handle SingletonMaps - an inner class to Collections - single key, single value.  These are
+                // reconstituted in a special way, maintaining the original instance (in case the Map is
+                // referenced elsewhere in the graph).
+                if (javaKeys.length != 1 || javaValues.length != 1)
+                {
+                    throw new JsonIoException("Unable to reconstruct SingletonMap, as there should not be more than 1 key or value.  Key count: " + javaKeys.length + ", value count: " + javaValues.length);
+                }
+                Field k = MetaUtils.getField(singletonMap, "k");
+                Field v = MetaUtils.getField(singletonMap, "v");
+                try
+                {
+                    // Have to override both 'final' and 'private'.
+                    k.setAccessible(true);
+                    v.setAccessible(true);
+                    Field modifiersField = Field.class.getDeclaredField( "modifiers" );
+                    modifiersField.setAccessible(true);
+                    modifiersField.setInt( k, k.getModifiers() & ~Modifier.FINAL );
+                    modifiersField.setInt( v, v.getModifiers() & ~Modifier.FINAL );
+                    k.set(map, javaKeys[0]);        // Stuff key
+                    v.set(map, javaValues[0]);      // Stuff value
+                }
+                catch (Exception e)
+                {
+                    throw new JsonIoException("Unable to reconstruct SingletonMap", e);
+                }
+            }
+            else
             {
-                map.put(javaKeys[j], javaValues[j]);
-                j++;
+                int j = 0;
+
+                while (javaKeys != null && j < javaKeys.length)
+                {
+                    map.put(javaKeys[j], javaValues[j]);
+                    j++;
+                }
             }
         }
     }

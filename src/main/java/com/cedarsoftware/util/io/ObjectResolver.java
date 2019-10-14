@@ -13,6 +13,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+
 /**
  * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
  * objects (a graph of Java instances).  The Maps have an optional type entry associated
@@ -180,7 +183,7 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    jsonArray.put("@items", elements);
+                    jsonArray.put(ITEMS, elements);
                     createJavaObjectInstance(fieldType, jsonArray);
                     field.set(target, jsonArray.target);
                     stack.addFirst(jsonArray);
@@ -397,7 +400,7 @@ public class ObjectResolver extends Resolver
             else if (element.getClass().isArray())
             {
                 final JsonObject jObj = new JsonObject();
-                jObj.put("@items", element);
+                jObj.put(ITEMS, element);
                 createJavaObjectInstance(Object.class, jObj);
                 col.add(jObj.target);
                 convertMapsToObjects(jObj);
@@ -438,7 +441,7 @@ public class ObjectResolver extends Resolver
             idx++;
         }
 
-        jsonObj.remove("@items");   // Reduce memory required during processing
+        jsonObj.remove(ITEMS);   // Reduce memory required during processing
     }
 
     /**
@@ -523,7 +526,7 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
-                    jsonObject.put("@items", element);
+                    jsonObject.put(ITEMS, element);
                     Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
                 }
@@ -704,15 +707,15 @@ public class ObjectResolver extends Resolver
                 if (Map.class.isAssignableFrom(clazz))
                 {
                     Map map = (Map) instance;
-                    if (!map.containsKey("@keys") && !map.containsKey("@items") && map instanceof JsonObject)
+                    if (!map.containsKey(KEYS) && !map.containsKey(ITEMS) && map instanceof JsonObject)
                     {   // Maps created in Javascript will come over without @keys / @items.
                         convertMapToKeysItems((JsonObject) map);
                     }
 
-                    Object[] keys = (Object[])map.get("@keys");
+                    Object[] keys = (Object[])map.get(KEYS);
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
 
-                    Object[] items = (Object[])map.get("@items");
+                    Object[] items = (Object[])map.get(ITEMS);
                     getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 }
                 else if (Collection.class.isAssignableFrom(clazz))
@@ -734,7 +737,7 @@ public class ObjectResolver extends Resolver
                                 JsonObject coll = new JsonObject();
                                 coll.type = clazz.getName();
                                 List items = Arrays.asList((Object[]) vals);
-                                coll.put("@items", items.toArray());
+                                coll.put(ITEMS, items.toArray());
                                 stack.addFirst(new Object[]{t, items});
                                 array[i] = coll;
                             }

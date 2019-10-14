@@ -447,7 +447,7 @@ class TestMapOfMaps
         ]
 
         String json = TestUtil.getJsonString(simple)
-        assert !json.contains('@keys')
+        assert !json.contains(JsonObject.KEYS)
         assert !json.contains('@items')
         Map back = TestUtil.readJsonObject(json)
         assert back.alpha == 0L

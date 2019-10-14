@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.cedarsoftware.util.io.JsonObject.*;
+
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
  * The entire JSON input stream will be read until it is emptied: an EOF (-1) is read.
@@ -78,11 +80,11 @@ class JsonParser
         stringCache.put("off", "off");
         stringCache.put("Off", "Off");
         stringCache.put("OFF", "OFF");
-        stringCache.put("@id", "@id");
-        stringCache.put("@ref", "@ref");
-        stringCache.put("@items", "@items");
-        stringCache.put("@type", "@type");
-        stringCache.put("@keys", "@keys");
+        stringCache.put(ID, ID);
+        stringCache.put(REF, REF);
+        stringCache.put(JsonObject.ITEMS, JsonObject.ITEMS);
+        stringCache.put(TYPE, TYPE);
+        stringCache.put(KEYS, KEYS);
         stringCache.put("0", "0");
         stringCache.put("1", "1");
         stringCache.put("2", "2");
@@ -151,23 +153,23 @@ class JsonParser
                         {   // Expand short-hand meta keys
                             if (field.equals("@t"))
                             {
-                                field = stringCache.get("@type");
+                                field = stringCache.get(TYPE);
                             }
                             else if (field.equals("@i"))
                             {
-                                field = stringCache.get("@id");
+                                field = stringCache.get(ID);
                             }
                             else if (field.equals("@r"))
                             {
-                                field = stringCache.get("@ref");
+                                field = stringCache.get(REF);
                             }
                             else if (field.equals("@k"))
                             {
-                                field = stringCache.get("@keys");
+                                field = stringCache.get(KEYS);
                             }
                             else if (field.equals("@e"))
                             {
-                                field = stringCache.get("@items");
+                                field = stringCache.get(ITEMS);
                             }
                         }
                         state = STATE_READ_VALUE;
@@ -182,11 +184,11 @@ class JsonParser
                     if (field == null)
                     {	// field is null when you have an untyped Object[], so we place
                         // the JsonArray on the @items field.
-                        field = "@items";
+                        field = ITEMS;
                     }
 
                     Object value = readValue(object);
-                    if ("@type".equals(field) && typeNameMap != null)
+                    if (TYPE.equals(field) && typeNameMap != null)
                     {
                         final String substitute = typeNameMap.get(value);
                         if (substitute != null)
@@ -197,7 +199,7 @@ class JsonParser
                     object.put(field, value);
 
                     // If object is referenced (has @id), then put it in the _objsRead table.
-                    if ("@id".equals(field))
+                    if (ID.equals(field))
                     {
                         objsRead.put((Long) value, object);
                     }
@@ -348,7 +350,7 @@ class JsonParser
         number.appendCodePoint(c);
         boolean isFloat = false;
         
-        if (JsonReader.isLenient() && (c == '-' || c == 'N' || c == 'I') ) {
+        if (JsonReader.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
             // Handle negativity.
             final boolean isNeg = (c == '-');
             if (isNeg) {

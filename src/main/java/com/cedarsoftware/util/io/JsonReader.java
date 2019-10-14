@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
  * in a "Map of Maps." (untyped representation).  This code handles cyclic references
@@ -78,31 +80,33 @@ public class JsonReader implements Closeable
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
 
-    
     private static Map<Class, JsonClassReaderBase> BASE_READERS;
-    protected final Map<Class, JsonClassReaderBase> readers = new HashMap<Class, JsonClassReaderBase>(BASE_READERS);
+    protected final Map<Class, JsonClassReaderBase> readers = new HashMap<>(BASE_READERS);
     protected MissingFieldHandler missingFieldHandler;
-    protected final Set<Class> notCustom = new HashSet<Class>();
-    private static final Map<String, Factory> factory = new ConcurrentHashMap<String, Factory>();
-    private final Map<Long, JsonObject> objsRead = new HashMap<Long, JsonObject>();
+    protected final Set<Class> notCustom = new HashSet<>();
+    private static final Map<String, Factory> factory = new ConcurrentHashMap<>();
+    private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
-    private final Map<String, Object> args = new HashMap<String, Object>();
+    private final Map<String, Object> args = new HashMap<>();
 
-    private static volatile boolean lenient = false;
+    private static volatile boolean allowNanAndInfinity = false;
+
     /**
-     * @return the lenient
+     * @return boolean the allowNanAndInfinity setting
      */
-    public static boolean isLenient() {
-        return lenient;
+    public static boolean isAllowNanAndInfinity()
+    {
+        return allowNanAndInfinity;
     }
 
     /**
      * Set the reader to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
      * @param lenient the lenient to set
      */
-    public static void setLenient(boolean lenient) {
-        JsonReader.lenient = lenient;
+    public static void setAllowNanAndInfinity(boolean lenient)
+    {
+        JsonReader.allowNanAndInfinity = lenient;
     }
     
     static
@@ -117,7 +121,7 @@ public class JsonReader implements Closeable
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
 
-        Map<Class, JsonClassReaderBase> temp = new HashMap<Class, JsonClassReaderBase>();
+        Map<Class, JsonClassReaderBase> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
         temp.put(Date.class, new Readers.DateReader());
         temp.put(AtomicBoolean.class, new Readers.AtomicBooleanReader());
@@ -404,6 +408,10 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
     {
+        if (json == null || "".equals(json.trim()))
+        {
+            return null;
+        }
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap<String, Object>();
@@ -515,11 +523,11 @@ public class JsonReader implements Closeable
         if (ret != null && ret.getClass().isArray())
         {
             JsonObject<String, Object> retMap = new JsonObject<String, Object>();
-            retMap.put("@items", ret);
+            retMap.put(ITEMS, ret);
             return retMap;
         }
         JsonObject<String, Object> retMap = new JsonObject<String, Object>();
-        retMap.put("@items", new Object[]{ret});
+        retMap.put(ITEMS, new Object[]{ret});
         return retMap;
     }
 
@@ -681,7 +689,7 @@ public class JsonReader implements Closeable
         {
             root.setType(Object[].class.getName());
             root.setTarget(o);
-            root.put("@items", o);
+            root.put(ITEMS, o);
             graph = convertParsedMapsToJava(root);
         }
         else

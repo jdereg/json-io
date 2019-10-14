@@ -1,12 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Before;
 import org.junit.BeforeClass;
 
 /**
@@ -30,8 +28,8 @@ public class TestNotLenientNanInfinity
 {
     @BeforeClass
     public static void init() {
-        JsonReader.setLenient(false);
-        JsonWriter.setLenient(false);
+        JsonReader.setAllowNanAndInfinity(false);
+        JsonWriter.setAllowNanAndInfinity(false);
     }
     
     public class A

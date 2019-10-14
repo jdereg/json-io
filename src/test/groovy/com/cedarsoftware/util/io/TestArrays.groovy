@@ -6,12 +6,8 @@ import org.junit.Test
 
 import java.lang.reflect.Array
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertFalse
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertSame
-import static org.junit.Assert.assertTrue
+import static com.cedarsoftware.util.io.JsonObject.ITEMS
+import static org.junit.Assert.*
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -888,8 +884,8 @@ class TestArrays
         assertTrue(list.length == 2)
         Map e1 = (Map) list[0];
         Map e2 = (Map) list[1];
-        assertTrue(e1.get("@items") == e2.get("@items"))
-        assertTrue(((Object[])e1.get("@items")).length == 0)
+        assertTrue(e1.get(ITEMS) == e2.get(ITEMS))
+        assertTrue(((Object[])e1.get(ITEMS)).length == 0)
 
         json1 = TestUtil.getJsonString(list)
         TestUtil.printLine("json1=" + json1)

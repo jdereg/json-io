@@ -63,14 +63,14 @@ import static java.lang.reflect.Modifier.isPublic;
 public class MetaUtils
 {
     private MetaUtils () {}
-    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
-    private static final Set<Class> prims = new HashSet<Class>();
-    private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
+    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    private static final Set<Class> prims = new HashSet<>();
+    private static final Map<String, Class> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<Class, Object[]>();
+    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
     private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
@@ -186,14 +186,11 @@ public class MetaUtils
                             continue;
                         }
 
-                        if (!field.isAccessible())
+                        try
                         {
-                            try
-                            {
-                                field.setAccessible(true);
-                            }
-                            catch (Exception ignored) { }
+                            field.setAccessible(true);
                         }
+                        catch (Exception ignored) { }
                         if (classFields.containsKey(field.getName()))
                         {
                             classFields.put(curr.getName() + '.' + field.getName(), field);
@@ -488,7 +485,7 @@ public class MetaUtils
      */
     public static Object newInstance(Class c)
     {
-        if (c.equals(ProcessBuilder.class))
+        if (c.isAssignableFrom(ProcessBuilder.class) && c != Object.class)
         {
             throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of the ProcessBuilder class.");
         }
@@ -891,6 +888,10 @@ public class MetaUtils
                 }
                 if (rhs instanceof String)
                 {
+                    if (rhs.equals("\""))
+                    {
+                        return '\"';
+                    }
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
                     if ("".equals(rhs))
                     {

@@ -555,4 +555,17 @@ class TestMaps
         assert map2['BigDecimal'] instanceof BigDecimal
         assert map2['BigDecimal'] == 3.33333
     }
+
+    @Test
+    void testSingletonMap()
+    {
+        // SingleTon Maps are simple one key, one value Maps (inner class to Collections) and must be reconstituted
+        // in a special way.  Make sure that works.
+        Map root1 = Collections.singletonMap( "testCfgKey", "testCfgValue" )
+        String json = JsonWriter.objectToJson(root1)
+        println json
+        Map root2 = (Map) JsonReader.jsonToJava(json)
+        assert root2.get('testCfgKey') == 'testCfgValue'
+        assert root1.get('testCfgKey') == root2.get('testCfgKey')
+    }
 }
