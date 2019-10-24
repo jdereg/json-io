@@ -92,6 +92,8 @@ can be read, modified, and then re-written by a JVM that does not contain any of
                             // to choose.                             
     CLASSLOADER             // ClassLoader instance to use when turning String names of     
                             // classes into JVM Class instances.
+    FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS  // Force Map output to use @keys/@items even if 
+                            // the Map contains all Strings as keys.
 
 #### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
