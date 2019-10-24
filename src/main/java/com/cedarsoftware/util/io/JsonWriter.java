@@ -89,6 +89,8 @@ public class JsonWriter implements Closeable, Flushable
     public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
+    /** If set to true all maps are transfered to the format @keys[],@items[] regardless of the key_type */
+    public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
 
     private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
     private final Map<Class, JsonClassWriterBase> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
@@ -110,6 +112,7 @@ public class JsonWriter implements Closeable, Flushable
     private boolean isEnumPublicOnly = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
+    private boolean forceMapFormatWithKeyArrays = false;
     private long identity = 1;
     private int depth = 0;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
@@ -390,6 +393,7 @@ public class JsonWriter implements Closeable, Flushable
         writeLongsAsStrings = isTrue(args.get(WRITE_LONGS_AS_STRINGS));
         writeLongsAsStrings = isTrue(args.get(WRITE_LONGS_AS_STRINGS));
         skipNullFields = isTrue(args.get(SKIP_NULL_FIELDS));
+	forceMapFormatWithKeyArrays =isTrue(args.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS)); 
         if (!args.containsKey(CLASSLOADER))
         {
             args.put(CLASSLOADER, JsonWriter.class.getClassLoader());
@@ -1848,7 +1852,7 @@ public class JsonWriter implements Closeable, Flushable
             showType = false;
         }
 
-        if (!ensureJsonPrimitiveKeys(jObj))
+        if ((forceMapFormatWithKeyArrays) || (!ensureJsonPrimitiveKeys(jObj)) )
         {
             return false;
         }
@@ -2081,7 +2085,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
-        if (!ensureJsonPrimitiveKeys(map))
+        if ((forceMapFormatWithKeyArrays) || (!ensureJsonPrimitiveKeys(map)))
         {
             return false;
         }
