@@ -8,11 +8,7 @@ import java.awt.*
 import java.util.List
 import java.util.concurrent.ConcurrentHashMap
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotNull
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.Assert.*
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -563,7 +559,6 @@ class TestMaps
         // in a special way.  Make sure that works.
         Map root1 = Collections.singletonMap( "testCfgKey", "testCfgValue" )
         String json = JsonWriter.objectToJson(root1)
-        println json
         Map root2 = (Map) JsonReader.jsonToJava(json)
         assert root2.get('testCfgKey') == 'testCfgValue'
         assert root1.get('testCfgKey') == root2.get('testCfgKey')
