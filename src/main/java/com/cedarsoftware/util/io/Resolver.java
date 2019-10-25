@@ -4,7 +4,6 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -383,6 +382,12 @@ abstract class Resolver
                 else if ((mate = coerceCertainTypes(c.getName())) != null)
                 {   // if coerceCertainTypes() returns non-null, it did the work
                 }
+                else if (singletonMap.isAssignableFrom(c))
+                {
+                    Object key = jsonObj.keySet().iterator().next();
+                    Object value = jsonObj.values().iterator().next();
+                    mate = Collections.singletonMap(key, value);
+                }
                 else
                 {
                     mate = newInstance(c, jsonObj);
@@ -625,31 +630,8 @@ abstract class Resolver
             }
 
             if (singletonMap.isAssignableFrom(map.getClass()))
-            {   // Handle SingletonMaps - an inner class to Collections - single key, single value.  These are
-                // reconstituted in a special way, maintaining the original instance (in case the Map is
-                // referenced elsewhere in the graph).
-                if (javaKeys.length != 1 || javaValues.length != 1)
-                {
-                    throw new JsonIoException("Unable to reconstruct SingletonMap, as there should not be more than 1 key or value.  Key count: " + javaKeys.length + ", value count: " + javaValues.length);
-                }
-                Field k = MetaUtils.getField(singletonMap, "k");
-                Field v = MetaUtils.getField(singletonMap, "v");
-                try
-                {
-                    // Have to override both 'final' and 'private'.
-                    k.setAccessible(true);
-                    v.setAccessible(true);
-                    Field modifiersField = Field.class.getDeclaredField( "modifiers" );
-                    modifiersField.setAccessible(true);
-                    modifiersField.setInt( k, k.getModifiers() & ~Modifier.FINAL );
-                    modifiersField.setInt( v, v.getModifiers() & ~Modifier.FINAL );
-                    k.set(map, javaKeys[0]);        // Stuff key
-                    v.set(map, javaValues[0]);      // Stuff value
-                }
-                catch (Exception e)
-                {
-                    throw new JsonIoException("Unable to reconstruct SingletonMap", e);
-                }
+            {   // Handle SingletonMaps - Do nothing here.  They are single entry maps.  The code before here
+                // has already instantiated the SingletonMap, and has filled in its values.
             }
             else
             {

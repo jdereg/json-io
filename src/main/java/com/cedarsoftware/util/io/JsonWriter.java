@@ -89,7 +89,7 @@ public class JsonWriter implements Closeable, Flushable
     public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
-    /** If set to true all maps are transfered to the format @keys[],@items[] regardless of the key_type */
+    /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
     public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
 
     private static Map<Class, JsonClassWriterBase> BASE_WRITERS;

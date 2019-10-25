@@ -11,15 +11,6 @@
     <url>https://github.com/jdereg/json-io</url>
 
     <profiles>
-        <profile>
-            <id>doclint-java8-disable</id>
-            <activation>
-                <jdk>[1.8,)</jdk>
-            </activation>
-            <properties>
-                <javadoc.opts>-Xdoclint:none</javadoc.opts>
-            </properties>
-        </profile>
 
         <profile>
             <id>release-sign-artifacts</id>
@@ -83,7 +74,6 @@
         <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
         <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
         <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
-        <version.java>1.7</version.java>
         <version.plugin.compiler>3.8.1</version.plugin.compiler>
         <version.plugin.nexus>1.6.8</version.plugin.nexus>
         <version.plugin.source>3.1.0</version.plugin.source>
@@ -162,8 +152,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
-                    <source>${version.java}</source>
-                    <target>${version.java}</target>
+                    <release>7</release>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
@@ -201,7 +190,8 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${version.plugin.javadoc}</version>
                 <configuration>
-                    <doclint>none</doclint>
+                    <additionalOptions>-Xdoclint:none</additionalOptions>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
                 </configuration>
                 <executions>
                     <execution>
