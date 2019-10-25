@@ -897,7 +897,9 @@ public class JsonWriter implements Closeable, Flushable
                 }
                 catch (UnsupportedOperationException e)
                 {
-                    // Some kind of Map that does not support .entrySet() - some Maps throw UnsupportedOperation for this API
+                    // Some kind of Map that does not support .entrySet() - some Maps throw UnsupportedOperation for
+                    // this API.  Do not attempt any further tracing of references.  Likely a ClassLoader field or
+                    // something unusual like that.
                 }
             }
             else if (Collection.class.isAssignableFrom(clazz))
