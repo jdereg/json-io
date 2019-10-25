@@ -879,18 +879,25 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (Map.class.isAssignableFrom(clazz))
             {   // Speed up - logically walk maps, as opposed to following their internal structure.
-                Map map = (Map) obj;
-                for (final Object item : map.entrySet())
+                try
                 {
-                    final Map.Entry entry = (Map.Entry) item;
-                    if (entry.getValue() != null)
+                    Map map = (Map) obj;
+                    for (final Object item : map.entrySet())
                     {
-                        stack.addFirst(entry.getValue());
+                        final Entry entry = (Entry) item;
+                        if (entry.getValue() != null)
+                        {
+                            stack.addFirst(entry.getValue());
+                        }
+                        if (entry.getKey() != null)
+                        {
+                            stack.addFirst(entry.getKey());
+                        }
                     }
-                    if (entry.getKey() != null)
-                    {
-                        stack.addFirst(entry.getKey());
-                    }
+                }
+                catch (UnsupportedOperationException e)
+                {
+                    // Some kind of Map that does not support .entrySet() - some Maps throw UnsupportedOperation for this API
                 }
             }
             else if (Collection.class.isAssignableFrom(clazz))
