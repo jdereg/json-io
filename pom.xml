@@ -220,7 +220,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${version.plugin.surefire}</version>
                 <configuration>
-                    <forkCount>1</forkCount>
+                    <forkCount>0</forkCount>
                 </configuration>
             </plugin>
 
