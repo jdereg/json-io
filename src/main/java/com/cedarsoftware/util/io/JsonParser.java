@@ -345,34 +345,44 @@ class JsonParser
     private Number readNumber(int c) throws IOException
     {
         final FastPushbackReader in = input;
-        final StringBuilder number = numBuf;
-        number.setLength(0);
-        number.appendCodePoint(c);
         boolean isFloat = false;
-        
+
         if (JsonReader.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
+            /*
+             * In this branch, we must have either one of these scenarios: (a) -NaN or NaN (b) Inf or -Inf (c) -123 but
+             * NOT 123 (replace 123 by any number)
+             *
+             * In case of (c), we do nothing and revert input and c for normal processing.
+             */
+
             // Handle negativity.
             final boolean isNeg = (c == '-');
             if (isNeg) {
                 // Advance to next character.
                 c = input.read();
             }
-            
+
             // Case "-Infinity", "Infinity" or "NaN".
             if (c == 'I') {
-                // [Out of RFC 4627] accept NaN/Infinity values
                 readToken("infinity");
+                // [Out of RFC 4627] accept NaN/Infinity values
                 return (isNeg) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
             } else if ('N' == c) {
                 // [Out of RFC 4627] accept NaN/Infinity values
                 readToken("nan");
                 return Double.NaN;
             } else {
-                // Case this is a number but not "-Infinity", like "-2". We let the normal code process.
-                input.unread('-');
+                // This is (c) case, meaning there was c = '-' at the beginning.
+                // This is a number like "-2", but not "-Infinity". We let the normal code process.
+                input.unread(c);
+                c = '-';
             }
         }
-        
+
+        // We are sure we have a positive or negative number, so we read char by char.
+        final StringBuilder number = numBuf;
+        number.setLength(0);
+        number.appendCodePoint(c);
         while (true)
         {
             c = in.read();
