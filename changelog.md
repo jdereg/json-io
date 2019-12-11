@@ -1,4 +1,6 @@
 ### Revision History
+* 4.12.0
+  * Bug fix: Enhancement #137 introduced bug for negative numbers on simple values when tolerant/lenient parsing of +/- infinity was turned on.
 * 4.11.1
   * Enhancement (#140): New option flag added `FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS:true|false` to allow forcing JSON output format to always write `Map` as `@keys/@items` in the JSON (example: `{"@keys":["a", "b"], "@values":[1, 2]}`, rather than its default behavior of recognizing all `String` keys and writing the `Map` as a JSON object, example: `{"a":1, "b":2}.`  The default value for this flag is `false`.  
 * 4.11.0
