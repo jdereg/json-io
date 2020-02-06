@@ -170,3 +170,28 @@ function assert(truth)
         throw 'assertion failed';
     }
 }
+
+// functionality to replace reused objects with @ref, assuming this object has @ids or $ids
+var reinsertRefs = function(jObj) {
+    if (!jObj) return;
+    var objsToIds = new WeakMap();
+    
+    desubstitute(null, null, jObj, objsToIds);
+    objsToIds = null;
+};
+
+function desubstitute(parent, fieldName, jObj, objsToIds) {
+    if (!jObj) return;
+
+    var keys = Object.keys(jObj);
+    for (var i = 0, len = keys.length; i < len; i++) {
+        var field = keys[i];
+        var value = jObj[field];
+
+        if (!value) continue;
+
+        if (("@id" === field || '$id' === field) && !objsToIds.has(jObj)) { objsToIds.set(jObj, jObj[field]); }
+        else if (("@id" === field || '$id' === field) && parent && fieldName) { parent[fieldName] = { "@ref": objsToIds.get(jObj) }; break; }
+        else if ("object" === typeof(value)) { desubstitute(jObj, field, value, objsToIds); }
+    }
+}
