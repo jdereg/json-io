@@ -36,7 +36,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  */
 abstract class Resolver
 {
-    final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
+    final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
     final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
@@ -589,9 +589,8 @@ abstract class Resolver
                     }
                 }
             }
-
-            i.remove();
         }
+        unresolvedRefs.clear();
     }
 
     /**

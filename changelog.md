@@ -1,4 +1,6 @@
 ### Revision History
+* 4.13.0
+   * Enhancement: Clear unresolved references after all have been processed, as opposed to removing each one after it was processed.  
 * 4.12.0
   * Bug fix: Enhancement #137 introduced bug for negative numbers on simple values when tolerant/lenient parsing of +/- infinity was turned on.
 * 4.11.1
