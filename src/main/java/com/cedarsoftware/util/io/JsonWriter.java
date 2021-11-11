@@ -2274,6 +2274,14 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
+    private Object getValueByReflect(Object obj, Field field) {
+        try {
+            return field.get(obj);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private boolean writeField(Object obj, boolean first, String fieldName, Field field, boolean allowTransient) throws IOException
     {
         if (!allowTransient && (field.getModifiers() & Modifier.TRANSIENT) != 0)
@@ -2281,8 +2289,10 @@ public class JsonWriter implements Closeable, Flushable
             return first;
         }
 
-        int modifiers = field.getModifiers();
-        if (Enum.class.isAssignableFrom(field.getDeclaringClass()))
+        final int modifiers = field.getModifiers();
+        final Class fieldDeclaringClass = field.getDeclaringClass();
+        Object o = null;
+        if (Enum.class.isAssignableFrom(fieldDeclaringClass))
         {
             if (!"name".equals(field.getName()))
             {
@@ -2294,17 +2304,17 @@ public class JsonWriter implements Closeable, Flushable
                 {
                     return first;
                 }
-            }
-        }
 
-        Object o;
-        try
-        {
-            o = field.get(obj);
-        }
-        catch (Exception ignored)
-        {
-            o = null;
+                o = getValueByReflect(obj, field);
+            } else {
+                //not advice to use reflect to get name field value from enum since jdk17
+                //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
+                o = ((Enum)obj).name();
+            }
+        } else if(ObjectResolver.isBasicWrapperType(fieldDeclaringClass)) {
+            o = obj;
+        } else {
+            o = getValueByReflect(obj, field);
         }
 
         if (skipNullFields && o == null)
