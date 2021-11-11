@@ -104,6 +104,13 @@ public class ObjectResolver extends Resolver
         }
     }
 
+    static boolean isBasicWrapperType(Class clazz) {
+        return clazz == Boolean.class || clazz == Integer.class ||
+            clazz == Short.class || clazz == Character.class ||
+            clazz == Byte.class || clazz == Long.class ||
+            clazz == Double.class || clazz == Float.class;
+    }
+
     /**
      * Map Json Map object field to Java object field.
      *
@@ -117,6 +124,7 @@ public class ObjectResolver extends Resolver
                                final Field field, final Object rhs)
     {
         final Object target = jsonObj.target;
+        final Class targetClass = target.getClass();
         try
         {
             final Class fieldType = field.getType();
@@ -124,7 +132,11 @@ public class ObjectResolver extends Resolver
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
-                    field.set(target, MetaUtils.convert(fieldType, "0"));
+                    if(isBasicWrapperType(targetClass)) {
+                        jsonObj.target = MetaUtils.convert(fieldType, "0");
+                    } else {
+                        field.set(target, MetaUtils.convert(fieldType, "0"));
+                    }
                 }
                 else
                 {
@@ -163,7 +175,12 @@ public class ObjectResolver extends Resolver
             }
             else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
             {
-                field.set(target, special);
+                //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
+                if(Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
+                    //no need to set for this case
+                } else {
+                    field.set(target, special);
+                }
             }
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
@@ -220,7 +237,11 @@ public class ObjectResolver extends Resolver
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    field.set(target, MetaUtils.convert(fieldType, rhs));
+                    if(isBasicWrapperType(targetClass)) {
+                        jsonObj.target = MetaUtils.convert(fieldType, rhs);
+                    } else {
+                        field.set(target, MetaUtils.convert(fieldType, rhs));
+                    }
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field

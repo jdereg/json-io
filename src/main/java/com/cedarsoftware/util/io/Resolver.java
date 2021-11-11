@@ -514,6 +514,18 @@ abstract class Resolver
         }
     }
 
+    private static enum OneEnum {
+        L1,
+        L2,
+        L3
+    }
+    /*
+    /* java 17 don't allow to call reflect on internal java api like EnumSet's implement, so need to create like this
+     */
+    private Object getEmptyEnumSet() {
+        return EnumSet.noneOf(OneEnum.class);
+    }
+
     /**
      * Create the EnumSet with its values (it must be created this way)
      */
@@ -522,7 +534,8 @@ abstract class Resolver
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-            return newInstance(c, jsonObj);
+            return getEmptyEnumSet();
+            //return newInstance(c, jsonObj);
         }
         JsonObject item = (JsonObject) items[0];
         String type = item.getType();
