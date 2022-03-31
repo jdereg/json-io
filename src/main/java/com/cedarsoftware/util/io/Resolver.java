@@ -65,6 +65,7 @@ abstract class Resolver
         coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
         coercedTypes.put("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
         coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
     }
 
     /**
