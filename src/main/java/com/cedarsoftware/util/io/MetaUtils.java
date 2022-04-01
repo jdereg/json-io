@@ -483,6 +483,9 @@ public class MetaUtils
         {
             return new ArrayList();
         }
+        if (Collections.EMPTY_LIST.getClass().equals(c)) {
+            return Collections.emptyList();
+        }
 
         if (c.isInterface())
         {
