@@ -72,7 +72,7 @@
         <version.java-util>1.37.0</version.java-util>           <!-- only test dependency -->
         <version.junit>4.13.1</version.junit>                     <!-- only test dependency -->
         <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
+        <version.gson>2.8.9</version.gson>                      <!-- only test dependency -->
         <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
         <version.plugin.compiler>3.8.1</version.plugin.compiler>
         <version.plugin.nexus>1.6.8</version.plugin.nexus>
