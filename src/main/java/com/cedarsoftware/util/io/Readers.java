@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -822,6 +823,36 @@ public class Readers
             tstamp.setNanos(Integer.valueOf((String) nanos));
             jObj.target = tstamp;
             return jObj.target;
+        }
+    }
+
+    public static class UUIDReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+
+            // to use the String representation
+            if (o instanceof String)
+            {
+                return UUID.fromString((String) o);
+            }
+
+            JsonObject jObj = (JsonObject) o;
+            Long mostSigBits = (Long) jObj.get("mostSigBits");
+            if (mostSigBits == null)
+            {
+                throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field");
+            }
+            Long leastSigBits = (Long) jObj.get("leastSigBits");
+            if (leastSigBits == null)
+            {
+                throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field");
+            }
+
+            UUID uuid = new UUID(mostSigBits, leastSigBits);
+
+            jObj.setTarget(uuid);
+            return jObj.getTarget();
         }
     }
 
