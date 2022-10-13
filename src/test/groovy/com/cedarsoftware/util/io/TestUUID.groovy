@@ -49,7 +49,7 @@ class TestUUID {
         assertEquals(IllegalArgumentException.class, thrown.cause.class)
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "leastSigBits":-7929886640328317609}}'
-         thrown = Assert.assertThrows(JsonIoException.class, { (TestUUIDFields) TestUtil.readJsonObject(json) })
+        thrown = Assert.assertThrows(JsonIoException.class, { (TestUUIDFields) TestUtil.readJsonObject(json) })
         assertTrue("", thrown.cause.message.contains("mostSigBits"))
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "mostSigBits":7280309849777586861}}'
@@ -66,7 +66,7 @@ class TestUUID {
         String json = TestUtil.getJsonString(uuid)
         TestUtil.printLine("json=" + json)
         uuid = (UUID) TestUtil.readJsonObject(json)
-        assertTrue(uuid.equals(UUID.fromString(s)))
+        assertEquals(UUID.fromString(s), uuid)
     }
 
     @Test
@@ -86,21 +86,21 @@ class TestUUID {
         TestUtil.printLine("json=" + json)
         assertTrue(typedUUIDs.length == 2)
         assertTrue(typedUUIDs[0] == typedUUIDs[1])
-        assertTrue(UUID.fromString(s).equals(typedUUIDs[0]))
+        assertEquals(UUID.fromString(s), typedUUIDs[0])
     }
 
     @Test
     void testUUIDInCollection() {
         String s = "03a7e3c2-2d3a-4ca9-a426-ff4270015fde"
-        UUID bigDec = UUID.fromString(s)
+        UUID uuid = UUID.fromString(s)
         List list = new ArrayList()
-        list.add(bigDec)
-        list.add(bigDec)
+        list.add(uuid)
+        list.add(uuid)
         String json = TestUtil.getJsonString(list)
         TestUtil.printLine("json=" + json)
         list = (List) TestUtil.readJsonObject(json)
         assertTrue(list.size() == 2)
-        assertTrue(list.get(0).equals(UUID.fromString(s)))
+        assertEquals(UUID.fromString(s), list.get(0))
         assertSame(list.get(0), list.get(1))
     }
 }
