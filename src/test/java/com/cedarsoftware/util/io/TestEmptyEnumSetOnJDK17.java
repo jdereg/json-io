@@ -1,12 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

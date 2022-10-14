@@ -392,7 +392,6 @@ public class JsonWriter implements Closeable, Flushable
         isPrettyPrint = isTrue(args.get(PRETTY_PRINT));
         isEnumPublicOnly = isTrue(args.get(ENUM_PUBLIC_ONLY));
         writeLongsAsStrings = isTrue(args.get(WRITE_LONGS_AS_STRINGS));
-        writeLongsAsStrings = isTrue(args.get(WRITE_LONGS_AS_STRINGS));
         skipNullFields = isTrue(args.get(SKIP_NULL_FIELDS));
         forceMapFormatWithKeyArrays = isTrue(args.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS));
         if (!args.containsKey(CLASSLOADER))
