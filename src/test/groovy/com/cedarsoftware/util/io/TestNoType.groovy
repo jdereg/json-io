@@ -43,9 +43,9 @@ class TestNoType
         cal.set(-700, 5, 10)
 
         Junk j = new Junk()
-        j.stuff = [(int)1, 2L, new BigInteger(3), new BigDecimal(4.0), cal.getTime(), 'Hello', Junk.class] as Object[]
+        j.stuff = [(int)1, 2L, BigInteger.valueOf(3), new BigDecimal(4.0), cal.getTime(), 'Hello', Junk.class] as Object[]
         j.name = 'Zeus'
-        j.things = [(int)1, 2L, new BigInteger(3), new BigDecimal(4.0), cal.getTime(), 'Hello', Junk.class] as Object[]
+        j.things = [(int)1, 2L, BigInteger.valueOf(3), new BigDecimal(4.0), cal.getTime(), 'Hello', Junk.class] as Object[]
         j.namesToAge.Appollo = 2500L
         j.namesToAge.Hercules = 2489 as int
         j.namesToAge.Poseidon = 2502 as BigInteger

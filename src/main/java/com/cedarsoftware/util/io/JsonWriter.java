@@ -142,6 +142,7 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(StringBuilder.class, new Writers.StringBuilderWriter());
         temp.put(StringBuffer.class, new Writers.StringBufferWriter());
+        temp.put(UUID.class, new Writers.UUIDWriter());
         BASE_WRITERS = temp;
     }
 

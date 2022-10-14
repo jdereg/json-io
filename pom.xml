@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.13.0</version>
+    <version>4.14.0-JDK17</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -69,10 +69,10 @@
     </developers>
 
     <properties>
-        <version.java-util>1.37.0</version.java-util>           <!-- only test dependency -->
-        <version.junit>4.13.1</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.8.9</version.gson>                      <!-- only test dependency -->
+        <version.java-util>1.68.0</version.java-util>           <!-- only test dependency -->
+        <version.junit>4.13</version.junit>                     <!-- only test dependency -->
+        <version.groovy>2.5.14</version.groovy>                  <!-- only test dependency -->
+        <version.gson>2.9.1</version.gson>                      <!-- only test dependency -->
         <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
         <version.plugin.compiler>3.8.1</version.plugin.compiler>
         <version.plugin.nexus>1.6.8</version.plugin.nexus>
@@ -80,8 +80,8 @@
         <version.plugin.javadoc>3.1.1</version.plugin.javadoc>
         <version.plugin.gpg>1.6</version.plugin.gpg>
         <version.plugin.surefire>2.22.2</version.plugin.surefire>
-        <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
-        <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
+        <version.plugin.groovy.eclipse.compiler>3.6.0-01</version.plugin.groovy.eclipse.compiler>
+        <version.plugin.groovy.eclipse.batch>2.5.14-02</version.plugin.groovy.eclipse.batch>
         <version.plugin.felix.scr>1.26.2</version.plugin.felix.scr>
         <version.plugin.felix.bundle>4.2.1</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -149,10 +149,13 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
-                    <release>7</release>
+                    <source>1.8</source>
+                    <target>1.8</target>
+<!--                    <release>1.8</release>-->
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
@@ -291,6 +294,7 @@
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
             <version>${version.groovy}</version>
+            <type>pom</type>
             <scope>test</scope>
         </dependency>
 

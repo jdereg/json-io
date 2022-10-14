@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -360,6 +361,35 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             StringBuffer buffer = (StringBuffer) o;
+            output.write('"');
+            output.write(buffer.toString());
+            output.write('"');
+        }
+    }
+
+    public static class UUIDWriter implements JsonWriter.JsonClassWriter
+    {
+        /**
+         * To preserve backward compatibility with previous serialized format the internal fields must be stored as longs
+         */
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            UUID uuid = (UUID) obj;
+            output.write("\"mostSigBits\": ");
+            output.write(Long.toString(uuid.getMostSignificantBits()));
+            output.write(",\"leastSigBits\":");
+            output.write(Long.toString(uuid.getLeastSignificantBits()));
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        /**
+         * We can use the String representation for easier handling, but this may break backwards compatibility
+         * if an earlier library version is used
+         */
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            UUID buffer = (UUID) o;
             output.write('"');
             output.write(buffer.toString());
             output.write('"');
