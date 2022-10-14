@@ -634,7 +634,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
-		JsonClassWriterBase closestWriter = getCustomWriter(arrayComponentClass);
+        JsonClassWriterBase closestWriter = getCustomWriter(arrayComponentClass);
 
         if (closestWriter == null)
         {
@@ -915,10 +915,10 @@ public class JsonWriter implements Closeable, Flushable
             }
             else
             {   // Speed up: do not traceReferences of primitives, they cannot reference anything
-				if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
+                if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
                 {
-					traceFields(stack, obj, fieldSpecifiers);
-				}
+                    traceFields(stack, obj, fieldSpecifiers);
+                }
             }
         }
     }
@@ -1229,7 +1229,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if ( (!isAllowNanAndInfinity()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
-            	out.write("null");
+                out.write("null");
             }
             else if ( (!isAllowNanAndInfinity()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
             {
@@ -1420,7 +1420,7 @@ public class JsonWriter implements Closeable, Flushable
         if (isAllowNanAndInfinity()) {
             return Double.toString(d);
         }
-    	return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
+        return (Double.isNaN(d) || Double.isInfinite(d)) ? "null" : Double.toString(d);
     }
 
     private String floatToString(float d)
@@ -1428,7 +1428,7 @@ public class JsonWriter implements Closeable, Flushable
         if (isAllowNanAndInfinity()) {
             return Float.toString(d);
         }
-    	return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
+        return (Float.isNaN(d) || Float.isInfinite(d)) ? "null" : Float.toString(d);
     }
 
     private void writeLongArray(long[] longs, int lenMinus1) throws IOException
