@@ -25,7 +25,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${version.plugin.gpg}</version>
+                        <version>1.6</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -48,7 +48,7 @@
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
@@ -69,21 +69,6 @@
     </developers>
 
     <properties>
-        <version.java-util>1.37.0</version.java-util>           <!-- only test dependency -->
-        <version.junit>4.13.1</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
-        <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
-        <version.plugin.compiler>3.8.1</version.plugin.compiler>
-        <version.plugin.nexus>1.6.8</version.plugin.nexus>
-        <version.plugin.source>3.1.0</version.plugin.source>
-        <version.plugin.javadoc>3.1.1</version.plugin.javadoc>
-        <version.plugin.gpg>1.6</version.plugin.gpg>
-        <version.plugin.surefire>2.22.2</version.plugin.surefire>
-        <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
-        <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
-        <version.plugin.felix.scr>1.26.2</version.plugin.felix.scr>
-        <version.plugin.felix.bundle>4.2.1</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--
             Name of the benchmark Uber-JAR to generate.
@@ -95,7 +80,7 @@
         <pluginRepository>
             <id>central</id>
             <name>Maven Plugin Repository</name>
-            <url>http://repo1.maven.org/maven2</url>
+            <url>https://repo1.maven.org/maven2</url>
             <layout>default</layout>
             <snapshots>
                 <enabled>false</enabled>
@@ -122,13 +107,13 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-scr-plugin</artifactId>
-                <version>${version.plugin.felix.scr}</version>
+                <version>1.26.2</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>${version.plugin.felix.bundle}</version>
+                <version>4.2.1</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
@@ -150,9 +135,11 @@
 
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${version.plugin.compiler}</version>
+                <version>3.8.1</version>
                 <configuration>
-                    <release>7</release>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <!--                    <release>1.8</release>-->
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
@@ -160,13 +147,13 @@
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-compiler</artifactId>
-                        <version>${version.plugin.groovy.eclipse.compiler}</version>
+                        <version>3.7.0</version>
                     </dependency>
 
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-batch</artifactId>
-                        <version>${version.plugin.groovy.eclipse.batch}</version>
+                        <version>2.5.14-02</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -174,7 +161,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>${version.plugin.source}</version>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -188,7 +175,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${version.plugin.javadoc}</version>
+                <version>3.1.1</version>
                 <configuration>
                     <additionalOptions>-Xdoclint:none</additionalOptions>
                     <additionalJOption>-Xdoclint:none</additionalJOption>
@@ -206,7 +193,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>${version.plugin.nexus}</version>
+                <version>1.6.8</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
@@ -218,7 +205,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${version.plugin.surefire}</version>
+                <version>2.22.2</version>
                 <configuration>
                     <forkCount>0</forkCount>
                 </configuration>
@@ -268,14 +255,14 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>${version.junit}</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.cedarsoftware</groupId>
             <artifactId>java-util</artifactId>
-            <version>${version.java-util}</version>
+            <version>2.0.0</version>
             <scope>test</scope>
             <optional>true</optional>
         </dependency>
@@ -283,28 +270,28 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>${version.gson}</version>
-            <scope>test</scope>     <!-- only test scope dependency -->
+            <version>2.9.1</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
-            <version>${version.groovy}</version>
+            <artifactId>groovy</artifactId>
+            <version>2.5.18</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>${version.jmh}</version>
+            <version>1.35</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>${version.jmh}</version>
+            <version>1.35</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
