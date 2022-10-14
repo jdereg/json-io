@@ -170,4 +170,41 @@ class TestEnums
         String json = JsonWriter.objectToJson(list, config)
         assert """[{"name":"FEDERATE_THIS"},{"name":"EXCLUDE"}]""" == json
     }
+
+    enum SimpleEnum
+    {
+        ONE, TWO
+    }
+
+    class SimpleClass
+    {
+        private final String name
+        private final SimpleEnum myEnum
+
+        SimpleClass(String name, SimpleEnum myEnum)
+        {
+            this.name = name
+            this.myEnum = myEnum
+        }
+
+        String getName()
+        {
+            return name
+        }
+
+        SimpleEnum getMyEnum()
+        {
+            return myEnum
+        }
+    }
+
+    @Test
+    void testEnumField()
+    {
+        SimpleClass mc = new SimpleClass("Dude", SimpleEnum.ONE)
+        String json = JsonWriter.objectToJson(mc)
+//        System.out.println(JsonWriter.objectToJson(mc))
+        assert json != null
+        assert json.contains("Dude")
+    }
 }

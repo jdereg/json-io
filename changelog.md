@@ -1,4 +1,8 @@
 ### Revision History
+* 4.14.0
+  * Bug fix: Enum serialization error with Java 17 #155.  According to @wweng-talend, if you set : "--illegal-access=deny" on jvm parameters, it works the same between jdk11 and jdk17. 
+  * Bug fix: java.lang primitives serialization - JDK-8256358 - JDK 17 support #154. Fix by @wwang-talend.
+  * Bug fix: failed to deserialize EnumSet with json without type #120.  Fix by @sgandon and @wwang-talend
 * 4.13.0
    * Enhancement: Clear unresolved references after all have been processed, as opposed to removing each one after it was processed.  
 * 4.12.0
