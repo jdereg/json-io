@@ -89,6 +89,11 @@
                 <updatePolicy>never</updatePolicy>
             </releases>
         </pluginRepository>
+
+        <pluginRepository>
+            <id>groovy-plugins-release</id>
+            <url>https://groovy.jfrog.io/artifactory/plugins-release</url>
+        </pluginRepository>
     </pluginRepositories>
 
     <distributionManagement>
@@ -137,9 +142,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <!--                    <release>1.8</release>-->
+                    <release>16</release>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
@@ -147,13 +150,13 @@
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-compiler</artifactId>
-                        <version>3.7.0</version>
+                        <version>3.7.1</version>
                     </dependency>
 
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-batch</artifactId>
-                        <version>2.5.14-02</version>
+                        <version>3.0.10-02</version>
                     </dependency>
                 </dependencies>
             </plugin>

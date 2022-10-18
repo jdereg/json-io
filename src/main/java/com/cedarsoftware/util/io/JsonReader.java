@@ -138,6 +138,7 @@ public class JsonReader implements Closeable
         temp.put(StringBuilder.class, new Readers.StringBuilderReader());
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
         temp.put(UUID.class, new Readers.UUIDReader());
+        temp.put(Record.class, (JsonReader.JsonClassReader) (jOb, stack) -> ((JsonObject)jOb).target);
         BASE_READERS = temp;
     }
 

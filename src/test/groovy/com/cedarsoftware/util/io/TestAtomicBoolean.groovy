@@ -88,7 +88,7 @@ class TestAtomicBoolean
         TestUtil.printLine("json=" + json)
         list = (List) TestUtil.readJsonObject(json)
         assert list.size() == 2
-        atomicBoolean = list.get(0)
+        atomicBoolean = (AtomicBoolean)list.get(0)
         assert atomicBoolean.get() == new AtomicBoolean(true).get()
         assertNotSame(list.get(0), list.get(1))
     }
