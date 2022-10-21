@@ -89,7 +89,7 @@ class TestAtomicLong
         TestUtil.printLine("json=" + json)
         list = (List) TestUtil.readJsonObject(json)
         assert list.size() == 2
-        atomicInt = (AtomicLong)list.get(0)
+        atomicInt = list.get(0)
         assert atomicInt.get() == new AtomicLong(12345).get()
         assertNotSame(list.get(0), list.get(1))
     }

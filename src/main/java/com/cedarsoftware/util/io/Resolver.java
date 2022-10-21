@@ -3,9 +3,7 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.RecordComponent;
 import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -370,10 +368,6 @@ abstract class Resolver
                 {
                     mate = MetaUtils.classForName((String) jsonObj.get("value"), reader.getClassLoader());
                 }
-                else if (c.isRecord())
-                {
-                    mate = getRecord(c, jsonObj);
-                }
                 else if (c.isEnum())
                 {
                     mate = getEnum(c, jsonObj);
@@ -411,10 +405,6 @@ abstract class Resolver
             {
                 int size = (items == null) ? 0 : items.length;
                 mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-            }
-            else if (clazz.isRecord())
-            {
-                mate = getRecord(clazz, jsonObj);
             }
             else if (clazz.isEnum())
             {
@@ -566,35 +556,6 @@ abstract class Resolver
             }
         }
         return enumSet;
-    }
-
-
-    /**
-     * Create the Record with its values (it must be created this way, because Record is immutable)
-     */
-    private Object getRecord(Class c, JsonObject jsonObj)
-    {
-        try
-        {
-
-            ArrayList<Class> lParameterTypes = new ArrayList<>(jsonObj.size());
-            ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
-
-            // the record components are per definition in the constructor parameter order
-            for (RecordComponent recordComponent : c.getRecordComponents())
-            {
-                lParameterTypes.add(recordComponent.getType());
-                lParameterValues.add(jsonObj.get(recordComponent.getName()));
-            }
-
-            Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
-
-            return constructor.newInstance(lParameterValues.toArray(new Object[0]));
-
-        } catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        }
     }
 
     /**

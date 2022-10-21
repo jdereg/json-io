@@ -30,7 +30,7 @@ class TestClassForName
     {
         Class testObjectClass = MetaUtils.classForName('com.cedarsoftware.util.io.TestObject', TestClassForName.class.getClassLoader())
         assert testObjectClass instanceof Class
-        assert 'com.cedarsoftware.util.io.TestObject' == ((Class)testObjectClass).name
+        assert 'com.cedarsoftware.util.io.TestObject' == testObjectClass.name
     }
 
     @Test
@@ -38,7 +38,7 @@ class TestClassForName
     {
         Class testObjectClass = MetaUtils.classForName('ReallyLong', new AlternateNameClassLoader('ReallyLong', Long.class))
         assert testObjectClass instanceof Class
-        assert 'java.lang.Long' == ((Class)testObjectClass).name
+        assert 'java.lang.Long' == testObjectClass.name
     }
 
     @Test
@@ -71,7 +71,7 @@ class TestClassForName
     {
         Class testObjectClass = MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), false)
         assert testObjectClass instanceof Class
-        assert 'java.util.LinkedHashMap' == ((Class)testObjectClass).name
+        assert 'java.util.LinkedHashMap' == testObjectClass.name
     }
 
     private class AlternateNameClassLoader extends ClassLoader

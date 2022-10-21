@@ -138,7 +138,15 @@ public class JsonReader implements Closeable
         temp.put(StringBuilder.class, new Readers.StringBuilderReader());
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
         temp.put(UUID.class, new Readers.UUIDReader());
-        temp.put(Record.class, (JsonReader.JsonClassReader) (jOb, stack) -> ((JsonObject)jOb).target);
+        try
+        {
+            Class recordClass = Class.forName("java.lang.Record");
+            temp.put(recordClass, new Readers.RecordReader());
+        } catch (ClassNotFoundException e)
+        {
+            // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
+        }
+
         BASE_READERS = temp;
     }
 
