@@ -1,8 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Deque;
@@ -853,6 +856,46 @@ public class Readers
 
             jObj.setTarget(uuid);
             return jObj.getTarget();
+        }
+    }
+
+    public static class RecordReader implements JsonReader.JsonClassReaderEx
+    {
+        @Override
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            try
+            {
+                JsonObject jsonObj = (JsonObject) o;
+
+                ArrayList<Class> lParameterTypes = new ArrayList<>(jsonObj.size());
+                ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
+
+                Class c = Class.forName(jsonObj.getType());
+                // the record components are per definition in the constructor parameter order
+                // we implement this with reflection due to code compatibility Java<16
+                Method getRecordComponents = Class.class.getMethod("getRecordComponents");
+                Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
+                for (Object recordComponent : recordComponents)
+                {
+                    Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
+                    lParameterTypes.add(type);
+
+                    String name = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                    lParameterValues.add(jsonObj.get(name));
+                }
+
+                Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+
+                return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+
+            } catch (NoSuchMethodException e)
+            {
+                throw new RuntimeException("Record de-serialization only works with java>=16.", e);
+            } catch (Exception e)
+            {
+                throw new RuntimeException(e);
+            }
         }
     }
 
