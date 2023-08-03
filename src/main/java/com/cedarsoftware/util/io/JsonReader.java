@@ -79,6 +79,8 @@ public class JsonReader implements Closeable
     public static final String CLASSLOADER = "CLASSLOADER";
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
+    /** Default maximum parsing depth */
+    static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
     private static Map<Class, JsonClassReaderBase> BASE_READERS;
     protected final Map<Class, JsonClassReaderBase> readers = new HashMap<>(BASE_READERS);
@@ -89,6 +91,7 @@ public class JsonReader implements Closeable
     private final FastPushbackReader input;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     private final Map<String, Object> args = new HashMap<>();
+    private final int maxParseDepth;
 
     private static volatile boolean allowNanAndInfinity = false;
 
@@ -414,9 +417,10 @@ public class JsonReader implements Closeable
      *
      * @param json String JSON input
      * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
+     * @param maxDepth Maximum parsing depth.
      * @return Java object graph matching JSON input
      */
-    public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
+    public static Object jsonToJava(String json, Map<String, Object> optionalArgs, int maxDepth)
     {
         if (json == null || "".equals(json.trim()))
         {
@@ -431,7 +435,44 @@ public class JsonReader implements Closeable
         {
             optionalArgs.put(USE_MAPS, false);
         }
-        JsonReader jr = new JsonReader(json, optionalArgs);
+        JsonReader jr = new JsonReader(json, optionalArgs, maxDepth);
+        Object obj = jr.readObject();
+        jr.close();
+        return obj;
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     *
+     * @param json String JSON input
+     * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
+     * @return Java object graph matching JSON input
+     */
+    public static Object jsonToJava(String json, Map<String, Object> optionalArgs)
+    {
+        return jsonToJava(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     *
+     * @param inputStream InputStream containing JSON input
+     * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
+     * @param maxDepth Maximum parsing depth.
+     * @return Java object graph matching JSON input
+     */
+    public static Object jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs, int maxDepth)
+    {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap<String, Object>();
+            optionalArgs.put(USE_MAPS, false);
+        }
+        if (!optionalArgs.containsKey(USE_MAPS))
+        {
+            optionalArgs.put(USE_MAPS, false);
+        }
+        JsonReader jr = new JsonReader(inputStream, optionalArgs, maxDepth);
         Object obj = jr.readObject();
         jr.close();
         return obj;
@@ -446,19 +487,21 @@ public class JsonReader implements Closeable
      */
     public static Object jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs)
     {
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<String, Object>();
-            optionalArgs.put(USE_MAPS, false);
-        }
-        if (!optionalArgs.containsKey(USE_MAPS))
-        {
-            optionalArgs.put(USE_MAPS, false);
-        }
-        JsonReader jr = new JsonReader(inputStream, optionalArgs);
-        Object obj = jr.readObject();
-        jr.close();
-        return obj;
+        return jsonToJava(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param json String of JSON content
+     * @param maxDeth Maximum parsing depth.
+     * @return Map representing JSON content.  Each object is represented by a Map.
+     */
+    public static Map jsonToMaps(String json, int maxDepth)
+    {
+        return jsonToMaps(json, null, maxDepth);
     }
 
     /**
@@ -471,7 +514,33 @@ public class JsonReader implements Closeable
      */
     public static Map jsonToMaps(String json)
     {
-        return jsonToMaps(json, null);
+        return jsonToMaps(json, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(String json, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param json String of JSON content
+     * @param optionalArgs Map of optional arguments to control customization.  See readme file for
+     * details on these options.
+     * @param maxDepth Maximum parsing depth.
+     * @return Map where each Map representa an object in the JSON input.
+     */
+    public static Map jsonToMaps(String json, Map<String, Object> optionalArgs, int maxDepth)
+    {
+        if (optionalArgs == null)
+        {
+            optionalArgs = new HashMap<String, Object>();
+        }
+        optionalArgs.put(USE_MAPS, true);
+        ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
+        JsonReader jr = new JsonReader(ba, optionalArgs, maxDepth);
+        Object ret = jr.readObject();
+        jr.close();
+
+        return adjustOutputMap(ret);
     }
 
     /**
@@ -486,13 +555,28 @@ public class JsonReader implements Closeable
      */
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
+        return jsonToMaps(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Map args = ["USE_MAPS": true]
+     * Use JsonReader.jsonToJava(inputStream, args)
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     * No longer recommended: Use jsonToJava with USE_MAPS:true
+     * @param inputStream containing JSON content
+     * @param optionalArgs Map of optional arguments to control customization.  See readme file for
+     * details on these options.
+     * @param maxDepth Maximum parsing depth.
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
+     */
+    public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs, int maxDepth)
+    {
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap<String, Object>();
         }
         optionalArgs.put(USE_MAPS, true);
-        ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-        JsonReader jr = new JsonReader(ba, optionalArgs);
+        JsonReader jr = new JsonReader(inputStream, optionalArgs, maxDepth);
         Object ret = jr.readObject();
         jr.close();
 
@@ -511,16 +595,7 @@ public class JsonReader implements Closeable
      */
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<String, Object>();
-        }
-        optionalArgs.put(USE_MAPS, true);
-        JsonReader jr = new JsonReader(inputStream, optionalArgs);
-        Object ret = jr.readObject();
-        jr.close();
-
-        return adjustOutputMap(ret);
+        return jsonToMaps(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     private static Map adjustOutputMap(Object ret)
@@ -541,16 +616,39 @@ public class JsonReader implements Closeable
         return retMap;
     }
 
-    public JsonReader()
+    public JsonReader(int maxDepth)
     {
         input = null;
         getArgs().put(USE_MAPS, false);
         getArgs().put(CLASSLOADER, JsonReader.class.getClassLoader());
+        maxParseDepth = maxDepth;
+    }
+
+    public JsonReader()
+    {
+        this(DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    public JsonReader(InputStream inp, int maxDepth)
+    {
+        this(inp, false, maxDepth);
     }
 
     public JsonReader(InputStream inp)
     {
-        this(inp, false);
+        this(inp, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Use this constructor if you already have a JsonObject graph and want to parse it into
+     * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
+     * the JsonReader.
+     * @param optionalArgs Map of optional arguments for the JsonReader.
+     * @param maxDepth Maximum parsing depth.
+     */
+    public JsonReader(Map<String, Object> optionalArgs, int maxDepth)
+    {
+        this(new ByteArrayInputStream(new byte[]{}), optionalArgs, maxDepth);
     }
 
     /**
@@ -561,7 +659,7 @@ public class JsonReader implements Closeable
      */
     public JsonReader(Map<String, Object> optionalArgs)
     {
-        this(new ByteArrayInputStream(new byte[]{}), optionalArgs);
+        this(optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     // This method is needed to get around the fact that 'this()' has to be the first method of a constructor.
@@ -571,29 +669,52 @@ public class JsonReader implements Closeable
         return args;
     }
 
-    public JsonReader(InputStream inp, boolean useMaps)
+    public JsonReader(InputStream inp, boolean useMaps, int maxDepth)
     {
-        this(inp, makeArgMap(new HashMap<String, Object>(), useMaps));
+        this(inp, makeArgMap(new HashMap<String, Object>(), useMaps), maxDepth);
     }
 
-    public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
+    public JsonReader(InputStream inp, boolean useMaps)
+    {
+        this(inp, useMaps, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    public JsonReader(InputStream inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
 
         input = new FastPushbackBufferedReader(new InputStreamReader(inp, StandardCharsets.UTF_8));
+        maxParseDepth = maxDepth;
     }
 
-    public JsonReader(String inp, Map<String, Object> optionalArgs)
+    public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
+    {
+        this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    public JsonReader(String inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
         byte[] bytes = inp.getBytes(StandardCharsets.UTF_8);
         input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
+        maxParseDepth = maxDepth;
+    }
+
+    public JsonReader(String inp, Map<String, Object> optionalArgs)
+    {
+        this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    public JsonReader(byte[] inp, Map<String, Object> optionalArgs, int maxDepth)
+    {
+        initializeFromArgs(optionalArgs);
+        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp), StandardCharsets.UTF_8));
+        maxParseDepth = maxDepth;
     }
 
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs)
     {
-        initializeFromArgs(optionalArgs);
-        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp), StandardCharsets.UTF_8));
+        this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     private void initializeFromArgs(Map<String, Object> optionalArgs)
