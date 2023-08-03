@@ -48,6 +48,7 @@ class JsonParser
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<String, String>();
+    private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
     private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
@@ -56,6 +57,9 @@ class JsonParser
     private final StringBuilder numBuf = new StringBuilder();
     private final boolean useMaps;
     private final Map<String, String> typeNameMap;
+    private final int maxParseDepth;
+
+    private int curParseDepth = 0;
 
     static
     {
@@ -97,12 +101,18 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args, int maxDepth)
     {
         input = reader;
         useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
         objsRead = objectsMap;
         typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
+        maxParseDepth = maxDepth;
+    }
+
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
+    {
+        this(reader, objectsMap, args, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     private Object readJsonObject() throws IOException
@@ -131,6 +141,7 @@ class JsonParser
                         }
                         in.unread(c);
                         state = STATE_READ_FIELD;
+                        ++curParseDepth;
                     }
                     else
                     {
@@ -215,6 +226,7 @@ class JsonParser
                     if (c == '}')
                     {
                         done = true;
+                        --curParseDepth;
                     }
                     else if (c == ',')
                     {
@@ -238,6 +250,10 @@ class JsonParser
 
     Object readValue(JsonObject object) throws IOException
     {
+        if (curParseDepth > maxParseDepth) {
+            return error("Maximum parsing depth exceeded");
+        }
+
         int c = skipWhitespaceRead();
         if (c == '"')
         {
@@ -282,6 +298,7 @@ class JsonParser
     private Object readArray(JsonObject object) throws IOException
     {
         final List<Object> array = new ArrayList();
+        ++curParseDepth;
 
         while (true)
         {
@@ -302,6 +319,7 @@ class JsonParser
             }
         }
 
+        --curParseDepth;
         return array.toArray();
     }
 
