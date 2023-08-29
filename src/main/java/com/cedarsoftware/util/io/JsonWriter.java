@@ -940,11 +940,14 @@ public class JsonWriter implements Closeable, Flushable
         Collection<Field> fields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         Collection<Field> fieldsBySpec = fields;
         if (fields == null)
-        {   // Trace fields using reflection
+        {   // Trace fields using reflection, could filter this with black list here
             fields = MetaUtils.getDeepDeclaredFields(obj.getClass()).values();
         }
+        final List<Field> fieldBlackListForClass = getFieldsUsingSpecifier(obj.getClass(), (Map) args.get(FIELD_BLACK_LIST));
+
         for (final Field field : fields)
         {
+
             if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
             {
                 if (fieldsBySpec == null || !fieldsBySpec.contains(field))
@@ -955,10 +958,15 @@ public class JsonWriter implements Closeable, Flushable
             }
             try
             {
-                final Object o = field.get(obj);
-                if (o != null && !MetaUtils.isLogicalPrimitive(o.getClass()))
-                {   // Trace through objects that can reference other objects
-                    stack.addFirst(o);
+                // make sure blacklisted classes don't get added to the stack.  If a field is proxied, such as
+                // by Hibernate then accessing the item in any way can throw an exception.
+                if (fieldBlackListForClass == null || !fieldBlackListForClass.contains(field))
+                {
+                    final Object o = field.get(obj);
+                    if (o != null && !MetaUtils.isLogicalPrimitive(o.getClass()))
+                    {   // Trace through objects that can reference other objects
+                        stack.addFirst(o);
+                    }
                 }
             }
             catch (Exception ignored) { }
