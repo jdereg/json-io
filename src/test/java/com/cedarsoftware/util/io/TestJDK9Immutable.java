@@ -81,6 +81,36 @@ public class TestJDK9Immutable {
     }
 
     @Test
+    public void testSetOfOne() {
+        final Object o = Set.of("One");
+
+        String json = JsonWriter.objectToJson(o);
+        Set es = (Set) JsonReader.jsonToJava(json);
+
+        Assert.assertEquals(1, es.size());
+    }
+
+    @Test
+    public void testSetOfTwo() {
+        final Object o = Set.of("One", "Two");
+
+        String json = JsonWriter.objectToJson(o);
+        Set es = (Set) JsonReader.jsonToJava(json);
+
+        Assert.assertEquals(2, es.size());
+    }
+
+    @Test
+    public void testSetOfThree() {
+        final Object o = Set.of("One", "Two", "Three");
+
+        String json = JsonWriter.objectToJson(o);
+        Set es = (Set) JsonReader.jsonToJava(json);
+
+        Assert.assertEquals(3, es.size());
+    }
+
+    @Test
     public void testListOfThreeRecs() {
         Rec rec1 = new Rec("OneOrThree", 0);
         Rec rec2 = new Rec("Two", 2);

@@ -599,11 +599,10 @@ abstract class Resolver
                 {
                     String containingTypeName = ref.referencingObj.type;
                     Collection col = (Collection) objToFix;
-                    if (containingTypeName != null && !col.contains(null)
-                        && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable")
+                        && !col.contains(null) && containingTypeName.contains("Set"))
                     {
-                        col = Set.of(col.toArray());
-                        ref.referencingObj.target = col;
+                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.type + "', @ref = " + ref.refId);
                     }
                     else
                     {
