@@ -2,9 +2,11 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import static com.cedarsoftware.util.io.JsonObject.*;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -46,14 +48,18 @@ class JsonParser
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<String, String>();
+    private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
     private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
-    private final StringBuilder strBuf = new StringBuilder();
+    private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
-    private final char[] numBuf = new char[256];
+    private final StringBuilder numBuf = new StringBuilder();
     private final boolean useMaps;
     private final Map<String, String> typeNameMap;
+    private final int maxParseDepth;
+
+    private int curParseDepth = 0;
 
     static
     {
@@ -78,11 +84,11 @@ class JsonParser
         stringCache.put("off", "off");
         stringCache.put("Off", "Off");
         stringCache.put("OFF", "OFF");
-        stringCache.put("@id", "@id");
-        stringCache.put("@ref", "@ref");
-        stringCache.put("@items", "@items");
-        stringCache.put("@type", "@type");
-        stringCache.put("@keys", "@keys");
+        stringCache.put(ID, ID);
+        stringCache.put(REF, REF);
+        stringCache.put(JsonObject.ITEMS, JsonObject.ITEMS);
+        stringCache.put(TYPE, TYPE);
+        stringCache.put(KEYS, KEYS);
         stringCache.put("0", "0");
         stringCache.put("1", "1");
         stringCache.put("2", "2");
@@ -95,12 +101,18 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args, int maxDepth)
     {
         input = reader;
         useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
         objsRead = objectsMap;
         typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
+        maxParseDepth = maxDepth;
+    }
+
+    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
+    {
+        this(reader, objectsMap, args, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     private Object readJsonObject() throws IOException
@@ -120,8 +132,8 @@ class JsonParser
                     c = skipWhitespaceRead();
                     if (c == '{')
                     {
-                        object.line = in.line;
-                        object.col = in.col;
+                        object.line = in.getLine();
+                        object.col = in.getCol();
                         c = skipWhitespaceRead();
                         if (c == '}')
                         {    // empty object
@@ -129,13 +141,10 @@ class JsonParser
                         }
                         in.unread(c);
                         state = STATE_READ_FIELD;
+                        ++curParseDepth;
                     }
                     else
                     {
-                        // The line below is not technically required, however, without it, the tests run
-                        // twice as slow.  It is apparently affecting a word, or paragraph boundary where
-                        // the generated code sits, making it much faster.
-                        objsRead.size();
                         error("Input is invalid JSON; object does not start with '{', c=" + c);
                     }
                     break;
@@ -150,34 +159,28 @@ class JsonParser
                         {
                             error("Expected ':' between string field and value");
                         }
-                        skipWhitespace();
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
                             if (field.equals("@t"))
                             {
-                                field = stringCache.get("@type");
-
+                                field = stringCache.get(TYPE);
                             }
                             else if (field.equals("@i"))
                             {
-                                field = stringCache.get("@id");
-
+                                field = stringCache.get(ID);
                             }
                             else if (field.equals("@r"))
                             {
-                                field = stringCache.get("@ref");
-
+                                field = stringCache.get(REF);
                             }
                             else if (field.equals("@k"))
                             {
-                                field = stringCache.get("@keys");
-
+                                field = stringCache.get(KEYS);
                             }
                             else if (field.equals("@e"))
                             {
-                                field = stringCache.get("@items");
-
+                                field = stringCache.get(ITEMS);
                             }
                         }
                         state = STATE_READ_VALUE;
@@ -192,11 +195,11 @@ class JsonParser
                     if (field == null)
                     {	// field is null when you have an untyped Object[], so we place
                         // the JsonArray on the @items field.
-                        field = "@items";
+                        field = ITEMS;
                     }
 
                     Object value = readValue(object);
-                    if ("@type".equals(field) && typeNameMap != null)
+                    if (TYPE.equals(field) && typeNameMap != null)
                     {
                         final String substitute = typeNameMap.get(value);
                         if (substitute != null)
@@ -207,7 +210,7 @@ class JsonParser
                     object.put(field, value);
 
                     // If object is referenced (has @id), then put it in the _objsRead table.
-                    if ("@id".equals(field))
+                    if (ID.equals(field))
                     {
                         objsRead.put((Long) value, object);
                     }
@@ -223,6 +226,7 @@ class JsonParser
                     if (c == '}')
                     {
                         done = true;
+                        --curParseDepth;
                     }
                     else if (c == ',')
                     {
@@ -236,7 +240,7 @@ class JsonParser
             }
         }
 
-        if (useMaps && object.isPrimitive())
+        if (useMaps && object.isLogicalPrimitive())
         {
             return object.getPrimitiveValue();
         }
@@ -246,11 +250,21 @@ class JsonParser
 
     Object readValue(JsonObject object) throws IOException
     {
-        final int c = input.read();
+        if (curParseDepth > maxParseDepth) {
+            return error("Maximum parsing depth exceeded");
+        }
+
+        int c = skipWhitespaceRead();
+        if (c == '"')
+        {
+            return readString();
+        }
+        else if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I')
+        {
+            return readNumber(c);
+        }
         switch(c)
         {
-            case '"':
-                return readString();
             case '{':
                 input.unread('{');
                 return readJsonObject();
@@ -275,10 +289,6 @@ class JsonParser
                 error("EOF reached prematurely");
         }
 
-        if (c >= '0' && c <= '9' || c == '-')
-        {
-            return readNumber(c);
-        }
         return error("Unknown JSON value type");
     }
 
@@ -287,11 +297,11 @@ class JsonParser
      */
     private Object readArray(JsonObject object) throws IOException
     {
-        final Collection array = new ArrayList();
+        final List<Object> array = new ArrayList();
+        ++curParseDepth;
 
         while (true)
         {
-            skipWhitespace();
             final Object o = readValue(object);
             if (o != EMPTY_ARRAY)
             {
@@ -309,6 +319,7 @@ class JsonParser
             }
         }
 
+        --curParseDepth;
         return array.toArray();
     }
 
@@ -352,66 +363,87 @@ class JsonParser
     private Number readNumber(int c) throws IOException
     {
         final FastPushbackReader in = input;
-        final char[] buffer = this.numBuf;
-        buffer[0] = (char) c;
-        int len = 1;
         boolean isFloat = false;
+
+        if (JsonReader.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
+            /*
+             * In this branch, we must have either one of these scenarios: (a) -NaN or NaN (b) Inf or -Inf (c) -123 but
+             * NOT 123 (replace 123 by any number)
+             *
+             * In case of (c), we do nothing and revert input and c for normal processing.
+             */
+
+            // Handle negativity.
+            final boolean isNeg = (c == '-');
+            if (isNeg) {
+                // Advance to next character.
+                c = input.read();
+            }
+
+            // Case "-Infinity", "Infinity" or "NaN".
+            if (c == 'I') {
+                readToken("infinity");
+                // [Out of RFC 4627] accept NaN/Infinity values
+                return (isNeg) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+            } else if ('N' == c) {
+                // [Out of RFC 4627] accept NaN/Infinity values
+                readToken("nan");
+                return Double.NaN;
+            } else {
+                // This is (c) case, meaning there was c = '-' at the beginning.
+                // This is a number like "-2", but not "-Infinity". We let the normal code process.
+                input.unread(c);
+                c = '-';
+            }
+        }
+
+        // We are sure we have a positive or negative number, so we read char by char.
+        final StringBuilder number = numBuf;
+        number.setLength(0);
+        number.appendCodePoint(c);
+        while (true)
+        {
+            c = in.read();
+            if ((c >= '0' && c <= '9') || c == '-' || c == '+')
+            {
+                number.appendCodePoint(c);
+            }
+            else if (c == '.' || c == 'e' || c == 'E')
+            {
+                number.appendCodePoint(c);
+                isFloat = true;
+            }
+            else if (c == -1)
+            {
+                break;
+            }
+            else
+            {
+                in.unread(c);
+                break;
+            }
+        }
 
         try
         {
-            while (true)
+            if (isFloat)
+            {   // Floating point number needed
+                return Double.parseDouble(number.toString());
+            }
+            else
             {
-                c = in.read();
-                if ((c >= '0' && c <= '9') || c == '-' || c == '+')     // isDigit() inlined for speed here
-                {
-                    buffer[len++] = (char) c;
-                }
-                else if (c == '.' || c == 'e' || c == 'E')
-                {
-                    buffer[len++] = (char) c;
-                    isFloat = true;
-                }
-                else if (c == -1)
-                {
-                    break;
-                }
-                else
-                {
-                    in.unread(c);
-                    break;
-                }
+                return Long.parseLong(number.toString());
             }
         }
-        catch (ArrayIndexOutOfBoundsException e)
+        catch (Exception e)
         {
-            error("Too many digits in number: " + new String(buffer));
+            return (Number) error("Invalid number: " + number, e);
         }
-
-        if (isFloat)
-        {   // Floating point number needed
-            String num = new String(buffer, 0, len);
-            try
-            {
-                return Double.parseDouble(num);
-            }
-            catch (NumberFormatException e)
-            {
-                error("Invalid floating point number: " + num, e);
-            }
-        }
-        boolean isNeg = buffer[0] == '-';
-        long n = 0;
-        for (int i = isNeg ? 1 : 0; i < len; i++)
-        {
-            n = (buffer[i] - '0') + n * 10;
-        }
-        return isNeg ? -n : n;
     }
 
-    private static final int STATE_STRING_START = 0;
-    private static final int STATE_STRING_SLASH = 1;
-    private static final int STATE_HEX_DIGITS_START = 2;
-    private static final int STATE_HEX_DIGITS = 3;
+    private static final int STRING_START = 0;
+    private static final int STRING_SLASH = 1;
+    private static final int HEX_DIGITS = 2;
 
     /**
      * Read a JSON string
@@ -422,125 +454,101 @@ class JsonParser
      */
     private String readString() throws IOException
     {
-        final StringBuilder str = this.strBuf;
+        final StringBuilder str = strBuf;
+        final StringBuilder hex = hexBuf;
         str.setLength(0);
-        boolean done = false;
-        int state = STATE_STRING_START;
+        int state = STRING_START;
+        final FastPushbackReader in = input;
 
-        while (!done)
+        while (true)
         {
-            final int c = input.read();
+            final int c = in.read();
             if (c == -1)
             {
                 error("EOF reached while reading JSON string");
             }
 
-            switch (state)
+            if (state == STRING_START)
             {
-                case STATE_STRING_START:
-                    if (c == '"')
-                    {
-                        done = true;
-                    }
-                    else if (c == '\\')
-                    {
-                        state = STATE_STRING_SLASH;
-                    }
-                    else
-                    {
-                        str.appendCodePoint(c);
-                    }
+                if (c == '"')
+                {
                     break;
+                }
+                else if (c == '\\')
+                {
+                    state = STRING_SLASH;
+                }
+                else
+                {
+                    str.appendCodePoint(c);
+                }
+            }
+            else if (state == STRING_SLASH)
+            {
+                switch(c)
+                {
+                    case '\\':
+                        str.appendCodePoint('\\');
+                        break;
+                    case '/':
+                        str.appendCodePoint('/');
+                        break;
+                    case '"':
+                        str.appendCodePoint('"');
+                        break;
+                    case '\'':
+                        str.appendCodePoint('\'');
+                        break;
+                    case 'b':
+                        str.appendCodePoint('\b');
+                        break;
+                    case 'f':
+                        str.appendCodePoint('\f');
+                        break;
+                    case 'n':
+                        str.appendCodePoint('\n');
+                        break;
+                    case 'r':
+                        str.appendCodePoint('\r');
+                        break;
+                    case 't':
+                        str.appendCodePoint('\t');
+                        break;
+                    case 'u':
+                        hex.setLength(0);
+                        state = HEX_DIGITS;
+                        break;
+                    default:
+                        error("Invalid character escape sequence specified: " + c);
+                }
 
-                case STATE_STRING_SLASH:
-                    switch(c)
+                if (c != 'u')
+                {
+                    state = STRING_START;
+                }
+            }
+            else
+            {
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                {
+                    hex.appendCodePoint((char) c);
+                    if (hex.length() == 4)
                     {
-                        case '\\':
-                            str.append('\\');
-                            break;
-                        case '/':
-                            str.append('/');
-                            break;
-                        case '"':
-                            str.append('"');
-                            break;
-                        case '\'':
-                            str.append('\'');
-                            break;
-                        case 'b':
-                            str.append('\b');
-                            break;
-                        case 'f':
-                            str.append('\f');
-                            break;
-                        case 'n':
-                            str.append('\n');
-                            break;
-                        case 'r':
-                            str.append('\r');
-                            break;
-                        case 't':
-                            str.append('\t');
-                            break;
-                        case 'u':
-                            state = STATE_HEX_DIGITS_START;
-                            break;
-                        default:
-                            error("Invalid character escape sequence specified: " + c);
+                        int value = Integer.parseInt(hex.toString(), 16);
+                        str.appendCodePoint(value);
+                        state = STRING_START;
                     }
-
-                    if (c != 'u')
-                    {
-                        state = STATE_STRING_START;
-                    }
-                    break;
-
-                case STATE_HEX_DIGITS_START:
-                    hexBuf.setLength(0);
-                    state = STATE_HEX_DIGITS;   // intentional 'fall-thru'
-                case STATE_HEX_DIGITS:
-                    switch(c)
-                    {
-                        case '0':
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '5':
-                        case '6':
-                        case '7':
-                        case '8':
-                        case '9':
-                        case 'A':
-                        case 'B':
-                        case 'C':
-                        case 'D':
-                        case 'E':
-                        case 'F':
-                        case 'a':
-                        case 'b':
-                        case 'c':
-                        case 'd':
-                        case 'e':
-                        case 'f':
-                            hexBuf.append((char) c);
-                            if (hexBuf.length() == 4)
-                            {
-                                int value = Integer.parseInt(hexBuf.toString(), 16);
-                                str.append(MetaUtils.valueOf((char) value));
-                                state = STATE_STRING_START;
-                            }
-                            break;
-                        default:
-                            error("Expected hexadecimal digits");
-                    }
-                    break;
+                }
+                else
+                {
+                    error("Expected hexadecimal digits");
+                }
             }
         }
 
         final String s = str.toString();
-        final String cacheHit = stringCache.get(s);
-        return cacheHit == null ? s : cacheHit;
+        final String translate =  stringCache.get(s);
+        return translate == null ? s : translate;
     }
 
     /**
@@ -552,28 +560,13 @@ class JsonParser
      */
     private int skipWhitespaceRead() throws IOException
     {
-        final FastPushbackReader in = input;
-        int c = in.read();
-        while (true)
+        FastPushbackReader in = input;
+        int c;
+        do
         {
-            switch (c)
-            {
-                case '\t':
-                case '\n':
-                case '\r':
-                case ' ':
-                    break;
-                default:
-                    return c;
-            }
-
             c = in.read();
-        }
-    }
-
-    private void skipWhitespace() throws IOException
-    {
-        input.unread(skipWhitespaceRead());
+        } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
+        return c;
     }
 
     Object error(String msg)
@@ -588,6 +581,6 @@ class JsonParser
 
     String getMessage(String msg)
     {
-        return msg + "\nline: " + input.line + ", col: " + input.col + "\n" + input.getLastSnippet();
+        return msg + "\nline: " + input.getLine()+ ", col: " + input.getCol()+ "\n" + input.getLastSnippet();
     }
 }

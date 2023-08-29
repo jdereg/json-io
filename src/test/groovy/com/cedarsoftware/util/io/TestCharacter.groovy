@@ -101,4 +101,13 @@ class TestCharacter
         assertEquals(chars[1], '\t' as char)
         assertEquals(chars[2], '\u0004' as char)
     }
+
+    @Test
+    void testQuoteAsCharacterValue()
+    {
+        String jsonString = """{ "@type": "char", "value": "\\"" }"""
+        JsonReader jsonReader = new JsonReader(new ByteArrayInputStream(jsonString.getBytes('UTF-8')))
+        Object object = jsonReader.readObject()
+        assert (Character) object == '"'
+    }
 }

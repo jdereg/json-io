@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io
 import org.junit.Test
 
 import static org.junit.Assert.assertFalse
+import static com.cedarsoftware.util.io.JsonObject.ID
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -33,7 +34,7 @@ class TestNoId
     {
         NoId noId = new NoId()
         String json = JsonWriter.objectToJson(noId)
-        assertFalse(json.contains("@id"))
+        assertFalse(json.contains(ID))
     }
 
     @Test
@@ -43,10 +44,10 @@ class TestNoId
         TestObject beta = new TestObject('beta')
         alpha._other = beta
         String json = TestUtil.getJsonString(alpha)
-        assert !json.contains('@id')
+        assert !json.contains(ID)
 
         beta._other = alpha
         json = TestUtil.getJsonString(alpha)
-        assert json.count('@id') == 1
+        assert json.count(ID) == 1
     }
 }

@@ -1,7 +1,12 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -31,8 +36,13 @@ import java.util.*;
  */
 public class JsonObject<K, V> extends LinkedHashMap<K, V>
 {
-    static Set<String> primitives = new HashSet<String>();
-    static Set<String> primitiveWrappers = new HashSet<String>();
+    public static final String KEYS = "@keys";
+    public static final String ITEMS = "@items";
+    public static final String ID = "@id";
+    public static final String REF = "@ref";
+    public static final String TYPE = "@type";
+    static Set<String> primitives = new HashSet<>();
+    static Set<String> primitiveWrappers = new HashSet<>();
 
     Object target;
     boolean isMap = false;
@@ -75,7 +85,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public void setType(String type)
     {
-        this.type = type != null ? type.intern() : null;
+        this.type = type;
     }
 
     public String getType()
@@ -98,47 +108,68 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return target.getClass();
     }
 
-    public boolean isPrimitive()
+    public boolean isLogicalPrimitive()
     {
-        return type != null && primitiveWrappers.contains(type);
-    }
-
-    public static boolean isPrimitiveWrapper(Class c)
-    {
-        final String cname = c.getName();
-        return primitiveWrappers.contains(cname);
+        return primitiveWrappers.contains(type) || primitives.contains(type) || "date".equals(type) ||
+                "java.math.BigInteger".equals(type) || "java.math.BigDecimal".equals(type);
     }
 
     public Object getPrimitiveValue()
     {
-        if (type.equals("byte"))
+        if ("boolean".equals(type) || "double".equals(type) || "long".equals(type))
+        {
+            return get("value");
+        }
+        else if ("byte".equals(type))
         {
             Number b = (Number) get("value");
             return b.byteValue();
         }
-        else if (type.equals("char"))
+        else if ("char".equals(type))
         {
             String c = (String) get("value");
             return c.charAt(0);
         }
-        else if (type.equals("boolean") || type.equals("double") || type.equals("long"))
-        {
-            return get("value");
-        }
-        else if (type.equals("float"))
+        else if ("float".equals(type))
         {
             Number f = (Number) get("value");
             return f.floatValue();
         }
-        else if (type.equals("int"))
+        else if ("int".equals(type))
         {
             Number integer = (Number) get("value");
             return integer.intValue();
         }
-        else if (type.equals("short"))
+        else if ("short".equals(type))
         {
             Number s = (Number) get("value");
             return s.shortValue();
+        }
+        else if ("date".equals(type))
+        {
+            Object date = get("value");
+            if (date instanceof Long)
+            {
+                return new Date((Long)(date));
+            }
+            else if (date instanceof String)
+            {
+                return Readers.DateReader.parseDate((String) date);
+            }
+            else
+            {
+                throw new JsonIoException("Unknown date type: " + type);
+            }
+        }
+        else if ("java.math.BigInteger".equals(type))
+        {
+            Object value = get("value");
+            return Readers.bigIntegerFrom(value);
+        }
+        else if ("java.math.BigDecimal".equals(type))
+        {
+            Object value = get("value");
+            return Readers.bigDecimalFrom(value);
         }
         else
         {
@@ -151,12 +182,12 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
      */
     public boolean isReference()
     {
-        return containsKey("@ref");
+        return containsKey(REF);
     }
 
     public Long getReferenceId()
     {
-        return (Long) get("@ref");
+        return (Long) get(REF);
     }
 
     // Map APIs
@@ -168,12 +199,15 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     // Collection APIs
     public boolean isCollection()
     {
-        if (containsKey("@items") && !containsKey("@keys"))
+        if (target instanceof Collection)
         {
-            return (target instanceof Collection || (type != null && !type.contains("[")));
+            return true;
         }
-
-        return target instanceof Collection;
+        if (containsKey(ITEMS) && !containsKey(KEYS))
+        {
+            return type != null && !type.contains("[");
+        }
+        return false;
     }
 
     // Array APIs
@@ -185,7 +219,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             {
                 return type.contains("[");
             }
-            return containsKey("@items") && !containsKey("@keys");
+            return containsKey(ITEMS) && !containsKey(KEYS);
         }
         return target.getClass().isArray();
     }
@@ -195,7 +229,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     // example).
     public Object[] getArray()
     {
-        return (Object[]) get("@items");
+        return (Object[]) get(ITEMS);
     }
 
     public int getLength()
@@ -204,14 +238,14 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             if (target == null)
             {
-                Object[] items = (Object[]) get("@items");
+                Object[] items = (Object[]) get(ITEMS);
                 return items == null ? 0 : items.length;
             }
             return Array.getLength(target);
         }
         if (isCollection() || isMap())
         {
-            Object[] items = (Object[]) get("@items");
+            Object[] items = (Object[]) get(ITEMS);
             return items == null ? 0 : items.length;
         }
         throw new JsonIoException("getLength() called on a non-collection, line " + line + ", col " + col);
@@ -263,19 +297,19 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             return super.put(null, value);
         }
 
-        if (key.equals("@type"))
+        if (key.equals(TYPE))
         {
             String oldType = type;
             type = (String) value;
             return (V) oldType;
         }
-        else if (key.equals("@id"))
+        else if (key.equals(ID))
         {
             Long oldId = id;
             id = (Long) value;
             return (V) oldId;
         }
-        else if (("@items".equals(key) && containsKey("@keys")) || ("@keys".equals(key) && containsKey("@items")))
+        else if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
         {
             isMap = true;
         }
@@ -290,7 +324,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     void clearArray()
     {
-        remove("@items");
+        remove(ITEMS);
     }
 
     /**
@@ -311,9 +345,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public int size()
     {
-        if (containsKey("@items"))
+        if (containsKey(ITEMS))
         {
-            Object value = get("@items");
+            Object value = get(ITEMS);
             if (value instanceof Object[])
             {
                 return ((Object[])value).length;
@@ -327,7 +361,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
                 throw new JsonIoException("JsonObject with @items, but no array [] associated to it, line " + line + ", col " + col);
             }
         }
-        else if (containsKey("@ref"))
+        else if (containsKey(REF))
         {
             return 0;
         }

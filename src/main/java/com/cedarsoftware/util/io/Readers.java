@@ -1,14 +1,27 @@
 package com.cedarsoftware.util.io;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * All special readers for json-io are stored here.  Special readers are not needed for handling
+ * All custom readers for json-io subclass this class.  Special readers are not needed for handling
  * user-defined classes.  However, special readers are built/supplied by json-io for many of the
  * primitive types and other JDK classes simply to allow for a more concise form.
  *
@@ -44,7 +57,7 @@ public class Readers
     private static final Pattern timePattern2 = Pattern.compile("(\\d{2})[.:](\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern timePattern3 = Pattern.compile("(\\d{2})[.:](\\d{2})([+-]\\d{2}[:]?\\d{2}|Z)?");
     private static final Pattern dayPattern = Pattern.compile(DAYS, Pattern.CASE_INSENSITIVE);
-    private static final Map<String, String> months = new LinkedHashMap<String, String>();
+    private static final Map<String, String> months = new LinkedHashMap<>();
 
     static
     {
@@ -85,7 +98,7 @@ public class Readers
             {
                 throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
-            jObj.target = TimeZone.getTimeZone((String) zone);                  
+            jObj.target = TimeZone.getTimeZone((String) zone);
             return jObj.target;
         }
     }
@@ -140,7 +153,7 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = classForName((String) type);
+                    c = classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 }
 
                 Calendar calendar = (Calendar) newInstance(c, jObj);
@@ -192,7 +205,7 @@ public class Readers
             }
         }
 
-        private Date parseDate(String dateStr)
+        static Date parseDate(String dateStr)
         {
             dateStr = dateStr.trim();
             if (dateStr.isEmpty())
@@ -443,17 +456,110 @@ public class Readers
         {
             if (o instanceof String)
             {
-                return classForName((String) o);
+                return classForName((String) o, (ClassLoader)args.get(JsonReader.CLASSLOADER));
             }
 
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = classForName((String) jObj.get("value"));
+                jObj.target = classForName((String) jObj.get("value"), (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 return jObj.target;
             }
             throw new JsonIoException("Class missing 'value' field");
         }
+    }
+
+    public static class AtomicBooleanReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicBoolean");
+
+            if (value instanceof String)
+            {
+                String state = (String) value;
+                if ("".equals(state.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicBoolean("true".equalsIgnoreCase(state));
+            }
+            else if (value instanceof Boolean)
+            {
+                return new AtomicBoolean((Boolean) value);
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicBoolean(((Number)value).longValue() != 0);
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicBoolean, value type = " + value.getClass().getName());
+        }
+    }
+
+    public static class AtomicIntegerReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicInteger");
+
+            if (value instanceof String)
+            {
+                String num = (String) value;
+                if ("".equals(num.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicInteger(Integer.parseInt(MetaUtils.removeLeadingAndTrailingQuotes(num)));
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicInteger(((Number)value).intValue());
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicInteger, value type = " + value.getClass().getName());
+        }
+    }
+
+    public static class AtomicLongReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            Object value = o;
+            value = getValueFromJsonObject(o, value, "AtomicLong");
+
+            if (value instanceof String)
+            {
+                String num = (String) value;
+                if ("".equals(num.trim()))
+                {   // special case
+                    return null;
+                }
+                return new AtomicLong(Long.parseLong(MetaUtils.removeLeadingAndTrailingQuotes(num)));
+            }
+            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
+            {
+                return new AtomicLong(((Number)value).longValue());
+            }
+            throw new JsonIoException("Unknown value in JSON assigned to AtomicLong, value type = " + value.getClass().getName());
+        }
+    }
+
+    private static Object getValueFromJsonObject(Object o, Object value, String typeName)
+    {
+        if (o instanceof JsonObject)
+        {
+            JsonObject jObj = (JsonObject) o;
+            if (jObj.containsKey("value"))
+            {
+                value = jObj.get("value");
+            }
+            else
+            {
+                throw new JsonIoException(typeName + " defined as JSON {} object, missing 'value' field");
+            }
+        }
+        return value;
     }
 
     public static class BigIntegerReader implements JsonReader.JsonClassReaderEx
@@ -723,10 +829,80 @@ public class Readers
         }
     }
 
-    // ========== Maintain dependency knowledge in once place, down here =========
-    static Class classForName(String name)
+    public static class UUIDReader implements JsonReader.JsonClassReaderEx
     {
-        return MetaUtils.classForName(name);
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+
+            // to use the String representation
+            if (o instanceof String)
+            {
+                return UUID.fromString((String) o);
+            }
+
+            JsonObject jObj = (JsonObject) o;
+            Long mostSigBits = (Long) jObj.get("mostSigBits");
+            if (mostSigBits == null)
+            {
+                throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field");
+            }
+            Long leastSigBits = (Long) jObj.get("leastSigBits");
+            if (leastSigBits == null)
+            {
+                throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field");
+            }
+
+            UUID uuid = new UUID(mostSigBits, leastSigBits);
+
+            jObj.setTarget(uuid);
+            return jObj.getTarget();
+        }
+    }
+
+    public static class RecordReader implements JsonReader.JsonClassReaderEx
+    {
+        @Override
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            try
+            {
+                JsonObject jsonObj = (JsonObject) o;
+
+                ArrayList<Class> lParameterTypes = new ArrayList<>(jsonObj.size());
+                ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
+
+                Class c = Class.forName(jsonObj.getType());
+                // the record components are per definition in the constructor parameter order
+                // we implement this with reflection due to code compatibility Java<16
+                Method getRecordComponents = Class.class.getMethod("getRecordComponents");
+                Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
+                for (Object recordComponent : recordComponents)
+                {
+                    Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
+                    lParameterTypes.add(type);
+
+                    String name = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                    lParameterValues.add(jsonObj.get(name));
+                }
+
+                Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+
+                return constructor.newInstance(lParameterValues.toArray(new Object[0]));
+
+            } catch (NoSuchMethodException e)
+            {
+                throw new RuntimeException("Record de-serialization only works with java>=16.", e);
+            } catch (Exception e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    // ========== Maintain dependency knowledge in once place, down here =========
+    static Class classForName(String name, ClassLoader classLoader)
+    {
+        return MetaUtils.classForName(name, classLoader);
     }
 
     static Object newInstance(Class c, JsonObject jsonObject)

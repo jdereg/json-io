@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertTrue
@@ -22,6 +23,7 @@ import static org.junit.Assert.fail
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestErrors
 {
     @Test
@@ -74,31 +76,24 @@ class TestErrors
     @Test
     void testParseInvalid1stChar()
     {
-        try
-        {
-            String json = '''
-  "array": [
-    1,
-    2,
-    3
-  ],
-  "boolean": true,
-  "null": null,
-  "number": 123,
-  "object": {
-    "a": "b",
-    "c": "d",
-    "e": "f"
-  },
-  "string:" "Hello World"
+        String json = '''
+"array": [
+1,
+2,
+3
+],
+"boolean": true,
+"null": null,
+"number": 123,
+"object": {
+"a": "b",
+"c": "d",
+"e": "f"
+},
+"string:" "Hello World"
 }'''
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unknown json value type"))
-        }
+        def x = JsonReader.jsonToJava(json)
+        assert "array" == x
     }
 
     @Test
@@ -402,16 +397,51 @@ class TestErrors
     void testBadType()
     {
         String json = '{"@type":"non.existent.class.Non"}'
-        Map map = TestUtil.readJsonObject(json)
+        Map map = (Map) TestUtil.readJsonObject(json)
         assert map.size() == 0
 
         // Bad class inside a Collection
         json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name", "fingers":5}]}'
-        List list = TestUtil.readJsonObject(json)
+        List list = (List) TestUtil.readJsonObject(json)
         assert list.size() == 3
         assert list[0] == null
         assert list[1]
-        assert list[2].fingers == 5
+        assert list[2]['fingers'] == 5
+    }
+
+    private static class Animal
+    {
+
+    }
+
+    private static class Dog extends Animal
+    {
+
+    }
+
+    private static class AnimalHolder
+    {
+        Animal dog;
+    }
+
+    @Test
+    void testBadTypeObject()
+    {
+        // Unclear and misleading error if the type is not found
+        AnimalHolder h = new AnimalHolder()
+        h.dog = new Dog()
+
+        String json = TestUtil.getJsonString(h)
+        json = json.replace('$Dog', '$BadDog');
+       try
+        {
+            TestUtil.readJsonObject(json)
+        }
+        catch (Exception e)
+        {
+            // Should indicate the type that was not found
+            assert e.toString().contains("BadDog");
+        }
     }
 
     @Test
@@ -425,7 +455,10 @@ class TestErrors
             TestUtil.readJsonObject(str.toString())
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('["\\u000r')
+        }
     }
 
     @Test
@@ -437,7 +470,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('{"field":19;')
+        }
 
         try
         {
@@ -445,7 +481,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('{"field":')
+        }
 
         try
         {
@@ -453,7 +492,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('{"field":j')
+        }
 
         try
         {
@@ -461,7 +503,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('{"field":trux')
+        }
 
         try
         {
@@ -469,7 +514,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('{"field":tru')
+        }
     }
 
     @Test
@@ -487,7 +535,10 @@ class TestErrors
             TestUtil.readJsonObject(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('["escaped slash \\x')
+        }
     }
 
     @Test
@@ -498,7 +549,11 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"class"}]')
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('lass listed')
+            assert e.message.contains('not found')
+        }
     }
 
     @Test
@@ -509,7 +564,11 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"java.util.Calendar"}]')
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('lass listed')
+            assert e.message.contains('not found')
+        }
     }
 
     @Test
@@ -520,7 +579,10 @@ class TestErrors
             TestUtil.readJsonObject('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]')
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains('ailed to parse calendar')
+        }
     }
 
     @Test
@@ -531,7 +593,10 @@ class TestErrors
             TestUtil.readJsonObject('{"@type":""}')
             fail()
         }
-        catch(Exception e) { }
+        catch(Exception e)
+        {
+            assert e.message.contains('nable to create class')
+        }
     }
 
     @Test
@@ -542,7 +607,8 @@ class TestErrors
             TestUtil.readJsonObject('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}')
             fail()
         }
-        catch(Exception e) { }
+        catch(Exception ignored)
+        { }
     }
 
     @Test
@@ -554,7 +620,11 @@ class TestErrors
             JsonReader.jsonToJava(json)
             fail()
         }
-        catch (Exception e) { }
+        catch (Exception e)
+        {
+            assert e.message.contains("xpected ':'")
+            assert e.message.contains('"field:"v')
+        }
     }
 
     @Test

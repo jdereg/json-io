@@ -12,9 +12,13 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * All special writers for json-io are stored here.  Special writers are not needed for handling
+ * All custom writers for json-io subclass this class.  Special writers are not needed for handling
  * user-defined classes.  However, special writers are built/supplied by json-io for many of the
  * primitive types and other JDK classes simply to allow for a more concise form.
  *
@@ -218,6 +222,81 @@ public class Writers
         }
     }
 
+    public static class AtomicBooleanWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicBoolean value = (AtomicBoolean) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicBoolean value = (AtomicBoolean) o;
+            output.write(value.toString());
+        }
+    }
+
+    public static class AtomicIntegerWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicInteger value = (AtomicInteger) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicInteger value = (AtomicInteger) o;
+            output.write(value.toString());
+        }
+    }
+
+    public static class AtomicLongWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            if (showType)
+            {
+                AtomicLong value = (AtomicLong) obj;
+                output.write("\"value\":");
+                output.write(value.toString());
+            }
+            else
+            {
+                writePrimitiveForm(obj, output);
+            }
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            AtomicLong value = (AtomicLong) o;
+            output.write(value.toString());
+        }
+    }
+
     public static class BigDecimalWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
@@ -282,6 +361,35 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             StringBuffer buffer = (StringBuffer) o;
+            output.write('"');
+            output.write(buffer.toString());
+            output.write('"');
+        }
+    }
+
+    public static class UUIDWriter implements JsonWriter.JsonClassWriter
+    {
+        /**
+         * To preserve backward compatibility with previous serialized format the internal fields must be stored as longs
+         */
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            UUID uuid = (UUID) obj;
+            output.write("\"mostSigBits\": ");
+            output.write(Long.toString(uuid.getMostSignificantBits()));
+            output.write(",\"leastSigBits\":");
+            output.write(Long.toString(uuid.getLeastSignificantBits()));
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+
+        /**
+         * We can use the String representation for easier handling, but this may break backwards compatibility
+         * if an earlier library version is used
+         */
+        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        {
+            UUID buffer = (UUID) o;
             output.write('"');
             output.write(buffer.toString());
             output.write('"');

@@ -9,6 +9,7 @@ import static org.junit.Assert.assertNotSame
 import static org.junit.Assert.assertNull
 import static org.junit.Assert.assertTrue
 
+import static com.cedarsoftware.util.io.JsonObject.REF
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -108,7 +109,7 @@ class TestBigDecimal
         bigDecs.fromDouble = new BigDecimal("0.0")
         bigDecs.fromBoolean = bigDecs.fromDouble;
         String json = TestUtil.getJsonString(bigDecs)
-        assertFalse(json.contains("@ref"))
+        assertFalse(json.contains(REF))
     }
 
     @Test

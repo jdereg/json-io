@@ -2,6 +2,8 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
+import static org.junit.Assert.fail
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -38,5 +40,26 @@ class TestUnknownObjectType
         def java = JsonReader.jsonToJava(json)
         assert java instanceof Map
         assert java.name == 'Joe'
+    }
+
+    @Test
+    void testUnknownClassTypePassesWhenFailOptionFalse()
+    {
+        def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
+        def java = JsonReader.jsonToJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): false ])
+        assert java instanceof Map
+        assert java.name == 'Joe'
+    }
+
+    @Test
+    void testUnknownClassTypeFailsWhenFailOptionTrue()
+    {
+        def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
+        try {
+            JsonReader.jsonToJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): true ])
+            fail()
+        }
+        catch (JsonIoException expected) {
+        }
     }
 }

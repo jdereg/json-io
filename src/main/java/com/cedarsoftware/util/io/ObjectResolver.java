@@ -1,33 +1,46 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
- * The ObjectResolver converts the raw Maps created from the JsonParser to Java
+ * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
  * objects (a graph of Java instances).  The Maps have an optional type entry associated
  * to them to indicate what Java peer instance to create.  The reason type is optional
  * is because it can be inferred in a couple instances.  A non-primitive field that
  * points to an object that is of the same type of the field, does not require the
- * @type because it can be inferred from the field.  This is not always the case.
+ * '@type' because it can be inferred from the field.  This is not always the case.
  * For example, if a Person field points to an Employee object (where Employee is a
  * subclass of Person), then the resolver cannot create an instance of the field type
  * (Person) because this is not the proper type.  (It had an Employee record with more
  * fields in this example). In this case, the writer recognizes that the instance type
  * and field type are not the same and therefore it writes the @type.
- *
+ * </p><p>
  * A similar case as above occurs with specific array types.  If there is a Person[]
  * containing Person and Employee instances, then the Person instances will not have
  * the '@type' but the employee instances will (because they are more derived than Person).
- *
- * The resolver 'rewires' the original object graph.  It does this by replacing
- * @ref values in the Maps with pointers (on the field of the associated instance of the
+ * </p><p>
+ * The resolver 'wires' the original object graph.  It does this by replacing
+ * '@ref' values in the Maps with pointers (on the field of the associated instance of the
  * Map) to the object that has the same ID.  If the object has not yet been read, then
  * an UnresolvedReference is created.  These are back-patched at the end of the resolution
  * process.  UnresolvedReference keeps track of what field or array element the actual value
  * should be stored within, and then locates the object (by id), and updates the appropriate
  * value.
- *
+ * </p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -44,11 +57,21 @@ import java.util.*;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class ObjectResolver extends Resolver
+public class ObjectResolver extends Resolver
 {
-    protected ObjectResolver(JsonReader reader)
+    private final ClassLoader classLoader;
+    protected JsonReader.MissingFieldHandler missingFieldHandler;
+
+    /**
+     * Constructor
+     * @param reader JsonReader instance being used
+     * @param classLoader ClassLoader that was set in the passed in 'options' arguments to JsonReader.
+     */
+    protected ObjectResolver(JsonReader reader, ClassLoader classLoader)
     {
         super(reader);
+        this.classLoader = classLoader;
+        missingFieldHandler = reader.getMissingFieldHandler();
     }
 
     /**
@@ -58,15 +81,8 @@ class ObjectResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
-        Object special;
-        if ((special = readIfMatching(jsonObj, null, stack)) != null)
-        {
-            jsonObj.target = special;
-            return;
-        }
-
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
@@ -81,7 +97,18 @@ class ObjectResolver extends Resolver
             {
                 assignField(stack, jsonObj, field, rhs);
             }
+            else if (missingFieldHandler != null)
+            {
+                handleMissingField(stack, jsonObj, rhs, key);
+            }//else no handler so ignor.
         }
+    }
+
+    static boolean isBasicWrapperType(Class clazz) {
+        return clazz == Boolean.class || clazz == Integer.class ||
+            clazz == Short.class || clazz == Character.class ||
+            clazz == Byte.class || clazz == Long.class ||
+            clazz == Double.class || clazz == Float.class;
     }
 
     /**
@@ -97,6 +124,7 @@ class ObjectResolver extends Resolver
                                final Field field, final Object rhs)
     {
         final Object target = jsonObj.target;
+        final Class targetClass = target.getClass();
         try
         {
             final Class fieldType = field.getType();
@@ -104,7 +132,11 @@ class ObjectResolver extends Resolver
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, "0"));
+                    if(isBasicWrapperType(targetClass)) {
+                        jsonObj.target = MetaUtils.convert(fieldType, "0");
+                    } else {
+                        field.set(target, MetaUtils.convert(fieldType, "0"));
+                    }
                 }
                 else
                 {
@@ -143,7 +175,12 @@ class ObjectResolver extends Resolver
             }
             else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
             {
-                field.set(target, special);
+                //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
+                if(Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
+                    //no need to set for this case
+                } else {
+                    field.set(target, special);
+                }
             }
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
@@ -163,7 +200,7 @@ class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    jsonArray.put("@items", elements);
+                    jsonArray.put(ITEMS, elements);
                     createJavaObjectInstance(fieldType, jsonArray);
                     field.set(target, jsonArray.target);
                     stack.addFirst(jsonArray);
@@ -200,7 +237,11 @@ class ObjectResolver extends Resolver
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
-                    field.set(target, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
+                    if(isBasicWrapperType(targetClass)) {
+                        jsonObj.target = MetaUtils.convert(fieldType, rhs);
+                    } else {
+                        field.set(target, MetaUtils.convert(fieldType, rhs));
+                    }
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
@@ -214,10 +255,114 @@ class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            throw new JsonIoException(e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs, e);
+            String message = e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs;
+            if (MetaUtils.loadClassException != null)
+            {
+                message += " Caused by: " + MetaUtils.loadClassException + " (which created a LinkedHashMap instead of the desired class)";
+            }
+            throw new JsonIoException(message, e);
         }
     }
 
+
+    /**
+     * Try to create an java object from the missing field.
+	 * Mosly primitive types and jsonObject that contains @type attribute will
+	 * be candidate for the missing field callback, others will be ignored. 
+	 * All missing field are stored for later notification
+     *
+     * @param stack Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     * @param rhs the JSON value that will be converted and stored in the 'field' on the associated Java target object.
+     * @param missingField name of the missing field in the java object.
+     */
+    protected void handleMissingField(final Deque<JsonObject<String, Object>> stack, final JsonObject jsonObj, final Object rhs,
+                                      final String missingField)
+    {
+        final Object target = jsonObj.target;
+        try
+        {
+            if (rhs == null)
+            { // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
+                storeMissingField(target, missingField, null);
+                return;
+            }
+
+            // we have a jsonobject with a type
+            Object special;
+            if (rhs == JsonParser.EMPTY_OBJECT)
+            {
+                storeMissingField(target, missingField, null);
+            }
+            else if ((special = readIfMatching(rhs, null, stack)) != null)
+            {
+                storeMissingField(target, missingField, special);
+            }
+            else if (rhs.getClass().isArray())
+            {
+                // impossible to determine the array type.
+                storeMissingField(target, missingField, null);
+            }
+            else if (rhs instanceof JsonObject)
+            {
+                final JsonObject<String, Object> jObj = (JsonObject) rhs;
+                final Long ref = jObj.getReferenceId();
+
+                if (ref != null)
+                { // Correct field references
+                    final JsonObject refObject = getReferencedObj(ref);
+                    storeMissingField(target, missingField, refObject.target);
+                }
+                else
+                {   // Assign ObjectMap's to Object (or derived) fields
+                    // check that jObj as a type
+                    if (jObj.getType() != null)
+                    {
+                        Object createJavaObjectInstance = createJavaObjectInstance(null, jObj);
+                        if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                        {
+                            stack.addFirst((JsonObject) rhs);
+                        }
+                        storeMissingField(target, missingField, createJavaObjectInstance);
+                    } 
+                    else //no type found, just notify.
+                    {
+                        storeMissingField(target, missingField, null);
+                    }
+                }
+            }
+            else
+            {
+                storeMissingField(target, missingField, rhs);
+            }
+        }
+        catch (Exception e)
+        {
+            String message = e.getClass().getSimpleName() + " missing field '" + missingField + "' on target: "
+                    + safeToString(target) + " with value: " + rhs;
+            if (MetaUtils.loadClassException != null)
+            {
+                message += " Caused by: " + MetaUtils.loadClassException
+                        + " (which created a LinkedHashMap instead of the desired class)";
+            }
+            throw new JsonIoException(message, e);
+        }
+    }
+
+    /**
+     * stores the missing field and their values to call back the handler at the end of the resolution, cause some
+     * reference may need to be resolved later.
+     */
+    private void storeMissingField(Object target, String missingField, Object value)
+    {
+        missingFields.add(new Missingfields(target, missingField, value));
+    }
+
+
+    /**
+     * @param o Object to turn into a String
+     * @return .toString() version of o or "null" if o is null.
+     */
     private static String safeToString(Object o)
     {
         if (o == null)
@@ -276,7 +421,7 @@ class ObjectResolver extends Resolver
             else if (element.getClass().isArray())
             {
                 final JsonObject jObj = new JsonObject();
-                jObj.put("@items", element);
+                jObj.put(ITEMS, element);
                 createJavaObjectInstance(Object.class, jObj);
                 col.add(jObj.target);
                 convertMapsToObjects(jObj);
@@ -317,7 +462,7 @@ class ObjectResolver extends Resolver
             idx++;
         }
 
-        jsonObj.remove("@items");   // Reduce memory required during processing
+        jsonObj.remove(ITEMS);   // Reduce memory required during processing
     }
 
     /**
@@ -375,7 +520,7 @@ class ObjectResolver extends Resolver
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, MetaUtils.newPrimitiveWrapper(compType, element));
+                Array.set(array, i, MetaUtils.convert(compType, element));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays
@@ -402,7 +547,7 @@ class ObjectResolver extends Resolver
                 else
                 {
                     JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
-                    jsonObject.put("@items", element);
+                    jsonObject.put(ITEMS, element);
                     Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
                 }
@@ -449,6 +594,15 @@ class ObjectResolver extends Resolver
         jsonObj.clearArray();
     }
 
+    /**
+     * Convert the passed in object (o) to a proper Java object.  If the passed in object (o) has a custom reader
+     * associated to it, then have it convert the object.  If there is no custom reader, then return null.
+     * @param o Object to read (convert).  Will be either a JsonObject or a JSON primitive String, long, boolean,
+     *          double, or null.
+     * @param compType Class destination type to which the passed in object should be converted to.
+     * @param stack   a Stack (Deque) used to support graph traversal.
+     * @return Java object converted from the passed in object o, or if there is no custom reader.
+     */
     protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack)
     {
         if (o == null)
@@ -456,12 +610,9 @@ class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (compType != null)
+        if (compType != null && notCustom(compType))
         {
-            if (notCustom(compType))
-            {
-                return null;
-            }
+            return null;
         }
 
         final boolean isJsonObject = o instanceof JsonObject;
@@ -483,7 +634,7 @@ class ObjectResolver extends Resolver
             }
 
             if (jObj.target == null)
-            {   // '@type' parameter used
+            {   // '@type' parameter used (not target instance)
                 String typeStr = null;
                 try
                 {
@@ -491,7 +642,7 @@ class ObjectResolver extends Resolver
                     if (type != null)
                     {
                         typeStr = (String) type;
-                        c = MetaUtils.classForName((String) type);
+                        c = MetaUtils.classForName((String) type, classLoader);
                     }
                     else
                     {
@@ -551,7 +702,7 @@ class ObjectResolver extends Resolver
 		return read;
     }
 
-    private static void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
+    private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
     {
         final Deque<Object[]> stack = new ArrayDeque<Object[]>();
         stack.addFirst(new Object[] {type, rhs});
@@ -577,15 +728,15 @@ class ObjectResolver extends Resolver
                 if (Map.class.isAssignableFrom(clazz))
                 {
                     Map map = (Map) instance;
-                    if (!map.containsKey("@keys") && !map.containsKey("@items") && map instanceof JsonObject)
+                    if (!map.containsKey(KEYS) && !map.containsKey(ITEMS) && map instanceof JsonObject)
                     {   // Maps created in Javascript will come over without @keys / @items.
                         convertMapToKeysItems((JsonObject) map);
                     }
 
-                    Object[] keys = (Object[])map.get("@keys");
+                    Object[] keys = (Object[])map.get(KEYS);
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
 
-                    Object[] items = (Object[])map.get("@items");
+                    Object[] items = (Object[])map.get(ITEMS);
                     getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 }
                 else if (Collection.class.isAssignableFrom(clazz))
@@ -607,7 +758,7 @@ class ObjectResolver extends Resolver
                                 JsonObject coll = new JsonObject();
                                 coll.type = clazz.getName();
                                 List items = Arrays.asList((Object[]) vals);
-                                coll.put("@items", items.toArray());
+                                coll.put(ITEMS, items.toArray());
                                 stack.addFirst(new Object[]{t, items});
                                 array[i] = coll;
                             }
@@ -704,6 +855,11 @@ class ObjectResolver extends Resolver
         }
     }
 
+    /**
+     * Given the passed in Type t, return the raw type of it, if the passed in value is a ParameterizedType.
+     * @param t Type to attempt to get raw type from.
+     * @return Raw type obtained from the passed in parameterized type or null if T is not a ParameterizedType
+     */
     public static Class getRawType(final Type t)
     {
         if (t instanceof ParameterizedType)

@@ -46,8 +46,8 @@ class TestWriters
     @Test
     void testNumericTruth()
     {
-        assertFalse JsonWriter.isTrue(new BigInteger(0))
-        assertTrue JsonWriter.isTrue(new BigInteger(1))
+        assertFalse JsonWriter.isTrue(BigInteger.valueOf(0))
+        assertTrue JsonWriter.isTrue(BigInteger.valueOf(1))
         assertFalse JsonWriter.isTrue(new BigDecimal(0.0))
         assertTrue JsonWriter.isTrue(new BigDecimal(1.1))
         assertFalse JsonWriter.isTrue(0.0d)

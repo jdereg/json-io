@@ -6,12 +6,8 @@ import org.junit.Test
 
 import java.lang.reflect.Array
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertFalse
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertSame
-import static org.junit.Assert.assertTrue
+import static com.cedarsoftware.util.io.JsonObject.ITEMS
+import static org.junit.Assert.*
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -40,7 +36,7 @@ class TestArrays
 	public static Integer _CONST_INT = new Integer(36)
 	public static Long _CONST_LONG = new Long(46)
 	public static Float _CONST_FLOAT = new Float(56.56f)
-	public static Double _CONST_DOUBLE = new Double(66.66)
+	public static Double _CONST_DOUBLE = new Double(66.66d)
 
     static class CharArrayTest
     {
@@ -50,19 +46,18 @@ class TestArrays
 
     private static class Empty implements Serializable
     {
-        public static double multiply(double x, double y)
+        static double multiply(double x, double y)
         {
             return x * y;
         }
 
-        @Override
-        public boolean equals(Object other)
+        boolean equals(Object other)
         {
             return other instanceof Empty;
         }
     }
 
-    public static class ManyArrays implements Serializable
+    static class ManyArrays implements Serializable
     {
         private Empty _empty_a;
         private Empty _empty_b;
@@ -540,10 +535,10 @@ class TestArrays
         assertTrue(root._doubles_b.length == 0)
         assertNull(root._doubles_c)
         assertTrue(root._doubles_d.length == 5)
-        assertTrue(root._doubles_d[0].equals(new Double(0.0)))
+        assertTrue(root._doubles_d[0].equals(new Double(0.0d)))
         assertTrue(root._doubles_d[1].equals(new Double(Double.MIN_VALUE)))
         assertTrue(root._doubles_d[2].equals(new Double(Double.MAX_VALUE)))
-        assertTrue(root._doubles_d[3].equals(new Double(-1.0)))
+        assertTrue(root._doubles_d[3].equals(new Double(-1.0d)))
         assertNull(root._doubles_d[4])
         assertTrue(root._doubles_e.length == 0)
         assertNull(root._doubles_f)
@@ -635,7 +630,7 @@ class TestArrays
         assertTrue(root._hetero_a[4].equals(new Integer(9)))
         assertTrue(root._hetero_a[5].equals(new Long(9)))
         assertTrue(root._hetero_a[6].equals(new Float(9.9f)))
-        assertTrue(root._hetero_a[7].equals(new Double(9.9)))
+        assertTrue(root._hetero_a[7].equals(new Double(9.9d)))
         assertTrue(root._hetero_a[8].equals("getStartupInfo"))
         assertTrue(root._hetero_a[9].equals(_testDate))
         assertTrue(root._hetero_a[10].equals(boolean.class))
@@ -889,8 +884,8 @@ class TestArrays
         assertTrue(list.length == 2)
         Map e1 = (Map) list[0];
         Map e2 = (Map) list[1];
-        assertTrue(e1.get("@items") == e2.get("@items"))
-        assertTrue(((Object[])e1.get("@items")).length == 0)
+        assertTrue(e1.get(ITEMS) == e2.get(ITEMS))
+        assertTrue(((Object[])e1.get(ITEMS)).length == 0)
 
         json1 = TestUtil.getJsonString(list)
         TestUtil.printLine("json1=" + json1)
@@ -1169,9 +1164,43 @@ class TestArrays
         assertTrue(args[6].equals(-1273123L))
         assertTrue(args[7].equals(32131L))
         assertTrue(args[8].equals(new Double(1000000)))
-        assertTrue(args[9].equals(new Double(3.14159)))
+        assertTrue(args[9].equals(new Double(3.14159d)))
         assertTrue(args[10].equals(Long.MIN_VALUE))
         assertTrue(args[11].equals(Long.MAX_VALUE))
     }
 
+    @Test
+    void testArrayListSaveAndRestoreGenericJSON()
+    {
+        ArrayList<Integer> numbers = new ArrayList<>()
+        numbers.add(10)
+        numbers.add(20)
+        numbers.add(30)
+        numbers.add(40)
+
+        // Serialize the ArrayList to Json
+        HashMap disableTypes = new HashMap();
+        disableTypes.put(JsonWriter.TYPE, false);
+        String json = JsonWriter.objectToJson(numbers, disableTypes);
+
+        System.out.println("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
+        // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
+
+        List<Integer> restoredNumbers;
+        restoredNumbers = (List<Integer>) JsonReader.jsonToJava(json);
+
+        assert numbers.equals(restoredNumbers)
+    }
+
+    @Test
+    void testToEnsureAtEIsWorking()
+    {
+        String[] testArray = new String[1]
+        testArray[0] = "Test"
+        String testOut = JsonWriter.objectToJson(testArray, [(JsonWriter.SHORT_META_KEYS) : true] as Map)
+//        System.out.println(testOut);
+
+        // The line below blew-up when the @i was being written by JsonWriter instead of @e in short-hand.
+        Object object = JsonReader.jsonToJava(testOut);
+    }
 }

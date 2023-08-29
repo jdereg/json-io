@@ -68,6 +68,38 @@ class TestRefs
         }
     }
 
+    static class Column
+    {
+        final Object value
+
+        Column(Object v)
+        {
+            value = v
+        }
+    }
+
+    static class Axis
+    {
+        final String name
+        final Column column
+
+        Axis(String n, Column c)
+        {
+            name = n
+            column = c
+        }
+    }
+
+    static class Delta
+    {
+        final Object newValue
+
+        Delta(Object n)
+        {
+            newValue = n
+        }
+    }
+
     @Test
     void testReferences()
     {
@@ -140,5 +172,40 @@ class TestRefs
                 assert aTarget._name == 'a'
                 return x
             }}]])
+    }
+
+    @Test
+    void testTypedAndUntypedReference()
+    {
+        Column column = new Column('foo')
+        Axis axis = new Axis('state', column)
+        Delta delta1 = new Delta(column)
+        Delta delta2 = new Delta(axis)
+
+        List<Delta> deltas = []
+        deltas.add(delta2)
+        deltas.add(delta1)
+
+        // With forward reference
+        String json = """\
+{"@type":"java.util.ArrayList","@items":[{"@type":"com.cedarsoftware.util.io.TestRefs\$Delta","newValue":{"@ref":1}}, {"@type":"com.cedarsoftware.util.io.TestRefs\$Delta","newValue":{"@type":"com.cedarsoftware.util.io.TestRefs\$Axis","name":"state","column":{"@id":1,"value":"foo"}}}]}"""
+        List<Object> newList = JsonReader.jsonToJava(json) as List
+        Delta d1 = newList[0] as Delta
+        Delta d2 = newList[1] as Delta
+
+        assert d1.newValue instanceof Column
+        assert d2.newValue instanceof Axis
+        assert ((d2.newValue) as Axis).column instanceof Column
+
+        // Backward reference
+        json = """\
+{"@type":"java.util.ArrayList","@items":[{"@type":"com.cedarsoftware.util.io.TestRefs\$Delta","newValue":{"@type":"com.cedarsoftware.util.io.TestRefs\$Axis","name":"state","column":{"@id":1,"value":"foo"}}},{"@type":"com.cedarsoftware.util.io.TestRefs\$Delta","newValue":{"@ref":1}}]}"""
+        newList = JsonReader.jsonToJava(json) as List
+        d1 = newList[0] as Delta
+        d2 = newList[1] as Delta
+
+        assert d1.newValue instanceof Axis
+        assert ((d1.newValue) as Axis).column instanceof Column
+        assert d2.newValue instanceof Column
     }
 }

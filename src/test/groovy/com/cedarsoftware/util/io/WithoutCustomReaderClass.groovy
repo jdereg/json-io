@@ -1,22 +1,30 @@
 package com.cedarsoftware.util.io
 
-class WithoutCustomReaderClass {
-	private String test;
-	private CustomDataClass customReaderInner;
+import groovy.transform.CompileStatic
 
-	public void setTest(String test) {
-		this.test = test;
-	}
+@CompileStatic
+class WithoutCustomReaderClass
+{
+    private String test
+    private CustomDataClass customReaderInner;
 
-	public String getTest() {
-		return test;
-	}
+    void setTest(String test)
+    {
+        this.test = test
+    }
 
-	public void setCustomReaderInner(CustomDataClass customReaderInner) {
-		this.customReaderInner = customReaderInner;
-	}
+    String getTest()
+    {
+        return test
+    }
 
-	public CustomDataClass getCustomReaderInner() {
-		return customReaderInner;
-	}
+    void setCustomReaderInner(CustomDataClass customReaderInner)
+    {
+        this.customReaderInner = customReaderInner
+    }
+
+    CustomDataClass getCustomReaderInner()
+    {
+        return customReaderInner
+    }
 }

@@ -75,11 +75,11 @@ function walk(jObj, idsToObjs)
         if (!value)
             continue;
 
-        if (field === "@id")
+        if ("@id" === field || '$id' === field)
         {
             idsToObjs[value] = jObj;
         }
-        else if (typeof(value) === "object")
+        else if ("object" === typeof(value))
         {
             walk(value, idsToObjs);
         }
@@ -101,18 +101,66 @@ function substitute(parent, fieldName, jObj, idsToObjs)
         if (!value)
             continue;
 
-        if (field === "@ref")
+        if ("@ref" === field)
         {
             if (parent && fieldName)
             {
                 parent[fieldName] = idsToObjs[jObj["@ref"]];
             }
         }
-        else if (typeof(value) === "object")
+        else if ("$ref" === field)
+        {
+            if (parent && fieldName)
+            {
+                parent[fieldName] = idsToObjs[jObj["$ref"]];
+            }
+        }
+        else if ("object" === typeof(value))
         {
             substitute(jObj, field, value, idsToObjs);
         }
     }
+}
+
+/**
+ * Get an HTTP GET command URL for use when the Ajax (JSON) command
+ * to be sent to the command servlet has a streaming return type.
+ * @param target String in the form of 'controller.method'
+ * @param args Array of arguments to be passed to the method.
+ */
+function stream(target, args)
+{
+    return buildJsonCmdUrl(target) + '?json=' + buildJsonArgs(args);
+}
+
+function buildJsonCmdUrl(target)
+{
+    var pieces = target.split('.');
+    if (pieces == null || pieces.length != 2)
+    {
+        throw "Error: Use 'Controller.method'";
+    }
+    var controller = pieces[0];
+    var method = pieces[1];
+
+    var regexp = /\/([^\/]+)\//g;
+    var match = regexp.exec(location.pathname);
+    if (match == null || match.length != 2)
+    {
+        return location.protocol + '//' + location.hostname + ":" + location.port + "/cmd/" + controller + "/" + method;
+    }
+    var ctx = match[1];
+    return location.protocol + '//' + location.hostname + ":" + location.port + "/" + ctx + "/cmd/" + controller + "/" + method;
+}
+
+function buildJsonArgs(args)
+{
+    if (!args)
+    {
+        args = [];  // empty args
+    }
+
+    return encodeURI(JSON.stringify(args));
 }
 
 function assert(truth)
@@ -120,5 +168,30 @@ function assert(truth)
     if (!truth)
     {
         throw 'assertion failed';
+    }
+}
+
+// functionality to replace reused objects with @ref, assuming this object has @ids or $ids
+var reinsertRefs = function(jObj) {
+    if (!jObj) return;
+    var objsToIds = new WeakMap();
+    
+    desubstitute(null, null, jObj, objsToIds);
+    objsToIds = null;
+};
+
+function desubstitute(parent, fieldName, jObj, objsToIds) {
+    if (!jObj) return;
+
+    var keys = Object.keys(jObj);
+    for (var i = 0, len = keys.length; i < len; i++) {
+        var field = keys[i];
+        var value = jObj[field];
+
+        if (!value) continue;
+
+        if (("@id" === field || '$id' === field) && !objsToIds.has(jObj)) { objsToIds.set(jObj, jObj[field]); }
+        else if (("@id" === field || '$id' === field) && parent && fieldName) { parent[fieldName] = { "@ref": objsToIds.get(jObj) }; break; }
+        else if ("object" === typeof(value)) { desubstitute(jObj, field, value, objsToIds); }
     }
 }

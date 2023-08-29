@@ -4,30 +4,31 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
 /**
- * The MapResolver converts the raw Maps created from the JsonParser to higher
- * quality Maps representing the implied object graph.  It does this by replace
- * <code>@ref</code> values with the Map with an @id key with the same value.
- *
- * This approach 'rewires' the original object graph.  During the resolution process,
+ * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
+ * quality Maps representing the implied object graph.  It does this by replacing
+ * <code>@ref</code> values with the Map indicated by the @id key with the same value.
+ * </p><p>
+ * This approach 'wires' the original object graph.  During the resolution process,
  * if 'peer' classes can be found for given Maps (for example, an @type entry is
  * available which indicates the class that would have been associated to the Map,
  * then the associated class is consulted to help 'improve' the quality of the primitive
  * values within the map fields.  For example, if the peer class indicated that a field
  * was of type 'short', and the Map had a long value (JSON only returns long's for integer
  * types), then the long would be converted to a short.
- *
+ * </p><p>
  * The final Map representation is a very high-quality graph that represents the original
  * JSON graph.  It can be passed as input to JsonWriter, and the JsonWriter will write
  * out the equivalent JSON to what was originally read.  This technique allows json-io to
  * be used on a machine that does not have any of the Java classes from the original graph,
  * read it in a JSON graph (any JSON graph), return the equivalent maps, allow mutations of
  * those maps, and finally this graph can be written out.
- *
+ * </p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -46,12 +47,28 @@ import java.util.Map;
  */
 public class MapResolver extends Resolver
 {
+
     protected MapResolver(JsonReader reader)
     {
         super(reader);
     }
 
-    protected void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    protected Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack)
+    {
+        // No custom reader support for maps
+        return null;
+    }
+
+    /**
+     * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
+     * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
+     * an @id of an object which can have more than one @ref to it, this code will make sure that each
+     * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
+     * instance.
+     * @param stack   Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     */
+    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
         final Object target = jsonObj.target;
         for (Map.Entry<String, Object> e : jsonObj.entrySet())
@@ -72,7 +89,7 @@ public class MapResolver extends Resolver
             {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
-                jsonArray.put("@items", rhs);
+                jsonArray.put(JsonObject.ITEMS, rhs);
                 stack.addFirst(jsonArray);
 
                 // Assign the array directly to the Map key (field name)
@@ -81,9 +98,10 @@ public class MapResolver extends Resolver
             else if (rhs instanceof JsonObject)
             {
                 JsonObject<String, Object> jObj = (JsonObject) rhs;
-                if (field != null && JsonObject.isPrimitiveWrapper(field.getType()))
+
+                if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
                 {
-                    jObj.put("value", MetaUtils.newPrimitiveWrapper(field.getType(), jObj.get("value")));
+                    jObj.put("value", MetaUtils.convert(field.getType(), jObj.get("value")));
                     continue;
                 }
                 Long refId = jObj.getReferenceId();
@@ -106,17 +124,9 @@ public class MapResolver extends Resolver
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class fieldType = field.getType();
-                if (MetaUtils.isPrimitive(fieldType))
+                if (MetaUtils.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
-                    jsonObj.put(fieldName, MetaUtils.newPrimitiveWrapper(fieldType, rhs));
-                }
-                else if (BigDecimal.class == fieldType)
-                {
-                    jsonObj.put(fieldName, Readers.bigDecimalFrom(rhs));
-                }
-                else if (BigInteger.class == fieldType)
-                {
-                    jsonObj.put(fieldName, Readers.bigIntegerFrom(rhs));
+                    jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));
                 }
                 else if (rhs instanceof String)
                 {
@@ -167,7 +177,7 @@ public class MapResolver extends Resolver
             if (element instanceof Object[])
             {   // array element inside Collection
                 JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
-                jsonObject.put("@items", element);
+                jsonObject.put(JsonObject.ITEMS, element);
                 stack.addFirst(jsonObject);
             }
             else if (element instanceof JsonObject)

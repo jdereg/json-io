@@ -1,10 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -33,34 +36,58 @@ import java.util.concurrent.ConcurrentMap;
  */
 abstract class Resolver
 {
-    protected final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<UnresolvedReference>();
+    final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final ConcurrentMap<Class, JsonReader.JsonClassReaderBase> readerCache = new ConcurrentHashMap<Class, JsonReader.JsonClassReaderBase>();
-    private final Collection<Object[]> prettyMaps = new ArrayList<Object[]>();
+    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
+    private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
+    private final boolean failOnUnknownType;
+    private final static Map<String, Class> coercedTypes = new LinkedHashMap<>();
+    // store the missing field found during deserialization to notify any client after the complete resolution is done
+    protected final Collection<Missingfields> missingFields = new ArrayList<>();
+    Class singletonMap = Collections.singletonMap("foo", "bar").getClass();
+
+    static {
+        coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
+        coercedTypes.put("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
+        coercedTypes.put("java.util.HashMap$KeySet", HashSet.class);
+        coercedTypes.put("java.util.HashMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.TreeMap$KeySet", TreeSet.class);
+        coercedTypes.put("java.util.TreeMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
+        coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
+        coercedTypes.put("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
+    }
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
      * definition.  This can point to a field reference or an array/Collection element reference.
      */
-    protected static final class UnresolvedReference
+    static final class UnresolvedReference
     {
         private final JsonObject referencingObj;
         private String field;
         private final long refId;
         private int index = -1;
 
-        protected UnresolvedReference(JsonObject referrer, String fld, long id)
+        UnresolvedReference(JsonObject referrer, String fld, long id)
         {
             referencingObj = referrer;
             field = fld;
             refId = id;
         }
 
-        protected UnresolvedReference(JsonObject referrer, int idx, long id)
+        UnresolvedReference(JsonObject referrer, int idx, long id)
         {
             referencingObj = referrer;
             index = idx;
@@ -69,18 +96,37 @@ abstract class Resolver
     }
 
     /**
+     * stores missing fields information to notify client after the complete deserialization resolution
+     */
+    protected static class Missingfields
+    {
+        private Object target;
+        private String fieldName;
+        private Object value;
+
+        public Missingfields(Object target, String fieldName, Object value)
+        {
+            this.target = target;
+            this.fieldName = fieldName;
+            this.value = value;
+        }
+    }
+
+    /**
      * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static class NullClass implements JsonReader.JsonClassReaderBase  { }
+    private static final class NullClass implements JsonReader.JsonClassReaderBase  { }
 
     protected Resolver(JsonReader reader)
     {
         this.reader = reader;
-        Map optionalArgs = reader.getArgs();
+        Map<String, Object> optionalArgs = reader.getArgs();
+        optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
+        failOnUnknownType = Boolean.TRUE.equals(optionalArgs.get(JsonReader.FAIL_ON_UNKNOWN_TYPE));
     }
 
     protected JsonReader getReader()
@@ -121,13 +167,23 @@ abstract class Resolver
             }
             else
             {
-                traverseFields(stack, jsonObj);
+                Object special;
+                if ((special = readIfMatching(jsonObj, null, stack)) != null)
+                {
+                    jsonObj.target = special;
+                }
+                else
+                {
+                    traverseFields(stack, jsonObj);
+                }
             }
         }
         return root.target;
     }
 
-    protected abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
+    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack);
+
+    public abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
     protected abstract void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
@@ -141,6 +197,20 @@ abstract class Resolver
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
+        handleMissingFields();
+    }
+
+    // calls the missing field handler if any for each recorded missing field.
+    private void handleMissingFields()
+    {
+        MissingFieldHandler missingFieldHandler = reader.getMissingFieldHandler();
+        if (missingFieldHandler != null)
+        {
+            for (Missingfields mf : missingFields)
+            {
+                missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
+            }
+        }//else no handler so ignore.
     }
 
     /**
@@ -155,14 +225,14 @@ abstract class Resolver
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
-        final Object[] keys = (Object[]) jsonObj.get("@keys");
+        final Object[] keys = (Object[]) jsonObj.get(KEYS);
         final Object[] items = jsonObj.getArray();
 
         if (keys == null || items == null)
         {
             if (keys != items)
             {
-                throw new JsonIoException("Map written where one of @keys or @items is empty");
+                throw new JsonIoException("Map written where one of " + KEYS + " or @items is empty");
             }
             return;
         }
@@ -170,7 +240,7 @@ abstract class Resolver
         final int size = keys.length;
         if (size != items.length)
         {
-            throw new JsonIoException("Map written with @keys and @items entries of different sizes");
+            throw new JsonIoException("Map written with " + KEYS + " and @items entries of different sizes");
         }
 
         Object[] mapKeys = buildCollection(stack, keys, size);
@@ -183,8 +253,8 @@ abstract class Resolver
 
     private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
     {
-        final JsonObject jsonCollection = new JsonObject();
-        jsonCollection.put("@items", items);
+        final JsonObject<String, Object> jsonCollection = new JsonObject<String, Object>();
+        jsonCollection.put(ITEMS, items);
         final Object[] javaKeys = new Object[size];
         jsonCollection.target = javaKeys;
         stack.addFirst(jsonCollection);
@@ -197,9 +267,9 @@ abstract class Resolver
      *
      * @param map Map to convert
      */
-    protected static void convertMapToKeysItems(final JsonObject map)
+    protected static void convertMapToKeysItems(final JsonObject<String, Object> map)
     {
-        if (!map.containsKey("@keys") && !map.isReference())
+        if (!map.containsKey(KEYS) && !map.isReference())
         {
             final Object[] keys = new Object[map.size()];
             final Object[] values = new Object[map.size()];
@@ -215,8 +285,8 @@ abstract class Resolver
             String saveType = map.getType();
             map.clear();
             map.setType(saveType);
-            map.put("@keys", keys);
-            map.put("@items", values);
+            map.put(KEYS, keys);
+            map.put(ITEMS, values);
         }
     }
 
@@ -258,7 +328,7 @@ abstract class Resolver
             Class c;
             try
             {
-                c = MetaUtils.classForName(type);
+                c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
             }
             catch (Exception e)
             {
@@ -292,11 +362,11 @@ abstract class Resolver
             {    // Handle regular field.object reference
                 if (MetaUtils.isPrimitive(c))
                 {
-                    mate = MetaUtils.newPrimitiveWrapper(c, jsonObj.get("value"));
+                    mate = MetaUtils.convert(c, jsonObj.get("value"));
                 }
                 else if (c == Class.class)
                 {
-                    mate = MetaUtils.classForName((String) jsonObj.get("value"));
+                    mate = MetaUtils.classForName((String) jsonObj.get("value"), reader.getClassLoader());
                 }
                 else if (c.isEnum())
                 {
@@ -310,9 +380,14 @@ abstract class Resolver
                 {
                     mate = getEnumSet(c, jsonObj);
                 }
-                else if ("java.util.Arrays$ArrayList".equals(c.getName()))
-                {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
-                    mate = new ArrayList();
+                else if ((mate = coerceCertainTypes(c.getName())) != null)
+                {   // if coerceCertainTypes() returns non-null, it did the work
+                }
+                else if (singletonMap.isAssignableFrom(c))
+                {
+                    Object key = jsonObj.keySet().iterator().next();
+                    Object value = jsonObj.values().iterator().next();
+                    mate = Collections.singletonMap(key, value);
                 }
                 else
                 {
@@ -326,7 +401,7 @@ abstract class Resolver
 
             // if @items is specified, it must be an [] type.
             // if clazz.isArray(), then it must be an [] type.
-            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey("@keys")))
+            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
             {
                 int size = (items == null) ? 0 : items.length;
                 mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
@@ -343,9 +418,8 @@ abstract class Resolver
             {
                 mate = getEnumSet(clazz, jsonObj);
             }
-            else if ("java.util.Arrays$ArrayList".equals(clazz.getName()))
-            {    // Special case: Arrays$ArrayList does not allow .add() to be called on it.
-                mate = new ArrayList();
+            else if ((mate = coerceCertainTypes(clazz.getName())) != null)
+            {   // if coerceCertainTypes() returns non-null, it did the work
             }
             else if (clazz == Object.class && !useMapsLocal)
             {
@@ -356,7 +430,7 @@ abstract class Resolver
                 }
                 else if (unknownClass instanceof String)
                 {
-                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim()), jsonObj);
+                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim(), reader.getClassLoader()), jsonObj);
                 }
                 else
                 {
@@ -370,6 +444,17 @@ abstract class Resolver
         }
         jsonObj.target = mate;
         return jsonObj.target;
+    }
+
+    protected Object coerceCertainTypes(String type)
+    {
+        Class clazz = coercedTypes.get(type);
+        if (clazz == null)
+        {
+            return null;
+        }
+
+        return MetaUtils.newInstance(clazz);
     }
 
     protected JsonObject getReferencedObj(Long ref)
@@ -388,11 +473,7 @@ abstract class Resolver
         if (reader == null)
         {
             reader = forceGetCustomReader(c);
-            JsonReader.JsonClassReaderBase readerRef = readerCache.putIfAbsent(c, reader);
-            if (readerRef != null)
-            {
-                reader = readerRef;
-            }
+            readerCache.put(c, reader);
         }
         return reader == nullReader ? null : reader;
     }
@@ -434,19 +515,32 @@ abstract class Resolver
         }
     }
 
+    private static enum OneEnum {
+        L1,
+        L2,
+        L3
+    }
+    /*
+    /* java 17 don't allow to call reflect on internal java api like EnumSet's implement, so need to create like this
+     */
+    private Object getEmptyEnumSet() {
+        return EnumSet.noneOf(OneEnum.class);
+    }
+
     /**
      * Create the EnumSet with its values (it must be created this way)
      */
-    private Object getEnumSet(Class c, JsonObject jsonObj)
+    private Object getEnumSet(Class c, JsonObject<String, Object> jsonObj)
     {
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-            return newInstance(c, jsonObj);
+            return getEmptyEnumSet();
+            //return newInstance(c, jsonObj);
         }
         JsonObject item = (JsonObject) items[0];
         String type = item.getType();
-        Class enumClass = MetaUtils.classForName(type);
+        Class enumClass = MetaUtils.classForName(type, reader.getClassLoader());
         EnumSet enumSet = null;
         for (Object objectItem : items)
         {
@@ -509,9 +603,8 @@ abstract class Resolver
                     }
                 }
             }
-
-            i.remove();
         }
+        unresolvedRefs.clear();
     }
 
     /**
@@ -538,8 +631,8 @@ abstract class Resolver
             if (useMapsLocal)
             {   // Make the @keys be the actual keys of the map.
                 map = jObj;
-                javaKeys = (Object[]) jObj.remove("@keys");
-                javaValues = (Object[]) jObj.remove("@items");
+                javaKeys = (Object[]) jObj.remove(KEYS);
+                javaValues = (Object[]) jObj.remove(ITEMS);
             }
             else
             {
@@ -549,12 +642,19 @@ abstract class Resolver
                 jObj.clear();
             }
 
-            int j = 0;
-
-            while (javaKeys != null && j < javaKeys.length)
+            if (singletonMap.isAssignableFrom(map.getClass()))
+            {   // Handle SingletonMaps - Do nothing here.  They are single entry maps.  The code before here
+                // has already instantiated the SingletonMap, and has filled in its values.
+            }
+            else
             {
-                map.put(javaKeys[j], javaValues[j]);
-                j++;
+                int j = 0;
+
+                while (javaKeys != null && j < javaKeys.length)
+                {
+                    map.put(javaKeys[j], javaValues[j]);
+                    j++;
+                }
             }
         }
     }

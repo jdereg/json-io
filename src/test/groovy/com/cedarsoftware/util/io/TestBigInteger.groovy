@@ -144,22 +144,22 @@ class TestBigInteger
         assertNotSame(list.get(0), list.get(1))
     }
 
-    @Test
-    void testNumTooBig()
-    {
-        String json = '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
-                '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
-                '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'
-        try
-        {
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("too many digits in number")
-        }
-    }
+//    @Test
+//    void testNumTooBig()
+//    {
+//        String json = '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
+//                '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890' +
+//                '1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'
+//        try
+//        {
+//            TestUtil.readJsonObject(json)
+//            fail()
+//        }
+//        catch (Exception e)
+//        {
+//            assert e.message.toLowerCase().contains("too many digits in number")
+//        }
+//    }
 
     @Test
     void testHugeBigInteger()

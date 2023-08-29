@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.lang.reflect.Modifier.*;
+
 /**
  * This utility class has the methods mostly related to reflection related code.
  *
@@ -35,15 +37,14 @@ import java.util.regex.Pattern;
 public class MetaUtils
 {
     private MetaUtils () {}
-    
-    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<Class, Map<String, Field>>();
-    private static final Set<Class> prims = new HashSet<Class>();
-    private static final Map<String, Class> nameToClass = new HashMap<String, Class>();
+    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    private static final Set<Class> prims = new HashSet<>();
+    private static final Map<String, Class> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
     private static final Class[] emptyClassArray = new Class[]{};
-    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<Class, Object[]>();
+    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
     private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
@@ -58,7 +59,13 @@ public class MetaUtils
     };
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
+    static Exception loadClassException;
 
+    /**
+     * Globally turn on (or off) the 'unsafe' option of Class construction.  The unsafe option
+     * is used when all constructors have been tried and the Java class could not be instantiated.
+     * @param state boolean true = on, false = off.
+     */
     public static void setUseUnsafe(boolean state)
     {
         useUnsafe = state;
@@ -153,14 +160,11 @@ public class MetaUtils
                             continue;
                         }
 
-                        if (!field.isAccessible())
+                        try
                         {
-                            try
-                            {
-                                field.setAccessible(true);
-                            }
-                            catch (Exception ignored) { }
+                            field.setAccessible(true);
                         }
+                        catch (Exception ignored) { }
                         if (classFields.containsKey(field.getName()))
                         {
                             classFields.put(curr.getName() + '.' + field.getName(), field);
@@ -190,7 +194,7 @@ public class MetaUtils
      * @param b Class target class
      * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related. Each
      * step upward in the inheritance from one class to the next (calling class.getSuperclass()) is counted
-     * as 1.
+     * as 1. This can be a lot of computational effort, therefore the results of this determination should be cached.
      */
     public static int getDistance(Class a, Class b)
     {
@@ -214,6 +218,11 @@ public class MetaUtils
         return distance;
     }
 
+    /**
+     * @return int distance between two passed in classes.  This method performs an exhaustive
+     * walk up the inheritance chain to compute the distance.  This can be a lot of
+     * computational effort, therefore the results of this determination should be cached internally.
+     */
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
         Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
@@ -255,7 +264,7 @@ public class MetaUtils
     /**
      * @param c Class to test
      * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
-     * Integer, Long, Boolean, etc. are consider primitives by this method.
+     * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isPrimitive(Class c)
     {
@@ -281,32 +290,56 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    static Class classForName(String name)
+    /**
+     * Given the passed in String class name, return the named JVM class.
+     * @param name String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @param failOnClassLoadingError If named class is not loadable off classpath: true will raise JsonIoException,
+     * false will return default LinkedHashMap.
+     * @return Class the named JVM class.
+     * @throws JsonIoException if named Class is invalid or not loadable via the classLoader and failOnClassLoadingError is
+     * true
+     */
+    static Class classForName(String name, ClassLoader classLoader, boolean failOnClassLoadingError)
     {
+        if (name == null || name.isEmpty())
+        {
+            throw new JsonIoException("Class name cannot be null or empty.");
+        }
+        Class c = nameToClass.get(name);
         try
         {
-            if (name == null || name.isEmpty())
-            {
-                throw new JsonIoException("Class name cannot be null or empty.");
-            }
-            Class c = nameToClass.get(name);
-            try
-            {
-                return c == null ? loadClass(name) : c;
-            }
-            catch (Exception e)
-            {
-                return LinkedHashMap.class;
-            }
+            loadClassException = null;
+            return c == null ? loadClass(name, classLoader) : c;
         }
         catch (Exception e)
         {
-            throw new JsonIoException("Unable to create class: " + name, e);
+            // Remember why in case later we have a problem
+            loadClassException = e;
+            if(failOnClassLoadingError) {
+                throw new JsonIoException("Unable to create class: " + name, e);
+            }
+            return LinkedHashMap.class;
         }
     }
 
-    // loadClass() provided by: Thomas Margreiter
-    private static Class loadClass(String name) throws ClassNotFoundException
+
+    /**
+     * Given the passed in String class name, return the named JVM class.
+     * @param name String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @return Class the named JVM class.
+     * @throws JsonIoException if named Class is invalid.
+     */
+    static Class classForName(String name, ClassLoader classLoader)
+    {
+        return classForName(name, classLoader, false);
+    }
+
+    /**
+     * loadClass() provided by: Thomas Margreiter
+     */
+    private static Class loadClass(String name, ClassLoader classLoader) throws ClassNotFoundException
     {
         String className = name;
         boolean arrayType = false;
@@ -322,42 +355,34 @@ public class MetaUtils
             if (className.equals("[B"))
             {
                 primitiveArray = byte[].class;
-
             }
             else if (className.equals("[S"))
             {
                 primitiveArray = short[].class;
-
             }
             else if (className.equals("[I"))
             {
                 primitiveArray = int[].class;
-
             }
             else if (className.equals("[J"))
             {
                 primitiveArray = long[].class;
-
             }
             else if (className.equals("[F"))
             {
                 primitiveArray = float[].class;
-
             }
             else if (className.equals("[D"))
             {
                 primitiveArray = double[].class;
-
             }
             else if (className.equals("[Z"))
             {
                 primitiveArray = boolean[].class;
-
             }
             else if (className.equals("[C"))
             {
                 primitiveArray = char[].class;
-
             }
             int startpos = className.startsWith("[L") ? 2 : 1;
             className = className.substring(startpos);
@@ -365,7 +390,14 @@ public class MetaUtils
         Class currentClass = null;
         if (null == primitiveArray)
         {
-            currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
+          try
+          {
+              currentClass = classLoader.loadClass(className);
+          }
+          catch (ClassNotFoundException e)
+          {
+              currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
+          }
         }
 
         if (arrayType)
@@ -392,6 +424,9 @@ public class MetaUtils
         return c <= 127 ? charCache[(int) c] : c;
     }
 
+    /**
+     * Strip leading and trailing double quotes from the passed in String.
+     */
     static String removeLeadingAndTrailingQuotes(String s)
     {
         Matcher m = extraQuotes.matcher(s);
@@ -402,8 +437,32 @@ public class MetaUtils
         return s;
     }
 
-    static Object newInstance(Class c)
+    /**
+     * <p>C language malloc() for Java
+     * </p><p>
+     * Create a new instance of the passed in Class.  This method will make a valiant effort to instantiate
+     * the passed in Class, including calling all of its constructors until successful.  The order they
+     * are tried are public with the fewest arguments first to private with the most arguments.  If, after
+     * exhausting all constructors, then it will attempt using the 'unsafe allocate' from Sun.  This step is
+     * optional - by default it will use this if on a Sun (Oracle) JVM unless MetaUtil.setUseUnsafe(false) is called.
+     * </p><p>
+     * This method will handle common interfaces, such as Collection, Map, etc. which commonly show up in
+     * parameterized types.  Any other interface passed to this method will cause a JsonIoException to be thrown.
+     * </p><p>
+     * To improve performance, when called a 2nd time for the same Class, the constructor that was successfully
+     * used to construct the instance will be retrieved from an internal cache.
+     * </p>
+     * @param c Class to instantiate
+     * @return an instance of the instantiated class.  This instance is intended to have its fields 'stuffed' by
+     * direct assignment, not called via setter methods.
+     * @throws JsonIoException if it cannot instantiate the passed in class.
+     */
+    public static Object newInstance(Class c)
     {
+        if (c.isAssignableFrom(ProcessBuilder.class) && c != Object.class)
+        {
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of the ProcessBuilder class.");
+        }
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
             return new TreeMap();
@@ -423,6 +482,14 @@ public class MetaUtils
         if (unmodifiableCollection.getClass().isAssignableFrom(c))
         {
             return new ArrayList();
+        }
+        if (Collections.EMPTY_LIST.getClass().equals(c)) {
+            return Collections.emptyList();
+        }
+
+        if (c.isInterface())
+        {
+            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
         }
 
         // Constructor not cached, go find a constructor
@@ -495,6 +562,7 @@ public class MetaUtils
             {
                 return new Object[] {constructor.newInstance(), constructor, true};
             }
+            // No empty arg constructor
             return tryOtherConstruction(c);
         }
         catch (Exception e)
@@ -506,6 +574,15 @@ public class MetaUtils
         }
     }
 
+    /**
+     * Brute force attempt to locate a constructor to construct the passed in Class.  This involves trying all
+     * constructors, public, protected, package-private, and private.  It will try with null arguments as well
+     * as it will make a 2nd attempt with populated values for some known types (Collection classes, Dates, Strings,
+     * primitive wrappers, TimeZone, Calendar).
+     * @param c Class to instantiate
+     * @return an Object[] containing three (3) elements.  Position 0 is the instance of the class, position 1
+     * is the constructor used, and position 2 indicates whether fillArgs was called with useNull or !useNull.
+     */
     static Object[] tryOtherConstruction(Class c)
     {
         Constructor[] constructors = c.getDeclaredConstructors();
@@ -514,8 +591,41 @@ public class MetaUtils
             throw new JsonIoException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
         }
 
-        // Try each constructor (private, protected, or public) with null values for non-primitives.
-        for (Constructor constructor : constructors)
+        // Sort constructors - public, protected, private, package-private
+        List<Constructor> constructorList = Arrays.asList(constructors);
+        Collections.sort(constructorList, new Comparator<Constructor>()
+        {
+            public int compare(Constructor c1, Constructor c2)
+            {
+                int c1Vis = c1.getModifiers();
+                int c2Vis = c2.getModifiers();
+
+                if (c1Vis == c2Vis)
+                {   // both are public, protected, private, etc.  Compare by arguments.
+                    return compareConstructors(c1, c2);
+                }
+
+                if (isPublic(c1Vis) != isPublic(c2Vis))
+                {   // favor 'public' as first
+                    return isPublic(c1Vis) ? -1 : 1;
+                }
+
+                if (isProtected(c1Vis) != isProtected(c2Vis))
+                {   // favor protected 2nd
+                    return isProtected(c1Vis) ? -1 : 1;
+                }
+
+                if (isPrivate(c1Vis) != isPrivate(c2Vis))
+                {   // favor private last
+                    return isPrivate(c1Vis) ? 1 : -1;
+                }
+
+                return 0;
+            }
+        });
+
+        // Try each constructor (public, protected, private, package-private) with null values for non-primitives.
+        for (Constructor constructor : constructorList)
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
@@ -528,8 +638,8 @@ public class MetaUtils
             { }
         }
 
-        // Try each constructor (private, protected, or public) with non-null values for primitives.
-        for (Constructor constructor : constructors)
+        // Try each constructor (public, protected, private, package-private) with non-null values for non-primitives.
+        for (Constructor constructor : constructorList)
         {
             constructor.setAccessible(true);
             Class[] argTypes = constructor.getParameterTypes();
@@ -558,6 +668,44 @@ public class MetaUtils
         throw new JsonIoException("Could not instantiate " + c.getName() + " using any constructor");
     }
 
+    /**
+     * When two constructors have the same access type (both public, both private, etc.)
+     * then compare constructors by parameter length (fewer params comes before more params).
+     * If parameter count is the same, then compare by parameter Class names.  If those are equal,
+     * which should never happen, then the constructors are equal.
+     */
+    private static int compareConstructors(Constructor c1, Constructor c2)
+    {
+        Class[] c1ParamTypes = c1.getParameterTypes();
+        Class[] c2ParamTypes = c2.getParameterTypes();
+        if (c1ParamTypes.length != c2ParamTypes.length)
+        {   // negative value if c1 has less (less parameters will be chosen ahead of more), positive value otherwise.
+            return c1ParamTypes.length - c2ParamTypes.length;
+        }
+
+        // Has same number of parameters.s
+        int len = c1ParamTypes.length;
+        for (int i=0; i < len; i++)
+        {
+            Class class1 = c1ParamTypes[i];
+            Class class2 = c2ParamTypes[i];
+            int compare = class1.getName().compareTo(class2.getName());
+            if (compare != 0)
+            {
+                return compare;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Return an Object[] of instance values that can be passed into a given Constructor.  This method
+     * will return an array of nulls if useNull is true, otherwise it will return sensible values for
+     * primitive classes, and null for non-known primitive / primitive wrappers.  This class is used
+     * when attempting to call constructors on Java objects to get them instantiated, since there is no
+     * 'malloc' in Java.
+     */
     static Object[] fillArgs(Class[] argTypes, boolean useNull)
     {
         final Object[] values = new Object[argTypes.length];
@@ -566,7 +714,7 @@ public class MetaUtils
             final Class argType = argTypes[i];
             if (isPrimitive(argType))
             {
-                values[i] = newPrimitiveWrapper(argType, null);
+                values[i] = convert(argType, null);
             }
             else if (useNull)
             {
@@ -638,7 +786,7 @@ public class MetaUtils
                 {
                     values[i] = String.class;
                 }
-                else if (argType == java.sql.Timestamp.class)
+                else if (argType == Timestamp.class)
                 {
                     values[i] = new Timestamp(System.currentTimeMillis());
                 }
@@ -646,7 +794,7 @@ public class MetaUtils
                 {
                     values[i] = new java.sql.Date(System.currentTimeMillis());
                 }
-                else if (argType == java.net.URL.class)
+                else if (argType == URL.class)
                 {
                     try
                     {
@@ -671,13 +819,19 @@ public class MetaUtils
         return values;
     }
 
-    static Object newPrimitiveWrapper(Class c, Object rhs)
+    /**
+     * @return a new primitive wrapper instance for the given class, using the
+     * rhs parameter as a hint.  For example, convert(long.class, "45")
+     * will return 45L.  However, if null is passed for the rhs, then the value 0L
+     * would be returned in this case.  For boolean, it would return false if null
+     * was passed in.  This method is similar to the GitHub project java-util's
+     * Converter.convert() API.
+     */
+    static Object convert(Class c, Object rhs)
     {
-        final String cname;
         try
         {
-            cname = c.getName();
-            if (cname.equals("boolean") || cname.equals("java.lang.Boolean"))
+            if (c == boolean.class || c == Boolean.class)
             {
                 if (rhs instanceof String)
                 {
@@ -690,7 +844,7 @@ public class MetaUtils
                 }
                 return rhs != null ? rhs : Boolean.FALSE;
             }
-            else if (cname.equals("byte") || cname.equals("java.lang.Byte"))
+            else if (c == byte.class || c == Byte.class)
             {
                 if (rhs instanceof String)
                 {
@@ -703,7 +857,7 @@ public class MetaUtils
                 }
                 return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
             }
-            else if (cname.equals("char") || cname.equals("java.lang.Character"))
+            else if (c == char.class || c == Character.class)
             {
                 if (rhs == null)
                 {
@@ -711,20 +865,24 @@ public class MetaUtils
                 }
                 if (rhs instanceof String)
                 {
+                    if (rhs.equals("\""))
+                    {
+                        return '\"';
+                    }
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
                     if ("".equals(rhs))
                     {
                         rhs = "\u0000";
                     }
-                    return valueOf(((String) rhs).charAt(0));
+                    return ((CharSequence) rhs).charAt(0);
                 }
                 if (rhs instanceof Character)
                 {
                     return rhs;
                 }
-
+                // Let it throw exception
             }
-            else if (cname.equals("double") || cname.equals("java.lang.Double"))
+            else if (c == double.class || c == Double.class)
             {
                 if (rhs instanceof String)
                 {
@@ -735,9 +893,9 @@ public class MetaUtils
                     }
                     return Double.parseDouble((String) rhs);
                 }
-                return rhs != null ? rhs : 0.0d;
+                return rhs != null ? ((Number) rhs).doubleValue() : 0.0d;
             }
-            else if (cname.equals("float") || cname.equals("java.lang.Float"))
+            else if (c == float.class || c == Float.class)
             {
                 if (rhs instanceof String)
                 {
@@ -750,7 +908,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
             }
-            else if (cname.equals("int") || cname.equals("java.lang.Integer"))
+            else if (c == int.class || c == Integer.class)
             {
                 if (rhs instanceof String)
                 {
@@ -763,7 +921,7 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).intValue() : 0;
             }
-            else if (cname.equals("long") || cname.equals("java.lang.Long"))
+            else if (c == long.class || c == Long.class)
             {
                 if (rhs instanceof String)
                 {
@@ -774,9 +932,9 @@ public class MetaUtils
                     }
                     return Long.parseLong((String) rhs);
                 }
-                return rhs != null ? rhs : 0L;
+                return rhs != null ? ((Number) rhs).longValue() : 0L;
             }
-            else if (cname.equals("short") || cname.equals("java.lang.Short"))
+            else if (c == short.class || c == Short.class)
             {
                 if (rhs instanceof String)
                 {
@@ -789,6 +947,25 @@ public class MetaUtils
                 }
                 return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
             }
+            else if (c == Date.class)
+            {
+                if (rhs instanceof String)
+                {
+                    return Readers.DateReader.parseDate((String) rhs);
+                }
+                else if (rhs instanceof Long)
+                {
+                    return new Date((Long)(rhs));
+                }
+            }
+            else if (c == BigInteger.class)
+            {
+                return Readers.bigIntegerFrom(rhs);
+            }
+            else if (c == BigDecimal.class)
+            {
+                return Readers.bigDecimalFrom(rhs);
+            }
         }
         catch (Exception e)
         {
@@ -796,7 +973,42 @@ public class MetaUtils
             throw new JsonIoException("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
-        throw new JsonIoException("Class '" + cname + "' does not have primitive wrapper.");
+        throw new JsonIoException("Class '" + c.getName() + "' does not have primitive wrapper.");
+    }
+
+    /**
+     * Format a nice looking method signature for logging output
+     */
+    public static String getLogMessage(String methodName, Object[] args)
+    {
+        return getLogMessage(methodName, args, 64);
+    }
+
+    public static String getLogMessage(String methodName, Object[] args, int argCharLen)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(methodName);
+        sb.append('(');
+        for (Object arg : args)
+        {
+            sb.append(getJsonStringToMaxLength(arg, argCharLen));
+            sb.append("  ");
+        }
+        String result = sb.toString().trim();
+        return result + ')';
+    }
+
+    private static String getJsonStringToMaxLength(Object obj, int argCharLen)
+    {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put(JsonWriter.TYPE, false);
+        args.put(JsonWriter.SHORT_META_KEYS, true);
+        String arg = JsonWriter.objectToJson(obj, args);
+        if (arg.length() > argCharLen)
+        {
+            arg = arg.substring(0, argCharLen) + "...";
+        }
+        return arg;
     }
 
     /**
@@ -816,7 +1028,7 @@ public class MetaUtils
         {
             try
             {
-                Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe").getDeclaredConstructor();
+                Constructor<Unsafe> unsafeConstructor = classForName("sun.misc.Unsafe", MetaUtils.class.getClassLoader()).getDeclaredConstructor();
                 unsafeConstructor.setAccessible(true);
                 sunUnsafe = unsafeConstructor.newInstance();
                 allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);

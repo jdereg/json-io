@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 import static org.junit.Assert.assertEquals
@@ -22,13 +23,14 @@ import static org.junit.Assert.assertNotEquals
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class TestPrettyPrint
 {
     static class Nice
     {
-        private String name;
-        private Collection items;
-        private Map dictionary;
+        private String name
+        private Collection items
+        private Map dictionary
     }
 
     @Test
@@ -71,7 +73,7 @@ class TestPrettyPrint
     }
   }
 }'''
-        String json = JsonWriter.objectToJson(nice, [(JsonWriter.PRETTY_PRINT):true])
+        String json = JsonWriter.objectToJson(nice, [(JsonWriter.PRETTY_PRINT):true] as Map)
         json = json.replaceAll("[\\r]","");
         assertEquals(target, json)
 
