@@ -397,11 +397,11 @@ abstract class Resolver
                 }
                 else if (c.getName().contains("Set"))
                 {
-                    mate = c.getName().endsWith("12") ? Set.of(1) : Set.of();
+                    mate = new ArrayList<>();
                 }
                 else if (c.getName().contains("List"))
                 {
-                    mate = c.getName().endsWith("12") ? List.of(1) : List.of();
+                    mate = new ArrayList<>();
                 }
             }
         }
@@ -588,9 +588,9 @@ abstract class Resolver
                     List list = (List) objToFix;
                     list.set(ref.index, objReferenced.target);
                     String containingTypeName = ref.referencingObj.type;
-                    if (containingTypeName != null && !list.contains(null)) {
-                        if (containingTypeName.startsWith("java.util.Immutable")
-                             && containingTypeName.contains("List"))
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List"))
+                    {
+                        if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
                         {
                             list = List.of(list.toArray());
                             ref.referencingObj.target = list;
@@ -601,8 +601,7 @@ abstract class Resolver
                 {
                     String containingTypeName = ref.referencingObj.type;
                     Collection col = (Collection) objToFix;
-                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable")
-                        && !col.contains(null) && containingTypeName.contains("Set"))
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
                     {
                         throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.type + "', @ref = " + ref.refId);
                     }

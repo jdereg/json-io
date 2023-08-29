@@ -393,12 +393,15 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
+        final String className = jsonObj.type;
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
+            if (className != null && className.startsWith("java.util.Immutable") && className.contains("Set")) {
+                jsonObj.target = Set.of();
+            }
             return;
         }
-        final String className = jsonObj.type;
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
         final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
@@ -470,17 +473,22 @@ public class ObjectResolver extends Resolver
         if (isImmutable) {
             if (className.contains("List"))
             {
-                if (col.isEmpty()) {
-                    jsonObj.target = List.of();
-                }
-                else if (!col.contains(null))
+                if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
                 {
                     jsonObj.target = List.of(col.toArray());
+                }
+                else
+                {
+                    jsonObj.target = col;
                 }
             }
             else if (className.contains("Set"))
             {
                 jsonObj.target = Set.of(col.toArray());
+            }
+            else
+            {
+                jsonObj.target = col;
             }
         }
 
