@@ -6,12 +6,14 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -395,7 +397,9 @@ public class ObjectResolver extends Resolver
         {
             return;
         }
-        final Collection col = (Collection) jsonObj.target;
+        final String className = jsonObj.type;
+        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
+        final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -460,6 +464,23 @@ public class ObjectResolver extends Resolver
                 }
             }
             idx++;
+        }
+
+        if (isImmutable) {
+            if (className.contains("List"))
+            {
+                if (col.isEmpty()) {
+                    jsonObj.target = List.of();
+                }
+                else if (!col.contains(null))
+                {
+                    jsonObj.target = List.of(col.toArray());
+                }
+            }
+            else if (className.contains("Set"))
+            {
+                jsonObj.target = Set.of(col.toArray());
+            }
         }
 
         jsonObj.remove(ITEMS);   // Reduce memory required during processing
@@ -699,7 +720,7 @@ public class ObjectResolver extends Resolver
         {
             read = ((JsonReader.JsonClassReader)closestReader).read(o, stack);
         }
-		return read;
+        return read;
     }
 
     private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)

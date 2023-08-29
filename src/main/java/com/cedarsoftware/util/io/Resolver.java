@@ -146,7 +146,7 @@ abstract class Resolver
      */
     protected Object convertMapsToObjects(final JsonObject<String, Object> root)
     {
-        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<JsonObject<String, Object>>();
+        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
 
         while (!stack.isEmpty())
@@ -389,9 +389,17 @@ abstract class Resolver
                     Object value = jsonObj.values().iterator().next();
                     mate = Collections.singletonMap(key, value);
                 }
-                else
+                else if (!c.getName().startsWith("java.util.Immutable"))
                 {
                     mate = newInstance(c, jsonObj);
+                }
+                else if (c.getName().contains("Set"))
+                {
+                    mate = c.getName().endsWith("12") ? Set.of(1) : Set.of();
+                }
+                else if (c.getName().contains("List"))
+                {
+                    mate = c.getName().endsWith("12") ? List.of(1) : List.of();
                 }
             }
         }
@@ -577,11 +585,31 @@ abstract class Resolver
                 {   // Patch up Indexable Collections
                     List list = (List) objToFix;
                     list.set(ref.index, objReferenced.target);
+                    String containingTypeName = ref.referencingObj.type;
+                    if (containingTypeName != null && !list.contains(null)) {
+                        if (containingTypeName.startsWith("java.util.Immutable")
+                             && containingTypeName.contains("List"))
+                        {
+                            list = List.of(list.toArray());
+                            ref.referencingObj.target = list;
+                        }
+                    }
                 }
                 else if (objToFix instanceof Collection)
-                {   // Add element (since it was not indexable, add it to collection)
+                {
+                    String containingTypeName = ref.referencingObj.type;
                     Collection col = (Collection) objToFix;
-                    col.add(objReferenced.target);
+                    if (containingTypeName != null && !col.contains(null)
+                        && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
+                    {
+                        col = Set.of(col.toArray());
+                        ref.referencingObj.target = col;
+                    }
+                    else
+                    {
+                        // Add element (since it was not indexable, add it to collection)
+                        col.add(objReferenced.target);
+                    }
                 }
                 else
                 {

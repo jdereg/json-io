@@ -79,6 +79,8 @@ class TestCollection {
         private Set _strs_c;
         private Set _strs_d;
         private HashSet _typedSet;
+        private List<String> _imm_lst_0;
+        private List<String> _imm_lst_1;
 
         private void init() {
             Collection array = new ArrayList()
@@ -191,6 +193,10 @@ class TestCollection {
             _typedSet.add(true)
             _typedSet.add(17.76)
             _typedSet.add(TimeZone.getTimeZone("PST"))
+
+            _imm_lst_0 = List.of()
+            _imm_lst_1 = List.of("One")
+
         }
     }
 
