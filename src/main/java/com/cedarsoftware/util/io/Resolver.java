@@ -34,6 +34,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
@@ -98,6 +99,7 @@ abstract class Resolver
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
+    @SuppressWarnings("FieldMayBeFinal")
     protected static class Missingfields
     {
         private Object target;
