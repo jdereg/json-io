@@ -795,7 +795,7 @@ public class JsonReader implements Closeable
      */
     public Object readObject()
     {
-        JsonParser parser = new JsonParser(input, objsRead, getArgs());
+        JsonParser parser = new JsonParser(input, objsRead, getArgs(), maxParseDepth);
         JsonObject<String, Object> root = new JsonObject();
         Object o;
         try
