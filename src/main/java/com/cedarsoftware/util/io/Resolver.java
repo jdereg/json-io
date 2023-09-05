@@ -391,17 +391,9 @@ abstract class Resolver
                     Object value = jsonObj.values().iterator().next();
                     mate = Collections.singletonMap(key, value);
                 }
-                else if (!c.getName().startsWith("java.util.Immutable"))
+                else
                 {
                     mate = newInstance(c, jsonObj);
-                }
-                else if (c.getName().contains("Set"))
-                {
-                    mate = new ArrayList<>();
-                }
-                else if (c.getName().contains("List"))
-                {
-                    mate = new ArrayList<>();
                 }
             }
         }

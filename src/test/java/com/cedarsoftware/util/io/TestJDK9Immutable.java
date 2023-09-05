@@ -17,7 +17,9 @@ public class TestJDK9Immutable {
             this.i = i;
         }
 
-        Rec link;
+        Rec       link;
+        List<Rec> ilinks;
+        List<Rec> mlinks;
     }
 
     @Test
@@ -28,6 +30,7 @@ public class TestJDK9Immutable {
         List es = (List) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(0, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -38,6 +41,7 @@ public class TestJDK9Immutable {
         List es = (List) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(0, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -48,6 +52,7 @@ public class TestJDK9Immutable {
         List es = (List) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(1, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -58,6 +63,7 @@ public class TestJDK9Immutable {
         List es = (List) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(2, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -68,6 +74,7 @@ public class TestJDK9Immutable {
         List es = (List) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(3, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -78,6 +85,7 @@ public class TestJDK9Immutable {
         Set es = (Set) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(0, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -88,6 +96,7 @@ public class TestJDK9Immutable {
         Set es = (Set) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(1, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -98,6 +107,7 @@ public class TestJDK9Immutable {
         Set es = (Set) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(2, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -108,6 +118,7 @@ public class TestJDK9Immutable {
         Set es = (Set) JsonReader.jsonToJava(json);
 
         Assert.assertEquals(3, es.size());
+        Assert.assertEquals(o.getClass(), es.getClass());
     }
 
     @Test
@@ -116,12 +127,37 @@ public class TestJDK9Immutable {
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        final Object o = List.of(rec1, rec2, rec1);
+        rec1.ilinks = List.of(rec2);
+        rec2.ilinks = List.of();
+        rec1.mlinks = new ArrayList<>(List.of());
+        rec2.mlinks = new ArrayList<>(List.of(rec1));
+        List<Rec> ol = List.of(rec1, rec2, rec1);
 
-        String json = JsonWriter.objectToJson(o);
+        String json = JsonWriter.objectToJson(ol);
         List es = (List) JsonReader.jsonToJava(json);
 
-        Assert.assertEquals(o.getClass(), es.getClass());
-        Assert.assertEquals(3, es.size());
+        Assert.assertEquals(((Object) ol).getClass(), es.getClass());
+
+        List<Rec> recs = es;
+        Assert.assertEquals(ol.size(), recs.size());
+
+        Assert.assertEquals(ol.get(0).s, recs.get(0).s);
+        Assert.assertEquals(ol.get(0).i, recs.get(0).i);
+        Assert.assertEquals(recs.get(1), recs.get(0).link);
+        Assert.assertEquals(ol.get(1).s, recs.get(1).s);
+        Assert.assertEquals(ol.get(1).i, recs.get(1).i);
+        Assert.assertEquals(recs.get(0), recs.get(1).link);
+
+        Assert.assertEquals(recs.get(0), recs.get(2));
+
+        Assert.assertEquals(ol.get(0).mlinks.size(), recs.get(0).mlinks.size());
+        Assert.assertEquals(ol.get(0).mlinks.getClass(), recs.get(0).mlinks.getClass());
+        Assert.assertEquals(ol.get(1).mlinks.size(), recs.get(1).mlinks.size());
+        Assert.assertEquals(ol.get(1).mlinks.getClass(), recs.get(1).mlinks.getClass());
+
+        Assert.assertEquals(ol.get(0).ilinks.size(), recs.get(0).ilinks.size());
+        Assert.assertEquals(ol.get(0).ilinks.getClass(), recs.get(0).ilinks.getClass());
+        Assert.assertEquals(ol.get(1).ilinks.size(), recs.get(1).ilinks.size());
+        Assert.assertEquals(ol.get(1).ilinks.getClass(), recs.get(1).ilinks.getClass());
     }
 }

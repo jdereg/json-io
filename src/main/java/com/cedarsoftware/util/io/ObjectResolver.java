@@ -397,9 +397,12 @@ public class ObjectResolver extends Resolver
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-            if (className != null && className.startsWith("java.util.Immutable") && className.contains("Set")) {
-                jsonObj.target = Set.of();
-            }
+            if (className != null && className.startsWith("java.util.Immutable"))
+                if (className.contains("Set")) {
+                    jsonObj.target = Set.of();
+                } else if (className.contains("List")) {
+                    jsonObj.target = List.of();
+                }
             return;
         }
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
