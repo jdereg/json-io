@@ -211,8 +211,8 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject<String, Object> jObj = (JsonObject) rhs;
-                final Long ref = jObj.getReferenceId();
+                final JsonObject<String, Object> jsRhs = (JsonObject) rhs;
+                final Long ref = jsRhs.getReferenceId();
 
                 if (ref != null)
                 {    // Correct field references
@@ -229,10 +229,19 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
-                    field.set(target, createJavaObjectInstance(fieldType, jObj));
-                    if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                    Object fieldObject = createJavaObjectInstance(fieldType, jsRhs);
+                    field.set(target, fieldObject);
+                    if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
-                        stack.addFirst((JsonObject) rhs);
+                        // GOTCHA : if the field is an immutable collection,
+                        // "work instance", where one can accumulate items in (ArrayList)
+                        // and "final instance' (say List.of() ) can _not_ be the same.
+                        // So, the later the assignment, the better.
+                        Object javaObj = convertMapsToObjects(jsRhs);
+                        if (javaObj != fieldObject)
+                        {
+                            field.set(target, javaObj);
+                        }
                     }
                 }
             }
@@ -473,29 +482,41 @@ public class ObjectResolver extends Resolver
             idx++;
         }
 
-        if (isImmutable) {
-            if (className.contains("List"))
+        //if (isImmutable) {
+            reconciliateCollection(jsonObj, col);
+        //}
+
+        jsonObj.remove(ITEMS);   // Reduce memory required during processing
+    }
+
+    static public void reconciliateCollection(JsonObject jsonObj, Collection col)
+    {
+        final String className = jsonObj.type;
+        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
+        if (!isImmutable) return;
+
+        if (col == null && jsonObj.target instanceof Collection) col = (Collection) jsonObj.target;
+        if (col == null) return;
+
+        if (className.contains("List"))
+        {
+            if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
             {
-                if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
-                {
-                    jsonObj.target = List.of(col.toArray());
-                }
-                else
-                {
-                    jsonObj.target = col;
-                }
-            }
-            else if (className.contains("Set"))
-            {
-                jsonObj.target = Set.of(col.toArray());
+                jsonObj.target = List.of(col.toArray());
             }
             else
             {
                 jsonObj.target = col;
             }
         }
-
-        jsonObj.remove(ITEMS);   // Reduce memory required during processing
+        else if (className.contains("Set"))
+        {
+            jsonObj.target = Set.of(col.toArray());
+        }
+        else
+        {
+            jsonObj.target = col;
+        }
     }
 
     /**
