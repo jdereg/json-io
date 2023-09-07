@@ -414,6 +414,13 @@ public class ObjectResolver extends Resolver
                 }
             return;
         }
+
+        Class mayEnumClass = null;
+        String mayEnumClasName = (String)jsonObj.get("@enum");
+        if (mayEnumClasName != null) {
+            mayEnumClass = MetaUtils.classForName(mayEnumClasName, classLoader);
+        }
+
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
         final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
@@ -436,7 +443,10 @@ public class ObjectResolver extends Resolver
             }
             else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long)
             {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
-                col.add(element);
+                if (mayEnumClass == null)
+                    col.add(element);
+                else
+                    col.add(Enum.valueOf(mayEnumClass, (String)element));
             }
             else if (element.getClass().isArray())
             {

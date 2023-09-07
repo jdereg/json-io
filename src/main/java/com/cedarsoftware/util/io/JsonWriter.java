@@ -1089,6 +1089,10 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeArray(obj, showType);
         }
+        else if (obj instanceof EnumSet)
+        {
+            writeEnumSet((EnumSet)obj, showType);
+        }
         else if (obj instanceof Collection)
         {
             writeCollection((Collection) obj, showType);
@@ -2205,6 +2209,83 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeImpl(o, true);
         }
+    }
+
+    public void writeEnumSet(final EnumSet<?> enumSet, boolean showType) throws IOException
+    {
+        out.write('{');
+        tabIn();
+
+        boolean referenced = objsReferenced.containsKey(enumSet);
+        if (referenced)
+        {
+            writeId(getId(enumSet));
+            out.write(',');
+            newLine();
+        }
+
+        if (showType) {
+            writeType(enumSet, out);
+            out.write(",");
+            newLine();
+        }
+
+        writeJsonUtf8String("@enum", out);
+        out.write(':');
+
+        Field elementTypeField = MetaUtils.getField(EnumSet.class, "elementType");
+        Class elementType = (Class) getValueByReflect(enumSet, elementTypeField);
+        writeJsonUtf8String(elementType.getName(), out);
+
+        var mapOfFileds = MetaUtils.getDeepDeclaredFields(elementType);
+        //Field[] enumFields = elementType.getDeclaredFields();
+        int enumFieldsCount = mapOfFileds.size();
+
+        if (!enumSet.isEmpty()) {
+            out.write(",");
+            newLine();
+
+            writeJsonUtf8String("@items", out);
+            out.write(":[");
+            if (enumFieldsCount > 2)
+            {
+                newLine();
+            }
+
+            boolean firstInSet = true;
+            for (var e : enumSet) {
+                if (!firstInSet)
+                {
+                    out.write(",");
+                    if (enumFieldsCount > 2)
+                    {
+                        newLine();
+                    }
+                }
+                firstInSet = false;
+
+                if (enumFieldsCount <= 2)
+                {
+                    writeJsonUtf8String(e.name(), out);
+                }
+                else
+                {
+                    boolean firstInEntry = true;
+                    out.write('{');
+                    for (var f : mapOfFileds.values())
+                    {
+                        firstInEntry = writeField(e, firstInEntry, f.getName(), f, false);
+                    }
+                    out.write('}');
+                }
+            }
+
+            out.write("]");
+        }
+
+
+        tabOut();
+        out.write('}');
     }
 
     /**
