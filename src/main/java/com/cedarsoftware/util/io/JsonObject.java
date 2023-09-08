@@ -72,6 +72,11 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         primitiveWrappers.add("java.lang.Short");
     }
 
+    public String toString()
+    {
+        return "mLen:" + getLenientSize() + " type:" + type + " l,c:" + line + "," + col + " id:" + id;
+    }
+
 
     public long getId()
     {
@@ -234,6 +239,15 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public int getLength()
     {
+        Integer items = getLenientSize();
+        if (items != null)
+        {
+            return items;
+        }
+        throw new JsonIoException("getLength() called on a non-collection, line " + line + ", col " + col);
+    }
+
+    private Integer getLenientSize() {
         if (isArray())
         {
             if (target == null)
@@ -248,7 +262,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             Object[] items = (Object[]) get(ITEMS);
             return items == null ? 0 : items.length;
         }
-        throw new JsonIoException("getLength() called on a non-collection, line " + line + ", col " + col);
+        return null;
     }
 
     public Class getComponentType()

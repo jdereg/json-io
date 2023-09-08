@@ -34,6 +34,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
@@ -98,6 +99,7 @@ abstract class Resolver
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
+    @SuppressWarnings("FieldMayBeFinal")
     protected static class Missingfields
     {
         private Object target;
@@ -146,7 +148,7 @@ abstract class Resolver
      */
     protected Object convertMapsToObjects(final JsonObject<String, Object> root)
     {
-        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<JsonObject<String, Object>>();
+        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
 
         while (!stack.isEmpty())
@@ -389,9 +391,17 @@ abstract class Resolver
                     Object value = jsonObj.values().iterator().next();
                     mate = Collections.singletonMap(key, value);
                 }
-                else
+                else if (!c.getName().startsWith("java.util.Immutable"))
                 {
                     mate = newInstance(c, jsonObj);
+                }
+                else if (c.getName().contains("Set"))
+                {
+                    mate = new ArrayList<>();
+                }
+                else if (c.getName().contains("List"))
+                {
+                    mate = new ArrayList<>();
                 }
             }
         }
@@ -577,11 +587,29 @@ abstract class Resolver
                 {   // Patch up Indexable Collections
                     List list = (List) objToFix;
                     list.set(ref.index, objReferenced.target);
+                    String containingTypeName = ref.referencingObj.type;
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List"))
+                    {
+                        if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
+                        {
+                            list = List.of(list.toArray());
+                            ref.referencingObj.target = list;
+                        }
+                    }
                 }
                 else if (objToFix instanceof Collection)
-                {   // Add element (since it was not indexable, add it to collection)
+                {
+                    String containingTypeName = ref.referencingObj.type;
                     Collection col = (Collection) objToFix;
-                    col.add(objReferenced.target);
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
+                    {
+                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.type + "', @ref = " + ref.refId);
+                    }
+                    else
+                    {
+                        // Add element (since it was not indexable, add it to collection)
+                        col.add(objReferenced.target);
+                    }
                 }
                 else
                 {

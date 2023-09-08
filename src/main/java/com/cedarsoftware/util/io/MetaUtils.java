@@ -627,7 +627,11 @@ public class MetaUtils
         // Try each constructor (public, protected, private, package-private) with null values for non-primitives.
         for (Constructor constructor : constructorList)
         {
-            constructor.setAccessible(true);
+            try {
+                constructor.setAccessible(true);
+            } catch (Exception ignore) {
+                continue;
+            }
             Class[] argTypes = constructor.getParameterTypes();
             Object[] values = fillArgs(argTypes, true);
             try
@@ -641,7 +645,11 @@ public class MetaUtils
         // Try each constructor (public, protected, private, package-private) with non-null values for non-primitives.
         for (Constructor constructor : constructorList)
         {
-            constructor.setAccessible(true);
+            try {
+                constructor.setAccessible(true);
+            } catch (Exception e) {
+                continue;
+            }
             Class[] argTypes = constructor.getParameterTypes();
             Object[] values = fillArgs(argTypes, false);
             try
@@ -808,6 +816,10 @@ public class MetaUtils
                 else if (argType == Object.class)
                 {
                     values[i] = new Object();
+                }
+                else if (argType.isArray())
+                {
+                    values[i] = new Object[0];
                 }
                 else
                 {

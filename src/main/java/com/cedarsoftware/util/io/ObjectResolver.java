@@ -6,12 +6,14 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -57,6 +59,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@SuppressWarnings({ "rawtypes", "unchecked", "Convert2Diamond" })
 public class ObjectResolver extends Resolver
 {
     private final ClassLoader classLoader;
@@ -208,8 +211,8 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject<String, Object> jObj = (JsonObject) rhs;
-                final Long ref = jObj.getReferenceId();
+                final JsonObject<String, Object> jsRhs = (JsonObject) rhs;
+                final Long ref = jsRhs.getReferenceId();
 
                 if (ref != null)
                 {    // Correct field references
@@ -226,10 +229,19 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
-                    field.set(target, createJavaObjectInstance(fieldType, jObj));
-                    if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                    Object fieldObject = createJavaObjectInstance(fieldType, jsRhs);
+                    field.set(target, fieldObject);
+                    if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
-                        stack.addFirst((JsonObject) rhs);
+                        // GOTCHA : if the field is an immutable collection,
+                        // "work instance", where one can accumulate items in (ArrayList)
+                        // and "final instance' (say List.of() ) can _not_ be the same.
+                        // So, the later the assignment, the better.
+                        Object javaObj = convertMapsToObjects(jsRhs);
+                        if (javaObj != fieldObject)
+                        {
+                            field.set(target, javaObj);
+                        }
                     }
                 }
             }
@@ -390,12 +402,20 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
+        final String className = jsonObj.type;
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
+            if (className != null && className.startsWith("java.util.Immutable"))
+                if (className.contains("Set")) {
+                    jsonObj.target = Set.of();
+                } else if (className.contains("List")) {
+                    jsonObj.target = List.of();
+                }
             return;
         }
-        final Collection col = (Collection) jsonObj.target;
+        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
+        final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -462,7 +482,41 @@ public class ObjectResolver extends Resolver
             idx++;
         }
 
+        //if (isImmutable) {
+            reconciliateCollection(jsonObj, col);
+        //}
+
         jsonObj.remove(ITEMS);   // Reduce memory required during processing
+    }
+
+    static public void reconciliateCollection(JsonObject jsonObj, Collection col)
+    {
+        final String className = jsonObj.type;
+        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
+        if (!isImmutable) return;
+
+        if (col == null && jsonObj.target instanceof Collection) col = (Collection) jsonObj.target;
+        if (col == null) return;
+
+        if (className.contains("List"))
+        {
+            if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
+            {
+                jsonObj.target = List.of(col.toArray());
+            }
+            else
+            {
+                jsonObj.target = col;
+            }
+        }
+        else if (className.contains("Set"))
+        {
+            jsonObj.target = Set.of(col.toArray());
+        }
+        else
+        {
+            jsonObj.target = col;
+        }
     }
 
     /**
@@ -699,7 +753,7 @@ public class ObjectResolver extends Resolver
         {
             read = ((JsonReader.JsonClassReader)closestReader).read(o, stack);
         }
-		return read;
+        return read;
     }
 
     private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
