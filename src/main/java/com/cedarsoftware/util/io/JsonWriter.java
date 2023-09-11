@@ -2237,7 +2237,7 @@ public class JsonWriter implements Closeable, Flushable
         Class elementType = (Class) getValueByReflect(enumSet, elementTypeField);
         writeJsonUtf8String(elementType.getName(), out);
 
-        var mapOfFileds = MetaUtils.getDeepDeclaredFields(elementType);
+        Map<String, Field> mapOfFileds = MetaUtils.getDeepDeclaredFields(elementType);
         //Field[] enumFields = elementType.getDeclaredFields();
         int enumFieldsCount = mapOfFileds.size();
 
@@ -2253,7 +2253,7 @@ public class JsonWriter implements Closeable, Flushable
             }
 
             boolean firstInSet = true;
-            for (var e : enumSet) {
+            for (Enum e : enumSet) {
                 if (!firstInSet)
                 {
                     out.write(",");
@@ -2272,7 +2272,7 @@ public class JsonWriter implements Closeable, Flushable
                 {
                     boolean firstInEntry = true;
                     out.write('{');
-                    for (var f : mapOfFileds.values())
+                    for (Field f : mapOfFileds.values())
                     {
                         firstInEntry = writeField(e, firstInEntry, f.getName(), f, false);
                     }
