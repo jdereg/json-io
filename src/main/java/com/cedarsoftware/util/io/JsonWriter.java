@@ -1091,7 +1091,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (obj instanceof EnumSet)
         {
-            writeEnumSet((EnumSet)obj, showType);
+            writeEnumSet((EnumSet)obj);
         }
         else if (obj instanceof Collection)
         {
@@ -2211,7 +2211,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    public void writeEnumSet(final EnumSet<?> enumSet, boolean showType) throws IOException
+    public void writeEnumSet(final EnumSet<?> enumSet) throws IOException
     {
         out.write('{');
         tabIn();
@@ -2224,24 +2224,44 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        if (showType) {
-            writeType(enumSet, out);
-            out.write(",");
-            newLine();
-        }
-
         writeJsonUtf8String("@enum", out);
         out.write(':');
 
+        Enum<? extends Enum<?>> ee = null;
+        if (!enumSet.isEmpty())
+        {
+            ee = enumSet.iterator().next();
+        }
+        else
+        {
+            EnumSet<? extends Enum<?>> complement = EnumSet.complementOf(enumSet);
+            if (!complement.isEmpty())
+            {
+                ee = complement.iterator().next();
+            }
+        }
+
         Field elementTypeField = MetaUtils.getField(EnumSet.class, "elementType");
-        Class elementType = (Class) getValueByReflect(enumSet, elementTypeField);
+        Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
+        if ( elementType != null)
+        {
+            // nice we got the right to sneak into
+        }
+        else if (ee == null)
+        {
+            elementType = MetaUtils.Dumpty.class;
+        }
+        else
+        {
+            elementType = ee.getClass();
+        }
         writeJsonUtf8String(elementType.getName(), out);
 
-        Map<String, Field> mapOfFileds = MetaUtils.getDeepDeclaredFields(elementType);
-        //Field[] enumFields = elementType.getDeclaredFields();
-        int enumFieldsCount = mapOfFileds.size();
-
         if (!enumSet.isEmpty()) {
+            Map<String, Field> mapOfFields = MetaUtils.getDeepDeclaredFields(elementType);
+            //Field[] enumFields = elementType.getDeclaredFields();
+            int enumFieldsCount = mapOfFields.size();
+
             out.write(",");
             newLine();
 
@@ -2272,7 +2292,7 @@ public class JsonWriter implements Closeable, Flushable
                 {
                     boolean firstInEntry = true;
                     out.write('{');
-                    for (Field f : mapOfFileds.values())
+                    for (Field f : mapOfFields.values())
                     {
                         firstInEntry = writeField(e, firstInEntry, f.getName(), f, false);
                     }

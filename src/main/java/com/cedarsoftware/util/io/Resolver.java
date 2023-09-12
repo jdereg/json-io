@@ -313,13 +313,21 @@ abstract class Resolver
         String type = jsonObj.type;
 
         // We can't set values to an Object, so well try to use the contained type instead
-		if ("java.lang.Object".equals(type))
+        if ("java.lang.Object".equals(type))
         {
-			Object value = jsonObj.get("value");
-        	if (jsonObj.keySet().size() == 1 && value != null)
+            Object value = jsonObj.get("value");
+            if (jsonObj.keySet().size() == 1 && value != null)
             {
-        		type = value.getClass().getName();
-        	}
+                type = value.getClass().getName();
+            }
+        }
+        if (type == null)
+        {
+            Object mayEnumSpecial = jsonObj.get("@enum");
+            if (mayEnumSpecial instanceof String)
+            {
+                type = "java.util.EnumSet";
+            }
         }
 
         Object mate;
@@ -571,12 +579,24 @@ abstract class Resolver
     protected EnumSet<?> extractEnumSet(Class c, JsonObject<String, Object> jsonObj)
     {
         String enumClassName = (String) jsonObj.get("@enum");
-        Class enumClass = MetaUtils.classForName(enumClassName, reader.getClassLoader());
+        Class enumClass = enumClassName == null ? null
+			: MetaUtils.classForName(enumClassName, reader.getClassLoader());
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-            return EnumSet.noneOf(enumClass);
+			if (enumClass != null)
+			{
+				return EnumSet.noneOf(enumClass);
+			}
+			else
+			{
+				return EnumSet.noneOf(MetaUtils.Dumpty.class);
+			}
         }
+		else if (enumClass == null)
+		{
+			throw new JsonIoException("Could not figure out Enum of the not empty set " + jsonObj);
+		}
 
         EnumSet enumSet = null;
         for (Object item : items)

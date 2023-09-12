@@ -33,10 +33,12 @@ public class TestEmptyEnumSetOnJDK17
     {
         EnumSet<TestEnum> versions;
         String dummy;
+        EnumSet<Thread.State> states;
 
-        public MultiVersioned(EnumSet<TestEnum> versions, String dummy) {
+        public MultiVersioned(EnumSet<TestEnum> versions, String dummy, EnumSet<Thread.State> states) {
             this.versions = versions;
             this.dummy = dummy;
+            this.states = states;
         }
 
         public boolean equals(Object o) {
@@ -76,7 +78,7 @@ public class TestEmptyEnumSetOnJDK17
 
     public void testEnumSetInPoJoOnJDK17()
     {
-        MultiVersioned m = new MultiVersioned(EnumSet.of(TestEnum.V1, TestEnum.V3), "what");
+        MultiVersioned m = new MultiVersioned(EnumSet.of(TestEnum.V1, TestEnum.V3), "what", EnumSet.of(Thread.State.NEW));
 
         String json = JsonWriter.objectToJson(m);
         MultiVersioned target = (MultiVersioned) JsonReader.jsonToJava(json);
