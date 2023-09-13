@@ -36,6 +36,8 @@ import static java.lang.reflect.Modifier.*;
  */
 public class MetaUtils
 {
+    public enum Dumpty {}
+
     private MetaUtils () {}
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();

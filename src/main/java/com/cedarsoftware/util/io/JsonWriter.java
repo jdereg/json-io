@@ -1089,6 +1089,10 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeArray(obj, showType);
         }
+        else if (obj instanceof EnumSet)
+        {
+            writeEnumSet((EnumSet)obj);
+        }
         else if (obj instanceof Collection)
         {
             writeCollection((Collection) obj, showType);
@@ -2205,6 +2209,103 @@ public class JsonWriter implements Closeable, Flushable
         {
             writeImpl(o, true);
         }
+    }
+
+    public void writeEnumSet(final EnumSet<?> enumSet) throws IOException
+    {
+        out.write('{');
+        tabIn();
+
+        boolean referenced = objsReferenced.containsKey(enumSet);
+        if (referenced)
+        {
+            writeId(getId(enumSet));
+            out.write(',');
+            newLine();
+        }
+
+        writeJsonUtf8String("@enum", out);
+        out.write(':');
+
+        Enum<? extends Enum<?>> ee = null;
+        if (!enumSet.isEmpty())
+        {
+            ee = enumSet.iterator().next();
+        }
+        else
+        {
+            EnumSet<? extends Enum<?>> complement = EnumSet.complementOf(enumSet);
+            if (!complement.isEmpty())
+            {
+                ee = complement.iterator().next();
+            }
+        }
+
+        Field elementTypeField = MetaUtils.getField(EnumSet.class, "elementType");
+        Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
+        if ( elementType != null)
+        {
+            // nice we got the right to sneak into
+        }
+        else if (ee == null)
+        {
+            elementType = MetaUtils.Dumpty.class;
+        }
+        else
+        {
+            elementType = ee.getClass();
+        }
+        writeJsonUtf8String(elementType.getName(), out);
+
+        if (!enumSet.isEmpty()) {
+            Map<String, Field> mapOfFields = MetaUtils.getDeepDeclaredFields(elementType);
+            //Field[] enumFields = elementType.getDeclaredFields();
+            int enumFieldsCount = mapOfFields.size();
+
+            out.write(",");
+            newLine();
+
+            writeJsonUtf8String("@items", out);
+            out.write(":[");
+            if (enumFieldsCount > 2)
+            {
+                newLine();
+            }
+
+            boolean firstInSet = true;
+            for (Enum e : enumSet) {
+                if (!firstInSet)
+                {
+                    out.write(",");
+                    if (enumFieldsCount > 2)
+                    {
+                        newLine();
+                    }
+                }
+                firstInSet = false;
+
+                if (enumFieldsCount <= 2)
+                {
+                    writeJsonUtf8String(e.name(), out);
+                }
+                else
+                {
+                    boolean firstInEntry = true;
+                    out.write('{');
+                    for (Field f : mapOfFields.values())
+                    {
+                        firstInEntry = writeField(e, firstInEntry, f.getName(), f, false);
+                    }
+                    out.write('}');
+                }
+            }
+
+            out.write("]");
+        }
+
+
+        tabOut();
+        out.write('}');
     }
 
     /**

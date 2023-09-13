@@ -1,12 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,7 +26,31 @@ public class TestEmptyEnumSetOnJDK17
 {
     static enum TestEnum
     {
-        V1
+        V1, V2, V3
+    }
+
+    static class MultiVersioned
+    {
+        EnumSet<TestEnum> versions;
+        String dummy;
+        EnumSet<Thread.State> states;
+
+        public MultiVersioned(EnumSet<TestEnum> versions, String dummy, EnumSet<Thread.State> states) {
+            this.versions = versions;
+            this.dummy = dummy;
+            this.states = states;
+        }
+
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MultiVersioned that = (MultiVersioned) o;
+            return Objects.equals(versions, that.versions) && Objects.equals(dummy, that.dummy);
+        }
+
+        public int hashCode() {
+            return Objects.hash(versions, dummy);
+        }
     }
 
     @Test
@@ -46,11 +67,22 @@ public class TestEmptyEnumSetOnJDK17
     @Test
     public void testEnumSetOnJDK17()
     {
-        EnumSet source = EnumSet.of(TestEnum.V1);
+        EnumSet source = EnumSet.of(TestEnum.V1, TestEnum.V3);
 
         String json = JsonWriter.objectToJson(source);
         EnumSet target = (EnumSet) JsonReader.jsonToJava(json);
 
         assert source.equals(target);
+    }
+    @Test
+
+    public void testEnumSetInPoJoOnJDK17()
+    {
+        MultiVersioned m = new MultiVersioned(EnumSet.of(TestEnum.V1, TestEnum.V3), "what", EnumSet.of(Thread.State.NEW));
+
+        String json = JsonWriter.objectToJson(m);
+        MultiVersioned target = (MultiVersioned) JsonReader.jsonToJava(json);
+
+        assert m.equals(target);
     }
 }
