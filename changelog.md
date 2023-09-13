@@ -1,4 +1,16 @@
 ### Revision History
+* 4.14.1
+  * JDK 1.8 is target class file format. @laurgarn
+  * JDK 11 is source file format. @laurgarn
+  * Bug fix: EnumSet support fixed. @laurgarn
+  * Bug fix: Null boxed primitives are preserved round-trip. @laurgarn
+  * Enhancement: Filter Blacklisted Fields Before Trying to Access them to prevent exceptions thrown by Proxies (improve hibernate support) @kpartlow
+  * Bug fix: Stack overflow error caused by json-io parsing of untrusted JSON String @PoppingSnack
+  * Enhancement: Create gradle-publish.yml @devlynnx
+  * Enhancement: Added record deserialization, which implies java 16 codebase @reuschling
+  * Bug fix: Fixed TestJavaScript @h143570
+  * Enhancement: Bump gson from 2.6.2 to 2.8.9 @dependabot
+  * Enhancement: support deserialization of Collections.EmptyList on JDK17 @ozhelezniak-talend
 * 4.14.0
   * Bug fix: Enum serialization error with Java 17 #155.  According to @wweng-talend, if you set : "--illegal-access=deny" on jvm parameters, it works the same between jdk11 and jdk17. 
   * Bug fix: java.lang primitives serialization - JDK-8256358 - JDK 17 support #154. Fix by @wwang-talend.
