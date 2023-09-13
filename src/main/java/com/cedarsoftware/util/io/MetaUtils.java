@@ -36,6 +36,8 @@ import static java.lang.reflect.Modifier.*;
  */
 public class MetaUtils
 {
+    public enum Dumpty {}
+
     private MetaUtils () {}
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();
@@ -720,13 +722,17 @@ public class MetaUtils
         for (int i = 0; i < argTypes.length; i++)
         {
             final Class argType = argTypes[i];
-            if (isPrimitive(argType))
+            if (argType.isPrimitive())
             {
                 values[i] = convert(argType, null);
             }
             else if (useNull)
             {
                 values[i] = null;
+            }
+            else if (prims.contains(argType))
+            {
+                values[i] = convert(argType, null);
             }
             else
             {
