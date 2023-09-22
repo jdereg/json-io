@@ -881,11 +881,19 @@ public class Readers
                     Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
                     lParameterTypes.add(type);
 
-                    String name = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
-                    lParameterValues.add(jsonObj.get(name));
+                    String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
+                    JsonObject parameterValueJsonObj = new JsonObject();
+                    parameterValueJsonObj.setType(type.getName());
+                    parameterValueJsonObj.put("value", jsonObj.get(parameterName));
+
+                    if(parameterValueJsonObj.isLogicalPrimitive())
+                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue());
+                    else
+                        lParameterValues.add(parameterValueJsonObj.get("value"));
                 }
 
                 Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+                constructor.setAccessible(true);
 
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
 
