@@ -6,9 +6,21 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.14.1</version>
+    <version>4.14.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
+
+    <properties>
+        <maven.compiler.fork>true</maven.compiler.fork>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+            Name of the benchmark Uber-JAR to generate.
+          -->
+        <uberjar.name>benchmarks</uberjar.name>
+    </properties>
 
     <profiles>
 
@@ -68,13 +80,12 @@
         </developer>
     </developers>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!--
-            Name of the benchmark Uber-JAR to generate.
-          -->
-        <uberjar.name>benchmarks</uberjar.name>
-    </properties>
+    <repositories>
+        <repository>
+            <id>groovy-libs-release</id>
+            <url>https://groovy.jfrog.io/artifactory/libs-release</url>
+        </repository>
+    </repositories>
 
     <pluginRepositories>
         <pluginRepository>
@@ -88,6 +99,10 @@
             <releases>
                 <updatePolicy>never</updatePolicy>
             </releases>
+        </pluginRepository>
+        <pluginRepository>
+            <id>groovy-plugins-release</id>
+            <url>https://groovy.jfrog.io/artifactory/plugins-release</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -135,25 +150,28 @@
 
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.11.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>1.8</target>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
                     <!--                    <release>1.8</release>-->
                     <compilerId>groovy-eclipse-compiler</compilerId>
+                    <compilerArguments>
+                        <indy/>
+                    </compilerArguments>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-compiler</artifactId>
-                        <version>3.7.0</version>
+                        <version>3.9.0</version>
                     </dependency>
 
                     <dependency>
                         <groupId>org.codehaus.groovy</groupId>
                         <artifactId>groovy-eclipse-batch</artifactId>
-                        <version>2.5.14-02</version>
+                        <version>4.0.15-01</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -275,10 +293,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.codehaus.groovy</groupId>
+            <groupId>org.apache.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>2.5.18</version>
-            <scope>test</scope>
+            <version>4.0.15</version>
         </dependency>
 
         <dependency>
