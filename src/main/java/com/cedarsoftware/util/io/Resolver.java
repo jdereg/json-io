@@ -411,6 +411,10 @@ abstract class Resolver
                 {
                     mate = new ArrayList<>();
                 }
+                else if (c.getName().contains("Map"))
+                {
+                    mate = new LinkedHashMap<>();
+                }
             }
         }
         else

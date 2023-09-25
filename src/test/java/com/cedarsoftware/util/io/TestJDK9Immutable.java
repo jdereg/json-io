@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.Assert;
@@ -20,6 +21,8 @@ public class TestJDK9Immutable {
         Rec       link;
         List<Rec> ilinks;
         List<Rec> mlinks;
+
+		Map<String, Rec> smap;
     }
 
     @Test
@@ -230,6 +233,8 @@ public class TestJDK9Immutable {
         rec1.ilinks = List.of(rec2, rec1);
         rec2.ilinks = List.of();
         List<Rec> ol = List.of(rec1, rec2, rec1);
+
+		rec1.smap = Map.of();
 
         String json = JsonWriter.objectToJson(ol);
         Object es = JsonReader.jsonToJava(json);
