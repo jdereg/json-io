@@ -1,9 +1,14 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.*
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType
+import static org.assertj.core.api.Assertions.assertThatNoException
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertFalse
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -61,14 +66,8 @@ class TestTransient
         assert json.contains('lname')
         assert json.contains('fullname')
 
-        try
-        {
-            TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'map']]] as Map)
-        }
-        catch (UnsupportedOperationException unused)
-        {
-            fail('Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue')
-        }
+        //'Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue'
+        assertThatNoException().isThrownBy({TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'map']]] as Map) })
     }
 
     @Test

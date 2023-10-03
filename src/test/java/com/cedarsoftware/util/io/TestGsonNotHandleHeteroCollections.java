@@ -1,14 +1,11 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import static junit.framework.TestCase.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

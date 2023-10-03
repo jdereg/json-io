@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -49,13 +49,8 @@ class TestJsonObject
         assertTrue MetaUtils.isLogicalPrimitive(BigInteger.class)
         assertTrue MetaUtils.isLogicalPrimitive(BigDecimal.class)
         assertTrue MetaUtils.isLogicalPrimitive(Number.class)
-        try
-        {
-            MetaUtils.isLogicalPrimitive(null)
-            fail()
-        }
-        catch (NullPointerException ignored)
-        { }
+
+        assertThrows(NullPointerException.class, { MetaUtils.isLogicalPrimitive(null) })
     }
 
     @Test

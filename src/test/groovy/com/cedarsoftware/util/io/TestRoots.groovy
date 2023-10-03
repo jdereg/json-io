@@ -2,10 +2,10 @@ package com.cedarsoftware.util.io
 
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertTrue
+import static org.junit.jupiter.api.Assertions.assertTrue
+import static org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

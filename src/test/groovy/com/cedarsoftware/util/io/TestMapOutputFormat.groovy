@@ -2,7 +2,7 @@ package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * Test cases for JsonReader / JsonWriter

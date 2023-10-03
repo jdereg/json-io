@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertSame
-import static org.junit.Assert.assertTrue
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertSame
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -47,7 +47,7 @@ class TestString
             StringBuffer s = new StringBuffer()
             for (int i = 0; i < MAX_UTF8_CHAR; i++)
             {
-                s.append((char) i)
+                s.append(i as char)
             }
             _range = s.toString()
 
@@ -80,7 +80,7 @@ class TestString
 
         for (int i = 0; i < ManyStrings.MAX_UTF8_CHAR; i++)
         {
-            assertTrue(that._range.charAt(i) == (char) i)
+            assertTrue(that._range.charAt(i) == (i as char))
         }
 
         // UTF-8 serialization makes it through clean.

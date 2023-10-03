@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.*;
@@ -141,6 +142,10 @@ public class JsonReader implements Closeable
         temp.put(StringBuilder.class, new Readers.StringBuilderReader());
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
         temp.put(UUID.class, new Readers.UUIDReader());
+        temp.put(URL.class, new Readers.URLReader());
+
+
+
         try
         {
             Class recordClass = Class.forName("java.lang.Record");
@@ -148,6 +153,15 @@ public class JsonReader implements Closeable
         } catch (ClassNotFoundException e)
         {
             // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
+        }
+
+        try
+        {
+            Class recordClass = Class.forName("sun.util.calendar.ZoneInfo");
+            temp.put(recordClass, new Readers.TimeZoneReader());
+        } catch (ClassNotFoundException e)
+        {
+            // we can just ignore it - time zone isn't represented as ZoneInfo in this jvm.
         }
 
         BASE_READERS = temp;

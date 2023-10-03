@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -105,26 +105,10 @@ class TestUsingSunMisc
     @Test
     void testImpossibleClass()
     {
-        try
-        {
-            ShouldBeImpossibleToInstantiate s = new ShouldBeImpossibleToInstantiate()
-            fail()
-        }
-        catch (Exception e)
-        {
-            e.message.toLowerCase().concat("go away")
-        }
+        assertThrows(Exception.class, { new ShouldBeImpossibleToInstantiate() })
 
         String json = '{"@type":"' + ShouldBeImpossibleToInstantiate.class.name + '", "x":50}'
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            e.message.toLowerCase().concat("go away")
-        }
+        assertThrows(Exception.class, {  JsonReader.jsonToJava(json) })
 
         MetaUtils.useUnsafe = true
         ShouldBeImpossibleToInstantiate s = JsonReader.jsonToJava(json)

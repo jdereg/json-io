@@ -1,11 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-
-import org.junit.BeforeClass;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,7 +30,7 @@ public class TestLenientNanInfinity
     static boolean readAllowNan;
     static boolean writeAllowNan;
 
-    @BeforeClass
+    @BeforeAll
     public static void init()
     {
         readAllowNan = JsonReader.isAllowNanAndInfinity();
@@ -38,7 +39,7 @@ public class TestLenientNanInfinity
         JsonWriter.setAllowNanAndInfinity(true);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDown()
     {
         JsonReader.setAllowNanAndInfinity(readAllowNan);

@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.JsonIOException
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertThrows
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -60,13 +61,7 @@ class TestAtomicBoolean
         assert json == '''{"@type":"com.cedarsoftware.util.io.TestAtomicBoolean$TestAtomicBooleanField","value":true,"nullValue":null,"strValue":true,"emptyStrValue":null,"objValue":false,"values":[false,null,true,true]}'''
 
         json = '''{"@type":"com.cedarsoftware.util.io.TestAtomicBoolean$TestAtomicBooleanField","value":16.5}'''
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (JsonIoException ignored)
-        { }
+        assertThrows(JsonIoException.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test

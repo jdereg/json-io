@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -40,16 +40,9 @@ class TestLocale
         us = (Locale) TestUtil.readJsonObject(json)
         assertTrue(locale.equals(us))
 
-        try
-        {
-            String noProps = '{"@type":"java.util.Locale"}'
-            TestUtil.readJsonObject(noProps)
-            fail()
-        }
-        catch(Exception e)
-        {
-            assert e.message.toLowerCase().contains("must specify 'language'")
-        }
+
+        Throwable e = assertThrows(Exception.class, { TestUtil.readJsonObject('{"@type":"java.util.Locale"}') })
+        assertTrue(e.message.toLowerCase().contains("must specify 'language'"))
 
         json = '{"@type":"java.util.Locale","language":"en"}'
         locale = (Locale) TestUtil.readJsonObject(json)

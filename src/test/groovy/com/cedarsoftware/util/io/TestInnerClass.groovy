@@ -1,10 +1,8 @@
 package com.cedarsoftware.util.io
 
-import org.junit.FixMethodOrder
-import org.junit.Test
-import org.junit.runners.MethodSorters
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertTrue
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,7 +21,6 @@ import static org.junit.Assert.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class TestInnerClass
 {
     static public class A

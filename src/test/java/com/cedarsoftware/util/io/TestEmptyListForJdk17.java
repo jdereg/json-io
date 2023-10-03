@@ -3,8 +3,9 @@ package com.cedarsoftware.util.io;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -32,8 +33,8 @@ public class TestEmptyListForJdk17 {
         String json = JsonWriter.objectToJson(o);
         List es = (List) JsonReader.jsonToJava(json);
 
-        Assert.assertTrue(es.isEmpty());
-        Assert.assertEquals(Collections.EMPTY_LIST.getClass(), es.getClass());
+        assertTrue(es.isEmpty());
+        assertEquals(Collections.EMPTY_LIST.getClass(), es.getClass());
     }
 
 }

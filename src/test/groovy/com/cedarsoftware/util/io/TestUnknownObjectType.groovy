@@ -1,8 +1,11 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import com.google.gson.JsonIOException
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -55,11 +58,6 @@ class TestUnknownObjectType
     void testUnknownClassTypeFailsWhenFailOptionTrue()
     {
         def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
-        try {
-            JsonReader.jsonToJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): true ])
-            fail()
-        }
-        catch (JsonIoException expected) {
-        }
+        assertThrows(JsonIoException.class, { JsonReader.jsonToJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): true]) });
     }
 }

@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io
 import com.google.gson.Gson
 import groovy.transform.CompileStatic
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotNull
 /**
  * Test cases for JsonReader / JsonWriter
  *
@@ -56,7 +56,7 @@ class TestBigJson
         println ((stop - start) / 1000000L)
     }
 
-    @Ignore
+    @Disabled
     void testGsonOnHugeFile()
     {
         String json = TestUtil.fetchResource('big.json')
@@ -78,7 +78,7 @@ class TestBigJson
         }
     }
 
-    @Ignore
+    @Disabled
     void testJsonOnHugeFile()
     {
         String json = TestUtil.fetchResource('big.json')

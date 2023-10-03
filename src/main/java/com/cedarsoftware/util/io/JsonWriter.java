@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.Map.Entry;
@@ -143,13 +144,26 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(StringBuilder.class, new Writers.StringBuilderWriter());
         temp.put(StringBuffer.class, new Writers.StringBufferWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
+        temp.put(URL.class, new Writers.URLWriter());
+
+        try
+        {
+            Class zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
+            temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
+        } catch (ClassNotFoundException e)
+        {
+           // we an ignore
+        }
+
+
+
         BASE_WRITERS = temp;
     }
 
     private static volatile boolean allowNanAndInfinity = false;
 
     /**
-     * @return boolean the allowsNanAndInifnity flag
+     * @return boolean the allowsNanAndInfinity flag
      */
     public static boolean isAllowNanAndInfinity() {
         return allowNanAndInfinity;

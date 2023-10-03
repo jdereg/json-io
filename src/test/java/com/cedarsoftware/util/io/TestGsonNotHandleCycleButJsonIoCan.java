@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -44,16 +44,8 @@ public class TestGsonNotHandleCycleButJsonIoCan
         beta.next = alpha;
 
         // Google blows the stack when there is a cycle in the data
-        try
-        {
-            Gson gson = new Gson();
-            String json = gson.toJson(alpha);
-            fail();
-        }
-        catch(StackOverflowError e)
-        {
-            // Expected with gson
-        }
+
+        assertThrows(StackOverflowError.class, () -> new Gson().toJson(alpha));
 
         // json-io handles cycles just fine.
         String json = JsonWriter.objectToJson(alpha);

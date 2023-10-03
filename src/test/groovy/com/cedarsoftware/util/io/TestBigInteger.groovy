@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -178,37 +178,10 @@ class TestBigInteger
         assertNull(Readers.bigIntegerFrom(null))
         assertNull(Readers.bigDecimalFrom(null))
 
-        try
-        {
-            Readers.bigIntegerFrom("Glock")
-            fail()
-        }
-        catch(Exception ignored)
-        { }
-
-        try
-        {
-            Readers.bigDecimalFrom("Glock")
-            fail()
-        }
-        catch(Exception ignored)
-        { }
-
-        try
-        {
-            Readers.bigIntegerFrom(new Date())
-            fail()
-        }
-        catch(Exception ignored)
-        { }
-
-        try
-        {
-            Readers.bigDecimalFrom(new Date())
-            fail()
-        }
-        catch(Exception ignored)
-        { }
+        assertThrows(Exception.class, { Readers.bigIntegerFrom("Glock")})
+        assertThrows(Exception.class, { Readers.bigDecimalFrom("Glock")})
+        assertThrows(Exception.class, { Readers.bigIntegerFrom(new Date())})
+        assertThrows(Exception.class, { Readers.bigDecimalFrom(new Date())})
 
         BigInteger bi = Readers.bigIntegerFrom(3.14)
         assertEquals(3, bi.intValue())
