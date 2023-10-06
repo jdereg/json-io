@@ -1,11 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.BeforeClass;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -26,7 +25,7 @@ import org.junit.BeforeClass;
  */
 public class TestNotLenientNanInfinity
 {
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         JsonReader.setAllowNanAndInfinity(false);
         JsonWriter.setAllowNanAndInfinity(false);

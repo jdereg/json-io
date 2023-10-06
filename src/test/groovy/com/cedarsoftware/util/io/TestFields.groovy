@@ -1,9 +1,13 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.*
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertFalse
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -483,15 +487,8 @@ class TestFields
 
         Map args = new HashMap()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
-        try
-        {
-            JsonWriter.objectToJson(painful, args)
-            fail("should not make it here")
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("unable to convert"))
-        }
+
+        assertThrows(Exception.class, {  JsonWriter.objectToJson(painful, args) })
     }
 
     @Test

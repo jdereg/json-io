@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

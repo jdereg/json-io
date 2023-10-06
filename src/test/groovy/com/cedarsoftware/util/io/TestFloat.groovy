@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotEquals
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
+
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -112,15 +113,7 @@ class TestFloat
     void parseBadFloat()
     {
         String json = '[123.45.67]'
-        try
-        {
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (JsonIoException e)
-        {
-            assert e.message.toLowerCase().contains('invalid number: 123.45.67')
-        }
+        assertThrows(JsonIoException.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
     }
 
     @Test

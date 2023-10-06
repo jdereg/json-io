@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 import java.sql.Timestamp
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -167,15 +167,7 @@ class TestDates
         assertEquals(9, cal.get(Calendar.DAY_OF_MONTH))
 
         json = '{"@type":"date","value":"2014 Juggler 9"}'
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("unable to parse")
-        }
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test

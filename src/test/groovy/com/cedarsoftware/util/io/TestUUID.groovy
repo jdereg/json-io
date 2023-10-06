@@ -1,10 +1,13 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.*
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertSame
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
+
 
 /**
  * @author Balazs Bessenyei (h143570@gmail.com)
@@ -46,16 +49,16 @@ class TestUUID
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.internals)
 
         json = '{"@type":"' + TestUUIDFields.class.name + '","fromString":""}'
-        Throwable thrown = Assert.assertThrows(JsonIoException.class, { (TestUUIDFields) TestUtil.readJsonObject(json) })
+        Throwable thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
         assertEquals(IllegalArgumentException.class, thrown.cause.class)
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "leastSigBits":-7929886640328317609}}'
-        thrown = Assert.assertThrows(JsonIoException.class, { (TestUUIDFields) TestUtil.readJsonObject(json) })
-        assertTrue("", thrown.cause.message.contains("mostSigBits"))
+        thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
+        assertTrue(thrown.cause.message.contains("mostSigBits"))
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "mostSigBits":7280309849777586861}}'
-        thrown = Assert.assertThrows(JsonIoException.class, { (TestUUIDFields) TestUtil.readJsonObject(json) })
-        assertTrue("", thrown.cause.message.contains("leastSigBits"))
+        thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
+        assertTrue(thrown.cause.message.contains("leastSigBits"))
     }
 
     @Test

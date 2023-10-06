@@ -4,6 +4,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -88,10 +90,81 @@ public class Readers
         months.put("december", "12");
     }
 
+    public static class URLReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            boolean isString = o instanceof String;
+
+            try
+            {
+                if (isString)
+                {
+                    return new URL((String)o);
+                }
+
+                return createURLFromJsonObject((JsonObject)o);
+            }
+            catch(MalformedURLException e)
+            {
+                throw new JsonIoException("java.net.URL malformed URL:  " + ((o instanceof String) ? o : e.getMessage()));
+            }
+        }
+
+        URL createURLFromJsonObject(JsonObject jObj) throws MalformedURLException {
+            if (jObj.containsKey("url")) {
+                jObj.target = createUrlNewWay(jObj);
+            } else {
+                jObj.target = createUrlOldWay(jObj);
+            }
+            return (URL)jObj.target;
+        }
+
+        URL createUrlNewWay(JsonObject jObj) throws MalformedURLException {
+            return new URL((String)jObj.get("url"));
+        }
+
+        URL createUrlOldWay(JsonObject jObj) throws MalformedURLException {
+            String protocol = (String)jObj.get("protocol");
+            String host = (String)jObj.get("host");
+            String file = (String)jObj.get("file");
+            String authority = (String)jObj.get("authority");
+            String ref = (String)jObj.get("ref");
+            Long port = (Long)jObj.get("port");
+
+            StringBuilder builder = new StringBuilder(protocol + ":");
+            if (!protocol.equalsIgnoreCase("jar")) {
+                builder.append("//");
+            }
+            if (authority != null && !authority.isEmpty()) {
+                builder.append(authority);
+            } else {
+                if (host != null && !host.isEmpty()) {
+                    builder.append(host);
+                }
+                if (!port.equals(-1L)) {
+                    builder.append(":" + port);
+                }
+            }
+            if (file != null && !file.isEmpty()) {
+                builder.append(file);
+            }
+            if (ref != null && !ref.isEmpty()) {
+                builder.append("#" + ref);
+            }
+            return new URL(builder.toString());
+        }
+    }
+
     public static class TimeZoneReader implements JsonReader.JsonClassReaderEx
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
+            if (o instanceof String)
+            {
+                return TimeZone.getTimeZone((String)o);
+            }
+
             JsonObject jObj = (JsonObject)o;
             Object zone = jObj.get("zone");
             if (zone == null)

@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.fail
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -24,23 +24,17 @@ import static org.junit.Assert.fail
 class TestWithAtSignInData
 {
     @Test
-    public void testFormatThatUsesAtSign()
+    void testFormatThatUsesAtSign()
     {
         String json = '{"PrincipalName":{"@type":"fir:IndividualNameType","NamePrefix":{"NamePrefixText":"Ms"},"FirstName":"Marge","LastName":"Simpson","FullName":"Marge Simpson"},"JobTitle":[{"JobTitleText":{"$":"President"}}],"CurrentManagementResponsibility":[{"ManagementResponsibilityText":{"@ManagementResponsibilityCode":"A1A6","$":"President"}}],"PrincipalIdentificationNumberDetail":[{"@DNBCodeValue":24226,"@TypeText":"Professional Contact Identifier","PrincipalIdentificationNumber":"178125299"}]}'
 
-        try
-        {
-            Map map = (Map) JsonReader.jsonToJava(json)
-            assert (map.CurrentManagementResponsibility instanceof Object[])
-            assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
-            assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226
-        }
-        catch (JsonIoException ignore)
-        {
-            fail('should not fail with an unknown @type')
-        }
+        Map map;
+        assertThatNoException().isThrownBy ({ map = (Map)JsonReader.jsonToJava(json); })
+        assert (map.CurrentManagementResponsibility instanceof Object[])
+        assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
+        assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226
 
-        Map map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert (map.CurrentManagementResponsibility instanceof Object[])
         assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
         assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226

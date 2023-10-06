@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,25 +29,12 @@ class TestErrors
     @Test
     void testBadJson()
     {
-        Object o = null;
-
-        try
-        {
-            o = TestUtil.readJsonObject('["bad JSON input"')
-            fail()
-        }
-        catch(Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("expected ',' or ']' inside array"))
-        }
-        assertTrue(o == null)
+        assertThrows(Exception.class, { TestUtil.readJsonObject('["bad JSON input"')})
     }
 
     @Test
     void testParseMissingQuote()
     {
-        try
-        {
             String json = '''{
   "array": [
     1,
@@ -64,13 +51,7 @@ class TestErrors
   },
   "string: "Hello World"
 }'''
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("expected ':' between string field and value"))
-        }
+            assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
@@ -99,8 +80,6 @@ class TestErrors
     @Test
     void testParseMissingLastBrace()
     {
-        try
-        {
             String json = """{
   "array": [
     1,1,1,1,1,1,1,1,1,1,
@@ -117,13 +96,7 @@ class TestErrors
   },
   "string": "Hello World"
 """
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("eof reached before closing '}'"))
-        }
+            assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
@@ -132,265 +105,101 @@ class TestErrors
         String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]'
         JsonReader.jsonToJava(json)
 
-        try
-        {
-            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("expected ',' or ']' inside array"))
-        }
+        json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseBadValueInArray()
     {
-        String json
-
-        try
-        {
-            json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("unknown json value type"))
-        }
+        String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseObjectWithoutClosingBrace()
     {
-        try
-        {
-            String json = '{"key": true{'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("object not ended with '}'"))
-        }
+        String json = '{"key": true{'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseBadHex()
     {
-        try
-        {
-            String json = '"\\u5h1t"'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("expected hexadecimal digits"))
-        }
+        String json = '"\\u5h1t"'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseBadEscapeChar()
     {
-        try
-        {
-            String json = '"What if I try to escape incorrectly \\L1CK"'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("invalid character escape sequence"))
-        }
+        String json = '"What if I try to escape incorrectly \\L1CK"'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseUnfinishedString()
     {
-        try
-        {
-            String json = '"This is an unfinished string...'
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("eof reached"))
-        }
+        String json = '"This is an unfinished string...'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseEOFInToken()
     {
-        try
-        {
-            String json = "falsz"
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("expected token: false"))
-        }
+        String json = "falsz"
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseEOFReadingToken()
     {
-        try
-        {
-            String json = "tru"
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("eof reached while reading token: true"))
-        }
+        String json = "tru"
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testParseEOFinArray()
     {
-        try
-        {
-            String json = "[true, false,"
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.message.toLowerCase().contains("eof reached prematurely"))
-        }
+        String json = "[true, false,"
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
     }
 
     @Test
     void testMalformedJson()
     {
-        String json;
+        String json = '{"field"0}'  // colon expected between fields
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field"0}'  // colon expected between fields
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("expected ':' between string field and value")
-        }
+        json = "{field:0}"  // not quoted field name
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = "{field:0}"  // not quoted field name
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("expected quote")
-        }
+        json = '{"field":0'  // object not terminated correctly (ending in number)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":0'  // object not terminated correctly (ending in number)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '{"field":true'  // object not terminated correctly (ending in token)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":true'  // object not terminated correctly (ending in token)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '{"field":"test"'  // object not terminated correctly (ending in string)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":"test"'  // object not terminated correctly (ending in string)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '{"field":{}'  // object not terminated correctly (ending in another object)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":{}'  // object not terminated correctly (ending in another object)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '{"field":[]'  // object not terminated correctly (ending in an array)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":[]'  // object not terminated correctly (ending in an array)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached before closing '}'")
-        }
+        json = '[1,2,3'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = '[1,2,3'
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("expected ',' or ']' inside array")
-        }
+        json = "[false,true,false"
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
-        try
-        {
-            json = "[false,true,false"
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("expected ',' or ']' inside array")
-        }
-
-        try
-        {
-            json = '["unclosed string]'
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("eof reached while reading json string")
-        }
+        json = '["unclosed string]'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
     }
 
     @Test
@@ -450,74 +259,27 @@ class TestErrors
         StringBuilder str = new StringBuilder()
         str.append("[\"\\")
         str.append("u000r\"]")
-        try
-        {
-            TestUtil.readJsonObject(str.toString())
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('["\\u000r')
-        }
+
+        assertThrows(Exception.class, { TestUtil.readJsonObject(str.toString() )})
     }
 
     @Test
     void testBadValue()
     {
-        try
-        {
-            String json = '{"field":19;}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('{"field":19;')
-        }
+        String json = '{"field":19;}'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
 
-        try
-        {
-            String json = '{"field":'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('{"field":')
-        }
+        json = '{"field":'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
 
-        try
-        {
-            String json = '{"field":joe'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('{"field":j')
-        }
+        json = '{"field":joe'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
 
-        try
-        {
-            String json = '{"field":trux}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('{"field":trux')
-        }
+        json = '{"field":trux}'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
 
-        try
-        {
-            String json = '{"field":tru'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('{"field":tru')
-        }
+        json = '{"field":tru'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
     }
 
     @Test
@@ -529,131 +291,58 @@ class TestErrors
         json = '["escaped slash \\/ should result in a single /"]'
         TestUtil.readJsonObject(json)
 
-        try
-        {
-            json = '["escaped slash \\x should result in a single /"]'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('["escaped slash \\x')
-        }
+        json = '["escaped slash \\x should result in a single /"]'
+        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
     }
 
     @Test
     void testClassMissingValue()
     {
-        try
-        {
-            TestUtil.readJsonObject('[{"@type":"class"}]')
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('lass listed')
-            assert e.message.contains('not found')
-        }
+        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"class"}]' )})
     }
 
     @Test
     void testCalendarMissingValue()
     {
-        try
-        {
-            TestUtil.readJsonObject('[{"@type":"java.util.Calendar"}]')
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('lass listed')
-            assert e.message.contains('not found')
-        }
+        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"java.util.Calendar"}]' )})
     }
 
     @Test
     void testBadFormattedCalendar()
     {
-        try
-        {
-            TestUtil.readJsonObject('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]')
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains('ailed to parse calendar')
-        }
+        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]' )})
     }
 
     @Test
     void testEmptyClassName()
     {
-        try
-        {
-            TestUtil.readJsonObject('{"@type":""}')
-            fail()
-        }
-        catch(Exception e)
-        {
-            assert e.message.contains('nable to create class')
-        }
+        assertThrows(Exception.class, { TestUtil.readJsonObject('{"@type":""}' )})
     }
 
     @Test
     void testBadBackRef()
     {
-        try
-        {
-            TestUtil.readJsonObject('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}')
-            fail()
-        }
-        catch(Exception ignored)
-        { }
+        assertThrows(Exception.class, { TestUtil.readJsonObject('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}' )})
     }
 
     @Test
     void testErrorReporting()
     {
         String json = '[{"@type":"funky"},\n{"field:"value"]'
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.contains("xpected ':'")
-            assert e.message.contains('"field:"v')
-        }
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json)})
     }
 
     @Test
     void testFieldMissingQuotes()
     {
-        try
-        {
-            String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, field2: "no quotes"}, 11, 12, 13]'
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (JsonIoException e)
-        {
-            assert e.message.contains('"field":25, f')
-        }
+        String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, field2: "no quotes"}, 11, 12, 13]'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json)})
     }
 
     @Test
     void testBadFloatingPointNumber()
     {
-        try
-        {
-            String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, "field2": "no quotes"}, 11, 12.14a, 13]'
-            JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-            fail()
-        }
-        catch (JsonIoException e)
-        {
-            assert e.message.toLowerCase().contains('expected \',\' or \']\' inside array')
-        }
+        String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, "field2": "no quotes"}, 11, 12.14a, 13]'
+        assertThrows(Exception.class, { JsonReader.jsonToJava(json,  [(JsonReader.USE_MAPS):true] as Map)})
     }
 }

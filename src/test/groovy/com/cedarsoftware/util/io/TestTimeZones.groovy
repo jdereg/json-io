@@ -1,8 +1,15 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
 
-import static org.junit.Assert.assertTrue
+import java.util.stream.Stream
+
+import static org.assertj.core.api.Assertions.assertThat
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -31,7 +38,8 @@ class TestTimeZones
     @Test
     void testTimeZoneAsField()
     {
-        TimeZone zone = TimeZone.default
+        // changed away from default because that could change per user and break the test.
+        TimeZone zone = TimeZone.getTimeZone("Africa/Casablanca")
         TestTimeZone tz = new TestTimeZone()
         tz._zone = zone
         String json = TestUtil.getJsonString(tz)
@@ -55,14 +63,15 @@ class TestTimeZones
         TestUtil.printLine("json=" + json)
         tz = (TimeZone) TestUtil.readJsonObject(json)
         assertTrue(tz.equals(pst))
+    }
 
-        try
-        {
-            String noZone = '{"@type":"sun.util.calendar.ZoneInfo"}'
-            TestUtil.readJsonObject(noZone)
-            assertTrue("Should not reach this point.", false)
-        }
-        catch(Exception e) {}
+    @Test
+    void testWithNoZone() {
+        String noZone = '{"@type":"sun.util.calendar.ZoneInfo"}'
+
+        assertThatExceptionOfType(JsonIoException.class)
+                .isThrownBy({ TestUtil.readJsonObject(noZone)})
+        .withMessageContaining("Could not instantiate");
     }
 
     @Test
@@ -154,4 +163,23 @@ class TestTimeZones
         assertTrue(tz.equals(pst))
         assertTrue(oArray[0] == oArray[1])
     }
+
+    private static Stream<Arguments> argumentsForOldFormatValidation() {
+        return Stream.of(
+                Arguments.of("timezone-away-from-est.json", "Africa/Casablanca"),
+                Arguments.of("zoneinfo-with-type-and-zone.json", "America/New_York"),
+                Arguments.of("zoneinfo-zone.json", "EST")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("argumentsForOldFormatValidation")
+    void testTimezone_readingJsonWithOldFormat_stillWorks(String fileName, String expectedTimeZone) throws Exception
+    {
+        String json = TestUtil.fetchResource("timezone/" + fileName);
+        TimeZone actual = (TimeZone) TestUtil.readJsonObject(json);
+
+        assertThat(actual.getID()).isEqualTo(expectedTimeZone);
+    }
+
 }

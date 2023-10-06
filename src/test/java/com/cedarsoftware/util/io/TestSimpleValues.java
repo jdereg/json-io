@@ -3,11 +3,11 @@
  */
 package com.cedarsoftware.util.io;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  *         <br>
@@ -86,13 +86,13 @@ public class TestSimpleValues
     static boolean readAllowNan;
     static boolean writeAllowNan;
 
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         readAllowNan = JsonReader.isAllowNanAndInfinity();
         writeAllowNan = JsonWriter.isAllowNanAndInfinity();
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDown()
     {
         JsonReader.setAllowNanAndInfinity(readAllowNan);

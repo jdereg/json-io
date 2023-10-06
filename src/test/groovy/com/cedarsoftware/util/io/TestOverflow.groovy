@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.assertThrows
-import static org.junit.Assert.assertTrue
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 class TestOverflow
 {
@@ -32,6 +32,6 @@ class TestOverflow
     void testOverflow()
     {
         Throwable thrown = assertThrows(JsonIoException.class, { JsonReader.jsonToJava(TOO_DEEP_DOC) })
-        assertTrue("", thrown.message.contains("Maximum parsing depth exceeded"))
+        assertTrue(thrown.message.contains("Maximum parsing depth exceeded"))
     }
 }

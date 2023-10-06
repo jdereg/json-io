@@ -2,13 +2,18 @@ package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 import java.awt.*
 import java.util.List
 import java.util.concurrent.ConcurrentHashMap
 
-import static org.junit.Assert.*
+import static org.assertj.core.api.Fail.fail
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -176,7 +181,7 @@ class TestMaps
             }
             else
             {
-                assertTrue("Unknown key", false)
+                fail("Unknown Key");
             }
         }
 
@@ -360,28 +365,15 @@ class TestMaps
         assertTrue(map instanceof HashMap)
         assertTrue(map.isEmpty())
 
-        try
-        {
-            json = '{"@type":"java.util.HashMap","@keys":null,"@items":[]}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains('@keys or @items')
-            assert e.message.toLowerCase().contains('empty')
-        }
 
-        try
-        {
-            json = '{"@type":"java.util.HashMap","@keys":[1,2],"@items":[true]}'
-            TestUtil.readJsonObject(json)
-            fail()
-        }
-        catch (Exception e)
-        {
-            assert e.message.toLowerCase().contains("different size")
-        }
+        json = '{"@type":"java.util.HashMap","@keys":null,"@items":[]}'
+        Exception e = assertThrows(Exception.class, { TestUtil.readJsonObject(json)})
+        assert e.message.toLowerCase().contains('@keys or @items')
+        assert e.message.toLowerCase().contains('empty')
+
+        json = '{"@type":"java.util.HashMap","@keys":[1,2],"@items":[true]}'
+        e = assertThrows(Exception.class, { TestUtil.readJsonObject(json) })
+        assert e.message.toLowerCase().contains("different size")
     }
 
     @Test
@@ -454,13 +446,7 @@ class TestMaps
         assert map.a == 'alpha'
         assert map.b == 'beta'
 
-        try
-        {
-            map = (Map) JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)Boolean.FALSE]);
-            fail()
-        }
-        catch (JsonIoException expected)
-        { }
+        assertThrows(JsonIoException.class, {JsonReader.jsonToJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)Boolean.FALSE]) })
     }
 
     @Test

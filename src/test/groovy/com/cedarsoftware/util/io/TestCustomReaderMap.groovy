@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static junit.framework.Assert.assertEquals
+import static org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

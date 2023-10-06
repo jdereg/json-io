@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.*;
 import java.util.LinkedHashMap;

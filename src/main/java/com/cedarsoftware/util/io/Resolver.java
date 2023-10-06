@@ -390,6 +390,10 @@ abstract class Resolver
                 {
                     mate = extractEnumSet(c, jsonObj);
                 }
+                else if (TimeZone.class.isAssignableFrom(c) && jsonObj.containsKey("zone"))
+                {
+                    mate = TimeZone.getTimeZone((String)jsonObj.get("zone"));
+                }
                 else if ((mate = coerceCertainTypes(c.getName())) != null)
                 {   // if coerceCertainTypes() returns non-null, it did the work
                 }

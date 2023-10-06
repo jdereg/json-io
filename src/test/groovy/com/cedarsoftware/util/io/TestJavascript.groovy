@@ -1,7 +1,9 @@
 package com.cedarsoftware.util.io
 
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledOnJre
+import org.junit.jupiter.api.condition.JRE
 
 import javax.script.ScriptEngine
 import javax.script.ScriptEngineManager
@@ -27,6 +29,7 @@ class TestJavascript {
     private static final ScriptEngineManager scm = new ScriptEngineManager(ClassLoader.getSystemClassLoader());
 
     @Test
+    @EnabledOnJre(value = JRE.JAVA_8, disabledReason = "java dropped support for javascript engine after 8")
     void testJsonUtilRefInsideArray() {
 
         ScriptEngine engine = scm.getEngineByName("JavaScript")
@@ -48,6 +51,7 @@ assert(array[0] === array[1]);   // Exactly the same instance
     }
 
     @Test
+    @EnabledOnJre(value = JRE.JAVA_8, disabledReason = "java dropped support for javascript engine after 8")
     void testJsonUtilForwardRefInsideArray() {
         ScriptEngine engine = scm.getEngineByName("JavaScript")
 
@@ -68,6 +72,7 @@ assert(array[0] === array[1]);   // Exactly the same instance
     }
 
     @Test
+    @EnabledOnJre(value = JRE.JAVA_8, disabledReason = "java dropped support for javascript engine after 8")
     void testJsonUtilRefInsideObject() {
         ScriptEngine engine = scm.getEngineByName("JavaScript")
 
@@ -91,6 +96,7 @@ assert(!testObj._other._other['@ref']);
     }
 
     @Test
+    @EnabledOnJre(value = JRE.JAVA_8, disabledReason = "java dropped support for javascript engine after 8")
     void testJsonUtilRefCycle() {
         ScriptEngine engine = scm.getEngineByName("JavaScript")
 

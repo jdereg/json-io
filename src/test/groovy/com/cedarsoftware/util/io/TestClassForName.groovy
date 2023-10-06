@@ -1,9 +1,10 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.JsonIOException
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
-import static org.junit.Assert.fail
+import static org.junit.jupiter.api.Assertions.assertThrows
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -44,26 +45,14 @@ class TestClassForName
     @Test
     void testClassForNameNullClassErrorHandling()
     {
-        try
-        {
-            MetaUtils.classForName(null, TestClassForName.class.getClassLoader())
-            fail()
-        }
-        catch (JsonIoException ignored)
-        { }
-
+        assertThrows(JsonIoException.class, { MetaUtils.classForName(null, TestClassForName.class.getClassLoader()) })
         assert Map.class.isAssignableFrom(MetaUtils.classForName('Smith&Wesson', TestClassForName.class.getClassLoader()))
     }
 
     @Test
     void testClassForNameFailOnClassLoaderErrorTrue()
     {
-        try {
-            MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), true)
-            fail()
-        }
-        catch (JsonIoException ignored)
-        { }
+        assertThrows(JsonIoException.class, { MetaUtils.classForName('foo.bar.baz.Qux', TestClassForName.class.getClassLoader(), true) })
     }
 
     @Test
@@ -99,7 +88,7 @@ class TestClassForName
             }
             catch (Exception ignored) { }
 
-            if (alternateName.equals(className))
+            if (alternateName == className)
             {
                 return Long.class;
             }

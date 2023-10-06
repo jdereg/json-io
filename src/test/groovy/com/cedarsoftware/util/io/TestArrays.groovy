@@ -2,12 +2,17 @@ package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 import java.lang.reflect.Array
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS
-import static org.junit.Assert.*
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertFalse
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertSame
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

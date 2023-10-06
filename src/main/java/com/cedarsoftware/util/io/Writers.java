@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URL;
 import java.sql.Timestamp;
 import java.text.Format;
 import java.text.SimpleDateFormat;
@@ -41,7 +43,23 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Writers
 {
     private Writers () {}
-    
+
+    public static class URLWriter implements JsonWriter.JsonClassWriter
+    {
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            URL url = (URL) obj;
+            output.write("\"url\":");
+            writeJsonUtf8String(url.toString(), output);
+        }
+
+        public boolean hasPrimitiveForm() { return true; }
+        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+            URL url = (URL) o;
+            writeJsonUtf8String(url.toString(), output);
+        }
+    }
+
     public static class TimeZoneWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
@@ -53,7 +71,10 @@ public class Writers
         }
 
         public boolean hasPrimitiveForm() { return false; }
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {}
+        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+            TimeZone tz = (TimeZone)o;
+            writeJsonUtf8String(tz.getID(), output);
+        }
     }
 
     public static class CalendarWriter implements JsonWriter.JsonClassWriter

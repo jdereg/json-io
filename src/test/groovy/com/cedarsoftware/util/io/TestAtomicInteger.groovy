@@ -1,15 +1,18 @@
 package com.cedarsoftware.util.io
 
+import com.google.gson.JsonIOException
 import groovy.transform.CompileStatic
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import static org.junit.Assert.assertEquals
-import static org.junit.Assert.assertNotSame
-import static org.junit.Assert.assertNull
-import static org.junit.Assert.assertTrue
-import static org.junit.Assert.fail
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
+import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertNotSame
+import static org.junit.jupiter.api.Assertions.assertNull
+import static org.junit.jupiter.api.Assertions.assertThrows
+import static org.junit.jupiter.api.Assertions.assertTrue
+
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -63,13 +66,7 @@ class TestAtomicInteger
 
 
         json = '''{"@type":"com.cedarsoftware.util.io.TestAtomicInteger$TestAtomicIntegerField","value":16.5}'''
-        try
-        {
-            JsonReader.jsonToJava(json)
-            fail()
-        }
-        catch (JsonIoException ignored)
-        { }
+        assertThatExceptionOfType(JsonIoException.class).isThrownBy({ JsonReader.jsonToJava(json) })
     }
 
     @Test

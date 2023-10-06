@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * Last test to run, dumps out statistics

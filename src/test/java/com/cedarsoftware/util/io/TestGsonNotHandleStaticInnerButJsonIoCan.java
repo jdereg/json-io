@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
