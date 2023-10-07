@@ -869,7 +869,12 @@ public class ObjectResolver extends Resolver
 
                                 if (field != null && (field.getType().getTypeParameters().length > 0 || field.getGenericType() instanceof TypeVariable))
                                 {
-                                    stack.addFirst(new Object[]{typeArgs[0], entry.getValue()});
+                                    Object pt = typeArgs[0];
+                                    if (entry.getValue() instanceof JsonObject && ((JsonObject)entry.getValue()).get("@enum") != null)
+                                    {
+                                        pt = field.getGenericType();
+                                    }
+                                    stack.addFirst(new Object[]{pt, entry.getValue()});
                                 }
                             }
                         }
