@@ -48,15 +48,16 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
-            URL url = (URL) obj;
-            output.write("\"url\":");
-            writeJsonUtf8String(url.toString(), output);
+            if (showType)
+            {
+                output.write("\"url\":");
+            }
+            writeJsonUtf8String(obj.toString(), output);
         }
 
         public boolean hasPrimitiveForm() { return true; }
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            URL url = (URL) o;
-            writeJsonUtf8String(url.toString(), output);
+            writeJsonUtf8String(o.toString(), output);
         }
     }
 
@@ -64,13 +65,15 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
-            TimeZone cal = (TimeZone) obj;
-            output.write("\"zone\":\"");
-            output.write(cal.getID());
-            output.write('"');
+            if (showType)
+            {
+                output.write("\"zone\":");
+            }
+
+            writePrimitiveForm(obj, output);
         }
 
-        public boolean hasPrimitiveForm() { return false; }
+        public boolean hasPrimitiveForm() { return true; }
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
             TimeZone tz = (TimeZone)o;
             writeJsonUtf8String(tz.getID(), output);

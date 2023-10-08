@@ -182,4 +182,83 @@ class TestTimeZones
         assertThat(actual.getID()).isEqualTo(expectedTimeZone);
     }
 
+
+    @Test
+    void testTimeZone_inGenericSubobject_serializeBackCorrectly() throws Exception {
+        TimeZone url = TimeZone.getTimeZone("PST");
+        GenericSubObject initial = new GenericSubObject<>(url);
+        String json = TestUtil.getJsonString(initial);
+
+        TestUtil.printLine("json=" + json);
+        GenericSubObject actual = (GenericSubObject)TestUtil.readJsonObject(json);
+        assertThat(actual.getObject()).isEqualTo(initial.getObject());
+    }
+
+    @Test
+    void testTimeZone_inNestedObject_serializeBackCorrectly() throws Exception {
+        TimeZone timeZone = TimeZone.getTimeZone("PST");
+        TestTimeZones.NestedOnce expected = new TestTimeZones.NestedOnce(timeZone);
+        String json = TestUtil.getJsonString(expected);
+        //assertThatJsonIsNewStyle(json);
+
+        TestUtil.printLine("json=" + json);
+        TestTimeZones.NestedOnce actual = (TestTimeZones.NestedOnce)TestUtil.readJsonObject(json);
+
+        assertThat(actual.getTimeZone()).isEqualTo(expected.getTimeZone());
+    }
+
+    @Test
+    void testTimeZone_referencedInArray() throws Exception {
+        TimeZone tz =  TimeZone.getTimeZone("PST")
+        List<TimeZone> list = List.of(tz, tz, tz, tz, tz);
+        String json = TestUtil.getJsonString(list);
+
+        List<TimeZone> actual = (List<TimeZone>)TestUtil.readJsonObject(json);
+
+        assertThat(actual).containsAll(list);
+    }
+
+    @Test
+    void testTimeZone_referencedInObject() throws Exception {
+        NestedTwice expected = new NestedTwice(TimeZone.getTimeZone("PST"));
+
+        String json = TestUtil.getJsonString(expected);
+
+        NestedTwice actual = (NestedTwice)TestUtil.readJsonObject(json);
+
+        assertThat(expected.getOne()).isEqualTo(actual.getOne());
+        assertThat(expected.getTwo()).isEqualTo(actual.getTwo());
+    }
+
+    private static class NestedOnce {
+        private final TimeZone timeZone;
+
+        NestedOnce(TimeZone timeZone) {
+            this.timeZone = timeZone;
+        }
+
+        TimeZone getTimeZone() {
+            return this.timeZone;
+        }
+    }
+
+    private static class NestedTwice {
+        private final TimeZone timeZone1;
+        private final TimeZone timeZone2;
+
+        NestedTwice(TimeZone initial) {
+            this.timeZone1 = initial;
+            this.timeZone2 = initial;
+        }
+
+        TimeZone getOne() {
+            return timeZone2;
+        }
+
+        TimeZone getTwo() {
+            return timeZone2;
+        }
+    }
+
+
 }

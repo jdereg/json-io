@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URL;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -128,6 +129,31 @@ class TestURL {
         assertThat(actual.getUrl()).isEqualTo(initial.getUrl());
     }
 
+    @Test
+    void testURL_referencedInArray() throws Exception {
+        URL url = new URL(OUTSIDE_DOMAIN);
+        List<URL> list = List.of(url, url, url, url, url);
+        String json = TestUtil.getJsonString(list);
+
+        List<URL> actual = (List<URL>)TestUtil.readJsonObject(json);
+
+        assertThat(actual).containsAll(list);
+    }
+
+    @Test
+    void testURL_referencedInObject() throws Exception {
+        var expected = new NestedTwice(new URL(OUTSIDE_DOMAIN));
+
+        String json = TestUtil.getJsonString(expected);
+
+        var actual = (NestedTwice)TestUtil.readJsonObject(json);
+
+        assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
+        assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());
+    }
+
+
+
     private static class NestedUrl {
         private final URL url;
 
@@ -137,6 +163,25 @@ class TestURL {
 
         public URL getUrl() {
             return this.url;
+        }
+    }
+
+    private static class NestedTwice {
+        private final URL url1;
+
+        private final URL url2;
+
+        public NestedTwice(URL url) {
+            this.url1 = url;
+            this.url2 = url;
+        }
+
+        public URL getUrl1() {
+            return url1;
+        }
+
+        public URL getUrl2() {
+            return url2;
         }
     }
 }

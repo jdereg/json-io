@@ -122,7 +122,7 @@ public class MetaUtils
     }
 
     /**
-     * Return an instance of of the Java Field class corresponding to the passed in field name.
+     * Return an instance of the Java Field class corresponding to the passed in field name.
      * @param c class containing the field / field name
      * @param field String name of a field on the class.
      * @return Field instance if the field with the corresponding name is found, null otherwise.
@@ -1029,6 +1029,16 @@ public class MetaUtils
         }
         return arg;
     }
+
+    public static <K, V> Map<K, V> computeMapIfAbsent(Map<String, Object> map, String keyName) {
+        return (Map<K, V>)map.computeIfAbsent(keyName, k -> new HashMap<K, V>());
+    }
+
+    public static <T> Set<T> computeSetIfAbsent(Map<String, Object> map, String keyName) {
+        return (Set<T>)map.computeIfAbsent(keyName, k -> new HashSet<T>());
+    }
+
+
 
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.

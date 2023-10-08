@@ -94,7 +94,14 @@ public class JsonWriter implements Closeable, Flushable
     public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
 
     private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
+
     private final Map<Class, JsonClassWriterBase> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
+
+    /** classes where the implementation type will be different from the field declaration type so it would always
+     *  force the type if not for our custom writer.  These will typically be sun style classes where there is
+     *  a static initializer */
+    private static Set<Class> BASE_STATICALLY_INITIALIZED_CLASSES;
+    private final Set<Class> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
     private final Map<Class, JsonClassWriterBase> writerCache = new HashMap<>();
     private final Set<Class> notCustom = new HashSet<>();
 
@@ -118,6 +125,7 @@ public class JsonWriter implements Closeable, Flushable
     private int depth = 0;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     final Map<String, Object> args = new HashMap<>();
+
 
     static
     {
@@ -146,17 +154,23 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(UUID.class, new Writers.UUIDWriter());
         temp.put(URL.class, new Writers.URLWriter());
 
+        Set<Class> staticallInitializedClasses = new HashSet<>();
+        staticallInitializedClasses.add(TimeZone.class);
+
         try
         {
             Class zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
             temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
+
+            staticallInitializedClasses.add(zoneInfoClass);
+
         } catch (ClassNotFoundException e)
         {
-           // we an ignore
+           // we can ignore
         }
 
 
-
+        BASE_STATICALLY_INITIALIZED_CLASSES = staticallInitializedClasses;
         BASE_WRITERS = temp;
     }
 
@@ -181,7 +195,9 @@ public class JsonWriter implements Closeable, Flushable
      * Common ancestor for JsonClassWriter and JsonClassWriterEx.
      */
     public interface JsonClassWriterBase
-    { }
+    {
+
+    }
 
     /**
      * Implement this interface to customize the JSON output for a given class.
@@ -811,6 +827,20 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
+     * Adds in Classes that are statically initialized with a possible sun.* class implementation beneath the
+     * scenes.  These classes will never match their Field declaration and will usually cause the writer
+     * to show the @Type.  Adding to this class and providing a custom writer and reader gives you the power
+     * to eliminate the type in those cases and possibly provide a primitive writer/reader.
+     * @param c Class that has custom writer implementation and will never match declared field.
+     */
+    public static void addStaticallyInitializedClasses(Class c)
+    {
+        BASE_STATICALLY_INITIALIZED_CLASSES.add(c);
+    }
+
+
+
+    /**
      * Write the passed in Java object in JSON format.
      * @param obj Object any Java Object or JsonObject.
      */
@@ -1017,12 +1047,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
-        if (obj == null)
-        {
-            return false;
-        }
-
-        if (MetaUtils.isLogicalPrimitive(obj.getClass()))
+        if (obj == null || MetaUtils.isLogicalPrimitive(obj.getClass()))
         {
             return false;
         }
@@ -1388,7 +1413,7 @@ public class JsonWriter implements Closeable, Flushable
                 else
                 {   // Specific Class-type arrays - only force type when
                     // the instance is derived from array base class.
-                    boolean forceType = !(value.getClass() == componentClass);
+                    boolean forceType = isForceType(value.getClass(), componentClass);
                     writeImpl(value, forceType || alwaysShowType);
                 }
 
@@ -1721,7 +1746,7 @@ public class JsonWriter implements Closeable, Flushable
             else
             {   // Specific Class-type arrays - only force type when
                 // the instance is derived from array base class.
-                boolean forceType = !(value.getClass() == componentClass);
+                boolean forceType = isForceType(value.getClass(), componentClass);
                 writeImpl(value, forceType || alwaysShowType);
             }
 
@@ -2463,7 +2488,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         Class type = field.getType();
-        boolean forceType = o.getClass() != type;     // If types are not exactly the same, write "@type" field
+        boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         //When no type is written we can check the Object itself not the declaration
         if (MetaUtils.isPrimitive(type) || (neverShowType && MetaUtils.isPrimitive(o.getClass())))
@@ -2475,6 +2500,18 @@ public class JsonWriter implements Closeable, Flushable
             writeImpl(o, forceType || alwaysShowType, true, true);
         }
         return false;
+    }
+
+    private boolean isForceType(Class objectClass, Class declaredType) {
+        if (objectClass == declaredType) {
+            return false;
+        }
+
+        if (!this.staticallyInitializedClasses.contains(declaredType)) {
+            return true;
+        }
+
+        return this.getCustomWriter(declaredType) == null;
     }
 
     /**
