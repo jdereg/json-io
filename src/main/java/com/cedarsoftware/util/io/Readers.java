@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -160,7 +161,6 @@ public class Readers
 
     public static class EnumReader implements JsonReader.JsonClassReaderEx
     {
-        private final Pattern pattern = Pattern.compile("(.+)\\$\\d$");
         public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
             boolean isString = o instanceof String;
@@ -185,14 +185,9 @@ public class Readers
             ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
             Class c = classForName(type, loader);
 
-            if (!c.isEnum()) {
-                Matcher matcher = pattern.matcher(type);
-                if (matcher.matches()) {
-                    c = classForName(matcher.group(1), loader);
-                }
-            }
+            Optional<Class> cls = MetaUtils.getClassIfEnum(c, loader);
 
-            jObj.target = Enum.valueOf(c, (String)jObj.get("name"));
+            jObj.target = Enum.valueOf(cls.orElse(c), (String)jObj.get("name"));
 
             ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
             resolver.traverseFields(stack, (JsonObject<String, Object>) jObj, Set.of("name", "ordinal"));

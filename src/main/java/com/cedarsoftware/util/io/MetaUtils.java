@@ -305,7 +305,7 @@ public class MetaUtils
         if (anonymousInnerClassMatcher.matches()) {
             try {
                 c = classForName(anonymousInnerClassMatcher.group(1), classLoader);
-                return Optional.ofNullable(c);
+                return c.isEnum() ? Optional.of(c) : Optional.empty();
             } catch (Exception e) {
                 return Optional.empty();
             }
