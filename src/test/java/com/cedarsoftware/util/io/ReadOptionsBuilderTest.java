@@ -199,7 +199,7 @@ public class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var map = (Map<Class, JsonWriter.JsonClassWriterEx>)options.get(CUSTOM_READER_MAP);
+        var map = (Map<Class, JsonReader.JsonClassReaderBase>)options.get(CUSTOM_READER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);

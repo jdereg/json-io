@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
 import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
 import static com.cedarsoftware.util.io.JsonWriter.DATE_FORMAT;
+import static com.cedarsoftware.util.io.JsonWriter.WRITE_ENUMS_AS_PRIMITIVE;
 import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
 import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
 import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
@@ -26,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
@@ -287,7 +287,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_WRITER_MAP);
 
-        var customWriterMap = (Map<Class, JsonWriter.JsonClassWriterEx>)options.get(CUSTOM_WRITER_MAP);
+        var customWriterMap = (Map<Class, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
 
         assertThat(customWriterMap).hasSize(1)
                 .containsKey(Date.class);
@@ -295,7 +295,7 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withCustomWriterMap() {
-        Map<Class, JsonWriter.JsonClassWriterEx> map = new HashMap<>();
+        Map<Class, JsonWriter.JsonClassWriter> map = new HashMap<>();
 
         var options = new WriteOptionsBuilder()
                 .withCustomWriterMap(map)
@@ -317,7 +317,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_WRITER_MAP);
 
-        var map = (Map<Class, JsonWriter.JsonClassWriterEx>)options.get(CUSTOM_WRITER_MAP);
+        var map = (Map<Class, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);
@@ -476,6 +476,17 @@ class WriteOptionsBuilderTest {
         assertThat(options)
                 .hasSize(1)
                 .containsEntry(ENUM_PUBLIC_ONLY, Boolean.TRUE);
+    }
+
+    @Test
+    void writeEnumsAsPrimitive() {
+        var options = new WriteOptionsBuilder()
+                .writeEnumsAsPrimitive()
+                .build();
+
+        assertThat(options)
+                .hasSize(1)
+                .containsEntry(WRITE_ENUMS_AS_PRIMITIVE, Boolean.TRUE);
     }
 
     @Test

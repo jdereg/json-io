@@ -143,8 +143,7 @@ public class JsonReader implements Closeable
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
         temp.put(UUID.class, new Readers.UUIDReader());
         temp.put(URL.class, new Readers.URLReader());
-
-
+        temp.put(Enum.class, new Readers.EnumReader());
 
         try
         {

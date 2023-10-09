@@ -1,11 +1,8 @@
 package com.cedarsoftware.util.io;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -47,6 +44,11 @@ public class WriteOptionsBuilder {
 
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
         writeOptions.put(JsonWriter.ENUM_PUBLIC_ONLY, Boolean.TRUE);
+        return this;
+    }
+
+    public WriteOptionsBuilder writeEnumsAsPrimitive() {
+        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_PRIMITIVE, Boolean.TRUE);
         return this;
     }
 
@@ -124,12 +126,12 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withCustomWriter(Class c, JsonWriter.JsonClassWriterEx writer) {
+    public WriteOptionsBuilder withCustomWriter(Class c, JsonWriter.JsonClassWriter writer) {
         MetaUtils.computeMapIfAbsent(writeOptions, CUSTOM_WRITER_MAP).put(c, writer);
         return this;
     }
 
-    public WriteOptionsBuilder withCustomWriterMap(Map<Class, JsonWriter.JsonClassWriterEx> map) {
+    public WriteOptionsBuilder withCustomWriterMap(Map<Class, JsonWriter.JsonClassWriter> map) {
         MetaUtils.computeMapIfAbsent(writeOptions, CUSTOM_WRITER_MAP).putAll(map);
         return this;
     }

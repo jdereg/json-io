@@ -121,7 +121,7 @@ class TestCustomWriter
         }
     }
 
-    static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
+    static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
         void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {
@@ -150,15 +150,15 @@ class TestCustomWriter
             }
             output.write(']');
 
-            assert JsonWriter.JsonClassWriterEx.Support.getWriter(args) instanceof JsonWriter
+            assert getWriter(args) instanceof JsonWriter
         }
     }
 
-    static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriterEx
+    static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
     {
         void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {
-            JsonWriter writer = JsonWriter.JsonClassWriterEx.Support.getWriter(args);
+            JsonWriter writer = getWriter(args);
             output.write("\"_version\":12,");
             writer.writeObject(o, false, true);
         }
@@ -188,7 +188,7 @@ class TestCustomWriter
         }
     }
 
-    static class BadCustomPWriter implements JsonWriter.JsonClassWriterEx
+    static class BadCustomPWriter implements JsonWriter.JsonClassWriter
     {
         void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {

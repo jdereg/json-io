@@ -39,6 +39,7 @@ public class MetaUtils
     public enum Dumpty {}
 
     private MetaUtils () {}
+
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();
     private static final Map<String, Class> nameToClass = new HashMap<>();
@@ -189,7 +190,7 @@ public class MetaUtils
         }
 
         classMetaCache.put(c, classFields);
-        return classFields;
+        return new LinkedHashMap(classFields);
     }
 
     /**
@@ -291,6 +292,26 @@ public class MetaUtils
                 Date.class.isAssignableFrom(c) ||
                 c.isEnum() ||
                 c.equals(Class.class);
+    }
+
+    private static final Pattern anonymousEnumClassNameExtractor = Pattern.compile("(.+)\\$\\d$");
+    public static Optional<Class> getClassIfEnum(Class c, ClassLoader classLoader) {
+        if (c.isEnum()) {
+            return Optional.of(c);
+        }
+
+        Matcher anonymousInnerClassMatcher = anonymousEnumClassNameExtractor.matcher(c.getName());
+
+        if (anonymousInnerClassMatcher.matches()) {
+            try {
+                c = classForName(anonymousInnerClassMatcher.group(1), classLoader);
+                return Optional.ofNullable(c);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+
+        return Optional.empty();
     }
 
     /**

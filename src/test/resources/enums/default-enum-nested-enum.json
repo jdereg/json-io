@@ -1,0 +1,1 @@
+{"@type":"com.cedarsoftware.util.io.TestEnums$NestedEnum","testEnum3":{"val":"Foo","name":"A"},"testEnum4":{"age":21,"foo":"bar","name":"B"}}

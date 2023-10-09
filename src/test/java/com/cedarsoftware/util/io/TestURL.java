@@ -95,7 +95,7 @@ class TestURL {
     }
 
     private static void assertThatJsonIsNewStyle(String json) {
-        assertThat(json).contains("url")
+        assertThat(json)
                 .contains("@type")
                 .doesNotContain("protocol")
                 .doesNotContain("file")
