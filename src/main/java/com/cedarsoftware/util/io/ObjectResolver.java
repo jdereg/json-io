@@ -86,6 +86,18 @@ public class ObjectResolver extends Resolver
      */
     public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
     {
+        this.traverseFields(stack, jsonObj, JsonWriter.EMPTY_SET);
+    }
+
+    /**
+     * Walk the Java object fields and copy them from the JSON object to the Java object, performing
+     * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
+     * arrays, Collections, or Maps.
+     * @param stack   Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     */
+    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj, Set<String> excludeFields)
+    {
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
@@ -178,8 +190,10 @@ public class ObjectResolver extends Resolver
             }
             else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
             {
-                //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
-                if(Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
+                if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
+                    field.set(target, Enum.valueOf(fieldType, (String) special));
+                    //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
+                } else if (Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
                     //no need to set for this case
                 } else {
                     field.set(target, special);
@@ -580,6 +594,9 @@ public class ObjectResolver extends Resolver
             }
             else if ((special = readIfMatching(element, compType, stack)) != null)
             {
+                if (compType.isEnum() && special instanceof String) {
+                    special = Enum.valueOf(compType, (String)special);
+                }
                 Array.set(array, i, special);
             }
             else if (isPrimitive)

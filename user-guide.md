@@ -56,7 +56,7 @@ can be read, modified, and then re-written by a JVM that does not contain any of
 
 #### The optional values below are public constants from `JsonWriter`, used by placing them as keys in the arguments map.
 
-    CUSTOM_WRITER_MAP       // Set to Map<Class, JsonWriter.JsonClassWriterEx> to
+    CUSTOM_WRITER_MAP       // Set to Map<Class, JsonWriter.JsonClassWriter> to
                             // override the default JSON output for a given class. 
     NOT_CUSTOM_WRITER_MAP   // Set to Collection<Class> to indicate classes that should
                             // not be written by a custom writer.
@@ -176,7 +176,7 @@ classes for which you do not have the source code.
     Example (in Groovy). Note the Person has a List of pets, and in this case, it re-uses 
     JsonWriter to write that part of the class out (no need to customize it):
     
-    static class CustomPersonWriter implements JsonWriter.JsonClassWriterEx
+    static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
         void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {

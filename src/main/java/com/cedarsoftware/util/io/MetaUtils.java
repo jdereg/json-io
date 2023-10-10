@@ -39,6 +39,7 @@ public class MetaUtils
     public enum Dumpty {}
 
     private MetaUtils () {}
+
     private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class> prims = new HashSet<>();
     private static final Map<String, Class> nameToClass = new HashMap<>();
@@ -122,7 +123,7 @@ public class MetaUtils
     }
 
     /**
-     * Return an instance of of the Java Field class corresponding to the passed in field name.
+     * Return an instance of the Java Field class corresponding to the passed in field name.
      * @param c class containing the field / field name
      * @param field String name of a field on the class.
      * @return Field instance if the field with the corresponding name is found, null otherwise.
@@ -189,7 +190,7 @@ public class MetaUtils
         }
 
         classMetaCache.put(c, classFields);
-        return classFields;
+        return new LinkedHashMap(classFields);
     }
 
     /**
@@ -291,6 +292,26 @@ public class MetaUtils
                 Date.class.isAssignableFrom(c) ||
                 c.isEnum() ||
                 c.equals(Class.class);
+    }
+
+    private static final Pattern anonymousEnumClassNameExtractor = Pattern.compile("(.+)\\$\\d$");
+    public static Optional<Class> getClassIfEnum(Class c, ClassLoader classLoader) {
+        if (c.isEnum()) {
+            return Optional.of(c);
+        }
+
+        Matcher anonymousInnerClassMatcher = anonymousEnumClassNameExtractor.matcher(c.getName());
+
+        if (anonymousInnerClassMatcher.matches()) {
+            try {
+                c = classForName(anonymousInnerClassMatcher.group(1), classLoader);
+                return c.isEnum() ? Optional.of(c) : Optional.empty();
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -1029,6 +1050,16 @@ public class MetaUtils
         }
         return arg;
     }
+
+    public static <K, V> Map<K, V> computeMapIfAbsent(Map<String, Object> map, String keyName) {
+        return (Map<K, V>)map.computeIfAbsent(keyName, k -> new HashMap<K, V>());
+    }
+
+    public static <T> Set<T> computeSetIfAbsent(Map<String, Object> map, String keyName) {
+        return (Set<T>)map.computeIfAbsent(keyName, k -> new HashSet<T>());
+    }
+
+
 
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.

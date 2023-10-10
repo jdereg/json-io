@@ -497,7 +497,7 @@ class TestCollection {
         String json = TestUtil.getJsonString(list)
         TestUtil.printLine(json)
         String className = TestCollection.class.getName()
-        assertEquals('{"@type":"java.util.ArrayList","@items":[{"@type":"' + className + '$TestEnum4","age":21,"foo":"bar","name":"B"}]}', json)
+        assertEquals('{"@type":"java.util.ArrayList","@items":[{"@type":"' + className + '$TestEnum4","name":"B","age":21,"foo":"bar"}]}', json)
 
         ByteArrayOutputStream ba = new ByteArrayOutputStream()
         JsonWriter writer = new JsonWriter(ba, [(JsonWriter.ENUM_PUBLIC_ONLY): true])

@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -14,6 +15,8 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -112,7 +115,7 @@ public class Readers
         }
 
         URL createURLFromJsonObject(JsonObject jObj) throws MalformedURLException {
-            if (jObj.containsKey("url")) {
+            if (jObj.containsKey("value")) {
                 jObj.target = createUrlNewWay(jObj);
             } else {
                 jObj.target = createUrlOldWay(jObj);
@@ -121,7 +124,7 @@ public class Readers
         }
 
         URL createUrlNewWay(JsonObject jObj) throws MalformedURLException {
-            return new URL((String)jObj.get("url"));
+            return new URL((String)jObj.get("value"));
         }
 
         URL createUrlOldWay(JsonObject jObj) throws MalformedURLException {
@@ -156,6 +159,43 @@ public class Readers
         }
     }
 
+    public static class EnumReader implements JsonReader.JsonClassReaderEx
+    {
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
+            boolean isString = o instanceof String;
+
+            try
+            {
+                if (isString)
+                {
+                    return (String)o;
+                }
+
+                return createEnumFromJsonObject((JsonObject)o, stack, args);
+            }
+            catch(Exception e)
+            {
+                throw new JsonIoException("Exception loading Enum:  " + ((o instanceof String) ? o : e.getMessage()));
+            }
+        }
+
+        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) throws MalformedURLException {
+            String type = jObj.type;
+            ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
+            Class c = classForName(type, loader);
+
+            Optional<Class> cls = MetaUtils.getClassIfEnum(c, loader);
+
+            jObj.target = Enum.valueOf(cls.orElse(c), (String)jObj.get("name"));
+
+            ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
+            resolver.traverseFields(stack, (JsonObject<String, Object>) jObj, Set.of("name", "ordinal"));
+            Object target = ((JsonObject<String, Object>) jObj).getTarget();
+            return target;
+        }
+    }
+
     public static class TimeZoneReader implements JsonReader.JsonClassReaderEx
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
@@ -172,6 +212,7 @@ public class Readers
                 throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
             }
             jObj.target = TimeZone.getTimeZone((String) zone);
+
             return jObj.target;
         }
     }

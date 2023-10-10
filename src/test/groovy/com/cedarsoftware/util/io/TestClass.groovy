@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertSame
@@ -70,6 +71,10 @@ class TestClass
         }
     }
 
+    private static class OneNestedClass {
+        private Class cls;
+    }
+
     @Test
     void testClassAtRoot()
     {
@@ -78,6 +83,18 @@ class TestClass
         TestUtil.printLine("json=" + json)
         Class r = (Class) TestUtil.readJsonObject(json)
         assertTrue(c.getName().equals(r.getName()))
+    }
+
+    @Test
+    void testOneNestedClass()
+    {
+        OneNestedClass expected = new OneNestedClass();
+        expected.cls = Date.class;
+
+        String json = TestUtil.getJsonString(expected)
+        TestUtil.printLine("json=" + json)
+        OneNestedClass actual = (OneNestedClass) TestUtil.readJsonObject(json)
+        Assertions.assertThat(expected.cls).isEqualTo(actual.cls);
     }
 
     @Test

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:Xlint="http://www.w3.org/2001/XMLSchema"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <name>json-io</name>
@@ -13,8 +14,10 @@
     <properties>
         <maven.compiler.fork>true</maven.compiler.fork>
         <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>9</maven.compiler.target>
-        <maven.compiler.release>9</maven.compiler.release>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.failOnWarning>false</maven.compiler.failOnWarning>
+        <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--
             Name of the benchmark Uber-JAR to generate.
@@ -156,10 +159,11 @@
                     <target>${maven.compiler.target}</target>
                     <release>${maven.compiler.release}</release>
                     <fork>${maven.compiler.fork}</fork>
+                    <failOnWarning>${maven.compiler.failOnWarning}</failOnWarning>
                     <compilerId>groovy-eclipse-compiler</compilerId>
-                    <compilerArguments>
-                        <indy/>
-                    </compilerArguments>
+                    <compilerArgs>
+                        <arg>-Xlint</arg>
+                    </compilerArgs>
                 </configuration>
                 <dependencies>
                     <dependency>

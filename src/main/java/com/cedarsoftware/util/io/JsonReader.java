@@ -72,7 +72,7 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";
     /** Pointer to the current ObjectResolver (automatically placed in the Map) */
     public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";
-    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    /** If set, this map will be used when reading @type values - allows short-hand abbreviations type names */
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
     /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
     public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
@@ -143,8 +143,7 @@ public class JsonReader implements Closeable
         temp.put(StringBuffer.class, new Readers.StringBufferReader());
         temp.put(UUID.class, new Readers.UUIDReader());
         temp.put(URL.class, new Readers.URLReader());
-
-
+        temp.put(Enum.class, new Readers.EnumReader());
 
         try
         {

@@ -1,0 +1,1 @@
+{"@type":"com.cedarsoftware.util.io.TestEnums$DuplicateRefEnum","enum1":{"@id":1,"val":"Foo","name":"A"},"enum2":{"@ref":1}}
