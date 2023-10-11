@@ -766,7 +766,7 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        JsonReader.JsonClassReaderBase closestReader = getCustomReader(c);
+        JsonReader.JsonClassReader closestReader = getCustomReader(c);
 
         if (closestReader == null)
         {
@@ -778,15 +778,7 @@ public class ObjectResolver extends Resolver
             ((JsonObject)o).setType(c.getName());
         }
 
-        Object read;
-        if (closestReader instanceof JsonReader.JsonClassReaderEx)
-        {
-            read = ((JsonReader.JsonClassReaderEx)closestReader).read(o, stack, getReader().getArgs());
-        }
-        else
-        {
-            read = ((JsonReader.JsonClassReader)closestReader).read(o, stack);
-        }
+        Object read = closestReader.read(o, stack, getReader().getArgs());
         return read;
     }
 

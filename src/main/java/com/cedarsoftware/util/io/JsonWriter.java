@@ -1,6 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -8,12 +16,33 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Timestamp;
-import java.util.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
@@ -66,10 +95,22 @@ public class JsonWriter implements Closeable, Flushable
     public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";
     /** Set the date format to use within the JSON output */
     public static final String DATE_FORMAT = "DATE_FORMAT";
+    /**
+     * Set the local date format to use within the JSON output
+     */
+    public static final String LOCAL_DATE_FORMAT = "LOCAL_DATE_FORMAT";
+    /**
+     * Constant for use as DATE_FORMAT value
+     */
+    public static final String DATE_AS_TIMESTAMP = "DATE_AS_TIMESTAMP";
     /** Constant for use as DATE_FORMAT value */
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     /** Constant for use as DATE_FORMAT value */
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    /**
+     * Constant for use as DATE_FORMAT value
+     */
+    public static final String ISO_8601_FORMAT = "uuuu-MM-dd";
     /** Force @type always */
     public static final String TYPE = "TYPE";
     /** Force nicely formatted JSON output */
@@ -92,9 +133,12 @@ public class JsonWriter implements Closeable, Flushable
     public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
-    /** If set, treats enums as primitives (like most people do) even if they have additional fields
-        extra fields, if they exist, are ignored and will read back in. **/
-    public static final String WRITE_ENUMS_AS_PRIMITIVE = "ENUMS_AS_PRIMITIVE";
+    /**
+     * If set, treats enums as object instead of writing them out as a single string.  You will get extra fields
+     * from the class written out.  a note on when these are deserialized they will overwrite the instance fields
+     * on a given enum.
+     **/
+    public static final String WRITE_ENUMS_AS_OBJECTS = "WRITE_ENUMS_AS_OBJECTS";
 
     /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
     public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
@@ -119,9 +163,7 @@ public class JsonWriter implements Closeable, Flushable
     private static final Long ZERO = 0L;
     private static final NullClass nullWriter = new NullClass();
 
-    private static final JsonClassWriter enumAsPrimitiveWriter = new Writers.EnumAsPrimitiveWriter();
-    private static final JsonClassWriter defaultEnumWriter = new Writers.DefaultEnumWriter();
-
+    private static final JsonClassWriter enumAsStringWriter = new Writers.EnumsAsStringWriter();
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
@@ -135,7 +177,7 @@ public class JsonWriter implements Closeable, Flushable
     private boolean skipNullFields = false;
     private boolean forceMapFormatWithKeyArrays = false;
 
-    private JsonClassWriter enumWriter = defaultEnumWriter;
+    private JsonClassWriter enumWriter = enumAsStringWriter;
 
     private long identity = 1;
     private int depth = 0;
@@ -152,6 +194,7 @@ public class JsonWriter implements Closeable, Flushable
             byteStrings[i + 128] = chars;
         }
 
+        // initialize friendly defaults.
         Map<Class, JsonClassWriter> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
@@ -170,6 +213,9 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(StringBuffer.class, new Writers.StringBufferWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
         temp.put(URL.class, new Writers.URLWriter());
+        temp.put(LocalDate.class, new Writers.LocalDateWriter());
+        temp.put(LocalTime.class, new Writers.LocalTimeWriter());
+        temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
 
         Set<Class> staticallInitializedClasses = new HashSet<>();
         staticallInitializedClasses.add(TimeZone.class);
@@ -243,7 +289,14 @@ public class JsonWriter implements Closeable, Flushable
          * @param output Writer destination to where the actual JSON is written.
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
-        default void write(Object o, boolean showType, Writer output) throws IOException {};
+        default void write(Object o, boolean showType, Writer output) throws IOException {
+        }
+
+        /**
+         * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
+         * most custom writers will not have a primitive form.
+         */
+        default boolean hasPrimitiveForm(Map args) { return hasPrimitiveForm(); }
 
 
         /**
@@ -468,36 +521,38 @@ public class JsonWriter implements Closeable, Flushable
         alwaysShowType = isTrue(args.get(TYPE));
         neverShowType = Boolean.FALSE.equals(args.get(TYPE)) || "false".equals(args.get(TYPE));
         isPrettyPrint = isTrue(args.get(PRETTY_PRINT));
-        isEnumPublicOnly = isTrue(args.get(ENUM_PUBLIC_ONLY));
         writeLongsAsStrings = isTrue(args.get(WRITE_LONGS_AS_STRINGS));
         skipNullFields = isTrue(args.get(SKIP_NULL_FIELDS));
-        enumWriter = isTrue(args.get(WRITE_ENUMS_AS_PRIMITIVE)) ? enumAsPrimitiveWriter : defaultEnumWriter;
+
+        // eventually let's get rid of this member variable and just use the one being passed into the writer object.
+        isEnumPublicOnly = isTrue(args.get(ENUM_PUBLIC_ONLY));
+        enumWriter = isTrue(args.get(WRITE_ENUMS_AS_OBJECTS)) ? new Writers.EnumAsObjectWriter(isEnumPublicOnly) : enumAsStringWriter;
+
         forceMapFormatWithKeyArrays = isTrue(args.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS));
         if (!args.containsKey(CLASSLOADER))
         {
             args.put(CLASSLOADER, JsonWriter.class.getClassLoader());
         }
 
-        Map<Class, JsonClassWriter> customWriters = (Map<Class, JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
+        var customWriters = (Map<Class, JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
         if (customWriters != null)
         {
-            for (Map.Entry<Class, JsonClassWriter> entry : customWriters.entrySet())
-            {
-                addWriter(entry.getKey(), entry.getValue());
-            }
+            writers.putAll(customWriters);
         }
 
-        Collection<Class> notCustomClasses = (Collection<Class>) args.get(NOT_CUSTOM_WRITER_MAP);
+        var notCustomClasses = (Collection<Class>) args.get(NOT_CUSTOM_WRITER_MAP);
         if (notCustomClasses != null)
         {
-            for (Class c : notCustomClasses)
-            {
-                addNotCustomWriter(c);
-            }
+            notCustom.addAll(notCustomClasses);
         }
 
-        if (optionalArgs.containsKey(FIELD_SPECIFIERS))
-        {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
+        if (optionalArgs.containsKey(FIELD_SPECIFIERS)) {
+            // I'd like to have us to move to finding the bean property first, and then using the field second
+            // as part of this conversion.  Java 11 and 17 have cracked down on changing a fields privacy levels.
+            // If someone creates a getter we should use that for its accessor.  More people are willing to do this
+            // with tools like lombok, etc.
+
+            // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
             Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
             for (Entry<Class, List<String>> entry : specifiers.entrySet())
@@ -571,28 +626,6 @@ public class JsonWriter implements Closeable, Flushable
     ClassLoader getClassLoader()
     {
         return (ClassLoader) args.get(CLASSLOADER);
-    }
-
-    /**
-     * @param setting Object setting value from JsonWriter args map.
-     * @return boolean true if the value is (boolean) true, Boolean.TRUE, "true" (any case), or non-zero if a Number.
-     */
-    static boolean isTrue(Object setting)
-    {
-        if (setting instanceof Boolean)
-        {
-            return Boolean.TRUE.equals(setting);
-        }
-        else if (setting instanceof String)
-        {
-            return "true".equalsIgnoreCase((String) setting);
-        }
-        else if (setting instanceof Number)
-        {
-            return ((Number)setting).intValue() != 0;
-        }
-
-        return false;
     }
 
     /**
@@ -726,7 +759,7 @@ public class JsonWriter implements Closeable, Flushable
 
         boolean referenced = objsReferenced.containsKey(o);
 
-        if (closestWriter.hasPrimitiveForm())
+        if (closestWriter.hasPrimitiveForm(args))
         {
             if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter)
             {
@@ -770,7 +803,7 @@ public class JsonWriter implements Closeable, Flushable
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    static final class NullClass implements JsonClassWriter { }
+    static final class NullClass implements JsonWriter.JsonClassWriter {}
 
     /**
      * Fetch the customer writer for the passed in Class.  If it is cached (already associated to the
@@ -797,7 +830,7 @@ public class JsonWriter implements Closeable, Flushable
             return null;
         }
 
-        return MetaUtils.getClassIfEnum(c, getClassLoader()).isPresent() ? enumWriter : null;
+        return MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : null;
     }
 
     /**
@@ -2562,7 +2595,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         if (declaredType.isEnum() && declaredType.isAssignableFrom(objectClass)) {
-            Optional<Class> optionalClass = MetaUtils.getClassIfEnum(objectClass, getClassLoader());
+            Optional<Class> optionalClass = MetaUtils.getClassIfEnum(objectClass);
             return declaredType != optionalClass.orElse(null);
         }
 

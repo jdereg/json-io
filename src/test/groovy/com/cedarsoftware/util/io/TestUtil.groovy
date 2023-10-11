@@ -84,15 +84,16 @@ class TestUtil
             outputStreamFailCount++;
         }
 
+        printLine(json);
         return json;
     }
 
-    static Object readJsonObject(String json)
+    static <T> T readJsonObject(String json)
     {
         return readJsonObject(json, [:])
     }
 
-    static Object readJsonObject(String json, Map<String, Object> args)
+    static <T> T readJsonObject(String json, Map<String, Object> args)
     {
         long startRead1 = System.nanoTime()
 

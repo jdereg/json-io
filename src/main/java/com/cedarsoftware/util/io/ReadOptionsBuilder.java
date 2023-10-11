@@ -1,17 +1,15 @@
 package com.cedarsoftware.util.io;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
 import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
 import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
 import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
-import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
 
 public class ReadOptionsBuilder {
@@ -52,12 +50,12 @@ public class ReadOptionsBuilder {
         return this;
     }
 
-    public ReadOptionsBuilder withCustomReader(Class c, JsonReader.JsonClassReaderEx writer) {
-        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, writer);
+    public ReadOptionsBuilder withCustomReader(Class c, JsonReader.JsonClassReader reader) {
+        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, reader);
         return this;
     }
 
-    public ReadOptionsBuilder withCustomReaderMap(Map<Class, JsonReader.JsonClassReaderEx> map) {
+    public ReadOptionsBuilder withCustomReaders(Map<Class, JsonReader.JsonClassReader> map) {
         MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
         return this;
     }
@@ -72,8 +70,19 @@ public class ReadOptionsBuilder {
         return this;
     }
 
+    public ReadOptionsBuilder withClassFactory(Class type, JsonReader.ClassFactory factory) {
+        return withClassFactory(type.getName(), factory);
+    }
 
+    public ReadOptionsBuilder withClassFactories(Map<String, JsonReader.ClassFactory> factories) {
+        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).putAll(factories);
+        return this;
+    }
 
+    public ReadOptionsBuilder withClassFactory(String type, JsonReader.ClassFactory factory) {
+        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).put(type, factory);
+        return this;
+    }
 
     public Map<String, Object> build() {
         return readOptions;

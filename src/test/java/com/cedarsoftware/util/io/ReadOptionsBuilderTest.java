@@ -1,15 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -19,6 +9,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
+import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
+import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
+import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ReadOptionsBuilderTest {
 
@@ -169,7 +168,7 @@ public class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var customWriterMap = (Map<Class, JsonReader.JsonClassReaderEx>)options.get(CUSTOM_READER_MAP);
+        var customWriterMap = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(customWriterMap).hasSize(1)
                 .containsKey(Date.class);
@@ -177,10 +176,10 @@ public class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReaderMap() {
-        Map<Class, JsonReader.JsonClassReaderEx> map = new HashMap<>();
+        Map<Class, JsonReader.JsonClassReader> map = new HashMap<>();
 
         var options = new ReadOptionsBuilder()
-                .withCustomReaderMap(map)
+                .withCustomReaders(map)
                 .build();
 
         assertThat(options)
@@ -199,7 +198,7 @@ public class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var map = (Map<Class, JsonReader.JsonClassReaderBase>)options.get(CUSTOM_READER_MAP);
+        var map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);

@@ -159,21 +159,27 @@ class RefsTest
         b._other = a;
         String json = JsonWriter.objectToJson(a);
         Map<String, Object> options = new HashMap<>();
-        Map<Class, JsonReader.JsonClassReaderEx> readers = new HashMap<>();
+        Map<Class, JsonReader.JsonClassReaderBase> readers = new HashMap<>();
         options.put(JsonReader.CUSTOM_READER_MAP, readers);
-        readers.put(TestObject.class, (jOb, stack, args) -> {
-            JsonObject jObj = (JsonObject) jOb;
+        readers.put(TestObject.class, new TestObjectReader());
+        TestObject aa = (TestObject) TestUtil.readJsonObject(json, options);
+    }
+
+    private static class TestObjectReader implements JsonReader.JsonClassReader {
+
+        @Override
+        public Object read(Object jOb, java.util.Deque<JsonObject<String, Object>> stack, Map<String, Object> args) {
+            var jObj = (JsonObject) jOb;
             TestObject x = new TestObject((String) jObj.get("name"));
-            JsonObject b1 = (JsonObject) jObj.get("_other");
-            JsonObject aRef = (JsonObject) b1.get("_other");
+            var b1 = (JsonObject) jObj.get("_other");
+            var aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
-            JsonObject aTarget = (JsonObject) reader.getRefTarget(aRef);
+            var reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
+            var aTarget = (JsonObject) reader.getRefTarget(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;
-        });
-        TestObject aa = (TestObject) TestUtil.readJsonObject(json, options);
+        }
     }
 
     @SuppressWarnings("unchecked")

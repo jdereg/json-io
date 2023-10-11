@@ -10,8 +10,12 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+<<<<<<<< HEAD:src/test/java/com/cedarsoftware/util/io/ArgumentHelperTest.java
 class ArgumentHelperTest
 {
+========
+class ArgumentHelperTests {
+>>>>>>>> 7bbcce8 (Added printLine() to readJsonString()):src/test/java/com/cedarsoftware/util/io/ArgumentHelperTests.java
     @ParameterizedTest
     @MethodSource("argumentHelperTrueValues")
     void argumentHelper_truthyValues_returnTrue(Object input) {
@@ -58,7 +62,11 @@ class ArgumentHelperTest
                 Arguments.of(new BigDecimal(0.0)),
                 Arguments.of(0.0d),
                 Arguments.of(0.0f),
+<<<<<<<< HEAD:src/test/java/com/cedarsoftware/util/io/ArgumentHelperTest.java
                 Arguments.of(new ArgumentHelperTest()),
+========
+                Arguments.of(new ArgumentHelperTests()),
+>>>>>>>> 7bbcce8 (Added printLine() to readJsonString()):src/test/java/com/cedarsoftware/util/io/ArgumentHelperTests.java
                 Arguments.of(Short.valueOf((short)0),
                 Arguments.of((short)0),
                 Arguments.of(0),

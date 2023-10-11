@@ -1,9 +1,19 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
+import java.net.URL;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+
 import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
 import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
 import static com.cedarsoftware.util.io.JsonWriter.DATE_FORMAT;
-import static com.cedarsoftware.util.io.JsonWriter.WRITE_ENUMS_AS_PRIMITIVE;
 import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
 import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
 import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
@@ -16,20 +26,10 @@ import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
 import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.WRITE_ENUMS_AS_OBJECTS;
 import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-
-import java.net.URL;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-
-import org.junit.jupiter.api.Test;
 
 class WriteOptionsBuilderTest {
 
@@ -474,19 +474,20 @@ class WriteOptionsBuilderTest {
                 .build();
 
         assertThat(options)
-                .hasSize(1)
-                .containsEntry(ENUM_PUBLIC_ONLY, Boolean.TRUE);
+                .hasSize(2)
+                .containsEntry(ENUM_PUBLIC_ONLY, Boolean.TRUE)
+                .containsEntry(WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
     }
 
     @Test
-    void writeEnumsAsPrimitive() {
+    void writeEnumsAsObjects() {
         var options = new WriteOptionsBuilder()
-                .writeEnumsAsPrimitive()
+                .writeEnumsAsObjects()
                 .build();
 
         assertThat(options)
                 .hasSize(1)
-                .containsEntry(WRITE_ENUMS_AS_PRIMITIVE, Boolean.TRUE);
+                .containsEntry(WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
     }
 
     @Test
@@ -516,7 +517,7 @@ class WriteOptionsBuilderTest {
     @Test
     void doNotCustomizeClass() {
         var options = new WriteOptionsBuilder()
-                .withNonCustomizableClass(String.class)
+                .withNoCustomizationFor(String.class)
                 .build();
 
         assertThat(options)
@@ -533,8 +534,8 @@ class WriteOptionsBuilderTest {
     @Test
     void doNotCustomizeClass_withTwoOfSameClass_isUsingSetUnderneath() {
         var options = new WriteOptionsBuilder()
-                .withNonCustomizableClass(String.class)
-                .withNonCustomizableClass(String.class)
+                .withNoCustomizationFor(String.class)
+                .withNoCustomizationFor(String.class)
                 .build();
 
         assertThat(options)
@@ -552,9 +553,9 @@ class WriteOptionsBuilderTest {
         Collection<Class> list = List.of(HashMap.class, String.class);
 
         var options = new WriteOptionsBuilder()
-                .withNonCustomizableClass(String.class)
-                .withNonCustomizableClass(Map.class)
-                .withNonCustomizableClasses(list)
+                .withNoCustomizationFor(String.class)
+                .withNoCustomizationFor(Map.class)
+                .withNoCustomizationsFor(list)
                 .build();
 
         assertThat(options)
@@ -570,9 +571,9 @@ class WriteOptionsBuilderTest {
     @Test
     void withNonCustomizableClasses_whenNonCustomizableClassesExist_addsUniqueItemsToTheCollection() {
         var options = new WriteOptionsBuilder()
-                .withNonCustomizableClass(String.class)
-                .withNonCustomizableClass(Date.class)
-                .withNonCustomizableClasses(List.of(String.class, List.class))
+                .withNoCustomizationFor(String.class)
+                .withNoCustomizationFor(Date.class)
+                .withNoCustomizationsFor(List.of(String.class, List.class))
                 .build();
 
         assertThat(options)

@@ -29,7 +29,7 @@ class TestCustomReaderMap
         public long y
     }
 
-    private static class CustomPointReader implements JsonReader.JsonClassReaderEx
+    private static class CustomPointReader implements JsonReader.JsonClassReader
     {
         public Object read(Object obj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
@@ -55,7 +55,7 @@ class TestCustomReaderMap
         pt.y = 7
 
         Map<String,Object> map = [pt: pt]
-        Map<Class,JsonReader.JsonClassReaderBase> customReaders = [(CustomPoint.class):new CustomPointReader()]
+        Map<Class,JsonReader.JsonClassReader> customReaders = [(CustomPoint.class):new CustomPointReader()]
         Map<String,Object> args = [(JsonReader.CUSTOM_READER_MAP):customReaders]
 
         String json = JsonWriter.objectToJson(map)
@@ -76,7 +76,7 @@ class TestCustomReaderMap
         List<Object> list = new ArrayList<>()
         list.add(pt)
 
-        Map<Class,JsonReader.JsonClassReaderBase> customReaders = new HashMap<>()
+        Map<Class,JsonReader.JsonClassReader> customReaders = new HashMap<>()
         customReaders[CustomPoint.class] = new CustomPointReader()
         HashMap<String,Object> args = new HashMap<>()
         args[JsonReader.CUSTOM_READER_MAP] = customReaders
@@ -100,7 +100,7 @@ class TestCustomReaderMap
         Object [] list = new Object [1]
         list[0] = pt
 
-        Map<Class,JsonReader.JsonClassReaderBase> customReaders = new HashMap<>()
+        Map<Class,JsonReader.JsonClassReader> customReaders = new HashMap<>()
         customReaders.put(CustomPoint.class, new CustomPointReader())
         HashMap<String,Object> args = new HashMap<>()
         args[JsonReader.CUSTOM_READER_MAP] = customReaders
