@@ -617,7 +617,7 @@ abstract class Resolver
             else
             {
                 JsonObject jsItem = (JsonObject) item;
-                enumItem = Enum.valueOf(c, (String) jsItem.get("name"));
+                enumItem = Enum.valueOf(enumClass, (String) jsItem.get("name"));
             }
 
             if (enumSet == null)

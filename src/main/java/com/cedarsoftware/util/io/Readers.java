@@ -180,7 +180,8 @@ public class Readers
             }
         }
 
-        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) throws MalformedURLException {
+        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        {
             String type = jObj.type;
             ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
             Class c = classForName(type, loader);
@@ -1007,7 +1008,7 @@ public class Readers
                 }
 
                 Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
-                constructor.setAccessible(true);
+                constructor.trySetAccessible();
 
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
 
