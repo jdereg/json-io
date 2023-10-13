@@ -107,11 +107,12 @@ public class ObjectResolver extends Resolver
             else if (missingFieldHandler != null)
             {
                 handleMissingField(stack, jsonObj, rhs, key);
-            }//else no handler so ignor.
+            }//else no handler so ignore.
         }
     }
 
-    static boolean isBasicWrapperType(Class clazz) {
+    static boolean isBasicWrapperType(Class clazz)
+    {
         return clazz == Boolean.class || clazz == Integer.class ||
             clazz == Short.class || clazz == Character.class ||
             clazz == Byte.class || clazz == Long.class ||
@@ -282,10 +283,9 @@ public class ObjectResolver extends Resolver
         }
     }
 
-
     /**
-     * Try to create an java object from the missing field.
-	 * Mosly primitive types and jsonObject that contains @type attribute will
+     * Try to create a java object from the missing field.
+	 * Mostly primitive types and jsonObject that contains @type attribute will
 	 * be candidate for the missing field callback, others will be ignored. 
 	 * All missing field are stored for later notification
      *
@@ -375,8 +375,7 @@ public class ObjectResolver extends Resolver
     {
         missingFields.add(new Missingfields(target, missingField, value));
     }
-
-
+    
     /**
      * @param o Object to turn into a String
      * @return .toString() version of o or "null" if o is null.
@@ -508,21 +507,27 @@ public class ObjectResolver extends Resolver
             idx++;
         }
 
-        //if (isImmutable) {
-            reconciliateCollection(jsonObj, col);
-        //}
-
+        reconcileCollection(jsonObj, col);
         jsonObj.remove(ITEMS);   // Reduce memory required during processing
     }
 
-    static public void reconciliateCollection(JsonObject jsonObj, Collection col)
+    static public void reconcileCollection(JsonObject jsonObj, Collection col)
     {
         final String className = jsonObj.type;
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        if (!isImmutable) return;
-
-        if (col == null && jsonObj.target instanceof Collection) col = (Collection) jsonObj.target;
-        if (col == null) return;
+        
+        if (!isImmutable)
+        {
+            return;
+        }
+        if (col == null && jsonObj.target instanceof Collection)
+        {
+            col = (Collection) jsonObj.target;
+        }
+        if (col == null)
+        {
+            return;
+        }
 
         if (className.contains("List"))
         {

@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -103,7 +104,8 @@ public class Readers
             {
                 if (isString)
                 {
-                    return new URL((String)o);
+                    URI uri = URI.create((String)o);
+                    return uri.toURL();
                 }
 
                 return createURLFromJsonObject((JsonObject)o);
@@ -123,8 +125,9 @@ public class Readers
             return (URL)jObj.target;
         }
 
-        URL createUrlNewWay(JsonObject jObj) throws MalformedURLException {
-            return new URL((String)jObj.get("value"));
+        URL createUrlNewWay(JsonObject jObj) throws MalformedURLException
+        {
+            return URI.create((String)jObj.get("value")).toURL();
         }
 
         URL createUrlOldWay(JsonObject jObj) throws MalformedURLException {
@@ -260,7 +263,7 @@ public class Readers
                     throw new JsonIoException("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
-                Class c;
+                Class<?> c;
                 if (jObj.getTarget() != null)
                 {
                     c = jObj.getTarget().getClass();
@@ -933,12 +936,12 @@ public class Readers
             Object nanos = jObj.get("nanos");
             if (nanos == null)
             {
-                jObj.target = new Timestamp(Long.valueOf((String) time));
+                jObj.target = new Timestamp(Long.parseLong((String) time));
                 return jObj.target;
             }
 
-            Timestamp tstamp = new Timestamp(Long.valueOf((String) time));
-            tstamp.setNanos(Integer.valueOf((String) nanos));
+            Timestamp tstamp = new Timestamp(Long.parseLong((String) time));
+            tstamp.setNanos(Integer.parseInt((String) nanos));
             jObj.target = tstamp;
             return jObj.target;
         }
@@ -983,10 +986,10 @@ public class Readers
             {
                 JsonObject jsonObj = (JsonObject) o;
 
-                ArrayList<Class> lParameterTypes = new ArrayList<>(jsonObj.size());
+                ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
                 ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
 
-                Class c = Class.forName(jsonObj.getType());
+                Class<?> c = Class.forName(jsonObj.getType());
                 // the record components are per definition in the constructor parameter order
                 // we implement this with reflection due to code compatibility Java<16
                 Method getRecordComponents = Class.class.getMethod("getRecordComponents");
@@ -1007,7 +1010,7 @@ public class Readers
                         lParameterValues.add(parameterValueJsonObj.get("value"));
                 }
 
-                Constructor constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
+                Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
                 constructor.trySetAccessible();
 
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
@@ -1023,12 +1026,12 @@ public class Readers
     }
 
     // ========== Maintain dependency knowledge in once place, down here =========
-    static Class classForName(String name, ClassLoader classLoader)
+    static Class<?> classForName(String name, ClassLoader classLoader)
     {
         return MetaUtils.classForName(name, classLoader);
     }
 
-    static Object newInstance(Class c, JsonObject jsonObject)
+    static Object newInstance(Class<?> c, JsonObject jsonObject)
     {
         return JsonReader.newInstance(c, jsonObject);
     }

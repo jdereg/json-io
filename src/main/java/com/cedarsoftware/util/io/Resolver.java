@@ -48,7 +48,7 @@ abstract class Resolver
     private final static Map<String, Class> coercedTypes = new LinkedHashMap<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
-    Class singletonMap = Collections.singletonMap("foo", "bar").getClass();
+    Class<?> singletonMap = Collections.singletonMap("foo", "bar").getClass();
 
     static {
         coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);

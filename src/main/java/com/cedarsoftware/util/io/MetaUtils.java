@@ -145,50 +145,42 @@ public class MetaUtils
 
         while (curr != null)
         {
-            try
+            final Field[] local = curr.getDeclaredFields();
+
+            for (Field field : local)
             {
-                final Field[] local = curr.getDeclaredFields();
+                int modifiers = field.getModifiers();
+                if (Modifier.isStatic(modifiers))
+                {   // skip static fields (allow transient, because  that is an option for json-io)
+                    continue;
+                }
+                String fieldName = field.getName();
+                if ("metaClass".equals(fieldName) && "groovy.lang.MetaClass".equals(field.getType().getName()))
+                {   // skip Groovy metaClass field if present (without tying this project to Groovy in any way).
+                    continue;
+                }
 
-                for (Field field : local)
-                {
-                    int modifiers = field.getModifiers();
-                    if (Modifier.isStatic(modifiers))
-                    {   // skip static fields (allow transient, because  that is an option for json-io)
+                if (field.getDeclaringClass().isAssignableFrom(Enum.class))
+                {   // For Enum fields, do not add .hash or .ordinal fields to output
+                    if ("hash".equals(fieldName) || "ordinal".equals(fieldName))
+                    {
                         continue;
-                    }
-                    String fieldName = field.getName();
-                    if ("metaClass".equals(fieldName) && "groovy.lang.MetaClass".equals(field.getType().getName()))
-                    {   // skip Groovy metaClass field if present (without tying this project to Groovy in any way).
-                        continue;
-                    }
-
-                    if (field.getDeclaringClass().isAssignableFrom(Enum.class))
-                    {   // For Enum fields, do not add .hash or .ordinal fields to output
-                        if ("hash".equals(fieldName) || "ordinal".equals(fieldName))
-                        {   
-                            continue;
-                        }
-                    }
-                    if (classFields.containsKey(fieldName))
-                    {
-                        classFields.put(curr.getName() + '.' + fieldName, field);
-                    }
-                    else
-                    {
-                        classFields.put(fieldName, field);
-                    }
-
-                    if (!Modifier.isPublic(modifiers))
-                    {
-                        field.trySetAccessible();
                     }
                 }
+                if (classFields.containsKey(fieldName))
+                {
+                    classFields.put(curr.getName() + '.' + fieldName, field);
+                }
+                else
+                {
+                    classFields.put(fieldName, field);
+                }
+
+                if (!Modifier.isPublic(modifiers))
+                {
+                    field.trySetAccessible();
+                }
             }
-            catch (ThreadDeath t)
-            {
-                throw t;
-            }
-            catch (Throwable ignored) { }
 
             curr = curr.getSuperclass();
         }
@@ -233,7 +225,7 @@ public class MetaUtils
      */
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
+        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
 
         Class<?>[] interfaces = from.getInterfaces();
         // is the interface direct inherited or via interfaces extends interface?
