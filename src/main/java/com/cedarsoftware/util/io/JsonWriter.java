@@ -2335,9 +2335,9 @@ public class JsonWriter implements Closeable, Flushable
         }
         writeJsonUtf8String(elementType.getName(), out);
 
-        if (!enumSet.isEmpty()) {
+        if (!enumSet.isEmpty())
+        {
             Map<String, Field> mapOfFields = MetaUtils.getDeepDeclaredFields(elementType);
-            //Field[] enumFields = elementType.getDeclaredFields();
             int enumFieldsCount = mapOfFields.size();
 
             out.write(",");
@@ -2351,7 +2351,8 @@ public class JsonWriter implements Closeable, Flushable
             }
 
             boolean firstInSet = true;
-            for (Enum e : enumSet) {
+            for (Enum e : enumSet)
+            {
                 if (!firstInSet)
                 {
                     out.write(",");
@@ -2380,8 +2381,7 @@ public class JsonWriter implements Closeable, Flushable
 
             out.write("]");
         }
-
-
+        
         tabOut();
         out.write('}');
     }

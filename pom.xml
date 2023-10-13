@@ -12,7 +12,6 @@
     <url>https://github.com/jdereg/json-io</url>
 
     <properties>
-        <maven.compiler.fork>true</maven.compiler.fork>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>

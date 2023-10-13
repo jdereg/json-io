@@ -5,15 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -421,17 +413,23 @@ public class ObjectResolver extends Resolver
         if (items == null || items.length == 0)
         {
             if (className != null && className.startsWith("java.util.Immutable"))
-                if (className.contains("Set")) {
+            {
+                if (className.contains("Set"))
+                {
                     jsonObj.target = Set.of();
-                } else if (className.contains("List")) {
+                }
+                else if (className.contains("List"))
+                {
                     jsonObj.target = List.of();
                 }
+            }
             return;
         }
 
         Class mayEnumClass = null;
         String mayEnumClasName = (String)jsonObj.get("@enum");
-        if (mayEnumClasName != null) {
+        if (mayEnumClasName != null)
+        {
             mayEnumClass = MetaUtils.classForName(mayEnumClasName, classLoader);
         }
 
@@ -500,7 +498,11 @@ public class ObjectResolver extends Resolver
                     {
                         convertMapsToObjects(jObj);
                     }
-                    col.add(jObj.target);
+                    
+                    if (!(col instanceof EnumSet))
+                    {   // EnumSet has already had it's items added to it.
+                        col.add(jObj.target);
+                    }
                 }
             }
             idx++;

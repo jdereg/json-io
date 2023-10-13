@@ -162,6 +162,13 @@ public class MetaUtils
                         continue;
                     }
 
+                    if (field.getDeclaringClass().isAssignableFrom(Enum.class))
+                    {   // For Enum fields, do not add .hash or .ordinal fields to output
+                        if ("hash".equals(fieldName) || "ordinal".equals(fieldName))
+                        {   
+                            continue;
+                        }
+                    }
                     if (classFields.containsKey(fieldName))
                     {
                         classFields.put(curr.getName() + '.' + fieldName, field);
