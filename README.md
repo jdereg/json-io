@@ -4,13 +4,23 @@ json-io
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io)
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
 
-Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)). To include in your project:
+Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)).
+This library has <b>no dependencies</b> on other libraries for runtime.  Built purely on the JDK.
 
+To include in your project:
+##### Gradle
+```
+implementation 'com.cedarsoftware:json-io:4.14.2'
+```
+
+##### Maven
+```
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
       <version>4.14.2</version>
     </dependency>
+```
 ___
 **json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates
 the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.
