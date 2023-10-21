@@ -3,9 +3,15 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -196,7 +202,7 @@ class RefsTest
         deltas.add(delta1);
 
         // With forward reference
-        String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
+        String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
         List<Object> newList = (List<Object>) JsonReader.jsonToJava(json);
         Delta d1 = (Delta) newList.get(0);
         Delta d2 = (Delta) newList.get(1);
@@ -206,7 +212,7 @@ class RefsTest
         assert ((Axis) d2.newValue).column != null;
 
         // Backward reference
-        json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@ref\":1}}]}";
+        json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}]}";
         newList = (List<Object>) JsonReader.jsonToJava(json);
         d1 = (Delta) newList.get(0);
         d2 = (Delta) newList.get(1);

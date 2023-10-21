@@ -229,7 +229,7 @@ public class Writers
         }
 
         public LocalTimeWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE);
+            this(DateTimeFormatter.ISO_LOCAL_TIME);
         }
     }
 
