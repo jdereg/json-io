@@ -22,7 +22,7 @@ public class LocalTimeFactory implements JsonReader.ClassFactory {
     }
 
     @Override
-    public Object newInstance(Class c, Object o, JsonReader reader) {
+    public Object newInstance(Class c, Object o) {
 
         if (o instanceof String) {
             return LocalTime.parse((String) o, dateTimeFormatter);

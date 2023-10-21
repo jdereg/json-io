@@ -26,9 +26,8 @@ class LocalTimeFactoryTests {
     void newInstance_testNonValueVariants(Integer hour, Integer minute, Integer second, Integer nano) {
         var factory = new LocalTimeFactory();
         var jsonObject = buildJsonObject(hour, minute, second, nano);
-        var jsonReader = new JsonReader();
 
-        LocalTime time = (LocalTime) factory.newInstance(LocalTime.class, jsonObject, jsonReader);
+        LocalTime time = (LocalTime) factory.newInstance(LocalTime.class, jsonObject);
 
         assertThat(time).hasHour(hour)
                 .hasMinute(minute)
@@ -43,7 +42,7 @@ class LocalTimeFactoryTests {
         var jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39");
 
-        LocalTime time = (LocalTime) factory.newInstance(LocalTime.class, jsonObject, jsonReader);
+        LocalTime time = (LocalTime) factory.newInstance(LocalTime.class, jsonObject);
 
         assertThat(time).hasHour(9)
                 .hasMinute(27)

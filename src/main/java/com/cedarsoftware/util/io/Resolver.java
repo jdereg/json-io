@@ -374,7 +374,7 @@ abstract class Resolver
             }
             JsonReader.ClassFactory factory = null;
             if ((factory = getClassFactory(c)) != null) {
-                mate = factory.newInstance(c, jsonObj, getReader());
+                mate = factory.newInstance(c, jsonObj);
                 jsonObj.setFinishedTarget(mate, factory.isObjectFinal());
                 return mate;
             }

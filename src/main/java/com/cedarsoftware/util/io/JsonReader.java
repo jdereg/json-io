@@ -222,21 +222,7 @@ public class JsonReader implements Closeable
         // will add it to a map and then pass the map to another object.
         // this is deprecated functionality.  Also this object is not guaranteed
         // to be a json object anymore.
-        default Object newInstance(Class c, Object o, JsonReader reader) {
-            if (o instanceof JsonObject) {
-                var map = new HashMap();
-                map.put("jsonObj", o);
-                return this.newInstance(c, map);
-            }
-
-            return this.newInstance(c);
-        }
-
-        @Deprecated(since = "1.4")
-        default Object newInstance(Class c, Map args) { return this.newInstance(c); }
-
-        @Deprecated(since = "1.4")
-        default Object newInstance(Class c) { return null; }
+        Object newInstance(Class c, Object o);
 
         /**
          * When an object is final we know that object is complete during factory creation
@@ -300,7 +286,6 @@ public class JsonReader implements Closeable
          * @return Java Object you wish to convert the the passed in jOb into.
          */
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args);
-
     }
 
     /**
@@ -361,7 +346,7 @@ public class JsonReader implements Closeable
      */
     public static class CollectionFactory implements ClassFactory
     {
-        public Object newInstance(Class c)
+        public Object newInstance(Class c, Object o)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -393,7 +378,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class c)
+        public Object newInstance(Class c, Object o)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {

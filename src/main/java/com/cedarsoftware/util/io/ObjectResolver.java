@@ -772,7 +772,7 @@ public class ObjectResolver extends Resolver
 
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null) {
-            Object target = classFactory.newInstance(c, o, getReader());
+            Object target = classFactory.newInstance(c, o);
 
             if (classFactory.isObjectFinal()) {
                 return target;

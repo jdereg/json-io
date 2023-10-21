@@ -21,7 +21,7 @@ public class LocalDateFactory implements JsonReader.ClassFactory {
     }
 
     @Override
-    public Object newInstance(Class c, Object object, JsonReader reader) {
+    public Object newInstance(Class c, Object object) {
         var optional = tryToFindValue(object);
 
         if (optional.isPresent()) {
