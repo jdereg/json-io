@@ -107,10 +107,10 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public boolean isFinished() { return isFinished; }
 
-    public void setFinishedTarget(Object target)
+    public void setFinishedTarget(Object target, boolean isFinished)
     {
         this.target = target;
-        this.isFinished = true;
+        this.isFinished = isFinished;
     }
 
     public void setTarget(Object target)

@@ -1068,6 +1068,22 @@ public class MetaUtils
         return (Set<T>)map.computeIfAbsent(keyName, k -> new HashSet<T>());
     }
 
+    public static <K, V> V getValue(Map map, K key) {
+        return (V) map.get(key);
+    }
+
+    public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
+        V value = (V) map.get(key);
+        return (value == null) ? defaultValue : value;
+    }
+
+    public static <K, V> V getValueWithDefaultForMissing(Map map, K key, V defaultValue) {
+        if (!map.containsKey(key)) {
+            return defaultValue;
+        }
+
+        return (V) map.get(key);
+    }
 
 
     /**

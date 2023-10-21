@@ -8,8 +8,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -26,8 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.cedarsoftware.util.io.JsonReader.LOCAL_DATE_FORMAT;
 
 /**
  * All custom readers for json-io subclass this class.  Special readers are not needed for handling
@@ -198,7 +194,7 @@ public class Readers
 
             ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
             resolver.traverseFields(stack, (JsonObject<String, Object>) jObj, Set.of("name", "ordinal"));
-            Object target = ((JsonObject<String, Object>) jObj).getTarget();
+            Object target = ((JsonObject) jObj).getTarget();
             return target;
         }
     }
@@ -254,7 +250,7 @@ public class Readers
 
     public static class CalendarReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args, JsonReader reader)
         {
             String time = null;
             try
@@ -277,7 +273,7 @@ public class Readers
                     c = classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 }
 
-                Calendar calendar = (Calendar) newInstance(c, jObj);
+                Calendar calendar = (Calendar) reader.newInstance(c, jObj);
                 calendar.setTime(date);
                 jObj.setTarget(calendar);
                 String zone = (String) jObj.get("zone");
@@ -570,76 +566,6 @@ public class Readers
             throw new JsonIoException("String missing 'value' field");
         }
     }
-
-    public static class LocalDateReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
-        {
-            var localDate = tryToFindValue(o, LOCAL_DATE_FORMAT);
-
-            if (localDate.isPresent()) {
-                return localDate.get();
-            }
-
-            JsonObject jObj = (JsonObject) o;
-
-            if (jObj.getTarget() instanceof LocalDate) {
-                return jObj.getTarget();
-            }
-
-            if (jObj.containsKey("value"))
-            {
-                jObj.target = tryToFindValue(o, args.get(LOCAL_DATE_FORMAT)).orElse(null);
-                return jObj.target;
-            }
-
-            // object with month, day, year on it.
-            return assembleObject(jObj);
-        }
-
-        private Optional<LocalDate> tryToFindValue(Object o, Object formatType)
-        {
-            if (o instanceof LocalDate)
-            {
-                return Optional.of((LocalDate)o);
-            }
-
-            if (o instanceof Long)
-            {
-                return Optional.of(LocalDate.ofEpochDay((Long)o));
-            }
-
-            if (o instanceof String)
-            {
-                return Optional.of(parseFromString((String)o, formatType));
-            }
-
-            return Optional.empty();
-        }
-
-        private LocalDate parseFromString(String localDate, Object formatType) {
-
-            try {
-                if (formatType instanceof DateTimeFormatter) {
-                    return LocalDate.parse(localDate, (DateTimeFormatter)formatType);
-                }
-            } catch (Exception e) {
-                // ignore, try another
-            }
-
-            return LocalDate.parse(localDate);
-        }
-
-        private LocalDate assembleObject(JsonObject jsonObject)
-        {
-            var month = (Number)jsonObject.get("month");
-            var day = (Number)jsonObject.get("day");
-            var year = (Number)jsonObject.get("year");
-
-            return LocalDate.of(year.intValue(), month.intValue(), day.intValue());
-        }
-    }
-
 
     public static class ClassReader implements JsonReader.JsonClassReader
     {
@@ -1102,10 +1028,5 @@ public class Readers
     static Class<?> classForName(String name, ClassLoader classLoader)
     {
         return MetaUtils.classForName(name, classLoader);
-    }
-
-    static Object newInstance(Class<?> c, JsonObject jsonObject)
-    {
-        return JsonReader.newInstance(c, jsonObject);
     }
 }

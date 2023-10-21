@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 
 public class LocalDateFactory implements JsonReader.ClassFactory {
@@ -21,36 +21,44 @@ public class LocalDateFactory implements JsonReader.ClassFactory {
     }
 
     @Override
-    public Object newInstance(Class c, JsonObject jsonObject) {
-        Object value = jsonObject.get("value");
+    public Object newInstance(Class c, Object object, JsonReader reader) {
+        var optional = tryToFindValue(object);
 
-        if (value != null) {
-            return loadFromValue(value);
+        if (optional.isPresent()) {
+            return optional.get();
         }
 
-        Long year = (Long)jsonObject.get("year");
-        Long month = (Long)jsonObject.get("month");
-        Long day = (Long)jsonObject.get("day");
-
-        if (year == null || month == null || day == null) {
-            throw new JsonIoException("year, month, and day cannot be null for LocalDateFactory");
+        var job = (JsonObject<String, Object>) object;
+        if (job.containsKey("value")) {
+            return tryToFindValue(job.get("value")).orElse(null);
         }
+
+        // object with month, day, year on it.
+        return assembleObject(job);
+    }
+
+    private Optional<LocalDate> tryToFindValue(Object o) {
+        if (o instanceof String) {
+            return Optional.of(LocalDate.parse((String) o, dateTimeFormatter));
+        }
+
+        if (o instanceof Long) {
+            return Optional.of(LocalDate.ofEpochDay(((Long) o).longValue()));
+        }
+
+        return Optional.empty();
+    }
+
+    private LocalDate assembleObject(JsonObject jsonObject) {
+        var month = (Number) jsonObject.get("month");
+        var day = (Number) jsonObject.get("day");
+        var year = (Number) jsonObject.get("year");
 
         return LocalDate.of(year.intValue(), month.intValue(), day.intValue());
     }
 
-    public Object loadFromValue(Object value)
-    {
-        if (value instanceof String)
-        {
-            return LocalDate.parse((String)value, dateTimeFormatter);
-        }
-
-        if (value instanceof Long)
-        {
-            return LocalDate.ofEpochDay((Long)value);
-        }
-
-        throw new JsonIoException("Unknown object type to parse");
+    @Override
+    public boolean isObjectFinal() {
+        return true;
     }
 }

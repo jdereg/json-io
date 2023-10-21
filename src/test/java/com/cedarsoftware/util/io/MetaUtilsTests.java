@@ -14,10 +14,12 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -132,5 +134,36 @@ public class MetaUtilsTests {
         assert msg.equals("blame({\"value\":17}  {\"value\":34.5}  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.141592653589793})");
     }
 
+    @Test
+    void getWithDefault_whenObjectIsFound_returnsObject() {
+        var map = Map.of("foo", "bar");
 
+        String actual = MetaUtils.getValueWithDefaultForMissing(map, "foo", "qux");
+        assertThat(actual).isEqualTo("bar");
+    }
+
+    @Test
+    void getWithDefault_whenObjectIsNotFound_returnsDefaultObject() {
+        var map = Map.of("foo", "bar");
+
+        String actual = MetaUtils.getValueWithDefaultForMissing(map, "blah", "qux");
+        assertThat(actual).isEqualTo("qux");
+    }
+
+    @Test
+    void getWithDefaultForNull_whenObjectIsNotFound_returnsDefaultObject() {
+        var map = Map.of("foo", "bar");
+
+        String actual = MetaUtils.getValueWithDefaultForNull(map, "blah", "qux");
+        assertThat(actual).isEqualTo("qux");
+    }
+
+    @Test
+    void getWithDefaultForNull_whenObjectIsEqualToNull_returnsDefaultObject() {
+        var map = new HashMap();
+        map.put("foo", null);
+
+        String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");
+        assertThat(actual).isEqualTo("bar");
+    }
 }

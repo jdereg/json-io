@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -12,6 +13,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -116,12 +118,12 @@ public class JsonReader implements Closeable
 
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
-    private static Map<Class, JsonClassReader> BASE_READERS;
+    protected static Map<Class, JsonClassReader> BASE_READERS;
     protected final Map<Class, JsonClassReader> readers = new HashMap<>(BASE_READERS);
-    protected final Map<String, Factory> instantiators = new HashMap<>(factory);
+    protected final Map<String, ClassFactory> classFactories = new HashMap<>(BASE_CLASS_FACTORIES);
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<>();
-    private static final Map<String, ClassFactory> factory = new ConcurrentHashMap<>();
+    protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
@@ -150,15 +152,16 @@ public class JsonReader implements Closeable
     static
     {
         ClassFactory colFactory = new CollectionFactory();
-        assignInstantiator(Collection.class, colFactory);
-        assignInstantiator(List.class, colFactory);
-        assignInstantiator(Set.class, colFactory);
-        assignInstantiator(SortedSet.class, colFactory);
-        assignInstantiator(LocalDate.class, new LocalDateFactory());
+        addGlobalClassFactory(Collection.class, colFactory);
+        addGlobalClassFactory(List.class, colFactory);
+        addGlobalClassFactory(Set.class, colFactory);
+        addGlobalClassFactory(SortedSet.class, colFactory);
+        addGlobalClassFactory(LocalDate.class, new LocalDateFactory());
+        addGlobalClassFactory(LocalTime.class, new LocalTimeFactory());
 
         ClassFactory mapFactory = new MapFactory();
-        assignInstantiator(Map.class, mapFactory);
-        assignInstantiator(SortedMap.class, mapFactory);
+        addGlobalClassFactory(Map.class, mapFactory);
+        addGlobalClassFactory(SortedMap.class, mapFactory);
 
         Map<Class, JsonClassReader> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
@@ -179,7 +182,6 @@ public class JsonReader implements Closeable
         temp.put(UUID.class, new Readers.UUIDReader());
         temp.put(URL.class, new Readers.URLReader());
         temp.put(Enum.class, new Readers.EnumReader());
-        temp.put(LocalDate.class, new Readers.LocalDateReader());
 
         // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
         addPossibleReader(temp, "java.lang.Record", Readers.RecordReader::new);
@@ -216,15 +218,37 @@ public class JsonReader implements Closeable
      */
     public interface ClassFactory extends Factory
     {
-        default Object newInstance(Class c, JsonObject jsonObject) {
-            Map args = new HashMap();
-            args.put("jsonObj", jsonObject);
-            return this.newInstance(c, args);
+        // for backwards compatibility if this is a json object we
+        // will add it to a map and then pass the map to another object.
+        // this is deprecated functionality.  Also this object is not guaranteed
+        // to be a json object anymore.
+        default Object newInstance(Class c, Object o, JsonReader reader) {
+            if (o instanceof JsonObject) {
+                var map = new HashMap();
+                map.put("jsonObj", o);
+                return this.newInstance(c, map);
+            }
+
+            return this.newInstance(c);
         }
 
+        @Deprecated(since = "1.4")
         default Object newInstance(Class c, Map args) { return this.newInstance(c); }
 
+        @Deprecated(since = "1.4")
         default Object newInstance(Class c) { return null; }
+
+        /**
+         * When an object is final we know that object is complete during factory creation
+         * and we don't have to worry about looking to subclasses for additional fields
+         * so we can return this object in the target immediately without going down
+         * further in the stack.
+         *
+         * @return true if this object is known to be the complete object
+         */
+        default boolean isObjectFinal() {
+            return false;
+        }
     }
 
     /**
@@ -238,7 +262,7 @@ public class JsonReader implements Closeable
      * Make json-io aware that it needs to call your class by calling the public
      * JsonReader.assignInstantiator() API.
      */
-    @Deprecated
+    @Deprecated(since = "1.4")
     public interface ClassFactoryEx extends ClassFactory
     {
     }
@@ -284,6 +308,16 @@ public class JsonReader implements Closeable
      */
     public interface JsonClassReader extends JsonClassReaderBase
     {
+        /**
+         * @param jOb   Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @param args  Map of argument settings that were passed to JsonReader when instantiated.
+         * @return Java Object you wish to convert the the passed in jOb into.
+         */
+        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args, JsonReader reader) {
+            return this.read(jOb, stack, args);
+        }
+
         /**
          * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
          * @param stack Deque of objects that have been read (Map of Maps view).
@@ -384,20 +418,30 @@ public class JsonReader implements Closeable
      * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
      * @param n Class name to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
+     * @deprecated - use addGlobalClassFactory(String, ClassFactory)
      */
-    public static void assignInstantiator(String n, ClassFactory f)
-    {
-        factory.put(n, f);
+    @Deprecated(since = "1.4")
+    public static void assignInstantiator(String n, ClassFactory f) {
+        addGlobalClassFactory(n, f);
     }
 
     /**
      * Assign instantiated by Class. Falls back to JsonReader.assignInstantiator(String, Factory)
      * @param c Class to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
+     * @deprecated - use addGlobalClassFactory(Class, ClassFactory)
      */
-    public static void assignInstantiator(Class c, ClassFactory f)
-    {
-        assignInstantiator(c.getName(), f);
+    @Deprecated(since = "1.4")
+    public static void assignInstantiator(Class c, ClassFactory f) {
+        addGlobalClassFactory(c, f);
+    }
+
+    public static void addGlobalClassFactory(Class c, ClassFactory classFactory) {
+        BASE_CLASS_FACTORIES.put(c.getName(), classFactory);
+    }
+
+    public static void addGlobalClassFactory(String fqClassName, ClassFactory classFactory) {
+        BASE_CLASS_FACTORIES.put(fqClassName, classFactory);
     }
 
     /**
@@ -412,7 +456,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder to create any additional readers you'll need.
      *
      */
-    @Deprecated
+    @Deprecated(since = "1.4")
     public void addReader(Class c, JsonClassReader reader)
     {
         readers.put(c, reader);
@@ -822,9 +866,12 @@ public class JsonReader implements Closeable
             this.notCustom.addAll(notCustomReaders);
         }
 
-        var factories = (Map<String, Factory>) args.get(FACTORIES);
+        // pull all factories out and add them to the already added
+        // global class factories.  The global class factories are
+        // replaced by and ith the same name in this object.
+        var factories = (Map<String, ClassFactory>) args.get(FACTORIES);
         if (factories != null) {
-            this.instantiators.putAll(factories);
+            this.classFactories.putAll(factories);
         }
     }
 
@@ -941,11 +988,14 @@ public class JsonReader implements Closeable
         try
         {
             Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader)args.get(CLASSLOADER));
-            resolver.createJavaObjectInstance(Object.class, root);
+            Object instance = resolver.createJavaObjectInstance(Object.class, root);
+            if (root.isFinished) {
+                return instance;
+            }
             Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
             resolver.cleanup();
             readers.clear();
-            instantiators.clear();
+            classFactories.clear();
             return graph;
         }
         catch (Exception e)
@@ -965,23 +1015,14 @@ public class JsonReader implements Closeable
         }
     }
 
-    public static Object newInstance(Class c)
-    {
-        if (factory.containsKey(c.getName()))
-        {
-            ClassFactory cf = (ClassFactory) factory.get(c.getName());
-            return cf.newInstance(c);
-        }
-        return MetaUtils.newInstance(c);
-    }
+    public Object newInstance(Class c, JsonObject jsonObject) {
+        ClassFactory classFactory = classFactories.get(c.getName());
 
-    public static Object newInstance(Class c, JsonObject jsonObject)
-    {
-        ClassFactory classFactory = factory.get(c.getName());
-
-        if (classFactory != null)
-        {
-            return classFactory.newInstance(c, jsonObject);
+        if (classFactory != null) {
+            Object o = classFactory.newInstance(c, jsonObject);
+            // possibly move this setting of finished into factory class itself.
+            jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
+            return o;
         }
 
         return MetaUtils.newInstance(c);

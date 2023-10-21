@@ -1,7 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -12,6 +16,7 @@ import java.util.TimeZone;
 
 import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
 import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
 import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
 import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
 import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
@@ -19,7 +24,7 @@ import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
 import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ReadOptionsBuilderTest {
+class ReadOptionsBuilderTest {
 
     @Test
     void failOnUnknownType() {
@@ -289,7 +294,28 @@ public class ReadOptionsBuilderTest {
                 .containsExactlyInAnyOrderElementsOf(List.of(String.class, Date.class, List.class));
     }
 
+    @Test
+    void withClassFactory() {
+        var localDateFactory = new LocalDateFactory();
+        var options = new ReadOptionsBuilder()
+                .withClassFactory(LocalDate.class, localDateFactory)
+                .build();
 
+        assertThat(options)
+                .hasSize(1)
+                .containsKey(FACTORIES);
+
+        var collection = (Map<String, JsonReader.ClassFactory>) options.get(FACTORIES);
+
+        assertThat(collection)
+                .containsAllEntriesOf(Map.of(LocalDate.class.getName(), localDateFactory));
+    }
+
+    private Map<String, JsonReader.ClassFactory> getClassFactoryMap() {
+        return Map.of(
+                LocalDate.class.getName(), new LocalDateFactory(),
+                LocalTime.class.getName(), new LocalTimeFactory());
+    }
 
 
     private Map<String, String> expectedTypeNameMap() {

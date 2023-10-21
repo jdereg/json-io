@@ -43,6 +43,12 @@ class TestUtil
 
     }
 
+    static <T> T serializeDeserialize(T initial) {
+        String json = TestUtil.getJsonString(initial);
+        return TestUtil.readJsonObject(json);
+    }
+
+
     static String getJsonString(Object obj)
     {
         return getJsonString(obj, [:]);

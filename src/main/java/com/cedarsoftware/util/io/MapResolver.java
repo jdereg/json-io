@@ -60,7 +60,7 @@ public class MapResolver extends Resolver
     }
 
     /**
-     * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
+     * Walk the JsonObject<String, Object> fields and perform necessary substitutions so that all references matched up.
      * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
      * an @id of an object which can have more than one @ref to it, this code will make sure that each
      * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
@@ -83,7 +83,7 @@ public class MapResolver extends Resolver
             }
             else if (rhs == JsonParser.EMPTY_OBJECT)
             {
-                jsonObj.put(fieldName, new JsonObject());
+                jsonObj.put(fieldName, new JsonObject<String, Object>());
             }
             else if (rhs.getClass().isArray())
             {   // RHS is an array
@@ -97,7 +97,7 @@ public class MapResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                JsonObject<String, Object> jObj = (JsonObject) rhs;
+                JsonObject<String, Object> jObj = (JsonObject<String, Object>) rhs;
 
                 if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
                 {
@@ -108,7 +108,7 @@ public class MapResolver extends Resolver
 
                 if (refId != null)
                 {    // Correct field references
-                    JsonObject refObject = getReferencedObj(refId);
+                    JsonObject<String, Object> refObject = getReferencedObj(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -168,7 +168,7 @@ public class MapResolver extends Resolver
         {
             if (element == JsonParser.EMPTY_OBJECT)
             {
-                copy.add(new JsonObject());
+                copy.add(new JsonObject<String, Object>());
                 continue;
             }
 
@@ -187,7 +187,7 @@ public class MapResolver extends Resolver
 
                 if (refId != null)
                 {    // connect reference
-                    JsonObject refObject = getReferencedObj(refId);
+                    JsonObject<String, Object> refObject = getReferencedObj(refId);
                     copy.set(idx, refObject);
                 }
                 else
