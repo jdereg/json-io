@@ -43,6 +43,12 @@ class TestUtil
 
     }
 
+    static <T> T serializeDeserialize(T initial) {
+        String json = TestUtil.getJsonString(initial);
+        return TestUtil.readJsonObject(json);
+    }
+
+
     static String getJsonString(Object obj)
     {
         return getJsonString(obj, [:]);
@@ -84,15 +90,16 @@ class TestUtil
             outputStreamFailCount++;
         }
 
+        printLine(json);
         return json;
     }
 
-    static Object readJsonObject(String json)
+    static <T> T readJsonObject(String json)
     {
         return readJsonObject(json, [:])
     }
 
-    static Object readJsonObject(String json, Map<String, Object> args)
+    static <T> T readJsonObject(String json, Map<String, Object> args)
     {
         long startRead1 = System.nanoTime()
 

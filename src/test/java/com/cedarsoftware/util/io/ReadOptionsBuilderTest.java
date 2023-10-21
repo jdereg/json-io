@@ -1,17 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static org.assertj.core.api.Assertions.assertThat;
-
+import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,7 +14,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-public class ReadOptionsBuilderTest {
+import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
+import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
+import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
+import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import static org.assertj.core.api.Assertions.assertThat;
+
+class ReadOptionsBuilderTest {
 
     @Test
     void failOnUnknownType() {
@@ -169,7 +173,7 @@ public class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var customWriterMap = (Map<Class, JsonReader.JsonClassReaderEx>)options.get(CUSTOM_READER_MAP);
+        var customWriterMap = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(customWriterMap).hasSize(1)
                 .containsKey(Date.class);
@@ -177,10 +181,10 @@ public class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReaderMap() {
-        Map<Class, JsonReader.JsonClassReaderEx> map = new HashMap<>();
+        Map<Class, JsonReader.JsonClassReader> map = new HashMap<>();
 
         var options = new ReadOptionsBuilder()
-                .withCustomReaderMap(map)
+                .withCustomReaders(map)
                 .build();
 
         assertThat(options)
@@ -199,7 +203,7 @@ public class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var map = (Map<Class, JsonReader.JsonClassReaderBase>)options.get(CUSTOM_READER_MAP);
+        var map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);
@@ -290,7 +294,28 @@ public class ReadOptionsBuilderTest {
                 .containsExactlyInAnyOrderElementsOf(List.of(String.class, Date.class, List.class));
     }
 
+    @Test
+    void withClassFactory() {
+        var localDateFactory = new LocalDateFactory();
+        var options = new ReadOptionsBuilder()
+                .withClassFactory(LocalDate.class, localDateFactory)
+                .build();
 
+        assertThat(options)
+                .hasSize(1)
+                .containsKey(FACTORIES);
+
+        var collection = (Map<String, JsonReader.ClassFactory>) options.get(FACTORIES);
+
+        assertThat(collection)
+                .containsAllEntriesOf(Map.of(LocalDate.class.getName(), localDateFactory));
+    }
+
+    private Map<String, JsonReader.ClassFactory> getClassFactoryMap() {
+        return Map.of(
+                LocalDate.class.getName(), new LocalDateFactory(),
+                LocalTime.class.getName(), new LocalTimeFactory());
+    }
 
 
     private Map<String, String> expectedTypeNameMap() {

@@ -164,7 +164,7 @@ class TestCustomWriter
         }
     }
 
-    static class CustomPersonReader implements JsonReader.JsonClassReaderEx
+    static class CustomPersonReader implements JsonReader.JsonClassReader
     {
         Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
@@ -235,10 +235,11 @@ class TestCustomWriter
         assert 'Chi hua hua' == bella.t
         assert 3 == bella.a
 
-        Person personCustom = TestUtil.readJsonObject(jsonCustom,
-                [
-                    (JsonReader.CUSTOM_READER_MAP) : [(Person.class):new CustomPersonReader()]
-                ])
+        Map<String, Object> readOptions = new ReadOptionsBuilder()
+                .withCustomReader(Person.class, new CustomPersonReader())
+                .build();
+        Person personCustom = TestUtil.readJsonObject(jsonCustom, readOptions);
+
         assert personCustom.firstName == 'Michael'
         assert personCustom.lastName == 'Bolton'
         List petz = personCustom.pets
@@ -250,11 +251,18 @@ class TestCustomWriter
         assert 'Chi hua hua' == petz[1].type
         assert 3 == petz[1].age
 
-        String jsonOrig = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP):[(Person.class):new CustomPersonWriter()],(JsonWriter.NOT_CUSTOM_WRITER_MAP):[Person.class]])
+        Map writeOptions = new WriteOptionsBuilder()
+                .withCustomWriter(Person.class, new CustomPersonWriter())
+                .withNoCustomizationFor(Person.class)
+                .build();
+        String jsonOrig = TestUtil.getJsonString(p, writeOptions)
         assert jsonCustom != jsonOrig
         assert jsonCustom.length() < jsonOrig.length()
 
-        String jsonCustom2 = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP):[(Person.class):new CustomPersonWriter()]])
+        writeOptions = new WriteOptionsBuilder()
+                .withCustomWriter(Person.class, new CustomPersonWriter())
+                .build();
+        String jsonCustom2 = TestUtil.getJsonString(p, writeOptions);
         String jsonOrig2 = JsonWriter.objectToJson(p)
         assert jsonCustom == jsonCustom2
         assert jsonOrig == jsonOrig2

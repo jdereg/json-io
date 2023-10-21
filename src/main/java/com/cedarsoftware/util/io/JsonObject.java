@@ -46,6 +46,8 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     Object target;
     boolean isMap = false;
+
+    boolean isFinished = false;
     String type;
     long id = -1;
     int line;
@@ -101,6 +103,14 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     public Object getTarget()
     {
         return target;
+    }
+
+    public boolean isFinished() { return isFinished; }
+
+    public void setFinishedTarget(Object target, boolean isFinished)
+    {
+        this.target = target;
+        this.isFinished = isFinished;
     }
 
     public void setTarget(Object target)

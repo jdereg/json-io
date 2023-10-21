@@ -4,7 +4,21 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.TreeSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -40,7 +54,7 @@ abstract class Resolver
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
+    final Map<Class, JsonReader.JsonClassReader> readerCache = new HashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
@@ -119,7 +133,7 @@ abstract class Resolver
      * null value.  Instead, singleton instance of this class is placed where null values
      * are needed.
      */
-    private static final class NullClass implements JsonReader.JsonClassReaderBase  { }
+    private static final class NullClass implements JsonReader.JsonClassReader { }
 
     protected Resolver(JsonReader reader)
     {
@@ -148,6 +162,10 @@ abstract class Resolver
      */
     protected Object convertMapsToObjects(final JsonObject<String, Object> root)
     {
+        if (root.isFinished) {
+            return root.getTarget();
+        }
+
         final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
         stack.addFirst(root);
 
@@ -354,6 +372,13 @@ abstract class Resolver
                     throw new JsonIoException("Unable to create class: " + name, e);
                 }
             }
+            JsonReader.ClassFactory factory = null;
+            if ((factory = getClassFactory(c)) != null) {
+                mate = factory.newInstance(c, jsonObj, getReader());
+                jsonObj.setFinishedTarget(mate, factory.isObjectFinal());
+                return mate;
+            }
+
             if (c.isArray())
             {    // Handle []
                 Object[] items = jsonObj.getArray();
@@ -405,7 +430,11 @@ abstract class Resolver
                 }
                 else if (!c.getName().startsWith("java.util.Immutable"))
                 {
-                    mate = newInstance(c, jsonObj);
+                    //  for some statically create objects that we have factories for like TimeZone, LocalDate,
+                    //  this could be the end of the line because it creates the entire object in the factory
+                    //  but we continue parsing.  I think we need to see if there is a way we can acknoledge
+                    //  objects that are complete or done by using the target on JsonObject and a flag.
+                    mate = reader.newInstance(c, jsonObj);
                 }
                 else if (c.getName().contains("Set"))
                 {
@@ -456,7 +485,7 @@ abstract class Resolver
                 }
                 else if (unknownClass instanceof String)
                 {
-                    mate = newInstance(MetaUtils.classForName(((String)unknownClass).trim(), reader.getClassLoader()), jsonObj);
+                    mate = reader.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()), jsonObj);
                 }
                 else
                 {
@@ -465,7 +494,7 @@ abstract class Resolver
             }
             else
             {
-                mate = newInstance(clazz, jsonObj);
+                mate = reader.newInstance(clazz, jsonObj);
             }
         }
         jsonObj.target = mate;
@@ -493,9 +522,9 @@ abstract class Resolver
         return refObject;
     }
 
-    protected JsonReader.JsonClassReaderBase getCustomReader(Class c)
+    protected JsonReader.JsonClassReader getCustomReader(Class c)
     {
-        JsonReader.JsonClassReaderBase reader = readerCache.get(c);
+        JsonReader.JsonClassReader reader = readerCache.get(c);
         if (reader == null)
         {
             reader = forceGetCustomReader(c);
@@ -504,12 +533,12 @@ abstract class Resolver
         return reader == nullReader ? null : reader;
     }
 
-    private JsonReader.JsonClassReaderBase forceGetCustomReader(Class c)
+    private JsonReader.JsonClassReader forceGetCustomReader(Class c)
     {
-        JsonReader.JsonClassReaderBase closestReader = nullReader;
+        JsonReader.JsonClassReader closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonReader.JsonClassReaderBase> entry : getReaders().entrySet())
+        for (Map.Entry<Class, JsonReader.JsonClassReader> entry : getReaders().entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -752,12 +781,8 @@ abstract class Resolver
     }
 
     // ========== Keep relationship knowledge below the line ==========
-    public static Object newInstance(Class c, JsonObject jsonObject)
-    {
-        return JsonReader.newInstance(c, jsonObject);
-    }
 
-    protected Map<Class, JsonReader.JsonClassReaderBase> getReaders()
+    protected Map<Class, JsonReader.JsonClassReader> getReaders()
     {
         return reader.readers;
     }
@@ -766,4 +791,9 @@ abstract class Resolver
     {
         return reader.notCustom.contains(cls);
     }
+
+    public JsonReader.ClassFactory getClassFactory(Class c) {
+        return reader.classFactories.get(c.getName());
+    }
+
 }

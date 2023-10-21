@@ -1,19 +1,46 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.*;
+import static java.lang.reflect.Modifier.isPrivate;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -268,6 +295,7 @@ public class MetaUtils
      */
     public static boolean isPrimitive(Class<?> c)
     {
+
         return c.isPrimitive() || prims.contains(c);
     }
 
@@ -290,24 +318,17 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    private static final Pattern anonymousEnumClassNameExtractor = Pattern.compile("(.+)\\$\\d$");
-    public static Optional<Class> getClassIfEnum(Class c, ClassLoader classLoader) {
+    public static Optional<Class> getClassIfEnum(Class c) {
         if (c.isEnum()) {
             return Optional.of(c);
         }
 
-        Matcher anonymousInnerClassMatcher = anonymousEnumClassNameExtractor.matcher(c.getName());
-
-        if (anonymousInnerClassMatcher.matches()) {
-            try {
-                c = classForName(anonymousInnerClassMatcher.group(1), classLoader);
-                return c.isEnum() ? Optional.of(c) : Optional.empty();
-            } catch (Exception e) {
-                return Optional.empty();
-            }
+        if (!Enum.class.isAssignableFrom(c)) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        Class enclosingClass = c.getEnclosingClass();
+        return enclosingClass != null && enclosingClass.isEnum() ? Optional.of(enclosingClass) : Optional.empty();
     }
 
     /**
@@ -1047,6 +1068,22 @@ public class MetaUtils
         return (Set<T>)map.computeIfAbsent(keyName, k -> new HashSet<T>());
     }
 
+    public static <K, V> V getValue(Map map, K key) {
+        return (V) map.get(key);
+    }
+
+    public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
+        V value = (V) map.get(key);
+        return (value == null) ? defaultValue : value;
+    }
+
+    public static <K, V> V getValueWithDefaultForMissing(Map map, K key, V defaultValue) {
+        if (!map.containsKey(key)) {
+            return defaultValue;
+        }
+
+        return (V) map.get(key);
+    }
 
 
     /**

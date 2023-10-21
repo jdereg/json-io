@@ -7,6 +7,11 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.Format;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -40,21 +45,24 @@ public class Writers
 {
     private Writers () {}
 
+    /**
+     * Used as a template to write out types that will have a primitive form.
+     * Uses the default key of "value" unless overridden
+     */
     public static class PrimitiveTypeWriter implements JsonWriter.JsonClassWriter
     {
         protected String getKey() { return "value"; }
 
         @Override
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
         {
             if (showType)
             {
-                output.write('\"');
-                output.write(getKey());
-                output.write("\":");
+                writeBasicString(output, getKey());
+                output.write(':');
             }
 
-            writePrimitiveForm(obj, output);
+            writePrimitiveForm(obj, output, args);
         }
 
         @Override
@@ -63,14 +71,17 @@ public class Writers
 
 
     /**
-     * Used as a template to write out value types such as int, boolean, etc.
-     * Uses the default key of "value"
+     * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
+     * but we do not put in quotes.  Uses the default key of "value" unless overridden
      */
     public static class PrimitiveValueWriter extends PrimitiveTypeWriter
     {
         public String extractString(Object o) { return o.toString(); }
 
         @Override
+        /**
+         * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
+         */
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
             output.write(extractString(o));
         }
@@ -110,7 +121,7 @@ public class Writers
         public String extractString(Object o) { return ((Class)o).getName(); }
     }
 
-    public static class EnumAsPrimitiveWriter extends PrimitiveUtf8StringWriter
+    public static class EnumsAsStringWriter extends PrimitiveUtf8StringWriter
     {
         @Override
         protected String getKey() {
@@ -153,9 +164,7 @@ public class Writers
 
             if (dateFormat instanceof Format)
             {
-                output.write("\"");
-                output.write(((Format) dateFormat).format(date));
-                output.write("\"");
+                writeBasicString(output, ((Format) dateFormat).format(date));
             }
             else
             {
@@ -178,6 +187,62 @@ public class Writers
         }
     }
 
+    public static class LocalDateAsTimestamp extends PrimitiveTypeWriter {
+        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException {
+            LocalDate localDate = (LocalDate) o;
+            output.write(Long.toString(localDate.toEpochDay()));
+        }
+    }
+
+    public static class TemporalWriter<T extends TemporalAccessor> extends PrimitiveTypeWriter {
+        protected final DateTimeFormatter formatter;
+
+        public TemporalWriter(DateTimeFormatter formatter) {
+            this.formatter = formatter;
+        }
+
+        @Override
+        public void writePrimitiveForm(Object obj, Writer output) throws IOException {
+            this.writePrimitiveForm((T) obj, output);
+        }
+
+        protected void writePrimitiveForm(T temporal, Writer output) throws IOException {
+            writeBasicString(output, this.formatter.format(temporal));
+        }
+
+    }
+
+    public static class LocalDateWriter extends TemporalWriter<LocalDate>
+    {
+        public LocalDateWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public LocalDateWriter() {
+            this(DateTimeFormatter.ISO_LOCAL_DATE);
+        }
+    }
+
+    public static class LocalTimeWriter extends TemporalWriter<LocalTime> {
+        public LocalTimeWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public LocalTimeWriter() {
+            this(DateTimeFormatter.ISO_LOCAL_TIME);
+        }
+    }
+
+    public static class LocalDateTimeWriter extends TemporalWriter<LocalDateTime> {
+        public LocalDateTimeWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public LocalDateTimeWriter() {
+            this(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
+    }
+
     public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object o, boolean showType, Writer output) throws IOException
@@ -191,8 +256,16 @@ public class Writers
         }
     }
 
-    public static class DefaultEnumWriter implements JsonWriter.JsonClassWriter
-    {
+
+    public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
+        // putting here to allow this to be the full enum object writer.
+        // write now we're just calling back to the JsonWriter
+        private final boolean isEnumPublicOnly;
+
+        public EnumAsObjectWriter(boolean isEnumPublicOnly) {
+            this.isEnumPublicOnly = isEnumPublicOnly;
+        }
+
         @Override
         public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {
@@ -226,9 +299,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             BigInteger big = (BigInteger) o;
-            output.write('"');
-            output.write(big.toString(10));
-            output.write('"');
+            writeBasicString(output, big.toString(10));
         }
     }
 
@@ -243,9 +314,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             BigDecimal big = (BigDecimal) o;
-            output.write('"');
-            output.write(big.toPlainString());
-            output.write('"');
+            writeBasicString(output, big.toPlainString());
         }
     }
 
@@ -276,17 +345,23 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             UUID buffer = (UUID) o;
-            output.write('"');
-            output.write(buffer.toString());
-            output.write('"');
+            writeBasicString(output, buffer.toString());
         }
     }
 
     // ========== Maintain knowledge about relationships below this line ==========
     static final String DATE_FORMAT = JsonWriter.DATE_FORMAT;
+    static final String LOCAL_DATE_FORMAT = JsonWriter.LOCAL_DATE_FORMAT;
+    static final String DATE_AS_TIMESTAMP = JsonWriter.DATE_AS_TIMESTAMP;
 
     protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
     {
         JsonWriter.writeJsonUtf8String(s, output);
+    }
+
+    protected static void writeBasicString(Writer output, String string) throws IOException {
+        output.write("\"");
+        output.write(string);
+        output.write("\"");
     }
 }

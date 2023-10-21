@@ -97,7 +97,7 @@ can be read, modified, and then re-written by a JVM that does not contain any of
 
 #### The optional values below are public constants from `JsonReader`, used by placing them as keys in the arguments map.
 
-    CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReaderEx> to
+    CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReader> to
                             // override the default JSON reader for a given class. 
     NOT_CUSTOM_READER_MAP   // Set to Collection<Class> to indicate classes that should
                             // not be read by a custom reader.

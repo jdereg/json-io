@@ -3,9 +3,15 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -159,21 +165,27 @@ class RefsTest
         b._other = a;
         String json = JsonWriter.objectToJson(a);
         Map<String, Object> options = new HashMap<>();
-        Map<Class, JsonReader.JsonClassReaderEx> readers = new HashMap<>();
+        Map<Class, JsonReader.JsonClassReaderBase> readers = new HashMap<>();
         options.put(JsonReader.CUSTOM_READER_MAP, readers);
-        readers.put(TestObject.class, (jOb, stack, args) -> {
-            JsonObject jObj = (JsonObject) jOb;
+        readers.put(TestObject.class, new TestObjectReader());
+        TestObject aa = (TestObject) TestUtil.readJsonObject(json, options);
+    }
+
+    private static class TestObjectReader implements JsonReader.JsonClassReader {
+
+        @Override
+        public Object read(Object jOb, java.util.Deque<JsonObject<String, Object>> stack, Map<String, Object> args) {
+            var jObj = (JsonObject) jOb;
             TestObject x = new TestObject((String) jObj.get("name"));
-            JsonObject b1 = (JsonObject) jObj.get("_other");
-            JsonObject aRef = (JsonObject) b1.get("_other");
+            var b1 = (JsonObject) jObj.get("_other");
+            var aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
-            JsonObject aTarget = (JsonObject) reader.getRefTarget(aRef);
+            var reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
+            var aTarget = (JsonObject) reader.getRefTarget(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;
-        });
-        TestObject aa = (TestObject) TestUtil.readJsonObject(json, options);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -190,7 +202,7 @@ class RefsTest
         deltas.add(delta1);
 
         // With forward reference
-        String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
+        String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
         List<Object> newList = (List<Object>) JsonReader.jsonToJava(json);
         Delta d1 = (Delta) newList.get(0);
         Delta d2 = (Delta) newList.get(1);
@@ -200,7 +212,7 @@ class RefsTest
         assert ((Axis) d2.newValue).column != null;
 
         // Backward reference
-        json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.TestRefs$Delta\",\"newValue\":{\"@ref\":1}}]}";
+        json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}]}";
         newList = (List<Object>) JsonReader.jsonToJava(json);
         d1 = (Delta) newList.get(0);
         d2 = (Delta) newList.get(1);

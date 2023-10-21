@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
  */
 class TestCustomReaderObject
 {
-	static class CustomReader implements JsonReader.JsonClassReaderEx
+	static class CustomReader implements JsonReader.JsonClassReader
 	{
 		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
 		{

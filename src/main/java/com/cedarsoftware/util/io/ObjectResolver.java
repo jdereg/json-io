@@ -195,7 +195,7 @@ public class ObjectResolver extends Resolver
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 final Object[] elements = (Object[]) rhs;
-                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
+                JsonObject jsonArray = new JsonObject();
                 if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF8 strings for compactness and speed.
@@ -218,7 +218,7 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject<String, Object> jsRhs = (JsonObject) rhs;
+                final JsonObject jsRhs = (JsonObject) rhs;
                 final Long ref = jsRhs.getReferenceId();
 
                 if (ref != null)
@@ -294,7 +294,7 @@ public class ObjectResolver extends Resolver
      * @param rhs the JSON value that will be converted and stored in the 'field' on the associated Java target object.
      * @param missingField name of the missing field in the java object.
      */
-    protected void handleMissingField(final Deque<JsonObject<String, Object>> stack, final JsonObject jsonObj, final Object rhs,
+    protected void handleMissingField(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj, final Object rhs,
                                       final String missingField)
     {
         final Object target = jsonObj.target;
@@ -323,7 +323,7 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject<String, Object> jObj = (JsonObject) rhs;
+                final JsonObject jObj = (JsonObject) rhs;
                 final Long ref = jObj.getReferenceId();
 
                 if (ref != null)
@@ -744,7 +744,10 @@ public class ObjectResolver extends Resolver
                             return null;
                         }
                     }
-                    createJavaObjectInstance(c, jObj);
+                    Object factoryCreated = createJavaObjectInstance(c, jObj);
+                    if (jObj.isFinished) {
+                        return factoryCreated;
+                    }
                 }
                 catch(Exception e)
                 {
@@ -755,6 +758,7 @@ public class ObjectResolver extends Resolver
             {   // Type inferred from target object
                 c = jObj.target.getClass();
             }
+
         }
         else
         {
@@ -766,7 +770,16 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        JsonReader.JsonClassReaderBase closestReader = getCustomReader(c);
+        JsonReader.ClassFactory classFactory = getClassFactory(c);
+        if (classFactory != null) {
+            Object target = classFactory.newInstance(c, o, getReader());
+
+            if (classFactory.isObjectFinal()) {
+                return target;
+            }
+        }
+
+        JsonReader.JsonClassReader closestReader = getCustomReader(c);
 
         if (closestReader == null)
         {
@@ -778,15 +791,7 @@ public class ObjectResolver extends Resolver
             ((JsonObject)o).setType(c.getName());
         }
 
-        Object read;
-        if (closestReader instanceof JsonReader.JsonClassReaderEx)
-        {
-            read = ((JsonReader.JsonClassReaderEx)closestReader).read(o, stack, getReader().getArgs());
-        }
-        else
-        {
-            read = ((JsonReader.JsonClassReader)closestReader).read(o, stack);
-        }
+        Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
         return read;
     }
 

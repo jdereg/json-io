@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -42,13 +43,21 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    /**
+     * This option only applies when you're writing enums as objects so we
+     * force the enum write to be ENUMS_AS_OBJECTS
+     *
+     * @return
+     */
+
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
         writeOptions.put(JsonWriter.ENUM_PUBLIC_ONLY, Boolean.TRUE);
+        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
         return this;
     }
 
-    public WriteOptionsBuilder writeEnumsAsPrimitive() {
-        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_PRIMITIVE, Boolean.TRUE);
+    public WriteOptionsBuilder writeEnumsAsObjects() {
+        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
         return this;
     }
 
@@ -60,6 +69,10 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder withClassLoader(ClassLoader classLoader) {
         writeOptions.put(JsonWriter.CLASSLOADER, classLoader);
         return this;
+    }
+
+    public WriteOptionsBuilder writeLocalDateAsTimeStamp() {
+        return withCustomWriter(LocalDate.class, new Writers.LocalDateAsTimestamp());
     }
 
     public WriteOptionsBuilder withIsoDateTimeFormat() {
@@ -136,12 +149,12 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withNonCustomizableClass(Class c) {
+    public WriteOptionsBuilder withNoCustomizationFor(Class c) {
         MetaUtils.computeSetIfAbsent(writeOptions, NOT_CUSTOM_WRITER_MAP).add(c);
         return this;
     }
 
-    public WriteOptionsBuilder withNonCustomizableClasses(Collection<Class> collection) {
+    public WriteOptionsBuilder withNoCustomizationsFor(Collection<Class> collection) {
         MetaUtils.computeSetIfAbsent(writeOptions, NOT_CUSTOM_WRITER_MAP).addAll(collection);
         return this;
     }
