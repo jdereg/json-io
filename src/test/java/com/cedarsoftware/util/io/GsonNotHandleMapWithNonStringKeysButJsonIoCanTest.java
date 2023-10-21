@@ -25,7 +25,7 @@ import java.util.Map;
  *         limitations under the License.
  */
 
-public class TestGsonNotHandleMapWithNonStringKeysButJsonIoCan
+public class GsonNotHandleMapWithNonStringKeysButJsonIoCanTest
 {
     @Test
     public void testMapWithNonStringKeys()

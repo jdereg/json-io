@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestEmptyListForJdk17 {
+public class EmptyListForJdk17Test
+{
 
     @Test
     public void testEmptyListJDK17() {

@@ -22,7 +22,7 @@ import java.util.Objects;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestEmptyEnumSetOnJDK17
+public class EmptyEnumSetOnJDK17Test
 {
     enum TestEnum
     {

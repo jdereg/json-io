@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,12 +23,25 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestNotLenientNanInfinity
+public class LenientNanInfinityTest
 {
+    static boolean readAllowNan;
+    static boolean writeAllowNan;
+
     @BeforeAll
-    public static void init() {
-        JsonReader.setAllowNanAndInfinity(false);
-        JsonWriter.setAllowNanAndInfinity(false);
+    public static void init()
+    {
+        readAllowNan = JsonReader.isAllowNanAndInfinity();
+        JsonReader.setAllowNanAndInfinity(true);
+        writeAllowNan = JsonWriter.isAllowNanAndInfinity();
+        JsonWriter.setAllowNanAndInfinity(true);
+    }
+
+    @AfterAll
+    public static void tearDown()
+    {
+        JsonReader.setAllowNanAndInfinity(readAllowNan);
+        JsonWriter.setAllowNanAndInfinity(writeAllowNan);
     }
     
     public class A
@@ -54,6 +67,14 @@ public class TestNotLenientNanInfinity
         public Float getFloatField() {
             return floatField;
         }
+    }
+
+    @Test
+    public void testFloatDoubleNormal()
+    {
+        float float1 = 1f;
+        double double1 = 2.0;
+        testFloatDouble(float1, double1);
     }
 
     @Test
@@ -83,8 +104,11 @@ public class TestNotLenientNanInfinity
         
         Double newDoubleField = newA.getDoubleField();
         Float newFloatField = newA.getFloatField();
-        assertNull(newDoubleField);
-        assertNull(newFloatField);
+        
+        Double doubleField = a.getDoubleField();
+        Float floatField = a.getFloatField();
+        assertTrue(newDoubleField.equals(doubleField));
+        assertTrue(newFloatField.equals(floatField));
     }
     
     

@@ -1,10 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
@@ -13,7 +10,8 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class TestArgumentHelper {
+class ArgumentHelperTest
+{
     @ParameterizedTest
     @MethodSource("argumentHelperTrueValues")
     void argumentHelper_truthyValues_returnTrue(Object input) {
@@ -60,7 +58,7 @@ class TestArgumentHelper {
                 Arguments.of(new BigDecimal(0.0)),
                 Arguments.of(0.0d),
                 Arguments.of(0.0f),
-                Arguments.of(new TestArgumentHelper()),
+                Arguments.of(new ArgumentHelperTest()),
                 Arguments.of(Short.valueOf((short)0),
                 Arguments.of((short)0),
                 Arguments.of(0),

@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class TestJDK9Immutable {
+public class JDK9ImmutableTest
+{
 
     static class Rec {
         final String s;

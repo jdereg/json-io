@@ -24,12 +24,12 @@ import java.util.Map;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestGsonNotHandleHeteroCollections
+public class GsonNotHandleHeteroCollectionsTest
 {
     static class Node
     {
         String name;
-        TestGsonNotHandleCycleButJsonIoCan.Node next;
+        GsonNotHandleCycleButJsonIoCanTest.Node next;
 
         Node(String name)
         {

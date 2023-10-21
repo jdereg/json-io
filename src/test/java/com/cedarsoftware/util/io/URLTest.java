@@ -12,7 +12,8 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class TestURL {
+class URLTest
+{
 
     private static final String LOCALHOST = "http://localhost";
     private static final String OUTSIDE_DOMAIN = "https://foo.bar.com";
