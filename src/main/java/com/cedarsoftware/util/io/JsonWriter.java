@@ -258,7 +258,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public interface JsonClassWriterBase
     {
     }
@@ -342,7 +342,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public interface JsonClassWriterEx extends JsonClassWriter
     {
         String JSON_WRITER = "JSON_WRITER";
@@ -351,7 +351,7 @@ public class JsonWriter implements Closeable, Flushable
          * If access to the JsonWriter is needed, JsonClassWriter's can access it by accessing Support.getWriter(args).
          * The args are the same arguments passed into the write(o, showType, args) method of JsonClassWriterEx.
          */
-        @Deprecated(since = "1.4")
+        @Deprecated(since = "1.14")
         class Support
         {
             /**

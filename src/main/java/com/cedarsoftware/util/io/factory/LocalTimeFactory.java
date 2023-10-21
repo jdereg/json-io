@@ -7,6 +7,7 @@ import com.cedarsoftware.util.io.MetaUtils;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 
 public class LocalTimeFactory implements JsonReader.ClassFactory {
@@ -22,22 +23,22 @@ public class LocalTimeFactory implements JsonReader.ClassFactory {
     }
 
     @Override
-    public Object newInstance(Class c, Object o) {
-
+    public Object newInstance(Class c, Object o)
+    {
         if (o instanceof String) {
             return LocalTime.parse((String) o, dateTimeFormatter);
         }
 
-        JsonObject job = (JsonObject) o;
+        Map jObj = (Map) o;
 
-        if (job.containsKey("value")) {
-            return LocalTime.parse((String) job.get("value"), dateTimeFormatter);
+        if (jObj.containsKey("value")) {
+            return LocalTime.parse((String) jObj.get("value"), dateTimeFormatter);
         }
 
-        Number hour = MetaUtils.getValueWithDefaultForMissing(job, "hour", null);
-        Number minute = MetaUtils.getValueWithDefaultForMissing(job, "minute", null);
-        Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);
-        Number nano = MetaUtils.getValueWithDefaultForNull(job, "nano", 0);
+        Number hour = MetaUtils.getValueWithDefaultForMissing(jObj, "hour", null);
+        Number minute = MetaUtils.getValueWithDefaultForMissing(jObj, "minute", null);
+        Number second = MetaUtils.getValueWithDefaultForNull(jObj, "second", 0);
+        Number nano = MetaUtils.getValueWithDefaultForNull(jObj, "nano", 0);
 
         if (hour == null || minute == null) {
             throw new JsonIoException("hour and minute cannot be null if value is null for LocalTimeFactory");

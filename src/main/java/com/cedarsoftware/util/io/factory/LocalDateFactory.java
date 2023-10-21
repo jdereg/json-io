@@ -5,6 +5,7 @@ import com.cedarsoftware.util.io.JsonReader;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -28,7 +29,7 @@ public class LocalDateFactory implements JsonReader.ClassFactory {
             return optional.get();
         }
 
-        var job = (JsonObject<String, Object>) object;
+        var job = (Map<String, Object>) object;
         if (job.containsKey("value")) {
             return tryToFindValue(job.get("value")).orElse(null);
         }
@@ -49,7 +50,7 @@ public class LocalDateFactory implements JsonReader.ClassFactory {
         return Optional.empty();
     }
 
-    private LocalDate assembleObject(JsonObject jsonObject) {
+    private LocalDate assembleObject(Map jsonObject) {
         var month = (Number) jsonObject.get("month");
         var day = (Number) jsonObject.get("day");
         var year = (Number) jsonObject.get("year");

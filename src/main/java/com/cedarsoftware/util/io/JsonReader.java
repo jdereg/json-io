@@ -203,7 +203,7 @@ public class JsonReader implements Closeable
     /**
      * Common ancestor for ClassFactory and ClassFactoryEx.
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public interface Factory
     {
     }
@@ -248,7 +248,7 @@ public class JsonReader implements Closeable
      * Make json-io aware that it needs to call your class by calling the public
      * JsonReader.assignInstantiator() API.
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public interface ClassFactoryEx extends ClassFactory
     {
     }
@@ -261,7 +261,6 @@ public class JsonReader implements Closeable
      */
     public interface MissingFieldHandler
     {
-
         /**
          * Notify that a field is missing. <br>
          * Warning : not every type can be deserialized upon missing fields. Arrays and Object type that do not have
@@ -272,7 +271,6 @@ public class JsonReader implements Closeable
          * @param value current value of the field
          */
         void fieldMissing(Object object, String fieldName, Object value);
-
     }
 
     /**
@@ -405,7 +403,7 @@ public class JsonReader implements Closeable
      * @param f ClassFactory that will create 'c' instances
      * @deprecated - use addGlobalClassFactory(String, ClassFactory)
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public static void assignInstantiator(String n, ClassFactory f) {
         addGlobalClassFactory(n, f);
     }
@@ -416,7 +414,7 @@ public class JsonReader implements Closeable
      * @param f ClassFactory that will create 'c' instances
      * @deprecated - use addGlobalClassFactory(Class, ClassFactory)
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public static void assignInstantiator(Class c, ClassFactory f) {
         addGlobalClassFactory(c, f);
     }
@@ -441,7 +439,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder to create any additional readers you'll need.
      *
      */
-    @Deprecated(since = "1.4")
+    @Deprecated(since = "1.14")
     public void addReader(Class c, JsonClassReader reader)
     {
         readers.put(c, reader);
