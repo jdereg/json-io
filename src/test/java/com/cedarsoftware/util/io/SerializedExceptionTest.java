@@ -1,20 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.Serializable;
-import java.util.List;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Map;
-import java.util.TimeZone;
-import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -35,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  */
 public class SerializedExceptionTest
 {
-    class MyException extends RuntimeException
+    static class MyException extends RuntimeException
     {
         private String name;
 
@@ -45,16 +35,49 @@ public class SerializedExceptionTest
             this.name = name;
         }
     }
-    
-    @Disabled
-    @Test
-    void testAccessToPrivateField()
+
+    public static class MyExceptionWriter implements JsonWriter.JsonClassWriter
     {
-        MyException exp = new MyException("foo", "bar");
-        String json = JsonWriter.objectToJson(exp);
-        System.out.println("json = " + json);
-        MyException exp2 = (MyException) JsonReader.jsonToJava(json);
-        System.out.println("exp2 = " + exp2);
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            MyException e = (MyException) obj;
+            output.write("\"name\":\"");
+            output.write(e.name);
+            output.write("\",\"detailMessage\":\"");
+            output.write(e.getMessage());
+            output.write('"');
+        }
     }
 
+    public static class MyExceptionReader implements JsonReader.ClassFactory
+    {
+        public Object newInstance(Class c, Object o)
+        {
+            Map map = (Map) o;
+            String name = (String) map.get("name");
+            String detailMessage = (String) map.get("detailMessage");
+            return new MyException(name, detailMessage);
+        }
+
+        public boolean isObjectFinal()
+        {
+            return true;
+        }
+    }
+
+    @Test
+    /**
+     * JDK 17+ compatible test.  This test works under JDK 17 because the private field 'detailMessage' of
+     * class Throwable serialized correctly, which will not work with 'field.set()' approach.
+     */
+    void testAccessToPrivateField()
+    {
+        JsonWriter.addWriterPermanent(MyException.class, new MyExceptionWriter());
+        JsonReader.addGlobalClassFactory(MyException.class, new MyExceptionReader());
+        MyException exp = new MyException("foo", "bar");
+        String json = JsonWriter.objectToJson(exp);
+        MyException exp2 = JsonReader.jsonToJava(json);
+        assert "foo".equals(exp2.name);
+        assert "bar".equals(exp2.getMessage());
+    }
 }
