@@ -157,7 +157,6 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <release>${maven.compiler.release}</release>
-                    <fork>${maven.compiler.fork}</fork>
                     <failOnWarning>${maven.compiler.failOnWarning}</failOnWarning>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <compilerArgs>

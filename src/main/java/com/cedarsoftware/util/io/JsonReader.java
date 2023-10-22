@@ -521,7 +521,7 @@ public class JsonReader implements Closeable
         }
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap<String, Object>();
+            optionalArgs = new HashMap<>();
             optionalArgs.put(USE_MAPS, false);
         }
         if (!optionalArgs.containsKey(USE_MAPS))
