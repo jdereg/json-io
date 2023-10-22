@@ -1188,7 +1188,7 @@ class TestArrays
         disableTypes.put(JsonWriter.TYPE, false);
         String json = JsonWriter.objectToJson(numbers, disableTypes);
 
-        System.out.println("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
+        TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
 
         List<Integer> restoredNumbers;
@@ -1203,7 +1203,7 @@ class TestArrays
         String[] testArray = new String[1]
         testArray[0] = "Test"
         String testOut = JsonWriter.objectToJson(testArray, [(JsonWriter.SHORT_META_KEYS) : true] as Map)
-//        System.out.println(testOut);
+        TestUtil.printLine(testOut);
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in short-hand.
         Object object = JsonReader.jsonToJava(testOut);

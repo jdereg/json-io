@@ -138,7 +138,7 @@ class TestMissingFieldHandler
         //        pt.inner2.inner12 = pt.inner1
         //        pt.aStringArray = ["foo", "bar"]
         //        pt.inner2WithNoSerializedType = new CustomPointWithRef.Inner2()
-        //        println( JsonWriter.objectToJson(pt))
+        //        TestUtil.printLine( JsonWriter.objectToJson(pt))
         def isStringArrayOk = false
         def isInner2WithNoSerializedTypeOk = false
         JsonReader.MissingFieldHandler missingHandler = new JsonReader.MissingFieldHandler() {

@@ -48,24 +48,24 @@ class TestBigJson
         long start = System.nanoTime()
         gson.fromJson(json, Object.class)
         long stop = System.nanoTime()
-        println ((stop - start) / 1000000L)
+        TestUtil.printLine 'gson: ' + ((stop - start) / 1000000L)
 
         start = System.nanoTime()
         JsonReader.jsonToJava(json)
         stop = System.nanoTime()
-        println ((stop - start) / 1000000L)
+        TestUtil.printLine 'json-io: ' + ((stop - start) / 1000000L)
     }
 
-    @Disabled
+    @Test
     void testGsonOnHugeFile()
     {
-        String json = TestUtil.fetchResource('big.json')
+        String json = TestUtil.fetchResource('big5D.json')
 
         Gson gson = new Gson()
         long start = System.nanoTime()
         gson.fromJson(json, Object.class)
         long stop = System.nanoTime()
-        println 'gson: ' + ((stop - start) / 1000000L)
+        TestUtil.printLine 'gson: ' + ((stop - start) / 1000000L)
 
         int i=0
         while (i++ < 50i)
@@ -74,22 +74,19 @@ class TestBigJson
             start = System.nanoTime()
             gson.fromJson(json, Object.class)
             stop = System.nanoTime()
-            println 'gson: ' + ((stop - start) / 1000000L)
+            TestUtil.printLine 'gson: ' + ((stop - start) / 1000000L)
         }
     }
 
-    @Disabled
+    @Test
     void testJsonOnHugeFile()
     {
-        String json = TestUtil.fetchResource('big.json')
+        String json = TestUtil.fetchResource('big5D.json')
 
         long start = System.nanoTime()
         JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         long stop = System.nanoTime()
-        println ((stop - start) / 1000000L)
-
-//        println 'num read = ' + FastPushbackReader.numread
-//        println 'num push = ' + FastPushbackReader.numpush
+        TestUtil.printLine 'json-io: ' + ((stop - start) / 1000000L)
 
         int i=0
         while (i++ < 50i)
@@ -97,7 +94,7 @@ class TestBigJson
             start = System.nanoTime()
             JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
             stop = System.nanoTime()
-            println ((stop - start) / 1000000L)
+            TestUtil.printLine 'json-io: ' + ((stop - start) / 1000000L)
         }
     }
 }
