@@ -8,7 +8,7 @@ import java.util.TimeZone;
 
 public class TimeZoneFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class c, Object o) {
+    public Object newInstance(Class c, Object o, Map args) {
         if (o instanceof String) {
             return TimeZone.getTimeZone((String) o);
         }

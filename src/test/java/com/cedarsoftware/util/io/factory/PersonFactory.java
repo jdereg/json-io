@@ -5,7 +5,7 @@ import com.cedarsoftware.util.io.TestCustomWriter;
 
 public class PersonFactory implements ClassFactory {
     @Override
-    public Object newInstance(Class c, Object o) {
+    public Object newInstance(Class c, Object o, Map args) {
         return new TestCustomWriter.Person();
     }
 }

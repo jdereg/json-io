@@ -211,12 +211,27 @@ public class JsonReader implements Closeable
          * in Object to supply values to the construction of the object.
          * @param c Class of the object that needs to be created
          * @param object Object (JsonObject or value) to use for construction of the object.
+         * @param args map of args for passing on jsonObject (backwards compatibility).
          * @return a new instance of C.  If you completely fill the new instance using
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
-        Object newInstance(Class<?> c, Object object);
+        default Object newInstance(Class<?> c, Object object, Map args) {
+            // passing on args is for backwards compatibility.
+            // also, once we remove the other new instances we
+            // can probably remove args from the parameters.
+            if (object instanceof JsonObject) {
+                args.put("jsonObj", object);
+                return this.newInstance(c, args);
+            }
 
+            return this.newInstance(c);
+        }
+
+        @Deprecated(since = "1.4")
+        default Object newInstance(Class<?> c, Map args) { return this.newInstance(c); }
+
+        @Deprecated(since = "1.4")
         default Object newInstance(Class<?> c) { return MetaUtils.newInstance(c); }
 
         /**
@@ -230,7 +245,7 @@ public class JsonReader implements Closeable
             return false;
         }
     }
-    
+
     /**
      * Used to react to fields missing when reading an object. This method will be called after all deserialization has
      * occured to allow all ref to be resolved.
@@ -393,7 +408,7 @@ public class JsonReader implements Closeable
     {
         BASE_CLASS_FACTORIES.put(c.getName(), factory);
     }
-    
+
     /**
      * Call this method to add a custom JSON reader to json-io.  It will
      * associate the Class 'c' to the reader you pass in.  The readers are
