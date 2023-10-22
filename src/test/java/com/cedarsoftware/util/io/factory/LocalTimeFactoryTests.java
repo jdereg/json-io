@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,13 +37,26 @@ class LocalTimeFactoryTests {
     }
 
     @Test
-    void newInstance_formattedTimeTEst() {
-        var jsonReader = new JsonReader();
+    void newInstance_formattedTimeTest() {
         var factory = new LocalTimeFactory();
         var jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39");
 
-        LocalTime time = (LocalTime) factory.newInstance(LocalTime.class, jsonObject);
+        LocalTime time = factory.newInstance(LocalTime.class, jsonObject, new HashMap());
+
+        assertThat(time).hasHour(9)
+                .hasMinute(27)
+                .hasSecond(39)
+                .hasNano(0);
+    }
+
+    @Test
+    void newInstance_formatTimeUsingIsoOffsetFormat() {
+        var factory = new LocalTimeFactory(DateTimeFormatter.ISO_OFFSET_TIME);
+        var jsonObject = new JsonObject();
+        jsonObject.put("value", "09:27:39+01:00");
+
+        LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
 
         assertThat(time).hasHour(9)
                 .hasMinute(27)

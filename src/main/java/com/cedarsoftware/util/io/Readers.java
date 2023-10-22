@@ -67,6 +67,7 @@ public class Readers
     static
     {
         // Month name to number map
+        // This class is only used in DateReader so far.  We should move it in there until we need it elsewhere.
         months.put("jan", "1");
         months.put("january", "1");
         months.put("feb", "2");
@@ -190,33 +191,21 @@ public class Readers
 
             Optional<Class> cls = MetaUtils.getClassIfEnum(c);
 
-            jObj.target = Enum.valueOf(cls.orElse(c), (String)jObj.get("name"));
+            jObj.target = getEnum(cls.orElse(c), jObj);
 
             ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
             resolver.traverseFields(stack, (JsonObject<String, Object>) jObj, Set.of("name", "ordinal"));
             Object target = ((JsonObject) jObj).getTarget();
             return target;
         }
-    }
 
-    public static class TimeZoneReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
-        {
-            if (o instanceof String)
-            {
-                return TimeZone.getTimeZone((String)o);
+        private Object getEnum(Class c, JsonObject jsonObj) {
+            try {
+                return Enum.valueOf(c, (String) jsonObj.get("name"));
+            } catch (
+                    Exception e) {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
+                return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
             }
-
-            JsonObject jObj = (JsonObject)o;
-            Object zone = jObj.get("zone");
-            if (zone == null)
-            {
-                throw new JsonIoException("java.util.TimeZone must specify 'zone' field");
-            }
-            jObj.target = TimeZone.getTimeZone((String) zone);
-
-            return jObj.target;
         }
     }
 

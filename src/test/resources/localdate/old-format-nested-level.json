@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.LocalDateTests$NestedLocalDate",
+  "@type": "com.cedarsoftware.util.io.factory.LocalDateFactoryTests$NestedLocalDate",
   "date1": {
     "year": 2014,
     "month": 6,
@@ -7,8 +7,8 @@
   },
   "date2": {
     "year": 2024,
-    "month": 6,
-    "day": 13
+    "month": 9,
+    "day": 12
   },
   "holiday": "Christmas",
   "value": 99

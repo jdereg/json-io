@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -45,6 +46,66 @@ class LocalDateFactoryTests {
                 .hasMonthValue(9)
                 .hasDayOfMonth(5);
     }
+
+    private static Stream<Arguments> checkDifferentFormatsByFile() {
+        return Stream.of(
+                Arguments.of("old-format-top-level.json", 2023, 4, 5),
+                Arguments.of("old-format-long.json", 2023, 4, 5)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("checkDifferentFormatsByFile")
+    void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
+        String json = loadJsonForTest(fileName);
+        LocalDate localDate = TestUtil.readJsonObject(json);
+
+        assertThat(localDate)
+                .hasYear(year)
+                .hasMonthValue(month)
+                .hasDayOfMonth(day);
+    }
+
+    @Test
+    void testOldFormat_nestedLevel() {
+
+        String json = loadJsonForTest("old-format-nested-level.json");
+        LocalDateFactoryTests.NestedLocalDate nested = TestUtil.readJsonObject(json);
+
+        assertThat(nested.date1)
+                .hasYear(2014)
+                .hasMonthValue(6)
+                .hasDayOfMonth(13);
+
+        assertThat(nested.date2)
+                .hasYear(2024)
+                .hasMonthValue(9)
+                .hasDayOfMonth(12);
+    }
+
+    public static class NestedLocalDate {
+        public LocalDate date1;
+        public LocalDate date2;
+        public String holiday;
+        public Long value;
+
+        public NestedLocalDate(LocalDate date1, LocalDate date2) {
+            this.holiday = "Festivus";
+            this.value = 999L;
+            this.date1 = date1;
+            this.date2 = date2;
+        }
+
+        public NestedLocalDate(LocalDate date) {
+            this(date, date);
+        }
+    }
+
+
+    private String loadJsonForTest(String fileName) {
+        return TestUtil.fetchResource("localdate/" + fileName);
+    }
+
 
     private JsonObject buildJsonObject(Integer year, Integer month, Integer day) {
         JsonObject object = new JsonObject();

@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 
 import java.time.LocalTime;
@@ -10,35 +9,32 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 
-public class LocalTimeFactory implements JsonReader.ClassFactory {
-
-    protected final DateTimeFormatter dateTimeFormatter;
+public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
 
     public LocalTimeFactory(DateTimeFormatter dateFormatter) {
-        this.dateTimeFormatter = dateFormatter;
+        super(dateFormatter);
     }
 
     public LocalTimeFactory() {
-        this(DateTimeFormatter.ISO_LOCAL_TIME);
+        super(DateTimeFormatter.ISO_LOCAL_TIME);
     }
 
     @Override
-    public Object newInstance(Class c, Object o)
-    {
-        if (o instanceof String) {
-            return LocalTime.parse((String) o, dateTimeFormatter);
-        }
+    protected LocalTime fromString(String s) {
+        return LocalTime.parse(s, dateTimeFormatter);
+    }
 
-        Map jObj = (Map) o;
+    @Override
+    protected LocalTime fromNumber(Number l) {
+        throw new UnsupportedOperationException("Cannot convert to " + LocalTime.class + " from number value");
+    }
 
-        if (jObj.containsKey("value")) {
-            return LocalTime.parse((String) jObj.get("value"), dateTimeFormatter);
-        }
-
-        Number hour = MetaUtils.getValueWithDefaultForMissing(jObj, "hour", null);
-        Number minute = MetaUtils.getValueWithDefaultForMissing(jObj, "minute", null);
-        Number second = MetaUtils.getValueWithDefaultForNull(jObj, "second", 0);
-        Number nano = MetaUtils.getValueWithDefaultForNull(jObj, "nano", 0);
+    @Override
+    protected LocalTime fromJsonObject(JsonObject job) {
+        Number hour = (Number) job.get("hour");
+        Number minute = (Number) job.get("minute");
+        Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);
+        Number nano = MetaUtils.getValueWithDefaultForNull(job, "nano", 0);
 
         if (hour == null || minute == null) {
             throw new JsonIoException("hour and minute cannot be null if value is null for LocalTimeFactory");

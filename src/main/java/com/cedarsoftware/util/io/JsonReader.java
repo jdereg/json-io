@@ -1,7 +1,9 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.TimeZoneFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -13,6 +15,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -151,14 +154,26 @@ public class JsonReader implements Closeable
 
     static
     {
-        ClassFactory colFactory = new CollectionFactory();
-        assignInstantiator(Collection.class, colFactory);
-        assignInstantiator(List.class, colFactory);
-        assignInstantiator(Set.class, colFactory);
-        assignInstantiator(SortedSet.class, colFactory);
-        assignInstantiator(LocalDate.class, new LocalDateFactory());
-        assignInstantiator(LocalTime.class, new LocalTimeFactory());
+        ClassFactory mapFactory = new MapFactory();
+        addGlobalClassFactory(Map.class, mapFactory);
+        addGlobalClassFactory(SortedMap.class, mapFactory);
 
+        ClassFactory colFactory = new CollectionFactory();
+
+        addGlobalClassFactory(Collection.class, colFactory);
+        addGlobalClassFactory(List.class, colFactory);
+        addGlobalClassFactory(Set.class, colFactory);
+        addGlobalClassFactory(SortedSet.class, colFactory);
+
+        addGlobalClassFactory(LocalDate.class, new LocalDateFactory());
+        addGlobalClassFactory(LocalTime.class, new LocalTimeFactory());
+        addGlobalClassFactory(LocalDateTime.class, new LocalDateTimeFactory());
+
+        var timeZoneFactory = new TimeZoneFactory();
+        addGlobalClassFactory(TimeZone.class, timeZoneFactory);
+        addGlobalClassFactory("sun.util.calendar.ZoneInfo", timeZoneFactory);
+
+        // jvm specific types
         ClassFactory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
@@ -174,7 +189,7 @@ public class JsonReader implements Closeable
         temp.put(java.sql.Date.class, new Readers.SqlDateReader());
         temp.put(Timestamp.class, new Readers.TimestampReader());
         temp.put(Calendar.class, new Readers.CalendarReader());
-        temp.put(TimeZone.class, new Readers.TimeZoneReader());
+
         temp.put(Locale.class, new Readers.LocaleReader());
         temp.put(Class.class, new Readers.ClassReader());
         temp.put(StringBuilder.class, new Readers.StringBuilderReader());
@@ -186,10 +201,12 @@ public class JsonReader implements Closeable
         // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
         addPossibleReader(temp, "java.lang.Record", Readers.RecordReader::new);
 
-        // jvm specific types
-        addPossibleReader(temp, "sun.util.calendar.ZoneInfo", Readers.TimeZoneReader::new);
-
+        // why'd we do this for the readers, but not for the ClassFactories?
         BASE_READERS = temp;
+    }
+
+    private static void addPossibleClassFactory(String fqClassName, Supplier<JsonReader.ClassFactory> classFactory) {
+        BASE_CLASS_FACTORIES.put(fqClassName, classFactory.get());
     }
 
     private static void addPossibleReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader) {
