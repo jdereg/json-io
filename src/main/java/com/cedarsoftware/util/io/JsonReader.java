@@ -407,7 +407,7 @@ public class JsonReader implements Closeable
     /**
      * See comment on method JsonReader.assignInstantiator(String, ClassFactory)
      */
-    public static void assignInstantiator(Class<?> c, ClassFactory factory)
+    public static void assignInstantiator(Class c, ClassFactory factory)
     {
         BASE_CLASS_FACTORIES.put(c.getName(), factory);
     }
@@ -955,15 +955,28 @@ public class JsonReader implements Closeable
     {
         try
         {
-            Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader)args.get(CLASSLOADER));
-            Object instance = resolver.createJavaObjectInstance(Object.class, root);
-            if (root.isFinished) {
-                return instance;
+            Object graph;
+            if (root.isFinished)
+            {   // Called on a JsonObject that has already been converted
+                graph = root.target;
             }
-            Object graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
-            resolver.cleanup();
-            readers.clear();
-            classFactories.clear();
+            else
+            {
+                Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader) args.get(CLASSLOADER));
+                Object instance = resolver.createJavaObjectInstance(Object.class, root);
+                if (root.isFinished)
+                {   // Factory method instantiated and completely loaded the object.
+                    graph = instance;
+
+                }
+                else
+                {
+                    graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
+                }
+                resolver.cleanup();
+                readers.clear();
+                classFactories.clear();
+            }
             return graph;
         }
         catch (Exception e)
