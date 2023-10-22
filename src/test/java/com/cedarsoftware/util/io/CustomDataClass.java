@@ -1,8 +1,7 @@
-package com.cedarsoftware.util.io
+package com.cedarsoftware.util.io;
 
 class CustomDataClass
 {
-
 	private String test;
 
 	public void setTest(String test) {

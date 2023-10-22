@@ -40,14 +40,12 @@ class TestUtil
         URL url = TestUtil.class.getResource('/' + name)
         Path resPath = Paths.get(url.toURI())
         return new String(Files.readAllBytes(resPath), "UTF-8")
-
     }
 
     static <T> T serializeDeserialize(T initial) {
-        String json = TestUtil.getJsonString(initial);
-        return TestUtil.readJsonObject(json);
+        String json = getJsonString(initial);
+        return readJsonObject(json);
     }
-
 
     static String getJsonString(Object obj)
     {
@@ -223,5 +221,23 @@ class TestUtil
         println("Total ObjectStream read  = " + (totalObjRead / 1000000.0) + " ms")
         println("Total ObjectStream write = " + (totalObjWrite / 1000000.0) + " ms")
         println("JDK InputStream/OutputStream fail count = " + outputStreamFailCount)
+    }
+    
+    public static int count(CharSequence self, CharSequence text)
+    {
+        int answer = 0;
+        int idx = 0;
+
+        while(true)
+        {
+            idx = self.toString().indexOf(text.toString(), idx);
+            if (idx < answer)
+            {
+                return answer;
+            }
+
+            ++answer;
+            ++idx;
+        }
     }
 }

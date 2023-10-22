@@ -74,9 +74,9 @@ class AtomicBooleanTest
     void testAssignAtomicBooleanStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicBooleanField.class.getName() + "\",\"strValue\":\"\"}";
-        Map args = new HashMap<>();
+        Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = (Map) JsonReader.jsonToJava(json, args);
+        Map map = JsonReader.jsonToJava(json, args);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -84,14 +84,14 @@ class AtomicBooleanTest
     void testAtomicBooleanInCollection()
     {
         AtomicBoolean atomicBoolean = new AtomicBoolean(true);
-        List list = new ArrayList<>();
+        List<AtomicBoolean> list = new ArrayList<>();
         list.add(atomicBoolean);
         list.add(atomicBoolean);
         String json = TestUtil.getJsonString(list);
         TestUtil.printLine("json=" + json);
         list = TestUtil.readJsonObject(json);
         assert list.size() == 2;
-        atomicBoolean = (AtomicBoolean)list.get(0);
+        atomicBoolean = list.get(0);
         assert atomicBoolean.get() == new AtomicBoolean(true).get();
         assertNotSame(list.get(0), list.get(1));
     }

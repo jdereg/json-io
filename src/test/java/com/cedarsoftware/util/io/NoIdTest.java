@@ -1,9 +1,11 @@
-package com.cedarsoftware.util.io
+package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse
-import static com.cedarsoftware.util.io.JsonObject.ID
+import java.util.LinkedList;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static com.cedarsoftware.util.io.JsonObject.ID;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,7 +24,7 @@ import static com.cedarsoftware.util.io.JsonObject.ID
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestNoId
+class NoIdTest
 {
     static class NoId
     {
@@ -32,22 +34,22 @@ class TestNoId
     @Test
     void testShouldNotNeedId()
     {
-        NoId noId = new NoId()
-        String json = JsonWriter.objectToJson(noId)
-        assertFalse(json.contains(ID))
+        NoId noId = new NoId();
+        String json = JsonWriter.objectToJson(noId);
+        assertFalse(json.contains(ID));
     }
 
     @Test
     void testNoIdNeeded()
     {
-        TestObject alpha = new TestObject('alpha')
-        TestObject beta = new TestObject('beta')
-        alpha._other = beta
-        String json = TestUtil.getJsonString(alpha)
-        assert !json.contains(ID)
+        TestObject alpha = new TestObject("alpha");
+        TestObject beta = new TestObject("beta");
+        alpha._other = beta;
+        String json = TestUtil.getJsonString(alpha);
+        assert !json.contains(ID);
 
-        beta._other = alpha
-        json = TestUtil.getJsonString(alpha)
-        assert json.count(ID) == 1
+        beta._other = alpha;
+        json = TestUtil.getJsonString(alpha);
+        assert TestUtil.count(json, ID) == 1;
     }
 }

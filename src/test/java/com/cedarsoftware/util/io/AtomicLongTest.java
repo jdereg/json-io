@@ -74,9 +74,9 @@ class AtomicLongTest
     void testAssignAtomicLongStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicLongField.class.getName() + "\",\"strValue\":\"\"}";
-        Map args = new HashMap<>();
+        Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = (Map) JsonReader.jsonToJava(json, args);
+        Map map = JsonReader.jsonToJava(json, args);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -84,14 +84,14 @@ class AtomicLongTest
     void testAtomicLongInCollection()
     {
         AtomicLong atomicInt = new AtomicLong(12345);
-        List list = new ArrayList<>();
+        List<AtomicLong> list = new ArrayList<>();
         list.add(atomicInt);
         list.add(atomicInt);
         String json = TestUtil.getJsonString(list);
         TestUtil.printLine("json=" + json);
-        list = (List) TestUtil.readJsonObject(json);
+        list = TestUtil.readJsonObject(json);
         assert list.size() == 2;
-        atomicInt = (AtomicLong)list.get(0);
+        atomicInt = list.get(0);
         assert atomicInt.get() == new AtomicLong(12345).get();
         assertNotSame(list.get(0), list.get(1));
     }
