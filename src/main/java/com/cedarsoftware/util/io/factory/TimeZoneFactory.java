@@ -9,7 +9,7 @@ import java.util.TimeZone;
 
 public class TimeZoneFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class c, Object o, Map args) {
+    public Object newInstance(Class c, Object o) {
         if (o instanceof String) {
             return TimeZone.getTimeZone((String) o);
         }

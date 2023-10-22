@@ -155,29 +155,25 @@ public class JsonReader implements Closeable
     static
     {
         ClassFactory mapFactory = new MapFactory();
-        addGlobalClassFactory(Map.class, mapFactory);
-        addGlobalClassFactory(SortedMap.class, mapFactory);
-
-        ClassFactory colFactory = new CollectionFactory();
-
-        addGlobalClassFactory(Collection.class, colFactory);
-        addGlobalClassFactory(List.class, colFactory);
-        addGlobalClassFactory(Set.class, colFactory);
-        addGlobalClassFactory(SortedSet.class, colFactory);
-
-        addGlobalClassFactory(LocalDate.class, new LocalDateFactory());
-        addGlobalClassFactory(LocalTime.class, new LocalTimeFactory());
-        addGlobalClassFactory(LocalDateTime.class, new LocalDateTimeFactory());
-
-        var timeZoneFactory = new TimeZoneFactory();
-        addGlobalClassFactory(TimeZone.class, timeZoneFactory);
-        addGlobalClassFactory("sun.util.calendar.ZoneInfo", timeZoneFactory);
-
-        // jvm specific types
-        ClassFactory mapFactory = new MapFactory();
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
 
+        ClassFactory colFactory = new CollectionFactory();
+
+        assignInstantiator(Collection.class, colFactory);
+        assignInstantiator(List.class, colFactory);
+        assignInstantiator(Set.class, colFactory);
+        assignInstantiator(SortedSet.class, colFactory);
+
+        assignInstantiator(LocalDate.class, new LocalDateFactory());
+        assignInstantiator(LocalTime.class, new LocalTimeFactory());
+        assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
+
+        var timeZoneFactory = new TimeZoneFactory();
+        assignInstantiator(TimeZone.class, timeZoneFactory);
+        assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
+
+        // jvm specific types
         Map<Class, JsonClassReader> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
         temp.put(Date.class, new Readers.DateReader());

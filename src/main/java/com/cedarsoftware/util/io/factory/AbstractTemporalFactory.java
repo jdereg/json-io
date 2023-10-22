@@ -18,7 +18,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     @Override
-    public T newInstance(Class c, Object object, Map args) {
+    public T newInstance(Class c, Object object) {
         if (object instanceof String) {
             return fromString((String) object);
         }
