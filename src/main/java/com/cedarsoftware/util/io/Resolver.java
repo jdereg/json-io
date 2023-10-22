@@ -17,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.TreeSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -374,7 +373,7 @@ abstract class Resolver
             }
             JsonReader.ClassFactory factory = null;
             if ((factory = getClassFactory(c)) != null) {
-                mate = factory.newInstance(c, jsonObj, getReader());
+                mate = factory.newInstance(c, jsonObj, new HashMap());
                 jsonObj.setFinishedTarget(mate, factory.isObjectFinal());
                 return mate;
             }
@@ -414,10 +413,6 @@ abstract class Resolver
                 else if (EnumSet.class.isAssignableFrom(c))
                 {
                     mate = extractEnumSet(c, jsonObj);
-                }
-                else if (TimeZone.class.isAssignableFrom(c) && jsonObj.containsKey("zone"))
-                {
-                    mate = TimeZone.getTimeZone((String)jsonObj.get("zone"));
                 }
                 else if ((mate = coerceCertainTypes(c.getName())) != null)
                 {   // if coerceCertainTypes() returns non-null, it did the work

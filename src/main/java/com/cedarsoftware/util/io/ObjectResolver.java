@@ -5,7 +5,17 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -772,7 +782,7 @@ public class ObjectResolver extends Resolver
 
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null) {
-            Object target = classFactory.newInstance(c, o, getReader());
+            Object target = classFactory.newInstance(c, o, new HashMap());
 
             if (classFactory.isObjectFinal()) {
                 return target;

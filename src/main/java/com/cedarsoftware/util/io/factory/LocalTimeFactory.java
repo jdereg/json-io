@@ -2,40 +2,36 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 
-public class LocalTimeFactory implements JsonReader.ClassFactory {
-
-    protected final DateTimeFormatter dateTimeFormatter;
+public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
 
     public LocalTimeFactory(DateTimeFormatter dateFormatter) {
-        this.dateTimeFormatter = dateFormatter;
+        super(dateFormatter);
     }
 
     public LocalTimeFactory() {
-        this(DateTimeFormatter.ISO_LOCAL_TIME);
+        super(DateTimeFormatter.ISO_LOCAL_TIME);
     }
 
     @Override
-    public Object newInstance(Class c, Object o, JsonReader reader) {
+    protected LocalTime fromString(String s) {
+        return LocalTime.parse(s, dateTimeFormatter);
+    }
 
-        if (o instanceof String) {
-            return LocalTime.parse((String) o, dateTimeFormatter);
-        }
+    @Override
+    protected LocalTime fromNumber(Number l) {
+        throw new UnsupportedOperationException("Cannot convert to " + LocalTime.class + " from number value");
+    }
 
-        JsonObject job = (JsonObject) o;
-
-        if (job.containsKey("value")) {
-            return LocalTime.parse((String) job.get("value"), dateTimeFormatter);
-        }
-
-        Number hour = MetaUtils.getValueWithDefaultForMissing(job, "hour", null);
-        Number minute = MetaUtils.getValueWithDefaultForMissing(job, "minute", null);
+    @Override
+    protected LocalTime fromJsonObject(JsonObject job) {
+        Number hour = (Number) job.get("hour");
+        Number minute = (Number) job.get("minute");
         Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);
         Number nano = MetaUtils.getValueWithDefaultForNull(job, "nano", 0);
 
