@@ -235,6 +235,8 @@ public class JsonReader implements Closeable
          */
         Object newInstance(Class<?> c, Object object);
 
+        default Object newInstance(Class<?> c) { return MetaUtils.newInstance(c); }
+
         /**
          * @return true if this object is instantiated and completely filled using the contents
          * from the Object object [a JsonOject or value].  In this case, no further processing
