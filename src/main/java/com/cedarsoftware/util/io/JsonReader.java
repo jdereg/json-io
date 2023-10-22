@@ -337,7 +337,7 @@ public class JsonReader implements Closeable
      */
     public static class CollectionFactory implements ClassFactory
     {
-        public Object newInstance(Class c, Object o)
+        public Object newInstance(Class c, Object o, Map args)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -369,7 +369,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class c, Object o)
+        public Object newInstance(Class c, Object o, Map args)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
@@ -997,7 +997,7 @@ public class JsonReader implements Closeable
         ClassFactory classFactory = classFactories.get(c.getName());
 
         if (classFactory != null) {
-            Object o = classFactory.newInstance(c, jsonObject);
+            Object o = classFactory.newInstance(c, jsonObject, new HashMap());
             // possibly move this setting of finished into factory class itself.
             jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
             return o;

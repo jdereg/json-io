@@ -3,10 +3,13 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -53,15 +56,15 @@ class PrettyPrintTest
         Map args = new HashMap<>();
         args.put(JsonWriter.PRETTY_PRINT, true);
         String json = JsonWriter.objectToJson(nice, args);
-        json = json.replaceAll("[\\r]","");
-        assertEquals(target, json);
+
+        assertThat(json).isEqualToIgnoringNewLines(target);
 
         String json1 = JsonWriter.objectToJson(nice);
-        json1 = json1.replaceAll("[\\r]","");
-        assertNotEquals(json, json1);
+        assertThat(json)
+                .isNotEqualTo(json1)
+                .isEqualToIgnoringWhitespace(json1);
 
         String json2 = JsonWriter.formatJson(json1);
-        json2 = json2.replaceAll("[\\r]","");
-        assertEquals(json2, json);
+        assertThat(json2).isEqualToIgnoringNewLines(json);
     }
 }
