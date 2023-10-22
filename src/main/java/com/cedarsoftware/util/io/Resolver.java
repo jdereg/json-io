@@ -716,7 +716,7 @@ abstract class Resolver
                 {
                     try
                     {
-                        field.set(objToFix, objReferenced.target);               // patch field here
+                        MetaUtils.setFieldValue(field, objToFix, objReferenced.target);    // patch field here
                     }
                     catch (Exception e)
                     {

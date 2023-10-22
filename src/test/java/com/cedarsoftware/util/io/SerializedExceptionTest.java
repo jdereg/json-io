@@ -73,7 +73,7 @@ public class SerializedExceptionTest
     void testAccessToPrivateField()
     {
         JsonWriter.addWriterPermanent(MyException.class, new MyExceptionWriter());
-        JsonReader.addGlobalClassFactory(MyException.class, new MyExceptionReader());
+        JsonReader.assignInstantiator(MyException.class, new MyExceptionReader());
         MyException exp = new MyException("foo", "bar");
         String json = JsonWriter.objectToJson(exp);
         MyException exp2 = JsonReader.jsonToJava(json);

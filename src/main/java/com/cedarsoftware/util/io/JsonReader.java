@@ -152,16 +152,16 @@ public class JsonReader implements Closeable
     static
     {
         ClassFactory colFactory = new CollectionFactory();
-        addGlobalClassFactory(Collection.class, colFactory);
-        addGlobalClassFactory(List.class, colFactory);
-        addGlobalClassFactory(Set.class, colFactory);
-        addGlobalClassFactory(SortedSet.class, colFactory);
-        addGlobalClassFactory(LocalDate.class, new LocalDateFactory());
-        addGlobalClassFactory(LocalTime.class, new LocalTimeFactory());
+        assignInstantiator(Collection.class, colFactory);
+        assignInstantiator(List.class, colFactory);
+        assignInstantiator(Set.class, colFactory);
+        assignInstantiator(SortedSet.class, colFactory);
+        assignInstantiator(LocalDate.class, new LocalDateFactory());
+        assignInstantiator(LocalTime.class, new LocalTimeFactory());
 
         ClassFactory mapFactory = new MapFactory();
-        addGlobalClassFactory(Map.class, mapFactory);
-        addGlobalClassFactory(SortedMap.class, mapFactory);
+        assignInstantiator(Map.class, mapFactory);
+        assignInstantiator(SortedMap.class, mapFactory);
 
         Map<Class, JsonClassReader> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
@@ -201,58 +201,39 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * Common ancestor for ClassFactory and ClassFactoryEx.
-     */
-    @Deprecated(since = "1.14")
-    public interface Factory
-    {
-    }
-
-    /**
      * Subclass this interface and create a class that will return a new instance of the
      * passed in Class (c).  Your subclass will be called when json-io encounters an
-     * the new to instantiate an instance of (c).
+     * the new to instantiate an instance of (c). Use the passed in Object o which will
+     * be a JsonObject or value to source values for the construction or your class.
      *
      * Make json-io aware that it needs to call your class by calling the public
      * JsonReader.assignInstantiator() API.
      */
-    public interface ClassFactory extends Factory
+    public interface ClassFactory
     {
-        // for backwards compatibility if this is a json object we
-        // will add it to a map and then pass the map to another object.
-        // this is deprecated functionality.  Also this object is not guaranteed
-        // to be a json object anymore.
-        Object newInstance(Class c, Object o);
+        /**
+         * Implement this method to return a new instance of the passed in Class.  Use the passed
+         * in Object to supply values to the construction of the object.
+         * @param c Class of the object that needs to be created
+         * @param object Object (JsonObject or value) to use for construction of the object.
+         * @return a new instance of C.  If you completely fill the new instance using
+         * the value(s) from object, and no further work is needed for construction, then
+         * override the isObjectFinal() method below and return true.
+         */
+        Object newInstance(Class<?> c, Object object);
 
         /**
-         * When an object is final we know that object is complete during factory creation
-         * and we don't have to worry about looking to subclasses for additional fields
-         * so we can return this object in the target immediately without going down
-         * further in the stack.
-         *
-         * @return true if this object is known to be the complete object
+         * @return true if this object is instantiated and completely filled using the contents
+         * from the Object object [a JsonOject or value].  In this case, no further processing
+         * will be performed on the instance.  If the object has sub-objects (complex fields),
+         * then return false so that the JsonReader will continue on filling out the remaining
+         * portion of the object.
          */
         default boolean isObjectFinal() {
             return false;
         }
     }
-
-    /**
-     * Subclass this interface and create a class that will return a new instance of the
-     * passed in Class (c).  Your subclass will be called when json-io encounters an
-     * the new to instantiate an instance of (c).  The 'args' Map passed in will
-     * contain a 'jsonObj' key that holds the JsonObject (Map) representing the
-     * object being converted.  If you need values from the fields of this object
-     * in order to instantiate your class, you can grab them from the JsonObject (Map).
-     *
-     * Make json-io aware that it needs to call your class by calling the public
-     * JsonReader.assignInstantiator() API.
-     */
-    @Deprecated(since = "1.14")
-    public interface ClassFactoryEx extends ClassFactory
-    {
-    }
-
+    
     /**
      * Used to react to fields missing when reading an object. This method will be called after all deserialization has
      * occured to allow all ref to be resolved.
@@ -392,41 +373,30 @@ public class JsonReader implements Closeable
 
     /**
      * For difficult to instantiate classes, you can add your own ClassFactory
-     * or ClassFactoryEx which will be called when the passed in class 'c' is
-     * encountered.  Your ClassFactory will be called with newInstance(c) and
-     * your factory is expected to return a new instance of 'c'.
-     *
+     * which will be called when the passed in class 'c' is encountered.  Your ClassFactory
+     * will be called with newInstance(class, Object) and your factory is expected to return
+     * a new instance of 'c' and can use values from Object (JsonMap or simple value) to
+     * initialize the created class with the appropriate values.
+     * <p>
      * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
      * and is useful when you encounter a class that JsonReader cannot instantiate using its
      * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
-     * @param n Class name to assign an ClassFactory to
-     * @param f ClassFactory that will create 'c' instances
-     * @deprecated - use addGlobalClassFactory(String, ClassFactory)
+     * @param className Class name to assign an ClassFactory to
+     * @param factory ClassFactory that will create 'c' instances
      */
-    @Deprecated(since = "1.14")
-    public static void assignInstantiator(String n, ClassFactory f) {
-        addGlobalClassFactory(n, f);
+    public static void assignInstantiator(String className, ClassFactory factory)
+    {
+        BASE_CLASS_FACTORIES.put(className, factory);
     }
 
     /**
-     * Assign instantiated by Class. Falls back to JsonReader.assignInstantiator(String, Factory)
-     * @param c Class to assign an ClassFactory to
-     * @param f ClassFactory that will create 'c' instances
-     * @deprecated - use addGlobalClassFactory(Class, ClassFactory)
+     * See comment on method JsonReader.assignInstantiator(String, ClassFactory)
      */
-    @Deprecated(since = "1.14")
-    public static void assignInstantiator(Class c, ClassFactory f) {
-        addGlobalClassFactory(c, f);
+    public static void assignInstantiator(Class<?> c, ClassFactory factory)
+    {
+        BASE_CLASS_FACTORIES.put(c.getName(), factory);
     }
-
-    public static void addGlobalClassFactory(Class c, ClassFactory classFactory) {
-        BASE_CLASS_FACTORIES.put(c.getName(), classFactory);
-    }
-
-    public static void addGlobalClassFactory(String fqClassName, ClassFactory classFactory) {
-        BASE_CLASS_FACTORIES.put(fqClassName, classFactory);
-    }
-
+    
     /**
      * Call this method to add a custom JSON reader to json-io.  It will
      * associate the Class 'c' to the reader you pass in.  The readers are
