@@ -130,8 +130,7 @@ public class Writers
         @Override
         public String extractString(Object o) { return ((Enum)o).name(); }
     }
-
-
+    
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException

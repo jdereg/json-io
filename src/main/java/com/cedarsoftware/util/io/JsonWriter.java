@@ -15,6 +15,7 @@ import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -48,7 +49,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
  * references and can serialize any Object graph without requiring a class
- * to be 'Serializeable' or have any specific methods on it.
+ * to be 'Serializable' or have any specific methods on it.
  * <br><ul><li>
  * Call the static method: {@code JsonWriter.objectToJson(employee)}.  This will
  * convert the passed in 'employee' instance into a JSON String.</li>
@@ -60,7 +61,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  * </li></ul>
  * <p>That's it.  This can be used as a debugging tool.  Output an object
  * graph using the above code.  Use the JsonWriter PRETTY_PRINT option to
- * format the the JSON to be human readable.
+ * format the JSON to be human-readable.
  * <br>
  * <p>This will output any object graph deeply (or null).  Object references are
  * properly handled.  For example, if you had A-&gt;B, B-&gt;C, and C-&gt;A, then
@@ -119,13 +120,13 @@ public class JsonWriter implements Closeable, Flushable
     public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
     /** Set value to a Map<Class, List<String>> which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS */
     public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";
-    /** same as above only internal for storing Field instances instead of strings. This avoid the initial argument content to be modified. */
+    /** same as above only internal for storing Field instances instead of strings. This avoids the initial argument content to be modified. */
     private static final String FIELD_BLACK_LIST = "FIELD_BLACK_LIST";
     /** If set, indicates that private variables of ENUMs are not to be serialized */
     public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY";
     /** If set, longs are written in quotes (Javascript safe) */
     public static final String WRITE_LONGS_AS_STRINGS = "WLAS";
-    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    /** If set, this map will be used when writing @type values - allows shorthand abbreviations type names */
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
     /** If set, then @type -> @t, @keys -> @k, @items -> @i */
     public static final String SHORT_META_KEYS = "SHORT_META_KEYS";
@@ -143,21 +144,20 @@ public class JsonWriter implements Closeable, Flushable
     /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
     public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
 
-    private static Map<Class, JsonClassWriter> BASE_WRITERS;
+    private static Map<Class<?>, JsonClassWriter> BASE_WRITERS;
 
-    private final Map<Class, JsonClassWriter> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
+    private final Map<Class<?>, JsonClassWriter> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
 
-    /** classes where the implementation type will be different from the field declaration type so it would always
+    /** classes where the implementation type will be different from the field declaration type, so it would always
      *  force the type if not for our custom writer.  These will typically be sun style classes where there is
      *  a static initializer */
-    private static Set<Class> BASE_STATICALLY_INITIALIZED_CLASSES;
-    private final Set<Class> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
-    private final Map<Class, JsonClassWriter> writerCache = new HashMap<>();
-    private final Set<Class> notCustom = new HashSet<>();
+    private static Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES;
+    private final Set<Class<?>> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
+    private final Map<Class<?>, JsonClassWriter> writerCache = new HashMap<>();
+    private final Set<Class<?>> notCustom = new HashSet<>();
 
     public static final Set<String> EMPTY_SET = new HashSet<>();
-
-
+    
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
@@ -184,8 +184,7 @@ public class JsonWriter implements Closeable, Flushable
 
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     final Map<String, Object> args = new HashMap<>();
-
-
+    
     static
     {
         for (short i = -128; i <= 127; i++)
@@ -195,7 +194,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         // initialize friendly defaults.
-        Map<Class, JsonClassWriter> temp = new HashMap<>();
+        Map<Class<?>, JsonClassWriter> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
         temp.put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
@@ -217,23 +216,18 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
 
-        Set<Class> staticallInitializedClasses = new HashSet<>();
-        staticallInitializedClasses.add(TimeZone.class);
+        Set<Class<?>> staticallyInitializedClasses = new HashSet<>();
+        staticallyInitializedClasses.add(TimeZone.class);
 
         try
         {
-            Class zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
+            Class<?> zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
             temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
-
-            staticallInitializedClasses.add(zoneInfoClass);
-
-        } catch (ClassNotFoundException e)
-        {
-           // we can ignore
+            staticallyInitializedClasses.add(zoneInfoClass);
         }
+        catch (ClassNotFoundException ignore) { }
 
-
-        BASE_STATICALLY_INITIALIZED_CLASSES = staticallInitializedClasses;
+        BASE_STATICALLY_INITIALIZED_CLASSES = staticallyInitializedClasses;
         BASE_WRITERS = temp;
     }
 
@@ -248,13 +242,12 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * Set the writer to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
-     * @param lenient boolean true allows Nan and Inifinity, -Infinity to be used within JSON.
+     * @param lenient boolean true allows Nan and Infinity, -Infinity to be used within JSON.
      */
     public static void setAllowNanAndInfinity(boolean lenient) {
         JsonWriter.allowNanAndInfinity = lenient;
     }
-
-
+    
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */
@@ -329,7 +322,7 @@ public class JsonWriter implements Closeable, Flushable
 
 
         /**
-         * return the JsonWriter instance performing the overall work.  This can be used to do some of the
+         * return the JsonWriter instance performing the overall work.  This can be used to do some
          * safe writes and utf8 writes that JsonWriter provides.
          * @param args Map of settings initially passed to JsonWriter.
          * @return JsonWriter instance performing the work.
@@ -446,7 +439,7 @@ public class JsonWriter implements Closeable, Flushable
             JsonWriter writer = new JsonWriter(stream, optionalArgs);
             writer.write(item);
             writer.close();
-            return new String(stream.toByteArray(), "UTF-8");
+            return stream.toString(StandardCharsets.UTF_8);
         }
         catch (Exception e)
         {
@@ -455,7 +448,7 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * Format the passed in JSON string in a nice, human readable format.
+     * Format the passed in JSON string in a nice, human-readable format.
      * @param json String input JSON
      * @return String containing equivalent JSON, formatted nicely for human readability.
      */
@@ -465,7 +458,7 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * Format the passed in JSON string in a nice, human readable format.
+     * Format the passed in JSON string in a nice, human-readable format.
      * @param json String input JSON
      * @param readingArgs (optional) Map of extra arguments for parsing json.  Can be null.
      * @param writingArgs (optional) Map of extra arguments for writing out json.  Can be null.
@@ -473,7 +466,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     public static String formatJson(String json, Map readingArgs, Map writingArgs)
     {
-        Map args = new HashMap();
+        Map args = new HashMap<>();
         if (readingArgs != null)
         {
             args.putAll(readingArgs);
@@ -508,6 +501,7 @@ public class JsonWriter implements Closeable, Flushable
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
      */
+    @SuppressWarnings("unchecked")
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
         if (optionalArgs == null)
@@ -534,13 +528,13 @@ public class JsonWriter implements Closeable, Flushable
             args.put(CLASSLOADER, JsonWriter.class.getClassLoader());
         }
 
-        var customWriters = (Map<Class, JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
+        var customWriters = (Map<Class<?>, JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
         if (customWriters != null)
         {
             writers.putAll(customWriters);
         }
 
-        var notCustomClasses = (Collection<Class>) args.get(NOT_CUSTOM_WRITER_MAP);
+        var notCustomClasses = (Collection<Class<?>>) args.get(NOT_CUSTOM_WRITER_MAP);
         if (notCustomClasses != null)
         {
             notCustom.addAll(notCustomClasses);
@@ -553,13 +547,13 @@ public class JsonWriter implements Closeable, Flushable
             // with tools like lombok, etc.
 
             // Convert String field names to Java Field instances (makes it easier for user to set this up)
-            Map<Class, List<String>> specifiers = (Map<Class, List<String>>) args.get(FIELD_SPECIFIERS);
-            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
-            for (Entry<Class, List<String>> entry : specifiers.entrySet())
+            Map<Class<?>, List<String>> specifiers = (Map<Class<?>, List<String>>) args.get(FIELD_SPECIFIERS);
+            Map<Class<?>, List<Field>> copy = new HashMap<>();
+            for (Entry<Class<?>, List<String>> entry : specifiers.entrySet())
             {
-                Class c = entry.getKey();
+                Class<?> c = entry.getKey();
                 List<String> fields = entry.getValue();
-                List<Field> newList = new ArrayList(fields.size());
+                List<Field> newList = new ArrayList<>(fields.size());
 
                 Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
 
@@ -578,15 +572,15 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
-            args.put(FIELD_SPECIFIERS, new HashMap());
+            args.put(FIELD_SPECIFIERS, new HashMap<>());
         }
         if (optionalArgs.containsKey(FIELD_NAME_BLACK_LIST))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
-            Map<Class, List<String>> blackList = (Map<Class, List<String>>) args.get(FIELD_NAME_BLACK_LIST);
-            Map<Class, List<Field>> copy = new HashMap<Class, List<Field>>();
-            for (Entry<Class, List<String>> entry : blackList.entrySet())
+            Map<Class<?>, List<String>> blackList = (Map<Class<?>, List<String>>) args.get(FIELD_NAME_BLACK_LIST);
+            Map<Class<?>, List<Field>> copy = new HashMap<Class<?>, List<Field>>();
+            for (Entry<Class<?>, List<String>> entry : blackList.entrySet())
             {
-                Class c = entry.getKey();
+                Class<?> c = entry.getKey();
                 List<String> fields = entry.getValue();
                 List<Field> newList = new ArrayList<Field>(fields.size());
 
@@ -607,17 +601,10 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Ensure that at least an empty Map is in the FIELD_SPECIFIERS entry
-            args.put(FIELD_BLACK_LIST, new HashMap());
+            args.put(FIELD_BLACK_LIST, new HashMap<>());
         }
 
-        try
-        {
-            this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new JsonIoException("UTF-8 not supported on your JVM.  Unable to convert object to JSON.", e);
-        }
+        this.out = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
     }
 
     /**
@@ -657,7 +644,7 @@ public class JsonWriter implements Closeable, Flushable
 
     /**
      * tab the JSON output by the given number of characters specified by delta.
-     * @param output Writer being used for JSON outpt.
+     * @param output Writer being used for JSON output.
      * @param delta int number of characters to tab.
      * @throws IOException
      */
@@ -679,7 +666,7 @@ public class JsonWriter implements Closeable, Flushable
      * Write the passed in object (o) to the JSON output stream, if and only if, there is a custom
      * writer associated to the Class of object (o).
      * @param o Object to be (potentially written)
-     * @param showType boolean indicating whether or not to show @type.
+     * @param showType boolean indicating whether to show @type.
      * @param output Writer where the actual JSON is being written to.
      * @return boolean true if written, false is there is no custom writer for the passed in object.
      */
@@ -689,7 +676,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
-        Class c = o.getClass();
+        Class<?> c = o.getClass();
         if (notCustom.contains(c))
         {
             return false;
@@ -710,11 +697,11 @@ public class JsonWriter implements Closeable, Flushable
      * for the class of the instance 'o'.
      * @param arrayComponentClass Class type of the array
      * @param o Object instance to write
-     * @param showType boolean indicating whether or not @type should be output.
+     * @param showType boolean indicating whether @type should be output.
      * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
-    public boolean writeArrayElementIfMatching(Class arrayComponentClass, Object o, boolean showType, Writer output)
+    public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output)
     {
         if (!o.getClass().isAssignableFrom(arrayComponentClass) || notCustom.contains(o.getClass()))
         {
@@ -735,11 +722,11 @@ public class JsonWriter implements Closeable, Flushable
      * Perform the actual custom writing for an array element that has a custom writer.
      * @param arrayComponentClass Class type of the array
      * @param o Object instance to write
-     * @param showType boolean indicating whether or not @type should be output.
+     * @param showType boolean indicating whether @type should be output.
      * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
-    protected boolean writeCustom(Class arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
+    protected boolean writeCustom(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
     {
         if (neverShowType)
         {
@@ -812,7 +799,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */
-    private JsonClassWriter getCustomWriter(Class c)
+    private JsonClassWriter getCustomWriter(Class<?> c)
     {
         JsonClassWriter writer = writerCache.get(c);
         if (writer == null)
@@ -836,19 +823,19 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Fetch the customer writer for the passed in Class.  This method always fetches the custom writer, doing
      * the complicated inheritance distance checking.  This method is only called when a cache miss has happened.
-     * A sentinal 'nullWriter' is returned when no custom writer is found.  This prevents future cache misses
+     * A sentinel 'nullWriter' is returned when no custom writer is found.  This prevents future cache misses
      * from re-attempting to find custom writers for classes that do not have a custom writer.
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
      */
-    private JsonClassWriter forceGetCustomWriter(Class c)
+    private JsonClassWriter forceGetCustomWriter(Class<?> c)
     {
         JsonClassWriter closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonClassWriter> entry : writers.entrySet())
+        for (Map.Entry<Class<?>, JsonClassWriter> entry : writers.entrySet())
         {
-            Class clz = entry.getKey();
+            Class<?> clz = entry.getKey();
             if (clz == c)
             {
                 return entry.getValue();
@@ -874,7 +861,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param writer JsonClassWriter which implements the appropriate
      * subclass of JsonClassWriter.
      */
-    public void addWriter(Class c, JsonClassWriter writer)
+    public void addWriter(Class<?> c, JsonClassWriter writer)
     {
         writers.put(c, writer);
     }
@@ -885,7 +872,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param writer JsonClassWriter which implements the appropriate
      * subclass of JsonClassWriter.
      */
-    public static void addWriterPermanent(Class c, JsonClassWriter writer)
+    public static void addWriterPermanent(Class<?> c, JsonClassWriter writer)
     {
         BASE_WRITERS.put(c, writer);
     }
@@ -895,7 +882,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param c Class which should NOT have any custom writer associated to it.  Use this
      * to prevent a custom writer from being used due to inheritance.
      */
-    public void addNotCustomWriter(Class c)
+    public void addNotCustomWriter(Class<?> c)
     {
         notCustom.add(c);
     }
@@ -907,7 +894,7 @@ public class JsonWriter implements Closeable, Flushable
      * to eliminate the type in those cases and possibly provide a primitive writer/reader.
      * @param c Class that has custom writer implementation and will never match declared field.
      */
-    public static void addStaticallyInitializedClasses(Class c)
+    public static void addStaticallyInitializedClasses(Class<?> c)
     {
         BASE_STATICALLY_INITIALIZED_CLASSES.add(c);
     }
@@ -946,7 +933,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
-        Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
+        Map<Class<?>, List<Field>> fieldSpecifiers = (Map<Class<?>, List<Field>>) args.get(FIELD_SPECIFIERS);
         final Deque<Object> stack = new ArrayDeque<Object>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
@@ -961,7 +948,7 @@ public class JsonWriter implements Closeable, Flushable
                 Long id = visited.get(obj);
                 if (id != null)
                 {   // Only write an object once.
-                    if (id == ZERO)
+                    if (id.equals(ZERO))
                     {   // 2nd time this object has been seen, so give it a unique ID and mark it referenced
                         id = identity++;
                         visited.put(obj, id);
@@ -976,7 +963,7 @@ public class JsonWriter implements Closeable, Flushable
                 }
             }
 
-            final Class clazz = obj.getClass();
+            final Class<?> clazz = obj.getClass();
 
             if (clazz.isArray())
             {
@@ -1002,13 +989,15 @@ public class JsonWriter implements Closeable, Flushable
                     for (final Object item : map.entrySet())
                     {
                         final Entry entry = (Entry) item;
-                        if (entry.getValue() != null)
+                        Object key = entry.getKey();
+                        Object value = entry.getValue();
+                        if (value != null && !MetaUtils.isLogicalPrimitive(value.getClass()))
                         {
-                            stack.addFirst(entry.getValue());
+                            stack.addFirst(value);
                         }
-                        if (entry.getKey() != null)
+                        if (key != null && !MetaUtils.isLogicalPrimitive(key.getClass()))
                         {
-                            stack.addFirst(entry.getKey());
+                            stack.addFirst(key);
                         }
                     }
                 }
@@ -1023,7 +1012,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 for (final Object item : (Collection)obj)
                 {
-                    if (item != null)
+                    if (item != null && !MetaUtils.isLogicalPrimitive(item.getClass()))
                     {
                         stack.addFirst(item);
                     }
@@ -1049,7 +1038,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param fieldSpecifiers Map of optional field specifiers, which are used to override the field list returned by
      * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void traceFields(final Deque<Object> stack, final Object obj, final Map<Class, List<Field>> fieldSpecifiers)
+    protected void traceFields(final Deque<Object> stack, final Object obj, final Map<Class<?>, List<Field>> fieldSpecifiers)
     {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
@@ -1063,7 +1052,6 @@ public class JsonWriter implements Closeable, Flushable
 
         for (final Field field : fields)
         {
-
             if ((field.getModifiers() & Modifier.TRANSIENT) != 0)
             {
                 if (fieldsBySpec == null || !fieldsBySpec.contains(field))
@@ -1089,16 +1077,16 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    private static List<Field> getFieldsUsingSpecifier(final Class classBeingWritten, final Map<Class, List<Field>> fieldSpecifiers)
+    private static List<Field> getFieldsUsingSpecifier(final Class<?> classBeingWritten, final Map<Class<?>, List<Field>> fieldSpecifiers)
     {
-        final Iterator<Map.Entry<Class, List<Field>>> i = fieldSpecifiers.entrySet().iterator();
+        final Iterator<Map.Entry<Class<?>, List<Field>>> i = fieldSpecifiers.entrySet().iterator();
         int minDistance = Integer.MAX_VALUE;
         List<Field> fields = null;
 
         while (i.hasNext())
         {
-            final Map.Entry<Class, List<Field>> entry = i.next();
-            final Class c = entry.getKey();
+            final Map.Entry<Class<?>, List<Field>> entry = i.next();
+            final Class<?> c = entry.getKey();
 
             if (c == classBeingWritten)
             {
@@ -1169,8 +1157,8 @@ public class JsonWriter implements Closeable, Flushable
      * @param showType if set to true, the @type tag will be output.  If false, it will be
      * @param allowRef if set to true, @ref will be used, otherwise 2+ occurrence will be
      * output as full object.
-     * @param allowCustom if set to true, the object being called will allowed to be checked for a matching
-     * custom writer to be used. This does not affect subobjects, just the top-level 'obj'
+     * @param allowCustom if set to true, the object being called will be checked for a matching
+     * custom writer to be used. This does not affect sub-objects, just the top-level 'obj'
      * being passed in.
      * @throws IOException if one occurs on the underlying output stream.
      */
@@ -1232,7 +1220,7 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
         else if (obj instanceof Map)
-        {
+        {   // Map instanceof check must be after JsonObject check above (JsonObject is a subclass of Map)
             if (!writeMapWithStringKeys((Map) obj, showType))
             {
                 writeMap((Map) obj, showType);
@@ -1257,7 +1245,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
         output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
-        final Class c = obj.getClass();
+        final Class<?> c = obj.getClass();
         String typeName = c.getName();
         String shortName = getSubstituteTypeNameIfExists(typeName);
 
@@ -1350,11 +1338,11 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
-            else if ( (!isAllowNanAndInfinity()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
+            else if ((!isAllowNanAndInfinity()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
                 out.write("null");
             }
-            else if ( (!isAllowNanAndInfinity()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
+            else if ((!isAllowNanAndInfinity()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
             {
                 out.write("null");
             }
@@ -1371,13 +1359,12 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
-        Class arrayType = array.getClass();
+        Class<?> arrayType = array.getClass();
         int len = Array.getLength(array);
         boolean referenced = objsReferenced.containsKey(array);
-//        boolean typeWritten = showType && !(Object[].class == arrayType);    // causes IDE warning in NetBeans 7/4 Java 1.7
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
-
         final Writer output = this.out; // performance opt: place in final local for quicker access
+        
         if (typeWritten || referenced)
         {
             output.write('{');
@@ -1462,7 +1449,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {
-            final Class componentClass = array.getClass().getComponentType();
+            final Class<?> componentClass = array.getClass().getComponentType();
             final boolean isPrimitiveArray = MetaUtils.isPrimitive(componentClass);
 
             for (int i = 0; i < len; i++)
@@ -1490,7 +1477,7 @@ public class JsonWriter implements Closeable, Flushable
                 }
 
                 if (i != lenMinus1)
-                {
+                {   // Make sure no bogus comma at the end of the array
                     output.write(',');
                     newLine();
                 }
@@ -1724,7 +1711,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         int len = jObj.getLength();
         String type = jObj.type;
-        Class arrayClass;
+        Class<?> arrayClass;
 
         if (type == null || Object[].class.getName().equals(type))
         {
@@ -1737,7 +1724,7 @@ public class JsonWriter implements Closeable, Flushable
 
         final Writer output = this.out;
         final boolean isObjectArray = Object[].class == arrayClass;
-        final Class componentClass = arrayClass.getComponentType();
+        final Class<?> componentClass = arrayClass.getComponentType();
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         boolean typeWritten = showType && !isObjectArray;
 
@@ -1845,7 +1832,7 @@ public class JsonWriter implements Closeable, Flushable
             showType = false;
         }
         String type = jObj.type;
-        Class colClass = MetaUtils.classForName(type, getClassLoader());
+        Class<?> colClass = MetaUtils.classForName(type, getClassLoader());
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
         int len = jObj.getLength();
@@ -1914,9 +1901,9 @@ public class JsonWriter implements Closeable, Flushable
         }
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
-
         output.write('{');
         tabIn();
+
         if (referenced)
         {
             writeId(String.valueOf(jObj.getId()));
@@ -1932,7 +1919,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = MetaUtils.classForName(type, getClassLoader());
+                Class<?> mapClass = MetaUtils.classForName(type, getClassLoader());
                 output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
                 output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
@@ -1956,25 +1943,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        output.write(shortMetaKeys ? "\"@k\":[" : "\"@keys\":[");
-        tabIn();
-        Iterator i = jObj.keySet().iterator();
-
-        writeElements(output, i);
-
-        tabOut();
-        output.write("],");
-        newLine();
-        output.write(shortMetaKeys ? "\"@e\":[" : "\"@items\":[");
-        tabIn();
-        i =jObj.values().iterator();
-
-        writeElements(output, i);
-
-        tabOut();
-        output.write(']');
-        tabOut();
-        output.write('}');
+        writeMapToEnd(jObj, output);
     }
 
 
@@ -2010,7 +1979,7 @@ public class JsonWriter implements Closeable, Flushable
             String type = jObj.getType();
             if (type != null)
             {
-                Class mapClass = MetaUtils.classForName(type, getClassLoader());
+                Class<?> mapClass = MetaUtils.classForName(type, getClassLoader());
                 output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
                 output.write(getSubstituteTypeName(mapClass.getName()));
                 output.write('"');
@@ -2049,7 +2018,7 @@ public class JsonWriter implements Closeable, Flushable
         final Writer output = this.out;
         boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         showType = showType && jObj.type != null;
-        Class type = null;
+        Class<?> type = null;
 
         output.write('{');
         tabIn();
@@ -2068,7 +2037,7 @@ public class JsonWriter implements Closeable, Flushable
             output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
             output.write(getSubstituteTypeName(jObj.type));
             output.write('"');
-            try  { type = MetaUtils.classForName(jObj.type, getClassLoader()); } catch(Exception ignored) { type = null; }
+            try  { type = MetaUtils.classForName(jObj.type, getClassLoader()); } catch(Exception ignored) { }
         }
 
         if (jObj.isEmpty())
@@ -2140,7 +2109,7 @@ public class JsonWriter implements Closeable, Flushable
         output.write('}');
     }
 
-    private static boolean doesValueTypeMatchFieldType(Class type, String fieldName, Object value)
+    private static boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
     {
         if (type != null)
         {
@@ -2190,6 +2159,11 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
+        writeMapToEnd(map, output);
+    }
+
+    private void writeMapToEnd(Map map, Writer output) throws IOException
+    {
         output.write(shortMetaKeys ? "\"@k\":[" : "\"@keys\":[");
         tabIn();
         Iterator i = map.keySet().iterator();
@@ -2210,8 +2184,7 @@ public class JsonWriter implements Closeable, Flushable
         tabOut();
         output.write('}');
     }
-
-
+    
     private boolean writeMapWithStringKeys(Map map, boolean showType) throws IOException
     {
         if (neverShowType)
@@ -2441,6 +2414,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param fieldsToExclude field that should be excluded when writing out object (per class bases for custom writers)
      * @throws IOException if an error occurs writing to the output stream.
      */
+    @SuppressWarnings("unchecked")
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly, Set<String> fieldsToExclude) throws IOException
     {
         if (neverShowType)
@@ -2475,7 +2449,7 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        final Map<Class, List<Field>> fieldSpecifiers = (Map) args.get(FIELD_SPECIFIERS);
+        final Map<Class<?>, List<Field>> fieldSpecifiers = (Map<Class<?>, List<Field>>) args.get(FIELD_SPECIFIERS);
         final List<Field> fieldBlackListForClass = getFieldsUsingSpecifier(obj.getClass(), (Map) args.get(FIELD_BLACK_LIST));
         final List<Field> externallySpecifiedFields = getFieldsUsingSpecifier(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
@@ -2496,7 +2470,8 @@ public class JsonWriter implements Closeable, Flushable
                 final String fieldName = entry.getKey();
                 final Field field = entry.getValue();
                 //output field if not on the blacklist
-                if ((fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)) && !fieldsToExclude.contains(field.getName())){
+                if ((fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)) && !fieldsToExclude.contains(field.getName()))
+                {
                     first = writeField(obj, first, fieldName, field, false);
                 }//else field is black listed.
             }
@@ -2525,7 +2500,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         final int modifiers = field.getModifiers();
-        final Class fieldDeclaringClass = field.getDeclaringClass();
+        final Class<?> fieldDeclaringClass = field.getDeclaringClass();
         Object o = null;
 
         if (Enum.class.isAssignableFrom(fieldDeclaringClass))
@@ -2543,13 +2518,17 @@ public class JsonWriter implements Closeable, Flushable
 
                 o = getValueByReflect(obj, field);
             } else {
-                //not advice to use reflect to get name field value from enum since jdk17
+                //not advised to use reflect to get name field value from enum since jdk17
                 //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
                 o = ((Enum)obj).name();
             }
-        } else if(ObjectResolver.isBasicWrapperType(fieldDeclaringClass)) {
+        }
+        else if (ObjectResolver.isBasicWrapperType(fieldDeclaringClass))
+        {
             o = obj;
-        } else {
+        }
+        else
+        {
             o = getValueByReflect(obj, field);
         }
 
@@ -2566,18 +2545,17 @@ public class JsonWriter implements Closeable, Flushable
 
         writeJsonUtf8String(fieldName, out);
         out.write(':');
-
-
+        
         if (o == null)
         {    // don't quote null
             out.write("null");
             return false;
         }
 
-        Class type = field.getType();
+        Class<?> type = field.getType();
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
-        //When no type is written we can check the Object itself not the declaration
+        // When no type is written we can check the Object itself not the declaration
         if (MetaUtils.isPrimitive(type) || (neverShowType && MetaUtils.isPrimitive(o.getClass())))
         {
             writePrimitive(o, false);
@@ -2589,7 +2567,7 @@ public class JsonWriter implements Closeable, Flushable
         return false;
     }
 
-    private boolean isForceType(Class objectClass, Class declaredType) {
+    private boolean isForceType(Class<?> objectClass, Class<?> declaredType) {
         if (objectClass == declaredType) {
             return false;
         }
