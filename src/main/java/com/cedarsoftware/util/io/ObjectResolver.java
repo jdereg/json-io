@@ -150,15 +150,18 @@ public class ObjectResolver extends Resolver
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
                 {
-                    if(isBasicWrapperType(targetClass)) {
+                    if (isBasicWrapperType(targetClass))
+                    {
                         jsonObj.target = MetaUtils.convert(fieldType, "0");
-                    } else {
-                        field.set(target, MetaUtils.convert(fieldType, "0"));
+                    }
+                    else
+                    {
+                        MetaUtils.setFieldValue(field, target, MetaUtils.convert(fieldType, "0"));
                     }
                 }
                 else
                 {
-                    field.set(target, null);
+                    MetaUtils.setFieldValue(field, target, null);
                 }
                 return;
             }
@@ -189,17 +192,17 @@ public class ObjectResolver extends Resolver
                 final JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
                 Object value = createJavaObjectInstance(fieldType, jObj);
-                field.set(target, value);
+                MetaUtils.setFieldValue(field, target, value);
             }
             else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
             {
                 if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
-                    field.set(target, Enum.valueOf(fieldType, (String) special));
+                    MetaUtils.setFieldValue(field, target, Enum.valueOf(fieldType, (String) special));
                     //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
                 } else if (Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
                     //no need to set for this case
                 } else {
-                    field.set(target, special);
+                    MetaUtils.setFieldValue(field, target, special);
                 }
             }
             else if (rhs.getClass().isArray())
@@ -211,18 +214,18 @@ public class ObjectResolver extends Resolver
                     // out as UTF8 strings for compactness and speed.
                     if (elements.length == 0)
                     {
-                        field.set(target, new char[]{});
+                        MetaUtils.setFieldValue(field, target, new char[]{});
                     }
                     else
                     {
-                        field.set(target, ((String) elements[0]).toCharArray());
+                        MetaUtils.setFieldValue(field, target, ((String) elements[0]).toCharArray());
                     }
                 }
                 else
                 {
                     jsonArray.put(ITEMS, elements);
                     createJavaObjectInstance(fieldType, jsonArray);
-                    field.set(target, jsonArray.target);
+                    MetaUtils.setFieldValue(field, target, jsonArray.target);
                     stack.addFirst(jsonArray);
                 }
             }
@@ -237,7 +240,7 @@ public class ObjectResolver extends Resolver
 
                     if (refObject.target != null)
                     {
-                        field.set(target, refObject.target);
+                        MetaUtils.setFieldValue(field, target, refObject.target);
                     }
                     else
                     {
@@ -247,7 +250,7 @@ public class ObjectResolver extends Resolver
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createJavaObjectInstance(fieldType, jsRhs);
-                    field.set(target, fieldObject);
+                    MetaUtils.setFieldValue(field, target, fieldObject);
                     if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
                         // GOTCHA : if the field is an immutable collection,
@@ -257,7 +260,7 @@ public class ObjectResolver extends Resolver
                         Object javaObj = convertMapsToObjects(jsRhs);
                         if (javaObj != fieldObject)
                         {
-                            field.set(target, javaObj);
+                            MetaUtils.setFieldValue(field, target, javaObj);
                         }
                     }
                 }
@@ -266,19 +269,20 @@ public class ObjectResolver extends Resolver
             {
                 if (MetaUtils.isPrimitive(fieldType))
                 {
+                    Object converted = MetaUtils.convert(fieldType, rhs);
                     if(isBasicWrapperType(targetClass)) {
-                        jsonObj.target = MetaUtils.convert(fieldType, rhs);
+                        jsonObj.target = converted;
                     } else {
-                        field.set(target, MetaUtils.convert(fieldType, rhs));
+                        MetaUtils.setFieldValue(field, target, converted);
                     }
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
-                    field.set(target, null);
+                    MetaUtils.setFieldValue(field, target, null);
                 }
                 else
                 {
-                    field.set(target, rhs);
+                    MetaUtils.setFieldValue(field, target, rhs);
                 }
             }
         }
@@ -782,8 +786,7 @@ public class ObjectResolver extends Resolver
 
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null) {
-            Object target = classFactory.newInstance(c, o, new HashMap());
-
+            Object target = classFactory.newInstance(c, o);
             if (classFactory.isObjectFinal()) {
                 return target;
             }

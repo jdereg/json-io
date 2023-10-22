@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class PersonFactory implements ClassFactory {
     @Override
-    public Object newInstance(Class c, Object o, Map args) {
+    public Object newInstance(Class c, Object o) {
         return new TestCustomWriter.Person();
     }
 }

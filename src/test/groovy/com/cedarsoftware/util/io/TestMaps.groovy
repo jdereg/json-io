@@ -493,15 +493,14 @@ class TestMaps
         final Map params = [(JsonWriter.DATE_FORMAT):JsonWriter.ISO_DATE_TIME_FORMAT] as Map
         final String str = JsonWriter.objectToJson(map, params)
         
-        // for debugging
-        System.out.println("${str}\n")
+        TestUtil.printLine("${str}\n")
 
         final Map<String, Object> map2 = (Map) JsonReader.jsonToMaps(str)
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())
         {
-            System.out.println("${entry.key} : ${entry.value} {${entry.value.class.simpleName}}")
+            TestUtil.printLine("${entry.key} : ${entry.value} {${entry.value.class.simpleName}}")
         }
 
         assert map2['Boolean'] instanceof Boolean

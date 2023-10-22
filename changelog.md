@@ -1,4 +1,7 @@
 ### Revision History
+* 4.15.0-SNAPSHOT
+  * Supporting JDK11, 17, 21.
+  * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values. 
 * 4.14.2
   * Enum/EnumSet support fully added @kpartlow
 * 4.14.1

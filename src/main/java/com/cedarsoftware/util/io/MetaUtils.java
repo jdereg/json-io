@@ -1049,7 +1049,7 @@ public class MetaUtils
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
     {
-        Map<String, Object> args = new HashMap<String, Object>();
+        Map<String, Object> args = new HashMap<>();
         args.put(JsonWriter.TYPE, false);
         args.put(JsonWriter.SHORT_META_KEYS, true);
         String arg = JsonWriter.objectToJson(obj, args);
@@ -1085,7 +1085,22 @@ public class MetaUtils
         return (V) map.get(key);
     }
 
-
+    public static void setFieldValue(Field field, Object instance, Object value)
+    {
+        try
+        {
+            if (instance == null)
+            {
+                throw new JsonIoException("Attempting to set field: " + field.getName() + " on null object.");
+            }
+            field.set(instance, value);
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not acccessible.  Add a create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+        }
+    }
+    
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
      * @author Kai Hufenback

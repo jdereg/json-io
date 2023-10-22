@@ -32,16 +32,17 @@ class TestNonUtf8
     @Test
     void testNonUtf8()
     {
-        println Charset.availableCharsets()
-        println Charset.defaultCharset()
+        TestUtil.printLine(Charset.availableCharsets().toString());
+        TestUtil.printLine(Charset.defaultCharset().toString());
 
-        def s1 = /"Die gelbe Hölle"/
+        def s1 = /"Die gelbe Hölle"/;
         def o = JsonReader.jsonToJava(s1);
         def s2 = JsonWriter.objectToJson(o);
 
-        println s1
-        println s2
+        TestUtil.printLine s1
+        TestUtil.printLine s2
 
         assert s1 == s2
     }
 }
+

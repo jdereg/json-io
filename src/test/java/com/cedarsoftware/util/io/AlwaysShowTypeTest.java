@@ -1,9 +1,12 @@
-package com.cedarsoftware.util.io
+package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals
-import org.junit.jupiter.api.Test
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,19 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestAlwaysShowType
+class AlwaysShowTypeTest
 {
     @Test
     void testAlwaysShowType()
     {
-        TestObject btc = new TestObject("Bitcoin")
-        btc._other = new TestObject("Satoshi")
-        Map args = new HashMap()
-        args.put(JsonWriter.TYPE, true)
-        String json0 = JsonWriter.objectToJson(btc, args)
-        TestObject thatBtc = (TestObject) TestUtil.readJsonObject(json0)
-        assertTrue(DeepEquals.deepEquals(btc, thatBtc))
-        String json1 = JsonWriter.objectToJson(btc)
-        assertTrue(json0.length() > json1.length())
+        TestObject btc = new TestObject("Bitcoin");
+        btc._other = new TestObject("Satoshi");
+        Map args = new HashMap<>();
+        args.put(JsonWriter.TYPE, true);
+        String json0 = JsonWriter.objectToJson(btc, args);
+        TestObject thatBtc = (TestObject) TestUtil.readJsonObject(json0);
+        assertTrue(DeepEquals.deepEquals(btc, thatBtc));
+        String json1 = JsonWriter.objectToJson(btc);
+        assertTrue(json0.length() > json1.length());
     }
 }

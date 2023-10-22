@@ -373,7 +373,7 @@ abstract class Resolver
             }
             JsonReader.ClassFactory factory = null;
             if ((factory = getClassFactory(c)) != null) {
-                mate = factory.newInstance(c, jsonObj, new HashMap());
+                mate = factory.newInstance(c, jsonObj);
                 jsonObj.setFinishedTarget(mate, factory.isObjectFinal());
                 return mate;
             }
@@ -711,7 +711,7 @@ abstract class Resolver
                 {
                     try
                     {
-                        field.set(objToFix, objReferenced.target);               // patch field here
+                        MetaUtils.setFieldValue(field, objToFix, objReferenced.target);    // patch field here
                     }
                     catch (Exception e)
                     {

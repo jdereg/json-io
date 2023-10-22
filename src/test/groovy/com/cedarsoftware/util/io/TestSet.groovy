@@ -102,7 +102,7 @@ class TestSet
         testSet._enumSet.remove(ManySets.EnumValues.E2)
         testSet._enumSet.remove(ManySets.EnumValues.E3)
         json = TestUtil.getJsonString(testSet)
-        println json
+        TestUtil.printLine(json);
         testSet = (ManySets) TestUtil.readJsonObject(json)
         // TODO: This line throws a ClassCastException - the Enum being added is not the same type as the one used to create the empty EnumSet
 //        testSet._enumSet.add(ManySets.EnumValues.E1)
