@@ -460,11 +460,11 @@ abstract class Resolver
             {
                 mate = getEnum(clazz, jsonObj);
             }
-            else if (Enum.class.isAssignableFrom(clazz)) // anonymous subclass of an enum
+            else if (Enum.class.isAssignableFrom(clazz)) // anonymous subclass of an Enum
             {
                 mate = getEnum(clazz.getSuperclass(), jsonObj);
             }
-            else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an enum
+            else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an EnumSet
             {
                 mate = extractEnumSet(clazz, jsonObj);
             }
@@ -563,49 +563,6 @@ abstract class Resolver
         {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
             return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
         }
-    }
-
-    private static enum OneEnum {
-        L1,
-        L2,
-        L3
-    }
-    /*
-    /* java 17 don't allow to call reflect on internal java api like EnumSet's implement, so need to create like this
-     */
-    private EnumSet getEmptyEnumSet() {
-        return EnumSet.noneOf(OneEnum.class);
-    }
-
-    /**
-     * Create the EnumSet with its values (it must be created this way)
-     */
-    private Object getEnumSet(Class c, JsonObject<String, Object> jsonObj)
-    {
-        Object[] items = jsonObj.getArray();
-        if (items == null || items.length == 0)
-        {
-            return getEmptyEnumSet();
-            //return newInstance(c, jsonObj);
-        }
-        JsonObject item = (JsonObject) items[0];
-        String type = item.getType();
-        Class enumClass = MetaUtils.classForName(type, reader.getClassLoader());
-        EnumSet enumSet = null;
-        for (Object objectItem : items)
-        {
-            item = (JsonObject) objectItem;
-            Enum enumItem = (Enum) getEnum(enumClass, item);
-            if (enumSet == null)
-            {   // Lazy init the EnumSet
-                enumSet = EnumSet.of(enumItem);
-            }
-            else
-            {
-                enumSet.add(enumItem);
-            }
-        }
-        return enumSet;
     }
 
     protected EnumSet<?> extractEnumSet(Class c, JsonObject<String, Object> jsonObj)
