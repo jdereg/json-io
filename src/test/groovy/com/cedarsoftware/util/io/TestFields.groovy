@@ -271,27 +271,27 @@ class TestFields
             c._other = a;
             _cycleTest = a;
 
-            _arrayList_empty = new ArrayList()
-            _arrayList_1 = new ArrayList()
+            _arrayList_empty = new ArrayList<>()
+            _arrayList_1 = new ArrayList<>()
             _arrayList_1.add("should be no id, no type")
-            _arrayList_2 = new ArrayList()
+            _arrayList_2 = new ArrayList<>()
             _arrayList_2.add("should have type, but no id")
-            _arrayList_3 = new ArrayList()
+            _arrayList_3 = new ArrayList<>()
             _arrayList_3.add("should have id and type")
             _arrayList_4 = _arrayList_3;
-            _arrayList_5 = new ArrayList()
+            _arrayList_5 = new ArrayList<>()
             _arrayList_5.add("should have id, but no type")
             _arrayList_6 = _arrayList_5;
 
-            _hashMap_empty = new HashMap()
-            _hashMap_1 = new HashMap()
+            _hashMap_empty = new HashMap<>()
+            _hashMap_1 = new HashMap<>()
             _hashMap_1.mapkey = "should have no id or type"
-            _hashMap_2 = new HashMap()
+            _hashMap_2 = new HashMap<>()
             _hashMap_2.mapkey = "should have type, but no id"
-            _hashMap_3 = new HashMap()
+            _hashMap_3 = new HashMap<>()
             _hashMap_3.mapkey = "should have id and type"
             _hashMap_4 = _hashMap_3;
-            _hashMap_5 = new HashMap()
+            _hashMap_5 = new HashMap<>()
             _hashMap_5.mapkey = 'should have id, but no type'
             _hashMap_6 = _hashMap_5;
 
@@ -485,7 +485,7 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map args = new HashMap()
+        Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
 
         assertThrows(Exception.class, {  JsonWriter.objectToJson(painful, args) })
@@ -502,7 +502,7 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map args = new HashMap()
+        Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
         String json = JsonWriter.objectToJson(painful, args)
         Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
@@ -587,7 +587,7 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map args = new HashMap()
+        Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
         args.put(JsonWriter.FIELD_NAME_BLACK_LIST, blackLists)
         String json = JsonWriter.objectToJson(painful, args)

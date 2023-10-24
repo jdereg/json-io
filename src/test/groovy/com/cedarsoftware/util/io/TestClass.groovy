@@ -49,7 +49,7 @@ class TestClass
 
         private ManyClasses()
         {
-            _classes_a = new ArrayList()
+            _classes_a = new ArrayList<>()
             _classes_a.add(char.class)
             _booleanClass = boolean.class
             _BooleanClass = Boolean.class

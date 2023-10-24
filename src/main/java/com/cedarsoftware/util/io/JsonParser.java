@@ -301,7 +301,7 @@ class JsonParser
      */
     private Object readArray(JsonObject object) throws IOException
     {
-        final List<Object> array = new ArrayList();
+        final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true)

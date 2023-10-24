@@ -98,7 +98,7 @@ class TestUUID
     {
         String s = "03a7e3c2-2d3a-4ca9-a426-ff4270015fde"
         UUID uuid = UUID.fromString(s)
-        List list = new ArrayList()
+        List list = new ArrayList<>()
         list.add(uuid)
         list.add(uuid)
         String json = TestUtil.getJsonString(list)

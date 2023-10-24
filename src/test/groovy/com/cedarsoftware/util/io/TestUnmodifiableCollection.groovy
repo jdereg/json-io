@@ -29,7 +29,7 @@ class TestUnmodifiableCollection
 
         UnmodifiableMapHolder()
         {
-            Map directions = new LinkedHashMap()
+            Map directions = new LinkedHashMap<>()
             directions.put("North", 0)
             directions.put("South", 1)
             directions.put("East", 2)
@@ -41,7 +41,7 @@ class TestUnmodifiableCollection
     @Test
     void testUnmodifiableCollection()
     {
-        Collection col = new ArrayList()
+        Collection col = new ArrayList<>()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -56,7 +56,7 @@ class TestUnmodifiableCollection
         assert root[2] == 'baz'
         assert root[3] == 'qux'
 
-        col = new ArrayList()
+        col = new ArrayList<>()
         col.add('foo')
         col.add('bar')
         col.add('baz')
@@ -124,7 +124,7 @@ class TestUnmodifiableCollection
     @Test
     void testUnmodifiableMap()
     {
-        Map map = new LinkedHashMap()
+        Map map = new LinkedHashMap<>()
         map.foo = 'foot'
         map.bar = 'bart'
         map.baz = 'bastard'

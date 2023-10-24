@@ -80,7 +80,7 @@ class TestLocale
     void testLocaleInMapValue()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
-        Map map = new HashMap()
+        Map map = new HashMap<>()
         map.put("us", locale)
         String json = TestUtil.getJsonString(map)
         TestUtil.printLine("json=" + json)
@@ -93,7 +93,7 @@ class TestLocale
     void testLocaleInMapKey()
     {
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
-        Map map = new HashMap()
+        Map map = new HashMap<>()
         map.put(locale, "us")
         String json = TestUtil.getJsonString(map)
         TestUtil.printLine("json=" + json)

@@ -226,16 +226,16 @@ public class CollectionTests {
 
     @Test
     public void testCollectionWithEmptyElement() {
-        List list = new ArrayList();
+        List list = new ArrayList<>();
         list.add("a");
         list.add(null);
         list.add("b");
         String json = TestUtil.getJsonString(list);
-        List list2 = (List) TestUtil.readJsonObject(json);
+        List list2 = TestUtil.readJsonObject(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
 
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[\"a\",{},\"b\"]}";
-        list2 = (List) TestUtil.readJsonObject(json);
+        list2 = TestUtil.readJsonObject(json);
         Assertions.assertTrue(list2.size() == 3);
         Assertions.assertTrue(list2.get(0).equals("a"));
         Assertions.assertEquals(list2.get(1).getClass(), JsonObject.class);
@@ -245,31 +245,31 @@ public class CollectionTests {
     @Test
     public void testCollectionWithReferences() {
         TestObject o = new TestObject("JSON");
-        List list = new ArrayList();
+        List list = new ArrayList<>();
         list.add(o);
         list.add(o);
 
         // Backward reference
         String json = TestUtil.getJsonString(list);
         TestUtil.printLine("json=" + json);
-        List list2 = (List) TestUtil.readJsonObject(json);
+        List list2 = TestUtil.readJsonObject(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
 
         // Forward reference
         String pkg = TestObject.class.getName();
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":3},{\"@id\":3,\"@type\":\"" + pkg + "\",\"_name\":\"JSON\",\"_other\":null}]}";
-        list2 = (List) JsonReader.jsonToJava(json);
+        list2 = JsonReader.jsonToJava(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
     }
 
     @Test
     public void testCollectionWithNonJsonPrimitives() {
-        Collection col = new ArrayList();
-        ((ArrayList) col).add(Integer.valueOf(7));
-        ((ArrayList) col).add(Short.valueOf((short) 9));
-        ((ArrayList) col).add(Float.valueOf(3.14f));
+        Collection col = new ArrayList<>();
+        col.add(Integer.valueOf(7));
+        col.add(Short.valueOf((short) 9));
+        col.add(Float.valueOf(3.14f));
         String json = TestUtil.getJsonString(col);
-        Collection col1 = (Collection) TestUtil.readJsonObject(json);
+        Collection col1 = TestUtil.readJsonObject(json);
         Assertions.assertTrue(col.equals(col1));
     }
 
@@ -335,7 +335,7 @@ public class CollectionTests {
 
         Map writeOptions = new WriteOptionsBuilder().writeEnumsAsObjects().build();
 
-        List arrayList = new ArrayList();
+        List arrayList = new ArrayList<>();
         arrayList.add(TestEnum4.B);
         String json = TestUtil.getJsonString(arrayList, writeOptions);
         TestUtil.printLine(json);
@@ -366,7 +366,7 @@ public class CollectionTests {
     @Test
     public void testLocaleInCollection() {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
-        List list = new ArrayList();
+        List list = new ArrayList<>();
         list.add(locale);
         String json = TestUtil.getJsonString(list);
         TestUtil.printLine("json=" + json);
@@ -377,7 +377,7 @@ public class CollectionTests {
 
     @Test
     public void testMapOfMapsCollection() {
-        List stuff = new ArrayList();
+        List stuff = new ArrayList<>();
         stuff.add("Hello");
         Object testObj = new TestObject("test object");
         stuff.add(testObj);
@@ -392,7 +392,7 @@ public class CollectionTests {
         Assertions.assertTrue("Hello".equals(items[0]));
         Assertions.assertTrue(items[1].equals(items[2]));
 
-        List list = new ArrayList();
+        List list = new ArrayList<>();
         list.add(new Object[]{123L, null, true, "Hello"});
         json = TestUtil.getJsonString(list);
         TestUtil.printLine("json=" + json);
@@ -410,7 +410,7 @@ public class CollectionTests {
     @Test
     public void testReconstituteCollection() {
         TestObject to = new TestObject("football");
-        Collection objs = new ArrayList();
+        Collection objs = new ArrayList<>();
         Date now = new Date();
         ((ArrayList) objs).add(now);
         ((ArrayList) objs).add(123.45);
@@ -418,7 +418,7 @@ public class CollectionTests {
         ((ArrayList) objs).add(null);
         ((ArrayList) objs).add(to);
         ((ArrayList) objs).add(new Object[]{"dog", new String[]{"a", "b", "c"}});
-        Collection two = new ArrayList();
+        Collection two = new ArrayList<>();
         ((ArrayList) two).add(objs);
         ((ArrayList) two).add("bella");
         ((ArrayList) two).add(objs);
@@ -453,7 +453,7 @@ public class CollectionTests {
 
     @Test
     public void testReconstituteEmptyCollection() {
-        Collection empty = new ArrayList();
+        Collection empty = new ArrayList<>();
         String json0 = TestUtil.getJsonString(empty);
         TestUtil.printLine("json0=" + json0);
 
@@ -485,7 +485,7 @@ public class CollectionTests {
         String json = TestUtil.getJsonString(poly);
         TestUtil.printLine("json=" + json);
         Assertions.assertTrue("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]".equals(json));
-        Collection col = new ArrayList();
+        Collection col = new ArrayList<>();
         ((ArrayList) col).add("string");
         ((ArrayList) col).add(Long.valueOf(16));
         ((ArrayList) col).add(Double.valueOf(3.14159));
@@ -579,9 +579,9 @@ public class CollectionTests {
             this.sortedMap = sortedMap;
         }
 
-        private Collection col = new LinkedList();
-        private List list = new ArrayList();
-        private Map map = new HashMap();
+        private Collection col = new LinkedList<>();
+        private List list = new ArrayList<>();
+        private Map map = new HashMap<>();
         private Set set = new HashSet();
         private SortedSet sortedSet = new TreeSet();
         private SortedMap sortedMap = new TreeMap();
@@ -625,7 +625,7 @@ public class CollectionTests {
 
     private static class ManyCollections implements Serializable {
         private void init() {
-            Collection array = new ArrayList();
+            Collection array = new ArrayList<>();
             ((ArrayList) array).add(_testDate);
             ((ArrayList) array).add("Hello");
             ((ArrayList) array).add(new TestObject("fudge"));
@@ -645,23 +645,23 @@ public class CollectionTests {
 
             _cols = new Collection[]{array, set, tree};
 
-            _strings_a = new LinkedList();
+            _strings_a = new LinkedList<>();
             _strings_a.add("Alpha");
             _strings_a.add("Bravo");
             _strings_a.add("Charlie");
             _strings_a.add("Delta");
-            _strings_b = new LinkedList();
+            _strings_b = new LinkedList<>();
             _strings_c = null;
 
-            _dates_a = new ArrayList();
+            _dates_a = new ArrayList<>();
             _dates_a.add(new Date(0));
             _dates_a.add(_testDate);
             _dates_a.add(new Date(Long.MAX_VALUE));
             _dates_a.add(null);
-            _dates_b = new ArrayList();
+            _dates_b = new ArrayList<>();
             _dates_c = null;
 
-            _classes_a = new ArrayList();
+            _classes_a = new ArrayList<>();
             _classes_a.add(Boolean.class);
             _classes_a.add(Character.class);
             _classes_a.add(Byte.class);
@@ -674,16 +674,16 @@ public class CollectionTests {
             _classes_a.add(Date.class);
             _classes_a.add(null);
             _classes_a.add(Class.class);
-            _classes_b = new ArrayList();
+            _classes_b = new ArrayList<>();
             _classes_c = null;
 
-            _sb_a = new LinkedList();
+            _sb_a = new LinkedList<>();
             _sb_a.add(new StringBuffer("one"));
             _sb_a.add(new StringBuffer("two"));
-            _sb_b = new LinkedList();
+            _sb_b = new LinkedList<>();
             _sb_c = null;
 
-            _poly_a = new ArrayList();
+            _poly_a = new ArrayList<>();
             _poly_a.add(Boolean.TRUE);
             _poly_a.add(Character.valueOf('a'));
             _poly_a.add(Byte.valueOf((byte) 16));
@@ -720,7 +720,7 @@ public class CollectionTests {
             _strs_d = new TreeSet();
             _strs_d.addAll(_strs_a);
 
-            _typedCol = new ArrayList();
+            _typedCol = new ArrayList<>();
             _typedCol.add("string");
             _typedCol.add(null);
             _typedCol.add(new Date(19));

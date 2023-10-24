@@ -82,7 +82,7 @@ class TestNoType
     public void testCollections()
     {
         CollectionTest cols = new CollectionTest()
-        cols.foos = new ArrayList()
+        cols.foos = new ArrayList<>()
         cols.foos.addAll([1,2,"4",8])
         cols.bars = [1,3,"5",7] as Object[]
 

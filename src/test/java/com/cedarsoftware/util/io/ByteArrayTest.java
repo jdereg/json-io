@@ -1,8 +1,10 @@
-package com.cedarsoftware.util.io
+package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue
+import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -21,23 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class TestByteArray
+class ByteArrayTest
 {
     @Test
     void testPerformance()
     {
-        byte[] bytes = new byte[128 * 1024]
-        Random r = new Random()
-        r.nextBytes(bytes)
-        String json = TestUtil.getJsonString(bytes)
-
-        byte[] bytes2 = (byte[]) TestUtil.readJsonObject(json)
+        byte[] bytes = new byte[128 * 1024];
+        Random r = new Random();
+        r.nextBytes(bytes);
+        String json = TestUtil.getJsonString(bytes);
+        byte[] bytes2 = TestUtil.readJsonObject(json);
 
         for (int i = 0; i < bytes.length; i++)
         {
-            assertTrue(bytes[i] == bytes2[i])
+            assertEquals(bytes[i], bytes2[i]);
         }
     }
-
-
 }

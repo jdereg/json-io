@@ -344,19 +344,19 @@ public class JsonReader implements Closeable
         {
             if (List.class.isAssignableFrom(c))
             {
-                return new ArrayList();
+                return new ArrayList<>();
             }
             else if (SortedSet.class.isAssignableFrom(c))
             {
-                return new TreeSet();
+                return new TreeSet<>();
             }
             else if (Set.class.isAssignableFrom(c))
             {
-                return new LinkedHashSet();
+                return new LinkedHashSet<>();
             }
             else if (Collection.class.isAssignableFrom(c))
             {
-                return new ArrayList();
+                return new ArrayList<>();
             }
             throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
         }
@@ -380,7 +380,7 @@ public class JsonReader implements Closeable
             }
             else if (Map.class.isAssignableFrom(c))
             {
-                return new LinkedHashMap();
+                return new LinkedHashMap<>();
             }
             throw new JsonIoException("MapFactory handed Class for which it was not expecting: " + c.getName());
         }
@@ -799,7 +799,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap();
+            optionalArgs = new HashMap<>();
         }
         Map<String, Object> args = getArgs();
         args.putAll(optionalArgs);

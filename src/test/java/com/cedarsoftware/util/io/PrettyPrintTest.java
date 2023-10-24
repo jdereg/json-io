@@ -39,12 +39,12 @@ class PrettyPrintTest
     {
         Nice nice = new Nice();
         nice.name = "Louie";
-        nice.items = new ArrayList();
+        nice.items = new ArrayList<>();
         nice.items.add("One");
         nice.items.add(1L);
         nice.items.add(1);
         nice.items.add(true);
-        nice.dictionary = new LinkedHashMap();
+        nice.dictionary = new LinkedHashMap<>();
         nice.dictionary.put("grade", "A");
         nice.dictionary.put("price", 100.0d);
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));

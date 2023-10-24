@@ -29,7 +29,7 @@ class TestInnerCollections
     @Test
     void testLinkedHashMap_LinkedKeySet()
     {
-        keySetTest(new LinkedHashMap())
+        keySetTest(new LinkedHashMap<>())
     }
 
     @Test

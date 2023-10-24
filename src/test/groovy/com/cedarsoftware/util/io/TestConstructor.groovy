@@ -299,7 +299,7 @@ class TestConstructor
     @Test
     void testNoNullConstructor()
     {
-        NoNullConstructor noNull = new NoNullConstructor(new ArrayList(), [:], "", new Date())
+        NoNullConstructor noNull = new NoNullConstructor(new ArrayList<>(), [:], "", new Date())
         noNull.list = null;
         noNull.map = null;
         noNull.string = null;

@@ -156,7 +156,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var map = new HashMap();
+        var map = new HashMap<>();
         map.put(String.class.getName(), "bar2");
 
         assertThat(map)
@@ -319,7 +319,7 @@ class ReadOptionsBuilderTest {
 
 
     private Map<String, String> expectedTypeNameMap() {
-        var expectedMap = new HashMap();
+        Map<String, String> expectedMap = new HashMap<>();
         expectedMap.put(Date.class.getName(), "foo2");
         expectedMap.put(String.class.getName(), "bar2");
         return expectedMap;

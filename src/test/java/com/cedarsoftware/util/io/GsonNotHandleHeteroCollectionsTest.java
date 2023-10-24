@@ -40,7 +40,7 @@ public class GsonNotHandleHeteroCollectionsTest
     @Test
     public void testGsonFailOnHeteroCollection()
     {
-        List list = new ArrayList();
+        List list = new ArrayList<>();
         list.add(1);
         list.add(42L);
         list.add(Math.PI);

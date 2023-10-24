@@ -447,7 +447,7 @@ public class ObjectResolver extends Resolver
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
+        final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
         int idx = 0;
 

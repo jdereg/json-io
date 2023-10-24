@@ -199,7 +199,7 @@ When reading JSON from external sources, you may want to start with:
     
 In Java:
 
-    Map args = new HashMap();
+    Map args = new HashMap<>();
     args.put(JsonReader.USE_MAPS, true);
     Object data = JsonReader.jsonToJava(json, args);
 
@@ -215,7 +215,7 @@ in Groovy:
 
 In Java:
 
-    Map args = new HashMap();
+    Map args = new HashMap<>();
     args.put(JsonWriter.TYPE, false);
     String json = JsonWriter.objectToJson(objToWrite, args);
     

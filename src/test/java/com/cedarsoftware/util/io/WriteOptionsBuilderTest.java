@@ -140,7 +140,7 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withFieldNameBlackListMap() {
-        var map = new HashMap();
+        Map<Class, List<String>> map = new HashMap<>();
         map.put(URL.class, List.of("protocol"));
         map.put(Date.class, List.of("month"));
 
@@ -151,7 +151,7 @@ class WriteOptionsBuilderTest {
         assertThat(options)
                 .hasSize(1)
                 .containsKey(FIELD_NAME_BLACK_LIST);
-        var optionItem = (Map<Class, List<String>>)options.get(FIELD_NAME_BLACK_LIST);
+        var optionItem = (Map<Class<?>, List<String>>)options.get(FIELD_NAME_BLACK_LIST);
 
         assertThat(optionItem)
                 .hasSize(2)
@@ -201,7 +201,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(FIELD_SPECIFIERS);
 
-        Map<Class, List<String>> map = new HashMap();
+        Map<Class, List<String>> map = new HashMap<>();
         map.put(URL.class, List.of("host", "port"));
         map.put(Date.class, List.of("month"));
 
@@ -426,7 +426,7 @@ class WriteOptionsBuilderTest {
     void withCustomTypeNameMap_whenNoTypeInformationIsBeingOutput_throwsIllegalStateException() {
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
                         .withNoTypeInformation()
-                        .withCustomTypeNameMap(new HashMap())
+                        .withCustomTypeNameMap(new HashMap<>())
                         .build())
                 .withMessage("TYPE_NAME_MAP is not needed when types are not going to be output");
     }
@@ -442,7 +442,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var map = new HashMap();
+        var map = new HashMap<>();
         map.put(String.class.getName(), "bar2");
 
         assertThat(map)
@@ -450,7 +450,7 @@ class WriteOptionsBuilderTest {
     }
 
     private Map<String, String> expectedTypeNameMap() {
-        var expectedMap = new HashMap();
+        Map<String, String> expectedMap = new HashMap<>();
         expectedMap.put(Date.class.getName(), "foo2");
         expectedMap.put(String.class.getName(), "bar2");
         return expectedMap;

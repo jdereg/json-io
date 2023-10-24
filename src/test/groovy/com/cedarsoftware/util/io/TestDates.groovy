@@ -234,7 +234,7 @@ class TestDates
         dt.christmas = new java.sql.Date(c.time.time)
 
         // Custom writer that only outputs ISO date portion
-        Map args = new HashMap()
+        Map args = new HashMap<>()
         args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_FORMAT)
         String json = JsonWriter.objectToJson(dt, args)
         TestUtil.printLine('json = ' + json)
@@ -257,7 +257,7 @@ class TestDates
         compareDatePortion(exp, act)
 
         // Custom writer that outputs date and time portion in ISO format
-        args = new HashMap()
+        args = new HashMap<>()
         args.put(JsonWriter.DATE_FORMAT, JsonWriter.ISO_DATE_TIME_FORMAT)
         json = JsonWriter.objectToJson(dt, args)
         TestUtil.printLine('json = ' + json)

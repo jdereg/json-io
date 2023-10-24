@@ -160,7 +160,7 @@ public class MetaUtilsTests {
 
     @Test
     void getWithDefaultForNull_whenObjectIsEqualToNull_returnsDefaultObject() {
-        var map = new HashMap();
+        var map = new HashMap<>();
         map.put("foo", null);
 
         String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");

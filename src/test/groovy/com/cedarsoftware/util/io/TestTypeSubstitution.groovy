@@ -25,7 +25,7 @@ class TestTypeSubstitution
     static class Person
     {
         String name
-        Map pets = new HashMap();
+        Map pets = new HashMap<>();
     }
 
     @Test

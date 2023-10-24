@@ -57,7 +57,7 @@ class TestMaps
 
     static class SimpleMapTest
     {
-        HashMap map = new HashMap()
+        HashMap map = new HashMap<>()
     }
 
     private static class ManyMaps implements Serializable
@@ -75,14 +75,14 @@ class TestMaps
 
         private void init()
         {
-            _strings_a = new HashMap()
-            _strings_b = new HashMap()
+            _strings_a = new HashMap<>()
+            _strings_b = new HashMap<>()
             _strings_c = null;
             _testobjs_a = new TreeMap()
-            _map_col = new HashMap()
+            _map_col = new HashMap<>()
             _map_col_2 = new TreeMap()
-            _map_col_3 = new HashMap()
-            _map_obj = new HashMap()
+            _map_col_3 = new HashMap<>()
+            _map_obj = new HashMap<>()
             _map_con = new ConcurrentHashMap()
 
             _strings_a.put("woods", "tiger")
@@ -92,7 +92,7 @@ class TestMaps
             _testobjs_a.put(new TestObject("one"), new TestObject("alpha"))
             _testobjs_a.put(new TestObject("two"), new TestObject("bravo"))
 
-            List l = new LinkedList()
+            List l = new LinkedList<>()
             l.add("andromeda")
             _map_col.put([new TestObject("earth"), new TestObject("jupiter")] as TestObject[], l)
             _map_col_2.put("cat", ["tiger", "lion", "cheetah", "jaguar"] as Object[])
@@ -218,7 +218,7 @@ class TestMaps
         b._other = c;
         c._other = a;
 
-        Map map = new HashMap()
+        Map map = new HashMap<>()
         map.put(a, b)
         String json = TestUtil.getJsonString(map)
         TestUtil.printLine("json = " + json)
@@ -234,7 +234,7 @@ class TestMaps
     @Test
     void testMap3()
     {
-        Map map = new HashMap()
+        Map map = new HashMap<>()
         map.put("a", "b")
         String json = TestUtil.getJsonString(map)
         TestUtil.printLine("json = " + json)
@@ -379,7 +379,7 @@ class TestMaps
     @Test
     void testReconstituteMapEmpty()
     {
-        Map map = new LinkedHashMap()
+        Map map = new LinkedHashMap<>()
         String json0 = TestUtil.getJsonString(map)
         TestUtil.printLine("json0=" + json0)
 
@@ -396,7 +396,7 @@ class TestMaps
     @Test
     void testReconstituteRefMap()
     {
-        Map m1 = new HashMap()
+        Map m1 = new HashMap<>()
         Object[] root = [m1, m1] as Object[]
         String json0 = TestUtil.getJsonString(root)
         TestUtil.printLine("json0=" + json0)
