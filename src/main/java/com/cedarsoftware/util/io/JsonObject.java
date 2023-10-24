@@ -1,12 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.

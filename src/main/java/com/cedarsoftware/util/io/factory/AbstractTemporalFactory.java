@@ -5,7 +5,6 @@ import com.cedarsoftware.util.io.JsonReader;
 
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
-import java.util.Map;
 
 /**
  * Abstract class to help create temporal items.

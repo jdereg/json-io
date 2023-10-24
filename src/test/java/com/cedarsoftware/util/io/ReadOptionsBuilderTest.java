@@ -6,22 +6,9 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
-import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import static com.cedarsoftware.util.io.JsonReader.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ReadOptionsBuilderTest {

@@ -3,31 +3,9 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.net.URL;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
-import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.DATE_FORMAT;
-import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
-import static com.cedarsoftware.util.io.JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS;
-import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_FORMAT;
-import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_TIME_FORMAT;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.PRETTY_PRINT;
-import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
-import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.WRITE_ENUMS_AS_OBJECTS;
-import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
+import static com.cedarsoftware.util.io.JsonWriter.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 

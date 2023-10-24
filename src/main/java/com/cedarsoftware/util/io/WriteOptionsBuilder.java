@@ -7,12 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.*;
 
 public class WriteOptionsBuilder {
 

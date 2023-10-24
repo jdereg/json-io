@@ -4,7 +4,6 @@ import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 
-import java.util.Map;
 import java.util.TimeZone;
 
 public class TimeZoneFactory implements JsonReader.ClassFactory {

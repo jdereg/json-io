@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static com.cedarsoftware.util.io.JsonObject.ID;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

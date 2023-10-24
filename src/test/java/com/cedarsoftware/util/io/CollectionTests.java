@@ -4,26 +4,11 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.awt.Point;
+import java.awt.*;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

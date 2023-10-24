@@ -6,11 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.ID;
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
-import static com.cedarsoftware.util.io.JsonObject.REF;
-import static com.cedarsoftware.util.io.JsonObject.TYPE;
+import static com.cedarsoftware.util.io.JsonObject.*;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.

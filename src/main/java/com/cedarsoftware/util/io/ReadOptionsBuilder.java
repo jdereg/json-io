@@ -5,11 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import static com.cedarsoftware.util.io.JsonReader.*;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
 
 public class ReadOptionsBuilder {

@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
-import org.codehaus.groovy.runtime.StringGroovyMethods;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
@@ -12,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
