@@ -166,7 +166,7 @@ class TestCustomWriter
 
     static class CustomPersonReader implements JsonReader.JsonClassReader
     {
-        Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args)
             assert reader instanceof JsonReader

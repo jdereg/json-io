@@ -31,7 +31,7 @@ class TestCustomReaderMap
 
     private static class CustomPointReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object obj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object obj, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject) obj
 

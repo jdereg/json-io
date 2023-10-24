@@ -1,0 +1,11 @@
+{
+  "@type": "java.time.ZonedDateTime",
+  "dateTime": "2023-10-22T11:39:27.2496504",
+  "offset": {
+    "totalSeconds": 10800
+  },
+  "zone": {
+    "@type": "java.time.ZoneRegion",
+    "id": "Asia/Aden"
+  }
+}

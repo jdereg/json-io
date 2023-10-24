@@ -8,18 +8,23 @@ import java.util.TimeZone;
 
 public class TimeZoneFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class c, Object o, Map args) {
-        if (o instanceof String) {
-            return TimeZone.getTimeZone((String) o);
+    public Object newInstance(Class c, JsonObject job) {
+
+        var value = job.getValue();
+        if (value != null) {
+            return fromString(job, (String) value);
         }
 
-        JsonObject jObj = (JsonObject) o;
-        Object zone = jObj.get("zone");
-        if (zone == null) {
-            throw new JsonIoException("java.util.TimeZone must specify 'zone' field if its a JsonObject");
+        var zone = (String) job.get("zone");
+        if (zone != null) {
+            return fromString(job, (String) zone);
         }
-        jObj.setFinishedTarget(TimeZone.getTimeZone((String) zone), isObjectFinal());
-        return jObj.getTarget();
+
+        throw new JsonIoException("java.util.TimeZone missing 'value' field");
+    }
+
+    private Object fromString(JsonObject job, String value) {
+        return job.setFinishedTarget(TimeZone.getTimeZone(value), isObjectFinal());
     }
 
     @Override

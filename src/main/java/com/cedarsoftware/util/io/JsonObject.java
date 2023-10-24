@@ -36,6 +36,14 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     public static final String ID = "@id";
     public static final String REF = "@ref";
     public static final String TYPE = "@type";
+    public static final String SHORT_TYPE = "@t";
+    public static final String SHORT_ITEMS = "@e";
+    public static final String SHORT_KEYS = "@k";
+    public static final String SHORT_ID = "@i";
+    public static final String SHORT_REF = "@r";
+    public static final String VALUE = "value";
+
+
     static Set<String> primitives = new HashSet<>();
     static Set<String> primitiveWrappers = new HashSet<>();
 
@@ -102,18 +110,20 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public boolean isFinished() { return isFinished; }
 
-    public void setFinishedTarget(Object target, boolean isFinished)
+    public Object setFinishedTarget(Object o, boolean isFinished)
     {
-        this.target = target;
+        this.target = o;
         this.isFinished = isFinished;
+        return this.target;
     }
 
-    public void setTarget(Object target)
+    public Object setTarget(Object target)
     {
         this.target = target;
+        return target;
     }
 
-    public Class getTargetClass()
+    public Class<?> getTargetClass()
     {
         return target.getClass();
     }
@@ -270,7 +280,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return null;
     }
 
-    public Class getComponentType()
+    public Class<?> getComponentType()
     {
         return target.getClass().getComponentType();
     }
@@ -333,6 +343,14 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
             isMap = true;
         }
         return super.put(key, value);
+    }
+
+    public Object setValue(Object o) {
+        return this.put((K) VALUE, (V) o);
+    }
+
+    public Object getValue() {
+        return this.get(VALUE);
     }
 
     public void clear()

@@ -4,11 +4,7 @@ import org.junit.jupiter.api.Test
 
 import java.sql.Timestamp
 
-import static org.junit.jupiter.api.Assertions.assertEquals
-import static org.junit.jupiter.api.Assertions.assertNotSame
-import static org.junit.jupiter.api.Assertions.assertNull
-import static org.junit.jupiter.api.Assertions.assertThrows
-import static org.junit.jupiter.api.Assertions.assertTrue
+import static org.junit.jupiter.api.Assertions.*
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -565,7 +561,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(null, new ArrayDeque<JsonObject<String,Object>>(), [:])
+            reader.read(null, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -581,7 +577,7 @@ class TestDates
         Date now = new Date()
         String nowStr = now.toString()
         Readers.DateReader reader = new Readers.DateReader()
-        Date now2 = reader.read(nowStr, new ArrayDeque<JsonObject<String,Object>>(), [:])
+        Date now2 = reader.read(nowStr, new ArrayDeque<JsonObject>(), [:])
         assert nowStr == now2.toString()
     }
 
@@ -590,7 +586,7 @@ class TestDates
     {
         String date = "9 July 1930 11:02-05:00"
         Readers.DateReader reader = new Readers.DateReader()
-        Date then = reader.read(date, new ArrayDeque<JsonObject<String,Object>>(), [:])
+        Date then = reader.read(date, new ArrayDeque<JsonObject>(), [:])
 
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone('UTC'))
         cal.clear()
@@ -603,7 +599,7 @@ class TestDates
     {
         String date = "sat 6 Jun 2015"
         Readers.DateReader reader = new Readers.DateReader()
-        Date date1 = reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+        Date date1 = reader.read(date, new ArrayDeque<JsonObject>(), [:])
 
         Calendar c = Calendar.getInstance()
         c.setTime(date1)
@@ -619,7 +615,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -635,7 +631,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -651,7 +647,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -667,7 +663,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -683,7 +679,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -699,7 +695,7 @@ class TestDates
         Readers.DateReader reader = new Readers.DateReader()
         try
         {
-            reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+            reader.read(date, new ArrayDeque<JsonObject>(), [:])
             fail()
         }
         catch (JsonIoException e)
@@ -713,7 +709,7 @@ class TestDates
     {
         String date = "2015/9/30 20:55Z"
         Readers.DateReader reader = new Readers.DateReader()
-        Date date1 = reader.read(date, new ArrayDeque<JsonObject<String, Object>>(), [:])
+        Date date1 = reader.read(date, new ArrayDeque<JsonObject>(), [:])
         // Not having exception while including the 'Z' is the test (no assertion)
     }
 }

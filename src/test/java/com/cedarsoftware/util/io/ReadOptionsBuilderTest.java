@@ -168,7 +168,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReaderMap() {
-        Map<Class, JsonReader.JsonClassReader> map = new HashMap<>();
+        Map<Class<?>, JsonReader.JsonClassReader> map = new HashMap<>();
 
         var options = new ReadOptionsBuilder()
                 .withCustomReaders(map)
@@ -245,7 +245,7 @@ class ReadOptionsBuilderTest {
     }
     @Test
     void withNonCustomizableClass_addsAdditionalUniqueClasses() {
-        Collection<Class> list = List.of(HashMap.class, String.class);
+        Collection<Class<?>> list = List.of(HashMap.class, String.class);
 
         var options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
@@ -257,7 +257,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_READER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
+        var collection = (Collection<Class<?>>) options.get(NOT_CUSTOM_READER_MAP);
 
         assertThat(collection)
                 .containsExactlyInAnyOrderElementsOf(List.of(String.class, HashMap.class, Map.class));
