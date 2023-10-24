@@ -1,7 +1,20 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -772,8 +785,19 @@ public class ObjectResolver extends Resolver
 
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null) {
-            Object target = classFactory.newInstance(c, o, new HashMap());
 
+            JsonObject job = null;
+
+            if (o instanceof JsonObject) {
+                job = (JsonObject) o;
+            } else {
+                job = new JsonObject();
+                job.setValue(o);
+            }
+
+            Object target = classFactory.newInstance(c, job);
+
+            // NOTE: should we set target on job or is this safe?
             if (classFactory.isObjectFinal()) {
                 return target;
             }

@@ -261,7 +261,7 @@ public class CollectionTests {
     @Test
     public void testCollectionWithParameterizedTypes() {
         String json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[{\"x\":1,\"y\":2},{\"x\":10,\"y\":20}],\"bar\":[{\"x\":3,\"y\":4}, {\"x\":30,\"y\":40}]}}";
-        ParameterizedCollection pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        ParameterizedCollection pCol = JsonReader.jsonToJava(json);
         Set<Point> points = pCol.getContent().get("foo");
         Assertions.assertNotNull(points);
         Assertions.assertEquals(2, points.size());

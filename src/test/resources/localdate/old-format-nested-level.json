@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.factory.LocalDateFactoryTests$NestedLocalDate",
+  "@type": "com.cedarsoftware.util.io.models.NestedLocalDate",
   "date1": {
     "year": 2014,
     "month": 6,

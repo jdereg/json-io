@@ -1,8 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalDate;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,21 +81,43 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         assertThat(result).isEqualTo(date);
     }
 
-    public static class NestedLocalDate {
-        public LocalDate date1;
-        public LocalDate date2;
-        public String holiday;
-        public Long value;
+    private static Stream<Arguments> checkDifferentFormatsByFile() {
+        return Stream.of(
+                Arguments.of("old-format-top-level.json", 2023, 4, 5),
+                Arguments.of("old-format-long.json", 2023, 4, 5)
+        );
+    }
 
-        public NestedLocalDate(LocalDate date1, LocalDate date2) {
-            this.holiday = "Festivus";
-            this.value = 999L;
-            this.date1 = date1;
-            this.date2 = date2;
-        }
+    @ParameterizedTest
+    @MethodSource("checkDifferentFormatsByFile")
+    void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
+        String json = loadJsonForTest(fileName);
+        LocalDate localDate = TestUtil.readJsonObject(json);
 
-        public NestedLocalDate(LocalDate date) {
-            this(date, date);
-        }
+        assertThat(localDate)
+                .hasYear(year)
+                .hasMonthValue(month)
+                .hasDayOfMonth(day);
+    }
+
+    @Test
+    void testOldFormat_nestedLevel() {
+
+        String json = loadJsonForTest("old-format-nested-level.json");
+        NestedLocalDate nested = TestUtil.readJsonObject(json);
+
+        assertThat(nested.date1)
+                .hasYear(2014)
+                .hasMonthValue(6)
+                .hasDayOfMonth(13);
+
+        assertThat(nested.date2)
+                .hasYear(2024)
+                .hasMonthValue(9)
+                .hasDayOfMonth(12);
+    }
+
+    private String loadJsonForTest(String fileName) {
+        return TestUtil.fetchResource("localdate/" + fileName);
     }
 }

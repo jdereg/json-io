@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.TestUtil;
+import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -26,7 +27,7 @@ class LocalDateFactoryTests {
         var factory = new LocalDateFactory();
         var jsonObject = buildJsonObject(year, month, day);
 
-        LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject, null);
+        LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)
@@ -39,7 +40,7 @@ class LocalDateFactoryTests {
         var jsonObject = new JsonObject();
         jsonObject.put("value", "2023-09-05");
 
-        LocalDate time = factory.newInstance(LocalDate.class, jsonObject, null);
+        LocalDate time = factory.newInstance(LocalDate.class, jsonObject);
 
         assertThat(time)
                 .hasYear(2023)
@@ -70,7 +71,7 @@ class LocalDateFactoryTests {
     void testOldFormat_nestedLevel() {
 
         String json = loadJsonForTest("old-format-nested-level.json");
-        LocalDateFactoryTests.NestedLocalDate nested = TestUtil.toJava(json);
+        NestedLocalDate nested = TestUtil.toJava(json);
 
         assertThat(nested.date1)
                 .hasYear(2014)
@@ -82,25 +83,6 @@ class LocalDateFactoryTests {
                 .hasMonthValue(9)
                 .hasDayOfMonth(12);
     }
-
-    public static class NestedLocalDate {
-        public LocalDate date1;
-        public LocalDate date2;
-        public String holiday;
-        public Long value;
-
-        public NestedLocalDate(LocalDate date1, LocalDate date2) {
-            this.holiday = "Festivus";
-            this.value = 999L;
-            this.date1 = date1;
-            this.date2 = date2;
-        }
-
-        public NestedLocalDate(LocalDate date) {
-            this(date, date);
-        }
-    }
-
 
     private String loadJsonForTest(String fileName) {
         return TestUtil.fetchResource("localdate/" + fileName);
