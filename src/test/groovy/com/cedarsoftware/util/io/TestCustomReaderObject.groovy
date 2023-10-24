@@ -40,7 +40,7 @@ class TestCustomReaderObject
 	{
 		TestCustomWriter.Person p = TestCustomWriter.createTestPerson();
 		String json = JsonWriter.objectToJson(p);
-		TestCustomWriter.Person pRead = TestUtil.readJsonObject(json, [(CustomDataClass.class):new CustomReader()]) as TestCustomWriter.Person
+		TestCustomWriter.Person pRead = TestUtil.toJava(json, [(CustomDataClass.class):new CustomReader()]) as TestCustomWriter.Person
 		assert p.equals(pRead)
 	}
 }

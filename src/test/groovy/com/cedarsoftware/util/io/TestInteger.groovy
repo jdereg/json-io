@@ -56,9 +56,9 @@ class TestInteger
     void testInteger()
     {
         ManyIntegers test = new ManyIntegers()
-        String json = TestUtil.getJsonString(test)
+        String json = TestUtil.toJson(test)
         TestUtil.printLine("json = " + json)
-        ManyIntegers that = (ManyIntegers) TestUtil.readJsonObject(json)
+        ManyIntegers that = (ManyIntegers) TestUtil.toJava(json)
 
         assertTrue(that._arrayElement.equals(-1))
         assertTrue(that._polyRefTarget.equals(710))

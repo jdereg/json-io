@@ -112,7 +112,7 @@ class TestMapOfMaps
     {
         String className = PointMap.class.name
         String json = '{"@type":"' + className + '","points":{"@type":"java.util.HashMap","@keys":[{"x":10,"y":20}],"@items":[{"x":1,"y":2}]}}'
-        PointMap pointMap = (PointMap) TestUtil.readJsonObject(json)
+        PointMap pointMap = (PointMap) TestUtil.toJava(json)
         assertTrue(pointMap.points.size() == 1)
         Point p1 = pointMap.points.get(new Point(10, 20))
         assertTrue(p1.x == 1 && p1.y == 2)
@@ -259,7 +259,7 @@ class TestMapOfMaps
         stuff.put("b", testObj)
         stuff.put("c", testObj)
         stuff.put(testObj, 1.0f)
-        String json = TestUtil.getJsonString(stuff)
+        String json = TestUtil.toJson(stuff)
         TestUtil.printLine("json=" + json)
 
         Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
@@ -283,9 +283,9 @@ class TestMapOfMaps
         TestUtil.printLine("cal=" + cal)
         Class strClass = String.class
         Object[] prims = [true, Boolean.TRUE, (byte)8, (short)1024, 131072, 16777216, 3.14, 3.14f, 'x', "hello", date, cal, strClass] as Object[]
-        String json = TestUtil.getJsonString(prims)
+        String json = TestUtil.toJson(prims)
         TestUtil.printLine("json=" + json)
-        Object[] javaObjs = (Object[]) TestUtil.readJsonObject(json)
+        Object[] javaObjs = (Object[]) TestUtil.toJava(json)
         assertTrue(prims.length == javaObjs.length)
 
         for (int i=0; i < javaObjs.length; i ++)
@@ -376,7 +376,7 @@ class TestMapOfMaps
         TestObject test = new TestObject("T.O.")
         TestObject child = new TestObject("child")
         test._other = child
-        String json = TestUtil.getJsonString(test)
+        String json = TestUtil.toJson(test)
         TestUtil.printLine("json=" + json)
         Map root = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
         JsonReader reader = new JsonReader()
@@ -396,8 +396,8 @@ class TestMapOfMaps
                 4L:'echo'
         ]
 
-        String json = TestUtil.getJsonString(simple)
-        Map back = TestUtil.readJsonObject(json)
+        String json = TestUtil.toJson(simple)
+        Map back = TestUtil.toJava(json)
         assert back[0L] == 'alpha'
         assert back[4L] == 'echo'
     }
@@ -410,8 +410,8 @@ class TestMapOfMaps
                 (true):'beta'
         ]
 
-        String json = TestUtil.getJsonString(simple)
-        Map back = TestUtil.readJsonObject(json)
+        String json = TestUtil.toJson(simple)
+        Map back = TestUtil.toJava(json)
         assert back[(false)] == 'alpha'
         assert back[(true)] == 'beta'
     }
@@ -425,8 +425,8 @@ class TestMapOfMaps
                 2.0d:'charlie',
         ]
 
-        String json = TestUtil.getJsonString(simple)
-        Map back = TestUtil.readJsonObject(json)
+        String json = TestUtil.toJson(simple)
+        Map back = TestUtil.toJava(json)
         assert back[0.0d] == 'alpha'
         assert back[1.0d] == 'beta'
         assert back[2.0d] == 'charlie'
@@ -441,10 +441,10 @@ class TestMapOfMaps
                 charlie:2L
         ]
 
-        String json = TestUtil.getJsonString(simple)
+        String json = TestUtil.toJson(simple)
         assert !json.contains(JsonObject.KEYS)
         assert !json.contains('@items')
-        Map back = TestUtil.readJsonObject(json)
+        Map back = TestUtil.toJava(json)
         assert back.alpha == 0L
         assert back.beta == 1L
         assert back.charlie == 2L

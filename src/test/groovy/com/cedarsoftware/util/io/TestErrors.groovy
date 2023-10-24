@@ -4,7 +4,6 @@ import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertThrows
-import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,7 +28,7 @@ class TestErrors
     @Test
     void testBadJson()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('["bad JSON input"')})
+        assertThrows(Exception.class, { TestUtil.toJava('["bad JSON input"')})
     }
 
     @Test
@@ -206,12 +205,12 @@ class TestErrors
     void testBadType()
     {
         String json = '{"@type":"non.existent.class.Non"}'
-        Map map = (Map) TestUtil.readJsonObject(json)
+        Map map = (Map) TestUtil.toJava(json)
         assert map.size() == 0
 
         // Bad class inside a Collection
         json = '{"@type":"java.util.ArrayList","@items":[null, true, {"@type":"bogus.class.Name", "fingers":5}]}'
-        List list = (List) TestUtil.readJsonObject(json)
+        List list = (List) TestUtil.toJava(json)
         assert list.size() == 3
         assert list[0] == null
         assert list[1]
@@ -240,11 +239,11 @@ class TestErrors
         AnimalHolder h = new AnimalHolder()
         h.dog = new Dog()
 
-        String json = TestUtil.getJsonString(h)
+        String json = TestUtil.toJson(h)
         json = json.replace('$Dog', '$BadDog');
        try
         {
-            TestUtil.readJsonObject(json)
+            TestUtil.toJava(json)
         }
         catch (Exception e)
         {
@@ -260,69 +259,69 @@ class TestErrors
         str.append("[\"\\")
         str.append("u000r\"]")
 
-        assertThrows(Exception.class, { TestUtil.readJsonObject(str.toString() )})
+        assertThrows(Exception.class, { TestUtil.toJava(str.toString() )})
     }
 
     @Test
     void testBadValue()
     {
         String json = '{"field":19;}'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
 
         json = '{"field":'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
 
         json = '{"field":joe'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
 
         json = '{"field":trux}'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
 
         json = '{"field":tru'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
     }
 
     @Test
     void testStringEscape()
     {
         String json = '["escaped slash \\\' should result in a single /"]'
-        TestUtil.readJsonObject(json)
+        TestUtil.toJava(json)
 
         json = '["escaped slash \\/ should result in a single /"]'
-        TestUtil.readJsonObject(json)
+        TestUtil.toJava(json)
 
         json = '["escaped slash \\x should result in a single /"]'
-        assertThrows(Exception.class, { TestUtil.readJsonObject(json )})
+        assertThrows(Exception.class, { TestUtil.toJava(json )})
     }
 
     @Test
     void testClassMissingValue()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"class"}]' )})
+        assertThrows(Exception.class, { TestUtil.toJava('[{"@type":"class"}]' )})
     }
 
     @Test
     void testCalendarMissingValue()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"java.util.Calendar"}]' )})
+        assertThrows(Exception.class, { TestUtil.toJava('[{"@type":"java.util.Calendar"}]' )})
     }
 
     @Test
     void testBadFormattedCalendar()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]' )})
+        assertThrows(Exception.class, { TestUtil.toJava('[{"@type":"java.util.GregorianCalendar","value":"2012-05-03T12:39:45.1X5-0400"}]' )})
     }
 
     @Test
     void testEmptyClassName()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('{"@type":""}' )})
+        assertThrows(Exception.class, { TestUtil.toJava('{"@type":""}' )})
     }
 
     @Test
     void testBadBackRef()
     {
-        assertThrows(Exception.class, { TestUtil.readJsonObject('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}' )})
+        assertThrows(Exception.class, { TestUtil.toJava('{"@type":"java.util.ArrayList","@items":[{"@ref":1}]}' )})
     }
 
     @Test

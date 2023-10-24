@@ -84,9 +84,9 @@ class TestSet
     {
         ManySets set = new ManySets()
         set.init()
-        String json = TestUtil.getJsonString(set)
+        String json = TestUtil.toJson(set)
 
-        ManySets testSet = (ManySets) TestUtil.readJsonObject(json)
+        ManySets testSet = (ManySets) TestUtil.toJava(json)
         TestUtil.printLine("json = " + json)
 
         assertTrue(testSet._treeSet.size() == 26)
@@ -101,9 +101,9 @@ class TestSet
         testSet._enumSet.remove(ManySets.EnumValues.E1)
         testSet._enumSet.remove(ManySets.EnumValues.E2)
         testSet._enumSet.remove(ManySets.EnumValues.E3)
-        json = TestUtil.getJsonString(testSet)
+        json = TestUtil.toJson(testSet)
         TestUtil.printLine(json);
-        testSet = (ManySets) TestUtil.readJsonObject(json)
+        testSet = (ManySets) TestUtil.toJava(json)
         // TODO: This line throws a ClassCastException - the Enum being added is not the same type as the one used to create the empty EnumSet
 //        testSet._enumSet.add(ManySets.EnumValues.E1)
     }

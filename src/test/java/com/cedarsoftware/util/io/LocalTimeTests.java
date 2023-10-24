@@ -84,7 +84,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int hour, int minute, int second, int nano) {
         String json = loadJsonForTest(fileName);
-        LocalTime localDate = TestUtil.readJsonObject(json);
+        LocalTime localDate = TestUtil.toJava(json);
 
         assertLocalTime(localDate, hour, minute, second, nano);
     }
@@ -92,7 +92,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     @Test
     void testOldFormat_nestedLevel() {
         String json = loadJsonForTest("old-format-nested-in-object.json");
-        NestedLocalTime nested = TestUtil.readJsonObject(json);
+        NestedLocalTime nested = TestUtil.toJava(json);
 
         assertLocalTime(nested.time1, 9, 12, 15, 999999);
     }

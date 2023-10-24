@@ -3,11 +3,9 @@ package com.cedarsoftware.util.io
 import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType
 import static org.assertj.core.api.Assertions.assertThatNoException
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertFalse
-import static org.junit.jupiter.api.Assertions.assertThrows
 import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
@@ -56,18 +54,18 @@ class TestTransient
         person.lname = "DeRegnaucourt"
         person.buildFull()
 
-        String json = TestUtil.getJsonString(person)
+        String json = TestUtil.toJson(person)
         assert json.contains('fname')
         assert json.contains('lname')
         assert !json.contains('fullname')
 
-        json = TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'fullname']]] as Map)
+        json = TestUtil.toJson(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'fullname']]] as Map)
         assert json.contains('fname')
         assert json.contains('lname')
         assert json.contains('fullname')
 
         //'Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue'
-        assertThatNoException().isThrownBy({TestUtil.getJsonString(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'map']]] as Map) })
+        assertThatNoException().isThrownBy({TestUtil.toJson(person, [(JsonWriter.FIELD_SPECIFIERS):[(Transient1.class):['fname', 'lname', 'map']]] as Map) })
     }
 
     @Test
@@ -77,11 +75,11 @@ class TestTransient
         person.fname = "John"
         person.lname = "DeRegnaucourt"
 
-        String json = TestUtil.getJsonString(person)
+        String json = TestUtil.toJson(person)
         TestUtil.printLine("json = " + json)
         assertFalse(json.contains("fullname"))
 
-        person = (Transient1) TestUtil.readJsonObject(json)
+        person = (Transient1) TestUtil.toJava(json)
         assertTrue(person.fullname == null)
     }
 
@@ -95,7 +93,7 @@ class TestTransient
         String json = JsonWriter.objectToJson(person, [FIELD_SPECIFIERS:[(Transient1.class) : ['fname', 'lname','fullname']]] as Map)
         assert json.contains("fullname")
 
-        person = (Transient1) TestUtil.readJsonObject(json)
+        person = (Transient1) TestUtil.toJava(json)
         assertTrue(person.fullname == 'John DeRegnaucourt')
     }
 
@@ -112,11 +110,11 @@ class TestTransient
         trans.backup = new TestObject("Roswell")
         trans.main = trans.backup;
 
-        String json = TestUtil.getJsonString(trans)
+        String json = TestUtil.toJson(trans)
         TestUtil.printLine("json = " + json)
         assertFalse(json.contains("backup"))
 
-        trans = (Transient2) TestUtil.readJsonObject(json)
+        trans = (Transient2) TestUtil.toJava(json)
         assertEquals(trans.main._name, "Roswell")
     }
 

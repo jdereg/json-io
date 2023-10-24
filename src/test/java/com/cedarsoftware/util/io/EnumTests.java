@@ -48,9 +48,9 @@ class EnumTests {
         expected.setTestEnum3(TestEnum3.A);
         expected.setTestEnum4(TestEnum4.B);
 
-        String json = TestUtil.getJsonString(expected, writeOptions);
+        String json = TestUtil.toJson(expected, writeOptions);
 
-        NestedEnum actual = TestUtil.readJsonObject(json);
+        NestedEnum actual = TestUtil.toJava(json);
 
         assertThat(actual.getTestEnum3()).isSameAs(expected.getTestEnum3());
         assertThat(actual.getTestEnum4()).isSameAs(expected.getTestEnum4());
@@ -61,13 +61,13 @@ class EnumTests {
     void testDuplicateRef(Map<String, Object> writeOptions) {
         DuplicateRefEnum expected = new DuplicateRefEnum(TestEnum3.A);
 
-        String json = TestUtil.getJsonString(expected, writeOptions);
+        String json = TestUtil.toJson(expected, writeOptions);
 
         assertThat(json)
                 .contains("@ref")
                 .contains("@i");
 
-        DuplicateRefEnum actual = TestUtil.readJsonObject(json);
+        DuplicateRefEnum actual = TestUtil.toJava(json);
 
         assertThat(actual.getEnum1())
                 .isSameAs(expected.getEnum1())
@@ -84,9 +84,9 @@ class EnumTests {
         input.addAll(List.of(TestEnum3.values()));
         input.addAll(List.of(ExternalEnum.values()));
 
-        String json = TestUtil.getJsonString(input, writeOptions);
+        String json = TestUtil.toJson(input, writeOptions);
 
-        Collection<Object> actual = TestUtil.readJsonObject(json);
+        Collection<Object> actual = TestUtil.toJava(json);
         assertThat(actual).containsExactlyInAnyOrderElementsOf(input);
     }
 
@@ -166,7 +166,7 @@ class EnumTests {
                 .writeEnumsAsObjects()
                 .build();
 
-        String json = TestUtil.getJsonString(x, options);
+        String json = TestUtil.toJson(x, options);
 
         var expected = loadJson("default-enum-standalone-with-privates.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
@@ -226,7 +226,7 @@ class EnumTests {
         String json = JsonWriter.objectToJson(mc);
         assertThat(json).contains("Dude");
 
-        SimpleClass actual = TestUtil.readJsonObject(json);
+        SimpleClass actual = TestUtil.toJava(json);
         assertThat(actual.getName()).isEqualTo("Dude");
         assertThat(actual.getMyEnum()).isEqualTo(SimpleEnum.ONE);
     }
@@ -483,22 +483,22 @@ class EnumTests {
     }
 
     private <T> T loadObject(String fileName) {
-        return (T) TestUtil.readJsonObject(loadJson(fileName));
+        return (T) TestUtil.toJava(loadJson(fileName));
     }
 
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnum(T input, Map<String, Object> writeOptions) {
-        String json = TestUtil.getJsonString(input);
-        Enum actual = TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(input);
+        Enum actual = TestUtil.toJava(json);
         assertThat(actual).isEqualTo(input);
         return (T) actual;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnumArray(T[] enumArray, Map<String, Object> writeOptions) {
-        String json = TestUtil.getJsonString(enumArray, writeOptions);
-        T[] actual = TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(enumArray, writeOptions);
+        T[] actual = TestUtil.toJava(json);
         assertThat(actual).isEqualTo(enumArray);
         return (T) actual;
     }

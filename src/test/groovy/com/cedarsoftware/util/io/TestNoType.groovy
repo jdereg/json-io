@@ -52,8 +52,8 @@ class TestNoType
         j.namesToAge.Aphrodite = 2499.0
         j.namesToAge.Zeus = cal.getTime()
 
-        String json = TestUtil.getJsonString(j)
-        String json2 = TestUtil.getJsonString(j, [(JsonWriter.TYPE):false])
+        String json = TestUtil.toJson(j)
+        String json2 = TestUtil.toJson(j, [(JsonWriter.TYPE):false])
         assert json != json2
         assert json2 == '{"name":"Zeus","things":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"],"namesToAge":{"Appollo":2500,"Hercules":2489,"Poseidon":"2502","Aphrodite":"2499.0","Zeus":-84243801600000},"stuff":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"]}'
     }

@@ -33,14 +33,14 @@ class TestForwardReferences
         two._other = one
         String pkg = TestObject.class.getName()
         String fwdRef = '[[{"@id":2,"@type":"' + pkg + '","_name":"Two","_other":{"@ref":1}}],[{"@id":1,"@type":"' + pkg + '","_name":"One","_other":{"@ref":2}}]]'
-        Object[] foo = (Object[]) TestUtil.readJsonObject(fwdRef)
+        Object[] foo = (Object[]) TestUtil.toJava(fwdRef)
         Object[] first = (Object[]) foo[0]
         Object[] second = (Object[]) foo[1]
         assertTrue(one.equals(second[0]))
         assertTrue(two.equals(first[0]))
 
         String json = '[{"@ref":2},{"@id":2,"@type":"int","value":5}]'
-        Object[] ints = (Object[]) TestUtil.readJsonObject(json)
+        Object[] ints = (Object[]) TestUtil.toJava(json)
         assertEquals((Integer)ints[0], 5)
         assertEquals((Integer) ints[1], 5)
 
@@ -50,7 +50,7 @@ class TestForwardReferences
         assertEquals((Integer)list.get(1), 5)
 
         json = '{"@type":"java.util.TreeSet","@items":[{"@type":"int","value":9},{"@ref":16},{"@type":"int","value":4},{"@id":16,"@type":"int","value":5}]}'
-        Set set = (Set) TestUtil.readJsonObject(json)
+        Set set = (Set) TestUtil.toJava(json)
         assertEquals(set.size(), 3)
         Iterator i = set.iterator()
         assertEquals((Integer)i.next(), 4)
@@ -58,7 +58,7 @@ class TestForwardReferences
         assertEquals((Integer)i.next(), 9)
 
         json = '{"@type":"java.util.HashMap","@keys":[1,2,3,4],"@items":[{"@type":"int","value":9},{"@ref":16},{"@type":"int","value":4},{"@id":16,"@type":"int","value":5}]}'
-        Map map = (Map) TestUtil.readJsonObject(json)
+        Map map = (Map) TestUtil.toJava(json)
         assertEquals(map.size(), 4)
         assertEquals((Integer)map.get(1L), 9)
         assertEquals((Integer)map.get(2L), 5)

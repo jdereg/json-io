@@ -45,11 +45,11 @@ class NoIdTest
         TestObject alpha = new TestObject("alpha");
         TestObject beta = new TestObject("beta");
         alpha._other = beta;
-        String json = TestUtil.getJsonString(alpha);
+        String json = TestUtil.toJson(alpha);
         assert !json.contains(ID);
 
         beta._other = alpha;
-        json = TestUtil.getJsonString(alpha);
+        json = TestUtil.toJson(alpha);
         assert TestUtil.count(json, ID) == 1;
     }
 }

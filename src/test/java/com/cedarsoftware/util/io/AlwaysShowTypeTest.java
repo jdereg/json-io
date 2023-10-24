@@ -35,7 +35,7 @@ class AlwaysShowTypeTest
         Map args = new HashMap<>();
         args.put(JsonWriter.TYPE, true);
         String json0 = JsonWriter.objectToJson(btc, args);
-        TestObject thatBtc = (TestObject) TestUtil.readJsonObject(json0);
+        TestObject thatBtc = (TestObject) TestUtil.toJava(json0);
         assertTrue(DeepEquals.deepEquals(btc, thatBtc));
         String json1 = JsonWriter.objectToJson(btc);
         assertTrue(json0.length() > json1.length());

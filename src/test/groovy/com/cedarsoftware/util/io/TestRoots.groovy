@@ -42,7 +42,7 @@ class TestRoots
         // Test Object[] as root element passed in
         Object[] foo = [new TestObject("alpha"), new TestObject("beta")] as Object[];
 
-        String jsonOut = TestUtil.getJsonString(foo)
+        String jsonOut = TestUtil.toJson(foo)
         TestUtil.printLine(jsonOut)
 
         Object[] bar = (Object[]) JsonReader.jsonToJava(jsonOut)
@@ -82,11 +82,11 @@ class TestRoots
     @Test
     void testRootTypes()
     {
-        assertEquals(25L, TestUtil.readJsonObject("25"))
-        assertEquals(25.0d, TestUtil.readJsonObject("25.0") as Double, 0.00001d)
-        assertEquals(true, TestUtil.readJsonObject("true"))
-        assertEquals(false, TestUtil.readJsonObject("false"))
-        assertEquals("foo", TestUtil.readJsonObject('"foo"'))
+        assertEquals(25L, TestUtil.toJava("25"))
+        assertEquals(25.0d, TestUtil.toJava("25.0") as Double, 0.00001d)
+        assertEquals(true, TestUtil.toJava("true"))
+        assertEquals(false, TestUtil.toJava("false"))
+        assertEquals("foo", TestUtil.toJava('"foo"'))
     }
 
     @Test
@@ -94,7 +94,7 @@ class TestRoots
     {
         // Test root JSON type as [ ]
         Object array = ['Hello'] as Object[]
-        String json = TestUtil.getJsonString(array)
+        String json = TestUtil.toJson(array)
         Object oa = JsonReader.jsonToJava(json)
         assertTrue(oa.getClass().isArray())
         assertTrue(((Object[]) oa)[0].equals("Hello"))
@@ -102,7 +102,7 @@ class TestRoots
         // Test root JSON type as { }
         Calendar cal = Calendar.getInstance()
         cal.set(1965, 11, 17)
-        json = TestUtil.getJsonString(cal)
+        json = TestUtil.toJson(cal)
         TestUtil.printLine("json = " + json)
         Object obj = JsonReader.jsonToJava(json)
         assertTrue(!obj.getClass().isArray())
@@ -123,10 +123,10 @@ class TestRoots
     @Test
     void testEmptyObject()
     {
-        Object o = TestUtil.readJsonObject('{}')
+        Object o = TestUtil.toJava('{}')
         assert JsonObject.class == o.getClass()
 
-        Object[] oa = (Object[]) TestUtil.readJsonObject('[{},{}]')
+        Object[] oa = (Object[]) TestUtil.toJava('[{},{}]')
         assert oa.length == 2
         assert JsonObject.class == oa[0].getClass()
         assert JsonObject.class == oa[1].getClass()

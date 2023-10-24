@@ -33,10 +33,10 @@ public class CollectionTests {
         TestUtil.printLine("\nTestJsonReaderWriter.testCollection()");
         ManyCollections obj = new ManyCollections();
         obj.init();
-        String jsonOut = TestUtil.getJsonString(obj);
+        String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        ManyCollections root = (ManyCollections) TestUtil.readJsonObject(jsonOut);
+        ManyCollections root = (ManyCollections) TestUtil.toJava(jsonOut);
 
         assertCollection(root);
 
@@ -184,14 +184,14 @@ public class CollectionTests {
     public void testReconstituteCollection2() {
         ManyCollections testCol = new ManyCollections();
         testCol.init();
-        String json0 = TestUtil.getJsonString(testCol);
+        String json0 = TestUtil.toJson(testCol);
         TestUtil.printLine("json0=" + json0);
         ManyCollections testCol2 = (ManyCollections) JsonReader.jsonToJava(json0);
 
-        String json1 = TestUtil.getJsonString(testCol2);
+        String json1 = TestUtil.toJson(testCol2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyCollections testCol3 = (ManyCollections) TestUtil.readJsonObject(json1);
+        ManyCollections testCol3 = (ManyCollections) TestUtil.toJava(json1);
         assertCollection(testCol3);// Re-written from Map of Maps and re-loaded correctly
         Assertions.assertTrue(json0.equals(json1));
     }
@@ -215,12 +215,12 @@ public class CollectionTests {
         list.add("a");
         list.add(null);
         list.add("b");
-        String json = TestUtil.getJsonString(list);
-        List list2 = TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(list);
+        List list2 = TestUtil.toJava(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
 
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[\"a\",{},\"b\"]}";
-        list2 = TestUtil.readJsonObject(json);
+        list2 = TestUtil.toJava(json);
         Assertions.assertTrue(list2.size() == 3);
         Assertions.assertTrue(list2.get(0).equals("a"));
         Assertions.assertEquals(list2.get(1).getClass(), JsonObject.class);
@@ -235,9 +235,9 @@ public class CollectionTests {
         list.add(o);
 
         // Backward reference
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        List list2 = TestUtil.readJsonObject(json);
+        List list2 = TestUtil.toJava(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
 
         // Forward reference
@@ -253,8 +253,8 @@ public class CollectionTests {
         col.add(Integer.valueOf(7));
         col.add(Short.valueOf((short) 9));
         col.add(Float.valueOf(3.14f));
-        String json = TestUtil.getJsonString(col);
-        Collection col1 = TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(col);
+        Collection col1 = TestUtil.toJava(json);
         Assertions.assertTrue(col.equals(col1));
     }
 
@@ -299,7 +299,7 @@ public class CollectionTests {
         String className = CollectionTests.class.getName();
         String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
         TestUtil.printLine("json = " + json);
-        emptyCols = (EmptyCols) TestUtil.readJsonObject(json);
+        emptyCols = (EmptyCols) TestUtil.toJava(json);
 
         Assertions.assertTrue(emptyCols.getCol().size() == 0);
         Assertions.assertTrue(emptyCols.getCol() instanceof ArrayList);
@@ -322,7 +322,7 @@ public class CollectionTests {
 
         List arrayList = new ArrayList<>();
         arrayList.add(TestEnum4.B);
-        String json = TestUtil.getJsonString(arrayList, writeOptions);
+        String json = TestUtil.toJson(arrayList, writeOptions);
         TestUtil.printLine(json);
         String className = CollectionTests.class.getName();
         Assertions.assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"name\":\"B\",\"age\":21,\"foo\":\"bar\"}]}", json);
@@ -334,7 +334,7 @@ public class CollectionTests {
         Map writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
 
         List list = List.of(TestEnum4.B);
-        String json = TestUtil.getJsonString(list, writeOptions);
+        String json = TestUtil.toJson(list, writeOptions);
         Assertions.assertEquals("{\"@type\":\"java.util.ImmutableCollections$List12\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.CollectionTests$TestEnum4\",\"name\":\"B\"}]}", json);
     }
 
@@ -342,7 +342,7 @@ public class CollectionTests {
     public void testGenericInfoCollection() {
         String className = PointList.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
-        PointList list = (PointList) TestUtil.readJsonObject(json);
+        PointList list = (PointList) TestUtil.toJava(json);
         Assertions.assertTrue(list.getPoints().size() == 1);
         Point p1 = list.getPoints().get(0);
         Assertions.assertTrue(p1.getX() == 1 && p1.getY() == 2);
@@ -353,9 +353,9 @@ public class CollectionTests {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         List list = new ArrayList<>();
         list.add(locale);
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = (List) TestUtil.readJsonObject(json);
+        list = (List) TestUtil.toJava(json);
         Assertions.assertTrue(list.size() == 1);
         Assertions.assertTrue(list.get(0).equals(locale));
     }
@@ -368,7 +368,7 @@ public class CollectionTests {
         stuff.add(testObj);
         stuff.add(testObj);
         stuff.add(new Date());
-        String json = TestUtil.getJsonString(stuff);
+        String json = TestUtil.toJson(stuff);
         TestUtil.printLine("json=" + json);
 
         List map = (List) JsonReader.jsonToJava(json);
@@ -379,7 +379,7 @@ public class CollectionTests {
 
         List list = new ArrayList<>();
         list.add(new Object[]{123L, null, true, "Hello"});
-        json = TestUtil.getJsonString(list);
+        json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
         map = (List) JsonReader.jsonToJava(json);
         items = map.toArray();
@@ -408,14 +408,14 @@ public class CollectionTests {
         ((ArrayList) two).add("bella");
         ((ArrayList) two).add(objs);
 
-        String json0 = TestUtil.getJsonString(two);
+        String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
         List map = (List) JsonReader.jsonToJava(json0);
         map.hashCode();
-        String json1 = TestUtil.getJsonString(map);
+        String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
-        List colOuter = (List) TestUtil.readJsonObject(json1);
+        List colOuter = (List) TestUtil.toJava(json1);
         Assertions.assertTrue(colOuter.get(0).equals(colOuter.get(2)));
         Assertions.assertTrue("bella".equals(colOuter.get(1)));
         List col1 = (List) colOuter.get(0);
@@ -439,19 +439,19 @@ public class CollectionTests {
     @Test
     public void testReconstituteEmptyCollection() {
         Collection empty = new ArrayList<>();
-        String json0 = TestUtil.getJsonString(empty);
+        String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
         List map = (List) JsonReader.jsonToJava(json0);
         Assertions.assertTrue(map != null);
         Assertions.assertTrue(map.isEmpty());
-        String json1 = TestUtil.getJsonString(map);
+        String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
         Assertions.assertTrue(json0.equals(json1));
 
         Object[] list = new Object[]{empty, empty};
-        json0 = TestUtil.getJsonString(list);
+        json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
         Object[] array = (Object[]) JsonReader.jsonToJava(json0);
@@ -467,7 +467,7 @@ public class CollectionTests {
     @Test
     public void testUntypedCollections() {
         Object[] poly = new Object[]{"Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"};
-        String json = TestUtil.getJsonString(poly);
+        String json = TestUtil.toJson(poly);
         TestUtil.printLine("json=" + json);
         Assertions.assertTrue("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]".equals(json));
         Collection col = new ArrayList<>();
@@ -478,7 +478,7 @@ public class CollectionTests {
         ((ArrayList) col).add(Boolean.FALSE);
         ((ArrayList) col).add(null);
         ((ArrayList) col).add(Integer.valueOf(7));
-        json = TestUtil.getJsonString(col);
+        json = TestUtil.toJson(col);
         TestUtil.printLine("json=" + json);
         Assertions.assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[\"string\",16,3.14159,true,false,null,{\"@type\":\"int\",\"value\":7}]}", json);
     }
@@ -486,12 +486,12 @@ public class CollectionTests {
     @Test
     public void testEmptyArrayList() {
         EmptyArrayList x = new EmptyArrayList();
-        String json = TestUtil.getJsonString(x);
+        String json = TestUtil.toJson(x);
         TestUtil.printLine(json);
         Assertions.assertTrue(json.contains("list\":[]"));
 
         EmptyArrayList obj = (EmptyArrayList) JsonReader.jsonToJava(json);
-        json = TestUtil.getJsonString(obj);
+        json = TestUtil.toJson(obj);
         TestUtil.printLine(json);
         Assertions.assertTrue(json.contains("list\":[]"));
     }

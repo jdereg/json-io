@@ -103,9 +103,9 @@ class TestInnerCollections
         map.a = 'alpha'
         map.b = 'beta'
         map.c = 'charlie'
-        String json = TestUtil.getJsonString(map.keySet())
+        String json = TestUtil.toJson(map.keySet())
 
-        Set set = TestUtil.readJsonObject(json) as Set
+        Set set = TestUtil.toJava(json) as Set
         assert set.size() == 3
         assert set.contains('a')
         assert set.contains('b')
@@ -117,9 +117,9 @@ class TestInnerCollections
         map.a = 'alpha'
         map.b = 'beta'
         map.c = 'charlie'
-        String json = TestUtil.getJsonString(map.values())
+        String json = TestUtil.toJson(map.values())
 
-        List list = TestUtil.readJsonObject(json) as List
+        List list = TestUtil.toJava(json) as List
         assert list.size() == 3
         assert list.contains('alpha')
         assert list.contains('beta')

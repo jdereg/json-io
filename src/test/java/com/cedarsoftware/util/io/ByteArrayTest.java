@@ -31,8 +31,8 @@ class ByteArrayTest
         byte[] bytes = new byte[128 * 1024];
         Random r = new Random();
         r.nextBytes(bytes);
-        String json = TestUtil.getJsonString(bytes);
-        byte[] bytes2 = TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(bytes);
+        byte[] bytes2 = TestUtil.toJava(json);
 
         for (int i = 0; i < bytes.length; i++)
         {

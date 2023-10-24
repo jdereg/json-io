@@ -48,7 +48,7 @@ class TestUsingSunMisc
                 return Dog.Shoe.construct()
             }
         })
-        TestUtil.readJsonObject(workaroundString, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
+        TestUtil.toJava(workaroundString, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
             {
                 // no need to do anything special
@@ -64,7 +64,7 @@ class TestUsingSunMisc
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.readJsonObject(json, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
+        TestUtil.toJava(json, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
             {
                 return jOb

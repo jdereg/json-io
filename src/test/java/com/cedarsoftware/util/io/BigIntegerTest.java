@@ -43,7 +43,7 @@ class BigIntegerTest
     void testAssignBigInteger()
     {
         String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"314159\",\"fromLong\":314159,\"fromBoolean\":true,\"fromStringObj\":{\"@type\":\"java.math.BigInteger\",\"value\":\"314159\"},\"fromLongObj\":{\"@type\":\"java.math.BigInteger\",\"value\":314159},\"fromBooleanObj\":{\"@type\":\"java.math.BigInteger\",\"value\":false},\"fromBigDecObj\":{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigDecimal\",\"value\":9}},\"fromBigIntObj\":{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":99}},\"values\":[\"314159\",314159,true,{\"@type\":\"java.math.BigInteger\",\"value\":\"314159\"},{\"@type\":\"java.math.BigInteger\",\"value\":314159},{\"@type\":\"java.math.BigInteger\",\"value\":true},{\"@type\":\"java.math.BigInteger\",\"value\":{\"@type\":\"java.math.BigInteger\",\"value\":999}}]}";
-        TestBigIntegerField tbi = TestUtil.readJsonObject(json);
+        TestBigIntegerField tbi = TestUtil.toJava(json);
         assertEquals(new BigInteger("314159"), tbi.fromString);
         assertEquals(new BigInteger("314159"), tbi.fromLong);
         assertEquals(new BigInteger("1"), tbi.fromBoolean);
@@ -64,8 +64,8 @@ class BigIntegerTest
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
         Map map = JsonReader.jsonToJava(json, args);
-        json = TestUtil.getJsonString(map);
-        tbi = TestUtil.readJsonObject(json);
+        json = TestUtil.toJson(map);
+        tbi = TestUtil.toJava(json);
         assertEquals(new BigInteger("314159"), tbi.fromString);
         assertEquals(new BigInteger("314159"), tbi.fromLong);
         assertEquals(new BigInteger("1"), tbi.fromBoolean);
@@ -84,7 +84,7 @@ class BigIntegerTest
         assertEquals(new BigInteger("999"), tbi.values[6]);
 
         json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
-        tbi = TestUtil.readJsonObject(json);
+        tbi = TestUtil.toJava(json);
         assertNull(tbi.fromString);
     }
 
@@ -103,9 +103,9 @@ class BigIntegerTest
     {
         String s = "123456789012345678901234567890";
         BigInteger bigInt = new BigInteger(s);
-        String json = TestUtil.getJsonString(bigInt);
+        String json = TestUtil.toJson(bigInt);
         TestUtil.printLine("json=" + json);
-        bigInt = TestUtil.readJsonObject(json);
+        bigInt = TestUtil.toJava(json);
         assertEquals(bigInt, new BigInteger(s));
     }
 
@@ -116,13 +116,13 @@ class BigIntegerTest
         BigInteger bigInt = new BigInteger(s);
         Object[] bigInts = new Object[] {bigInt, bigInt};
         BigInteger[] typedBigInts = new BigInteger[] {bigInt, bigInt};
-        String json = TestUtil.getJsonString(bigInts);
+        String json = TestUtil.toJson(bigInts);
         TestUtil.printLine("json=" + json);
-        bigInts = TestUtil.readJsonObject(json);
+        bigInts = TestUtil.toJava(json);
         assertEquals(2, bigInts.length);
         assertNotSame(bigInts[0], bigInts[1]);
         assertEquals(new BigInteger(s), bigInts[0]);
-        json = TestUtil.getJsonString(typedBigInts);
+        json = TestUtil.toJson(typedBigInts);
         TestUtil.printLine("json=" + json);
         assertEquals(2, typedBigInts.length);
         assertSame(typedBigInts[0], typedBigInts[1]);
@@ -137,9 +137,9 @@ class BigIntegerTest
         List<BigInteger> list = new ArrayList<>();
         list.add(bigInt);
         list.add(bigInt);
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.readJsonObject(json);
+        list = TestUtil.toJava(json);
         assertEquals(2, list.size());
         assertEquals(list.get(0), new BigInteger(s));
         assertNotSame(list.get(0), list.get(1));
@@ -153,7 +153,7 @@ class BigIntegerTest
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
         try
         {
-            TestUtil.readJsonObject(json);
+            TestUtil.toJava(json);
             fail();
         }
         catch (JsonIoException e)
@@ -168,7 +168,7 @@ class BigIntegerTest
         String json = "{\"@type\":\"java.math.BigInteger\",\"value\":\"" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\"}";
-        BigInteger x = TestUtil.readJsonObject(json);
+        BigInteger x = TestUtil.toJava(json);
         assertEquals(new BigInteger("1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"), x);
     }

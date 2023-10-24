@@ -60,13 +60,13 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         Object expected = provideDuplicatesNestedInObject();
 
         // act
-        String json = TestUtil.getJsonString(expected);
+        String json = TestUtil.toJson(expected);
 
         assertThat(json)
                 .contains("@i")
                 .contains("@ref");
 
-        Object actual = TestUtil.readJsonObject(json);
+        Object actual = TestUtil.toJava(json);
 
         // assert
         assertDuplicatesNestedInObject(expected, actual);
@@ -100,13 +100,13 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         var expected = List.of(standalone, standalone, 5, "foo");
 
         // act
-        var json = TestUtil.getJsonString(expected);
+        var json = TestUtil.toJson(expected);
 
         assertThat(json)
                 .contains("@i")
                 .contains("@ref");
 
-        List<Object> actual = TestUtil.readJsonObject(json);
+        List<Object> actual = TestUtil.toJava(json);
 
         // assert
         assertDuplicatesInObjectArray(expected, actual);
@@ -151,13 +151,13 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         var expected = List.of(instance, provideT2(), provideT3(), provideT4(), instance);
 
         // act
-        var json = TestUtil.getJsonString(expected);
+        var json = TestUtil.toJson(expected);
 
         assertThat(json)
                 .contains("@i")
                 .contains("@ref");
 
-        List<T> actual = TestUtil.readJsonObject(json);
+        List<T> actual = TestUtil.toJava(json);
 
         // assert
         assertDuplicatesInCollection(expected, actual);
@@ -189,12 +189,12 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         var expected = Map.of("foo", instance, "bar", provideT2(), "qux", instance);
 
         // act
-        var json = TestUtil.getJsonString(expected);
+        var json = TestUtil.toJson(expected);
 
         assertThat(json).contains("@i")
                 .contains("@ref");
 
-        Map<String, T> actual = TestUtil.readJsonObject(json);
+        Map<String, T> actual = TestUtil.toJava(json);
 
         // assert
         assertAsDuplicateValuesInMap(expected, actual);

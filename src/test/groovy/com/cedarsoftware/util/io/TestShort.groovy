@@ -56,9 +56,9 @@ class TestShort
     void testShort()
     {
         ManyShorts test = new ManyShorts()
-        String json = TestUtil.getJsonString(test)
+        String json = TestUtil.toJson(test)
         TestUtil.printLine("json = " + json)
-        ManyShorts that = (ManyShorts) TestUtil.readJsonObject(json)
+        ManyShorts that = (ManyShorts) TestUtil.toJava(json)
 
         assertTrue(that._arrayElement.equals((short) -1))
         assertTrue(that._polyRefTarget.equals((short) 710))

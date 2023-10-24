@@ -59,7 +59,7 @@ class TestPrimitives
     void testPrimitivesSetWithStrings()
     {
         String json = '{"@type":"' + AllPrimitives.class.getName() + '","b":"true","bb":"true","by":"9","bby":"9","c":"B","cc":"B","d":"9.0","dd":"9.0","f":"9.0","ff":"9.0","i":"9","ii":"9","l":"9","ll":"9","s":"9","ss":"9"}'
-        AllPrimitives ap = (AllPrimitives) TestUtil.readJsonObject(json)
+        AllPrimitives ap = (AllPrimitives) TestUtil.toJava(json)
         assertTrue(ap.b)
         assertTrue(ap.bb)
         assertTrue(ap.by == 9)
@@ -82,7 +82,7 @@ class TestPrimitives
     void testAbilityToNullPrimitivesWithEmptyString()
     {
         String json = '{"@type":"' + AllPrimitives.class.getName() + '","b":"","bb":"","by":"","bby":"","c":"","cc":"","d":"","dd":"","f":"","ff":"","i":"","ii":"","l":"","ll":"","s":"","ss":""}'
-        AllPrimitives ap = (AllPrimitives) TestUtil.readJsonObject(json)
+        AllPrimitives ap = (AllPrimitives) TestUtil.toJava(json)
         assertFalse(ap.b)
         assertFalse(ap.bb)
         assertTrue(ap.by == 0)
@@ -161,7 +161,7 @@ class TestPrimitives
     void testAssignPrimitiveToString()
     {
         String json = '{"@type":"' + TestStringField.class.getName() + '","intField":16,"booleanField":true,"doubleField":345.12321,"nullField":null,"values":[10,true,3.14159,null]}'
-        TestStringField tsf = (TestStringField) TestUtil.readJsonObject(json)
+        TestStringField tsf = (TestStringField) TestUtil.toJava(json)
         assertEquals("16", tsf.intField)
         assertEquals("true", tsf.booleanField)
         assertEquals("345.12321", tsf.doubleField)

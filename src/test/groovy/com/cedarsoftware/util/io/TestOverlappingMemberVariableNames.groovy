@@ -78,10 +78,10 @@ class TestOverlappingMemberVariableNames
         outer.foo = outer.createInner(outer)           // Trickier with Groovy because of difficulty using nested inner class.
         outer.foo.name = "Jane Inner"
 
-        String json = TestUtil.getJsonString(outer)
+        String json = TestUtil.toJson(outer)
         TestUtil.printLine("json = " + json)
 
-        Outer x = (Outer) TestUtil.readJsonObject(json)
+        Outer x = (Outer) TestUtil.toJava(json)
         assertEquals(x.name, "Joe Outer")
         assertEquals(x.foo.name, "Jane Inner")
     }
@@ -93,15 +93,15 @@ class TestOverlappingMemberVariableNames
         child.childName = 'child'
         child.parentName = 'parent'
 
-        String json = TestUtil.getJsonString(child)
+        String json = TestUtil.toJson(child)
         TestUtil.printLine(json)
-        Child roundTrip = (Child) TestUtil.readJsonObject(json)
+        Child roundTrip = (Child) TestUtil.toJava(json)
 
         assertEquals(child.parentName, roundTrip.parentName)
         assertEquals(child.childName, roundTrip.childName)
 
         JsonObject jObj = (JsonObject)JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-        String json1 = TestUtil.getJsonString(jObj)
+        String json1 = TestUtil.toJson(jObj)
         TestUtil.printLine(json1)
         assertEquals(json, json1)
     }

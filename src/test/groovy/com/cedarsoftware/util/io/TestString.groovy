@@ -74,9 +74,9 @@ class TestString
     void testString()
     {
         ManyStrings test = new ManyStrings()
-        String jsonOut = TestUtil.getJsonString(test)
+        String jsonOut = TestUtil.toJson(test)
         TestUtil.printLine("json=" + jsonOut)
-        ManyStrings that = (ManyStrings) TestUtil.readJsonObject(jsonOut)
+        ManyStrings that = (ManyStrings) TestUtil.toJava(jsonOut)
 
         for (int i = 0; i < ManyStrings.MAX_UTF8_CHAR; i++)
         {
@@ -116,7 +116,7 @@ class TestString
         String s = '"root string"'
         Object o = JsonReader.jsonToJava(s, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals("root string", o)
-        o = TestUtil.readJsonObject(s)
+        o = TestUtil.toJava(s)
         assertEquals("root string", o)
     }
 
@@ -124,7 +124,7 @@ class TestString
     void testStringAsObject()
     {
         String json = '{"@type":"string","value":"Sledge Hammer"}'
-        String x = TestUtil.readJsonObject(json)
+        String x = TestUtil.toJava(json)
         assert x == 'Sledge Hammer'
     }
 
@@ -132,7 +132,7 @@ class TestString
     void testFrenchChar()
     {
         String json = '"Réunion"'
-        String x = TestUtil.readJsonObject(json)
+        String x = TestUtil.toJava(json)
         assert x == 'Réunion'
     }
 

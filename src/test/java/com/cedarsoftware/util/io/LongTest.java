@@ -29,9 +29,9 @@ public class LongTest
     public void testLong()
     {
         ManyLongs test = new ManyLongs();
-        String json = TestUtil.getJsonString(test);
+        String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyLongs that = TestUtil.readJsonObject(json);
+        ManyLongs that = TestUtil.toJava(json);
 
         Assertions.assertEquals(-1L, (long) that._arrayElement);
         Assertions.assertEquals(710L, that._polyRefTarget);

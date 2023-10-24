@@ -87,9 +87,9 @@ class AtomicLongTest
         List<AtomicLong> list = new ArrayList<>();
         list.add(atomicInt);
         list.add(atomicInt);
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.readJsonObject(json);
+        list = TestUtil.toJava(json);
         assert list.size() == 2;
         atomicInt = list.get(0);
         assert atomicInt.get() == new AtomicLong(12345).get();

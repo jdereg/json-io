@@ -219,8 +219,8 @@ class TestCustomWriter
     void testCustomWriter()
     {
         Person p = createTestPerson()
-        String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriter()]])
-        Map obj = TestUtil.readJsonMap(jsonCustom, [(JsonReader.CUSTOM_READER_MAP): [(Person.class): new CustomPersonReader()], (JsonReader.NOT_CUSTOM_READER_MAP): []])
+        String jsonCustom = TestUtil.toJson(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriter()]])
+        Map obj = TestUtil.toMap(jsonCustom, [(JsonReader.CUSTOM_READER_MAP): [(Person.class): new CustomPersonReader()], (JsonReader.NOT_CUSTOM_READER_MAP): []])
         assert 'Michael' == obj.f
         assert 'Bolton' == obj.l
         List pets = obj.p
@@ -238,7 +238,7 @@ class TestCustomWriter
         Map<String, Object> readOptions = new ReadOptionsBuilder()
                 .withCustomReader(Person.class, new CustomPersonReader())
                 .build();
-        Person personCustom = TestUtil.readJsonObject(jsonCustom, readOptions);
+        Person personCustom = TestUtil.toJava(jsonCustom, readOptions);
 
         assert personCustom.firstName == 'Michael'
         assert personCustom.lastName == 'Bolton'
@@ -255,19 +255,19 @@ class TestCustomWriter
                 .withCustomWriter(Person.class, new CustomPersonWriter())
                 .withNoCustomizationFor(Person.class)
                 .build();
-        String jsonOrig = TestUtil.getJsonString(p, writeOptions)
+        String jsonOrig = TestUtil.toJson(p, writeOptions)
         assert jsonCustom != jsonOrig
         assert jsonCustom.length() < jsonOrig.length()
 
         writeOptions = new WriteOptionsBuilder()
                 .withCustomWriter(Person.class, new CustomPersonWriter())
                 .build();
-        String jsonCustom2 = TestUtil.getJsonString(p, writeOptions);
+        String jsonCustom2 = TestUtil.toJson(p, writeOptions);
         String jsonOrig2 = JsonWriter.objectToJson(p)
         assert jsonCustom == jsonCustom2
         assert jsonOrig == jsonOrig2
 
-        Person personOrig = TestUtil.readJsonObject(jsonOrig,
+        Person personOrig = TestUtil.toJava(jsonOrig,
                 [
                         (JsonReader.CUSTOM_READER_MAP):[(Person.class):new CustomPersonReader()],
                         (JsonReader.NOT_CUSTOM_READER_MAP):[Person.class]
@@ -284,7 +284,7 @@ class TestCustomWriter
         Person p = createTestPerson()
         try
         {
-            TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new BadCustomPWriter()]])
+            TestUtil.toJson(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new BadCustomPWriter()]])
             fail()
         }
         catch (JsonIoException e)
@@ -297,7 +297,7 @@ class TestCustomWriter
     void testCustomWriterAddField()
     {
         Person p = createTestPerson()
-        String jsonCustom = TestUtil.getJsonString(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriterAddField()]])
+        String jsonCustom = TestUtil.toJson(p, [(JsonWriter.CUSTOM_WRITER_MAP): [(Person.class): new CustomPersonWriterAddField()]])
         assert jsonCustom.contains("_version\":12");
         assert jsonCustom.contains("Michael");
     }

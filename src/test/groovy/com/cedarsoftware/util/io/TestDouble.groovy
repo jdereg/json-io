@@ -58,9 +58,9 @@ class TestDouble
     void testDouble()
     {
         ManyDoubles test = new ManyDoubles()
-        String json = TestUtil.getJsonString(test)
+        String json = TestUtil.toJson(test)
         TestUtil.printLine("json = " + json)
-        ManyDoubles that = (ManyDoubles) TestUtil.readJsonObject(json)
+        ManyDoubles that = (ManyDoubles) TestUtil.toJava(json)
 
         assertTrue(that._arrayElement.equals(-1.0d))
         assertTrue(that._polyRefTarget.equals(71.0d))

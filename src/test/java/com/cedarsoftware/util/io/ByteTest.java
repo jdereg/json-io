@@ -56,10 +56,10 @@ class ByteTest
     void testByte()
     {
         ManyBytes test = new ManyBytes();
-        String json = TestUtil.getJsonString(test);
+        String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
 
-        ManyBytes that = TestUtil.readJsonObject(json);
+        ManyBytes that = TestUtil.toJava(json);
 
         assertEquals((byte) that._arrayElement, (byte) -1);
         assertEquals(that._polyRefTarget, (byte) 71);

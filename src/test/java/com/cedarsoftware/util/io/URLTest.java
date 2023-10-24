@@ -42,7 +42,7 @@ class URLTest
     void testUrl_readingJsonWithOldFormat_stillWorks(String fileName, String expectedUrl) throws Exception
     {
         String json = TestUtil.fetchResource("url/" + fileName);
-        URL actual = (URL) TestUtil.readJsonObject(json);
+        URL actual = (URL) TestUtil.toJava(json);
 
         assertThat(actual.toString()).isEqualTo(expectedUrl);
     }
@@ -80,17 +80,17 @@ class URLTest
     @MethodSource("argumentsForUrlTesting")
     void testSerialization_withDifferentUrls_works(String input) throws Exception {
         URL url = new URL(input);
-        String json = TestUtil.getJsonString(url);
+        String json = TestUtil.toJson(url);
 
         TestUtil.printLine("json=" + json);
-        Object read = TestUtil.readJsonObject(json);
+        Object read = TestUtil.toJava(json);
         assertThat(read).isEqualTo(url);
     }
 
     @Test
     void testURL_hasTypeAndUrl_and_noOtherUrlParams() throws Exception {
         URL url = new URL(OUTSIDE_DOMAIN);
-        String json = TestUtil.getJsonString(url);
+        String json = TestUtil.toJson(url);
         assertThatJsonIsNewStyle(json);
     }
 
@@ -109,10 +109,10 @@ class URLTest
     void testUrl_inGenericSubobject_serializeBackCorrectly() throws Exception {
         URL url = new URL(LOCALHOST);
         GenericSubObject initial = new GenericSubObject<>(url);
-        String json = TestUtil.getJsonString(initial);
+        String json = TestUtil.toJson(initial);
 
         TestUtil.printLine("json=" + json);
-        GenericSubObject actual = (GenericSubObject)TestUtil.readJsonObject(json);
+        GenericSubObject actual = (GenericSubObject)TestUtil.toJava(json);
         assertThat(actual.getObject()).isEqualTo(initial.getObject());
     }
 
@@ -120,11 +120,11 @@ class URLTest
     void testUrl_inNestedObject_serializeBackCorrectly() throws Exception {
         URL url = new URL(OUTSIDE_DOMAIN);
         NestedUrl initial = new NestedUrl(url);
-        String json = TestUtil.getJsonString(initial);
+        String json = TestUtil.toJson(initial);
         assertThatJsonIsNewStyle(json);
 
         TestUtil.printLine("json=" + json);
-        NestedUrl actual = (NestedUrl)TestUtil.readJsonObject(json);
+        NestedUrl actual = (NestedUrl)TestUtil.toJava(json);
 
         assertThat(actual.getUrl()).isEqualTo(initial.getUrl());
     }
@@ -133,9 +133,9 @@ class URLTest
     void testURL_referencedInArray() throws Exception {
         URL url = new URL(OUTSIDE_DOMAIN);
         List<URL> list = List.of(url, url, url, url, url);
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
 
-        List<URL> actual = (List<URL>)TestUtil.readJsonObject(json);
+        List<URL> actual = (List<URL>)TestUtil.toJava(json);
 
         assertThat(actual).containsAll(list);
     }
@@ -144,9 +144,9 @@ class URLTest
     void testURL_referencedInObject() throws Exception {
         var expected = new NestedTwice(new URL(OUTSIDE_DOMAIN));
 
-        String json = TestUtil.getJsonString(expected);
+        String json = TestUtil.toJson(expected);
 
-        var actual = (NestedTwice)TestUtil.readJsonObject(json);
+        var actual = (NestedTwice)TestUtil.toJava(json);
 
         assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());

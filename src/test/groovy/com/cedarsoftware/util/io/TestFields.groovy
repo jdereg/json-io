@@ -310,10 +310,10 @@ class TestFields
     {
         ManyFields obj = new ManyFields()
         obj.init()
-        String jsonOut = TestUtil.getJsonString(obj)
+        String jsonOut = TestUtil.toJson(obj)
         TestUtil.printLine(jsonOut)
 
-        ManyFields root = (ManyFields) TestUtil.readJsonObject(jsonOut)
+        ManyFields root = (ManyFields) TestUtil.toJava(jsonOut)
         assertFields(root)
     }
 
@@ -449,14 +449,14 @@ class TestFields
     {
         ManyFields testFields = new ManyFields()
         testFields.init()
-        String json0 = TestUtil.getJsonString(testFields)
+        String json0 = TestUtil.toJson(testFields)
         TestUtil.printLine("json0=" + json0)
         Map testFields2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
-        String json1 = TestUtil.getJsonString(testFields2)
+        String json1 = TestUtil.toJson(testFields2)
         TestUtil.printLine("json1=" + json1)
 
-        ManyFields testFields3 = (ManyFields) TestUtil.readJsonObject(json1)
+        ManyFields testFields3 = (ManyFields) TestUtil.toJava(json1)
         assertFields(testFields3)   // Re-written from Map of Maps and re-loaded correctly
         assertTrue(json0.equals(json1))
     }
@@ -466,7 +466,7 @@ class TestFields
     {
         Class clazz = TestVanillaFields.class
         String json = '{"@type":"' + clazz.name + '","name":"Nakamoto","salary":100.45,"age":48,"alive":true,"garbage":null}'
-        TestVanillaFields vanilla = (TestVanillaFields) TestUtil.readJsonObject(json)
+        TestVanillaFields vanilla = (TestVanillaFields) TestUtil.toJava(json)
         assertEquals(vanilla.name, "Nakamoto")
         assertEquals(vanilla.salary as Double, 100.45d, 0.0001d)
         assertEquals(vanilla.age, 48L)
@@ -541,10 +541,10 @@ class TestFields
         Locale locale = Locale.getDefault()
         TestLocale tl = new TestLocale()
         tl._loc = locale;
-        String json = TestUtil.getJsonString(tl)
+        String json = TestUtil.toJson(tl)
         TestUtil.printLine("json=" + json)
 
-        tl = (TestLocale) TestUtil.readJsonObject(json)
+        tl = (TestLocale) TestUtil.toJava(json)
         assertTrue(locale.equals(tl._loc))
     }
     

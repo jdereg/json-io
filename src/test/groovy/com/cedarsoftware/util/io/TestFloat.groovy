@@ -66,9 +66,9 @@ class TestFloat
     void testFloat()
     {
         ManyFloats test = new ManyFloats()
-        String json = TestUtil.getJsonString(test)
+        String json = TestUtil.toJson(test)
         TestUtil.printLine("json = " + json)
-        ManyFloats that = (ManyFloats) TestUtil.readJsonObject(json)
+        ManyFloats that = (ManyFloats) TestUtil.toJava(json)
 
         assertTrue(that._arrayElement.equals(-1.0f))
         assertTrue(that._polyRefTarget.equals(71.0f))

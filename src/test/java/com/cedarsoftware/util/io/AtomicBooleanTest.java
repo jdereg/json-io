@@ -87,9 +87,9 @@ class AtomicBooleanTest
         List<AtomicBoolean> list = new ArrayList<>();
         list.add(atomicBoolean);
         list.add(atomicBoolean);
-        String json = TestUtil.getJsonString(list);
+        String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.readJsonObject(json);
+        list = TestUtil.toJava(json);
         assert list.size() == 2;
         atomicBoolean = list.get(0);
         assert atomicBoolean.get() == new AtomicBoolean(true).get();

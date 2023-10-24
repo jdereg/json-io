@@ -49,13 +49,13 @@ class InnerClassTest
         dog.x = 10;
         Dog.Leg leg = dog.new Leg();       // original Java
         leg.y = 20;
-        String json0 = TestUtil.getJsonString(dog);
+        String json0 = TestUtil.toJson(dog);
         TestUtil.printLine("json0=" + json0);
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
         JsonObject job = JsonReader.jsonToJava(json0, args);
         job.put("phantom", new TestObject("Eddie"));
-        String json1 = TestUtil.getJsonString(job);
+        String json1 = TestUtil.toJson(job);
         TestUtil.printLine("json1=" + json1);
         assertTrue(json1.contains("phantom"));
         assertTrue(json1.contains("TestObject"));
@@ -68,16 +68,16 @@ class InnerClassTest
         A a = new A();
         a.a = "aaa";
 
-        String json = TestUtil.getJsonString(a);
+        String json = TestUtil.toJson(a);
         TestUtil.printLine("json = " + json);
-        A o1 = (A) TestUtil.readJsonObject(json);
+        A o1 = (A) TestUtil.toJava(json);
         assertEquals("aaa", o1.a);
 
         InnerClassTest.A.B b = a.new B();        // Original Java
         b.b = "bbb";
-        json = TestUtil.getJsonString(b);
+        json = TestUtil.toJson(b);
         TestUtil.printLine("json = " + json);
-        InnerClassTest.A.B o2 = TestUtil.readJsonObject(json);
+        InnerClassTest.A.B o2 = TestUtil.toJava(json);
         assertEquals("bbb", o2.b);
     }
 
@@ -88,12 +88,12 @@ class InnerClassTest
         dog.x = 10;
         Dog.Leg leg = dog.new Leg();
         leg.y = 20;
-        String json0 = TestUtil.getJsonString(dog);
+        String json0 = TestUtil.toJson(dog);
         TestUtil.printLine("json0=" + json0);
 
-        String json1 = TestUtil.getJsonString(leg);
+        String json1 = TestUtil.toJson(leg);
         TestUtil.printLine("json1=" + json1);
-        Dog.Leg go = (Dog.Leg) TestUtil.readJsonObject(json1);
+        Dog.Leg go = (Dog.Leg) TestUtil.toJava(json1);
         assertEquals(20, go.y);
         assertEquals(10, go.getParentX());
     }

@@ -128,10 +128,10 @@ public class SimpleValuesTest
     private final void testWriteRead(Object testObj)
     {
 
-        final String json = TestUtil.getJsonString(testObj);
+        final String json = TestUtil.toJson(testObj);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
-        final Object newObj = TestUtil.readJsonObject(json);
+        final Object newObj = TestUtil.toJava(json);
         TestUtil.printLine("newObj = " + newObj);
 
         assertEquals(testObj, newObj);

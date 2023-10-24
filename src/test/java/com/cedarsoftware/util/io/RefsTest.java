@@ -109,10 +109,10 @@ class RefsTest
     {
         TestReferences obj = new TestReferences();
         obj.init();
-        String jsonOut = TestUtil.getJsonString(obj);
+        String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        TestReferences root = (TestReferences) TestUtil.readJsonObject(jsonOut);
+        TestReferences root = (TestReferences) TestUtil.toJava(jsonOut);
 
         assertEquals(1, root._a.length);
         assertNotNull(root._b);
@@ -165,7 +165,7 @@ class RefsTest
         Map<Class, JsonReader.JsonClassReaderBase> readers = new HashMap<>();
         options.put(JsonReader.CUSTOM_READER_MAP, readers);
         readers.put(TestObject.class, new TestObjectReader());
-        TestObject aa = (TestObject) TestUtil.readJsonObject(json, options);
+        TestObject aa = (TestObject) TestUtil.toJava(json, options);
     }
 
     private static class TestObjectReader implements JsonReader.JsonClassReader {

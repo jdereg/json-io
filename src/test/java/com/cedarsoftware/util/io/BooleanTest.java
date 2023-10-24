@@ -62,9 +62,9 @@ class BooleanTest
     void testBoolean()
     {
         ManyBooleans test = new ManyBooleans();
-        String json = TestUtil.getJsonString(test);
+        String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyBooleans that = TestUtil.readJsonObject(json);
+        ManyBooleans that = TestUtil.toJava(json);
 
         assertTrue(that._arrayElement);
         assertEquals(true, that._polyRefTarget);
@@ -102,8 +102,8 @@ class BooleanTest
     {
         MyBooleanTesting testObject = new MyBooleanTesting();
         MyBoolean2Testing testObject2 = new MyBoolean2Testing();
-        String json0 = TestUtil.getJsonString(testObject);
-        String json1 = TestUtil.getJsonString(testObject2);
+        String json0 = TestUtil.toJson(testObject);
+        String json1 = TestUtil.toJson(testObject2);
 
         TestUtil.printLine("json0=" + json0);
         TestUtil.printLine("json1=" + json1);

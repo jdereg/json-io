@@ -38,26 +38,26 @@ class TestUUID
     void testAssignUUID()
     {
         String json = '{"@type":"' + TestUUIDFields.class.name + '","fromString":"6508db3c-52c5-42ad-91f3-621d6e1d6557", "internals": {"@type": "java.util.UUID", "mostSigBits":7280309849777586861,"leastSigBits":-7929886640328317609}}'
-        TestUUIDFields tu = (TestUUIDFields) TestUtil.readJsonObject(json)
+        TestUUIDFields tu = (TestUUIDFields) TestUtil.toJava(json)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.fromString)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.internals)
 
         Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
-        json = TestUtil.getJsonString(map)
-        tu = (TestUUIDFields) TestUtil.readJsonObject(json)
+        json = TestUtil.toJson(map)
+        tu = (TestUUIDFields) TestUtil.toJava(json)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.fromString)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.internals)
 
         json = '{"@type":"' + TestUUIDFields.class.name + '","fromString":""}'
-        Throwable thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
+        Throwable thrown = assertThrows(JsonIoException.class, { TestUtil.toJava(json) })
         assertEquals(IllegalArgumentException.class, thrown.cause.class)
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "leastSigBits":-7929886640328317609}}'
-        thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
+        thrown = assertThrows(JsonIoException.class, { TestUtil.toJava(json) })
         assertTrue(thrown.cause.message.contains("mostSigBits"))
 
         json = '{"@type":"' + TestUUIDFields.class.name + '", "internals": {"@type": "java.util.UUID", "mostSigBits":7280309849777586861}}'
-        thrown = assertThrows(JsonIoException.class, { TestUtil.readJsonObject(json) })
+        thrown = assertThrows(JsonIoException.class, { TestUtil.toJava(json) })
         assertTrue(thrown.cause.message.contains("leastSigBits"))
     }
 
@@ -66,9 +66,9 @@ class TestUUID
     {
         String s = "9bf37453-c576-432b-a531-2dbc2be797c2"
         UUID uuid = UUID.fromString(s)
-        String json = TestUtil.getJsonString(uuid)
+        String json = TestUtil.toJson(uuid)
         TestUtil.printLine("json=" + json)
-        uuid = (UUID) TestUtil.readJsonObject(json)
+        uuid = (UUID) TestUtil.toJava(json)
         assertEquals(UUID.fromString(s), uuid)
     }
 
@@ -79,14 +79,14 @@ class TestUUID
         UUID uuid = UUID.fromString(s)
         Object[] uuids = [uuid, uuid] as Object[]
         UUID[] typedUUIDs = [uuid, uuid] as UUID[]
-        String json = TestUtil.getJsonString(uuids)
+        String json = TestUtil.toJson(uuids)
         TestUtil.printLine("json=" + json)
 
-        uuids = (Object[]) TestUtil.readJsonObject(json)
+        uuids = (Object[]) TestUtil.toJava(json)
         assertTrue(uuids.length == 2)
         assertSame(uuids[0], uuids[1])
         assertTrue(UUID.fromString(s).equals(uuids[0]))
-        json = TestUtil.getJsonString(typedUUIDs)
+        json = TestUtil.toJson(typedUUIDs)
         TestUtil.printLine("json=" + json)
         assertTrue(typedUUIDs.length == 2)
         assertTrue(typedUUIDs[0] == typedUUIDs[1])
@@ -101,9 +101,9 @@ class TestUUID
         List list = new ArrayList<>()
         list.add(uuid)
         list.add(uuid)
-        String json = TestUtil.getJsonString(list)
+        String json = TestUtil.toJson(list)
         TestUtil.printLine("json=" + json)
-        list = (List) TestUtil.readJsonObject(json)
+        list = (List) TestUtil.toJava(json)
         assertTrue(list.size() == 2)
         assertEquals(UUID.fromString(s), list.get(0))
         assertSame(list.get(0), list.get(1))

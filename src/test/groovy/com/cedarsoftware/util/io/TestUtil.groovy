@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -43,16 +44,16 @@ class TestUtil
     }
 
     static <T> T serializeDeserialize(T initial) {
-        String json = getJsonString(initial);
-        return readJsonObject(json);
+        String json = toJson(initial);
+        return toJava(json);
     }
 
-    static String getJsonString(Object obj)
+    static String toJson(Object obj)
     {
-        return getJsonString(obj, [:]);
+        return toJson(obj, [:]);
     }
 
-    static String getJsonString(Object obj, Map<String, Object> args)
+    static String toJson(Object obj, Map<String, Object> args)
     {
         ByteArrayOutputStream bout = new ByteArrayOutputStream()
         JsonWriter jsonWriter = new JsonWriter(bout, args)
@@ -92,19 +93,19 @@ class TestUtil
         return json;
     }
 
-    static <T> T readJsonObject(String json)
+    static <T> T toJava(String json)
     {
-        return readJsonObject(json, [:])
+        return toJava(json, [:])
     }
 
-    static <T> T readJsonObject(String json, Map<String, Object> args)
+    static <T> T toJava(String json, Map<String, Object> args)
     {
         long startRead1 = System.nanoTime()
 
         ByteArrayInputStream ba;
         try
         {
-            ba = new ByteArrayInputStream(json.getBytes("UTF-8"));
+            ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
         }
         catch (UnsupportedEncodingException e)
         {
@@ -149,7 +150,7 @@ class TestUtil
         return o;
     }
 
-    static Map readJsonMap(String json, Map<String, Object> args)
+    static Map toMap(String json, Map<String, Object> args)
     {
         if (args == null)
         {
@@ -160,7 +161,7 @@ class TestUtil
 
         try
         {
-            ba = new ByteArrayInputStream(json.getBytes("UTF-8"))
+            ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
         }
         catch (UnsupportedEncodingException e)
         {
@@ -198,7 +199,7 @@ class TestUtil
                 println("ObjectInputStream time = " + t2 + " ms")
             }
         }
-        catch (Exception e)
+        catch (Exception ignore)
         {
             outputStreamFailCount++;
         }

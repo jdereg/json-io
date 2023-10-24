@@ -115,10 +115,10 @@ class TestMaps
     {
         ManyMaps obj = new ManyMaps()
         obj.init()
-        String jsonOut = TestUtil.getJsonString(obj)
+        String jsonOut = TestUtil.toJson(obj)
         TestUtil.printLine(jsonOut)
 
-        ManyMaps root = (ManyMaps) TestUtil.readJsonObject(jsonOut)
+        ManyMaps root = (ManyMaps) TestUtil.toJava(jsonOut)
         assertMap(root)
     }
 
@@ -196,14 +196,14 @@ class TestMaps
     {
         ManyMaps testMap = new ManyMaps()
         testMap.init()
-        String json0 = TestUtil.getJsonString(testMap)
+        String json0 = TestUtil.toJson(testMap)
         TestUtil.printLine("json0=" + json0)
         Map testMap2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
-        String json1 = TestUtil.getJsonString(testMap2)
+        String json1 = TestUtil.toJson(testMap2)
         TestUtil.printLine("json1=" + json1)
 
-        ManyMaps testMap3 = (ManyMaps) TestUtil.readJsonObject(json1)
+        ManyMaps testMap3 = (ManyMaps) TestUtil.toJava(json1)
         assertMap(testMap3)   // Re-written from Map of Maps and re-loaded correctly
         assertTrue(json0.equals(json1))
     }
@@ -220,9 +220,9 @@ class TestMaps
 
         Map map = new HashMap<>()
         map.put(a, b)
-        String json = TestUtil.getJsonString(map)
+        String json = TestUtil.toJson(map)
         TestUtil.printLine("json = " + json)
-        map = (Map) TestUtil.readJsonObject(json)
+        map = (Map) TestUtil.toJava(json)
         assertTrue(map != null)
         assertTrue(map.size() == 1)
         TestObject bb = (TestObject) map.get(new TestObject("A"))
@@ -236,9 +236,9 @@ class TestMaps
     {
         Map map = new HashMap<>()
         map.put("a", "b")
-        String json = TestUtil.getJsonString(map)
+        String json = TestUtil.toJson(map)
         TestUtil.printLine("json = " + json)
-        map = (Map) TestUtil.readJsonObject(json)
+        map = (Map) TestUtil.toJava(json)
         assertTrue(map != null)
         assertTrue(map.size() == 1)
     }
@@ -256,8 +256,8 @@ class TestMaps
         arrayB[0] = new Point(3, 4)
         arrayB[1] = new Point(30, 40)
         m.content.put(arrayB, "bar")
-        String json = TestUtil.getJsonString(m)
-        MapArrayKey x = (MapArrayKey) TestUtil.readJsonObject(json)
+        String json = TestUtil.toJson(m)
+        MapArrayKey x = (MapArrayKey) TestUtil.toJava(json)
 
         Iterator<Map.Entry<Object[], String>> i = x.content.entrySet().iterator()
         Map.Entry<Object[], String> entry = i.next()
@@ -287,8 +287,8 @@ class TestMaps
         setB.add(new Point(3, 4))
         setB.add(new Point(30, 40))
         m.content.put(setB, "bar")
-        String json = TestUtil.getJsonString(m)
-        MapSetKey x = (MapSetKey) TestUtil.readJsonObject(json)
+        String json = TestUtil.toJson(m)
+        MapSetKey x = (MapSetKey) TestUtil.toJava(json)
 
         assertEquals("foo", x.content.get(setA))
         assertEquals("bar", x.content.get(setB))
@@ -296,15 +296,15 @@ class TestMaps
         m = new MapSetKey()
         m.content = new LinkedHashMap<>()
         m.content.put(null, null)
-        json = TestUtil.getJsonString(m)
-        x = (MapSetKey) TestUtil.readJsonObject(json)
+        json = TestUtil.toJson(m)
+        x = (MapSetKey) TestUtil.toJava(json)
         assertNull(x.content.get(null))
 
         m = new MapSetKey()
         m.content = new LinkedHashMap<>()
         m.content.put(new LinkedHashSet(), "Fargo")
-        json = TestUtil.getJsonString(m)
-        x = (MapSetKey) TestUtil.readJsonObject(json)
+        json = TestUtil.toJson(m)
+        x = (MapSetKey) TestUtil.toJava(json)
         assertEquals("Fargo", x.content.get(new LinkedHashSet<Point>()))
     }
 
@@ -313,7 +313,7 @@ class TestMaps
     {
         String json0 = '{"rows":[{"columns":[{"name":"FOO","value":"9000"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]},{"columns":[{"name":"FOO","value":"9713"},{"name":"VON","value":"0001-01-01"},{"name":"BAR","value":"0001-01-01"}]}],"selectedRows":"110"}'
         Map root = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
-        String json1 = TestUtil.getJsonString(root)
+        String json1 = TestUtil.toJson(root)
         Map root2 = (Map) JsonReader.jsonToJava(json1, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(DeepEquals.deepEquals(root, root2))
 
@@ -356,23 +356,23 @@ class TestMaps
     void testOddMaps()
     {
         String json = '{"@type":"java.util.HashMap","@keys":null,"@items":null}'
-        Map map = (Map)TestUtil.readJsonObject(json)
+        Map map = (Map)TestUtil.toJava(json)
         assertTrue(map instanceof HashMap)
         assertTrue(map.isEmpty())
 
         json = '{"@type":"java.util.HashMap"}'
-        map = (Map)TestUtil.readJsonObject(json)
+        map = (Map)TestUtil.toJava(json)
         assertTrue(map instanceof HashMap)
         assertTrue(map.isEmpty())
 
 
         json = '{"@type":"java.util.HashMap","@keys":null,"@items":[]}'
-        Exception e = assertThrows(Exception.class, { TestUtil.readJsonObject(json)})
+        Exception e = assertThrows(Exception.class, { TestUtil.toJava(json)})
         assert e.message.toLowerCase().contains('@keys or @items')
         assert e.message.toLowerCase().contains('empty')
 
         json = '{"@type":"java.util.HashMap","@keys":[1,2],"@items":[true]}'
-        e = assertThrows(Exception.class, { TestUtil.readJsonObject(json) })
+        e = assertThrows(Exception.class, { TestUtil.toJava(json) })
         assert e.message.toLowerCase().contains("different size")
     }
 
@@ -380,14 +380,14 @@ class TestMaps
     void testReconstituteMapEmpty()
     {
         Map map = new LinkedHashMap<>()
-        String json0 = TestUtil.getJsonString(map)
+        String json0 = TestUtil.toJson(map)
         TestUtil.printLine("json0=" + json0)
 
         map = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
-        String json1 = TestUtil.getJsonString(map)
+        String json1 = TestUtil.toJson(map)
         TestUtil.printLine("json1=" + json1)
 
-        map = (Map) TestUtil.readJsonObject(json1)
+        map = (Map) TestUtil.toJava(json1)
         assertTrue(map instanceof LinkedHashMap)
         assertTrue(map.isEmpty())
         assertTrue(json0.equals(json1))
@@ -398,14 +398,14 @@ class TestMaps
     {
         Map m1 = new HashMap<>()
         Object[] root = [m1, m1] as Object[]
-        String json0 = TestUtil.getJsonString(root)
+        String json0 = TestUtil.toJson(root)
         TestUtil.printLine("json0=" + json0)
 
         Object[] array = (Object[]) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
-        String json1 = TestUtil.getJsonString(array)
+        String json1 = TestUtil.toJson(array)
         TestUtil.printLine("json1=" + json1)
 
-        root = (Object[]) TestUtil.readJsonObject(json1)
+        root = (Object[]) TestUtil.toJava(json1)
         assertTrue(root.length == 2)
         assertTrue(root[0] instanceof Map)
         assertTrue(((Map)root[0]).isEmpty())
@@ -419,14 +419,14 @@ class TestMaps
     {
         SimpleMapTest smt = new SimpleMapTest()
         smt.map.put("a", "alpha")
-        String json0 = TestUtil.getJsonString(smt)
+        String json0 = TestUtil.toJson(smt)
         TestUtil.printLine("json0=" + json0)
 
         Map result = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
-        String json1 = TestUtil.getJsonString(result)
+        String json1 = TestUtil.toJson(result)
         TestUtil.printLine("json1=" + json1)
 
-        SimpleMapTest mapTest = (SimpleMapTest) TestUtil.readJsonObject(json1)
+        SimpleMapTest mapTest = (SimpleMapTest) TestUtil.toJava(json1)
         assertTrue(mapTest.map.equals(smt.map))
         assertTrue(json0.equals(json1))
     }
@@ -453,8 +453,8 @@ class TestMaps
     void testMapWithQuoteInKey()
     {
         Map variableKeys = [0L: 0L, '"one"':1L, '"two"':2L]
-        String json = TestUtil.getJsonString(variableKeys)
-        Map ret = TestUtil.readJsonMap(json, [:])
+        String json = TestUtil.toJson(variableKeys)
+        Map ret = TestUtil.toMap(json, [:])
         assert ret.size() == 3
 
         assert ret[0L] == 0L
@@ -462,8 +462,8 @@ class TestMaps
         assert ret['"two"'] == 2L
 
         Map stringKeys = ['"zero"': 0L, '"one"':1L, '"two"':2L]
-        json = TestUtil.getJsonString(stringKeys)
-        ret = TestUtil.readJsonMap(json, [:])
+        json = TestUtil.toJson(stringKeys)
+        ret = TestUtil.toMap(json, [:])
         assert ret.size() == 3
 
         assert ret['"zero"'] == 0L

@@ -71,8 +71,8 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     @Test
     void testTopLevel_serializesAsISODate() {
         var date = LocalDate.of(2014, 10, 17);
-        String json = TestUtil.getJsonString(date);
-        var result = (LocalDate) TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(date);
+        var result = (LocalDate) TestUtil.toJava(json);
         assertThat(result).isEqualTo(date);
     }
 
