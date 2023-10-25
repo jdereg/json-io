@@ -37,7 +37,7 @@ public class CustomReaderIdentityTest
 		elements.add(element);
 		elements.add(element);
 
-		String json = JsonWriter.objectToJson(elements);
+		String json = TestUtil.toJson(elements);
 
 		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
@@ -63,7 +63,7 @@ public class CustomReaderIdentityTest
 		elements.add(element);
 		elements.add(element);
 
-		String json = JsonWriter.objectToJson(elements);
+		String json = TestUtil.toJson(elements);
 
 		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
@@ -92,7 +92,7 @@ public class CustomReaderIdentityTest
 		set.add(e1);
 		set.add(e2);
 
-		String json = JsonWriter.objectToJson(set);
+		String json = TestUtil.toJson(set);
 
 		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
@@ -114,7 +114,7 @@ public class CustomReaderIdentityTest
 		array[0] = element;
 		array[1] = element;
 
-		String json = JsonWriter.objectToJson(array);
+		String json = TestUtil.toJson(array);
 
 		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);

@@ -116,7 +116,7 @@ public class CalendarTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Object[] items = JsonReader.jsonToJava(json, args);
+        Object[] items = TestUtil.toJava(json, args);
         Map item = (Map) items[0];
         Assertions.assertTrue(item.containsKey("time"));
         Assertions.assertTrue(item.containsKey("zone"));

@@ -100,7 +100,7 @@ class TestOverlappingMemberVariableNames
         assertEquals(child.parentName, roundTrip.parentName)
         assertEquals(child.childName, roundTrip.childName)
 
-        JsonObject jObj = (JsonObject)JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        JsonObject jObj = (JsonObject)TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         String json1 = TestUtil.toJson(jObj)
         TestUtil.printLine(json1)
         assertEquals(json, json1)

@@ -113,32 +113,32 @@ class TestFloat
     void parseBadFloat()
     {
         String json = '[123.45.67]'
-        assertThrows(JsonIoException.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(JsonIoException.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
     }
 
     @Test
     void testNanAsRoot()
     {
-        Object json = JsonWriter.objectToJson(Float.NaN, [(JsonWriter.TYPE):false] as Map)
+        Object json = TestUtil.toJson(Float.NaN, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson(Float.NEGATIVE_INFINITY, [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson(Float.NEGATIVE_INFINITY, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson(Float.POSITIVE_INFINITY, [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson(Float.POSITIVE_INFINITY, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
     }
 
     @Test
     void testNanMapKey()
     {
-        Object json = JsonWriter.objectToJson([field:Float.NaN], [(JsonWriter.TYPE):false] as Map)
+        Object json = TestUtil.toJson([field:Float.NaN], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.NEGATIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson([field:Float.NEGATIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.POSITIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson([field:Float.POSITIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
     }
 
@@ -147,54 +147,54 @@ class TestFloat
     {
         Simple holder = new Simple()
         holder.x = Float.NaN
-        Object json = JsonWriter.objectToJson(holder, [(JsonWriter.TYPE):false] as Map)
+        Object json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
         holder.x = Float.NEGATIVE_INFINITY
-        json = JsonWriter.objectToJson(holder, [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
         holder.x = Float.POSITIVE_INFINITY
-        json = JsonWriter.objectToJson(holder, [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
     }
 
     @Test
     void testNanArrayElement()
     {
-        Object json = JsonWriter.objectToJson([Float.NaN], [(JsonWriter.TYPE):false] as Map)
+        Object json = TestUtil.toJson([Float.NaN], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([Float.NEGATIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson([Float.NEGATIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.POSITIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
+        json = TestUtil.toJson([field:Float.POSITIVE_INFINITY], [(JsonWriter.TYPE):false] as Map)
         assert json.contains('null')
     }
 
     @Test
     void testNanAsRoot2()
     {
-        Object json = JsonWriter.objectToJson(Float.NaN)
+        Object json = TestUtil.toJson(Float.NaN)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson(Float.NEGATIVE_INFINITY)
+        json = TestUtil.toJson(Float.NEGATIVE_INFINITY)
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson(Float.POSITIVE_INFINITY)
+        json = TestUtil.toJson(Float.POSITIVE_INFINITY)
         assert json.contains('null')
     }
 
     @Test
     void testNanMapKey2()
     {
-        Object json = JsonWriter.objectToJson([field:Float.NaN])
+        Object json = TestUtil.toJson([field:Float.NaN])
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.NEGATIVE_INFINITY])
+        json = TestUtil.toJson([field:Float.NEGATIVE_INFINITY])
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.POSITIVE_INFINITY])
+        json = TestUtil.toJson([field:Float.POSITIVE_INFINITY])
         assert json.contains('null')
     }
 
@@ -203,28 +203,28 @@ class TestFloat
     {
         Simple holder = new Simple()
         holder.x = Float.NaN
-        Object json = JsonWriter.objectToJson(holder)
+        Object json = TestUtil.toJson(holder)
         assert json.contains('null')
 
         holder.x = Float.NEGATIVE_INFINITY
-        json = JsonWriter.objectToJson(holder)
+        json = TestUtil.toJson(holder)
         assert json.contains('null')
 
         holder.x = Float.POSITIVE_INFINITY
-        json = JsonWriter.objectToJson(holder)
+        json = TestUtil.toJson(holder)
         assert json.contains('null')
     }
 
     @Test
     void testNanArrayElement2()
     {
-        Object json = JsonWriter.objectToJson([Float.NaN])
+        Object json = TestUtil.toJson([Float.NaN])
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([Float.NEGATIVE_INFINITY])
+        json = TestUtil.toJson([Float.NEGATIVE_INFINITY])
         assert json.contains('null')
 
-        json = JsonWriter.objectToJson([field:Float.POSITIVE_INFINITY])
+        json = TestUtil.toJson([field:Float.POSITIVE_INFINITY])
         assert json.contains('null')
     }
 }

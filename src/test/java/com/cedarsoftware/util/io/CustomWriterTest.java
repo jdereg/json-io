@@ -99,7 +99,7 @@ public class CustomWriterTest
 
         writeOptions = new WriteOptionsBuilder().withCustomWriter(Person.class, new CustomPersonWriter()).build();
         String jsonCustom2 = TestUtil.toJson(p, writeOptions);
-        String jsonOrig2 = JsonWriter.objectToJson(p);
+        String jsonOrig2 = TestUtil.toJson(p);
         assert jsonCustom.equals(jsonCustom2);
         assert jsonOrig.equals(jsonOrig2);
 

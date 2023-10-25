@@ -34,8 +34,8 @@ class TestTypeSubstitution
         Map<String, String> types = ['java.util.ArrayList':'al']
         Map args = [(JsonWriter.TYPE_NAME_MAP):types]
         List list = ['alpha', 'bravo', 'charlie']
-        String json = JsonWriter.objectToJson(list, args)
-        List test = (List) JsonReader.jsonToJava(json, args)
+        String json = TestUtil.toJson(list, args)
+        List test = (List) TestUtil.toJava(json, args)
         assert list.equals(test)
     }
 
@@ -51,9 +51,9 @@ class TestTypeSubstitution
                 'com.cedarsoftware.util.io.TestTypeSubstitution$Person':'person'
         ]
         Map args = [(JsonWriter.TYPE_NAME_MAP):types]
-        String json = JsonWriter.objectToJson(p, args)
+        String json = TestUtil.toJson(p, args)
         args[(JsonReader.USE_MAPS)] = true
-        Person clone = JsonReader.jsonToJava(json, args)
+        Person clone = TestUtil.toJava(json, args)
         assert clone.name == 'John'
         assert clone.pets.equals(p.pets)
     }

@@ -186,7 +186,7 @@ public class CollectionTests {
         testCol.init();
         String json0 = TestUtil.toJson(testCol);
         TestUtil.printLine("json0=" + json0);
-        ManyCollections testCol2 = (ManyCollections) JsonReader.jsonToJava(json0);
+        ManyCollections testCol2 = (ManyCollections) TestUtil.toJava(json0);
 
         String json1 = TestUtil.toJson(testCol2);
         TestUtil.printLine("json1=" + json1);
@@ -202,8 +202,8 @@ public class CollectionTests {
         tc.init();
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.TYPE, true);
-        String json0 = JsonWriter.objectToJson(tc, map);
-        String json1 = JsonWriter.objectToJson(tc);
+        String json0 = TestUtil.toJson(tc, map);
+        String json1 = TestUtil.toJson(tc);
         TestUtil.printLine("json0 = " + json0);
         TestUtil.printLine("json1 = " + json1);
         Assertions.assertTrue(json0.length() > json1.length());
@@ -243,7 +243,7 @@ public class CollectionTests {
         // Forward reference
         String pkg = TestObject.class.getName();
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":3},{\"@id\":3,\"@type\":\"" + pkg + "\",\"_name\":\"JSON\",\"_other\":null}]}";
-        list2 = JsonReader.jsonToJava(json);
+        list2 = TestUtil.toJava(json);
         Assertions.assertTrue(DefaultGroovyMethods.equals(list, list2));
     }
 
@@ -261,7 +261,7 @@ public class CollectionTests {
     @Test
     public void testCollectionWithParameterizedTypes() {
         String json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[{\"x\":1,\"y\":2},{\"x\":10,\"y\":20}],\"bar\":[{\"x\":3,\"y\":4}, {\"x\":30,\"y\":40}]}}";
-        ParameterizedCollection pCol = JsonReader.jsonToJava(json);
+        ParameterizedCollection pCol = TestUtil.toJava(json);
         Set<Point> points = pCol.getContent().get("foo");
         Assertions.assertNotNull(points);
         Assertions.assertEquals(2, points.size());
@@ -275,7 +275,7 @@ public class CollectionTests {
         points.contains(new Point(30, 40));
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[],\"bar\":null}}";
-        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        pCol = (ParameterizedCollection) TestUtil.toJava(json);
         points = pCol.getContent().get("foo");
         Assertions.assertNotNull(points);
         Assertions.assertEquals(0, points.size());
@@ -284,12 +284,12 @@ public class CollectionTests {
         Assertions.assertNull(points);
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{}}";
-        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        pCol = (ParameterizedCollection) TestUtil.toJava(json);
         Assertions.assertNotNull(pCol.getContent());
         Assertions.assertEquals(0, pCol.getContent().size());
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":null}";
-        pCol = (ParameterizedCollection) JsonReader.jsonToJava(json);
+        pCol = (ParameterizedCollection) TestUtil.toJava(json);
         Assertions.assertNull(pCol.getContent());
     }
 
@@ -371,7 +371,7 @@ public class CollectionTests {
         String json = TestUtil.toJson(stuff);
         TestUtil.printLine("json=" + json);
 
-        List map = (List) JsonReader.jsonToJava(json);
+        List map = (List) TestUtil.toJava(json);
         Object[] items = map.toArray();
         Assertions.assertTrue(items.length == 4);
         Assertions.assertTrue("Hello".equals(items[0]));
@@ -381,7 +381,7 @@ public class CollectionTests {
         list.add(new Object[]{123L, null, true, "Hello"});
         json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        map = (List) JsonReader.jsonToJava(json);
+        map = (List) TestUtil.toJava(json);
         items = map.toArray();
         Assertions.assertTrue(items.length == 1);
         Object[] oa = (Object[]) items[0];
@@ -410,7 +410,7 @@ public class CollectionTests {
 
         String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
-        List map = (List) JsonReader.jsonToJava(json0);
+        List map = (List) TestUtil.toJava(json0);
         map.hashCode();
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
@@ -442,7 +442,7 @@ public class CollectionTests {
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        List map = (List) JsonReader.jsonToJava(json0);
+        List map = (List) TestUtil.toJava(json0);
         Assertions.assertTrue(map != null);
         Assertions.assertTrue(map.isEmpty());
         String json1 = TestUtil.toJson(map);
@@ -454,7 +454,7 @@ public class CollectionTests {
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = (Object[]) JsonReader.jsonToJava(json0);
+        Object[] array = (Object[]) TestUtil.toJava(json0);
         Assertions.assertTrue(array != null);
         list = array;
         Assertions.assertTrue(list.length == 2);
@@ -490,7 +490,7 @@ public class CollectionTests {
         TestUtil.printLine(json);
         Assertions.assertTrue(json.contains("list\":[]"));
 
-        EmptyArrayList obj = (EmptyArrayList) JsonReader.jsonToJava(json);
+        EmptyArrayList obj = (EmptyArrayList) TestUtil.toJava(json);
         json = TestUtil.toJson(obj);
         TestUtil.printLine(json);
         Assertions.assertTrue(json.contains("list\":[]"));

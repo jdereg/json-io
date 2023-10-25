@@ -36,8 +36,8 @@ class TestShortMetaNames
                 (JsonWriter.SHORT_META_KEYS):true,
                 (JsonWriter.TYPE_NAME_MAP):['java.util.ArrayList':'al', 'java.util.LinkedHashMap':'lmap', (TestObject.class.getName()):'to']
         ]
-        String json = JsonWriter.objectToJson(list, args)
-        List clone = (List) JsonReader.jsonToJava(json, args)
+        String json = TestUtil.toJson(list, args)
+        List clone = (List) TestUtil.toJava(json, args)
         assert DeepEquals.deepEquals(list, clone)
     }
 }

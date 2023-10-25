@@ -191,7 +191,7 @@ public class TimeZoneTests
         TestUtil.printLine("json=" + json);
 
         var options = new ReadOptionsBuilder().returnAsMaps().build();
-        Object[] items = (Object[]) JsonReader.jsonToJava(json, options);
+        Object[] items = (Object[]) TestUtil.toJava(json, options);
 
         // assert
         Map actual = (Map) items[0];

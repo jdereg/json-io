@@ -32,7 +32,7 @@ class TestRoots
     {
         Gson gson = new Gson()
         String g = gson.toJson("root should not be a string")
-        String j = JsonWriter.objectToJson("root should not be a string")
+        String j = TestUtil.toJson("root should not be a string")
         assertEquals(g, j)
     }
 
@@ -45,13 +45,13 @@ class TestRoots
         String jsonOut = TestUtil.toJson(foo)
         TestUtil.printLine(jsonOut)
 
-        Object[] bar = (Object[]) JsonReader.jsonToJava(jsonOut)
+        Object[] bar = (Object[]) TestUtil.toJava(jsonOut)
         assertTrue(bar.length == 2)
         assertTrue(bar[0].equals(new TestObject("alpha")))
         assertTrue(bar[1].equals(new TestObject("beta")))
 
         String json = '["getStartupInfo",["890.022905.16112006.00024.0067ur","machine info"]]'
-        Object[] baz = (Object[]) JsonReader.jsonToJava(json)
+        Object[] baz = (Object[]) TestUtil.toJava(json)
         assertTrue(baz.length == 2)
         assertTrue("getStartupInfo".equals(baz[0]))
         Object[] args = (Object[]) baz[1];
@@ -60,19 +60,19 @@ class TestRoots
         assertTrue("machine info".equals(args[1]))
 
         String hw = '["Hello, World"]'
-        Object[] qux = (Object[]) JsonReader.jsonToJava(hw)
+        Object[] qux = (Object[]) TestUtil.toJava(hw)
         assertTrue(qux != null)
         assertTrue("Hello, World".equals(qux[0]))
 
         // Whitespace
         String pkg = TestObject.class.name
-        Object[] fred = (Object[]) JsonReader.jsonToJava('[  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "alpha"  ,  "_other"  :  null  }  ,  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "beta"  ,  "_other" : null  }  ]  ')
+        Object[] fred = (Object[]) TestUtil.toJava('[  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "alpha"  ,  "_other"  :  null  }  ,  {  "@type"  :  "' + pkg + '"  ,  "_name"  :  "beta"  ,  "_other" : null  }  ]  ')
         assertTrue(fred != null)
         assertTrue(fred.length == 2)
         assertTrue(fred[0] == (new TestObject("alpha")))
         assertTrue(fred[1] == (new TestObject("beta")))
 
-        Object[] wilma = (Object[]) JsonReader.jsonToJava('[{"@type":"' + pkg + '","_name" : "alpha" , "_other":null,"fake":"_typeArray"},{"@type": "' + pkg + '","_name":"beta","_other":null}]')
+        Object[] wilma = (Object[]) TestUtil.toJava('[{"@type":"' + pkg + '","_name" : "alpha" , "_other":null,"fake":"_typeArray"},{"@type": "' + pkg + '","_name":"beta","_other":null}]')
         assertTrue(wilma != null)
         assertTrue(wilma.length == 2)
         assertTrue(wilma[0] == (new TestObject("alpha")))
@@ -95,7 +95,7 @@ class TestRoots
         // Test root JSON type as [ ]
         Object array = ['Hello'] as Object[]
         String json = TestUtil.toJson(array)
-        Object oa = JsonReader.jsonToJava(json)
+        Object oa = TestUtil.toJava(json)
         assertTrue(oa.getClass().isArray())
         assertTrue(((Object[]) oa)[0].equals("Hello"))
 
@@ -104,7 +104,7 @@ class TestRoots
         cal.set(1965, 11, 17)
         json = TestUtil.toJson(cal)
         TestUtil.printLine("json = " + json)
-        Object obj = JsonReader.jsonToJava(json)
+        Object obj = TestUtil.toJava(json)
         assertTrue(!obj.getClass().isArray())
         Calendar date = (Calendar) obj;
         assertTrue(date.get(Calendar.YEAR) == 1965)
@@ -115,7 +115,7 @@ class TestRoots
     @Test
     void testNull()
     {
-        String json = JsonWriter.objectToJson(null)
+        String json = TestUtil.toJson(null)
         TestUtil.printLine('json=' + json)
         assert 'null' == json
     }

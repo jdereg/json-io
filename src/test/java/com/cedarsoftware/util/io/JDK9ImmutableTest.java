@@ -31,8 +31,8 @@ public class JDK9ImmutableTest
     public void testCopyOfListOf() {
         final Object o = new ArrayList<>(List.of());
 
-        String json = JsonWriter.objectToJson(o);
-        List<?> es = (List<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        List<?> es = (List<?>) TestUtil.toJava(json);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -42,8 +42,8 @@ public class JDK9ImmutableTest
     public void testListOf() {
         final Object o = List.of();
 
-        String json = JsonWriter.objectToJson(o);
-        List<?> es = (List<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        List<?> es = (List<?>) TestUtil.toJava(json);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -53,8 +53,8 @@ public class JDK9ImmutableTest
     public void testListOfOne() {
         final Object o = List.of("One");
 
-        String json = JsonWriter.objectToJson(o);
-        List<?> es = (List<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        List<?> es = (List<?>) TestUtil.toJava(json);
 
         assertEquals(1, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -64,8 +64,8 @@ public class JDK9ImmutableTest
     public void testListOfTwo() {
         final Object o = List.of("One", "Two");
 
-        String json = JsonWriter.objectToJson(o);
-        List<?> es = (List<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        List<?> es = (List<?>) TestUtil.toJava(json);
 
         assertEquals(2, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -75,8 +75,8 @@ public class JDK9ImmutableTest
     public void testListOfThree() {
         final Object o = List.of("One", "Two", "Three");
 
-        String json = JsonWriter.objectToJson(o);
-        List<?> es = (List<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        List<?> es = (List<?>) TestUtil.toJava(json);
 
         assertEquals(3, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -86,8 +86,8 @@ public class JDK9ImmutableTest
     public void testSetOf() {
         final Object o = Set.of();
 
-        String json = JsonWriter.objectToJson(o);
-        Set<?> es = (Set<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        Set<?> es = (Set<?>) TestUtil.toJava(json);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -97,8 +97,8 @@ public class JDK9ImmutableTest
     public void testSetOfOne() {
         final Object o = Set.of("One");
 
-        String json = JsonWriter.objectToJson(o);
-        Set<?> es = (Set<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        Set<?> es = (Set<?>) TestUtil.toJava(json);
 
         assertEquals(1, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -108,8 +108,8 @@ public class JDK9ImmutableTest
     public void testSetOfTwo() {
         final Object o = Set.of("One", "Two");
 
-        String json = JsonWriter.objectToJson(o);
-        Set<?> es = (Set<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        Set<?> es = (Set<?>) TestUtil.toJava(json);
 
         assertEquals(2, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -119,8 +119,8 @@ public class JDK9ImmutableTest
     public void testSetOfThree() {
         final Object o = Set.of("One", "Two", "Three");
 
-        String json = JsonWriter.objectToJson(o);
-        Set<?> es = (Set<?>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(o);
+        Set<?> es = (Set<?>) TestUtil.toJava(json);
 
         assertEquals(3, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -136,8 +136,8 @@ public class JDK9ImmutableTest
         rec2.mlinks = new ArrayList<>(List.of(rec1));
         List<Rec> ol = new ArrayList<>(List.of(rec1, rec2, rec1));
 
-        String json = JsonWriter.objectToJson(ol);
-        List<Rec> recs = (List<Rec>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(ol);
+        List<Rec> recs = (List<Rec>) TestUtil.toJava(json);
 
         assertEquals(ol.getClass(), recs.getClass());
         assertEquals(ol.size(), recs.size());
@@ -167,8 +167,8 @@ public class JDK9ImmutableTest
         rec2.mlinks = new ArrayList<>(List.of(rec1));
         List<Rec> ol = List.of(rec1, rec2, rec1);
 
-        String json = JsonWriter.objectToJson(ol);
-        List<Rec> recs = (List<Rec>) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(ol);
+        List<Rec> recs = (List<Rec>) TestUtil.toJava(json);
 
         assertEquals(ol.getClass(), recs.getClass());
         assertEquals(ol.size(), recs.size());
@@ -200,8 +200,8 @@ public class JDK9ImmutableTest
         rec2.mlinks = new ArrayList<>(List.of(rec1));
         List<Rec> ol = List.of(rec1, rec2, rec1);
 
-        String json = JsonWriter.objectToJson(ol);
-        Object es = (List) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(ol);
+        Object es = (List) TestUtil.toJava(json);
 
         assertEquals(((Object) ol).getClass(), es.getClass());
 
@@ -238,8 +238,8 @@ public class JDK9ImmutableTest
 
 		rec1.smap = Map.of();
 
-        String json = JsonWriter.objectToJson(ol);
-        Object es = JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(ol);
+        Object es = TestUtil.toJava(json);
 
         assertEquals(((Object) ol).getClass(), es.getClass());
 

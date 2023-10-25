@@ -444,7 +444,7 @@ public class ArrayTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Object[] array = JsonReader.jsonToJava(json0, args);
+        Object[] array = TestUtil.toJava(json0, args);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -478,7 +478,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = JsonReader.jsonToJava(json0, args);
+        Map map = TestUtil.toJava(json0, args);
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -585,7 +585,7 @@ public class ArrayTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Object array = JsonReader.jsonToJava(json0, args);
+        Object array = TestUtil.toJava(json0, args);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -600,7 +600,7 @@ public class ArrayTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        empty = JsonReader.jsonToJava(json0, args);
+        empty = TestUtil.toJava(json0, args);
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -613,7 +613,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = JsonReader.jsonToJava(json0, args);
+        list = TestUtil.toJava(json0, args);
         assertNotNull(list);
         assertEquals(2, list.length);
         Map e1 = (Map) list[0];
@@ -635,7 +635,7 @@ public class ArrayTest
         TestUtil.printLine("json0=" + json0);
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Object array = JsonReader.jsonToJava(json0, args);
+        Object array = TestUtil.toJava(json0, args);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -663,7 +663,7 @@ public class ArrayTest
         TestUtil.printLine("json0=" + json0);
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map testArray2 = JsonReader.jsonToJava(json0, args);
+        Map testArray2 = TestUtil.toJava(json0, args);
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
@@ -682,7 +682,7 @@ public class ArrayTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map m = JsonReader.jsonToJava(json0, args);
+        Map m = TestUtil.toJava(json0, args);
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -697,10 +697,10 @@ public class ArrayTest
         ta.init();
         LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>(1);
         map.put(JsonWriter.TYPE, (Object) true);
-        String json0 = JsonWriter.objectToJson(ta, map);
+        String json0 = TestUtil.toJson(ta, map);
         ManyArrays thatTa = (ManyArrays) TestUtil.toJava(json0);
         assertTrue(DeepEquals.deepEquals(ta, thatTa));
-        String json1 = JsonWriter.objectToJson(ta);
+        String json1 = TestUtil.toJson(ta);
         TestUtil.printLine("json0 = " + json0);
         TestUtil.printLine("json1 = " + json1);
         assertTrue(json0.length() > json1.length());
@@ -737,7 +737,7 @@ public class ArrayTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonWriter.TYPE, true);
-        String json0 = JsonWriter.objectToJson(cat, args);
+        String json0 = TestUtil.toJson(cat, args);
         TestUtil.printLine(json0);
 
         CharArrayTest cat2 = TestUtil.toJava(json0);
@@ -753,7 +753,7 @@ public class ArrayTest
         assertEquals('\t', (char) chars_b[1]);
         assertEquals('\u0002', (char) chars_b[2]);
 
-        String json1 = JsonWriter.objectToJson(cat);
+        String json1 = TestUtil.toJson(cat);
         TestUtil.printLine(json1);
 
         cat2 = TestUtil.toJava(json0);
@@ -774,7 +774,7 @@ public class ArrayTest
     public void testEmptyArray()
     {
         String json = "{\"@type\":\"[Ljava.lang.String;\"}";
-        String[] s = JsonReader.jsonToJava(json);
+        String[] s = TestUtil.toJava(json);
         assertNotNull(s);
         assertEquals(0, s.length);
     }
@@ -879,9 +879,9 @@ public class ArrayTest
     {
         String[] array = new String[0];
         Object[] refArray = new Object[]{array};
-        String json = JsonWriter.objectToJson(refArray);
+        String json = TestUtil.toJson(refArray);
         TestUtil.printLine("json=" + json);
-        Object[] oa = JsonReader.jsonToJava(json);
+        Object[] oa = TestUtil.toJava(json);
         assertEquals(oa[0].getClass(), String[].class);
         assertEquals(0, ((String[]) oa[0]).length);
     }
@@ -926,13 +926,13 @@ public class ArrayTest
         // Serialize the ArrayList to Json
         Map<String, Object> args = new HashMap<>();
         args.put(JsonWriter.TYPE, false);
-        String json = JsonWriter.objectToJson(numbers, args);
+        String json = TestUtil.toJson(numbers, args);
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
 
         Object[] restoredNumbers;
-        restoredNumbers = JsonReader.jsonToJava(json);
+        restoredNumbers = TestUtil.toJava(json);
         assert DeepEquals.deepEquals(Arrays.asList(restoredNumbers), numbers);
     }
 
@@ -943,11 +943,11 @@ public class ArrayTest
         testArray[0] = "Test";
         Map<String, Object> args = new HashMap<>();
         args.put(JsonWriter.SHORT_META_KEYS, true);
-        String testOut = JsonWriter.objectToJson(testArray, args);
+        String testOut = TestUtil.toJson(testArray, args);
         TestUtil.printLine(testOut);
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in short-hand.
-        Object object = JsonReader.jsonToJava(testOut);
+        Object object = TestUtil.toJava(testOut);
     }
 
     private static final Date _testDate = new Date();

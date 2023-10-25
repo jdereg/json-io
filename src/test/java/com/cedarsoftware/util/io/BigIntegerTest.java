@@ -63,7 +63,7 @@ class BigIntegerTest
 
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = JsonReader.jsonToJava(json, args);
+        Map map = TestUtil.toJava(json, args);
         json = TestUtil.toJson(map);
         tbi = TestUtil.toJava(json);
         assertEquals(new BigInteger("314159"), tbi.fromString);
@@ -94,7 +94,7 @@ class BigIntegerTest
         String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = JsonReader.jsonToJava(json, args);
+        Map map = TestUtil.toJava(json, args);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 

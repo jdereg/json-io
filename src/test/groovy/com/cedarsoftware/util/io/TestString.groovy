@@ -114,7 +114,7 @@ class TestString
     void testRootString()
     {
         String s = '"root string"'
-        Object o = JsonReader.jsonToJava(s, [(JsonReader.USE_MAPS):true] as Map)
+        Object o = TestUtil.toJava(s, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals("root string", o)
         o = TestUtil.toJava(s)
         assertEquals("root string", o)
@@ -140,13 +140,13 @@ class TestString
     void testEmptyString()
     {
         // Ensure no exception is thrown
-        JsonReader.jsonToJava("");
+        TestUtil.toJava("");
     }
 
     @Test
     void testNullInput()
     {
         // Ensure no exception is thrown
-        JsonReader.jsonToJava(null);
+        TestUtil.toJava(null);
     }
 }

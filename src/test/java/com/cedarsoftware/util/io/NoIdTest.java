@@ -35,7 +35,7 @@ class NoIdTest
     void testShouldNotNeedId()
     {
         NoId noId = new NoId();
-        String json = JsonWriter.objectToJson(noId);
+        String json = TestUtil.toJson(noId);
         assertFalse(json.contains(ID));
     }
 

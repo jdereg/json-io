@@ -48,7 +48,7 @@ class TestUnmodifiableCollection
         col.add('qux')
         col = Collections.unmodifiableCollection(col)
         String json = TestUtil.toJson(col)
-        def root = JsonReader.jsonToJava(json)
+        def root = TestUtil.toJava(json)
         assert root instanceof List
         assert root.size() == 4
         assert root[0] == 'foo'
@@ -63,7 +63,7 @@ class TestUnmodifiableCollection
         col.add('qux')
         col = Collections.unmodifiableList(col)
         json = TestUtil.toJson(col)
-        root = JsonReader.jsonToJava(json)
+        root = TestUtil.toJava(json)
         assert root instanceof List
         assert root.size() == 4
         assert root[0] == 'foo'
@@ -82,7 +82,7 @@ class TestUnmodifiableCollection
         col.add('qux')
         col = Collections.unmodifiableSet(col)
         String json = TestUtil.toJson(col)
-        def root = JsonReader.jsonToJava(json)
+        def root = TestUtil.toJava(json)
         assert root instanceof Set
         assert root.size() == 4
         assert root[0] == 'foo'
@@ -97,7 +97,7 @@ class TestUnmodifiableCollection
         col.add('qux')
         col = Collections.unmodifiableSet(col)
         json = TestUtil.toJson(col)
-        root = JsonReader.jsonToJava(json)
+        root = TestUtil.toJava(json)
         assert root instanceof Set
         assert root.size() == 4
         assert root.contains('foo')
@@ -112,7 +112,7 @@ class TestUnmodifiableCollection
         col.add('qux')
         col = Collections.unmodifiableSortedSet(col)
         json = TestUtil.toJson(col)
-        root = JsonReader.jsonToJava(json)
+        root = TestUtil.toJava(json)
         assert root instanceof SortedSet
         assert root.size() == 4
         assert root[0] == 'bar'
@@ -131,7 +131,7 @@ class TestUnmodifiableCollection
         map.qux = 'quixotic'
         map = Collections.unmodifiableMap(map)
         String json = TestUtil.toJson(map)
-        def root = JsonReader.jsonToJava(json)
+        def root = TestUtil.toJava(json)
         assert root instanceof Map
         assert root.size() == 4
         assert root.foo == 'foot'
@@ -146,7 +146,7 @@ class TestUnmodifiableCollection
         map.qux = 'quixotic'
         map = Collections.unmodifiableSortedMap(map)
         json = TestUtil.toJson(map)
-        root = JsonReader.jsonToJava(json)
+        root = TestUtil.toJava(json)
         assert root instanceof SortedMap
         assert root.size() == 4
         assert root.foo == 'foot'
@@ -159,7 +159,7 @@ class TestUnmodifiableCollection
     void testUnmodifiableMapHolder()
     {
         UnmodifiableMapHolder holder = new UnmodifiableMapHolder()
-        String json = JsonWriter.objectToJson(holder)
+        String json = TestUtil.toJson(holder)
         UnmodifiableMapHolder holder1 = (UnmodifiableMapHolder) TestUtil.toJava(json)
         assert holder1.map.get("North") == 0
         assert holder1.map.get("South") == 1

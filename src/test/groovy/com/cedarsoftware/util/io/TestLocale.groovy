@@ -109,7 +109,7 @@ class TestLocale
         Locale locale = new Locale(Locale.ENGLISH.language, Locale.US.country)
         String json = TestUtil.toJson(locale)
         TestUtil.printLine("json=" + json)
-        Map map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map map = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue("en".equals(map.get("language")))
         assertTrue("US".equals(map.get("country")))
     }

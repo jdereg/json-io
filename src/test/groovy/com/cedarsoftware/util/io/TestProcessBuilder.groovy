@@ -67,7 +67,7 @@ class TestProcessBuilder
     }
   ]
 }"""
-        Object obj = JsonReader.jsonToJava(poc);
+        Object obj = TestUtil.toJava(poc);
         TestUtil.printLine(obj.toString());
     }
 }

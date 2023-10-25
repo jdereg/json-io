@@ -215,7 +215,7 @@ class EnumTests {
                 .doNotWritePrivateEnumFields()
                 .build();
 
-        var json = JsonWriter.objectToJson(list, options);
+        var json = TestUtil.toJson(list, options);
 
         assertThat(json).isEqualToIgnoringWhitespace("[{\"name\":\"FEDERATE_THIS\"},{\"name\":\"EXCLUDE\"}]");
     }
@@ -223,7 +223,7 @@ class EnumTests {
     @Test
     void testEnumField() {
         SimpleClass mc = new SimpleClass(this, "Dude", SimpleEnum.ONE);
-        String json = JsonWriter.objectToJson(mc);
+        String json = TestUtil.toJson(mc);
         assertThat(json).contains("Dude");
 
         SimpleClass actual = TestUtil.toJava(json);

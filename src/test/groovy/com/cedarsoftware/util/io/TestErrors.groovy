@@ -50,7 +50,7 @@ class TestErrors
   },
   "string: "Hello World"
 }'''
-            assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+            assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
@@ -72,7 +72,7 @@ class TestErrors
 },
 "string:" "Hello World"
 }'''
-        def x = JsonReader.jsonToJava(json)
+        def x = TestUtil.toJava(json)
         assert "array" == x
     }
 
@@ -95,110 +95,110 @@ class TestErrors
   },
   "string": "Hello World"
 """
-            assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+            assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseMissingLastBracket()
     {
         String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10]'
-        JsonReader.jsonToJava(json)
+        TestUtil.toJava(json)
 
         json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,10'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseBadValueInArray()
     {
         String json = '[true, "bunch of ints", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseObjectWithoutClosingBrace()
     {
         String json = '{"key": true{'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseBadHex()
     {
         String json = '"\\u5h1t"'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseBadEscapeChar()
     {
         String json = '"What if I try to escape incorrectly \\L1CK"'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseUnfinishedString()
     {
         String json = '"This is an unfinished string...'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseEOFInToken()
     {
         String json = "falsz"
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseEOFReadingToken()
     {
         String json = "tru"
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testParseEOFinArray()
     {
         String json = "[true, false,"
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, { TestUtil.toJava(json) })
     }
 
     @Test
     void testMalformedJson()
     {
         String json = '{"field"0}'  // colon expected between fields
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = "{field:0}"  // not quoted field name
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":0'  // object not terminated correctly (ending in number)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":true'  // object not terminated correctly (ending in token)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":"test"'  // object not terminated correctly (ending in string)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":{}'  // object not terminated correctly (ending in another object)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":[]'  // object not terminated correctly (ending in an array)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '{"field":3.14'  // object not terminated correctly (ending in double precision number)
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '[1,2,3'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = "[false,true,false"
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
 
         json = '["unclosed string]'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map) })
+        assertThrows(Exception.class, { TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map) })
     }
 
     @Test
@@ -328,20 +328,20 @@ class TestErrors
     void testErrorReporting()
     {
         String json = '[{"@type":"funky"},\n{"field:"value"]'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json)})
+        assertThrows(Exception.class, { TestUtil.toJava(json)})
     }
 
     @Test
     void testFieldMissingQuotes()
     {
         String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, field2: "no quotes"}, 11, 12, 13]'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json)})
+        assertThrows(Exception.class, { TestUtil.toJava(json)})
     }
 
     @Test
     void testBadFloatingPointNumber()
     {
         String json = '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, {"field":25, "field2": "no quotes"}, 11, 12.14a, 13]'
-        assertThrows(Exception.class, { JsonReader.jsonToJava(json,  [(JsonReader.USE_MAPS):true] as Map)})
+        assertThrows(Exception.class, { TestUtil.toJava(json,  [(JsonReader.USE_MAPS):true] as Map)})
     }
 }

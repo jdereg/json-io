@@ -30,14 +30,14 @@ class TestMapOutputFormat
     void testMapFormat()
     {
         Map map = ['a': 'foo', 'b': 'bar', 'c':'baz', 'd': 'qux']
-        String json1 = JsonWriter.objectToJson(map, [(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS): true] as Map)
-        String json2 = JsonWriter.objectToJson(map, [(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS): false] as Map)
+        String json1 = TestUtil.toJson(map, [(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS): true] as Map)
+        String json2 = TestUtil.toJson(map, [(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS): false] as Map)
         assert json1 != json2
         assert json1.contains('@keys')
         assert json1.contains('@items')
         assert !json2.contains('@keys')
         assert !json2.contains('@items')
-        Map newMap = (Map) JsonReader.jsonToJava(json2)
+        Map newMap = (Map) TestUtil.toJava(json2)
         assert DeepEquals.deepEquals(map, newMap)
     }
 }

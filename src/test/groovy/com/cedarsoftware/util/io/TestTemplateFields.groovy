@@ -149,19 +149,19 @@ class TestTemplateFields
         LinkedList<Test1> llList = new LinkedList<>()
         llList.add(container2)
         container.internalMember.hsOne.put("key", llList)
-        String json = JsonWriter.objectToJson(container)
+        String json = TestUtil.toJson(container)
 
         // This would throw exception in the past
-        JsonReader.jsonToJava(json)
+        TestUtil.toJava(json)
     }
 
     @Test
     void testTemplateNonClassFields()
     {
         Test3 container = new Test3()
-        String json = JsonWriter.objectToJson(container)
+        String json = TestUtil.toJson(container)
         // This would throw exception in the past
-        Test3 reanimated = JsonReader.jsonToJava(json)
+        Test3 reanimated = TestUtil.toJava(json)
         assert reanimated.internalMember.two.name == 'Jane'
         assert reanimated.internalMember.two.age == 45
     }
@@ -170,8 +170,8 @@ class TestTemplateFields
     void testSingle()
     {
         UseSingle useSingle = new UseSingle(new Single<String>("Steel", "Wood"))
-        String json = JsonWriter.objectToJson(useSingle)
-        UseSingle other = (UseSingle) JsonReader.jsonToJava(json)
+        String json = TestUtil.toJson(useSingle)
+        UseSingle other = (UseSingle) TestUtil.toJava(json)
 
         assertEquals("Steel", other.single.field1)
         assertEquals("Wood", other.single.field2)
@@ -181,32 +181,32 @@ class TestTemplateFields
     void testTwoParam()
     {
         UseTwoParam useTwoParam = new UseTwoParam(new TwoParam("Hello", "Goodbye", new Point(20, 40)))
-        String json = JsonWriter.objectToJson(useTwoParam)
-        UseTwoParam other = (UseTwoParam) JsonReader.jsonToJava(json)
+        String json = TestUtil.toJson(useTwoParam)
+        UseTwoParam other = (UseTwoParam) TestUtil.toJava(json)
 
         assertEquals("Hello", other.twoParam.field1)
         assertEquals("Goodbye", other.twoParam.field2)
         assertEquals(new Point(20, 40), other.twoParam.field3)
 
         useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), "Hello"))
-        json = JsonWriter.objectToJson(useTwoParam)
-        other = (UseTwoParam) JsonReader.jsonToJava(json)
+        json = TestUtil.toJson(useTwoParam)
+        other = (UseTwoParam) TestUtil.toJava(json)
 
         assertEquals(new Point(10, 30), other.twoParam.field1)
         assertEquals(new Point(20, 40), other.twoParam.field2)
         assertEquals("Hello", other.twoParam.field3)
 
         useTwoParam = new UseTwoParam(new TwoParam(50, 100, "Hello"))
-        json = JsonWriter.objectToJson(useTwoParam)
-        other = (UseTwoParam) JsonReader.jsonToJava(json)
+        json = TestUtil.toJson(useTwoParam)
+        other = (UseTwoParam) TestUtil.toJava(json)
 
         assertEquals(50, other.twoParam.field1)
         assertEquals(100, other.twoParam.field2)
         assertEquals("Hello", other.twoParam.field3)
 
         useTwoParam = new UseTwoParam(new TwoParam(new Point(10, 30), new Point(20, 40), new TestObject("Hello")))
-        json = JsonWriter.objectToJson(useTwoParam)
-        other = (UseTwoParam) JsonReader.jsonToJava(json)
+        json = TestUtil.toJson(useTwoParam)
+        other = (UseTwoParam) TestUtil.toJava(json)
 
         assertEquals(new Point(10, 30), other.twoParam.field1)
         assertEquals(new Point(20, 40), other.twoParam.field2)
@@ -218,9 +218,9 @@ class TestTemplateFields
     {
         StaticUseSingle useSingle = new StaticUseSingle(new StaticSingle<>("Boonies"))
 
-        String json = JsonWriter.objectToJson(useSingle)
+        String json = TestUtil.toJson(useSingle)
         //this will crash on ArrayIndexOutOfBoundsException
-        StaticUseSingle other = (StaticUseSingle) JsonReader.jsonToJava(json)
+        StaticUseSingle other = (StaticUseSingle) TestUtil.toJava(json)
 
         assertEquals("Boonies", other.single.field1)
     }
@@ -229,13 +229,13 @@ class TestTemplateFields
     void test3TypeGeneric()
     {
         String json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":{"x":1,"y":2},"u":"Sochi","v":{"x":10,"y":20}}}'
-        GenericHolder gen = (GenericHolder) JsonReader.jsonToJava(json)
+        GenericHolder gen = (GenericHolder) TestUtil.toJava(json)
         assertEquals(new Point(1, 2), gen.a.t)
         assertEquals("Sochi", gen.a.u)
         assertEquals(new Point(10, 20), gen.a.v)
 
         json = '{"@type":"' + GenericHolder.class.getName() + '","a":{"t":null,"u":null,"v":null}}'
-        gen = (GenericHolder) JsonReader.jsonToJava(json)
+        gen = (GenericHolder) TestUtil.toJava(json)
         assertNull(gen.a.t)
         assertNull(gen.a.u)
         assertNull(gen.a.v)

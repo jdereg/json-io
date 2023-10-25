@@ -48,8 +48,8 @@ public class GsonNotHandleCycleButJsonIoCanTest
         assertThrows(StackOverflowError.class, () -> new Gson().toJson(alpha));
 
         // json-io handles cycles just fine.
-        String json = JsonWriter.objectToJson(alpha);
-        Node a2 = (Node) JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(alpha);
+        Node a2 = (Node) TestUtil.toJava(json);
         assert "alpha".equals(a2.name);
         Node b2 = a2.next;
         assert "beta".equals(b2.name);

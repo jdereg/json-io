@@ -29,12 +29,12 @@ class TestWithAtSignInData
         String json = '{"PrincipalName":{"@type":"fir:IndividualNameType","NamePrefix":{"NamePrefixText":"Ms"},"FirstName":"Marge","LastName":"Simpson","FullName":"Marge Simpson"},"JobTitle":[{"JobTitleText":{"$":"President"}}],"CurrentManagementResponsibility":[{"ManagementResponsibilityText":{"@ManagementResponsibilityCode":"A1A6","$":"President"}}],"PrincipalIdentificationNumberDetail":[{"@DNBCodeValue":24226,"@TypeText":"Professional Contact Identifier","PrincipalIdentificationNumber":"178125299"}]}'
 
         Map map;
-        assertThatNoException().isThrownBy ({ map = (Map)JsonReader.jsonToJava(json); })
+        assertThatNoException().isThrownBy ({ map = (Map)TestUtil.toJava(json); })
         assert (map.CurrentManagementResponsibility instanceof Object[])
         assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
         assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226
 
-        map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        map = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert (map.CurrentManagementResponsibility instanceof Object[])
         assert map.PrincipalName.NamePrefix.NamePrefixText == 'Ms'
         assert map.PrincipalIdentificationNumberDetail[0]['@DNBCodeValue'] == 24226

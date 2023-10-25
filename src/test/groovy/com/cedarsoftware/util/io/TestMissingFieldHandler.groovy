@@ -107,7 +107,7 @@ class TestMissingFieldHandler
         }
 
         Map<String, Object> args = [(JsonReader.MISSING_FIELD_HANDLER): missingHandler] as Map
-        CustomPoint clonePoint = JsonReader.jsonToJava(OLD_CUSTOM_POINT, args) as CustomPoint
+        CustomPoint clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT, args) as CustomPoint
         assertEquals(pt.x, clonePoint.x)
         assertEquals(7, clonePoint.newY)
     }
@@ -138,7 +138,7 @@ class TestMissingFieldHandler
         //        pt.inner2.inner12 = pt.inner1
         //        pt.aStringArray = ["foo", "bar"]
         //        pt.inner2WithNoSerializedType = new CustomPointWithRef.Inner2()
-        //        TestUtil.printLine( JsonWriter.objectToJson(pt))
+        //        TestUtil.printLine( TestUtil.toJson(pt))
         def isStringArrayOk = false
         def isInner2WithNoSerializedTypeOk = false
         JsonReader.MissingFieldHandler missingHandler = new JsonReader.MissingFieldHandler() {
@@ -207,7 +207,7 @@ class TestMissingFieldHandler
             }
         }
         Map<String, Object> args = [(JsonReader.MISSING_FIELD_HANDLER): missingHandler] as Map
-        CustomPointWithRef clonePoint = JsonReader.jsonToJava(OLD_CUSTOM_POINT2, args) as CustomPointWithRef
+        CustomPointWithRef clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT2, args) as CustomPointWithRef
         assertEquals(clonePoint.inner1, clonePoint.inner2Missing.inner12)
         assertTrue(clonePoint.bMissing)
         assertTrue(clonePoint.bbMissing)

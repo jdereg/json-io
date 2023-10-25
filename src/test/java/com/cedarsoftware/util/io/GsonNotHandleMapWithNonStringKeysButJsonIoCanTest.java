@@ -50,8 +50,8 @@ public class GsonNotHandleMapWithNonStringKeysButJsonIoCanTest
         assert newMap.keySet().iterator().next() instanceof String;     // fail, keys turned into Strings.
 
         // ------------------------ json-io ------------------------
-        json = JsonWriter.objectToJson(map);
-        newMap = (Map) JsonReader.jsonToJava(json);
+        json = TestUtil.toJson(map);
+        newMap = (Map) TestUtil.toJava(json);
 
         assert newMap.size() == 3;
         assert newMap.containsKey(pt1);                                // success, pt1 not found

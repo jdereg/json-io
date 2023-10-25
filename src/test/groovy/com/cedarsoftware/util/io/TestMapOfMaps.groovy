@@ -51,12 +51,12 @@ class TestMapOfMaps
     void testMapOfMapsWithUnknownClasses()
     {
         String json = '{"@type":"com.foo.bar.baz.Qux","_name":"Hello","_other":null}'
-        Map stuff = JsonReader.jsonToJava(json)
+        Map stuff = TestUtil.toJava(json)
         assert stuff.size() == 2
         assert stuff._name == 'Hello'
         assert stuff._other == null
 
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals('Hello', map._name)
         assertNull(map._other)
 
@@ -65,10 +65,10 @@ class TestMapOfMaps
         json = '{"@type":"' + testObjectClassName + '","_name":"alpha","_other":{"@type":"com.baz.Qux","_name":"beta","_other":null}}'
 
 
-        Exception e = assertThrows(Exception.class, { JsonReader.jsonToJava(json)})
+        Exception e = assertThrows(Exception.class, { TestUtil.toJava(json)})
         assertThat(e.getMessage().toLowerCase()).contains('setting field \'_other\'')
 
-        map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertEquals('alpha', map._name)
         assertTrue(map._other instanceof JsonObject)
         JsonObject other = (JsonObject) map._other
@@ -79,7 +79,7 @@ class TestMapOfMaps
     @Test
     void testForwardRefNegId()
     {
-        Object doc = JsonReader.jsonToJava(TestUtil.fetchResource("forwardRefNegId.json"), [(JsonReader.USE_MAPS):true] as Map)
+        Object doc = TestUtil.toJava(TestUtil.fetchResource("forwardRefNegId.json"), [(JsonReader.USE_MAPS):true] as Map)
         Object[] items = (Object[]) doc
         assertEquals(2, items.length)
         Map male = items[0]
@@ -89,8 +89,8 @@ class TestMapOfMaps
         assertSame(male.friend, female)
         assertSame(female.friend, male)
 
-        String json = JsonWriter.objectToJson(doc) // Neat trick json-io does - rewrites proper json from Map of Maps input
-        Object doc2 = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)      // Read in this map of maps to JSON string and make sure it's right
+        String json = TestUtil.toJson(doc) // Neat trick json-io does - rewrites proper json from Map of Maps input
+        Object doc2 = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)      // Read in this map of maps to JSON string and make sure it's right
 
         Object[] peeps1 = items
         Object[] peeps2 = (Object[]) doc2
@@ -119,7 +119,7 @@ class TestMapOfMaps
 
         // Comes in as a Map [[x:20, y:20]:[x:1, y:2]] when read as Map of maps.  This is due to a Point (non simple type)
         // being the key of the map.
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(map.points.size() == 1)
         Map points = map.points;
         Map ten20 = points.keySet().iterator().next()
@@ -139,7 +139,7 @@ class TestMapOfMaps
     {
         String json = '{"traits":{"ui:attributes":{"type":"text","label":"Risk Type","maxlength":"30"},"v:max":"1","v:min":"1","v:regex":"[[0-9][a-z][A-Z]]","db:attributes":{"selectColumn":"QR.RISK_TYPE_REF_ID","table":"QUOTE_RISK","tableAlias":"QR","column":"QUOTE_ID","columnName":"QUOTE_ID","columnAlias":"c:riskType","joinTable":"QUOTE","joinAlias":"Q","joinColumn":"QUOTE_ID"},"r:exists":true,"r:value":"risk"}}'
         TestUtil.printLine("json = " + json)
-        Map root = (Map) JsonReader.jsonToJava(json)
+        Map root = (Map) TestUtil.toJava(json)
         Map traits = (Map) root.traits
         Map uiAttributes = (Map) traits['ui:attributes']
         String label = (String) uiAttributes['label']
@@ -156,7 +156,7 @@ class TestMapOfMaps
     {
         String json = '[{"traits":{"ui:attributes":{"type":"text","label":"Risk Type","maxlength":"30"},"v:max":"1","v:min":"1","v:regex":"[[0-9][a-z][A-Z]]","db:attributes":{"selectColumn":"QR.RISK_TYPE_REF_ID","table":"QUOTE_RISK","tableAlias":"QR","column":"QUOTE_ID","columnName":"QUOTE_ID","columnAlias":"c:riskType","joinTable":"QUOTE","joinAlias":"Q","joinColumn":"QUOTE_ID"},"r:exists":true,"r:value":"risk"}},{"key1":1,"key2":2}]'
         TestUtil.printLine("json = " + json)
-        Object[] root = (Object[]) JsonReader.jsonToJava(json)
+        Object[] root = (Object[]) TestUtil.toJava(json)
         Map traits = (Map) root[0]
         traits = (Map) traits.traits
         Map uiAttributes = (Map) traits['ui:attributes']
@@ -189,8 +189,8 @@ class TestMapOfMaps
         p.iq = 125
         p.birthYear = 1981
 
-        String json = JsonWriter.objectToJson(p)
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(p)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
 
         def age = map.age
         assert age instanceof BigDecimal
@@ -209,7 +209,7 @@ class TestMapOfMaps
     void testMapOfMapsSimpleArray()
     {
         String s = '[{"@ref":1},{"name":"Jack","age":21,"@id":1}]'
-        Object[] list = (Object[]) JsonReader.jsonToJava(s, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] list = (Object[]) TestUtil.toJava(s, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(list[0] == list[1])
     }
 
@@ -228,7 +228,7 @@ class TestMapOfMaps
 ]'''
 
         TestUtil.printLine("json=" + s)
-        Object[] items = (Object[]) JsonReader.jsonToJava(s, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] items = (Object[]) TestUtil.toJava(s, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(items.length == 8)
         Map husband = (Map) items[0]
         Map wife = (Map) items[6]
@@ -262,7 +262,7 @@ class TestMapOfMaps
         String json = TestUtil.toJson(stuff)
         TestUtil.printLine("json=" + json)
 
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         TestUtil.printLine("map=" + map)
         Object aa = map.get("a")
         Map bb = (Map) map.get("b")
@@ -300,7 +300,7 @@ class TestMapOfMaps
         Object o = null;
         try
         {
-            o = JsonReader.jsonToJava("[This is not quoted]", [(JsonReader.USE_MAPS):true] as Map)
+            o = TestUtil.toJava("[This is not quoted]", [(JsonReader.USE_MAPS):true] as Map)
             fail()
         }
         catch (Exception e)
@@ -313,7 +313,7 @@ class TestMapOfMaps
     @Test
     void testToMaps()
     {
-        JsonObject map = (JsonObject) JsonReader.jsonToJava('{"num":0,"nullValue":null,"string":"yo"}', [(JsonReader.USE_MAPS):true] as Map)
+        JsonObject map = (JsonObject) TestUtil.toJava('{"num":0,"nullValue":null,"string":"yo"}', [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(map != null)
         assertTrue(map.size() == 3)
         assertTrue(map.get("num").equals(0L))
@@ -328,7 +328,7 @@ class TestMapOfMaps
     void testUntyped()
     {
         String json = '{"age":46,"name":"jack","married":false,"salary":125000.07,"notes":null,"address1":{"@ref":77},"address2":{"@id":77,"street":"1212 Pennsylvania ave","city":"Washington"}}'
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         TestUtil.printLine('map=' + map)
         assertTrue(map.age.equals(46L))
         assertTrue(map.name.equals('jack'))
@@ -349,11 +349,11 @@ class TestMapOfMaps
         Map map = [age:'36', name:'chris']
 
         //in formatJson, the json will be parsed into a map, which checks both jsonReader and writeJsonObjectMap
-        String jsonGenerated = JsonWriter.formatJson(JsonWriter.objectToJson(map))
+        String jsonGenerated = JsonWriter.formatJson(TestUtil.toJson(map))
         jsonGenerated = jsonGenerated.replaceAll("[\\r]","");
         assert json == jsonGenerated
 
-        Map clone = (Map) JsonReader.jsonToJava(jsonGenerated)
+        Map clone = (Map) TestUtil.toJava(jsonGenerated)
         assert map.equals(clone)
     }
 
@@ -363,10 +363,10 @@ class TestMapOfMaps
         String json = '{"@type":"java.util.LinkedHashMap","age":"36","name":"chris"}'
         Map map = [age:'36', name:'chris']
 
-        String jsonGenerated = JsonWriter.objectToJson(map)
+        String jsonGenerated = TestUtil.toJson(map)
         assert json == jsonGenerated
 
-        Map clone = (Map) JsonReader.jsonToJava(jsonGenerated)
+        Map clone = (Map) TestUtil.toJava(jsonGenerated)
         assert map.equals(clone)
     }
 
@@ -378,7 +378,7 @@ class TestMapOfMaps
         test._other = child
         String json = TestUtil.toJson(test)
         TestUtil.printLine("json=" + json)
-        Map root = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map root = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         JsonReader reader = new JsonReader()
         TestObject test2 = (TestObject) reader.jsonObjectsToJava(root)
         assertTrue(test2.equals(test))
@@ -458,15 +458,15 @@ class TestMapOfMaps
         a._other = b
         b._other = a
 
-        String json = JsonWriter.objectToJson(a)
-        Map aa = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(a)
+        Map aa = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert aa._name == 'a'
         Map bb = aa._other
         assert bb._name == 'b'
         assert bb._other.is(aa)
         assert aa._other.is(bb)
 
-        String json1 = JsonWriter.objectToJson(aa)
+        String json1 = TestUtil.toJson(aa)
         assert json == json1
     }
 
@@ -486,9 +486,9 @@ class TestMapOfMaps
         pCopy.iq = 140
 
         List list = [p, p, pCopy]
-        String json = JsonWriter.objectToJson(list, [(JsonWriter.TYPE):false])
+        String json = TestUtil.toJson(list, [(JsonWriter.TYPE):false])
 
-        Object[] array = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] array = (Object[]) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert array[0].is(array[1])
         assert !array[0].is(array[2])   // identical object
         assert array[2] == array[1]     // contents match
@@ -511,9 +511,9 @@ class TestMapOfMaps
 
         List list = [p, p, pCopy]
         List holder = [list, list]
-        String json = JsonWriter.objectToJson(holder, [(JsonWriter.TYPE):false])
+        String json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false])
 
-        Object[] array = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] array = (Object[]) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert array[0] == array[1]     // Identical array
         Map objList1 = (Map) array[0]
         List list1 = (List) objList1['@items']
@@ -535,18 +535,18 @@ class TestMapOfMaps
    "last":"Adams"
 }
 '''
-        Map person = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
-        json = JsonWriter.objectToJson(person)
+        Map person = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        json = TestUtil.toJson(person)
 
-        Map map = JsonReader.jsonToJava(json)
+        Map map = TestUtil.toJava(json)
         assert map.size() == 3
         assert map.first == 'Sam'
         assert map.middle == null
         assert map.last == 'Adams'
 
-        json = JsonWriter.objectToJson(person, [(JsonWriter.SKIP_NULL_FIELDS):true])
+        json = TestUtil.toJson(person, [(JsonWriter.SKIP_NULL_FIELDS):true])
 
-        map = JsonReader.jsonToJava(json)
+        map = TestUtil.toJava(json)
         assert map.size() == 2
         assert map.first == 'Sam'
         assert map.last == 'Adams'
@@ -561,17 +561,17 @@ class TestMapOfMaps
         p.iq = null
         p.birthYear = 1984
 
-        String json = JsonWriter.objectToJson(p)
-        Person p1 = JsonReader.jsonToJava(json)
+        String json = TestUtil.toJson(p)
+        Person p1 = TestUtil.toJava(json)
         assert p.name == 'Sam Adams'
         assert p.age == null
         assert p.iq == null
         assert p.birthYear == 1984
 
-        json = JsonWriter.objectToJson(p, [(JsonWriter.SKIP_NULL_FIELDS):true])
+        json = TestUtil.toJson(p, [(JsonWriter.SKIP_NULL_FIELDS):true])
         assert !json.contains('age')
         assert !json.contains('iq')
-        p1 = JsonReader.jsonToJava(json)
+        p1 = TestUtil.toJava(json)
         assert p1.name == 'Sam Adams'
         assert p1.birthYear == 1984
     }

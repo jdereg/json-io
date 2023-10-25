@@ -45,7 +45,7 @@ class TestForwardReferences
         assertEquals((Integer) ints[1], 5)
 
         json = '{"@type":"java.util.ArrayList","@items":[{"@ref":2},{"@id":2,"@type":"int","value":5}]}'
-        List list = (List) JsonReader.jsonToJava(json)
+        List list = (List) TestUtil.toJava(json)
         assertEquals((Integer)list.get(0), 5)
         assertEquals((Integer)list.get(1), 5)
 

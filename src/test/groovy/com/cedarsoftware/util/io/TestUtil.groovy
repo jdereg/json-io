@@ -100,6 +100,10 @@ class TestUtil
 
     static <T> T toJava(String json, Map<String, Object> args)
     {
+        if (null == json || "".equals(json.trim()))
+        {
+            return null;
+        }
         long startRead1 = System.nanoTime()
 
         ByteArrayInputStream ba;

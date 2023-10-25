@@ -41,7 +41,7 @@ class TestUsingSunMisc
         // Dirty Workaround otherwise
         Object[] array = new Object[1]
         array[0] = shoe;
-        String workaroundString = JsonWriter.objectToJson(array)
+        String workaroundString = TestUtil.toJson(array)
         JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
             Object newInstance(Class c, JsonObject<String, Object> o)
             {
@@ -59,7 +59,7 @@ class TestUsingSunMisc
         // checking array type + length
         // and accessing [0]
 
-        String json = JsonWriter.objectToJson(shoe)
+        String json = TestUtil.toJson(shoe)
         //Should not fail, as we defined our own reader
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
@@ -78,16 +78,16 @@ class TestUsingSunMisc
         MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe shoe = Dog.OtherShoe.construct()
-        Dog.OtherShoe oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
+        Dog.OtherShoe oShoe = (Dog.OtherShoe) TestUtil.toJava(TestUtil.toJson(shoe))
         assertTrue(shoe.equals(oShoe))
-        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
+        oShoe = (Dog.OtherShoe) TestUtil.toJava(TestUtil.toJson(shoe))
         assertTrue(shoe.equals(oShoe))
 
         try
         {
             MetaUtils.useUnsafe = false;
             shoe = Dog.OtherShoe.construct()
-            JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
+            TestUtil.toJava(TestUtil.toJson(shoe))
             fail()
         }
         catch (JsonIoException e)
@@ -98,7 +98,7 @@ class TestUsingSunMisc
         MetaUtils.useUnsafe = true;
         // this test will fail without directCreation
         Dog.OtherShoe.construct()
-        oShoe = (Dog.OtherShoe) JsonReader.jsonToJava(JsonWriter.objectToJson(shoe))
+        oShoe = (Dog.OtherShoe) TestUtil.toJava(TestUtil.toJson(shoe))
         assertTrue(shoe.equals(oShoe))
     }
 
@@ -108,10 +108,10 @@ class TestUsingSunMisc
         assertThrows(Exception.class, { new ShouldBeImpossibleToInstantiate() })
 
         String json = '{"@type":"' + ShouldBeImpossibleToInstantiate.class.name + '", "x":50}'
-        assertThrows(Exception.class, {  JsonReader.jsonToJava(json) })
+        assertThrows(Exception.class, {  TestUtil.toJava(json) })
 
         MetaUtils.useUnsafe = true
-        ShouldBeImpossibleToInstantiate s = JsonReader.jsonToJava(json)
+        ShouldBeImpossibleToInstantiate s = TestUtil.toJava(json)
         assert s.x == 50
         MetaUtils.useUnsafe = false
     }

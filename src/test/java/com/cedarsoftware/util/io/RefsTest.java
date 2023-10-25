@@ -163,7 +163,7 @@ class RefsTest
         TestObject b = new TestObject("b");
         a._other = b;
         b._other = a;
-        String json = JsonWriter.objectToJson(a);
+        String json = TestUtil.toJson(a);
         Map<String, Object> options = new HashMap<>();
         Map<Class, JsonReader.JsonClassReaderBase> readers = new HashMap<>();
         options.put(JsonReader.CUSTOM_READER_MAP, readers);
@@ -202,7 +202,7 @@ class RefsTest
 
         // With forward reference
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
-        List<Object> newList = (List<Object>) JsonReader.jsonToJava(json);
+        List<Object> newList = (List<Object>) TestUtil.toJava(json);
         Delta d1 = (Delta) newList.get(0);
         Delta d2 = (Delta) newList.get(1);
 
@@ -212,7 +212,7 @@ class RefsTest
 
         // Backward reference
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}]}";
-        newList = (List<Object>) JsonReader.jsonToJava(json);
+        newList = (List<Object>) TestUtil.toJava(json);
         d1 = (Delta) newList.get(0);
         d2 = (Delta) newList.get(1);
 

@@ -58,8 +58,8 @@ public class GsonNotHandleHeteroCollectionsTest
         assert "Bitcoin".equals(map.get("name"));
 
         // ---------------------------- json-io maintains types ----------------------------
-        json = JsonWriter.objectToJson(list);
-        newList = (List) JsonReader.jsonToJava(json);
+        json = TestUtil.toJson(list);
+        newList = (List) TestUtil.toJava(json);
 
         assert newList.get(0) instanceof Integer;
         assert newList.get(1) instanceof Long;

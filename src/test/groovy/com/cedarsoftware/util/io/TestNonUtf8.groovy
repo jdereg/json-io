@@ -36,8 +36,8 @@ class TestNonUtf8
         TestUtil.printLine(Charset.defaultCharset().toString());
 
         def s1 = /"Die gelbe Hölle"/;
-        def o = JsonReader.jsonToJava(s1);
-        def s2 = JsonWriter.objectToJson(o);
+        def o = TestUtil.toJava(s1);
+        def s2 = TestUtil.toJson(o);
 
         TestUtil.printLine s1
         TestUtil.printLine s2

@@ -53,7 +53,7 @@ class InnerClassTest
         TestUtil.printLine("json0=" + json0);
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        JsonObject job = JsonReader.jsonToJava(json0, args);
+        JsonObject job = TestUtil.toJava(json0, args);
         job.put("phantom", new TestObject("Eddie"));
         String json1 = TestUtil.toJson(job);
         TestUtil.printLine("json1=" + json1);

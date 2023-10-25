@@ -34,7 +34,7 @@ class BigJsonTest
         String json = TestUtil.fetchResource("big5D.json");
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = JsonReader.jsonToJava(json, args);
+        Map map = TestUtil.toJava(json, args);
         assertEquals("big5D", map.get("ncube"));
         assertEquals(0L, map.get("defaultCellValue"));
         assertNotNull(map.get("axes"));
@@ -53,7 +53,7 @@ class BigJsonTest
         TestUtil.printLine("gson: " + ((stop - start) / 1000000L));
 
         start = System.nanoTime();
-        JsonReader.jsonToJava(json);
+        TestUtil.toJava(json);
         stop = System.nanoTime();
         TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
     }
@@ -89,7 +89,7 @@ class BigJsonTest
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
 
-        JsonReader.jsonToJava(json, args);
+        TestUtil.toJava(json, args);
         long stop = System.nanoTime();
         TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
 
@@ -97,7 +97,7 @@ class BigJsonTest
         while (i++ < 50)
         {
             start = System.nanoTime();
-            JsonReader.jsonToJava(json, args);
+            TestUtil.toJava(json, args);
             stop = System.nanoTime();
             TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
         }

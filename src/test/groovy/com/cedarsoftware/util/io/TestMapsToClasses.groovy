@@ -79,7 +79,7 @@ class TestMapsToClasses
   "pets2":[{"name":"eddie","type":"dog"},{"name":"bella","type":"chi hua hua"}]
 }"""
 
-        Person superMan = JsonReader.jsonToJava(json)
+        Person superMan = TestUtil.toJava(json)
         assert superMan.fname == 'Clark'
         assert superMan.lname == 'Kent'
         assert superMan.age == '40'       // int was converted to String
@@ -137,7 +137,7 @@ class TestMapsToClasses
     "atomicLong":""
 }
 """
-        AllTypes types = JsonReader.jsonToJava(json)
+        AllTypes types = TestUtil.toJava(json)
         assert types.aBoolean == false
         assert types.aByte == (byte)0
         assert types.aShort == (short)0
@@ -184,7 +184,7 @@ class TestMapsToClasses
     "atomicLong":null
 }
 """
-        AllTypes types = JsonReader.jsonToJava(json)
+        AllTypes types = TestUtil.toJava(json)
         assert types.aBoolean == false
         assert types.aByte == (byte)0
         assert types.aShort == (short)0

@@ -44,7 +44,7 @@ class AtomicBooleanTest
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":\"true\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":false},\"values\":[false,null,true, \"true\"]}";
 
-        TestAtomicBooleanField atom2 = JsonReader.jsonToJava(json);
+        TestAtomicBooleanField atom2 = TestUtil.toJava(json);
 
         assert atom2.value.get();
         assert atom2.nullValue == null;
@@ -57,13 +57,13 @@ class AtomicBooleanTest
         assert atom2.values[2].get();
         assert atom2.values[3].get();
 
-        json = JsonWriter.objectToJson(atom2);
+        json = TestUtil.toJson(atom2);
         assert json.equals("{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":null,\"objValue\":false,\"values\":[false,null,true,true]}");
 
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":16.5}";
         try
         {
-            Object x = JsonReader.jsonToJava(json);
+            Object x = TestUtil.toJava(json);
             fail("should not make it here");
         }
         catch (Exception ignore)
@@ -76,7 +76,7 @@ class AtomicBooleanTest
         String json = "{\"@type\":\"" + TestAtomicBooleanField.class.getName() + "\",\"strValue\":\"\"}";
         Map<String, Object> args = new HashMap<>();
         args.put(JsonReader.USE_MAPS, true);
-        Map map = JsonReader.jsonToJava(json, args);
+        Map map = TestUtil.toJava(json, args);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 

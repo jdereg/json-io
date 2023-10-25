@@ -72,10 +72,10 @@ public class LongTest
         long x = 19;
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = JsonWriter.objectToJson(x, map);
+        String json = TestUtil.toJson(x, map);
         assert json.contains("\"19\"");
 
-        Object y = JsonReader.jsonToJava(json);
+        Object y = TestUtil.toJava(json);
         assert y instanceof Long;
         Assertions.assertEquals(19L, (Long) y);
     }
@@ -86,12 +86,12 @@ public class LongTest
         Long[] x = new Long[]{1L, 2L, 3L};
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = JsonWriter.objectToJson(x, map);
+        String json = TestUtil.toJson(x, map);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = JsonReader.jsonToJava(json);
+        Object y = TestUtil.toJava(json);
         assert y instanceof Long[];
         Long[] longArray = (Long[]) y;
         Assertions.assertEquals(1L, longArray[0]);
@@ -105,12 +105,12 @@ public class LongTest
         Object[] x = new Object[]{1L, 2L, 3L};
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = JsonWriter.objectToJson(x, map);
+        String json = TestUtil.toJson(x, map);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = JsonReader.jsonToJava(json);
+        Object y = TestUtil.toJava(json);
         assert y instanceof Object[];
         Object[] objArray = (Object[])y;
         Assertions.assertEquals(1L, objArray[0]);
@@ -127,13 +127,13 @@ public class LongTest
         x.add(3L);
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = JsonWriter.objectToJson(x, map);
+        String json = TestUtil.toJson(x, map);
 
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
 
-        Object y = JsonReader.jsonToJava(json);
+        Object y = TestUtil.toJava(json);
         assert y instanceof Collection;
         assert y instanceof List;
         List<Long> col = (List<Long>)y;
@@ -151,12 +151,12 @@ public class LongTest
 
         Map<String, Object> map = new LinkedHashMap<>(1);
         map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = JsonWriter.objectToJson(x, map);
+        String json = TestUtil.toJson(x, map);
 
         assert json.contains("\"49\"");
         assert json.contains("\"205\"");
 
-        Object y = JsonReader.jsonToJava(json);
+        Object y = TestUtil.toJava(json);
         assert y instanceof PhysicalAttributes;
         Assertions.assertEquals(49L, ((PhysicalAttributes) y).getAge());
         Assertions.assertEquals(205L, ((PhysicalAttributes) y).getWeight());

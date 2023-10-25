@@ -439,8 +439,8 @@ class TestFields
     {
         ManyFields tf = new ManyFields()
         tf.init()
-        def json0 = JsonWriter.objectToJson(tf, [(JsonWriter.TYPE):true] as Map)
-        def json1 = JsonWriter.objectToJson(tf)
+        def json0 = TestUtil.toJson(tf, [(JsonWriter.TYPE):true] as Map)
+        def json1 = TestUtil.toJson(tf)
         assertTrue(json0.length() > json1.length())
     }
 
@@ -451,7 +451,7 @@ class TestFields
         testFields.init()
         String json0 = TestUtil.toJson(testFields)
         TestUtil.printLine("json0=" + json0)
-        Map testFields2 = (Map) JsonReader.jsonToJava(json0, [(JsonReader.USE_MAPS):true] as Map)
+        Map testFields2 = (Map) TestUtil.toJava(json0, [(JsonReader.USE_MAPS):true] as Map)
 
         String json1 = TestUtil.toJson(testFields2)
         TestUtil.printLine("json1=" + json1)
@@ -488,7 +488,7 @@ class TestFields
         Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
 
-        assertThrows(Exception.class, {  JsonWriter.objectToJson(painful, args) })
+        assertThrows(Exception.class, {  TestUtil.toJson(painful, args) })
     }
 
     @Test
@@ -504,8 +504,8 @@ class TestFields
 
         Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
-        String json = JsonWriter.objectToJson(painful, args)
-        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, args)
+        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
     }
@@ -519,8 +519,8 @@ class TestFields
         painful.age = 50;
 
         def args = [(JsonWriter.FIELD_SPECIFIERS):fieldSpecifiers] as Map
-        String json = JsonWriter.objectToJson(painful, args)
-        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, args)
+        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
 
@@ -528,8 +528,8 @@ class TestFields
         fields2.add("age")
         fields2.add("name")
         fieldSpecifiers.put(MorePainfulToSerialize.class, fields2)
-        json = JsonWriter.objectToJson(painful, args)
-        check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        json = TestUtil.toJson(painful, args)
+        check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 2)
         assertTrue(check.containsKey("name"))
         assertTrue(check.containsKey("age"))
@@ -556,8 +556,8 @@ class TestFields
         painful.name = "Android rocks"
 
         def args = [(JsonWriter.FIELD_NAME_BLACK_LIST):blackLists] as Map
-        String json = JsonWriter.objectToJson(painful, args)
-        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, args)
+        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
     }
@@ -571,8 +571,8 @@ class TestFields
         painful.age = 50;
 
         def args = [(JsonWriter.FIELD_NAME_BLACK_LIST):blackLists] as Map
-        String json = JsonWriter.objectToJson(painful, args)
-        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, args)
+        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 2)
         assertTrue(check.containsKey("name"))
         assertTrue(check.containsKey("age"))
@@ -590,8 +590,8 @@ class TestFields
         Map<String, Object> args = new HashMap<>()
         args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
         args.put(JsonWriter.FIELD_NAME_BLACK_LIST, blackLists)
-        String json = JsonWriter.objectToJson(painful, args)
-        Map check = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, args)
+        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
     }

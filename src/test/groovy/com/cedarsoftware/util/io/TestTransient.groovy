@@ -90,7 +90,7 @@ class TestTransient
         person.lname = "DeRegnaucourt"
         person.buildFull()
 
-        String json = JsonWriter.objectToJson(person, [FIELD_SPECIFIERS:[(Transient1.class) : ['fname', 'lname','fullname']]] as Map)
+        String json = TestUtil.toJson(person, [FIELD_SPECIFIERS:[(Transient1.class) : ['fname', 'lname','fullname']]] as Map)
         assert json.contains("fullname")
 
         person = (Transient1) TestUtil.toJava(json)

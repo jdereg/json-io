@@ -105,49 +105,49 @@ class TestPrimitives
     void testEmptyPrimitives()
     {
         String json = '{"@type":"byte"}'
-        Byte b = (Byte) JsonReader.jsonToJava(json)
+        Byte b = (Byte) TestUtil.toJava(json)
         assertTrue(b.getClass().equals(Byte.class))
         assertTrue(b == 0)
 
         json = '{"@type":"short"}'
-        Short s = (Short) JsonReader.jsonToJava(json)
+        Short s = (Short) TestUtil.toJava(json)
         assertTrue(s.getClass().equals(Short.class))
         assertTrue(s == 0)
 
         json = '{"@type":"int"}'
-        Integer i = (Integer) JsonReader.jsonToJava(json)
+        Integer i = (Integer) TestUtil.toJava(json)
         assertTrue(i.getClass().equals(Integer.class))
         assertTrue(i == 0)
 
         json = '{"@type":"long"}'
-        Long l = (Long) JsonReader.jsonToJava(json)
+        Long l = (Long) TestUtil.toJava(json)
         assertTrue(l.getClass().equals(Long.class))
         assertTrue(l == 0)
 
         json = '{"@type":"float"}'
-        Float f = (Float) JsonReader.jsonToJava(json)
+        Float f = (Float) TestUtil.toJava(json)
         assertTrue(f.getClass().equals(Float.class))
         assertTrue(f == 0.0f)
 
         json = '{"@type":"double"}'
-        Double d = (Double) JsonReader.jsonToJava(json)
+        Double d = (Double) TestUtil.toJava(json)
         assertTrue(d.getClass().equals(Double.class))
         assertTrue(d == 0.0d)
 
         json = '{"@type":"char"}'
-        Character c = (Character) JsonReader.jsonToJava(json)
+        Character c = (Character) TestUtil.toJava(json)
         assertTrue(c.getClass().equals(Character.class))
         assertTrue(c == '\u0000')
 
         json = '{"@type":"boolean"}'
-        Boolean bool = (Boolean) JsonReader.jsonToJava(json)
+        Boolean bool = (Boolean) TestUtil.toJava(json)
         assertTrue(bool == Boolean.FALSE)
 
         json = '{"@type":"string"}'
         String str = null;
         try
         {
-            str = (String) JsonReader.jsonToJava(json)
+            str = (String) TestUtil.toJava(json)
             fail()
         }
         catch (Exception e)

@@ -31,8 +31,8 @@ public class ObjectHolderTest
     public void simpleTest()
     {
         ObjectHolder holder = new ObjectHolder("bool", true);
-        String json = JsonWriter.objectToJson(holder);
-        ObjectHolder deserialized = JsonReader.jsonToJava(json);
+        String json = TestUtil.toJson(holder);
+        ObjectHolder deserialized = TestUtil.toJava(json);
         assertEquals(holder, deserialized);
     }
 
@@ -58,8 +58,8 @@ public class ObjectHolderTest
         Map<String, Object> deSerialParams = new HashMap<String, Object>();
         deSerialParams.put(JsonReader.UNKNOWN_OBJECT, ObjectHolder.class.getName());
 
-        String json = JsonWriter.objectToJson(holder, serialParams);
-        ObjectHolder deserialized = (ObjectHolder) JsonReader.jsonToJava(json, deSerialParams);
+        String json = TestUtil.toJson(holder, serialParams);
+        ObjectHolder deserialized = (ObjectHolder) TestUtil.toJava(json, deSerialParams);
         assertEquals(holder, deserialized);
     }
 }

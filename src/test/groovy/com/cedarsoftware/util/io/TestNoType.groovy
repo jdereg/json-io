@@ -63,14 +63,14 @@ class TestNoType
     {
         String json = '{"groups":["one","two","three"],"search":{"datalist":[]}}'
 
-        Map map = JsonReader.jsonToJava(json)
+        Map map = TestUtil.toJava(json)
         assert !(map.groups instanceof Map)
         assert map.groups[0] == "one"
         assert map.groups[1] == "two"
         assert map.groups[2] == "three"
         assert map.search.datalist.length == 0
 
-        map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
+        map = TestUtil.toJava(json, [(JsonReader.USE_MAPS): true] as Map)
         assert !(map.groups instanceof Map)
         assert map.groups[0] == "one"
         assert map.groups[1] == "two"
@@ -86,8 +86,8 @@ class TestNoType
         cols.foos.addAll([1,2,"4",8])
         cols.bars = [1,3,"5",7] as Object[]
 
-        String json = JsonWriter.objectToJson(cols, [(JsonWriter.TYPE): false])
-        Map map = JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(cols, [(JsonWriter.TYPE): false])
+        Map map = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assert map.foos[0] == 1
         assert map.foos[1] == 2
         assert map.foos[2] == "4"
@@ -98,10 +98,10 @@ class TestNoType
         assert map.bars[2] == "5"
         assert map.bars[3] == 7
 
-        json = JsonWriter.objectToJson([1, 2, 3, 4], [(JsonWriter.TYPE): false])
+        json = TestUtil.toJson([1, 2, 3, 4], [(JsonWriter.TYPE): false])
         assert '[1,2,3,4]' == json
 
-        json = JsonWriter.objectToJson([1, 2, 3, 4] as Object[], [(JsonWriter.TYPE): false])
+        json = TestUtil.toJson([1, 2, 3, 4] as Object[], [(JsonWriter.TYPE): false])
         assert '[1,2,3,4]' == json
     }
 
@@ -109,8 +109,8 @@ class TestNoType
     public void testObjectArray()
     {
         def array = [[1L,2L,3L] as Object[], ['a', 'b', 'c'] as Object[]] as Object[]
-        String json = JsonWriter.objectToJson(array)
-        Object[] list = (Object[]) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(array)
+        Object[] list = (Object[]) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
 
         assert list[0] instanceof Object[]
         assert list[0][0] == 1L

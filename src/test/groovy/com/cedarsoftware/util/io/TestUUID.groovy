@@ -42,7 +42,7 @@ class TestUUID
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.fromString)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.internals)
 
-        Map map = (Map) JsonReader.jsonToJava(json, [(JsonReader.USE_MAPS): true] as Map)
+        Map map = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS): true] as Map)
         json = TestUtil.toJson(map)
         tu = (TestUUIDFields) TestUtil.toJava(json)
         assertEquals((Object) UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.fromString)

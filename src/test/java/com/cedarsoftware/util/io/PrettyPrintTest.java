@@ -55,11 +55,11 @@ class PrettyPrintTest
         String target = TestUtil.fetchResource("prettyPrint.json");
         Map args = new HashMap<>();
         args.put(JsonWriter.PRETTY_PRINT, true);
-        String json = JsonWriter.objectToJson(nice, args);
+        String json = TestUtil.toJson(nice, args);
 
         assertThat(json).isEqualToIgnoringNewLines(target);
 
-        String json1 = JsonWriter.objectToJson(nice);
+        String json1 = TestUtil.toJson(nice);
         assertThat(json)
                 .isNotEqualTo(json1)
                 .isEqualToIgnoringWhitespace(json1);
