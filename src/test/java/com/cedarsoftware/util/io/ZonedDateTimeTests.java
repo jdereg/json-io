@@ -23,15 +23,15 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         var date = ZonedDateTime.of(LocalDate.now(), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
         var date2 = ZonedDateTime.of(LocalDate.of(2022, 12, 23), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
         var expected = new NestedZonedDateTime(date, date2);
-        String json = TestUtil.getJsonString(expected);
-        var result = (NestedZonedDateTime) TestUtil.readJsonObject(json);
+        String json = TestUtil.toJson(expected);
+        var result = (NestedZonedDateTime) TestUtil.toJava(json);
         assertThat(result.date1).isEqualTo(date);
     }
 
     @Test
     void testOldFormat_nested() {
         String json = loadJsonForTest("old-format-nested.json");
-        NestedZonedDateTime zonedDateTime = TestUtil.readJsonObject(json);
+        NestedZonedDateTime zonedDateTime = TestUtil.toJava(json);
 
         assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 00, 4539375 * 100, "Asia/Aden");
         assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden");
@@ -40,7 +40,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     @Test
     void testOldFormat_topLevel() {
         String json = loadJsonForTest("old-format-simple-case.json");
-        ZonedDateTime zonedDateTime = TestUtil.readJsonObject(json);
+        ZonedDateTime zonedDateTime = TestUtil.toJava(json);
 
         assertZonedDateTime(zonedDateTime, 2023, 10, 22, 11, 39, 27, 2496504 * 100, "Asia/Aden");
     }
