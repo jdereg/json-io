@@ -4,7 +4,20 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -199,7 +212,7 @@ abstract class Resolver
     {
         patchUnresolvedReferences();
         rehashMaps();
-        reader.getObjectsRead().clear();
+        ReferenceTracker.instance().clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
@@ -497,7 +510,11 @@ abstract class Resolver
 
     protected JsonObject getReferencedObj(Long ref)
     {
-        JsonObject refObject = reader.getObjectsRead().get(ref);
+        //  I saw two ways in here to get the reference...
+        // on recursively calls getRefTarget until it finds and object
+        // without a ref...This one just makes one call and then bails
+        // Do we need to recurse if the initial object returned is a refernce?
+        JsonObject refObject = ReferenceTracker.instance().getRef(ref);
         if (refObject == null)
         {
             throw new JsonIoException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
@@ -612,7 +629,7 @@ abstract class Resolver
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.target;
-            JsonObject objReferenced = reader.getObjectsRead().get(ref.refId);
+            JsonObject objReferenced = ReferenceTracker.instance().getRef(ref.refId);
 
             if (ref.index >= 0)
             {    // Fix []'s and Collections containing a forward reference.

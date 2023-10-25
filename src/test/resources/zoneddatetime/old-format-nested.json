@@ -8,6 +8,7 @@
     },
     "zone": {
       "@type": "java.time.ZoneRegion",
+      "@id": 2,
       "id": "Asia/Aden"
     }
   },
@@ -18,7 +19,7 @@
     },
     "zone": {
       "@type": "java.time.ZoneRegion",
-      "id": "Asia/Aden"
+      "@ref": 2
     }
   },
   "holiday": "Festivus",

@@ -21,11 +21,11 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
         Object value = job.get("value");
 
         if (value instanceof String) {
-            return (T) fromString((String) value);
+            return fromString((String) value);
         }
 
         if (value instanceof Number) {
-            return (T) fromNumber((Number) value);
+            return fromNumber((Number) value);
         }
 
         return fromJsonObject(job);

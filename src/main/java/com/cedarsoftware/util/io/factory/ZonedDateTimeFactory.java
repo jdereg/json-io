@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReferenceTracker;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime> {
     public ZonedDateTimeFactory(DateTimeFormatter dateFormatter) {
@@ -24,20 +24,30 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
     }
 
     @Override
-    protected ZonedDateTime fromJsonObject(JsonObject job) {
+    protected ZonedDateTime fromJsonObject(JsonObject<String, Object> job) {
         var dateTime = (String) job.get("dateTime");
         var localDateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-        var zone = (JsonObject) job.get("zone");
-        var zoneId = ZoneId.of((String) zone.get("id"));
+
+        var zone = (JsonObject<String, Object>) job.get("zone");
+        String id = checkReferences(zone, "id");
+        var zoneId = ZoneId.of(id);
+
 
         // need to be able to process references for offset and zone.
-        var offsetMap = (Map) job.get("offset");
-        if (offsetMap == null || !offsetMap.containsKey("totalSeconds")) {
+        var offsetMap = (JsonObject<String, Object>) job.get("offset");
+        Number totalSeconds = checkReferences(offsetMap, "totalSeconds");
+        if (totalSeconds == null) {
             return ZonedDateTime.of(localDateTime, zoneId);
         }
 
-        var totalSeconds = (Number) offsetMap.get("totalSeconds");
         return ZonedDateTime.ofStrict(localDateTime, ZoneOffset.ofTotalSeconds(totalSeconds.intValue()), zoneId);
+    }
+
+    private <T> T checkReferences(JsonObject<String, Object> job, String key) {
+        if (job == null) {
+            return null;
+        }
+        return (T) ReferenceTracker.instance().getRefTarget(job).get(key);
     }
 }

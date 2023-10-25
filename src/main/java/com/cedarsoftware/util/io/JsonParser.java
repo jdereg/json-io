@@ -59,7 +59,6 @@ class JsonParser
     private static final Map<String, String> stringCache = new HashMap<>();
     private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
     private final FastPushbackReader input;
-    private final Map<Long, JsonObject> objsRead;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
@@ -114,18 +113,17 @@ class JsonParser
         stringCache.put("9", "9");
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args, int maxDepth)
+    JsonParser(FastPushbackReader reader, Map<String, Object> args, int maxDepth)
     {
         input = reader;
         useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
-        objsRead = objectsMap;
         typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
         maxParseDepth = maxDepth;
     }
 
-    JsonParser(FastPushbackReader reader, Map<Long, JsonObject> objectsMap, Map<String, Object> args)
+    JsonParser(FastPushbackReader reader, Map<String, Object> args)
     {
-        this(reader, objectsMap, args, DEFAULT_MAX_PARSE_DEPTH);
+        this(reader, args, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     private Object readJsonObject() throws IOException
@@ -207,10 +205,10 @@ class JsonParser
                     }
                     object.put(field, value);
 
-                    // If object is referenced (has @id), then put it in the _objsRead table.
+                    // If object is referenced (has @id), then add it to the ReferenceTracker
                     if (ID.equals(field))
                     {
-                        objsRead.put((Long) value, object);
+                        ReferenceTracker.instance().put((Long) value, object);
                     }
                     state = STATE_READ_POST_VALUE;
                     break;

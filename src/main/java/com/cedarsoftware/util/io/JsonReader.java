@@ -118,9 +118,6 @@ public class JsonReader implements Closeable
      * If set, this map will contain Factory classes for creating hard to instantiate objects.
      */
     public static final String FACTORIES = "FACTORIES";
-
-    public static final String LOCAL_DATE_FORMAT = "LOCAL_DATE_FORMAT";
-
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
     protected static Map<Class, JsonClassReader> BASE_READERS;
@@ -129,7 +126,7 @@ public class JsonReader implements Closeable
     protected MissingFieldHandler missingFieldHandler;
     protected final Set<Class> notCustom = new HashSet<>();
     protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
-    private final Map<Long, JsonObject> objsRead = new HashMap<>();
+
     private final FastPushbackReader input;
     /** _args is using ThreadLocal so that static inner classes can have access to them */
     private final Map<String, Object> args = new HashMap<>();
@@ -862,27 +859,6 @@ public class JsonReader implements Closeable
         }
     }
 
-    public Map<Long, JsonObject> getObjectsRead()
-    {
-        return objsRead;
-    }
-
-    public Object getRefTarget(JsonObject jObj)
-    {
-        if (!jObj.isReference())
-        {
-            return jObj;
-        }
-
-        Long id = jObj.getReferenceId();
-        JsonObject target = objsRead.get(id);
-        if (target == null)
-        {
-            throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
-        }
-        return getRefTarget(target);
-    }
-
     /**
      * Read JSON input from the stream that was set up in the constructor, turning it into
      * Java Maps (JsonObject's).  Then, if requested, the JsonObjects can be converted
@@ -893,7 +869,7 @@ public class JsonReader implements Closeable
      */
     public Object readObject()
     {
-        JsonParser parser = new JsonParser(input, objsRead, getArgs(), maxParseDepth);
+        JsonParser parser = new JsonParser(input, getArgs(), maxParseDepth);
         JsonObject root = new JsonObject();
         Object o;
         try
@@ -1015,7 +991,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    public Object newInstance(Class<?> c, JsonObject jsonObject) {
+    public Object newInstance(Class<?> c, JsonObject<String, Object> jsonObject) {
         ClassFactory classFactory = classFactories.get(c.getName());
 
         if (classFactory != null) {
