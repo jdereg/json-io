@@ -288,7 +288,7 @@ class WriteOptionsBuilderTest {
     void withCustomWriterMap_whenCustomWriterMapAlreadyExists_throwsIllegalStateException() {
         var options = new WriteOptionsBuilder()
                 .withCustomWriter(Date.class, new Writers.DateWriter())
-                .withCustomWriter(TestCustomWriter.Person.class, new TestCustomWriter.CustomPersonWriter())
+                .withCustomWriter(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter())
                 .build();
 
         assertThat(options)
@@ -298,7 +298,7 @@ class WriteOptionsBuilderTest {
         var map = (Map<Class, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
 
         assertThat(map)
-                .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);
+                .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
     }
 
     @Test

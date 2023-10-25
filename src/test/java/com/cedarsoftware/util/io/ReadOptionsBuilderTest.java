@@ -183,7 +183,7 @@ class ReadOptionsBuilderTest {
     void withCustomReaderMap_whenCustomWriterMapAlreadyExists_throwsIllegalStateException() {
         var options = new ReadOptionsBuilder()
                 .withCustomReader(Date.class, new Readers.DateReader())
-                .withCustomReader(TestCustomWriter.Person.class, new TestCustomWriter.CustomPersonReader())
+                .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
                 .build();
 
         assertThat(options)
@@ -193,7 +193,7 @@ class ReadOptionsBuilderTest {
         var map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(map)
-                .containsOnlyKeys(Date.class, TestCustomWriter.Person.class);
+                .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
     }
 
     @Test

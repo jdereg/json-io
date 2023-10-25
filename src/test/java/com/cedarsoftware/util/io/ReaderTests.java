@@ -51,7 +51,7 @@ class ReaderTests {
     @Test
     void testConstructor_whenOptionsContainsClassFactories_thoseAreAppendedToBaseClassFactories() {
         var options = new ReadOptionsBuilder()
-                .withClassFactory(TestCustomWriter.Person.class, new PersonFactory())
+                .withClassFactory(CustomWriterTest.Person.class, new PersonFactory())
                 .build();
 
         JsonReader reader = new JsonReader(options);
@@ -71,7 +71,7 @@ class ReaderTests {
     @Test
     void testConstructor_whenOptionsContainsReaders_thoseAreAppendedToBaseReaders() {
         var options = new ReadOptionsBuilder()
-                .withCustomReader(TestCustomWriter.Person.class, new TestCustomWriter.CustomPersonReader())
+                .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
                 .build();
 
         JsonReader reader = new JsonReader(options);
