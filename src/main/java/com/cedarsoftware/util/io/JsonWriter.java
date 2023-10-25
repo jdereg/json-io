@@ -1,6 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -12,8 +19,26 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.time.ZonedDateTime;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -190,6 +215,7 @@ public class JsonWriter implements Closeable, Flushable
         temp.put(LocalDate.class, new Writers.LocalDateWriter());
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
+        temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
 
         Set<Class<?>> staticallyInitializedClasses = new HashSet<>();
         staticallyInitializedClasses.add(TimeZone.class);
@@ -226,7 +252,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */
-    @Deprecated(since = "1.14")
+    @Deprecated(since = "4.14.0")
     public interface JsonClassWriterBase
     {
     }
@@ -310,7 +336,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    @Deprecated(since = "1.14")
+    @Deprecated(since = "4.14.0")
     public interface JsonClassWriterEx extends JsonClassWriter
     {
         String JSON_WRITER = "JSON_WRITER";
@@ -319,7 +345,7 @@ public class JsonWriter implements Closeable, Flushable
          * If access to the JsonWriter is needed, JsonClassWriter's can access it by accessing Support.getWriter(args).
          * The args are the same arguments passed into the write(o, showType, args) method of JsonClassWriterEx.
          */
-        @Deprecated(since = "1.14")
+        @Deprecated(since = "4.14.0")
         class Support
         {
             /**

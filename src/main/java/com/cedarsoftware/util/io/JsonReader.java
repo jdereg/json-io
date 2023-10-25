@@ -4,6 +4,7 @@ import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
+import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -17,7 +18,26 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -150,6 +170,7 @@ public class JsonReader implements Closeable
         assignInstantiator(LocalDate.class, new LocalDateFactory());
         assignInstantiator(LocalTime.class, new LocalTimeFactory());
         assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
+        assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
 
         var timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
@@ -183,15 +204,11 @@ public class JsonReader implements Closeable
         BASE_READERS = temp;
     }
 
-    private static void addPossibleClassFactory(String fqClassName, Supplier<JsonReader.ClassFactory> classFactory) {
-        BASE_CLASS_FACTORIES.put(fqClassName, classFactory.get());
-    }
-
     private static void addPossibleReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader) {
         try {
             map.put(Class.forName(fqClassName), reader.get());
         } catch (ClassNotFoundException e) {
-            // we can just ignore it - this class is not in this jvm
+            // we can just ignore it - this class is not in this jvm or possibly expected to not be found
         }
     }
 
@@ -210,13 +227,29 @@ public class JsonReader implements Closeable
          * Implement this method to return a new instance of the passed in Class.  Use the passed
          * in Object to supply values to the construction of the object.
          * @param c Class of the object that needs to be created
-         * @param object Object (JsonObject or value) to use for construction of the object.
+         * @param job JsonObject (if primitive type do job.getPrimitiveValue();
          * @return a new instance of C.  If you completely fill the new instance using
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
-        Object newInstance(Class<?> c, Object object);
+        default Object newInstance(Class<?> c, JsonObject<String, Object> job) {
+            // passing on args is for backwards compatibility.
+            // also, once we remove the other new instances we
+            // can probably remove args from the parameters.
+            Map args = new HashMap();
+            args.put("jsonObj", job);
 
+            return this.newInstance(c, args);
+        }
+
+        default Object setTarget(JsonObject<String, Object> job, Object o) {
+            return job.setFinishedTarget(o, isObjectFinal());
+        }
+
+        @Deprecated(since = "4.14.0")
+        default Object newInstance(Class<?> c, Map args) { return this.newInstance(c); }
+
+        @Deprecated(since = "4.14.0")
         default Object newInstance(Class<?> c) { return MetaUtils.newInstance(c); }
 
         /**
@@ -230,7 +263,7 @@ public class JsonReader implements Closeable
             return false;
         }
     }
-    
+
     /**
      * Used to react to fields missing when reading an object. This method will be called after all deserialization has
      * occured to allow all ref to be resolved.
@@ -285,14 +318,18 @@ public class JsonReader implements Closeable
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
-        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) { return this.read(jOb, stack); }
+        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) {
+            return this.read(jOb, stack);
+        }
 
         /**
          * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
          * @param stack Deque of objects that have been read (Map of Maps view).
          * @return Object you wish to convert the jOb value into.
          */
-        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack) { return null; }
+        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack) {
+            return null;
+        }
     }
 
     /**
@@ -322,7 +359,7 @@ public class JsonReader implements Closeable
      */
     public static class CollectionFactory implements ClassFactory
     {
-        public Object newInstance(Class c, Object o)
+        public Object newInstance(Class<?> c, JsonObject<String, Object> job)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -354,7 +391,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class c, Object o)
+        public Object newInstance(Class<?> c, JsonObject<String, Object> job)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
@@ -393,7 +430,7 @@ public class JsonReader implements Closeable
     {
         BASE_CLASS_FACTORIES.put(c.getName(), factory);
     }
-    
+
     /**
      * Call this method to add a custom JSON reader to json-io.  It will
      * associate the Class 'c' to the reader you pass in.  The readers are
@@ -406,7 +443,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder to create any additional readers you'll need.
      *
      */
-    @Deprecated(since = "1.14")
+    @Deprecated(since = "4.14.0")
     public void addReader(Class c, JsonClassReader reader)
     {
         readers.put(c, reader);
@@ -667,11 +704,11 @@ public class JsonReader implements Closeable
 
         if (ret != null && ret.getClass().isArray())
         {
-            JsonObject<String, Object> retMap = new JsonObject<String, Object>();
+            JsonObject retMap = new JsonObject();
             retMap.put(ITEMS, ret);
             return retMap;
         }
-        JsonObject<String, Object> retMap = new JsonObject<String, Object>();
+        JsonObject retMap = new JsonObject();
         retMap.put(ITEMS, new Object[]{ret});
         return retMap;
     }
@@ -857,7 +894,7 @@ public class JsonReader implements Closeable
     public Object readObject()
     {
         JsonParser parser = new JsonParser(input, objsRead, getArgs(), maxParseDepth);
-        JsonObject<String, Object> root = new JsonObject();
+        JsonObject root = new JsonObject();
         Object o;
         try
         {
@@ -978,19 +1015,18 @@ public class JsonReader implements Closeable
         }
     }
 
-    public Object newInstance(Class c, JsonObject jsonObject) {
+    public Object newInstance(Class<?> c, JsonObject jsonObject) {
         ClassFactory classFactory = classFactories.get(c.getName());
 
         if (classFactory != null) {
             Object o = classFactory.newInstance(c, jsonObject);
-            // possibly move this setting of finished into factory class itself.
-            jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
-            return o;
+            return jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
         }
 
         return MetaUtils.newInstance(c);
     }
 
+    @Override
     public void close()
     {
         try

@@ -10,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
@@ -235,6 +236,17 @@ public class Writers
             this(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
     }
+
+    public static class ZonedDateTimeWriter extends TemporalWriter<ZonedDateTime> {
+        public ZonedDateTimeWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public ZonedDateTimeWriter() {
+            this(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+        }
+    }
+
 
     public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {

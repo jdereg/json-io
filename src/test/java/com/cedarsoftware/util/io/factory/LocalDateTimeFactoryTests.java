@@ -57,9 +57,9 @@ class LocalDateTimeFactoryTests {
                 .hasSecond(30);
     }
 
-    private JsonObject<String, Object> buildJsonObject(Integer year, Integer month, Integer day, Integer hour, Integer minute, Integer second, Integer nano) {
+    private JsonObject buildJsonObject(Integer year, Integer month, Integer day, Integer hour, Integer minute, Integer second, Integer nano) {
 
-        var object = new JsonObject<String, Object>();
+        var object = new JsonObject();
         var date = LocalDate.of(year, month, day);
         var time = LocalTime.of(hour, minute, second == null ? 0 : second, nano == null ? 0 : nano);
 

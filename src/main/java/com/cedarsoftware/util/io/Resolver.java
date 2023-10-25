@@ -358,11 +358,12 @@ abstract class Resolver
                     throw new JsonIoException("Unable to create class: " + name, e);
                 }
             }
-            JsonReader.ClassFactory factory = null;
-            if ((factory = getClassFactory(c)) != null) {
-                mate = factory.newInstance(c, jsonObj);
-                jsonObj.setFinishedTarget(mate, factory.isObjectFinal());
-                return mate;
+            JsonReader.ClassFactory classFactory = getClassFactory(c);
+
+            if (classFactory != null) {
+                mate = classFactory.newInstance(c, jsonObj);
+                // should we only return if isObjectFinal?
+                return classFactory.setTarget(jsonObj, mate);
             }
 
             if (c.isArray())
@@ -479,8 +480,8 @@ abstract class Resolver
                 mate = reader.newInstance(clazz, jsonObj);
             }
         }
-        jsonObj.target = mate;
-        return jsonObj.target;
+
+        return jsonObj.setTarget(mate);
     }
 
     protected Object coerceCertainTypes(String type)

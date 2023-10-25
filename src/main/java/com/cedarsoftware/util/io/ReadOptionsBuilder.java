@@ -12,7 +12,7 @@ public class ReadOptionsBuilder {
 
     ConcurrentMap<String, Object> readOptions = new ConcurrentHashMap<>();
 
-    public ReadOptionsBuilder setUnknownTypeClass(Class c) {
+    public ReadOptionsBuilder setUnknownTypeClass(Class<?> c) {
         readOptions.put(JsonReader.UNKNOWN_OBJECT, c.getName());
         return this;
     }
@@ -46,27 +46,27 @@ public class ReadOptionsBuilder {
         return this;
     }
 
-    public ReadOptionsBuilder withCustomReader(Class c, JsonReader.JsonClassReader reader) {
+    public ReadOptionsBuilder withCustomReader(Class<?> c, JsonReader.JsonClassReader reader) {
         MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, reader);
         return this;
     }
 
-    public ReadOptionsBuilder withCustomReaders(Map<Class, JsonReader.JsonClassReader> map) {
+    public ReadOptionsBuilder withCustomReaders(Map<Class<?>, JsonReader.JsonClassReader> map) {
         MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
         return this;
     }
 
-    public ReadOptionsBuilder withNonCustomizableClass(Class c) {
+    public ReadOptionsBuilder withNonCustomizableClass(Class<?> c) {
         MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).add(c);
         return this;
     }
 
-    public ReadOptionsBuilder withNonCustomizableClasses(Collection<Class> collection) {
+    public ReadOptionsBuilder withNonCustomizableClasses(Collection<Class<?>> collection) {
         MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).addAll(collection);
         return this;
     }
 
-    public ReadOptionsBuilder withClassFactory(Class type, JsonReader.ClassFactory factory) {
+    public ReadOptionsBuilder withClassFactory(Class<?> type, JsonReader.ClassFactory factory) {
         return withClassFactory(type.getName(), factory);
     }
 

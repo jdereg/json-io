@@ -17,24 +17,15 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     @Override
-    public T newInstance(Class c, Object object) {
-        if (object instanceof String) {
-            return fromString((String) object);
-        }
-
-        if (object instanceof Number) {
-            return fromNumber((Number) object);
-        }
-
-        JsonObject job = (JsonObject) object;
+    public T newInstance(Class<?> c, JsonObject<String, Object> job) {
         Object value = job.get("value");
 
         if (value instanceof String) {
-            return fromString((String) value);
+            return (T) fromString((String) value);
         }
 
         if (value instanceof Number) {
-            return fromNumber((Number) value);
+            return (T) fromNumber((Number) value);
         }
 
         return fromJsonObject(job);
@@ -43,10 +34,10 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     protected abstract T fromString(String s);
 
     protected T fromNumber(Number l) {
-        throw new IllegalArgumentException("Long Timestamps are not supported for this Temporal Class");
+        throw new IllegalArgumentException("Long Timestamps are not supported for this Temporal class");
     }
 
-    protected abstract T fromJsonObject(JsonObject job);
+    protected abstract T fromJsonObject(JsonObject<String, Object> job);
 
     @Override
     public boolean isObjectFinal() {

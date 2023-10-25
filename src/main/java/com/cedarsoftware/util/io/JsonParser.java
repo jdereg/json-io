@@ -6,7 +6,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.*;
+import static com.cedarsoftware.util.io.JsonObject.ID;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+import static com.cedarsoftware.util.io.JsonObject.REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ID;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_KEYS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_TYPE;
+import static com.cedarsoftware.util.io.JsonObject.TYPE;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -47,9 +56,8 @@ class JsonParser
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
-    private static final Map<String, String> stringCache = new HashMap<String, String>();
+    private static final Map<String, String> stringCache = new HashMap<>();
     private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
-
     private final FastPushbackReader input;
     private final Map<Long, JsonObject> objsRead;
     private final StringBuilder strBuf = new StringBuilder(256);
@@ -86,9 +94,14 @@ class JsonParser
         stringCache.put("OFF", "OFF");
         stringCache.put(ID, ID);
         stringCache.put(REF, REF);
-        stringCache.put(JsonObject.ITEMS, JsonObject.ITEMS);
+        stringCache.put(ITEMS, ITEMS);
         stringCache.put(TYPE, TYPE);
         stringCache.put(KEYS, KEYS);
+        stringCache.put(SHORT_ID, ID);
+        stringCache.put(SHORT_REF, REF);
+        stringCache.put(SHORT_ITEMS, ITEMS);
+        stringCache.put(SHORT_TYPE, TYPE);
+        stringCache.put(SHORT_KEYS, KEYS);
         stringCache.put("0", "0");
         stringCache.put("1", "1");
         stringCache.put("2", "2");
@@ -162,25 +175,10 @@ class JsonParser
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
-                            if (field.equals("@t"))
-                            {
-                                field = stringCache.get(TYPE);
-                            }
-                            else if (field.equals("@i"))
-                            {
-                                field = stringCache.get(ID);
-                            }
-                            else if (field.equals("@r"))
-                            {
-                                field = stringCache.get(REF);
-                            }
-                            else if (field.equals("@k"))
-                            {
-                                field = stringCache.get(KEYS);
-                            }
-                            else if (field.equals("@e"))
-                            {
-                                field = stringCache.get(ITEMS);
+                            var temp = stringCache.get(field);
+
+                            if (temp != null) {
+                                field = temp;
                             }
                         }
                         state = STATE_READ_VALUE;

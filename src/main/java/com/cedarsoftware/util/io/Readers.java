@@ -156,20 +156,18 @@ public class Readers
     {
         public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
         {
-            boolean isString = o instanceof String;
-
             try
             {
-                if (isString)
+                if (o instanceof String)
                 {
-                    return (String)o;
+                    return o;
                 }
 
                 return createEnumFromJsonObject((JsonObject)o, stack, args);
             }
             catch(Exception e)
             {
-                throw new JsonIoException("Exception loading Enum:  " + ((o instanceof String) ? o : e.getMessage()));
+                throw new JsonIoException("Exception loading Enum:  " + e.getMessage());
             }
         }
 
