@@ -8,7 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -177,8 +180,7 @@ class RefsTest
             var b1 = (JsonObject) jObj.get("_other");
             var aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            var reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
-            var aTarget = (JsonObject) reader.getRefTarget(aRef);
+            var aTarget = ReferenceTracker.instance().getRefTarget(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;
