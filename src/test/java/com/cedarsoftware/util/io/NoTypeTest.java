@@ -4,7 +4,13 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -43,7 +49,7 @@ public class NoTypeTest
         j.getNamesToAge().put("Zeus", cal.getTime());
 
         String json = TestUtil.toJson(j);
-        String json2 = TestUtil.toJson(j, new WriteOptionsBuilder().noTypeInfo().build());
+        String json2 = TestUtil.toJson(j, new WriteOptionsBuilder().neverShowTypeInfo().build());
         assert !json.equals(json2);
         assert json2.equals("{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"]}");
     }
@@ -81,7 +87,7 @@ public class NoTypeTest
         cols.setFoos(MetaUtils.listOf(1, 2, "4", 8));
         cols.setBars(new Object[]{1, 3, "5", 7});
 
-        String json = TestUtil.toJson(cols, new WriteOptionsBuilder().noTypeInfo().build());
+        String json = TestUtil.toJson(cols, new WriteOptionsBuilder().neverShowTypeInfo().build());
         Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
@@ -97,10 +103,10 @@ public class NoTypeTest
         assert listBars[2].equals("5");
         assert listBars[3].equals(7L);
 
-        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptionsBuilder().noTypeInfo().build());
+        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptionsBuilder().neverShowTypeInfo().build());
         assert "[1,2,3,4]".equals(json);
 
-        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptionsBuilder().noTypeInfo().build());
+        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptionsBuilder().neverShowTypeInfo().build());
         assert "[1,2,3,4]".equals(json);
     }
 

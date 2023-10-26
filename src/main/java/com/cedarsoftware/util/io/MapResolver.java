@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
@@ -142,6 +143,11 @@ public class MapResolver extends Resolver
         }
         jsonObj.target = null;  // don't waste space (used for typed return, not for Map return)
     }
+
+    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields) {
+        this.traverseFields(stack, jsonObj);
+    }
+
 
     /**
      * Process java.util.Collection and it's derivatives.  Collections are written specially

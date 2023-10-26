@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -12,7 +16,26 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
@@ -1129,6 +1152,35 @@ public class MetaUtils
         return arg;
     }
 
+    // Currently, still returning DEEP declared fields.
+    public static Map<Class<?>, Collection<Accessor>> convertStringFieldNamesToAccessors(Map<Class<?>, Collection<String>> map) {
+
+        Map<Class<?>, Collection<Accessor>> copy = new HashMap<>();
+
+        if (map == null) {
+            return copy;
+        }
+
+        for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
+            Class<?> c = entry.getKey();
+            Collection<String> fields = entry.getValue();
+            Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
+
+            for (String field : fields) {
+                Field f = classFields.get(field);
+                if (f == null) {
+                    throw new JsonIoException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
+                }
+
+                ClassDescriptor descriptor = ClassDescriptors.instance().getClassDescriptor(f.getDeclaringClass());
+                final Collection<Accessor> list = copy.computeIfAbsent(f.getDeclaringClass(), l -> new LinkedHashSet<>());
+                list.add(descriptor.getAccessors().get(f.getName()));
+            }
+        }
+
+        return copy;
+    }
+
     public static <K, V> Map<K, V> computeMapIfAbsent(Map<String, Object> map, String keyName) {
         return (Map<K, V>)map.computeIfAbsent(keyName, k -> new HashMap<K, V>());
     }
@@ -1182,7 +1234,16 @@ public class MetaUtils
             return false;
         }
     }
-    
+
+    public static boolean trySetAccessible(Method method) {
+        try {
+            method.setAccessible(true);
+            return true;
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
      * @author Kai Hufenback

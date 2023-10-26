@@ -1,15 +1,33 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
-import java.awt.*;
+import java.awt.Point;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.*;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -201,9 +219,8 @@ public class CollectionTests {
     public void testAlwaysShowType() {
         ManyCollections tc = new ManyCollections();
         tc.init();
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.TYPE, true);
-        String json0 = TestUtil.toJson(tc, map);
+        WriteOptions writeOptions = new WriteOptionsBuilder().alwaysShowTypeInfo().build();
+        String json0 = TestUtil.toJson(tc, writeOptions);
         String json1 = TestUtil.toJson(tc);
         TestUtil.printLine("json0 = " + json0);
         TestUtil.printLine("json1 = " + json1);
@@ -319,7 +336,7 @@ public class CollectionTests {
     @Test
     public void testEnumsInsideOfACollection_whenWritingAsObject_withPrivateMembersIncluded() {
 
-        Map writeOptions = new WriteOptionsBuilder().writeEnumsAsObjects().build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().writeEnumsAsObject().build();
 
         List arrayList = new ArrayList<>();
         arrayList.add(TestEnum4.B);
@@ -332,7 +349,7 @@ public class CollectionTests {
     @Test
     public void testEnumsInsideOfACollection_whenWritingAsObject_withPublicFieldsOnly() {
 
-        Map writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
 
         List list = MetaUtils.listOf(TestEnum4.B);
         String json = TestUtil.toJson(list, writeOptions);

@@ -1,0 +1,26 @@
+{
+  "@type": "com.cedarsoftware.util.io.models.NestedZonedDateTime",
+  "date1": {
+    "dateTime": "2023-10-22T12:03:01.4539375",
+    "offset": {
+      "@id": 1,
+      "totalSeconds": 10800
+    },
+    "zone": {
+      "@type": "java.time.ZoneRegion",
+      "@id": 2,
+      "id": "Asia/Aden"
+    }
+  },
+  "date2": {
+    "dateTime": "2022-12-23T12:03:00.4549357",
+    "offset": {
+      "@ref": 1
+    },
+    "zone": {
+      "@ref": 2
+    }
+  },
+  "holiday": "Festivus",
+  "value": 999
+}

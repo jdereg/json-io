@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -187,7 +188,7 @@ public class FieldsTest
     {
         ManyFields tf = new ManyFields();
         tf.init();
-        String json0 = TestUtil.toJson(tf, new WriteOptionsBuilder().forceTypeInfo().build());
+        String json0 = TestUtil.toJson(tf, new WriteOptionsBuilder().alwaysShowTypeInfo().build());
         String json1 = TestUtil.toJson(tf);
         assertTrue(json0.length() > json1.length());
     }
@@ -225,7 +226,7 @@ public class FieldsTest
     @Test
     public void testExternalFieldSpecifiedBadName()
     {
-        Map<Class<?>, List<String>> fieldSpecifiers = new HashMap<>();
+        Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
         List<String> fields = new ArrayList<>();
         fields.add("mane");
         fieldSpecifiers.put(PainfulToSerialize.class, fields);
@@ -245,7 +246,7 @@ public class FieldsTest
     @Test
     public void testExternalFieldSpecifier()
     {
-        Map<Class<?>, List<String>> fieldSpecifiers = new HashMap<>();
+        Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
         List<String> fields = new ArrayList<>();
         fields.add("name");
         fieldSpecifiers.put(PainfulToSerialize.class, fields);
@@ -262,14 +263,14 @@ public class FieldsTest
     @Test
     public void testExternalFieldSpecifierInheritance()
     {
-        Map<Class<?>, List<String>> fieldSpecifiers = new LinkedHashMap<>();
+        Map<Class<?>, Collection<String>> fieldSpecifiers = new LinkedHashMap<>();
         fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
 
         Map<String, Object> readOptions = new ReadOptionsBuilder().returnAsMaps().build();
-        Map<String, Object> writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toJava(json, readOptions);
         assertEquals(1, check.size());
@@ -303,7 +304,7 @@ public class FieldsTest
     @Test
     public void testFieldBlackList()
     {
-        Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
+        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
         blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         PainfulToSerialize painful = new PainfulToSerialize();
@@ -318,7 +319,7 @@ public class FieldsTest
     @Test
     public void testFieldBlackListInheritance()
     {
-        Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
+        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
         blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
@@ -335,9 +336,9 @@ public class FieldsTest
     @Test
     public void testFieldBlackListPriorityToSpecifier()
     {
-        Map<Class<?>, List<String>> fieldSpecifiers = new LinkedHashMap<>();
+        Map<Class<?>, Collection<String>> fieldSpecifiers = new LinkedHashMap<>();
         fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"));
-        Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
+        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
         blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         PainfulToSerialize painful = new PainfulToSerialize();

@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -70,9 +72,11 @@ public class LongTest
     public void testLongAsString()
     {
         long x = 19;
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = TestUtil.toJson(x, map);
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeLongsAsStrings()
+                .build();
+
+        String json = TestUtil.toJson(x, options);
         assert json.contains("\"19\"");
 
         Object y = TestUtil.toJava(json);
@@ -84,9 +88,11 @@ public class LongTest
     public void testLongArrayAsString()
     {
         Long[] x = new Long[]{1L, 2L, 3L};
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = TestUtil.toJson(x, map);
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeLongsAsStrings()
+                .build();
+
+        String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
@@ -103,9 +109,10 @@ public class LongTest
     public void testObjectArrayOfLongsAsString()
     {
         Object[] x = new Object[]{1L, 2L, 3L};
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = TestUtil.toJson(x, map);
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeLongsAsStrings()
+                .build();
+        String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
         assert json.contains("\"3\"");
@@ -125,9 +132,10 @@ public class LongTest
         x.add(1L);
         x.add(2L);
         x.add(3L);
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = TestUtil.toJson(x, map);
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeLongsAsStrings()
+                .build();
+        String json = TestUtil.toJson(x, options);
 
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
@@ -149,9 +157,10 @@ public class LongTest
         x.setAge(49L);
         x.setWeight(205L);
 
-        Map<String, Object> map = new LinkedHashMap<>(1);
-        map.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
-        String json = TestUtil.toJson(x, map);
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeLongsAsStrings()
+                .build();
+        String json = TestUtil.toJson(x, options);
 
         assert json.contains("\"49\"");
         assert json.contains("\"205\"");

@@ -3,9 +3,14 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -61,9 +66,9 @@ public class DoubleTest
     }
 
     @Test
-    public void testNanAsRoot()
+    void testNanAsRoot()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(Double.NaN, args);
         assert json.contains("null");
 
@@ -75,9 +80,9 @@ public class DoubleTest
     }
 
     @Test
-    public void testNanMapKey()
+    void testNanMapKey()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         LinkedHashMap<String, Double> map = new LinkedHashMap<String, Double>(1);
         map.put("field", Double.NaN);
         String json = TestUtil.toJson(map, args);
@@ -95,12 +100,12 @@ public class DoubleTest
     }
 
     @Test
-    public void testNanObjectField()
+    void testNanObjectField()
     {
         DoubleHolder holder = new DoubleHolder();
         holder.number = Double.NaN;
 
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -116,7 +121,7 @@ public class DoubleTest
     @Test
     public void testNanArrayElement()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)), args);
         assert json.contains("null");
 
@@ -162,7 +167,7 @@ public class DoubleTest
     }
 
     @Test
-    public void testNanObjectField2()
+    void testNanObjectField2()
     {
         DoubleHolder holder = new DoubleHolder();
         holder.number = Double.NaN;
@@ -179,7 +184,7 @@ public class DoubleTest
     }
 
     @Test
-    public void testNanArrayElement2()
+    void testNanArrayElement2()
     {
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)));
         assert json.contains("null");

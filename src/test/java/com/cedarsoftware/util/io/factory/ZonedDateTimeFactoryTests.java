@@ -56,11 +56,21 @@ class ZonedDateTimeFactoryTests {
     }
 
     @Test
+    void testOldFormat_nested_withRef() {
+        String json = loadJsonForTest("old-format-nested-with-ref.json");
+        NestedZonedDateTime zonedDateTime = TestUtil.toJava(json);
+
+        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 01, 4539375 * 100, "Asia/Aden", 10800);
+        assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden", 10800);
+        assertSame(zonedDateTime.date1.getOffset(), zonedDateTime.date2.getOffset());
+    }
+
+    @Test
     void testOldFormat_nested() {
         String json = loadJsonForTest("old-format-nested.json");
         NestedZonedDateTime zonedDateTime = TestUtil.toJava(json);
 
-        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 00, 4539375 * 100, "Asia/Aden", 10800);
+        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 01, 4539375 * 100, "Asia/Aden", 10800);
         assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden", 10800);
         assertSame(zonedDateTime.date1.getOffset(), zonedDateTime.date2.getOffset());
     }

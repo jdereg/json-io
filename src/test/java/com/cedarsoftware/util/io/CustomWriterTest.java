@@ -63,7 +63,7 @@ public class CustomWriterTest
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        Map<String, Object> writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
         Map<String, Object> readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toJava(jsonCustom, readOptions0);
@@ -95,7 +95,7 @@ public class CustomWriterTest
         assert "Chi hua hua".equals(petz.get(1).getType());
         assert 3 == petz.get(1).getAge();
 
-        Map writeOptions = new WriteOptionsBuilder().withCustomWriter(Person.class, new CustomPersonWriter()).withNoCustomizationFor(Person.class).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriter(Person.class, new CustomPersonWriter()).withNoCustomizationFor(Person.class).build();
         String jsonOrig = TestUtil.toJson(p, writeOptions);
         assert !jsonCustom.equals(jsonOrig);
         assert jsonCustom.length() < jsonOrig.length();
@@ -154,7 +154,7 @@ public class CustomWriterTest
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        Map<String, Object> writeOptions = new HashMap<>();
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
         Map<String, Object> readOptions = new HashMap<>();
 
         // Object[] { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
@@ -174,7 +174,7 @@ public class CustomWriterTest
         assert DeepEquals.deepEquals(people, obj);
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
-        writeOptions = new HashMap<>();
+        writeOptions = new WriteOptionsBuilder().build();
         readOptions = new HashMap<>();
 
         // List of { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
@@ -208,7 +208,7 @@ public class CustomWriterTest
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        Map<String, Object> writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
         Map<String, Object> readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         
         People people = new People(new Object[]{p, p});

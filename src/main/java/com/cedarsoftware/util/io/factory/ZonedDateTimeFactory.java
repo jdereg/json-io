@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReferenceTracker;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -69,6 +69,6 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
         if (job == null) {
             return null;
         }
-        return (T) ReferenceTracker.instance().getRefTarget(job).get(key);
+        return (T) ReaderContext.instance().getReferenceTracker().get(job).get(key);
     }
 }

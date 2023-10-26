@@ -7,9 +7,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedDateTime> {
     private static final ZoneId Z1 = ZoneId.of("America/Chicago");
@@ -29,12 +31,23 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Test
+    void testOldFormat_nested_withRef() {
+        String json = loadJsonForTest("old-format-nested-with-ref.json");
+        NestedZonedDateTime zonedDateTime = TestUtil.toJava(json);
+
+        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 01, 4539375 * 100, "Asia/Aden", 10800);
+        assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden", 10800);
+        assertSame(zonedDateTime.date1.getOffset(), zonedDateTime.date2.getOffset());
+    }
+
+    @Test
     void testOldFormat_nested() {
         String json = loadJsonForTest("old-format-nested.json");
         NestedZonedDateTime zonedDateTime = TestUtil.toJava(json);
 
-        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 00, 4539375 * 100, "Asia/Aden");
-        assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden");
+        assertZonedDateTime(zonedDateTime.date1, 2023, 10, 22, 12, 03, 01, 4539375 * 100, "Asia/Aden", 10800);
+        assertZonedDateTime(zonedDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden", 10800);
+        assertSame(zonedDateTime.date1.getOffset(), zonedDateTime.date2.getOffset());
     }
 
     @Test
@@ -42,10 +55,10 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         String json = loadJsonForTest("old-format-simple-case.json");
         ZonedDateTime zonedDateTime = TestUtil.toJava(json);
 
-        assertZonedDateTime(zonedDateTime, 2023, 10, 22, 11, 39, 27, 2496504 * 100, "Asia/Aden");
+        assertZonedDateTime(zonedDateTime, 2023, 10, 22, 11, 39, 27, 2496504 * 100, "Asia/Aden", 10800);
     }
 
-    private void assertZonedDateTime(ZonedDateTime zonedDateTime, int year, int month, int day, int hour, int min, int sec, int nano, String zone) {
+    private void assertZonedDateTime(ZonedDateTime zonedDateTime, int year, int month, int day, int hour, int min, int sec, int nano, String zone, Number totalOffset) {
         assertThat(zonedDateTime.getYear()).isEqualTo(year);
         assertThat(zonedDateTime.getMonthValue()).isEqualTo(month);
         assertThat(zonedDateTime.getDayOfMonth()).isEqualTo(day);
@@ -54,6 +67,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         assertThat(zonedDateTime.getSecond()).isEqualTo(sec);
         assertThat(zonedDateTime.getNano()).isEqualTo(nano);
         assertThat(zonedDateTime.getZone()).isEqualTo(ZoneId.of(zone));
+        assertThat(zonedDateTime.getOffset()).isEqualTo(ZoneOffset.ofTotalSeconds(totalOffset.intValue()));
     }
 
     private String loadJsonForTest(String fileName) {

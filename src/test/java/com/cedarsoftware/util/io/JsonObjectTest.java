@@ -4,9 +4,13 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -105,7 +109,7 @@ class JsonObjectTest
         jsonObj2.put("name", "Robin");
         jsonObj2.put("partners", new Object[]{jsonObj1});
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().noTypeInfo().build());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
         TestUtil.printLine("json = " + json);
         Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         json = TestUtil.toJson(o);
@@ -133,7 +137,7 @@ class JsonObjectTest
         jsonObj2.put("name", "Robin");
         jsonObj2.put("partners", robFriends);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().noTypeInfo().build());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
         TestUtil.printLine("json = " + json);
         Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         json = TestUtil.toJson(o);

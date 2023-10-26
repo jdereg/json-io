@@ -11,7 +11,21 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -147,5 +161,18 @@ public class MetaUtilsTests {
         map.put("foo", null);
         String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");
         assertThat(actual).isEqualTo("bar");
+    }
+
+    @Test
+    void convertStringFieldNamesToFields() {
+
+        // toto:
+    }
+
+    private static Stream<Arguments> createGetterNameTests() {
+        return Stream.of(
+                Arguments.of("field", "getField"),
+                Arguments.of("foo", "getFoo"),
+                Arguments.of("treeMap", "getTreeMap"));
     }
 }

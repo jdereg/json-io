@@ -5,7 +5,6 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -144,35 +143,25 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
         {
-            Date date = (Date)obj;
-            Object dateFormat = args.get(DATE_FORMAT);
-            if (dateFormat instanceof String)
-            {   // Passed in as String, turn into a SimpleDateFormat instance to be used throughout this stream write.
-                dateFormat = new SimpleDateFormat((String) dateFormat, Locale.ENGLISH);
-                args.put(DATE_FORMAT, dateFormat);
-            }
             if (showType)
             {
                 output.write("\"value\":");
             }
 
-            if (dateFormat instanceof Format)
-            {
-                writeBasicString(output, ((Format) dateFormat).format(date));
-            }
-            else
-            {
-                output.write(Long.toString(((Date) obj).getTime()));
-            }
+            writePrimitiveForm(obj, output, args);
         }
 
         public boolean hasPrimitiveForm() { return true; }
 
         public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
         {
-            if (args.containsKey(DATE_FORMAT))
+            final WriteOptions writeOptions = WriterContext.instance().getWriteOptions();
+            String format = writeOptions.getDateFormat();
+            Date date = (Date) o;
+
+            if (format != null)
             {
-                write(o, false, output, args);
+                writeBasicString(output, new SimpleDateFormat(format).format(date));
             }
             else
             {
@@ -265,12 +254,7 @@ public class Writers
     public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
         // putting here to allow this to be the full enum object writer.
         // write now we're just calling back to the JsonWriter
-        private final boolean isEnumPublicOnly;
         private static final Set<String> excluded = MetaUtils.setOf("name", "ordinal", "internal");
-
-        public EnumAsObjectWriter(boolean isEnumPublicOnly) {
-            this.isEnumPublicOnly = isEnumPublicOnly;
-        }
 
         @Override
         public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
@@ -357,8 +341,6 @@ public class Writers
 
     // ========== Maintain knowledge about relationships below this line ==========
     static final String DATE_FORMAT = JsonWriter.DATE_FORMAT;
-    static final String LOCAL_DATE_FORMAT = JsonWriter.LOCAL_DATE_FORMAT;
-    static final String DATE_AS_TIMESTAMP = JsonWriter.DATE_AS_TIMESTAMP;
 
     protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
     {
