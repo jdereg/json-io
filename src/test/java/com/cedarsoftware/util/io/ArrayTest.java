@@ -442,9 +442,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Object[] array = TestUtil.toJava(json0, args);
+        Object[] array = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -478,7 +476,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = TestUtil.toJava(json0, args);
+        Map map = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -583,9 +581,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Object array = TestUtil.toJava(json0, args);
+        Object array = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -598,9 +594,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        empty = TestUtil.toJava(json0, args);
+        empty = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -613,7 +607,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = TestUtil.toJava(json0, args);
+        list = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         assertNotNull(list);
         assertEquals(2, list.length);
         Map e1 = (Map) list[0];
@@ -633,9 +627,7 @@ public class ArrayTest
         Object[] objs = new Object[]{strs, "a", strs};
         String json0 = TestUtil.toJson(objs);
         TestUtil.printLine("json0=" + json0);
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Object array = TestUtil.toJava(json0, args);
+        Object array = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -661,9 +653,7 @@ public class ArrayTest
         testArray.init();
         String json0 = TestUtil.toJson(testArray);
         TestUtil.printLine("json0=" + json0);
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map testArray2 = TestUtil.toJava(json0, args);
+        Map testArray2 = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
@@ -680,9 +670,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map m = TestUtil.toJava(json0, args);
+        Map m = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -735,9 +723,7 @@ public class ArrayTest
         cat.chars_a = new Character[] {'a', '\t', '\u0005'};
         cat.chars_b = new Character[] {'b', '\t', '\u0002'};
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonWriter.TYPE, true);
-        String json0 = TestUtil.toJson(cat, args);
+        String json0 = TestUtil.toJson(cat, new ReadOptionsBuilder().returnAsMaps().build());
         TestUtil.printLine(json0);
 
         CharArrayTest cat2 = TestUtil.toJava(json0);
@@ -924,9 +910,7 @@ public class ArrayTest
         numbers.add(40);
 
         // Serialize the ArrayList to Json
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonWriter.TYPE, false);
-        String json = TestUtil.toJson(numbers, args);
+        String json = TestUtil.toJson(numbers, new WriteOptionsBuilder().noTypeInfo().build());
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
@@ -941,9 +925,7 @@ public class ArrayTest
     {
         String[] testArray = new String[1];
         testArray[0] = "Test";
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonWriter.SHORT_META_KEYS, true);
-        String testOut = TestUtil.toJson(testArray, args);
+        String testOut = TestUtil.toJson(testArray, new WriteOptionsBuilder().withShortMetaKeys().build());
         TestUtil.printLine(testOut);
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in short-hand.

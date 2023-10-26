@@ -48,13 +48,15 @@ class TestUsingSunMisc
                 return Dog.Shoe.construct()
             }
         })
-        TestUtil.toJava(workaroundString, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
+        Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<>();
+        customReader.put(Dog.Shoe.class, new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
             {
                 // no need to do anything special
                 return jOb
             }
-        }]])
+        });
+        TestUtil.toJava(workaroundString, new ReadOptionsBuilder().withCustomReaders(customReader).build());
         // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
@@ -64,12 +66,7 @@ class TestUsingSunMisc
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.toJava(json, [(JsonReader.CUSTOM_READER_MAP):[(Dog.Shoe.class):new JsonReader.JsonClassReader() {
-            public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
-            {
-                return jOb
-            }
-        }]])
+        TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReader).build());
     }
 
     @Test

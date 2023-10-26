@@ -116,11 +116,9 @@ public class CustomWriterTest
         Person p = createTestPerson();
         try
         {
-            Map<String, Object> args = new HashMap<>();
             Map<Class<Person>, BadCustomPWriter> badCustomPWriterMap = new HashMap<>();
             badCustomPWriterMap.put(Person.class, new BadCustomPWriter());
-            args.put(JsonWriter.CUSTOM_WRITER_MAP, badCustomPWriterMap);
-            TestUtil.toJson(p, args);
+            TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriterMap(badCustomPWriterMap).build());
             fail();
         }
         catch (JsonIoException e)
@@ -133,11 +131,9 @@ public class CustomWriterTest
     public void testCustomWriterAddField()
     {
         Person p = createTestPerson();
-        Map<String, Object> args = new HashMap<>();
         Map<Class<Person>, CustomPersonWriterAddField> customPersonWriterAddFieldMap = new HashMap<>();
         customPersonWriterAddFieldMap.put(Person.class, new CustomPersonWriterAddField());
-        args.put(JsonWriter.CUSTOM_WRITER_MAP, customPersonWriterAddFieldMap);
-        String jsonCustom = TestUtil.toJson(p, args);
+        String jsonCustom = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriterMap(customPersonWriterAddFieldMap).build());
         assert jsonCustom.contains("_version\":12");
         assert jsonCustom.contains("Michael");
     }

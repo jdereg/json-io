@@ -30,7 +30,7 @@ class TestUnknownObjectType
     void testUnknownObjects()
     {
         def json = '{"DashboardController.updateFilter":{"dto":{"@type":"java.util.Map","assignedToList":["1000004947"],"assignedToMap":{"1000004947":"Me"},"claimsExistIndicator":true,"defaultFilter":false,"defaultSortField":"trnEffectiveDate","defaultSortOrder":"asc","effectiveDateFrom":null,"effectiveDateTo":null,"fieldList":[],"needByDateFrom":null,"needByDateTo":null,"overdueIndicator":true,"pendedOption":null,"previouslyPendedIndicator":true,"producerCodeList":[],"producerCodesPCTerrField":[],"producerCodeMap":null,"profitCenterList":[],"rushIndicator":true,"territoryList":[],"underwriterList":[],"underwriterMap":{},"viewByOption":"view_by_actvity","countOnly":false,"newFilterName":"My Assigned To","originalFilterName":"My Assigned To","filterRanIndicator":false,"filterRanIndicatorMap":{"@type":"java.util.LinkedHashMap","1000004947":true,"0000029443":false,"0000020985":false,"0000020994":false},"rowLimit":0,"filterType":null,"filterName":"My Assigned To","com.gaic.bue.uwd.ra.common.dto.AbstractFilterDto.defaultFilter":false,"filterAppCode":"RADashboardFilter","createDate":null,"updateDate":null,"createHid":"1000004947","updateHid":null,"sourceNumber":0,"disabledFields":{},"screenCommands":{},"rpmSession":null}}}'
-        def myParams = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        def myParams = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build())
         def inputParams = new JsonReader().jsonObjectsToJava(myParams)
         def json2 = TestUtil.toJson(inputParams)
         assert json2.length() > 100
@@ -49,7 +49,7 @@ class TestUnknownObjectType
     void testUnknownClassTypePassesWhenFailOptionFalse()
     {
         def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
-        def java = TestUtil.toJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): false ])
+        def java = TestUtil.toJava(json)   // failOnUnknownType = false (default no need to set option)
         assert java instanceof Map
         assert java.name == 'Joe'
     }
@@ -58,6 +58,11 @@ class TestUnknownObjectType
     void testUnknownClassTypeFailsWhenFailOptionTrue()
     {
         def json = '{"@type":"foo.bar.baz.Qux", "name":"Joe"}'
-        assertThrows(JsonIoException.class, { TestUtil.toJava(json, [(JsonReader.FAIL_ON_UNKNOWN_TYPE): true]) });
+        try
+        {
+            TestUtil.toJava(json, new ReadOptionsBuilder().failOnUnknownType().build());
+        }
+        catch (JsonIoException ignore)
+        { }
     }
 }

@@ -29,15 +29,13 @@ class TestShortMetaNames
         TestObject b = new TestObject("B")
         a._other = b
         b._other = a
-        Map map = [(a):(b)]
+        Map map = new LinkedHashMap();
+        map.put(a, b);
         List list = [map]
 
-        Map args = [
-                (JsonWriter.SHORT_META_KEYS):true,
-                (JsonWriter.TYPE_NAME_MAP):['java.util.ArrayList':'al', 'java.util.LinkedHashMap':'lmap', (TestObject.class.getName()):'to']
-        ]
-        String json = TestUtil.toJson(list, args)
-        List clone = (List) TestUtil.toJava(json, args)
+        Map<String, String> shortNames = Map.of("java.util.ArrayList","al", "java.util.LinkedHashMap","lmap", (TestObject.class.getName()),"to");
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().withShortMetaKeys().withCustomTypeNameMap(shortNames).build());
+        List clone = (List) TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(shortNames).build())
         assert DeepEquals.deepEquals(list, clone)
     }
 }

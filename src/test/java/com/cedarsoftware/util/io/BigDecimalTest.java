@@ -71,9 +71,7 @@ class BigDecimalTest
         assertEquals(new BigDecimal(1), tbd.values[7]);
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map map = TestUtil.toJava(json, args);
+        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         json = TestUtil.toJson(map);
         tbd = TestUtil.toJava(json);
         assertEquals(new BigDecimal("3.14159"), tbd.fromString);

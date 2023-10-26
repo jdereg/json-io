@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -40,8 +40,8 @@ public class CustomReaderMapTest
         Map<String, CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
 
         CustomPoint clonePoint = clone.get("pt");
-        Assertions.assertEquals(pt.x, clonePoint.x);
-        Assertions.assertEquals(pt.y, clonePoint.y);
+        assertEquals(pt.x, clonePoint.x);
+        assertEquals(pt.y, clonePoint.y);
     }
 
     @Test
@@ -56,14 +56,12 @@ public class CustomReaderMapTest
 
         Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.CUSTOM_READER_MAP, customReaders);
         String json = TestUtil.toJson(list);
-        List<CustomPoint> clone = TestUtil.toJava(json, args);
+        List<CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
 
         CustomPoint clonePoint = clone.get(0);
-        Assertions.assertEquals(pt.x, clonePoint.x);
-        Assertions.assertEquals(pt.y, clonePoint.y);
+        assertEquals(pt.x, clonePoint.x);
+        assertEquals(pt.y, clonePoint.y);
     }
 
     @Test
@@ -78,15 +76,13 @@ public class CustomReaderMapTest
 
         Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.CUSTOM_READER_MAP, customReaders);
 
         String json = TestUtil.toJson(list);
-        Object[] clone = TestUtil.toJava(json, args);
+        Object[] clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
 
         CustomPoint clonePoint = (CustomPoint) clone[0];
-        Assertions.assertEquals(pt.x, clonePoint.x);
-        Assertions.assertEquals(pt.y, clonePoint.y);
+        assertEquals(pt.x, clonePoint.x);
+        assertEquals(pt.y, clonePoint.y);
     }
 
     private static class CustomPoint

@@ -53,7 +53,7 @@ abstract class Resolver
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final Map<Class, JsonReader.JsonClassReader> readerCache = new HashMap<>();
+    final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new HashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
@@ -483,6 +483,10 @@ abstract class Resolver
                 {
                     mate = reader.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()), jsonObj);
                 }
+                else if (unknownClass instanceof Class)
+                {
+                    mate = unknownClass;
+                }
                 else
                 {
                     throw new JsonIoException("Unable to determine object type at column: " + jsonObj.col + ", line: " + jsonObj.line + ", content: " + jsonObj);
@@ -538,7 +542,7 @@ abstract class Resolver
         JsonReader.JsonClassReader closestReader = nullReader;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonReader.JsonClassReader> entry : getReaders().entrySet())
+        for (Map.Entry<Class<?>, JsonReader.JsonClassReader> entry : getReaders().entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)
@@ -739,7 +743,7 @@ abstract class Resolver
 
     // ========== Keep relationship knowledge below the line ==========
 
-    protected Map<Class, JsonReader.JsonClassReader> getReaders()
+    protected Map<Class<?>, JsonReader.JsonClassReader> getReaders()
     {
         return reader.readers;
     }

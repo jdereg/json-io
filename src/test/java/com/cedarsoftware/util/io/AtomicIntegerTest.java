@@ -73,9 +73,7 @@ class AtomicIntegerTest
     void testAssignAtomicIntegerStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicIntegerField.class.getName() + "\",\"strValue\":\"\"}";
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map map = TestUtil.toJava(json, args);
+        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 

@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.channels.ReadPendingException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,13 +54,8 @@ public class ObjectHolderTest
 
     private void testSerialization(ObjectHolder holder)
     {
-        Map<String, Object> serialParams = new HashMap<String, Object>();
-        serialParams.put(JsonWriter.TYPE, false);
-        Map<String, Object> deSerialParams = new HashMap<String, Object>();
-        deSerialParams.put(JsonReader.UNKNOWN_OBJECT, ObjectHolder.class.getName());
-
-        String json = TestUtil.toJson(holder, serialParams);
-        ObjectHolder deserialized = (ObjectHolder) TestUtil.toJava(json, deSerialParams);
+        String json = TestUtil.toJson(holder, new WriteOptionsBuilder().noTypeInfo().build());
+        ObjectHolder deserialized = TestUtil.toJava(json, new ReadOptionsBuilder().setUnknownTypeClass(ObjectHolder.class).build());
         assertEquals(holder, deserialized);
     }
 }

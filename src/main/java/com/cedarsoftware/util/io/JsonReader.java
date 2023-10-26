@@ -120,11 +120,11 @@ public class JsonReader implements Closeable
     public static final String FACTORIES = "FACTORIES";
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
-    protected static Map<Class, JsonClassReader> BASE_READERS;
-    protected final Map<Class, JsonClassReader> readers = new HashMap<>(BASE_READERS);
+    protected static Map<Class<?>, JsonClassReader> BASE_READERS;
+    protected final Map<Class<?>, JsonClassReader> readers = new HashMap<>(BASE_READERS);
     protected final Map<String, ClassFactory> classFactories = new HashMap<>(BASE_CLASS_FACTORIES);
     protected MissingFieldHandler missingFieldHandler;
-    protected final Set<Class> notCustom = new HashSet<>();
+    protected final Set<Class<?>> notCustom = new HashSet<>();
     protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
 
     private final FastPushbackReader input;
@@ -174,7 +174,7 @@ public class JsonReader implements Closeable
         assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
 
         // jvm specific types
-        Map<Class, JsonClassReader> temp = new HashMap<>();
+        Map<Class<?>, JsonClassReader> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
         temp.put(Date.class, new Readers.DateReader());
         temp.put(AtomicBoolean.class, new Readers.AtomicBooleanReader());
@@ -840,12 +840,12 @@ public class JsonReader implements Closeable
         setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
 
 
-        var customReaders = (Map<Class, JsonClassReader>) args.get(CUSTOM_READER_MAP);
+        var customReaders = (Map<Class<?>, JsonClassReader>) args.get(CUSTOM_READER_MAP);
         if (customReaders != null) {
             this.readers.putAll(customReaders);
         }
 
-        var notCustomReaders = (Collection<Class>) args.get(NOT_CUSTOM_READER_MAP);
+        var notCustomReaders = (Collection<Class<?>>) args.get(NOT_CUSTOM_READER_MAP);
         if (notCustomReaders != null) {
             this.notCustom.addAll(notCustomReaders);
         }

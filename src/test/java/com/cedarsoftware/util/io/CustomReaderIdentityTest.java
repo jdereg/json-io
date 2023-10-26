@@ -39,11 +39,9 @@ public class CustomReaderIdentityTest
 
 		String json = TestUtil.toJson(elements);
 
-		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		args.put(JsonReader.CUSTOM_READER_MAP, readerMap);
-		Object obj = TestUtil.toJava(json, args);
+		Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readerMap).build());
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) != list.get(1);
@@ -65,11 +63,9 @@ public class CustomReaderIdentityTest
 
 		String json = TestUtil.toJson(elements);
 
-		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		args.put(JsonReader.CUSTOM_READER_MAP, readerMap);
-		Object obj = TestUtil.toJava(json, args);
+		Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readerMap).build());
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) == list.get(1);
@@ -94,11 +90,9 @@ public class CustomReaderIdentityTest
 
 		String json = TestUtil.toJson(set);
 
-		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		args.put(JsonReader.CUSTOM_READER_MAP, readerMap);
-		Object obj = TestUtil.toJava(json, args);
+		Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readerMap).build());
 		assert obj instanceof Set;
 		set = (Set) obj;
 		assert set.size() == 2;
@@ -116,11 +110,9 @@ public class CustomReaderIdentityTest
 
 		String json = TestUtil.toJson(array);
 
-		Map<String, Object> args = new HashMap<>();
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		args.put(JsonReader.CUSTOM_READER_MAP, readerMap);
-		Object obj = TestUtil.toJava(json, args);
+		Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readerMap).build());
 		assert obj instanceof CustomDataClass[];
 		array = (CustomDataClass[]) obj;
 		assert array.length == 2;

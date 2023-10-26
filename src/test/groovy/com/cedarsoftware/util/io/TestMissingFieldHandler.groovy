@@ -98,16 +98,19 @@ class TestMissingFieldHandler
     {
         CustomPoint pt = new CustomPoint()
         pt.x = 5
+        final boolean[] madeItHere = [false] as boolean[]
 
         JsonReader.MissingFieldHandler missingHandler = new JsonReader.MissingFieldHandler() {
             void fieldMissing(Object object, String fieldName, Object value)
             {
                 ((CustomPoint) object).newY = (long) value
+                madeItHere[0] = true;
             }
         }
+        assert !madeItHere[0];
+        CustomPoint clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT, new ReadOptionsBuilder().setMissingFieldHandler(missingHandler).build()) as CustomPoint
+        assert madeItHere[0];
 
-        Map<String, Object> args = [(JsonReader.MISSING_FIELD_HANDLER): missingHandler] as Map
-        CustomPoint clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT, args) as CustomPoint
         assertEquals(pt.x, clonePoint.x)
         assertEquals(7, clonePoint.newY)
     }
@@ -206,8 +209,7 @@ class TestMissingFieldHandler
                 }
             }
         }
-        Map<String, Object> args = [(JsonReader.MISSING_FIELD_HANDLER): missingHandler] as Map
-        CustomPointWithRef clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT2, args) as CustomPointWithRef
+        CustomPointWithRef clonePoint = TestUtil.toJava(OLD_CUSTOM_POINT2, new ReadOptionsBuilder().setMissingFieldHandler(missingHandler).build())
         assertEquals(clonePoint.inner1, clonePoint.inner2Missing.inner12)
         assertTrue(clonePoint.bMissing)
         assertTrue(clonePoint.bbMissing)

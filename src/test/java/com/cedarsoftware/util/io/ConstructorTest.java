@@ -101,9 +101,7 @@ public class ConstructorTest
         String json = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map<String, Object> map = TestUtil.toJava(json, args);
+        Map<String, Object> map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         assertEquals((byte) 1, map.get("_byte"));
         assertEquals((short) 2, map.get("_short"));
         assertEquals(3, map.get("_int"));
@@ -136,7 +134,7 @@ public class ConstructorTest
         TestUtil.printLine("json1=" + json1);
         assertEquals(json, json1);
 
-        map = TestUtil.toJava(json1, args);
+        map = TestUtil.toJava(json1, new ReadOptionsBuilder().returnAsMaps().build());
         json = TestUtil.toJson(map);
         TestUtil.printLine("json2=" + json);
         assertEquals(json, json1);
@@ -209,9 +207,7 @@ public class ConstructorTest
     public void testMapConstructor()
     {
         String json = TestUtil.toJson(new Canine("Bella"));
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map root = TestUtil.toJava(json, args);
+        Map root = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
 
         JsonReader reader = new JsonReader(new LinkedHashMap<>());
         Canine bella = (Canine) reader.jsonObjectsToJava((JsonObject) root);
@@ -228,10 +224,7 @@ public class ConstructorTest
         assert eddie.getName().equals("Eddie");
 
         inputStream = new ByteArrayInputStream(json.getBytes());
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-
-        Map<String, Object> dogMap = JsonReader.jsonToJava(inputStream, args);
+        Map<String, Object> dogMap = JsonReader.jsonToJava(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
         assert dogMap.get("name").equals("Eddie");
     }
 

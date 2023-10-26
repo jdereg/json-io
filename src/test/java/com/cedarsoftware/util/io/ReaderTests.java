@@ -78,7 +78,7 @@ class ReaderTests {
 
         assertThat(reader.readers)
                 .containsAllEntriesOf(JsonReader.BASE_READERS)
-                .containsAllEntriesOf((Map<Class, JsonReader.JsonClassReader>) options.get(JsonReader.CUSTOM_READER_MAP))
+                .containsAllEntriesOf((Map<Class<?>, JsonReader.JsonClassReader>) options.get(JsonReader.CUSTOM_READER_MAP))
                 .hasSize(JsonReader.BASE_READERS.size() + 1);
     }
 

@@ -1,19 +1,16 @@
 package com.cedarsoftware.util.io
 
 import com.cedarsoftware.util.DeepEquals
+import com.google.gson.JsonIOException
 import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 
 import java.awt.*
 import java.util.List
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListMap
 
-import static org.assertj.core.api.Fail.fail
-import static org.junit.jupiter.api.Assertions.assertEquals
-import static org.junit.jupiter.api.Assertions.assertNull
-import static org.junit.jupiter.api.Assertions.assertNotNull
-import static org.junit.jupiter.api.Assertions.assertThrows
-import static org.junit.jupiter.api.Assertions.assertTrue
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -434,19 +431,23 @@ class TestMaps
     @Test
     void testMapFromUnknown()
     {
-        Map map = (Map) TestUtil.toJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)"java.util.concurrent.ConcurrentHashMap"]);
+        Map map = (Map) TestUtil.toJava('{"a":"alpha", "b":"beta"}', new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentHashMap.class).build());
         assert map instanceof ConcurrentHashMap
         assert map.size() == 2
         assert map.a == 'alpha'
         assert map.b == 'beta'
 
-        map = (Map) TestUtil.toJava('{"a":"alpha", "b":"beta"}');
-        assert map instanceof JsonObject
+        map = (Map) TestUtil.toJava('{"a":"alpha", "b":"beta"}', new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentSkipListMap.class).build());
+        assert map instanceof ConcurrentSkipListMap
         assert map.size() == 2
         assert map.a == 'alpha'
         assert map.b == 'beta'
 
-        assertThrows(JsonIoException.class, {TestUtil.toJava('{"a":"alpha", "b":"beta"}', [(JsonReader.UNKNOWN_OBJECT):(Object)Boolean.FALSE]) })
+        map = (Map) TestUtil.toJava('{"a":"alpha", "b":"beta"}');
+        assert map instanceof JsonObject        // Default 'Map' type
+        assert map.size() == 2
+        assert map.a == 'alpha'
+        assert map.b == 'beta'
     }
 
     @Test

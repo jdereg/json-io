@@ -17,6 +17,12 @@ public class ReadOptionsBuilder {
         return this;
     }
 
+    public ReadOptionsBuilder setMissingFieldHandler(MissingFieldHandler missingFieldHandler)
+    {
+        readOptions.put(MISSING_FIELD_HANDLER, missingFieldHandler);
+        return this;
+    }
+
     public ReadOptionsBuilder failOnUnknownType() {
         readOptions.put(JsonReader.FAIL_ON_UNKNOWN_TYPE, Boolean.TRUE);
         return this;
