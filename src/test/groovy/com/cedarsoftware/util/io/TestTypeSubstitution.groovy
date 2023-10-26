@@ -32,10 +32,9 @@ class TestTypeSubstitution
     void testBasicTypeSubAtRoot()
     {
         Map<String, String> types = ['java.util.ArrayList':'al']
-        Map args = [(JsonWriter.TYPE_NAME_MAP):types]
         List list = ['alpha', 'bravo', 'charlie']
-        String json = TestUtil.toJson(list, args)
-        List test = (List) TestUtil.toJava(json, args)
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().withCustomTypeNameMap(types).build())
+        List test = (List) TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(types).build())
         assert list.equals(test)
     }
 
@@ -50,10 +49,8 @@ class TestTypeSubstitution
                 'java.util.LinkedHashMap':'lmap',
                 'com.cedarsoftware.util.io.TestTypeSubstitution$Person':'person'
         ]
-        Map args = [(JsonWriter.TYPE_NAME_MAP):types]
-        String json = TestUtil.toJson(p, args)
-        args[(JsonReader.USE_MAPS)] = true
-        Person clone = TestUtil.toJava(json, args)
+        String json = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomTypeNameMap(types).build())
+        Person clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(types).returnAsMaps().build())
         assert clone.name == 'John'
         assert clone.pets.equals(p.pets)
     }

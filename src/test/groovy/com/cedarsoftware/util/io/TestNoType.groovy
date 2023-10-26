@@ -53,7 +53,7 @@ class TestNoType
         j.namesToAge.Zeus = cal.getTime()
 
         String json = TestUtil.toJson(j)
-        String json2 = TestUtil.toJson(j, [(JsonWriter.TYPE):false])
+        String json2 = TestUtil.toJson(j, new WriteOptionsBuilder().noTypeInfo().build())
         assert json != json2
         assert json2 == '{"name":"Zeus","things":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"],"namesToAge":{"Appollo":2500,"Hercules":2489,"Poseidon":"2502","Aphrodite":"2499.0","Zeus":-84243801600000},"stuff":[1,2,"3","4",-84243801600000,"Hello","com.cedarsoftware.util.io.TestNoType$Junk"]}'
     }
@@ -70,7 +70,7 @@ class TestNoType
         assert map.groups[2] == "three"
         assert map.search.datalist.length == 0
 
-        map = TestUtil.toJava(json, [(JsonReader.USE_MAPS): true] as Map)
+        map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build())
         assert !(map.groups instanceof Map)
         assert map.groups[0] == "one"
         assert map.groups[1] == "two"
@@ -86,8 +86,8 @@ class TestNoType
         cols.foos.addAll([1,2,"4",8])
         cols.bars = [1,3,"5",7] as Object[]
 
-        String json = TestUtil.toJson(cols, [(JsonWriter.TYPE): false])
-        Map map = TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(cols, new WriteOptionsBuilder().noTypeInfo().build())
+        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build())
         assert map.foos[0] == 1
         assert map.foos[1] == 2
         assert map.foos[2] == "4"
@@ -98,10 +98,10 @@ class TestNoType
         assert map.bars[2] == "5"
         assert map.bars[3] == 7
 
-        json = TestUtil.toJson([1, 2, 3, 4], [(JsonWriter.TYPE): false])
+        json = TestUtil.toJson([1, 2, 3, 4], new WriteOptionsBuilder().noTypeInfo().build())
         assert '[1,2,3,4]' == json
 
-        json = TestUtil.toJson([1, 2, 3, 4] as Object[], [(JsonWriter.TYPE): false])
+        json = TestUtil.toJson([1, 2, 3, 4] as Object[], new WriteOptionsBuilder().noTypeInfo().build())
         assert '[1,2,3,4]' == json
     }
 
@@ -110,7 +110,7 @@ class TestNoType
     {
         def array = [[1L,2L,3L] as Object[], ['a', 'b', 'c'] as Object[]] as Object[]
         String json = TestUtil.toJson(array)
-        Object[] list = (Object[]) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Object[] list = (Object[]) TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build())
 
         assert list[0] instanceof Object[]
         assert list[0][0] == 1L

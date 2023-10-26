@@ -91,26 +91,28 @@ class TestDouble
     @Test
     void testNanAsRoot()
     {
-        Object json = TestUtil.toJson(Double.NaN, [(JsonWriter.TYPE):false])
-        assert json.contains('null')
+        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        Object json = TestUtil.toJson(Double.NaN, args);
+        assert json.contains('null');
 
-        json = TestUtil.toJson(Double.NEGATIVE_INFINITY, [(JsonWriter.TYPE):false])
-        assert json.contains('null')
+        json = TestUtil.toJson(Double.NEGATIVE_INFINITY, args);
+        assert json.contains('null');
 
-        json = TestUtil.toJson(Double.POSITIVE_INFINITY, [(JsonWriter.TYPE):false])
-        assert json.contains('null')
+        json = TestUtil.toJson(Double.POSITIVE_INFINITY, args);
+        assert json.contains('null');
     }
 
     @Test
     void testNanMapKey()
     {
-        Object json = TestUtil.toJson([field:Double.NaN], [(JsonWriter.TYPE):false])
+        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        Object json = TestUtil.toJson([field:Double.NaN], args)
         assert json.contains('null')
 
-        json = TestUtil.toJson([field:Double.NEGATIVE_INFINITY], [(JsonWriter.TYPE):false])
+        json = TestUtil.toJson([field:Double.NEGATIVE_INFINITY], args)
         assert json.contains('null')
 
-        json = TestUtil.toJson([field:Double.POSITIVE_INFINITY], [(JsonWriter.TYPE):false])
+        json = TestUtil.toJson([field:Double.POSITIVE_INFINITY], args)
         assert json.contains('null')
     }
 
@@ -119,15 +121,17 @@ class TestDouble
     {
         DoubleHolder holder = new DoubleHolder()
         holder.number = Double.NaN
-        Object json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false])
+
+        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        Object json = TestUtil.toJson(holder, args)
         assert json.contains('null')
 
         holder.number = Double.NEGATIVE_INFINITY
-        json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false])
+        json = TestUtil.toJson(holder, args)
         assert json.contains('null')
 
         holder.number = Double.POSITIVE_INFINITY
-        json = TestUtil.toJson(holder, [(JsonWriter.TYPE):false])
+        json = TestUtil.toJson(holder, args)
         assert json.contains('null')
     }
 

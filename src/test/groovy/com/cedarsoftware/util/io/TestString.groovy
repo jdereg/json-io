@@ -114,7 +114,7 @@ class TestString
     void testRootString()
     {
         String s = '"root string"'
-        Object o = TestUtil.toJava(s, [(JsonReader.USE_MAPS):true] as Map)
+        Object o = TestUtil.toJava(s, new ReadOptionsBuilder().returnAsMaps().build())
         assertEquals("root string", o)
         o = TestUtil.toJava(s)
         assertEquals("root string", o)
