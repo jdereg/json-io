@@ -44,7 +44,6 @@ public class WriteOptionsBuilder {
      *
      * @return
      */
-
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
         writeOptions.put(JsonWriter.ENUM_PUBLIC_ONLY, Boolean.TRUE);
         writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
@@ -88,37 +87,42 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withNoTypeInformation() {
+    public WriteOptionsBuilder noTypeInfo() {
         writeOptions.put(TYPE, Boolean.FALSE);
         return this;
     }
 
-    public WriteOptionsBuilder forceTypeInformation() {
+    public WriteOptionsBuilder forceTypeInfo() {
         writeOptions.put(TYPE, Boolean.TRUE);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldNameBlackList(Class c, List<String> fields) {
+    public WriteOptionsBuilder minTypeInfo() {
+        writeOptions.remove(TYPE);
+        return this;
+    }
+
+    public WriteOptionsBuilder withFieldNameBlackList(Class<?> c, List<String> fields) {
         MetaUtils.computeMapIfAbsent(writeOptions, FIELD_NAME_BLACK_LIST).put(c, fields);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldNameBlackListMap(Map<Class, List<String>> map) {
+    public WriteOptionsBuilder withFieldNameBlackListMap(Map<? extends Class<?>, List<String>> map) {
         MetaUtils.computeMapIfAbsent(writeOptions, FIELD_NAME_BLACK_LIST).putAll(map);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldSpecifier(Class c, List<String> fields) {
+    public WriteOptionsBuilder withFieldSpecifier(Class<?> c, List<String> fields) {
         MetaUtils.computeMapIfAbsent(writeOptions, FIELD_SPECIFIERS).put(c, fields);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldSpecifiersMap(Map<Class, List<String>> map) {
+    public WriteOptionsBuilder withFieldSpecifiersMap(Map<? extends Class<?>, List<String>> map) {
         MetaUtils.computeMapIfAbsent(writeOptions, FIELD_SPECIFIERS).putAll(map);
         return this;
     }
 
-    public WriteOptionsBuilder withCustomTypeName(Class type, String newTypeName) {
+    public WriteOptionsBuilder withCustomTypeName(Class<?> type, String newTypeName) {
         return withCustomTypeName(type.getName(), newTypeName);
     }
 
@@ -134,22 +138,22 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withCustomWriter(Class c, JsonWriter.JsonClassWriter writer) {
+    public WriteOptionsBuilder withCustomWriter(Class<?> c, JsonWriter.JsonClassWriter writer) {
         MetaUtils.computeMapIfAbsent(writeOptions, CUSTOM_WRITER_MAP).put(c, writer);
         return this;
     }
 
-    public WriteOptionsBuilder withCustomWriterMap(Map<Class, JsonWriter.JsonClassWriter> map) {
+    public WriteOptionsBuilder withCustomWriterMap(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> map) {
         MetaUtils.computeMapIfAbsent(writeOptions, CUSTOM_WRITER_MAP).putAll(map);
         return this;
     }
 
-    public WriteOptionsBuilder withNoCustomizationFor(Class c) {
+    public WriteOptionsBuilder withNoCustomizationFor(Class<?> c) {
         MetaUtils.computeSetIfAbsent(writeOptions, NOT_CUSTOM_WRITER_MAP).add(c);
         return this;
     }
 
-    public WriteOptionsBuilder withNoCustomizationsFor(Collection<Class> collection) {
+    public WriteOptionsBuilder withNoCustomizationsFor(Collection<Class<?>> collection) {
         MetaUtils.computeSetIfAbsent(writeOptions, NOT_CUSTOM_WRITER_MAP).addAll(collection);
         return this;
     }
@@ -164,6 +168,4 @@ public class WriteOptionsBuilder {
             throw new IllegalStateException(TYPE_NAME_MAP + " is not needed when types are not going to be output");
         }
     }
-
-
 }

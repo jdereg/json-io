@@ -53,9 +53,8 @@ class PrettyPrintTest
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
         String target = TestUtil.fetchResource("prettyPrint.json");
-        Map args = new HashMap<>();
-        args.put(JsonWriter.PRETTY_PRINT, true);
-        String json = TestUtil.toJson(nice, args);
+        Map<String, Object> writeOptions = new WriteOptionsBuilder().withPrettyPrint().build();
+        String json = TestUtil.toJson(nice, writeOptions);
 
         assertThat(json).isEqualToIgnoringNewLines(target);
 

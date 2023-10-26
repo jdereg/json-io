@@ -68,9 +68,7 @@ public class ConstructorTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> args = new HashMap<>();
-        args.put(JsonReader.USE_MAPS, true);
-        Map<String, Object> map = TestUtil.toJava(json0, args);
+        Map<String, Object> map = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
         assertEquals((byte) 1, map.get("_byte"));
         assertEquals((short) 2, map.get("_short"));
         assertEquals(3, map.get("_int"));

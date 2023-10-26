@@ -178,7 +178,7 @@ class EnumTests {
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
         var options = new WriteOptionsBuilder()
-                .withNoTypeInformation()
+                .noTypeInfo()
                 .build();
 
         JsonWriter writer = new JsonWriter(ba, options);
@@ -211,7 +211,7 @@ class EnumTests {
         var list = List.of(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
         var options = new WriteOptionsBuilder()
-                .withNoTypeInformation()
+                .noTypeInfo()
                 .doNotWritePrivateEnumFields()
                 .build();
 

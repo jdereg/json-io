@@ -33,25 +33,19 @@ public class CustomClassHandlerTest
     public void testCustomClassReaderWriter()
     {
         WeirdDate now = new WeirdDate(System.currentTimeMillis());
-        Map<String, Object> args = new LinkedHashMap<>(1);
         Map<Class<WeirdDate>, WeirdDateWriter> map1 = new LinkedHashMap<>(1);
         map1.put(WeirdDate.class, new WeirdDateWriter());
-        args.put(JsonWriter.CUSTOM_WRITER_MAP, map1);
-        String json = TestUtil.toJson(now, args);
+        String json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map1).build());
         TestUtil.printLine("json=" + json);
 
         Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
         map3.put(WeirdDate.class, new WeirdDateReader());
-        args.put(JsonReader.CUSTOM_READER_MAP, map3);
-        WeirdDate date = TestUtil.toJava(json, args);
+        WeirdDate date = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(map3).build());
         assertEquals(now, date);
 
-        args = new HashMap<>(2);
         Map<Class<WeirdDate>, WeirdDateWriter> map5 = new LinkedHashMap<>(1);
         map5.put(WeirdDate.class, new WeirdDateWriter());
-        args.put(JsonWriter.CUSTOM_WRITER_MAP, map5);
-        args.put(JsonWriter.NOT_CUSTOM_WRITER_MAP, new ArrayList<>(List.of(WeirdDate.class)));
-        json = TestUtil.toJson(now, args);
+        json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map5).withNoCustomizationsFor(List.of(WeirdDate.class)).build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);
     }

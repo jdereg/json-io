@@ -51,19 +51,17 @@ public class CustomWriterTest
     public void testCustomWriter()
     {
         Person p = createTestPerson();
-        Map<String, Object> args = new HashMap<>();
-
+        
         Map<Class<Person>, CustomPersonWriter> customWriters = new HashMap<>();
         customWriters.put(Person.class, new CustomPersonWriter());
 
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        args.put(JsonWriter.CUSTOM_WRITER_MAP, customWriters);
-        args.put(JsonReader.CUSTOM_READER_MAP, customReaders);
-        args.put(JsonReader.NOT_CUSTOM_READER_MAP, new ArrayList<>());
-        String jsonCustom = TestUtil.toJson(p, args);
-        Map obj = TestUtil.toMap(jsonCustom, args);
+        Map<String, Object> writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        Map<String, Object> readOptions0 = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
+        String jsonCustom = TestUtil.toJson(p, writeOptions0);
+        Map obj = TestUtil.toMap(jsonCustom, readOptions0);
         assert "Michael".equals(obj.get("f"));
         assert "Bolton".equals(obj.get("l"));
         Object[] pets = (Object[]) obj.get("p");
@@ -103,12 +101,9 @@ public class CustomWriterTest
         assert jsonCustom.equals(jsonCustom2);
         assert jsonOrig.equals(jsonOrig2);
 
-        args.clear();
         Map<Class<Person>, CustomPersonReader> customPersonReaderMap = new HashMap<>();
         customPersonReaderMap.put(Person.class, new CustomPersonReader());
-        args.put(JsonReader.CUSTOM_READER_MAP, customPersonReaderMap);
-        args.put(JsonReader.NOT_CUSTOM_READER_MAP, new ArrayList<>(List.of(Person.class)));
-        Person personOrig = TestUtil.toJava(jsonOrig, args);
+        Person personOrig = TestUtil.toJava(jsonOrig, new ReadOptionsBuilder().withCustomReaders(customPersonReaderMap).withNonCustomizableClasses(List.of(Person.class)).build());
         assert personOrig.equals(personCustom);
 
         p = TestUtil.toJava(jsonCustom);

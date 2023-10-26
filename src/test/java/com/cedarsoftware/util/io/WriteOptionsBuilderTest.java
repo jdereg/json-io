@@ -80,7 +80,7 @@ class WriteOptionsBuilderTest {
     @Test
     void withNoTypeInformation() {
         var options = new WriteOptionsBuilder()
-                .withNoTypeInformation()
+                .noTypeInfo()
                 .build();
 
         assertThat(options)
@@ -91,7 +91,7 @@ class WriteOptionsBuilderTest {
     @Test
     void forceTypeInformation() {
         var options = new WriteOptionsBuilder()
-                .forceTypeInformation()
+                .forceTypeInfo()
                 .build();
 
         assertThat(options)
@@ -118,7 +118,7 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withFieldNameBlackListMap() {
-        Map<Class, List<String>> map = new HashMap<>();
+        Map<Class<?>, List<String>> map = new HashMap<>();
         map.put(URL.class, List.of("protocol"));
         map.put(Date.class, List.of("month"));
 
@@ -140,7 +140,7 @@ class WriteOptionsBuilderTest {
     @Test
     void withFieldNameBlackListMap_accumulates_andKeepsLastUnique() {
 
-        Map<Class, List<String>> map = Map.of(
+        Map<Class<?>, List<String>> map = Map.of(
                 URL.class, List.of("host", "port"),
                 Date.class, List.of("month")
         );
@@ -191,7 +191,7 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withFieldNameSpecifierMap() {
-        Map<Class, List<String>> map = Map.of(URL.class, List.of("protocol"));
+        Map<Class<?>, List<String>> map = Map.of(URL.class, List.of("protocol"));
 
         var options = new WriteOptionsBuilder()
                 .withFieldSpecifiersMap(map)
@@ -201,7 +201,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsEntry(FIELD_SPECIFIERS, map);
 
-        var specifiers = (Map<Class, List<String>>) options.get(FIELD_SPECIFIERS);
+        var specifiers = (Map<Class<?>, List<String>>) options.get(FIELD_SPECIFIERS);
 
         assertThat(specifiers)
                 .hasSize(1)
@@ -209,7 +209,7 @@ class WriteOptionsBuilderTest {
     }
     @Test
     void withFieldNameSpecifierMap_accumulates_andKeepsUnique() {
-        Map<Class, List<String>> map = Map.of(
+        Map<Class<?>, List<String>> map = Map.of(
                 URL.class, List.of("protocol"),
                 Date.class, List.of("month"));
 
@@ -219,9 +219,9 @@ class WriteOptionsBuilderTest {
                 .withFieldSpecifier(TimeZone.class, List.of("zone"))
                 .build();
 
-        var specifiers = (Map<Class, List<String>>) options.get(FIELD_SPECIFIERS);
+        var specifiers = (Map<Class<?>, List<String>>) options.get(FIELD_SPECIFIERS);
 
-        Map<Class, List<String>> expected = Map.of(
+        Map<Class<?>, List<String>> expected = Map.of(
                 URL.class, List.of("host", "ref"),
                 TimeZone.class, List.of("zone"),
                 Date.class, List.of("month"));
@@ -265,7 +265,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_WRITER_MAP);
 
-        var customWriterMap = (Map<Class, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
+        var customWriterMap = (Map<Class<?>, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
 
         assertThat(customWriterMap).hasSize(1)
                 .containsKey(Date.class);
@@ -273,7 +273,7 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withCustomWriterMap() {
-        Map<Class, JsonWriter.JsonClassWriter> map = new HashMap<>();
+        Map<Class<?>, JsonWriter.JsonClassWriter> map = new HashMap<>();
 
         var options = new WriteOptionsBuilder()
                 .withCustomWriterMap(map)
@@ -295,7 +295,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_WRITER_MAP);
 
-        var map = (Map<Class, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
+        var map = (Map<Class<?>, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
@@ -394,7 +394,7 @@ class WriteOptionsBuilderTest {
         var value = "foobar";
 
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
-                        .withNoTypeInformation()
+                        .noTypeInfo()
                         .withCustomTypeName(Date.class, value)
                         .build())
                 .withMessage("TYPE_NAME_MAP is not needed when types are not going to be output");
@@ -403,7 +403,7 @@ class WriteOptionsBuilderTest {
     @Test
     void withCustomTypeNameMap_whenNoTypeInformationIsBeingOutput_throwsIllegalStateException() {
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
-                        .withNoTypeInformation()
+                        .noTypeInfo()
                         .withCustomTypeNameMap(new HashMap<>())
                         .build())
                 .withMessage("TYPE_NAME_MAP is not needed when types are not going to be output");
@@ -502,7 +502,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_WRITER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_WRITER_MAP);
+        var collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
 
         assertThat(collection)
                 .hasSize(1)
@@ -520,7 +520,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_WRITER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_WRITER_MAP);
+        var collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
 
         assertThat(collection)
                 .hasSize(1)
@@ -528,7 +528,7 @@ class WriteOptionsBuilderTest {
     }
     @Test
     void doNotCustomizeClass_addsAdditionalUniqueClasses() {
-        Collection<Class> list = List.of(HashMap.class, String.class);
+        Collection<Class<?>> list = List.of(HashMap.class, String.class);
 
         var options = new WriteOptionsBuilder()
                 .withNoCustomizationFor(String.class)
@@ -540,7 +540,7 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_WRITER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_WRITER_MAP);
+        var collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
 
         assertThat(collection)
                 .containsExactlyInAnyOrderElementsOf(List.of(String.class, HashMap.class, Map.class));
@@ -558,11 +558,9 @@ class WriteOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_WRITER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_WRITER_MAP);
+        var collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
 
         assertThat(collection)
                 .containsExactlyInAnyOrderElementsOf(List.of(String.class, Date.class, List.class));
     }
-
-
 }

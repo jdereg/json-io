@@ -35,11 +35,9 @@ public class CustomReaderMapTest
         data.put("pt", pt);
         Map<Class<CustomPoint>, CustomPointReader> customReaders = new HashMap<>(1);
         customReaders.put(CustomPoint.class, new CustomPointReader());
-        Map<String, Object> args = new HashMap<>(1);
-        args.put(JsonReader.CUSTOM_READER_MAP, customReaders);
-
+        
         String json = TestUtil.toJson(data);
-        Map<String, CustomPoint> clone = TestUtil.toJava(json, args);
+        Map<String, CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
 
         CustomPoint clonePoint = clone.get("pt");
         Assertions.assertEquals(pt.x, clonePoint.x);

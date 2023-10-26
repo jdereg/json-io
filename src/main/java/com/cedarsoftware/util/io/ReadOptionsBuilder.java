@@ -10,7 +10,7 @@ import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
 
 public class ReadOptionsBuilder {
 
-    ConcurrentMap<String, Object> readOptions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Object> readOptions = new ConcurrentHashMap<>();
 
     public ReadOptionsBuilder setUnknownTypeClass(Class<?> c) {
         readOptions.put(JsonReader.UNKNOWN_OBJECT, c.getName());
@@ -32,7 +32,7 @@ public class ReadOptionsBuilder {
         return this;
     }
 
-    public ReadOptionsBuilder withCustomTypeName(Class type, String newTypeName) {
+    public ReadOptionsBuilder withCustomTypeName(Class<?> type, String newTypeName) {
         return withCustomTypeName(type.getName(), newTypeName);
     }
 
@@ -51,7 +51,7 @@ public class ReadOptionsBuilder {
         return this;
     }
 
-    public ReadOptionsBuilder withCustomReaders(Map<Class<?>, JsonReader.JsonClassReader> map) {
+    public ReadOptionsBuilder withCustomReaders(Map<? extends Class<?>, ? extends JsonReader.JsonClassReader> map) {
         MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
         return this;
     }
@@ -70,7 +70,7 @@ public class ReadOptionsBuilder {
         return withClassFactory(type.getName(), factory);
     }
 
-    public ReadOptionsBuilder withClassFactories(Map<String, JsonReader.ClassFactory> factories) {
+    public ReadOptionsBuilder withClassFactories(Map<String, ? extends JsonReader.ClassFactory> factories) {
         MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).putAll(factories);
         return this;
     }

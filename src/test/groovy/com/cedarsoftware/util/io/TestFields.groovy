@@ -3,11 +3,7 @@ package com.cedarsoftware.util.io
 import groovy.transform.CompileStatic
 import org.junit.jupiter.api.Test
 
-import static org.junit.jupiter.api.Assertions.assertEquals
-import static org.junit.jupiter.api.Assertions.assertFalse
-import static org.junit.jupiter.api.Assertions.assertNull
-import static org.junit.jupiter.api.Assertions.assertThrows
-import static org.junit.jupiter.api.Assertions.assertTrue
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -477,7 +473,7 @@ class TestFields
     @Test
     void testExternalFieldSpecifiedBadName()
     {
-        Map<Class, List<String>> fieldSpecifiers = new HashMap<Class, List<String>>()
+        Map<Class<?>, List<String>> fieldSpecifiers = new HashMap<>()
         List<String> fields = new ArrayList<String>()
         fields.add("mane")
         fieldSpecifiers.put(PainfulToSerialize.class, fields)
@@ -485,16 +481,19 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map<String, Object> args = new HashMap<>()
-        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
-
-        assertThrows(Exception.class, {  TestUtil.toJson(painful, args) })
+        try
+        {
+            TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build())
+            fail();
+        }
+        catch (Exception ignore)
+        {}
     }
 
     @Test
     void testExternalFieldSpecifier()
     {
-        Map<Class, List<String>> fieldSpecifiers = new HashMap<>()
+        Map<Class<?>, List<String>> fieldSpecifiers = new HashMap<>()
         List<String> fields = new ArrayList<>()
         fields.add("name")
         fieldSpecifiers.put(PainfulToSerialize.class, fields)
@@ -502,10 +501,8 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map<String, Object> args = new HashMap<>()
-        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
-        String json = TestUtil.toJson(painful, args)
-        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build())
+        Map check = (Map) TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
     }
@@ -518,9 +515,10 @@ class TestFields
         painful.name = "Android rocks"
         painful.age = 50;
 
-        def args = [(JsonWriter.FIELD_SPECIFIERS):fieldSpecifiers] as Map
-        String json = TestUtil.toJson(painful, args)
-        Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        Map<String, Object> readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        Map<String, Object> writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
+        String json = TestUtil.toJson(painful, writeOptions)
+        Map check = (Map) TestUtil.toJava(json, readOptions)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
 
@@ -528,8 +526,9 @@ class TestFields
         fields2.add("age")
         fields2.add("name")
         fieldSpecifiers.put(MorePainfulToSerialize.class, fields2)
-        json = TestUtil.toJson(painful, args)
-        check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
+        writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
+        json = TestUtil.toJson(painful, writeOptions);
+        check = (Map) TestUtil.toJava(json, readOptions)
         assertTrue(check.size() == 2)
         assertTrue(check.containsKey("name"))
         assertTrue(check.containsKey("age"))
@@ -587,10 +586,7 @@ class TestFields
         PainfulToSerialize painful = new PainfulToSerialize()
         painful.name = "Android rocks"
 
-        Map<String, Object> args = new HashMap<>()
-        args.put(JsonWriter.FIELD_SPECIFIERS, fieldSpecifiers)
-        args.put(JsonWriter.FIELD_NAME_BLACK_LIST, blackLists)
-        String json = TestUtil.toJson(painful, args)
+        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).withFieldNameBlackListMap(blackLists).build())
         Map check = (Map) TestUtil.toJava(json, [(JsonReader.USE_MAPS):true] as Map)
         assertTrue(check.size() == 1)
         assertTrue(check.containsKey("name"))
