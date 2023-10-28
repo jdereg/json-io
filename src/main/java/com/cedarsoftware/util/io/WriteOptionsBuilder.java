@@ -24,17 +24,17 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder skipNullFields() {
-        writeOptions.put(JsonWriter.SKIP_NULL_FIELDS, Boolean.TRUE);
+        writeOptions.put(JsonWriter.SKIP_NULL_FIELDS, true);
         return this;
     }
 
     public WriteOptionsBuilder withPrettyPrint() {
-        writeOptions.put(JsonWriter.PRETTY_PRINT, Boolean.TRUE);
+        writeOptions.put(JsonWriter.PRETTY_PRINT, true);
         return this;
     }
 
     public WriteOptionsBuilder writeLongsAsStrings() {
-        writeOptions.put(JsonWriter.WRITE_LONGS_AS_STRINGS, Boolean.TRUE);
+        writeOptions.put(JsonWriter.WRITE_LONGS_AS_STRINGS, true);
         return this;
     }
 
@@ -45,18 +45,26 @@ public class WriteOptionsBuilder {
      * @return
      */
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
-        writeOptions.put(JsonWriter.ENUM_PUBLIC_ONLY, Boolean.TRUE);
-        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
+        writeOptions.put(JsonWriter.ENUM_PUBLIC_ONLY, true);
+        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, true);
         return this;
     }
 
     public WriteOptionsBuilder writeEnumsAsObjects() {
-        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
+        writeOptions.put(JsonWriter.WRITE_ENUMS_AS_OBJECTS, true);
         return this;
     }
 
+    // Map with all String keys, will still output in the @keys/@items approach
     public WriteOptionsBuilder forceMapOutputAsKeysAndItems() {
-        writeOptions.put(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, Boolean.TRUE);
+        writeOptions.put(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, true);
+        return this;
+    }
+
+    // Map with all String keys, will output as a JSON object, with the keys of the Map being the keys of the JSON
+    // Object, which is the default and more natural.
+    public WriteOptionsBuilder doNotForceMapOutputAsKeysAndItems() {
+        writeOptions.put(JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, false);
         return this;
     }
 
@@ -88,7 +96,7 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder noTypeInfo() {
-        writeOptions.put(TYPE, Boolean.FALSE);
+        writeOptions.put(TYPE, false);
         return this;
     }
 
