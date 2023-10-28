@@ -169,7 +169,7 @@ public class MetaUtils
                 }
                 if (classFields.containsKey(fieldName))
                 {
-                    classFields.put(curr.getName() + '.' + fieldName, field);
+                    classFields.put(curr.getSimpleName() + '.' + fieldName, field);
                 }
                 else
                 {
