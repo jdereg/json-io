@@ -11,19 +11,32 @@
     <url>https://github.com/jdereg/json-io</url>
 
     <properties>
+        <!-- remove source encoding warnings from maven output -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Java source, target, and release version -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.release>11</maven.compiler.release>
-        <maven.compiler.failOnWarning>false</maven.compiler.failOnWarning>
-        <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <lombok.version>1.18.30</lombok.version>
-        <version.plugin.compiler>3.11.0</version.plugin.compiler>
-        <version.plugin.gpg>3.1.0</version.plugin.gpg>
-        <version.plugin.javadoc>3.6.0</version.plugin.javadoc>
+
+        <!-- testing only -->
+        <version.junit>5.10.0</version.junit>
+        <version.assertj>3.24.2</version.assertj>
+        <version.java.util>2.1.1</version.java.util>
+        <version.gson>2.10.1</version.gson>
+        <version.lombok>1.18.30</version.lombok>
+
+        <!-- release to Maven Central via Sonatype Nexus -->
         <version.plugin.nexus>1.6.13</version.plugin.nexus>
-        <version.plugin.surefire>3.1.2</version.plugin.surefire>
+
+        <!-- Build maven-***-plugins-->
+        <version.plugin.gpg>3.1.0</version.plugin.gpg>
+        <version.plugin.compiler>3.11.0</version.plugin.compiler>
+        <version.plugin.javadoc>3.6.0</version.plugin.javadoc>
+        <version.plugin.surefire>3.2.1</version.plugin.surefire>
         <version.plugin.source>3.3.0</version.plugin.source>
+        <version.plugin.felix.scr>1.26.4</version.plugin.felix.scr>
+        <version.plugin.felix.bundle>5.1.9</version.plugin.felix.bundle>
         <!--
             Name of the benchmark Uber-JAR to generate.
           -->
@@ -86,6 +99,11 @@
             <name>John DeRegnaucourt</name>
             <email>jdereg@gmail.com</email>
         </developer>
+        <developer>
+            <id>kpartlow</id>
+            <name>Kenny Partlow</name>
+            <email>kpartlow@gmail.com</email>
+        </developer>
     </developers>
 
     <pluginRepositories>
@@ -119,13 +137,13 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-scr-plugin</artifactId>
-                <version>1.26.2</version>
+                <version>${version.plugin.felix.scr}</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>5.1.1</version>
+                <version>${version.plugin.felix.bundle}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
@@ -250,53 +268,43 @@
 <!--        <dependency>-->
 <!--            <groupId>org.projectlombok</groupId>-->
 <!--            <artifactId>lombok</artifactId>-->
-<!--            <version>1.18.30</version>-->
-<!--            <scope>provided</scope>-->
+<!--            <version>${version.lombok}</version>-->
+<!--            <scope>test</scope>-->
 <!--        </dependency>-->
+        
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.9.2</version>
+            <version>${version.junit}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>5.9.2</version>
+            <version>${version.junit}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>com.cedarsoftware</groupId>
             <artifactId>java-util</artifactId>
-            <version>2.1.1</version>
+            <version>${version.java.util}</version>
             <scope>test</scope>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.9.1</version>
+            <version>${version.gson}</version>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-core</artifactId>
-            <version>1.35</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.openjdk.jmh</groupId>
-            <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.35</version>
-            <scope>test</scope>
-        </dependency>
-
+        
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.24.2</version>
+            <version>${version.assertj}</version>
             <scope>test</scope>
         </dependency>
 

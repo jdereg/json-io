@@ -45,12 +45,12 @@ public class SecurityTest
         attemptToWriteDisallowedClass(builder);
         attemptToWriteDisallowedClass(process);
         attemptToWriteDisallowedClass(SecurityTest.class.getClassLoader());
-        Method method = ReflectionUtils.getMethod(SecurityTest.class, "testSecureWrites", null);
+        Method method = ReflectionUtils.getMethod(SecurityTest.class, "testSecureWrites", (Class<?>[])null);
         assert method != null;
         attemptToWriteDisallowedClass(method);
         Collection<Field> fields = ReflectionUtils.getDeepDeclaredFields(SecurityTest.class);
         attemptToWriteDisallowedClass(fields.toArray()[0]);
-        Constructor<?> constructor = ReflectionUtils.getConstructor(SecurityTest.class, null);
+        Constructor<?> constructor = ReflectionUtils.getConstructor(SecurityTest.class, (Class<?>[])null);
         attemptToWriteDisallowedClass(constructor);
     }
 
