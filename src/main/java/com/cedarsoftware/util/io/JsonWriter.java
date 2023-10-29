@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import lombok.Getter;
+
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -8,7 +10,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -162,7 +168,17 @@ public class JsonWriter implements Closeable, Flushable
     private static final NullClass nullWriter = new NullClass();
 
     private static final JsonClassWriter enumAsStringWriter = new Writers.EnumsAsStringWriter();
+
+    /**
+     * @return Map containing all objects that were visited within input object graph
+     */
+    @Getter
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
+
+    /**
+     * @return Map containing all objects that were referenced within input object graph.
+     */
+    @Getter
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
     private final Writer out;
     private Map<String, String> typeNameMap = null;
@@ -356,24 +372,6 @@ public class JsonWriter implements Closeable, Flushable
                 return (JsonWriter) args.get(JSON_WRITER);
             }
         }
-    }
-
-    /**
-     * Provide access to subclasses.
-     * @return Map containing all objects that were referenced within input object graph.
-     */
-    public Map getObjectsReferenced()
-    {
-        return objsReferenced;
-    }
-
-    /**
-     * Provide access to subclasses.
-     * @return Map containing all objects that were visited within input object graph
-     */
-    public Map getObjectsVisited()
-    {
-        return objVisited;
     }
 
     /**
@@ -2065,12 +2063,12 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        Iterator<Map.Entry<String,Object>> i = jObj.entrySet().iterator();
+        Iterator<Map.Entry<Object, Object>> i = jObj.entrySet().iterator();
         boolean first = true;
 
         while (i.hasNext())
         {
-            Map.Entry<String, Object>entry = i.next();
+            Map.Entry<Object, Object> entry = i.next();
             if (skipNullFields && entry.getValue() == null)
             {
                 continue;
@@ -2082,7 +2080,7 @@ public class JsonWriter implements Closeable, Flushable
                 newLine();
             }
             first = false;
-            final String fieldName = entry.getKey();
+            final String fieldName = (String) entry.getKey();
             output.write('"');
             output.write(fieldName);
             output.write("\":");
@@ -2520,10 +2518,6 @@ public class JsonWriter implements Closeable, Flushable
             if (!"name".equals(field.getName()))
             {
                 if (!Modifier.isPublic(modifiers) && isEnumPublicOnly)
-                {
-                    return first;
-                }
-                if ("ordinal".equals(field.getName()) || "internal".equals(field.getName()))
                 {
                     return first;
                 }

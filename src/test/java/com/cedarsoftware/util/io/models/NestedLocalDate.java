@@ -1,12 +1,15 @@
 package com.cedarsoftware.util.io.models;
 
+import lombok.Getter;
+
 import java.time.LocalDate;
 
+@Getter
 public class NestedLocalDate {
-    public LocalDate date1;
-    public LocalDate date2;
-    public String holiday;
-    public Long value;
+    private final LocalDate date1;
+    private final LocalDate date2;
+    private final String holiday;
+    private final Long value;
 
     public NestedLocalDate(LocalDate date1, LocalDate date2) {
         this.holiday = "Festivus";

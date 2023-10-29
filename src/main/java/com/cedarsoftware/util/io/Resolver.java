@@ -159,18 +159,18 @@ abstract class Resolver
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    protected Object convertMapsToObjects(final JsonObject<String, Object> root)
+    protected Object convertMapsToObjects(final JsonObject root)
     {
         if (root.isFinished) {
             return root.getTarget();
         }
 
-        final Deque<JsonObject<String, Object>> stack = new ArrayDeque<>();
+        final Deque<JsonObject> stack = new ArrayDeque<>();
         stack.addFirst(root);
 
         while (!stack.isEmpty())
         {
-            final JsonObject<String, Object> jsonObj = stack.removeFirst();
+            final JsonObject jsonObj = stack.removeFirst();
 
             if (jsonObj.isArray())
             {
@@ -200,13 +200,13 @@ abstract class Resolver
         return root.target;
     }
 
-    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack);
+    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack);
 
-    public abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
+    public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 
-    protected abstract void traverseCollection(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
+    protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 
-    protected abstract void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
+    protected abstract void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj);
 
     protected void cleanup()
     {
@@ -240,7 +240,7 @@ abstract class Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseMap(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj)
+    protected void traverseMap(Deque<JsonObject> stack, JsonObject jsonObj)
     {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
@@ -270,9 +270,9 @@ abstract class Resolver
         prettyMaps.add(new Object[]{jsonObj, mapKeys, mapValues});
     }
 
-    private static Object[] buildCollection(Deque<JsonObject<String, Object>> stack, Object[] items, int size)
+    private static Object[] buildCollection(Deque<JsonObject> stack, Object[] items, int size)
     {
-        final JsonObject<String, Object> jsonCollection = new JsonObject<String, Object>();
+        final JsonObject jsonCollection = new JsonObject();
         jsonCollection.put(ITEMS, items);
         final Object[] javaKeys = new Object[size];
         jsonCollection.target = javaKeys;
@@ -286,7 +286,7 @@ abstract class Resolver
      *
      * @param map Map to convert
      */
-    protected static void convertMapToKeysItems(final JsonObject<String, Object> map)
+    protected static void convertMapToKeysItems(final JsonObject map)
     {
         if (!map.containsKey(KEYS) && !map.isReference())
         {
@@ -461,10 +461,6 @@ abstract class Resolver
             {
                 mate = getEnum(clazz, jsonObj);
             }
-            else if (Enum.class.isAssignableFrom(clazz)) // anonymous subclass of an Enum
-            {
-                mate = getEnum(clazz.getSuperclass(), jsonObj);
-            }
             else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an EnumSet
             {
                 mate = extractEnumSet(clazz, jsonObj);
@@ -498,7 +494,8 @@ abstract class Resolver
             }
         }
 
-        return jsonObj.setTarget(mate);
+        jsonObj.setTarget(mate);
+        return jsonObj.getTarget();
     }
 
     protected Object coerceCertainTypes(String type)
@@ -574,7 +571,7 @@ abstract class Resolver
         }
     }
 
-    protected EnumSet<?> extractEnumSet(Class c, JsonObject<String, Object> jsonObj)
+    protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj)
     {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null

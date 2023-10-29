@@ -85,7 +85,7 @@ public class ObjectResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         this.traverseFields(stack, jsonObj, JsonWriter.EMPTY_SET);
     }
@@ -97,16 +97,16 @@ public class ObjectResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj, Set<String> excludeFields)
+    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields)
     {
         final Object javaMate = jsonObj.target;
-        final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
+        final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
 
         while (i.hasNext())
         {
-            Map.Entry<String, Object> e = i.next();
-            String key = e.getKey();
+            Map.Entry<Object, Object> e = i.next();
+            String key = (String) e.getKey();
             final Field field = MetaUtils.getField(cls, key);
             Object rhs = e.getValue();
             if (field != null)
@@ -137,7 +137,7 @@ public class ObjectResolver extends Resolver
      * @param rhs     the JSON value that will be converted and stored in the 'field' on the associated
      *                Java target object.
      */
-    protected void assignField(final Deque<JsonObject<String, Object>> stack, final JsonObject jsonObj,
+    protected void assignField(final Deque<JsonObject> stack, final JsonObject jsonObj,
                                final Field field, final Object rhs)
     {
         final Object target = jsonObj.target;
@@ -307,7 +307,7 @@ public class ObjectResolver extends Resolver
      * @param rhs the JSON value that will be converted and stored in the 'field' on the associated Java target object.
      * @param missingField name of the missing field in the java object.
      */
-    protected void handleMissingField(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj, final Object rhs,
+    protected void handleMissingField(final Deque<JsonObject> stack, final JsonObject jsonObj, final Object rhs,
                                       final String missingField)
     {
         final Object target = jsonObj.target;
@@ -418,7 +418,7 @@ public class ObjectResolver extends Resolver
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final String className = jsonObj.type;
         final Object[] items = jsonObj.getArray();
@@ -572,7 +572,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseArray(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    protected void traverseArray(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final int len = jsonObj.getLength();
         if (len == 0)
@@ -647,7 +647,7 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
+                    JsonObject jsonObject = new JsonObject();
                     jsonObject.put(ITEMS, element);
                     Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
@@ -655,7 +655,7 @@ public class ObjectResolver extends Resolver
             }
             else if (element instanceof JsonObject)
             {
-                JsonObject<String, Object> jsonObject = (JsonObject<String, Object>) element;
+                JsonObject jsonObject = (JsonObject) element;
                 Long ref = jsonObject.getReferenceId();
 
                 if (ref != null)
@@ -704,7 +704,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack)
+    protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack)
     {
         if (o == null)
         {
@@ -793,6 +793,7 @@ public class ObjectResolver extends Resolver
             } else {
                 job = new JsonObject();
                 job.setValue(o);
+                job.setType(c.getName());
             }
 
             Object target = classFactory.newInstance(c, job);
@@ -910,11 +911,11 @@ public class ObjectResolver extends Resolver
                 {
                     if (instance instanceof JsonObject)
                     {
-                        final JsonObject<String, Object> jObj = (JsonObject) instance;
+                        final JsonObject jObj = (JsonObject) instance;
 
-                        for (Map.Entry<String, Object> entry : jObj.entrySet())
+                        for (Map.Entry<Object, Object> entry : jObj.entrySet())
                         {
-                            final String fieldName = entry.getKey();
+                            final String fieldName = (String) entry.getKey();
                             if (!fieldName.startsWith("this$"))
                             {
                                 // TODO: If more than one type, need to associate correct typeArgs entry to value

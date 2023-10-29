@@ -63,8 +63,6 @@ public class Dog
         private Dog getOuterType() {
             return Dog.this;
         }
-
-
     }
 
     public static class Shoe {

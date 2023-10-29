@@ -1,12 +1,15 @@
 package com.cedarsoftware.util.io;
 
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -38,7 +41,7 @@ public class SunMiscTest
         String workaroundString = TestUtil.toJson(array);
 
         JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
-            public Object newInstance(Class<?> c, JsonObject<String, Object> o)
+            public Object newInstance(Class<?> c, JsonObject o)
             {
                 return Dog.Shoe.construct();
             }
@@ -46,7 +49,7 @@ public class SunMiscTest
 
         Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<Class<Dog.Shoe>, JsonReader.JsonClassReader>();
         customReader.put(Dog.Shoe.class, new JsonReader.JsonClassReader() {
-            public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
+            public Object read(Object jOb, Deque<JsonObject> stack)
             {
                 // no need to do anything special
                 return jOb;

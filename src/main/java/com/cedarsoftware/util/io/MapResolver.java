@@ -3,7 +3,11 @@ package com.cedarsoftware.util.io;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
@@ -49,14 +53,14 @@ public class MapResolver extends Resolver
         super(reader);
     }
 
-    protected Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack)
+    protected Object readIfMatching(Object o, Class compType, Deque<JsonObject> stack)
     {
         // No custom reader support for maps
         return null;
     }
 
     /**
-     * Walk the JsonObject<String, Object> fields and perform necessary substitutions so that all references matched up.
+     * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
      * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
      * an @id of an object which can have more than one @ref to it, this code will make sure that each
      * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
@@ -64,12 +68,12 @@ public class MapResolver extends Resolver
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final Object target = jsonObj.target;
-        for (Map.Entry<String, Object> e : jsonObj.entrySet())
+        for (Map.Entry<Object, Object> e : jsonObj.entrySet())
         {
-            final String fieldName = e.getKey();
+            final String fieldName = (String) e.getKey();
             final Field field = (target != null) ? MetaUtils.getField(target.getClass(), fieldName) : null;
             final Object rhs = e.getValue();
 
@@ -79,12 +83,12 @@ public class MapResolver extends Resolver
             }
             else if (rhs == JsonParser.EMPTY_OBJECT)
             {
-                jsonObj.put(fieldName, new JsonObject<String, Object>());
+                jsonObj.put(fieldName, new JsonObject());
             }
             else if (rhs.getClass().isArray())
             {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
-                JsonObject<String, Object> jsonArray = new JsonObject<String, Object>();
+                JsonObject jsonArray = new JsonObject();
                 jsonArray.put(JsonObject.ITEMS, rhs);
                 stack.addFirst(jsonArray);
 
@@ -93,7 +97,7 @@ public class MapResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                JsonObject<String, Object> jObj = (JsonObject<String, Object>) rhs;
+                JsonObject jObj = (JsonObject) rhs;
 
                 if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
                 {
@@ -104,7 +108,7 @@ public class MapResolver extends Resolver
 
                 if (refId != null)
                 {    // Correct field references
-                    JsonObject<String, Object> refObject = getReferencedObj(refId);
+                    JsonObject refObject = getReferencedObj(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -149,7 +153,7 @@ public class MapResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final Deque<JsonObject<String, Object>> stack, final JsonObject<String, Object> jsonObj)
+    protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
@@ -164,7 +168,7 @@ public class MapResolver extends Resolver
         {
             if (element == JsonParser.EMPTY_OBJECT)
             {
-                copy.add(new JsonObject<String, Object>());
+                copy.add(new JsonObject());
                 continue;
             }
 
@@ -172,18 +176,18 @@ public class MapResolver extends Resolver
 
             if (element instanceof Object[])
             {   // array element inside Collection
-                JsonObject<String, Object> jsonObject = new JsonObject<String, Object>();
+                JsonObject jsonObject = new JsonObject();
                 jsonObject.put(JsonObject.ITEMS, element);
                 stack.addFirst(jsonObject);
             }
             else if (element instanceof JsonObject)
             {
-                JsonObject<String, Object> jsonObject = (JsonObject<String, Object>) element;
+                JsonObject jsonObject = (JsonObject) element;
                 Long refId = jsonObject.getReferenceId();
 
                 if (refId != null)
                 {    // connect reference
-                    JsonObject<String, Object> refObject = getReferencedObj(refId);
+                    JsonObject refObject = getReferencedObj(refId);
                     copy.set(idx, refObject);
                 }
                 else
@@ -201,7 +205,7 @@ public class MapResolver extends Resolver
         }
     }
 
-    protected void traverseArray(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj)
+    protected void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj)
     {
         traverseCollection(stack, jsonObj);
     }

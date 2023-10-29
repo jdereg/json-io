@@ -1,7 +1,15 @@
 package com.cedarsoftware.util.io;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -29,7 +37,7 @@ import java.util.*;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonObject<K, V> extends LinkedHashMap<K, V>
+public class JsonObject extends LinkedHashMap<Object, Object>
 {
     public static final String KEYS = "@keys";
     public static final String ITEMS = "@items";
@@ -47,13 +55,30 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     static Set<String> primitives = new HashSet<>();
     static Set<String> primitiveWrappers = new HashSet<>();
 
+    @Getter
+    @Setter
     Object target;
     boolean isMap = false;
 
     boolean isFinished = false;
+    @Getter
+    @Setter
     String type;
+    @Getter
     long id = -1;
+    /**
+     * -- GETTER --
+     *
+     * @return int line where this object '{' started in the JSON stream
+     */
+    @Getter
     int line;
+    /**
+     * -- GETTER --
+     *
+     * @return int column where this object '{' started in the JSON stream
+     */
+    @Getter
     int col;
 
     static
@@ -81,30 +106,10 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     {
         return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
     }
-    
-    public long getId()
-    {
-        return id;
-    }
 
     public boolean hasId()
     {
         return id != -1;
-    }
-
-    public void setType(String type)
-    {
-        this.type = type;
-    }
-
-    public String getType()
-    {
-        return type;
-    }
-
-    public Object getTarget()
-    {
-        return target;
     }
 
     public boolean isFinished() { return isFinished; }
@@ -114,12 +119,6 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         this.target = o;
         this.isFinished = isFinished;
         return this.target;
-    }
-
-    public Object setTarget(Object target)
-    {
-        this.target = target;
-        return target;
     }
 
     public Class<?> getTargetClass()
@@ -318,7 +317,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         }
     }
 
-    public V put(K key, V value)
+    public Object put(Object key, Object value)
     {
         if (key == null)
         {
@@ -329,13 +328,13 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         {
             String oldType = type;
             type = (String) value;
-            return (V) oldType;
+            return oldType;
         }
         else if (key.equals(ID))
         {
             Long oldId = id;
             id = (Long) value;
-            return (V) oldId;
+            return oldId;
         }
         else if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
         {
@@ -345,7 +344,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     }
 
     public Object setValue(Object o) {
-        return this.put((K) VALUE, (V) o);
+        return this.put(VALUE, o);
     }
 
     public Object getValue() {
@@ -361,22 +360,6 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
     void clearArray()
     {
         remove(ITEMS);
-    }
-
-    /**
-     * @return int line where this object '{' started in the JSON stream
-     */
-    public int getLine()
-    {
-        return line;
-    }
-
-    /**
-     * @return int column where this object '{' started in the JSON stream
-     */
-    public int getCol()
-    {
-        return col;
     }
 
     public int size()

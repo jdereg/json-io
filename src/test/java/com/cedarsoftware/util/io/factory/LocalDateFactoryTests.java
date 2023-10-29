@@ -73,12 +73,12 @@ class LocalDateFactoryTests {
         String json = loadJsonForTest("old-format-nested-level.json");
         NestedLocalDate nested = TestUtil.toJava(json);
 
-        assertThat(nested.date1)
+        assertThat(nested.getDate1())
                 .hasYear(2014)
                 .hasMonthValue(6)
                 .hasDayOfMonth(13);
 
-        assertThat(nested.date2)
+        assertThat(nested.getDate2())
                 .hasYear(2024)
                 .hasMonthValue(9)
                 .hasDayOfMonth(12);

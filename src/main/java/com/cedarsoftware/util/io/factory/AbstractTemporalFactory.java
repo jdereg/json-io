@@ -17,7 +17,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     @Override
-    public T newInstance(Class<?> c, JsonObject<String, Object> job) {
+    public T newInstance(Class<?> c, JsonObject job) {
         Object value = job.get("value");
 
         if (value instanceof String) {
@@ -37,7 +37,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
         throw new IllegalArgumentException("Long Timestamps are not supported for this Temporal class");
     }
 
-    protected abstract T fromJsonObject(JsonObject<String, Object> job);
+    protected abstract T fromJsonObject(JsonObject job);
 
     @Override
     public boolean isObjectFinal() {
