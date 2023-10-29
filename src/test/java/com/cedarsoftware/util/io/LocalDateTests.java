@@ -45,13 +45,13 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         NestedLocalDate expectedDate = (NestedLocalDate) expected;
         NestedLocalDate actualDate = (NestedLocalDate) actual;
 
-        assertThat(actualDate.date1)
-                .isEqualTo(expectedDate.date1)
-                .isNotSameAs(actualDate.date2);
+        assertThat(actualDate.getDate1())
+                .isEqualTo(expectedDate.getDate1())
+                .isNotSameAs(actualDate.getDate2());
 
-        assertThat(actualDate.date1).isEqualTo(expectedDate.date1);
-        assertThat(actualDate.holiday).isEqualTo(expectedDate.holiday);
-        assertThat(actualDate.value).isEqualTo(expectedDate.value);
+        assertThat(actualDate.getDate1()).isEqualTo(expectedDate.getDate1());
+        assertThat(actualDate.getHoliday()).isEqualTo(expectedDate.getHoliday());
+        assertThat(actualDate.getValue()).isEqualTo(expectedDate.getValue());
     }
 
     @Override
@@ -64,13 +64,13 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         NestedLocalDate expectedDate = (NestedLocalDate) expected;
         NestedLocalDate actualDate = (NestedLocalDate) actual;
 
-        assertThat(actualDate.date1)
-                .isEqualTo(expectedDate.date1)
-                .isSameAs(actualDate.date2);
+        assertThat(actualDate.getDate1())
+                .isEqualTo(expectedDate.getDate1())
+                .isSameAs(actualDate.getDate2());
 
-        assertThat(actualDate.date1).isEqualTo(expectedDate.date1);
-        assertThat(actualDate.holiday).isEqualTo(expectedDate.holiday);
-        assertThat(actualDate.value).isEqualTo(expectedDate.value);
+        assertThat(actualDate.getDate1()).isEqualTo(expectedDate.getDate1());
+        assertThat(actualDate.getHoliday()).isEqualTo(expectedDate.getHoliday());
+        assertThat(actualDate.getValue()).isEqualTo(expectedDate.getValue());
     }
 
     @Test
@@ -106,12 +106,12 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = loadJsonForTest("old-format-nested-level.json");
         NestedLocalDate nested = TestUtil.toJava(json);
 
-        assertThat(nested.date1)
+        assertThat(nested.getDate1())
                 .hasYear(2014)
                 .hasMonthValue(6)
                 .hasDayOfMonth(13);
 
-        assertThat(nested.date2)
+        assertThat(nested.getDate2())
                 .hasYear(2024)
                 .hasMonthValue(9)
                 .hasDayOfMonth(12);

@@ -5,6 +5,8 @@ import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -123,33 +125,35 @@ public class JsonReader implements Closeable
     protected static Map<Class<?>, JsonClassReader> BASE_READERS;
     protected final Map<Class<?>, JsonClassReader> readers = new HashMap<>(BASE_READERS);
     protected final Map<String, ClassFactory> classFactories = new HashMap<>(BASE_CLASS_FACTORIES);
+
+
+    @Setter
+    @Getter(lombok.AccessLevel.PACKAGE)
     protected MissingFieldHandler missingFieldHandler;
+
     protected final Set<Class<?>> notCustom = new HashSet<>();
     protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
 
     private final FastPushbackReader input;
-    /** _args is using ThreadLocal so that static inner classes can have access to them */
+    // Note:  this is not thread local.
+    /**
+     * _args is using ThreadLocal so that static inner classes can have access to them
+     * -- GETTER --
+     *
+     * @return The arguments used to configure the JsonReader.  These are thread local.
+     */
+    @Getter
     private final Map<String, Object> args = new HashMap<>();
     private final int maxParseDepth;
 
-    private static volatile boolean allowNanAndInfinity = false;
-
     /**
+     * -- GETTER --
+     *
      * @return boolean the allowNanAndInfinity setting
      */
-    public static boolean isAllowNanAndInfinity()
-    {
-        return allowNanAndInfinity;
-    }
-
-    /**
-     * Set the reader to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
-     * @param lenient the lenient to set
-     */
-    public static void setAllowNanAndInfinity(boolean lenient)
-    {
-        JsonReader.allowNanAndInfinity = lenient;
-    }
+    @Setter
+    @Getter
+    private static volatile boolean allowNanAndInfinity = false;
 
     static
     {
@@ -229,7 +233,7 @@ public class JsonReader implements Closeable
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
-        default Object newInstance(Class<?> c, JsonObject<String, Object> job) {
+        default Object newInstance(Class<?> c, JsonObject job) {
             // passing on args is for backwards compatibility.
             // also, once we remove the other new instances we
             // can probably remove args from the parameters.
@@ -239,7 +243,7 @@ public class JsonReader implements Closeable
             return this.newInstance(c, args);
         }
 
-        default Object setTarget(JsonObject<String, Object> job, Object o) {
+        default Object setTarget(JsonObject job, Object o) {
             return job.setFinishedTarget(o, isObjectFinal());
         }
 
@@ -291,7 +295,7 @@ public class JsonReader implements Closeable
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
-        Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args);
+        Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args);
     }
 
     /**
@@ -305,7 +309,7 @@ public class JsonReader implements Closeable
          * @param args  Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
-        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args, JsonReader reader) {
+        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args, JsonReader reader) {
             return this.read(jOb, stack, args);
         }
 
@@ -315,7 +319,7 @@ public class JsonReader implements Closeable
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
-        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args) {
+        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args) {
             return this.read(jOb, stack);
         }
 
@@ -324,7 +328,7 @@ public class JsonReader implements Closeable
          * @param stack Deque of objects that have been read (Map of Maps view).
          * @return Object you wish to convert the jOb value into.
          */
-        default Object read(Object jOb, Deque<JsonObject<String, Object>> stack) {
+        default Object read(Object jOb, Deque<JsonObject> stack) {
             return null;
         }
     }
@@ -354,9 +358,8 @@ public class JsonReader implements Closeable
     /**
      * Use to create new instances of collection interfaces (needed for empty collections)
      */
-    public static class CollectionFactory implements ClassFactory
-    {
-        public Object newInstance(Class<?> c, JsonObject<String, Object> job)
+    public static class CollectionFactory implements ClassFactory {
+        public Object newInstance(Class<?> c, JsonObject job)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -388,7 +391,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class<?> c, JsonObject<String, Object> job)
+        public Object newInstance(Class<?> c, JsonObject job)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
@@ -475,24 +478,6 @@ public class JsonReader implements Closeable
     public void addNotCustomReader(Class c)
     {
         notCustom.add(c);
-    }
-
-    MissingFieldHandler getMissingFieldHandler()
-    {
-        return missingFieldHandler;
-    }
-
-    public void setMissingFieldHandler(MissingFieldHandler handler)
-    {
-        missingFieldHandler = handler;
-    }
-
-    /**
-     * @return The arguments used to configure the JsonReader.  These are thread local.
-     */
-    public Map<String, Object> getArgs() {
-        // Note:  this is not thread local.
-        return args;
     }
 
     /**
@@ -964,9 +949,8 @@ public class JsonReader implements Closeable
                     graph = instance;
 
                 }
-                else
-                {
-                    graph = resolver.convertMapsToObjects((JsonObject<String, Object>) root);
+                else {
+                    graph = resolver.convertMapsToObjects((JsonObject) root);
                 }
                 resolver.cleanup();
                 readers.clear();
@@ -991,7 +975,7 @@ public class JsonReader implements Closeable
         }
     }
 
-    public Object newInstance(Class<?> c, JsonObject<String, Object> jsonObject) {
+    public Object newInstance(Class<?> c, JsonObject jsonObject) {
         ClassFactory classFactory = classFactories.get(c.getName());
 
         if (classFactory != null) {

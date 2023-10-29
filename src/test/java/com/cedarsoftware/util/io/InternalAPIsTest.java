@@ -6,7 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -54,8 +55,8 @@ public class InternalAPIsTest
     {
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         DerivedWriter writer = new DerivedWriter(bao);
-        Map ref = writer.getObjectsReferenced();
-        Map vis = writer.getObjectsVisited();
+        Map ref = writer.getObjsReferenced();
+        Map vis = writer.getObjVisited();
         assertNotNull(ref);
         assertNotNull(vis);
     }

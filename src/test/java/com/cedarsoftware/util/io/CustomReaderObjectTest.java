@@ -43,11 +43,11 @@ public class CustomReaderObjectTest
 
 	public class CustomReader implements JsonReader.JsonClassReader
 	{
-		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
 		{
 			ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
-			resolver.traverseFields(stack, (JsonObject<String, Object>) jOb);
-			Object target = ((JsonObject<String, Object>) jOb).getTarget();
+            resolver.traverseFields(stack, (JsonObject) jOb);
+            Object target = ((JsonObject) jOb).getTarget();
 			madeItHere = true;
 			return target;
 		}

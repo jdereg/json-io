@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import lombok.Getter;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
@@ -14,7 +16,9 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
     private final int[] buf = new int[256];
     private int idx = 0;
     private int unread = Integer.MAX_VALUE;
+    @Getter
     protected int line = 1;
+    @Getter
     protected int col = 0;
 
     public FastPushbackBufferedReader(Reader reader)
@@ -109,15 +113,5 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
         {
             idx--;
         }
-    }
-
-    public int getCol()
-    {
-        return col;
-    }
-
-    public int getLine()
-    {
-        return line;
     }
 }

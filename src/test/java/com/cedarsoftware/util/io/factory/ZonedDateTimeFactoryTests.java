@@ -89,12 +89,12 @@ class ZonedDateTimeFactoryTests {
         return TestUtil.fetchResource("zoneddatetime/" + fileName);
     }
 
-    private JsonObject<String, Object> buildJsonObject(String localDateTime, String zoneId, Number totalSeconds) {
-        var jsonObject = new JsonObject<String, Object>();
-        var zone = new JsonObject<String, Object>();
+    private JsonObject buildJsonObject(String localDateTime, String zoneId, Number totalSeconds) {
+        var jsonObject = new JsonObject();
+        var zone = new JsonObject();
         zone.put("id", zoneId);
 
-        var offset = new JsonObject<String, Object>();
+        var offset = new JsonObject();
         offset.put("totalSeconds", totalSeconds == null ? 0 : totalSeconds.intValue());
 
         jsonObject.put("dateTime", localDateTime);
@@ -103,8 +103,8 @@ class ZonedDateTimeFactoryTests {
         return jsonObject;
     }
 
-    private JsonObject<String, Object> buildJsonObject(String zonedDateTime) {
-        var jsonObject = new JsonObject<String, Object>();
+    private JsonObject buildJsonObject(String zonedDateTime) {
+        var jsonObject = new JsonObject();
         jsonObject.put("value", zonedDateTime);
         return jsonObject;
     }

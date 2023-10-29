@@ -2,7 +2,13 @@ package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -121,7 +127,7 @@ public class CustomReaderIdentityTest
 
 	public static class CustomDataReader implements JsonReader.JsonClassReader
 	{
-		public Object read(Object jOb, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object jOb, Deque<JsonObject> stack)
 		{
 			CustomDataClass customClass = new CustomDataClass();
 			customClass.setTest("blab");

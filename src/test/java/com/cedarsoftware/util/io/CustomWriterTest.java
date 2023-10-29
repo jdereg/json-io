@@ -4,7 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -350,7 +355,7 @@ public class CustomWriterTest
 
     public static class CustomPersonReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object jOb, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
             assert reader != null;

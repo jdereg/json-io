@@ -6,9 +6,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -89,7 +93,7 @@ public class CustomClassHandlerTest
 
     public static class WeirdDateReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack)
+        public Object read(Object o, Deque<JsonObject> stack)
         {
             if (o instanceof String)
             {

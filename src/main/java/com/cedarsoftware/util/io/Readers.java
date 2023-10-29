@@ -8,7 +8,17 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,7 +96,7 @@ public class Readers
 
     public static class URLReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             boolean isString = o instanceof String;
 
@@ -154,7 +164,7 @@ public class Readers
 
     public static class EnumReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             try
             {
@@ -171,7 +181,7 @@ public class Readers
             }
         }
 
-        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject> stack, Map<String, Object> args)
         {
             String type = jObj.type;
             ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
@@ -182,7 +192,7 @@ public class Readers
             jObj.target = getEnum(cls.orElse(c), jObj);
 
             ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
-            resolver.traverseFields(stack, (JsonObject<String, Object>) jObj, Set.of("name", "ordinal"));
+            resolver.traverseFields(stack, (JsonObject) jObj, Set.of("name", "ordinal", "internal"));
             Object target = ((JsonObject) jObj).getTarget();
             return target;
         }
@@ -199,7 +209,7 @@ public class Readers
 
     public static class LocaleReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject) o;
             Object language = jObj.get("language");
@@ -227,7 +237,7 @@ public class Readers
 
     public static class CalendarReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args, JsonReader reader)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args, JsonReader reader)
         {
             String time = null;
             try
@@ -269,7 +279,7 @@ public class Readers
 
     public static class DateReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             if (o instanceof Long)
             {
@@ -514,7 +524,7 @@ public class Readers
 
     public static class SqlDateReader extends DateReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             return new java.sql.Date(((Date) super.read(o, stack, args)).getTime());
         }
@@ -522,7 +532,7 @@ public class Readers
 
     public static class StringReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -546,7 +556,7 @@ public class Readers
 
     public static class ClassReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -565,7 +575,7 @@ public class Readers
 
     public static class AtomicBooleanReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicBoolean");
@@ -593,7 +603,7 @@ public class Readers
 
     public static class AtomicIntegerReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicInteger");
@@ -617,7 +627,7 @@ public class Readers
 
     public static class AtomicLongReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicLong");
@@ -658,7 +668,7 @@ public class Readers
 
     public static class BigIntegerReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -764,7 +774,7 @@ public class Readers
 
     public static class BigDecimalReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -863,7 +873,7 @@ public class Readers
 
     public static class StringBuilderReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -882,7 +892,7 @@ public class Readers
 
     public static class StringBufferReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             if (o instanceof String)
             {
@@ -901,7 +911,7 @@ public class Readers
 
     public static class TimestampReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             JsonObject jObj = (JsonObject) o;
             Object time = jObj.get("time");
@@ -925,7 +935,7 @@ public class Readers
 
     public static class UUIDReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
 
             // to use the String representation
@@ -956,7 +966,7 @@ public class Readers
     public static class RecordReader implements JsonReader.JsonClassReader
     {
         @Override
-        public Object read(Object o, Deque<JsonObject<String, Object>> stack, Map<String, Object> args)
+        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             try
             {
