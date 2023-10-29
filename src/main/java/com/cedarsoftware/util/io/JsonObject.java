@@ -79,10 +79,9 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
 
     public String toString()
     {
-        return "mLen:" + getLenientSize() + " type:" + type + " l,c:" + line + "," + col + " id:" + id;
+        return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
     }
-
-
+    
     public long getId()
     {
         return id;

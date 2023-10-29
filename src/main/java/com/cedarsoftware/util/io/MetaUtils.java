@@ -451,6 +451,14 @@ public class MetaUtils
         return s;
     }
 
+    static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
+    {
+        if (securityConcern.isAssignableFrom(c))
+        {
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
+        }
+    }
+
     /**
      * <p>C language malloc() for Java
      * </p><p>
@@ -474,10 +482,13 @@ public class MetaUtils
     @SuppressWarnings("unchecked")
     public static Object newInstance(Class<?> c)
     {
-        if (c.isAssignableFrom(ProcessBuilder.class) && c != Object.class)
-        {
-            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of the ProcessBuilder class.");
-        }
+        throwIfSecurityConcern(ProcessBuilder.class, c);
+        throwIfSecurityConcern(Process.class, c);
+        throwIfSecurityConcern(ClassLoader.class, c);
+        throwIfSecurityConcern(Constructor.class, c);
+        throwIfSecurityConcern(Method.class, c);
+        throwIfSecurityConcern(Field.class, c);
+
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
             return new TreeMap<>();
@@ -507,7 +518,7 @@ public class MetaUtils
             throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
         }
 
-        // Constructor not cached, go find a constructor
+        // Fetch constructor from cache
         Object[] constructorInfo = constructors.get(c);
         if (constructorInfo != null)
         {   // Constructor was cached
@@ -556,6 +567,7 @@ public class MetaUtils
         }
 
         Object[] ret = newInstanceEx(c);
+        // Cache constructor so it can be quickly obtained next time.
         constructors.put(c, new Object[]{ret[1], ret[2]});
         return ret[0];
     }

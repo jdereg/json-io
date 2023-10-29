@@ -18,6 +18,12 @@
         <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.30</lombok.version>
+        <version.plugin.compiler>3.11.0</version.plugin.compiler>
+        <version.plugin.gpg>3.1.0</version.plugin.gpg>
+        <version.plugin.javadoc>3.6.0</version.plugin.javadoc>
+        <version.plugin.nexus>1.6.13</version.plugin.nexus>
+        <version.plugin.surefire>3.1.2</version.plugin.surefire>
+        <version.plugin.source>3.3.0</version.plugin.source>
         <!--
             Name of the benchmark Uber-JAR to generate.
           -->
@@ -39,7 +45,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
+                        <version>${version.plugin.gpg}</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -82,13 +88,6 @@
         </developer>
     </developers>
 
-    <repositories>
-        <repository>
-            <id>groovy-libs-release</id>
-            <url>https://groovy.jfrog.io/artifactory/libs-release</url>
-        </repository>
-    </repositories>
-
     <pluginRepositories>
         <pluginRepository>
             <id>central</id>
@@ -101,10 +100,6 @@
             <releases>
                 <updatePolicy>never</updatePolicy>
             </releases>
-        </pluginRepository>
-        <pluginRepository>
-            <id>groovy-plugins-release</id>
-            <url>https://groovy.jfrog.io/artifactory/plugins-release</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -151,37 +146,20 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>${version.plugin.compiler}</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <release>${maven.compiler.release}</release>
-                    <failOnWarning>${maven.compiler.failOnWarning}</failOnWarning>
-                    <compilerId>groovy-eclipse-compiler</compilerId>
-                    <compilerArgs>
-                        <arg>-Xlint</arg>
-                    </compilerArgs>
                 </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.codehaus.groovy</groupId>
-                        <artifactId>groovy-eclipse-compiler</artifactId>
-                        <version>3.9.0</version>
-                    </dependency>
-
-                    <dependency>
-                        <groupId>org.codehaus.groovy</groupId>
-                        <artifactId>groovy-eclipse-batch</artifactId>
-                        <version>4.0.15-01</version>
-                    </dependency>
-                </dependencies>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>${version.plugin.source}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -195,7 +173,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>${version.plugin.javadoc}</version>
                 <configuration>
                     <additionalOptions>-Xdoclint:none</additionalOptions>
                     <additionalJOption>-Xdoclint:none</additionalJOption>
@@ -213,7 +191,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
+                <version>${version.plugin.nexus}</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>ossrh</serverId>
@@ -225,7 +203,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.2</version>
+                <version>${version.plugin.surefire}</version>
             </plugin>
 
             <!--<plugin>-->
@@ -298,12 +276,6 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.9.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>4.0.15</version>
             <scope>test</scope>
         </dependency>
 

@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -142,7 +141,7 @@ public class CustomWriterTest
     {
         public boolean equals(Object o)
         {
-            if (DefaultGroovyMethods.is(this, o))
+            if (this == o)
             {
                 return true;
             }
@@ -220,7 +219,7 @@ public class CustomWriterTest
     {
         public boolean equals(Object o)
         {
-            if (DefaultGroovyMethods.is(this, o))
+            if (this == o)
             {
                 return true;
             }

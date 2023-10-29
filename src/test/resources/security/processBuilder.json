@@ -1,0 +1,13 @@
+{
+  "@type": "java.lang.ProcessBuilder",
+  "command": {
+    "@type": "java.util.ArrayList",
+    "@items": [
+      "ipconfig"
+    ]
+  },
+  "directory": null,
+  "environment": null,
+  "redirectErrorStream": false,
+  "redirects": null
+}

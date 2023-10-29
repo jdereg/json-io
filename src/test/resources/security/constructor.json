@@ -1,0 +1,36 @@
+{
+  "@type": "java.lang.reflect.Constructor",
+  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "slot": 4,
+  "parameterTypes": {
+    "@id": 2,
+    "@items": []
+  },
+  "exceptionTypes": {
+    "@id": 1,
+    "@items": []
+  },
+  "modifiers": 1,
+  "annotations": null,
+  "parameterAnnotations": null,
+  "constructorAccessor": null,
+  "root": {
+    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "slot": 4,
+    "parameterTypes": {
+      "@ref": 2
+    },
+    "exceptionTypes": {
+      "@ref": 1
+    },
+    "modifiers": 1,
+    "annotations": null,
+    "parameterAnnotations": null,
+    "constructorAccessor": null,
+    "root": null,
+    "override": false,
+    "securityCheckCache": null
+  },
+  "override": false,
+  "securityCheckCache": null
+}

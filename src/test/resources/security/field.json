@@ -1,0 +1,26 @@
+{
+  "@type": "java.lang.reflect.Field",
+  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "slot": 0,
+  "name": "testName",
+  "type": "java.lang.String",
+  "modifiers": 1,
+  "annotations": null,
+  "fieldAccessor": null,
+  "overrideFieldAccessor": null,
+  "root": {
+    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "slot": 0,
+    "name": "testName",
+    "type": "java.lang.String",
+    "modifiers": 1,
+    "annotations": null,
+    "fieldAccessor": null,
+    "overrideFieldAccessor": null,
+    "root": null,
+    "override": false,
+    "securityCheckCache": null
+  },
+  "override": false,
+  "securityCheckCache": null
+}

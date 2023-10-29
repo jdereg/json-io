@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -1169,6 +1167,19 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
+
+        // For security - write instances of these classes out as null
+        if (obj instanceof ProcessBuilder ||
+            obj instanceof Process ||
+            obj instanceof ClassLoader ||
+            obj instanceof Constructor ||
+            obj instanceof Method ||
+            obj instanceof Field)
+        {
+            out.write("null");
+            return;
+        }
+
         if (obj == null)
         {
             out.write("null");

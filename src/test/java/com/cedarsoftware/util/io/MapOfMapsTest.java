@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import java.awt.*;
@@ -251,7 +251,7 @@ public class MapOfMapsTest
         assertEquals("alpha", aa);
         assertEquals("test object", bb.get("_name"));
         assertNull(bb.get("_other"));
-        assertTrue(DefaultGroovyMethods.equals(bb, cc));
+        assertEquals(bb, cc);
         assertEquals(4, map.size());// contains @type entry
     }
 
@@ -339,7 +339,7 @@ public class MapOfMapsTest
 
         Map clone = TestUtil.toJava(jsonGenerated);
         assert map.equals(clone);
-        assert DefaultGroovyMethods.equals(map, clone);
+        assert DeepEquals.deepEquals(map, clone);
     }
 
     @Test
@@ -451,9 +451,10 @@ public class MapOfMapsTest
         assert aa.get("_name").equals("a");
         Map bb = (Map) aa.get("_other");
         assert bb.get("_name").equals("b");
-        assert DefaultGroovyMethods.is(bb.get("_other"), aa);
-        assert DefaultGroovyMethods.is(aa.get("_other"), bb);
 
+        assert bb.get("_other").equals(aa);
+        assert aa.get("_other").equals(bb);
+        
         String json1 = TestUtil.toJson(aa);
         assert json.equals(json1);
     }

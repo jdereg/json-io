@@ -1,0 +1,56 @@
+{
+  "@type": "java.lang.reflect.Method",
+  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "slot": 2,
+  "name": "testSecureWrites",
+  "returnType": "void",
+  "parameterTypes": {
+    "@id": 3,
+    "@items": []
+  },
+  "exceptionTypes": {
+    "@id": 2,
+    "@items": [
+      "java.lang.Exception"
+    ]
+  },
+  "modifiers": 1,
+  "annotations": {
+    "@id": 1,
+    "@items": [
+      0,
+      1,
+      0,
+      96,
+      0,
+      0
+    ]
+  },
+  "parameterAnnotations": null,
+  "annotationDefault": null,
+  "methodAccessor": null,
+  "root": {
+    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "slot": 2,
+    "name": "testSecureWrites",
+    "returnType": "void",
+    "parameterTypes": {
+      "@ref": 3
+    },
+    "exceptionTypes": {
+      "@ref": 2
+    },
+    "modifiers": 1,
+    "annotations": {
+      "@ref": 1
+    },
+    "parameterAnnotations": null,
+    "annotationDefault": null,
+    "methodAccessor": null,
+    "root": null,
+    "override": false,
+    "securityCheckCache": null
+  },
+  "override": false,
+  "securityCheckCache": null
+}
