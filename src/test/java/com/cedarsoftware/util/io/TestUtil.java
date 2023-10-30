@@ -3,6 +3,9 @@ package com.cedarsoftware.util.io;
 import com.google.gson.Gson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
@@ -32,6 +35,8 @@ import java.util.Map;
  */
 public class TestUtil
 {
+    final static Logger logger = LoggerFactory.getLogger(TestUtil.class);
+
     public static boolean isDebug()
     {
         return debug;
@@ -355,26 +360,26 @@ public class TestUtil
 
     public static void writeTimings()
     {
-        System.out.println("Write JSON");
-        System.out.println("  json-io: " + (totalJsonWrite / 1000000.0) + " ms");
-        System.out.println("  JDK binary: " + (totalJdkWrite / 1000000.0) + " ms");
-        System.out.println("  GSON: " + (totalGsonWrite / 1000000.0) + " ms");
-        System.out.println("  Jackson: " + (totalJacksonWrite / 1000000.0) + " ms");
-        System.out.println("Read JSON");
-        System.out.println("  json-io: " + (totalJsonRead / 1000000.0) + " ms");
-        System.out.println("  JDK binary: " + (totalJdkRead / 1000000.0) + " ms");
-        System.out.println("  GSON: " + (totalGsonRead / 1000000.0) + " ms");
-        System.out.println("  Jackson: " + (totalJacksonRead / 1000000.0) + " ms");
-        System.out.println("Write Fails:");
-        System.out.println("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
-        System.out.println("  JDK: " + jdkWriteFails + " / " + totalWrites);
-        System.out.println("  GSON: " + gsonWriteFails + " / " + totalWrites);
-        System.out.println("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
-        System.out.println("Read Fails");
-        System.out.println("  json-io: " + jsonIoReadFails + " / " + totalReads);
-        System.out.println("  JDK: " + jdkReadFails + " / " + totalReads);
-        System.out.println("  GSON: " + gsonReadFails + " / " + totalReads);
-        System.out.println("  Jackson: " + jacksonReadFails + " / " + totalReads);
+        logger.info("Write JSON");
+        logger.info("  json-io: " + (totalJsonWrite / 1000000.0) + " ms");
+        logger.info("  JDK binary: " + (totalJdkWrite / 1000000.0) + " ms");
+        logger.info("  GSON: " + (totalGsonWrite / 1000000.0) + " ms");
+        logger.info("  Jackson: " + (totalJacksonWrite / 1000000.0) + " ms");
+        logger.info("Read JSON");
+        logger.info("  json-io: " + (totalJsonRead / 1000000.0) + " ms");
+        logger.info("  JDK binary: " + (totalJdkRead / 1000000.0) + " ms");
+        logger.info("  GSON: " + (totalGsonRead / 1000000.0) + " ms");
+        logger.info("  Jackson: " + (totalJacksonRead / 1000000.0) + " ms");
+        logger.info("Write Fails:");
+        logger.info("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
+        logger.info("  JDK: " + jdkWriteFails + " / " + totalWrites);
+        logger.info("  GSON: " + gsonWriteFails + " / " + totalWrites);
+        logger.info("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
+        logger.info("Read Fails");
+        logger.info("  json-io: " + jsonIoReadFails + " / " + totalReads);
+        logger.info("  JDK: " + jdkReadFails + " / " + totalReads);
+        logger.info("  GSON: " + gsonReadFails + " / " + totalReads);
+        logger.info("  Jackson: " + jacksonReadFails + " / " + totalReads);
     }
 
     public static int count(CharSequence content, CharSequence token)
