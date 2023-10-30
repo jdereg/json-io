@@ -62,11 +62,6 @@ public class TestUtil
         return toJava(json);
     }
 
-    public static String toJson(Object obj)
-    {
-        return toJson(obj, new LinkedHashMap<>());
-    }
-
     private static class TestInfo
     {
         long nanos;
@@ -144,6 +139,12 @@ public class TestUtil
         }
         return testInfo;
     }
+
+    public static String toJson(Object obj)
+    {
+        return toJson(obj, new LinkedHashMap<>());
+    }
+
     /**
      * Generally, use this API to write JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.

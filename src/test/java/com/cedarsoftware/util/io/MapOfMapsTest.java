@@ -265,7 +265,7 @@ public class MapOfMapsTest
         Object[] prims = new Object[]{true, Boolean.TRUE, (byte) 8, (short) 1024, 131072, 16777216, 3.14, 3.14f, "x", "hello", date, cal, strClass};
         String json = TestUtil.toJson(prims);
         TestUtil.printLine("json=" + json);
-        Object[] javaObjs = (Object[]) TestUtil.toJava(json);
+        Object[] javaObjs = TestUtil.toJava(json);
         assertEquals(prims.length, javaObjs.length);
 
         for (int i = 0; i < javaObjs.length ; i++)

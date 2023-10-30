@@ -200,7 +200,7 @@ class RefsTest
 
         // With forward reference
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
-        List<Object> newList = (List<Object>) TestUtil.toJava(json);
+        List<Object> newList = TestUtil.toJava(json);
         Delta d1 = (Delta) newList.get(0);
         Delta d2 = (Delta) newList.get(1);
 
@@ -210,7 +210,7 @@ class RefsTest
 
         // Backward reference
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}]}";
-        newList = (List<Object>) TestUtil.toJava(json);
+        newList = TestUtil.toJava(json);
         d1 = (Delta) newList.get(0);
         d2 = (Delta) newList.get(1);
 
