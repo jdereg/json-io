@@ -1,14 +1,26 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.OuterObject;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,6 +41,18 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class FieldsTest
 {
+    @Test
+    void testNestedPrivateClass() {
+        var expected = OuterObject.of(9, 12, "Happy Holidays", "Some Other Message");
+        String json = TestUtil.toJson(expected);
+        TestUtil.printLine(json);
+        OuterObject actual = TestUtil.toJava(json);
+        assertThat(actual.getX()).isEqualTo(expected.getX());
+        assertThat(actual.getY()).isEqualTo(expected.getY());
+        assertThat(actual.getMessage1Holder().getMessage()).isEqualTo(expected.getMessage1Holder().getMessage());
+        assertThat(actual.getMessage2Holder().getMessage()).isEqualTo(expected.getMessage2Holder().getMessage());
+    }
+
     @Test
     public void testFields()
     {
