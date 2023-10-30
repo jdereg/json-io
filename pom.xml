@@ -24,6 +24,7 @@
         <version.assertj>3.24.2</version.assertj>
         <version.java.util>2.1.1</version.java.util>
         <version.gson>2.10.1</version.gson>
+        <version.jackson>2.15.3</version.jackson>
         <version.lombok>1.18.30</version.lombok>
 
         <!-- release to Maven Central via Sonatype Nexus -->
@@ -304,6 +305,27 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${version.assertj}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${version.jackson}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${version.jackson}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${version.jackson}</version>
             <scope>test</scope>
         </dependency>
 

@@ -1,15 +1,13 @@
 package com.cedarsoftware.util.io;
 
 import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -45,7 +43,7 @@ public class TestUtil
         {
             URL url = TestUtil.class.getResource("/" + name);
             Path resPath = Paths.get(url.toURI());
-            return new String(Files.readAllBytes(resPath), "UTF-8");
+            return Files.readString(resPath);
         }
         catch (Exception e)
         {
@@ -91,11 +89,9 @@ public class TestUtil
     private static TestInfo writeJDK(Object obj, Map<String, Object> args)
     {
         TestInfo testInfo = new TestInfo();
-
         try
         {
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            ObjectOutputStream out = new ObjectOutputStream(bout);
+            ObjectOutputStream out = new ObjectOutputStream(new ByteArrayOutputStream());
             long start = System.nanoTime();
             out.writeObject(obj);
             out.flush();
@@ -116,9 +112,9 @@ public class TestUtil
         {
             Gson gson = new Gson();
             long start = System.nanoTime();
-            gson.toJson(obj);
-            testInfo.json = JsonWriter.objectToJson(obj, args);
+            String json = gson.toJson(obj);
             testInfo.nanos = System.nanoTime() - start;
+            testInfo.json = json;
         }
         catch (Throwable t)
         {
@@ -127,6 +123,22 @@ public class TestUtil
         return testInfo;
     }
 
+    private static TestInfo writeJackson(Object obj, Map<String, Object> args)
+    {
+        TestInfo testInfo = new TestInfo();
+        try
+        {
+            ObjectMapper objectMapper = new ObjectMapper();
+            long start = System.nanoTime();
+            testInfo.json = objectMapper.writeValueAsString(obj);
+            testInfo.nanos = System.nanoTime() - start;
+        }
+        catch (Throwable t)
+        {
+            testInfo.t = t;
+        }
+        return testInfo;
+    }
     /**
      * Generally, use this API to write JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.
@@ -138,17 +150,19 @@ public class TestUtil
         TestInfo jsonIoTestInfo = writeJsonIo(obj, args);
         TestInfo jdkTestInfo = writeJDK(obj, args);
         TestInfo gsonTestInfo = writeGSON(obj, args);
+        TestInfo jacksonTestInfo = writeJackson(obj, args);
 
         if (jsonIoTestInfo.json != null)
         {
             printLine(jsonIoTestInfo.json);
         }
 
-        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null)
+        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // Only add times when all parsers succeeded
             totalJsonWrite += jsonIoTestInfo.nanos;
             totalJdkWrite += jdkTestInfo.nanos;
             totalGsonWrite += gsonTestInfo.nanos;
+            totalJacksonWrite += jacksonTestInfo.nanos;
         }
         else
         {
@@ -163,6 +177,10 @@ public class TestUtil
             if (gsonTestInfo.t != null)
             {
                 gsonWriteFails++;
+            }
+            if (jacksonTestInfo.t != null)
+            {
+                jacksonWriteFails++;
             }
         }
 
@@ -186,9 +204,8 @@ public class TestUtil
         try
         {
             long start = System.nanoTime();
-            Object o = JsonReader.jsonToJava(json, args);
+            testInfo.obj = JsonReader.jsonToJava(json, args);
             testInfo.nanos = System.nanoTime() - start;
-            testInfo.obj = o;
         }
         catch (Exception e)
         {
@@ -209,8 +226,8 @@ public class TestUtil
             out.writeObject(o);
             out.flush();
             out.close();
-            long start = System.nanoTime();
             ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bout.toByteArray()));
+            long start = System.nanoTime();
             testInfo.obj = in.readObject();
             assert testInfo.obj instanceof JsonObject;
             in.close();
@@ -231,7 +248,25 @@ public class TestUtil
         {
             Gson gson = new Gson();
             long start = System.nanoTime();
-            Map<String, Object> map = gson.fromJson(json, Map.class);
+            Map<?, ?> map = gson.fromJson(json, Map.class);
+            testInfo.nanos = System.nanoTime() - start;
+            testInfo.obj = map;
+        }
+        catch (Exception e)
+        {
+            testInfo.t = e;
+        }
+        return testInfo;
+    }
+
+    private static TestInfo readJackson(String json, Map<String, Object> args)
+    {
+        TestInfo testInfo = new TestInfo();
+        try
+        {
+            ObjectMapper mapper = new ObjectMapper();
+            long start = System.nanoTime();
+            Map<?, ?> map = mapper.readValue(json, Map.class);
             testInfo.nanos = System.nanoTime() - start;
             testInfo.obj = map;
         }
@@ -266,12 +301,14 @@ public class TestUtil
         TestInfo jsonIoTestInfo = readJsonIo(json, args);
         TestInfo jdkTestInfo = readJdk(json, args);
         TestInfo gsonTestInfo = readGson(json, args);
-        
-        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null)
+        TestInfo jacksonTestInfo = readJackson(json, args);
+
+        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // only add times when all parsers succeeded
             totalJsonRead += jsonIoTestInfo.nanos;
             totalJdkRead += jdkTestInfo.nanos;
             totalGsonRead += gsonTestInfo.nanos;
+            totalJacksonRead += jacksonTestInfo.nanos;
         }
         else
         {
@@ -286,6 +323,10 @@ public class TestUtil
             if (gsonTestInfo.t != null)
             {
                 gsonReadFails++;
+            }
+            if (jacksonTestInfo.t != null)
+            {
+                jacksonReadFails++;
             }
         }
 
@@ -318,28 +359,48 @@ public class TestUtil
         System.out.println("  json-io: " + (totalJsonWrite / 1000000.0) + " ms");
         System.out.println("  JDK binary: " + (totalJdkWrite / 1000000.0) + " ms");
         System.out.println("  GSON: " + (totalGsonWrite / 1000000.0) + " ms");
+        System.out.println("  Jackson: " + (totalJacksonWrite / 1000000.0) + " ms");
         System.out.println("Read JSON");
         System.out.println("  json-io: " + (totalJsonRead / 1000000.0) + " ms");
         System.out.println("  JDK binary: " + (totalJdkRead / 1000000.0) + " ms");
         System.out.println("  GSON: " + (totalGsonRead / 1000000.0) + " ms");
+        System.out.println("  Jackson: " + (totalJacksonRead / 1000000.0) + " ms");
         System.out.println("Write Fails:");
         System.out.println("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
         System.out.println("  JDK: " + jdkWriteFails + " / " + totalWrites);
         System.out.println("  GSON: " + gsonWriteFails + " / " + totalWrites);
+        System.out.println("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
         System.out.println("Read Fails");
         System.out.println("  json-io: " + jsonIoReadFails + " / " + totalReads);
         System.out.println("  JDK: " + jdkReadFails + " / " + totalReads);
         System.out.println("  GSON: " + gsonReadFails + " / " + totalReads);
+        System.out.println("  Jackson: " + jacksonReadFails + " / " + totalReads);
     }
 
-    public static int count(CharSequence self, CharSequence text)
+    public static int count(CharSequence content, CharSequence token)
     {
+        if (content == null || token == null)
+        {
+            return 0;
+        }
+
+        String source = content.toString();
+        if (source.isEmpty())
+        {
+            return 0;
+        }
+        String sub = token.toString();
+        if (sub.isEmpty())
+        {
+            return 0;
+        }
+
         int answer = 0;
         int idx = 0;
 
         while (true)
         {
-            idx = self.toString().indexOf(text.toString(), idx);
+            idx = source.indexOf(sub, idx);
             if (idx < answer)
             {
                 return answer;
@@ -351,15 +412,19 @@ public class TestUtil
 
     private static long totalJsonWrite;
     private static long totalGsonWrite;
+    private static long totalJacksonWrite;
     private static long totalJdkWrite;
     private static long totalJsonRead;
     private static long totalGsonRead;
+    private static long totalJacksonRead;
     private static long totalJdkRead;
     private static long jsonIoWriteFails;
     private static long gsonWriteFails;
+    private static long jacksonWriteFails;
     private static long jdkWriteFails;
     private static long jsonIoReadFails;
     private static long gsonReadFails;
+    private static long jacksonReadFails;
     private static long jdkReadFails;
     private static long totalReads;
     private static long totalWrites;
