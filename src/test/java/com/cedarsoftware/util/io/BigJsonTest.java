@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 import com.google.gson.Gson;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -38,64 +39,15 @@ class BigJsonTest
         assertNotNull(map.get("axes"));
         assertNotNull(map.get("cells"));
     }
-
-    @Test
-    void testJsonIoVersusGson()
-    {
-        String json = TestUtil.fetchResource("big5D.json");
-
-        Gson gson = new Gson();
-        long start = System.nanoTime();
-        gson.fromJson(json, Object.class);
-        long stop = System.nanoTime();
-        TestUtil.printLine("gson: " + ((stop - start) / 1000000L));
-
-        start = System.nanoTime();
-        TestUtil.toJava(json);
-        stop = System.nanoTime();
-        TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
-    }
-
-    @Test
-    void testGsonOnHugeFile()
-    {
-        String json = TestUtil.fetchResource("big5D.json");
-
-        Gson gson = new Gson();
-        long start = System.nanoTime();
-        gson.fromJson(json, Object.class);
-        long stop = System.nanoTime();
-        TestUtil.printLine("gson: " + ((stop - start) / 1000000L));
-
-        int i=0;
-        while (i++ < 50)
-        {
-            gson = new Gson();
-            start = System.nanoTime();
-            gson.fromJson(json, Object.class);
-            stop = System.nanoTime();
-            TestUtil.printLine("gson: " + ((stop - start) / 1000000L));
-        }
-    }
-
+    
     @Test
     void testJsonOnHugeFile()
     {
         String json = TestUtil.fetchResource("big5D.json");
-
         long start = System.nanoTime();
         Map<String, Object> options = new ReadOptionsBuilder().returnAsMaps().build();
         TestUtil.toJava(json, options);
         long stop = System.nanoTime();
         TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
-
-        int i=0;
-        while (i++ < 50)
-        {
-            start = System.nanoTime();
-            TestUtil.toJava(json, options);
-            stop = System.nanoTime();
-            TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
-        }
     }
 }

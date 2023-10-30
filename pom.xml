@@ -291,7 +291,6 @@
             <artifactId>java-util</artifactId>
             <version>${version.java.util}</version>
             <scope>test</scope>
-            <optional>true</optional>
         </dependency>
 
         <dependency>

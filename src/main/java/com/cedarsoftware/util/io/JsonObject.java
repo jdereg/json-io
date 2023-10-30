@@ -4,12 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -17,9 +12,6 @@ import java.util.Set;
  * when reflecting them in Java.  Instances of this class hold a
  * Map-of-Map representation of a Java object, read from the JSON
  * input stream.
- *
- * @param <K> field name in Map-of-Map
- * @param <V> Value
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -80,6 +72,8 @@ public class JsonObject extends LinkedHashMap<Object, Object>
      */
     @Getter
     int col;
+
+    Integer hash = null;
 
     static
     {
@@ -319,6 +313,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
 
     public Object put(Object key, Object value)
     {
+        hash = null;
         if (key == null)
         {
             return super.put(null, value);
@@ -343,7 +338,8 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         return super.put(key, value);
     }
 
-    public Object setValue(Object o) {
+    public Object setValue(Object o)
+    {
         return this.put(VALUE, o);
     }
 
@@ -355,11 +351,13 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     {
         super.clear();
         type = null;
+        hash = null;
     }
 
     void clearArray()
     {
         remove(ITEMS);
+        hash = null;
     }
 
     public int size()
@@ -386,5 +384,62 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         }
 
         return super.size();
+    }
+
+    public int hashCode()
+    {
+        if (hash == null)
+        {
+            hash = keySet().hashCode() + values().hashCode();
+        }
+        return hash;
+    }
+    public boolean equals(Object other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+        if (this == other)
+        {
+            return true;
+        }
+        if (!getClass().isAssignableFrom(other.getClass()))
+        {
+            return false;
+        }
+        JsonObject that = (JsonObject) other;
+        if (hashCode() != that.hashCode())
+        {
+            return false;
+        }
+
+        if (!compareCollection(keySet(), that.keySet()))
+        {
+            return false;
+        }
+
+        return compareCollection(values(), that.values());
+    }
+
+    private boolean compareCollection(Collection col1, Collection col2)
+    {
+        if (col1.size() != col2.size())
+        {
+            return false;
+        }
+        
+        Iterator i = col1.iterator();
+        Iterator j = col2.iterator();
+        while (i.hasNext())
+        {
+            Object obj1 = i.next();
+            Object obj2 = j.next();
+            if (!Objects.equals(obj1, obj2))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

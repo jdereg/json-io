@@ -480,7 +480,7 @@ public class MapOfMapsTest
 
         assert array[0] == array[1];    // same instance
         assert array[0] != array[2];    // not same instance
-        assert array[2].equals(array[1]);// contents match even though not same instance
+        assert DeepEquals.deepEquals(array[2], array[1]);  // contents match even though not same instance
     }
 
     @Test
@@ -510,7 +510,7 @@ public class MapOfMapsTest
         Object[] list1 = objList1.getArray();
         assert list1[0] == list1[1];                // Same Person instance
         assert list1[0] != list1[2];                // Not same Person instance
-        assert list1[2].equals(list1[1]);           // Although difference instance, same contents
+        assert DeepEquals.deepEquals(list1[2], list1[1]);  // Although difference instance, same contents
 
         Map objList2 = (Map) array[1];
         assert objList1 == objList2;                // Same JsonObject instance

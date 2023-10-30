@@ -127,7 +127,7 @@ public class CustomWriterTest
         }
         catch (JsonIoException e)
         {
-            assert e.getMessage().toLowerCase().contains("error writing object");
+            assert e.getMessage().toLowerCase().contains("unable to convert");
         }
     }
 

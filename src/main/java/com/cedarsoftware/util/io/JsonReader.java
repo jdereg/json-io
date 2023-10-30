@@ -611,7 +611,7 @@ public class JsonReader implements Closeable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap<String, Object>();
+            optionalArgs = new HashMap<>();
         }
         optionalArgs.put(USE_MAPS, true);
         ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
@@ -947,10 +947,10 @@ public class JsonReader implements Closeable
                 if (root.isFinished)
                 {   // Factory method instantiated and completely loaded the object.
                     graph = instance;
-
                 }
-                else {
-                    graph = resolver.convertMapsToObjects((JsonObject) root);
+                else
+                {
+                    graph = resolver.convertMapsToObjects(root);
                 }
                 resolver.cleanup();
                 readers.clear();

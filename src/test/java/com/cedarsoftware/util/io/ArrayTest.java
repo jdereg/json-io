@@ -41,10 +41,6 @@ public class ArrayTest
 
         ManyArrays root = TestUtil.toJava(jsonOut);
         assertArray(root);
-
-        // GSON cannot handle it
-//        Gson gson = new Gson()
-//        String j = gson.toJson(obj)
     }
 
     private void assertArray(ManyArrays root)
@@ -107,11 +103,11 @@ public class ArrayTest
         assertEquals(0, root._chars_e.length);
         assertNull(root._chars_f);
 
-        assertEquals(Byte.MIN_VALUE, (byte) root._bytes_a[0]);
-        assertEquals(-1, (byte) root._bytes_a[1]);
-        assertEquals(0, (byte) root._bytes_a[2]);
-        assertEquals(1, (byte) root._bytes_a[3]);
-        assertEquals(Byte.MAX_VALUE, (byte) root._bytes_a[4]);
+        assertEquals(Byte.MIN_VALUE, root._bytes_a[0]);
+        assertEquals(-1, root._bytes_a[1]);
+        assertEquals(0, root._bytes_a[2]);
+        assertEquals(1, root._bytes_a[3]);
+        assertEquals(Byte.MAX_VALUE, root._bytes_a[4]);
         assertEquals(0, root._bytes_b.length);
         assertNull(root._bytes_c);
         assertEquals(Byte.MIN_VALUE, root._bytes_d[0].byteValue());
@@ -125,13 +121,13 @@ public class ArrayTest
         assertNull(root._bytes_g[0]);
         assertEquals(0, root._bytes_g[1].length);
         assertEquals(1, root._bytes_g[2].length);
-        assertEquals(Byte.MAX_VALUE, (byte) root._bytes_g[2][0]);
+        assertEquals(Byte.MAX_VALUE, root._bytes_g[2][0]);
         assertEquals(3, root._bytes_h.length);
         assertNull(root._bytes_h[0]);
         assertEquals(0, root._bytes_h[1].length);
         assertEquals(1, root._bytes_h[2].length);
         assertEquals(Byte.MAX_VALUE, root._bytes_h[2][0].byteValue());
-        assertEquals(16, (byte) root._bytes_i[0]);
+        assertEquals(16, root._bytes_i[0]);
 
         assertEquals(3, root._chars_g.length);
         assertEquals(3, root._chars_g[0].length);
@@ -148,11 +144,11 @@ public class ArrayTest
         assertNull(root._chars_h[1]);
         assertEquals(0, root._chars_h[2].length);
 
-        assertEquals(Short.MIN_VALUE, (short) root._shorts_a[0]);
-        assertEquals(-1, (short) root._shorts_a[1]);
-        assertEquals(0, (short) root._shorts_a[2]);
-        assertEquals(1, (short) root._shorts_a[3]);
-        assertEquals(Short.MAX_VALUE, (short) root._shorts_a[4]);
+        assertEquals(Short.MIN_VALUE, root._shorts_a[0]);
+        assertEquals(-1, root._shorts_a[1]);
+        assertEquals(0, root._shorts_a[2]);
+        assertEquals(1, root._shorts_a[3]);
+        assertEquals(Short.MAX_VALUE, root._shorts_a[4]);
         assertEquals(0, root._shorts_b.length);
         assertNull(root._shorts_c);
         assertEquals(Short.MIN_VALUE, root._shorts_d[0].shortValue());
@@ -166,18 +162,18 @@ public class ArrayTest
         assertNull(root._shorts_g[0]);
         assertEquals(0, root._shorts_g[1].length);
         assertEquals(1, root._shorts_g[2].length);
-        assertEquals(Short.MAX_VALUE, (short) root._shorts_g[2][0]);
+        assertEquals(Short.MAX_VALUE, root._shorts_g[2][0]);
         assertEquals(3, root._shorts_h.length);
         assertNull(root._shorts_h[0]);
         assertEquals(0, root._shorts_h[1].length);
         assertEquals(1, root._shorts_h[2].length);
         assertEquals(Short.MAX_VALUE, root._shorts_h[2][0].shortValue());
 
-        assertEquals(Integer.MIN_VALUE, (int) root._ints_a[0]);
-        assertEquals(-1, (int) root._ints_a[1]);
-        assertEquals(0, (int) root._ints_a[2]);
-        assertEquals(1, (int) root._ints_a[3]);
-        assertEquals(Integer.MAX_VALUE, (int) root._ints_a[4]);
+        assertEquals(Integer.MIN_VALUE, root._ints_a[0]);
+        assertEquals(-1, root._ints_a[1]);
+        assertEquals(0, root._ints_a[2]);
+        assertEquals(1, root._ints_a[3]);
+        assertEquals(Integer.MAX_VALUE, root._ints_a[4]);
         assertEquals(0, root._ints_b.length);
         assertNull(root._ints_c);
         assertEquals(Integer.MIN_VALUE, root._ints_d[0].intValue());
@@ -189,28 +185,28 @@ public class ArrayTest
         assertNull(root._ints_f);
         assertEquals(3, root._int_1.length);
         assertEquals(5, root._int_1[0].length);
-        assertEquals(Integer.MIN_VALUE, (int) root._int_1[0][0]);
-        assertEquals(-1, (int) root._int_1[0][1]);
-        assertEquals(0, (int) root._int_1[0][2]);
-        assertEquals(1, (int) root._int_1[0][3]);
-        assertEquals(Integer.MAX_VALUE, (int) root._int_1[0][4]);
+        assertEquals(Integer.MIN_VALUE, root._int_1[0][0]);
+        assertEquals(-1, root._int_1[0][1]);
+        assertEquals(0, root._int_1[0][2]);
+        assertEquals(1, root._int_1[0][3]);
+        assertEquals(Integer.MAX_VALUE, root._int_1[0][4]);
         assertNull(root._int_1[1]);
         assertEquals(4, root._int_1[2].length);
-        assertEquals(-1, (int) root._int_1[2][0]);
-        assertEquals(0, (int) root._int_1[2][1]);
-        assertEquals(1, (int) root._int_1[2][2]);
-        assertEquals(2, (int) root._int_1[2][3]);
+        assertEquals(-1, root._int_1[2][0]);
+        assertEquals(0, root._int_1[2][1]);
+        assertEquals(1, root._int_1[2][2]);
+        assertEquals(2, root._int_1[2][3]);
         assertEquals(3, root._ints_g.length);
         assertNull(root._ints_g[0]);
         assertEquals(0, root._ints_g[1].length);
         assertEquals(1, root._ints_g[2].length);
         assertEquals(Integer.MAX_VALUE, root._ints_g[2][0].intValue());
 
-        assertEquals(Long.MIN_VALUE, (long) root._longs_a[0]);
-        assertEquals(-1, (long) root._longs_a[1]);
-        assertEquals(0, (long) root._longs_a[2]);
-        assertEquals(1, (long) root._longs_a[3]);
-        assertEquals(Long.MAX_VALUE, (long) root._longs_a[4]);
+        assertEquals(Long.MIN_VALUE, root._longs_a[0]);
+        assertEquals(-1, root._longs_a[1]);
+        assertEquals(0, root._longs_a[2]);
+        assertEquals(1, root._longs_a[3]);
+        assertEquals(Long.MAX_VALUE, root._longs_a[4]);
         assertEquals(0, root._longs_b.length);
         assertNull(root._longs_c);
         assertEquals(Long.MIN_VALUE, root._longs_d[0].longValue());
@@ -397,8 +393,8 @@ public class ArrayTest
         assertEquals("foo", items[0]);
         assertEquals(Boolean.TRUE, items[1]);
         assertNull(items[2]);
-        assertEquals(((Long) 16L), items[3]);
-        assertEquals(((Double) 3.14), items[4]);
+        assertEquals(16L, items[3]);
+        assertEquals(3.14, items[4]);
 
         assertTrue(root._arrayS instanceof String[]);
         String[] strItems = (String[]) root._arrayS;
@@ -447,7 +443,7 @@ public class ArrayTest
         TestUtil.printLine("json1=" + json1);
 
         // Read back into typed Java objects, the Maps of Maps versus that was dumped out
-        Object[] result = (Object[]) TestUtil.toJava(json1);
+        Object[] result = TestUtil.toJava(json1);
         assertEquals(3, result.length);
         Object[] arr1 = (Object[]) result[0];
         assertEquals(11, arr1.length);
@@ -631,7 +627,7 @@ public class ArrayTest
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
-        Object[] result = (Object[]) TestUtil.toJava(json1);
+        Object[] result = TestUtil.toJava(json1);
         assertEquals(3, result.length);
         assertSame(result[0], result[2]);
         assertEquals("a", result[1]);
@@ -658,7 +654,7 @@ public class ArrayTest
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyArrays testArray3 = (ManyArrays) TestUtil.toJava(json1);
+        ManyArrays testArray3 = TestUtil.toJava(json1);
         assertArray(testArray3);// Re-written from Map of Maps and re-loaded correctly
         assertEquals(json0, json1);
     }
@@ -684,9 +680,9 @@ public class ArrayTest
         ManyArrays ta = new ManyArrays();
         ta.init();
         LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>(1);
-        map.put(JsonWriter.TYPE, (Object) true);
+        map.put(JsonWriter.TYPE, true);
         String json0 = TestUtil.toJson(ta, map);
-        ManyArrays thatTa = (ManyArrays) TestUtil.toJava(json0);
+        ManyArrays thatTa = TestUtil.toJava(json0);
         assertTrue(DeepEquals.deepEquals(ta, thatTa));
         String json1 = TestUtil.toJson(ta);
         TestUtil.printLine("json0 = " + json0);
@@ -709,7 +705,7 @@ public class ArrayTest
     public void testBadArray()
     {
         String json = "[1, 10, 100,]";
-        Object[] array = (Object[]) TestUtil.toJava(json);
+        Object[] array = TestUtil.toJava(json);
         assertEquals(3, array.length);
         assertEquals(array[0], 1L);
         assertEquals(array[1], 10L);
@@ -901,7 +897,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testArrayListSaveAndRestoreGenericJSON()
+    public void testArrayListSaveAndRestoreGenericJSON() throws Throwable
     {
         List<Integer> numbers = new ArrayList<>();
         numbers.add(10);
@@ -921,7 +917,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testToEnsureAtEIsWorking()
+    public void testToEnsureAtEIsWorking() throws Throwable
     {
         String[] testArray = new String[1];
         testArray[0] = "Test";
