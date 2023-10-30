@@ -30,6 +30,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class BigJsonTest
 {
     @Test
+    void testBigJsonToJava()
+    {
+        String json = TestUtil.fetchResource("big5D.json");
+        Map map = TestUtil.toJava(json);
+        assertEquals("big5D", map.get("ncube"));
+        assertEquals(0L, map.get("defaultCellValue"));
+        assertNotNull(map.get("axes"));
+        assertNotNull(map.get("cells"));
+    }
+
+    @Test
     void testBigJsonToMaps()
     {
         String json = TestUtil.fetchResource("big5D.json");
@@ -38,16 +49,5 @@ class BigJsonTest
         assertEquals(0L, map.get("defaultCellValue"));
         assertNotNull(map.get("axes"));
         assertNotNull(map.get("cells"));
-    }
-    
-    @Test
-    void testJsonOnHugeFile()
-    {
-        String json = TestUtil.fetchResource("big5D.json");
-        long start = System.nanoTime();
-        Map<String, Object> options = new ReadOptionsBuilder().returnAsMaps().build();
-        TestUtil.toJava(json, options);
-        long stop = System.nanoTime();
-        TestUtil.printLine("json-io: " + ((stop - start) / 1000000L));
     }
 }

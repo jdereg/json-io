@@ -133,6 +133,7 @@ class JsonParser
         JsonObject object = new JsonObject();
         int state = STATE_READ_START_OBJECT;
         final FastPushbackReader in = input;
+        final ReferenceTracker refTracker = ReferenceTracker.instance();
 
         while (!done)
         {
@@ -208,7 +209,7 @@ class JsonParser
                     // If object is referenced (has @id), then add it to the ReferenceTracker
                     if (ID.equals(field))
                     {
-                        ReferenceTracker.instance().put((Long) value, object);
+                        refTracker.put((Long) value, object);
                     }
                     state = STATE_READ_POST_VALUE;
                     break;
@@ -428,7 +429,7 @@ class JsonParser
             }
             else
             {
-                return Long.parseLong(number.toString());
+                return Long.parseLong(number.toString(), 10);
             }
         }
         catch (Exception e)

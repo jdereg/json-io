@@ -63,9 +63,9 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         Map<String, Object> writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
-        Map<String, Object> readOptions0 = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
+        Map<String, Object> readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
-        Map obj = TestUtil.toMap(jsonCustom, readOptions0);
+        Map obj = TestUtil.toJava(jsonCustom, readOptions0);
         assert "Michael".equals(obj.get("f"));
         assert "Bolton".equals(obj.get("l"));
         Object[] pets = (Object[]) obj.get("p");

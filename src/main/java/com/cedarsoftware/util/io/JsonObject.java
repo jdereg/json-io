@@ -409,33 +409,31 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             return false;
         }
         JsonObject that = (JsonObject) other;
+        if (size() != that.size())
+        {
+            return false;
+        }         
         if (hashCode() != that.hashCode())
         {
             return false;
         }
 
-        if (!compareCollection(keySet(), that.keySet()))
-        {
-            return false;
-        }
-
-        return compareCollection(values(), that.values());
+        return compareEntrySet(that);
     }
 
-    private boolean compareCollection(Collection col1, Collection col2)
+    private boolean compareEntrySet(JsonObject that)
     {
-        if (col1.size() != col2.size())
-        {
-            return false;
-        }
-        
-        Iterator i = col1.iterator();
-        Iterator j = col2.iterator();
+        Iterator i = entrySet().iterator();
+        Iterator j = entrySet().iterator();
         while (i.hasNext())
         {
-            Object obj1 = i.next();
-            Object obj2 = j.next();
-            if (!Objects.equals(obj1, obj2))
+            Map.Entry entry = (Map.Entry) i.next();
+            Map.Entry thatEntry = (Map.Entry) j.next();
+            if (!Objects.equals(entry.getKey(), thatEntry.getKey()))
+            {
+                return false;
+            }
+            if (!Objects.equals(entry.getValue(), thatEntry.getValue()))
             {
                 return false;
             }

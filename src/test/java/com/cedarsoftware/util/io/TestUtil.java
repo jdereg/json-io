@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -301,53 +302,6 @@ public class TestUtil
         }
         
         return (T) jsonIoTestInfo.obj;
-    }
-
-    public static Map toMap(String json, Map<String, Object> args)
-    {
-        if (args == null)
-        {
-            args = ((Map<String, Object>) (new ArrayList<>()));
-        }
-
-        long startRead1 = System.nanoTime();
-        ByteArrayInputStream ba;
-
-        ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-
-        args.putAll(new ReadOptionsBuilder().returnAsMaps().build());
-        JsonReader jr = new JsonReader(ba, args);
-        Object o = jr.readObject();
-        jr.close();
-
-        long endRead1 = System.nanoTime();
-
-        try
-        {
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            ObjectOutputStream out = new ObjectOutputStream(bout);
-            out.writeObject(o);
-            out.flush();
-            out.close();
-
-            long startRead2 = System.nanoTime();
-            ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
-            ObjectInputStream input = new ObjectInputStream(bin);
-            input.readObject();
-            input.close();
-            long endRead2 = System.nanoTime();
-
-//            totalJsonRead += endRead1 - startRead1;
-//            totalJdkRead += endRead2 - startRead2;
-            double t1 = (double) (endRead1 - startRead1) / 1000000.0;
-            double t2 = (double) (endRead2 - startRead2) / 1000000.0;
-        }
-        catch (Exception ignore)
-        {
-//            jdkReadFails++;
-        }
-        
-        return ((Map) (o));
     }
 
     public static void printLine(String s)

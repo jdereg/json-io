@@ -382,7 +382,7 @@ public class MapsTest
         quoteInKeyMap.put("\"one\"", 1L);
         quoteInKeyMap.put("\"two\"", 2L);
         String json = TestUtil.toJson(quoteInKeyMap);
-        Map ret = TestUtil.toMap(json, new LinkedHashMap<>());
+        Map ret = TestUtil.toJava(json, new LinkedHashMap<>());
         assert ret.size() == 3;
 
         assert ret.get(0L).equals(0L);
@@ -394,7 +394,7 @@ public class MapsTest
         stringKeys.put("\"one\"", 1L);
         stringKeys.put("\"two\"", 2L);
         json = TestUtil.toJson(stringKeys);
-        ret = TestUtil.toMap(json, new LinkedHashMap<>());
+        ret = TestUtil.toJava(json, new LinkedHashMap<>());
         assert ret.size() == 3;
 
         assert ret.get("\"zero\"").equals(0L);
