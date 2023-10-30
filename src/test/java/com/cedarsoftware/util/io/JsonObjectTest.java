@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -92,5 +92,57 @@ class JsonObjectTest
         }
 
         jObj.moveCharsToMate();
+    }
+
+    @Test
+    void testMultipleReadWritesRefInsideArray()
+    {
+        Map jsonObj1 = new LinkedHashMap<>();
+        Map jsonObj2 = new LinkedHashMap<>();
+
+        jsonObj1.put("name", "Batman");
+        jsonObj1.put("partners", new Object[]{jsonObj2});
+        jsonObj2.put("name", "Robin");
+        jsonObj2.put("partners", new Object[]{jsonObj1});
+
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().noTypeInfo().build());
+        TestUtil.printLine("json = " + json);
+        Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        json = TestUtil.toJson(o);
+        TestUtil.printLine("json = " + json);
+        o = TestUtil.toJava(json);
+        json = TestUtil.toJson(o); // Before JsonWriter.adjustIfReferenced, it did not write "@id":1 for Batman's Map, so bad reference is written
+        assert TestUtil.count(json, "@id") == 1;
+        TestUtil.printLine("json = " + json);
+        o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        assert o instanceof JsonObject;
+    }
+
+    @Test
+    void testMultipleReadWritesRefInsideCollection()
+    {
+        Map jsonObj1 = new LinkedHashMap<>();
+        Map jsonObj2 = new LinkedHashMap<>();
+
+        Map<String, Map> batFriends = new LinkedHashMap<>();
+        batFriends.put("Robski", jsonObj2);
+        Map<String, Map> robFriends = new LinkedHashMap<>();
+        robFriends.put("Batski", jsonObj1);
+        jsonObj1.put("name", "Batman");
+        jsonObj1.put("partners", batFriends);
+        jsonObj2.put("name", "Robin");
+        jsonObj2.put("partners", robFriends);
+
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().noTypeInfo().build());
+        TestUtil.printLine("json = " + json);
+        Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        json = TestUtil.toJson(o);
+        TestUtil.printLine("json = " + json);
+        o = TestUtil.toJava(json);
+        json = TestUtil.toJson(o); // Before JsonWriter.adjustIfReferenced, it did not write "@id":1 for Batman's Map, so bad reference is written
+        assert TestUtil.count(json, "@id") == 1;
+        TestUtil.printLine("json = " + json);
+        o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        assert o instanceof JsonObject;
     }
 }

@@ -42,8 +42,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-
-
+    
     static Set<String> primitives = new HashSet<>();
     static Set<String> primitiveWrappers = new HashSet<>();
 
@@ -57,7 +56,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     @Setter
     String type;
     @Getter
-    long id = -1;
+    long id = -1L;
     /**
      * -- GETTER --
      *
@@ -101,9 +100,13 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
     }
 
+    /**
+     * A JsonObject starts off with an id of -1.  Also, an id of 0 is not considered a valid id.
+     * It must be 1 or greater.  JsonWriter utilizes this fact.
+     */
     public boolean hasId()
     {
-        return id != -1;
+        return id > 0L;
     }
 
     public boolean isFinished() { return isFinished; }
@@ -352,6 +355,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         super.clear();
         type = null;
         hash = null;
+        id = -1L;
     }
 
     void clearArray()

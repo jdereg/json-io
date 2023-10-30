@@ -247,10 +247,10 @@ public class JsonReader implements Closeable
             return job.setFinishedTarget(o, isObjectFinal());
         }
 
-        @Deprecated(since = "4.14.0")
+        @Deprecated
         default Object newInstance(Class<?> c, Map args) { return this.newInstance(c); }
 
-        @Deprecated(since = "4.14.0")
+        @Deprecated
         default Object newInstance(Class<?> c) { return MetaUtils.newInstance(c); }
 
         /**
@@ -443,7 +443,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder to create any additional readers you'll need.
      *
      */
-    @Deprecated(since = "4.14.0")
+    @Deprecated
     public void addReader(Class c, JsonClassReader reader)
     {
         readers.put(c, reader);

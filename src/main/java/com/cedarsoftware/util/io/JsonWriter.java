@@ -266,7 +266,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */
-    @Deprecated(since = "4.14.0")
+    @Deprecated
     public interface JsonClassWriterBase
     {
     }
@@ -350,7 +350,7 @@ public class JsonWriter implements Closeable, Flushable
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    @Deprecated(since = "4.14.0")
+    @Deprecated
     public interface JsonClassWriterEx extends JsonClassWriter
     {
         String JSON_WRITER = "JSON_WRITER";
@@ -359,7 +359,7 @@ public class JsonWriter implements Closeable, Flushable
          * If access to the JsonWriter is needed, JsonClassWriter's can access it by accessing Support.getWriter(args).
          * The args are the same arguments passed into the write(o, showType, args) method of JsonClassWriterEx.
          */
-        @Deprecated(since = "4.14.0")
+        @Deprecated
         class Support
         {
             /**
@@ -1348,11 +1348,11 @@ public class JsonWriter implements Closeable, Flushable
                     out.write('"');
                 }
             }
-            else if ((!isAllowNanAndInfinity()) && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
+            else if (!isAllowNanAndInfinity() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj)))
             {
                 out.write("null");
             }
-            else if ((!isAllowNanAndInfinity()) && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
+            else if (!isAllowNanAndInfinity() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj)))
             {
                 out.write("null");
             }
@@ -1735,7 +1735,7 @@ public class JsonWriter implements Closeable, Flushable
         final Writer output = this.out;
         final boolean isObjectArray = Object[].class == arrayClass;
         final Class<?> componentClass = arrayClass.getComponentType();
-        boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
+        boolean referenced = adjustIfReferenced(jObj);
         boolean typeWritten = showType && !isObjectArray;
 
         if (typeWritten || referenced)
@@ -1843,7 +1843,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         String type = jObj.type;
         Class<?> colClass = MetaUtils.classForName(type, getClassLoader());
-        boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
+        boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
         int len = jObj.getLength();
 
@@ -1909,8 +1909,59 @@ public class JsonWriter implements Closeable, Flushable
         {
             showType = false;
         }
-        boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
         final Writer output = this.out;
+        showType = emitIdAndTypeIfNeeded(jObj, showType, output);
+
+        if (jObj.isEmpty())
+        {   // Empty
+            tabOut();
+            output.write('}');
+            return;
+        }
+
+        if (showType)
+        {
+            output.write(',');
+            newLine();
+        }
+
+        writeMapToEnd(jObj, output);
+    }
+
+    private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
+    {
+        if (neverShowType)
+        {
+            showType = false;
+        }
+
+        if (forceMapFormatWithKeyArrays || !ensureJsonPrimitiveKeys(jObj))
+        {
+            return false;
+        }
+
+        Writer output = this.out;
+        emitIdAndTypeIfNeeded(jObj, showType, output);
+
+        if (jObj.isEmpty())
+        { // Empty
+            tabOut();
+            output.write('}');
+            return true;
+        }
+
+        if (showType)
+        {
+            output.write(',');
+            newLine();
+        }
+
+        return writeMapBody(jObj.entrySet().iterator());
+    }
+
+    private boolean emitIdAndTypeIfNeeded(JsonObject jObj, boolean showType, Writer output) throws IOException
+    {
+        boolean referenced = adjustIfReferenced(jObj);
         output.write('{');
         tabIn();
 
@@ -1939,81 +1990,7 @@ public class JsonWriter implements Closeable, Flushable
                 showType = false;
             }
         }
-
-        if (jObj.isEmpty())
-        {   // Empty
-            tabOut();
-            output.write('}');
-            return;
-        }
-
-        if (showType)
-        {
-            output.write(',');
-            newLine();
-        }
-
-        writeMapToEnd(jObj, output);
-    }
-
-
-    private boolean writeJsonObjectMapWithStringKeys(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (neverShowType)
-        {
-            showType = false;
-        }
-
-        if ((forceMapFormatWithKeyArrays) || (!ensureJsonPrimitiveKeys(jObj)) )
-        {
-            return false;
-        }
-
-        boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
-        final Writer output = this.out;
-        output.write('{');
-        tabIn();
-
-        if (referenced)
-        {
-            writeId(String.valueOf(jObj.getId()));
-        }
-
-        if (showType)
-        {
-            if(referenced)
-            {
-                output.write(',');
-                newLine();
-            }
-            String type = jObj.getType();
-            if (type != null)
-            {
-                Class<?> mapClass = MetaUtils.classForName(type, getClassLoader());
-                output.write(shortMetaKeys ? "\"@t\":\"" : "\"@type\":\"");
-                output.write(getSubstituteTypeName(mapClass.getName()));
-                output.write('"');
-            }
-            else
-            { // type not displayed
-                showType = false;
-            }
-        }
-
-        if (jObj.isEmpty())
-        { // Empty
-            tabOut();
-            output.write('}');
-            return true;
-        }
-
-        if (showType)
-        {
-            output.write(',');
-            newLine();
-        }
-
-        return writeMapBody(jObj.entrySet().iterator());
+        return showType;
     }
 
     /**
@@ -2026,7 +2003,9 @@ public class JsonWriter implements Closeable, Flushable
             showType = false;
         }
         final Writer output = this.out;
-        boolean referenced = objsReferenced.containsKey(jObj) && jObj.hasId();
+
+        boolean referenced = adjustIfReferenced(jObj);
+
         showType = showType && jObj.type != null;
         Class<?> type = null;
 
@@ -2117,6 +2096,16 @@ public class JsonWriter implements Closeable, Flushable
         }
         tabOut();
         output.write('}');
+    }
+
+    private boolean adjustIfReferenced(JsonObject jObj)
+    {
+        Long idx = objsReferenced.get(jObj);
+        if (!jObj.hasId() && idx != null && idx > 0)
+        {   // Referenced object that needs an ID copied to it.
+            jObj.id = idx;
+        }
+        return objsReferenced.containsKey(jObj) && jObj.hasId();
     }
 
     private static boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
