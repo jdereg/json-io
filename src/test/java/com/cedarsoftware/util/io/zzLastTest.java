@@ -26,6 +26,6 @@ public class zzLastTest
     @Test
     public void testZTimings()
     {
-        TestUtil.getTimings();
+        TestUtil.writeTimings();
     }
 }
