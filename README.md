@@ -34,12 +34,6 @@ ObjectOutputStream behavior.
 
 **json-io** does not depend on any 3rd party libraries, has extensive support for Java Generics, and allows extensive customization.
 
-### A few advantages of json-io over Google's gson library:
-* gson will fail with infinite recursion (`StackOverflowError`) when there is a cycle in the input data.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleCycleButJsonIoCan.java)
-* gson cannot handle non-static inner classes. [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleStaticInnerButJsonIoCan.java)
-* gson cannot handle hetereogeneous `Collections`, `Object[]`, or `Maps`.  [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleHeteroCollections.java)
-* gson cannot handle Maps with keys that are not Strings. [Illustrated here.](https://github.com/jdereg/json-io/blob/master/src/test/java/com/cedarsoftware/util/io/TestGsonNotHandleMapWithNonStringKeysButJsonIoCan.java)
-
 ### Format
 **json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as
 possible.  When an object's class can be inferred from a field type or array type, the object's type information is
@@ -70,8 +64,6 @@ in a nice, human readable format.
 ### RESTful support
 **json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server
 in a RESTful fashion.
-
-See [json-command-servlet](https://github.com/jdereg/json-command-servlet) for a light-weight servlet that processes REST requests.
 
 ### Noteworthy
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
@@ -108,4 +100,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-by John DeRegnaucourt
+by John DeRegnaucourt and Kenny Partlow

@@ -26,6 +26,8 @@
         <version.gson>2.10.1</version.gson>
         <version.jackson>2.15.3</version.jackson>
         <version.lombok>1.18.30</version.lombok>
+        <version.slf4j>2.0.9</version.slf4j>
+        <version.logback>1.4.11</version.logback>
 
         <!-- release to Maven Central via Sonatype Nexus -->
         <version.plugin.nexus>1.6.13</version.plugin.nexus>
@@ -332,17 +334,18 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.9</version>
+            <version>${version.slf4j}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.11</version> <!-- Use the latest version -->
+            <version>${version.logback}</version> <!-- Use the latest version -->
             <scope>test</scope>
         </dependency>
 
+<!-- Attempting to get the Surefire Logger, so tests can write to it, and then SL4FJ and Logback are not needed -->
 <!--        <dependency>-->
 <!--            <groupId>org.apache.maven.surefire</groupId>-->
 <!--            <artifactId>surefire-api</artifactId>-->
