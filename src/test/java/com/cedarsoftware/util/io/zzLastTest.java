@@ -1,8 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.ClassOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestClassOrder;
 
 /**
  * Last test to run, dumps out statistics
@@ -23,12 +21,11 @@ import org.junit.jupiter.api.TestClassOrder;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@TestClassOrder(ClassOrderer.DisplayName.class)
-public class zLastTest
+public class zzLastTest
 {
     @Test
     public void testZTimings()
     {
-        TestUtil.writeTimings();
+        TestUtil.getTimings();
     }
 }
