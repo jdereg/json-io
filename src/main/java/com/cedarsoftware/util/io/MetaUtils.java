@@ -202,7 +202,7 @@ public class MetaUtils
                     classFields.put(fieldName, field);
                 }
 
-                if (!Modifier.isPublic(modifiers))
+                if (!Modifier.isPublic(modifiers) || !Modifier.isPublic(field.getDeclaringClass().getModifiers()))
                 {
                     field.trySetAccessible();
                 }
