@@ -193,7 +193,7 @@ public class ObjectResolver extends Resolver
                 Object value = createJavaObjectInstance(fieldType, jObj);
                 MetaUtils.setFieldValue(field, target, value);
             }
-            else if ((special = readIfMatching(rhs, fieldType, stack)) != null)
+            else if ((special = readWithCustomReaderIfOneExists(rhs, fieldType, stack)) != null)
             {
                 if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
                     MetaUtils.setFieldValue(field, target, Enum.valueOf(fieldType, (String) special));
@@ -325,7 +325,7 @@ public class ObjectResolver extends Resolver
             {
                 storeMissingField(target, missingField, null);
             }
-            else if ((special = readIfMatching(rhs, null, stack)) != null)
+            else if ((special = readWithCustomReaderIfOneExists(rhs, null, stack)) != null)
             {
                 storeMissingField(target, missingField, special);
             }
@@ -461,7 +461,7 @@ public class ObjectResolver extends Resolver
             {   // Handles {}
                 col.add(new JsonObject());
             }
-            else if ((special = readIfMatching(element, null, stack)) != null)
+            else if ((special = readWithCustomReaderIfOneExists(element, null, stack)) != null)
             {
                 col.add(special);
             }
@@ -612,7 +612,7 @@ public class ObjectResolver extends Resolver
                 Object arrayElement = createJavaObjectInstance(compType, new JsonObject());
                 Array.set(array, i, arrayElement);
             }
-            else if ((special = readIfMatching(element, compType, stack)) != null)
+            else if ((special = readWithCustomReaderIfOneExists(element, compType, stack)) != null)
             {
                 if (compType.isEnum() && special instanceof String) {
                     special = Enum.valueOf(compType, (String)special);
@@ -704,7 +704,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack)
+    protected Object readWithCustomReaderIfOneExists(final Object o, final Class compType, final Deque<JsonObject> stack)
     {
         if (o == null)
         {
@@ -784,11 +784,11 @@ public class ObjectResolver extends Resolver
         }
 
         JsonReader.ClassFactory classFactory = getClassFactory(c);
-        if (classFactory != null) {
+        if (classFactory != null)
+        {
+            JsonObject job;
 
-            JsonObject job = null;
-
-            if (o instanceof JsonObject) {
+            if (isJsonObject) {
                 job = (JsonObject) o;
             } else {
                 job = new JsonObject();
@@ -817,12 +817,17 @@ public class ObjectResolver extends Resolver
         }
 
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
+        if (isJsonObject)
+        {   // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
+            // This way, references to it, will be pointed back to the correct instance.
+            ((JsonObject) o).setFinishedTarget(read, true);
+        }
         return read;
     }
 
     private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
     {
-        final Deque<Object[]> stack = new ArrayDeque<Object[]>();
+        final Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
 
         while (!stack.isEmpty())

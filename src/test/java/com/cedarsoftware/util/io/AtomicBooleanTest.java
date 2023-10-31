@@ -91,6 +91,6 @@ class AtomicBooleanTest
         assert list.size() == 2;
         atomicBoolean = list.get(0);
         assert atomicBoolean.get() == new AtomicBoolean(true).get();
-        assertNotSame(list.get(0), list.get(1));
+        assertSame(list.get(0), list.get(1));
     }
 }

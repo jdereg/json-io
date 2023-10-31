@@ -180,7 +180,7 @@ abstract class Resolver
             else
             {
                 Object special;
-                if ((special = readIfMatching(jsonObj, null, stack)) != null)
+                if ((special = readWithCustomReaderIfOneExists(jsonObj, null, stack)) != null)
                 {
                     jsonObj.target = special;
                 }
@@ -193,7 +193,7 @@ abstract class Resolver
         return root.target;
     }
 
-    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract Object readWithCustomReaderIfOneExists(final Object o, final Class compType, final Deque<JsonObject> stack);
 
     public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 
@@ -421,7 +421,7 @@ abstract class Resolver
                 {
                     //  for some statically create objects that we have factories for like TimeZone, LocalDate,
                     //  this could be the end of the line because it creates the entire object in the factory
-                    //  but we continue parsing.  I think we need to see if there is a way we can acknoledge
+                    //  but we continue parsing.  I think we need to see if there is a way we can acknowledge
                     //  objects that are complete or done by using the target on JsonObject and a flag.
                     mate = reader.newInstance(c, jsonObj);
                 }
@@ -504,10 +504,7 @@ abstract class Resolver
 
     protected JsonObject getReferencedObj(Long ref)
     {
-        //  I saw two ways in here to get the reference...
-        // on recursively calls getRefTarget until it finds and object
-        // without a ref...This one just makes one call and then bails
-        // Do we need to recurse if the initial object returned is a refernce?
+        // Get deep referenced object.
         JsonObject refObject = ReferenceTracker.instance().getRef(ref);
         if (refObject == null)
         {

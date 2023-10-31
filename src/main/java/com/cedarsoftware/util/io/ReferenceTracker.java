@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class ReferenceTracker {
 
-    private static ThreadLocal<ReferenceTracker> referenceTracker = ThreadLocal.withInitial(ReferenceTracker::new);
+    private static final ThreadLocal<ReferenceTracker> referenceTracker = ThreadLocal.withInitial(ReferenceTracker::new);
 
     private final Map<Long, JsonObject> references = new HashMap<>();
 
@@ -13,28 +13,30 @@ public class ReferenceTracker {
         return referenceTracker.get();
     }
 
-    public JsonObject put(Long l, JsonObject o) {
-        return this.references.put(l, o);
+    public JsonObject put(Long id, JsonObject target) {
+        return this.references.put(id, target);
     }
 
     public void clear() {
-        this.references.clear();
+        references.clear();
     }
 
-    public JsonObject getRef(Long id) {
-        return this.references.get(id);
+    public JsonObject getRef(Long id)
+    {
+        return getRefTarget(references.get(id));
     }
 
-    public JsonObject getRefTarget(JsonObject jObj) {
-        if (!jObj.isReference()) {
-            return jObj;
+    public JsonObject getRefTarget(JsonObject jObj)
+    {
+        while (jObj != null && jObj.isReference())
+        {
+            jObj = references.get(jObj.getReferenceId());
         }
-
-        Long id = jObj.getReferenceId();
-        JsonObject target = references.get(id);
-        if (target == null) {
+        if (jObj == null)
+        {
             throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
         }
-        return getRefTarget(target);
+        return jObj;
     }
+
 }

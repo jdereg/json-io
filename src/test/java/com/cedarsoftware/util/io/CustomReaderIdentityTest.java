@@ -50,7 +50,7 @@ public class CustomReaderIdentityTest
 		Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readerMap).build());
 		assert obj instanceof List;
 		List list = (List) obj;
-		assert list.get(0) != list.get(1);
+		assert list.get(0) == list.get(1);
 	}
 
 	/**
@@ -122,7 +122,7 @@ public class CustomReaderIdentityTest
 		assert obj instanceof CustomDataClass[];
 		array = (CustomDataClass[]) obj;
 		assert array.length == 2;
-		assert array[0] != array[1];
+		assert array[0] == array[1];
 	}
 
 	public static class CustomDataReader implements JsonReader.JsonClassReader

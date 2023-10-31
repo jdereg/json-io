@@ -503,7 +503,7 @@ public class JsonWriter implements Closeable, Flushable
     {
         if (optionalArgs == null)
         {
-            optionalArgs = new HashMap<String, Object>();
+            optionalArgs = new HashMap<>();
         }
         args.putAll(optionalArgs);
         args.put(JSON_WRITER, this);
@@ -574,12 +574,12 @@ public class JsonWriter implements Closeable, Flushable
         if (optionalArgs.containsKey(FIELD_NAME_BLACK_LIST))
         {   // Convert String field names to Java Field instances (makes it easier for user to set this up)
             Map<Class<?>, List<String>> blackList = (Map<Class<?>, List<String>>) args.get(FIELD_NAME_BLACK_LIST);
-            Map<Class<?>, List<Field>> copy = new HashMap<Class<?>, List<Field>>();
+            Map<Class<?>, List<Field>> copy = new HashMap<>();
             for (Entry<Class<?>, List<String>> entry : blackList.entrySet())
             {
                 Class<?> c = entry.getKey();
                 List<String> fields = entry.getValue();
-                List<Field> newList = new ArrayList<Field>(fields.size());
+                List<Field> newList = new ArrayList<>(fields.size());
 
                 Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
 
@@ -931,7 +931,7 @@ public class JsonWriter implements Closeable, Flushable
             return;
         }
         Map<Class<?>, List<Field>> fieldSpecifiers = (Map<Class<?>, List<Field>>) args.get(FIELD_SPECIFIERS);
-        final Deque<Object> stack = new ArrayDeque<Object>();
+        final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = objVisited;
         final Map<Object, Long> referenced = objsReferenced;
@@ -2245,7 +2245,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param map Map to inspect that all keys are primitive.  This allows the output JSON
      *            to be optimized into {"key1":value1, "key2": value2} format if all the
      *            keys of the Map are Strings.  If not, then a Map is written as two
-     *            arrays, an @keys array and an @items array.  This allows support for Maps
+     *            arrays, a @keys array and an @items array.  This allows support for Maps
      *            with non-String keys.
      */
     public static boolean ensureJsonPrimitiveKeys(Map map)
