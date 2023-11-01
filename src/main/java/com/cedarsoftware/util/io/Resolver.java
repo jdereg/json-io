@@ -364,13 +364,6 @@ abstract class Resolver
                     throw new JsonIoException("Unable to create class: " + name, e);
                 }
             }
-            JsonReader.ClassFactory classFactory = getClassFactory(c);
-
-            if (classFactory != null) {
-                mate = classFactory.newInstance(c, jsonObj);
-                // should we only return if isObjectFinal?
-                return classFactory.setTarget(jsonObj, mate);
-            }
 
             if (c.isArray())
             {    // Handle []
