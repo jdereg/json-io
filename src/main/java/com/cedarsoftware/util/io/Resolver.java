@@ -226,8 +226,8 @@ abstract class Resolver
     }
 
     /**
-     * Process java.util.Map and it's derivatives.  These can be written specially
-     * so that the serialization would not expose the derivative class internals
+     * Process java.util.Map and it's derivatives.  These are written specially
+     * so that the serialization does not expose the class internals
      * (internal fields of TreeMap for example).
      *
      * @param stack   a Stack (Deque) used to support graph traversal.
@@ -244,7 +244,7 @@ abstract class Resolver
         {
             if (keys != items)
             {
-                throw new JsonIoException("Map written where one of " + KEYS + " or @items is empty");
+                throw new JsonIoException("JSON has " + KEYS + " or " + ITEMS + " empty");
             }
             return;
         }
@@ -252,25 +252,23 @@ abstract class Resolver
         final int size = keys.length;
         if (size != items.length)
         {
-            throw new JsonIoException("Map written with " + KEYS + " and @items entries of different sizes");
+            throw new JsonIoException("Map written with " + KEYS + " and " + ITEMS + "s entries of different sizes");
         }
 
-        Object[] mapKeys = buildCollection(stack, keys, size);
-        Object[] mapValues = buildCollection(stack, items, size);
+        buildCollection(stack, keys);
+        buildCollection(stack, items);
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
-        prettyMaps.add(new Object[]{jsonObj, mapKeys, mapValues});
+        prettyMaps.add(new Object[]{jsonObj, keys, items});
     }
 
-    private static Object[] buildCollection(Deque<JsonObject> stack, Object[] items, int size)
+    private static void buildCollection(Deque<JsonObject> stack, Object[] arrayContent)
     {
-        final JsonObject jsonCollection = new JsonObject();
-        jsonCollection.put(ITEMS, items);
-        final Object[] javaKeys = new Object[size];
-        jsonCollection.target = javaKeys;
-        stack.addFirst(jsonCollection);
-        return javaKeys;
+        final JsonObject collection = new JsonObject();
+        collection.put(ITEMS, arrayContent);
+        collection.target = arrayContent;
+        stack.addFirst(collection);
     }
 
     /**
@@ -679,7 +677,7 @@ abstract class Resolver
      * <br>
      * This hashes both Sets and Maps because the JDK sets are implemented
      * as Maps.  If you have a custom built Set, this would not 'treat' it
-     * and you would need to provider a custom reader for that set.
+     * and you would need to provide a custom reader for that set.
      */
     protected void rehashMaps()
     {
