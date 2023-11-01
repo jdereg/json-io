@@ -40,7 +40,7 @@ public class UnmodifiableCollectionTest
         String json = TestUtil.toJson(col);
         List<String> root = TestUtil.toJava(json);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, List.of("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
 
         col = new ArrayList<>();
         col.add("foo");
@@ -51,7 +51,7 @@ public class UnmodifiableCollectionTest
         json = TestUtil.toJson(col);
         root = TestUtil.toJava(json);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, List.of("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
     }
 
     @Test
@@ -66,7 +66,7 @@ public class UnmodifiableCollectionTest
         String json = TestUtil.toJson(col);
         Set<String> root = TestUtil.toJava(json);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, Set.of("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
 
         col = new HashSet<>();
         col.add("foo");
@@ -78,7 +78,7 @@ public class UnmodifiableCollectionTest
         root = TestUtil.toJava(json);
         assert root instanceof Set;
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, Set.of("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
 
         col = new TreeSet<>();
         col.add("foo");
@@ -90,7 +90,7 @@ public class UnmodifiableCollectionTest
         root = TestUtil.toJava(json);
         assert root instanceof SortedSet;
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, Set.of("bar", "baz", "foo", "qux"));
+        assert DeepEquals.deepEquals(root, MetaUtils.setOf("bar", "baz", "foo", "qux"));
         // DeepEquals does not impose order on Sets for equivalency, which is correct
         assertEquals(root.iterator().next(), "bar");
     }

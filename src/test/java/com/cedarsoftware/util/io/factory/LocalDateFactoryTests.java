@@ -24,8 +24,8 @@ class LocalDateFactoryTests {
     @ParameterizedTest
     @MethodSource("nonValueVariants")
     void newInstance_testNonValueVariants(Integer year, Integer month, Integer day) {
-        var factory = new LocalDateFactory();
-        var jsonObject = buildJsonObject(year, month, day);
+        LocalDateFactory factory = new LocalDateFactory();
+        JsonObject jsonObject = buildJsonObject(year, month, day);
 
         LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject);
 
@@ -36,8 +36,8 @@ class LocalDateFactoryTests {
 
     @Test
     void newInstance_formattedDateTest() {
-        var factory = new LocalDateFactory();
-        var jsonObject = new JsonObject();
+        LocalDateFactory factory = new LocalDateFactory();
+        JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "2023-09-05");
 
         LocalDate time = factory.newInstance(LocalDate.class, jsonObject);

@@ -189,7 +189,7 @@ public class ConstructorTest
         JsonWriter writer = new JsonWriter(ba);
         writer.write(o);
         writer.close();
-        String s = ba.toString(StandardCharsets.UTF_8);
+        String s = new String(ba.toByteArray(), StandardCharsets.UTF_8);
         assert json.equals(s);
     }
 

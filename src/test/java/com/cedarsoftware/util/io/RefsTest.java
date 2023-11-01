@@ -173,12 +173,12 @@ class RefsTest
 
         @Override
         public Object read(Object jOb, java.util.Deque<JsonObject> stack, Map<String, Object> args) {
-            var jObj = (JsonObject) jOb;
+            JsonObject jObj = (JsonObject) jOb;
             TestObject x = new TestObject((String) jObj.get("name"));
-            var b1 = (JsonObject) jObj.get("_other");
-            var aRef = (JsonObject) b1.get("_other");
+            JsonObject b1 = (JsonObject) jObj.get("_other");
+            JsonObject aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            var aTarget = ReferenceTracker.instance().getRefTarget(aRef);
+            JsonObject aTarget = ReferenceTracker.instance().getRefTarget(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;

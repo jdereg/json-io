@@ -43,7 +43,7 @@ public class FieldsTest
 {
     @Test
     void testNestedPrivateClass() {
-        var expected = OuterObject.of(9, 12, "Happy Holidays", "Some Other Message");
+        OuterObject expected = OuterObject.of(9, 12, "Happy Holidays", "Some Other Message");
         String json = TestUtil.toJson(expected);
         TestUtil.printLine(json);
         OuterObject actual = TestUtil.toJava(json);
@@ -263,7 +263,7 @@ public class FieldsTest
     public void testExternalFieldSpecifierInheritance()
     {
         Map<Class<?>, List<String>> fieldSpecifiers = new LinkedHashMap<>();
-        fieldSpecifiers.put(PainfulToSerialize.class, List.of("name"));
+        fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
@@ -304,7 +304,7 @@ public class FieldsTest
     public void testFieldBlackList()
     {
         Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, List.of("classLoader"));
+        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         PainfulToSerialize painful = new PainfulToSerialize();
         painful.setName("Android rocks");
@@ -319,7 +319,7 @@ public class FieldsTest
     public void testFieldBlackListInheritance()
     {
         Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, List.of("classLoader"));
+        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
@@ -336,9 +336,9 @@ public class FieldsTest
     public void testFieldBlackListPriorityToSpecifier()
     {
         Map<Class<?>, List<String>> fieldSpecifiers = new LinkedHashMap<>();
-        fieldSpecifiers.put(PainfulToSerialize.class, List.of("name", "classLoader"));
+        fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"));
         Map<Class<?>, List<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, List.of("classLoader"));
+        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
 
         PainfulToSerialize painful = new PainfulToSerialize();
         painful.setName("Android rocks");

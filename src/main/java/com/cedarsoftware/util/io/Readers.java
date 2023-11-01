@@ -164,6 +164,8 @@ public class Readers
 
     public static class EnumReader implements JsonReader.JsonClassReader
     {
+        private static final Set<String> excludedFields = MetaUtils.setOf("name", "ordinal", "internal");
+        
         public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
             try
@@ -192,8 +194,8 @@ public class Readers
             jObj.target = getEnum(cls.orElse(c), jObj);
 
             ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
-            resolver.traverseFields(stack, (JsonObject) jObj, Set.of("name", "ordinal", "internal"));
-            Object target = ((JsonObject) jObj).getTarget();
+            resolver.traverseFields(stack, jObj, excludedFields);
+            Object target = jObj.getTarget();
             return target;
         }
 
@@ -997,7 +999,15 @@ public class Readers
                 }
 
                 Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
-                constructor.trySetAccessible();
+                // JDK11+ constructor.trySetAccessible();
+                try
+                {
+                    constructor.setAccessible(true);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
 
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
 

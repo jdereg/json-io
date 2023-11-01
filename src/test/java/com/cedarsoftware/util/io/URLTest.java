@@ -132,7 +132,7 @@ class URLTest
     @Test
     void testURL_referencedInArray() throws Exception {
         URL url = new URL(OUTSIDE_DOMAIN);
-        List<URL> list = List.of(url, url, url, url, url);
+        List<URL> list = MetaUtils.listOf(url, url, url, url, url);
         String json = TestUtil.toJson(list);
 
         List<URL> actual = (List<URL>)TestUtil.toJava(json);
@@ -142,11 +142,11 @@ class URLTest
 
     @Test
     void testURL_referencedInObject() throws Exception {
-        var expected = new NestedTwice(new URL(OUTSIDE_DOMAIN));
+        NestedTwice expected = new NestedTwice(new URL(OUTSIDE_DOMAIN));
 
         String json = TestUtil.toJson(expected);
 
-        var actual = (NestedTwice)TestUtil.toJava(json);
+        NestedTwice actual = (NestedTwice)TestUtil.toJava(json);
 
         assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());

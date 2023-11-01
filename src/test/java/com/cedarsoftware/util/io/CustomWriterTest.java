@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -109,7 +108,7 @@ public class CustomWriterTest
 
         Map<Class<Person>, CustomPersonReader> customPersonReaderMap = new HashMap<>();
         customPersonReaderMap.put(Person.class, new CustomPersonReader());
-        Person personOrig = TestUtil.toJava(jsonOrig, new ReadOptionsBuilder().withCustomReaders(customPersonReaderMap).withNonCustomizableClasses(List.of(Person.class)).build());
+        Person personOrig = TestUtil.toJava(jsonOrig, new ReadOptionsBuilder().withCustomReaders(customPersonReaderMap).withNonCustomizableClasses(MetaUtils.listOf(Person.class)).build());
         assert personOrig.equals(personCustom);
 
         p = TestUtil.toJava(jsonCustom);
@@ -145,7 +144,7 @@ public class CustomWriterTest
     }
 
     @Test
-    public void testCustomerPersonWriterReaderinCollectionTypes()
+    public void testCustomPersonWriterReaderinCollectionTypes()
     {
         Person p = createTestPerson();
 
@@ -199,7 +198,7 @@ public class CustomWriterTest
     }
 
     @Test
-    public void testCustomerPersonWriterReaderForCollectionFields()
+    public void testCustomPersonWriterReaderForCollectionFields()
     {
         Person p = createTestPerson();
 

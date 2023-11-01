@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -29,10 +30,10 @@ public class JDK9ImmutableTest
 
     @Test
     public void testCopyOfListOf() {
-        final Object o = new ArrayList<>(List.of());
+        final Object o = new ArrayList<>(MetaUtils.listOf());
 
         String json = TestUtil.toJson(o);
-        List<?> es = (List<?>) TestUtil.toJava(json);
+        List<?> es = TestUtil.toJava(json);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -40,65 +41,66 @@ public class JDK9ImmutableTest
 
     @Test
     public void testListOf() {
-        final Object o = List.of();
+        final Object o = MetaUtils.listOf();
 
         String json = TestUtil.toJson(o);
-        List<?> es = (List<?>) TestUtil.toJava(json);
+        List<?> es = TestUtil.toJava(json);
 
         assertEquals(0, es.size());
-        assertEquals(o.getClass(), es.getClass());
+        assert DeepEquals.deepEquals(o, es);
     }
 
     @Test
     public void testListOfOne() {
-        final Object o = List.of("One");
+        final Object o = MetaUtils.listOf("One");
 
         String json = TestUtil.toJson(o);
-        List<?> es = (List<?>) TestUtil.toJava(json);
+        List<?> es = TestUtil.toJava(json);
 
         assertEquals(1, es.size());
-        assertEquals(o.getClass(), es.getClass());
+        assert DeepEquals.deepEquals(o, es);
     }
 
     @Test
     public void testListOfTwo() {
-        final Object o = List.of("One", "Two");
+        final Object o = MetaUtils.listOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        List<?> es = (List<?>) TestUtil.toJava(json);
+        List<?> es = TestUtil.toJava(json);
 
         assertEquals(2, es.size());
-        assertEquals(o.getClass(), es.getClass());
+        assert DeepEquals.deepEquals(o, es);
     }
 
     @Test
     public void testListOfThree() {
-        final Object o = List.of("One", "Two", "Three");
+        final Object o = MetaUtils.listOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        List<?> es = (List<?>) TestUtil.toJava(json);
+        List<?> es = TestUtil.toJava(json);
 
         assertEquals(3, es.size());
-        assertEquals(o.getClass(), es.getClass());
+        assert DeepEquals.deepEquals(o, es);
     }
 
     @Test
     public void testSetOf() {
-        final Object o = Set.of();
+        final Object o = MetaUtils.setOf();
 
         String json = TestUtil.toJson(o);
-        Set<?> es = (Set<?>) TestUtil.toJava(json);
+        Set<?> es = TestUtil.toJava(json);
 
         assertEquals(0, es.size());
-        assertEquals(o.getClass(), es.getClass());
+        assert Set.class.isAssignableFrom(o.getClass());
+        assert Set.class.isAssignableFrom(es.getClass());
     }
 
     @Test
     public void testSetOfOne() {
-        final Object o = Set.of("One");
+        final Object o = MetaUtils.setOf("One");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = (Set<?>) TestUtil.toJava(json);
+        Set<?> es = TestUtil.toJava(json);
 
         assertEquals(1, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -106,10 +108,10 @@ public class JDK9ImmutableTest
 
     @Test
     public void testSetOfTwo() {
-        final Object o = Set.of("One", "Two");
+        final Object o = MetaUtils.setOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = (Set<?>) TestUtil.toJava(json);
+        Set<?> es = TestUtil.toJava(json);
 
         assertEquals(2, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -117,10 +119,10 @@ public class JDK9ImmutableTest
 
     @Test
     public void testSetOfThree() {
-        final Object o = Set.of("One", "Two", "Three");
+        final Object o = MetaUtils.setOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = (Set<?>) TestUtil.toJava(json);
+        Set<?> es = TestUtil.toJava(json);
 
         assertEquals(3, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -132,12 +134,12 @@ public class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        rec1.mlinks = new ArrayList<>(List.of());
-        rec2.mlinks = new ArrayList<>(List.of(rec1));
-        List<Rec> ol = new ArrayList<>(List.of(rec1, rec2, rec1));
+        rec1.mlinks = new ArrayList<>(MetaUtils.listOf());
+        rec2.mlinks = new ArrayList<>(MetaUtils.listOf(rec1));
+        List<Rec> ol = new ArrayList<>(MetaUtils.listOf(rec1, rec2, rec1));
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = (List<Rec>) TestUtil.toJava(json);
+        List<Rec> recs = TestUtil.toJava(json);
 
         assertEquals(ol.getClass(), recs.getClass());
         assertEquals(ol.size(), recs.size());
@@ -163,29 +165,14 @@ public class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        rec1.mlinks = new ArrayList<>(List.of());
-        rec2.mlinks = new ArrayList<>(List.of(rec1));
-        List<Rec> ol = List.of(rec1, rec2, rec1);
+        rec1.mlinks = new ArrayList<>(MetaUtils.listOf());
+        rec2.mlinks = new ArrayList<>(MetaUtils.listOf(rec1));
+        List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = (List<Rec>) TestUtil.toJava(json);
+        List<Rec> recs = TestUtil.toJava(json);
 
-        assertEquals(ol.getClass(), recs.getClass());
-        assertEquals(ol.size(), recs.size());
-
-        assertEquals(ol.get(0).s, recs.get(0).s);
-        assertEquals(ol.get(0).i, recs.get(0).i);
-        assertEquals(recs.get(1), recs.get(0).link);
-        assertEquals(ol.get(1).s, recs.get(1).s);
-        assertEquals(ol.get(1).i, recs.get(1).i);
-        assertEquals(recs.get(0), recs.get(1).link);
-
-        assertEquals(recs.get(0), recs.get(2));
-
-        assertEquals(ol.get(0).mlinks.size(), recs.get(0).mlinks.size());
-        assertEquals(ol.get(0).mlinks.getClass(), recs.get(0).mlinks.getClass());
-        assertEquals(ol.get(1).mlinks.size(), recs.get(1).mlinks.size());
-        assertEquals(ol.get(1).mlinks.getClass(), recs.get(1).mlinks.getClass());
+        assert DeepEquals.deepEquals(ol, recs);
     }
 
     @Test
@@ -194,68 +181,31 @@ public class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        rec1.ilinks = List.of(rec2);
-        rec2.ilinks = List.of();
-        rec1.mlinks = new ArrayList<>(List.of());
-        rec2.mlinks = new ArrayList<>(List.of(rec1));
-        List<Rec> ol = List.of(rec1, rec2, rec1);
+        rec1.ilinks = MetaUtils.listOf(rec2);
+        rec2.ilinks = MetaUtils.listOf();
+        rec1.mlinks = new ArrayList<>(MetaUtils.listOf());
+        rec2.mlinks = new ArrayList<>(MetaUtils.listOf(rec1));
+        List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        Object es = (List) TestUtil.toJava(json);
+        Object es = TestUtil.toJava(json);
 
-        assertEquals(((Object) ol).getClass(), es.getClass());
-
-        List<Rec> recs = (List<Rec>) es;
-        assertEquals(ol.size(), recs.size());
-
-        assertEquals(ol.get(0).s, recs.get(0).s);
-        assertEquals(ol.get(0).i, recs.get(0).i);
-        assertEquals(recs.get(1), recs.get(0).link);
-        assertEquals(ol.get(1).s, recs.get(1).s);
-        assertEquals(ol.get(1).i, recs.get(1).i);
-        assertEquals(recs.get(0), recs.get(1).link);
-
-        assertEquals(recs.get(0), recs.get(2));
-
-        assertEquals(ol.get(0).mlinks.size(), recs.get(0).mlinks.size());
-        assertEquals(ol.get(0).mlinks.getClass(), recs.get(0).mlinks.getClass());
-        assertEquals(ol.get(1).mlinks.size(), recs.get(1).mlinks.size());
-        assertEquals(ol.get(1).mlinks.getClass(), recs.get(1).mlinks.getClass());
-
-        assertEquals(ol.get(0).ilinks.getClass(), recs.get(0).ilinks.getClass());
-        assertEquals(ol.get(0).ilinks.size(), recs.get(0).ilinks.size());
-        assertEquals(ol.get(1).ilinks.getClass(), recs.get(1).ilinks.getClass());
-        assertEquals(ol.get(1).ilinks.size(), recs.get(1).ilinks.size());
+        assert DeepEquals.deepEquals(es, ol);
     }
 
     @Test
     public void testListOfThreeRecsImmutableOnly() {
         Rec rec1 = new Rec("OneOrThree", 0);
         Rec rec2 = new Rec("Two", 2);
-        rec1.ilinks = List.of(rec2, rec1);
-        rec2.ilinks = List.of();
-        List<Rec> ol = List.of(rec1, rec2, rec1);
+        rec1.ilinks = MetaUtils.listOf(rec2, rec1);
+        rec2.ilinks = MetaUtils.listOf();
+        List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
-		rec1.smap = Map.of();
+		rec1.smap = MetaUtils.mapOf();
 
         String json = TestUtil.toJson(ol);
         Object es = TestUtil.toJava(json);
 
-        assertEquals(((Object) ol).getClass(), es.getClass());
-
-        List<Rec> recs = (List<Rec>) es;
-        assertEquals(ol.size(), recs.size());
-
-        assertEquals(ol.get(0).s, recs.get(0).s);
-        assertEquals(ol.get(0).i, recs.get(0).i);
-        assertEquals(ol.get(1).s, recs.get(1).s);
-        assertEquals(ol.get(1).i, recs.get(1).i);
-
-        assertEquals(recs.get(0), recs.get(2));
-
-        assertEquals(ol.get(0).ilinks.getClass(), recs.get(0).ilinks.getClass());
-        assertEquals(ol.get(0).ilinks.size(), recs.get(0).ilinks.size());
-        assertEquals(ol.get(1).ilinks.getClass(), recs.get(1).ilinks.getClass());
-        assertEquals(ol.get(1).ilinks.size(), recs.get(1).ilinks.size());
+        assert DeepEquals.deepEquals(ol, es);
     }
 }

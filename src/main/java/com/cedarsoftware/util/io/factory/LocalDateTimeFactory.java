@@ -25,15 +25,15 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
 
     @Override
     protected LocalDateTime fromJsonObject(JsonObject job) {
-        var date = (String) job.get("date");
-        var time = (String) job.get("time");
+        String date = (String) job.get("date");
+        String time = (String) job.get("time");
 
         if (date == null || time == null) {
             throw new IllegalArgumentException("'date' and 'time' or 'value' are required fields when parsing object using LocalDateTimeFactory");
         }
 
-        var localDate = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE);
-        var localTime = LocalTime.parse(time, DateTimeFormatter.ISO_LOCAL_TIME);
+        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE);
+        LocalTime localTime = LocalTime.parse(time, DateTimeFormatter.ISO_LOCAL_TIME);
         return LocalDateTime.of(localDate, localTime);
     }
 }

@@ -254,7 +254,7 @@ public class ObjectResolver extends Resolver
                     {
                         // GOTCHA : if the field is an immutable collection,
                         // "work instance", where one can accumulate items in (ArrayList)
-                        // and "final instance' (say List.of() ) can _not_ be the same.
+                        // and "final instance' (say MetaUtils.listOf() ) can _not_ be the same.
                         // So, the later the assignment, the better.
                         Object javaObj = convertMapsToObjects(jsRhs);
                         if (javaObj != fieldObject)
@@ -413,8 +413,8 @@ public class ObjectResolver extends Resolver
      * Process java.util.Collection and it's derivatives.  Collections are written specially
      * so that the serialization does not expose the Collection's internal structure, for
      * example, a TreeSet.  All entries are processed, except unresolved references, which
-     * are filled in later.  For an indexable collection, the unresolved references are set
-     * back into the proper element location.  For non-indexable collections (Sets), the
+     * are filled in later.  For an index-able collection, the unresolved references are set
+     * back into the proper element location.  For non-index-able collections (Sets), the
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
@@ -428,11 +428,11 @@ public class ObjectResolver extends Resolver
             {
                 if (className.contains("Set"))
                 {
-                    jsonObj.target = Set.of();
+                    jsonObj.target = MetaUtils.setOf();
                 }
                 else if (className.contains("List"))
                 {
-                    jsonObj.target = List.of();
+                    jsonObj.target = MetaUtils.listOf();
                 }
             }
             return;
@@ -497,7 +497,7 @@ public class ObjectResolver extends Resolver
                     {
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
                         if (isList)
-                        {   // Indexable collection, so set 'null' as element for now - will be patched in later.
+                        {   // Index-able collection, so set 'null' as element for now - will be patched in later.
                             col.add(null);
                         }
                     }
@@ -546,7 +546,7 @@ public class ObjectResolver extends Resolver
         {
             if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
             {
-                jsonObj.target = List.of(col.toArray());
+                jsonObj.target = MetaUtils.listOf(col.toArray());
             }
             else
             {
@@ -555,7 +555,7 @@ public class ObjectResolver extends Resolver
         }
         else if (className.contains("Set"))
         {
-            jsonObj.target = Set.of(col.toArray());
+            jsonObj.target = MetaUtils.setOf(col.toArray());
         }
         else
         {
@@ -819,7 +819,7 @@ public class ObjectResolver extends Resolver
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
         if (isJsonObject)
         {   // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
-            // This way, references to it, will be pointed back to the correct instance.
+            // This way, references to it will be pointed back to the correct instance.
             ((JsonObject) o).setFinishedTarget(read, true);
         }
         return read;

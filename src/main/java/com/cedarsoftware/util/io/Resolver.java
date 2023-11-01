@@ -633,7 +633,7 @@ abstract class Resolver
                     {
                         if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
                         {
-                            list = List.of(list.toArray());
+                            list = MetaUtils.listOf(list.toArray());
                             ref.referencingObj.target = list;
                         }
                     }

@@ -174,7 +174,7 @@ class JsonParser
 
                         if (field.startsWith("@"))
                         {   // Expand short-hand meta keys
-                            var temp = stringCache.get(field);
+                            String temp = stringCache.get(field);
 
                             if (temp != null) {
                                 field = temp;

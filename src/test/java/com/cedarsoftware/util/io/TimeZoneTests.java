@@ -43,13 +43,13 @@ public class TimeZoneTests
     void testTimeZoneAsField()
     {
         // changed away from default because that could change per user and break the test.
-        var expected = TimeZone.getTimeZone("Africa/Casablanca");
-        var tz = new TestTimeZone();
+        TimeZone expected = TimeZone.getTimeZone("Africa/Casablanca");
+        TestTimeZone tz = new TestTimeZone();
         tz._zone = expected;
-        var json = TestUtil.toJson(tz);
+        String json = TestUtil.toJson(tz);
         TestUtil.printLine("json=" + json);
 
-        var actual = (TestTimeZone) TestUtil.toJava(json);
+        TestTimeZone actual = TestUtil.toJava(json);
         assertThat(actual._zone).isEqualTo(expected);
     }
 
@@ -64,12 +64,12 @@ public class TimeZoneTests
     void testTimeZone(String zone)
     {
         // arrange
-        var expected = TimeZone.getTimeZone(zone);
+        TimeZone expected = TimeZone.getTimeZone(zone);
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
-        var actual = (TimeZone) TestUtil.toJava(json);
+        TimeZone actual = TestUtil.toJava(json);
 
         // assert
         assertThat(actual).isEqualTo(expected);
@@ -88,13 +88,13 @@ public class TimeZoneTests
     void testTwoTimezones_InObjectArray()
     {
         // arrange
-        var expected = new Object[] { getEST(), getPST() };
+        Object[] expected = new Object[] { getEST(), getPST() };
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        var actual = (Object[]) TestUtil.toJava(json);
+        Object[] actual = TestUtil.toJava(json);
 
         // assert
         assertThat(actual).hasSize(2)
@@ -108,15 +108,15 @@ public class TimeZoneTests
     void testTwoOfSameTimeZone_inObjectArray()
     {
         // arrange
-        var est = getEST();
-        var objectArray = new Object[] { est, est };
+        TimeZone est = getEST();
+        Object[] objectArray = new Object[] { est, est };
 
         // act
-        var json = TestUtil.toJson(objectArray);
+        String json = TestUtil.toJson(objectArray);
 
         TestUtil.printLine("json=" + json);
 
-        var actual = (Object[]) TestUtil.toJava(json);
+        Object[] actual = TestUtil.toJava(json);
 
         // assert
         assertThat(json).containsIgnoringCase("@id")
@@ -133,13 +133,13 @@ public class TimeZoneTests
     void testTimeZone_inCollection()
     {
         // arrange
-        var expected = List.of(getEST(), getPST());
+        List expected = MetaUtils.listOf(getEST(), getPST());
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        var actual = (List<TimeZone>) TestUtil.toJava(json);
+       List<TimeZone> actual = (List<TimeZone>) TestUtil.toJava(json);
 
         // assert
         assertThat(actual).hasSize(2)
@@ -150,12 +150,12 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asValue()
     {
-        var expected = Map.of("p", getPST());
+       Map expected = MetaUtils.mapOf("p", getPST());
 
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        var actual = (Map<String, TimeZone>) TestUtil.toJava(json);
+        Map actual = (Map<String, TimeZone>) TestUtil.toJava(json);
 
         assertThat(actual).hasSize(1)
                 .containsAllEntriesOf(expected);
@@ -165,13 +165,13 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asKey()
     {
-        var expected = Map.of(getPST(), "p");
+        Map expected = MetaUtils.mapOf(getPST(), "p");
 
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
 
-        var actual = (Map<TimeZone, String>) TestUtil.toJava(json);
+        Map actual = TestUtil.toJava(json);
 
         assertThat(actual).hasSize(1)
                 .containsAllEntriesOf(expected);
@@ -183,14 +183,14 @@ public class TimeZoneTests
     void testTimeZone_inMapofMaps()
     {
         // arrange
-        var pst = getPST();
-        var expected = new Object[] { pst };
+        TimeZone pst = getPST();
+        Object[] expected = new Object[] { pst };
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        var options = new ReadOptionsBuilder().returnAsMaps().build();
+        Map options = new ReadOptionsBuilder().returnAsMaps().build();
         Object[] items = (Object[]) TestUtil.toJava(json, options);
 
         // assert
@@ -205,14 +205,14 @@ public class TimeZoneTests
     void testTimeZone_withRefs()
     {
         // arrange
-        var pst = getPST();
-        var expected = new Object[] { pst, pst };
+        TimeZone pst = getPST();
+        Object[] expected = new Object[] { pst, pst };
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        var actual = (Object[]) TestUtil.toJava(json);
+        Object[] actual = TestUtil.toJava(json);
 
         // assert
         assertThat(json)
@@ -237,8 +237,8 @@ public class TimeZoneTests
     @MethodSource("argumentsForOldFormatValidation")
     void testTimezone_readingJsonWithOldFormat_stillWorks(String fileName, String expectedTimeZone) throws Exception
     {
-        var json = TestUtil.fetchResource("timezone/" + fileName);
-        var actual = (TimeZone) TestUtil.toJava(json);
+        String json = TestUtil.fetchResource("timezone/" + fileName);
+        TimeZone actual = TestUtil.toJava(json);
 
         assertThat(actual.getID()).isEqualTo(expectedTimeZone);
     }
@@ -247,25 +247,25 @@ public class TimeZoneTests
     @Test
     void testTimeZone_inGenericSubobject_serializeBackCorrectly() throws Exception
     {
-        var initial = new GenericSubObject<>(getPST());
-        var json = TestUtil.toJson(initial);
+        GenericSubObject initial = new GenericSubObject<>(getPST());
+        String json = TestUtil.toJson(initial);
 
         TestUtil.printLine("json=" + json);
-        var actual = (GenericSubObject)TestUtil.toJava(json);
+        GenericSubObject actual = TestUtil.toJava(json);
         assertThat(actual.getObject()).isEqualTo(initial.getObject());
     }
 
     @Test
     void testTimeZone_inNestedObject_serializeBackCorrectly() throws Exception {
         // arrange
-        var timeZone = getPST();
-        var expected = new TimeZoneTests.NestedOnce(timeZone);
+        TimeZone timeZone = getPST();
+        TimeZoneTests.NestedOnce expected = new TimeZoneTests.NestedOnce(timeZone);
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
 
         TestUtil.printLine("json=" + json);
-        var actual = (TimeZoneTests.NestedOnce)TestUtil.toJava(json);
+        TimeZoneTests.NestedOnce actual = TestUtil.toJava(json);
 
         // assert
         assertThat(actual.getTimeZone()).isEqualTo(expected.getTimeZone());
@@ -275,13 +275,13 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_referencedInList() throws Exception {
         // arrange
-        var tz =  getPST();
-        var list = List.of(tz, tz, tz, tz, tz);
+        TimeZone tz =  getPST();
+        List list = MetaUtils.listOf(tz, tz, tz, tz, tz);
 
         // act
-        var json = TestUtil.toJson(list);
+        String json = TestUtil.toJson(list);
 
-        var actual = (List<TimeZone>)TestUtil.toJava(json);
+        List<TimeZone> actual = TestUtil.toJava(json);
 
         // assert
         assertThat(json).contains("@id").contains("@ref");

@@ -71,7 +71,7 @@ public class SecurityTest
         assert array[0] == null;
 
         // attempt to write inside List
-        List listOfObj = List.of(obj);
+        List listOfObj = MetaUtils.listOf(obj);
         json = TestUtil.toJson(listOfObj);
         o = TestUtil.toJava(json);
         List list = (List) o;
@@ -135,13 +135,14 @@ public class SecurityTest
     {
         try
         {
-            TestUtil.toJava(json);
+            Object obj = TestUtil.toJava(json);
             fail();
         }
         catch (JsonIoException e)
         {
-            assert e.getMessage().toLowerCase().contains("security");
-            assert e.getMessage().toLowerCase().contains("instantiation");
+            String msg = e.getMessage().toLowerCase();
+            assert (msg.contains("class listed") && msg.contains("not found")) ||
+                   (msg.contains("security") && msg.contains("instantiation"));
         }
     }
 

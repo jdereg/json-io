@@ -13,13 +13,7 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -272,6 +266,7 @@ public class Writers
         // putting here to allow this to be the full enum object writer.
         // write now we're just calling back to the JsonWriter
         private final boolean isEnumPublicOnly;
+        private static final Set<String> excluded = MetaUtils.setOf("name", "ordinal", "internal");
 
         public EnumAsObjectWriter(boolean isEnumPublicOnly) {
             this.isEnumPublicOnly = isEnumPublicOnly;
@@ -283,7 +278,7 @@ public class Writers
             output.write("\"name\":");
             writeJsonUtf8String(((Enum)obj).name(), output);
             JsonWriter writer = getWriter(args);
-            writer.writeObject(obj, true, true, Set.of("name", "ordinal", "internal"));
+            writer.writeObject(obj, true, true, excluded);
         }
     }
 

@@ -173,7 +173,7 @@ public class JsonReader implements Closeable
         assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
         assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
 
-        var timeZoneFactory = new TimeZoneFactory();
+        TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
         assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
 
@@ -825,12 +825,12 @@ public class JsonReader implements Closeable
         setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
 
 
-        var customReaders = (Map<Class<?>, JsonClassReader>) args.get(CUSTOM_READER_MAP);
+        Map<Class<?>, JsonClassReader> customReaders = (Map) args.get(CUSTOM_READER_MAP);
         if (customReaders != null) {
             this.readers.putAll(customReaders);
         }
 
-        var notCustomReaders = (Collection<Class<?>>) args.get(NOT_CUSTOM_READER_MAP);
+        Collection<Class<?>> notCustomReaders = (Collection) args.get(NOT_CUSTOM_READER_MAP);
         if (notCustomReaders != null) {
             this.notCustom.addAll(notCustomReaders);
         }
@@ -838,7 +838,7 @@ public class JsonReader implements Closeable
         // pull all factories out and add them to the already added
         // global class factories.  The global class factories are
         // replaced by and ith the same name in this object.
-        var factories = (Map<String, ClassFactory>) args.get(FACTORIES);
+        Map<String, ClassFactory> factories = (Map) args.get(FACTORIES);
         if (factories != null) {
             this.classFactories.putAll(factories);
         }

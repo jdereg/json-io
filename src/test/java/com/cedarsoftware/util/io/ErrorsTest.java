@@ -72,7 +72,7 @@ class ErrorsTest
                 "},\n" +
                 "\"string:\" \"Hello World\"\n" +
                 "}";
-        var x = TestUtil.toJava(json);
+        Object x = TestUtil.toJava(json);
         assert "array".equals(x);
     }
 

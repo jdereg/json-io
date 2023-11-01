@@ -473,7 +473,7 @@ public class MapOfMapsTest
         pCopy.setAge(new BigDecimal("39"));
         pCopy.setBirthYear(1975);
         pCopy.setIq(new BigInteger("140"));
-        List<Person> list = List.of(p, p, pCopy);
+        List<Person> list = MetaUtils.listOf(p, p, pCopy);
         
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().noTypeInfo().build());
         Object[] array = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
@@ -498,8 +498,8 @@ public class MapOfMapsTest
         pCopy.setBirthYear(1975);
         pCopy.setIq(new BigInteger("140"));
 
-        List<Person> list = List.of(p, p, pCopy);
-        List<List<Person>> holder = List.of(list, list);
+        List<Person> list = MetaUtils.listOf(p, p, pCopy);
+        List<List<Person>> holder = MetaUtils.listOf(list, list);
 
         String json = TestUtil.toJson(holder, new WriteOptionsBuilder().noTypeInfo().build());
         Object[] array = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());

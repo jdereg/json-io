@@ -117,10 +117,10 @@ public class DoubleTest
     public void testNanArrayElement()
     {
         Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
-        String json = TestUtil.toJson(new ArrayList<>(List.of(Double.NaN)), args);
+        String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)), args);
         assert json.contains("null");
 
-        json = TestUtil.toJson(new ArrayList<>(List.of(Double.NEGATIVE_INFINITY)), args);
+        json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NEGATIVE_INFINITY)), args);
         assert json.contains("null");
 
         LinkedHashMap<String, Double> map2 = new LinkedHashMap<>(1);
@@ -181,10 +181,10 @@ public class DoubleTest
     @Test
     public void testNanArrayElement2()
     {
-        String json = TestUtil.toJson(new ArrayList<>(List.of(Double.NaN)));
+        String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)));
         assert json.contains("null");
 
-        json = TestUtil.toJson(new ArrayList<>(List.of(Double.NEGATIVE_INFINITY)));
+        json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NEGATIVE_INFINITY)));
         assert json.contains("null");
 
         LinkedHashMap<String, Double> map = new LinkedHashMap<>(1);

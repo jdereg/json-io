@@ -100,15 +100,15 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
 
     @Test
     void testTopLevel_serializesAsISODate() {
-        var date = LocalDateTime.of(2014, 10, 17, 9, 15, 16, 99999);
+        LocalDateTime date = LocalDateTime.of(2014, 10, 17, 9, 15, 16, 99999);
         String json = TestUtil.toJson(date);
-        var result = (LocalDateTime) TestUtil.toJava(json);
+        LocalDateTime result = TestUtil.toJava(json);
         assertThat(result).isEqualTo(date);
     }
 
     @Test
     void testLocalDateTime_inArray() {
-        var initial = new LocalDateTime[]{
+        LocalDateTime[] initial = new LocalDateTime[]{
                 LocalDateTime.of(2014, 10, 9, 11, 11, 11, 11),
                 LocalDateTime.of(2023, 6, 24, 11, 11, 11, 1000)
         };

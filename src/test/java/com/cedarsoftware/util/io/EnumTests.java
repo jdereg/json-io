@@ -78,11 +78,11 @@ class EnumTests {
     @MethodSource("testDifferentWriteOptions")
     void testCollectionOfEnums(Map<String, Object> writeOptions) {
 
-        var input = new LinkedList<>();
-        input.addAll(List.of(TestEnum1.values()));
-        input.addAll(List.of(TestEnum2.values()));
-        input.addAll(List.of(TestEnum3.values()));
-        input.addAll(List.of(ExternalEnum.values()));
+        List input = new LinkedList<>();
+        input.addAll(MetaUtils.listOf(TestEnum1.values()));
+        input.addAll(MetaUtils.listOf(TestEnum2.values()));
+        input.addAll(MetaUtils.listOf(TestEnum3.values()));
+        input.addAll(MetaUtils.listOf(ExternalEnum.values()));
 
         String json = TestUtil.toJson(input, writeOptions);
 
@@ -162,13 +162,13 @@ class EnumTests {
     void testEnumWithPrivateMembersAsField_withPrivatesOn() {
         TestEnum4 x = TestEnum4.B;
 
-        var options = new WriteOptionsBuilder()
+        Map options = new WriteOptionsBuilder()
                 .writeEnumsAsObjects()
                 .build();
 
         String json = TestUtil.toJson(x, options);
 
-        var expected = loadJson("default-enum-standalone-with-privates.json");
+        String expected = loadJson("default-enum-standalone-with-privates.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
     }
 
@@ -177,7 +177,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        var options = new WriteOptionsBuilder()
+        Map options = new WriteOptionsBuilder()
                 .noTypeInfo()
                 .build();
 
@@ -185,7 +185,7 @@ class EnumTests {
         writer.write(x);
         String json = new String(ba.toByteArray());
         
-        var expected = loadJson("default-enum-with-no-type.json");
+        String expected = loadJson("default-enum-with-no-type.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
     }
 
@@ -194,7 +194,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        var options = new WriteOptionsBuilder()
+        Map options = new WriteOptionsBuilder()
                 .doNotWritePrivateEnumFields()
                 .build();
 
@@ -202,20 +202,20 @@ class EnumTests {
         writer.write(x);
         String json = new String(ba.toByteArray());
 
-        var expected = loadJson("default-enum-standalone-without-privates.json");
+        String expected = loadJson("default-enum-standalone-without-privates.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
     }
 
     @Test
     void testEnumNoOrdinal_enumsAsPrimitive() {
-        var list = List.of(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
+        List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
-        var options = new WriteOptionsBuilder()
+        Map options = new WriteOptionsBuilder()
                 .noTypeInfo()
                 .doNotWritePrivateEnumFields()
                 .build();
 
-        var json = TestUtil.toJson(list, options);
+        String json = TestUtil.toJson(list, options);
 
         assertThat(json).isEqualToIgnoringWhitespace("[{\"name\":\"FEDERATE_THIS\"},{\"name\":\"EXCLUDE\"}]");
     }

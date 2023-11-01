@@ -50,7 +50,7 @@ class ReaderTests {
 
     @Test
     void testConstructor_whenOptionsContainsClassFactories_thoseAreAppendedToBaseClassFactories() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withClassFactory(CustomWriterTest.Person.class, new PersonFactory())
                 .build();
 
@@ -70,7 +70,7 @@ class ReaderTests {
 
     @Test
     void testConstructor_whenOptionsContainsReaders_thoseAreAppendedToBaseReaders() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
                 .build();
 

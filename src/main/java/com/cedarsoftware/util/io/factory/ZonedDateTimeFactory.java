@@ -25,17 +25,15 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
 
     @Override
     protected ZonedDateTime fromJsonObject(JsonObject job) {
-        var dateTime = (String) job.get("dateTime");
-        var localDateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        String dateTime = (String) job.get("dateTime");
+        LocalDateTime localDateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-
-        var zone = (JsonObject) job.get("zone");
+        JsonObject zone = (JsonObject) job.get("zone");
         String id = checkReferences(zone, "id");
-        var zoneId = ZoneId.of(id);
-
+        ZoneId zoneId = ZoneId.of(id);
 
         // need to be able to process references for offset and zone.
-        var offsetMap = (JsonObject) job.get("offset");
+        JsonObject offsetMap = (JsonObject) job.get("offset");
         Number totalSeconds = checkReferences(offsetMap, "totalSeconds");
         if (totalSeconds == null) {
             return ZonedDateTime.of(localDateTime, zoneId);

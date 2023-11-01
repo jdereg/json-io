@@ -12,26 +12,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
@@ -75,10 +56,10 @@ public class MetaUtils
     private static final Class<?>[] emptyClassArray = new Class[]{};
     private static final ConcurrentMap<Class<?>, Object[]> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
-    private static final Collection<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
-    private static final Collection<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
+    private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
+    private static final SortedSet<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
     private static final Map<?, ?> unmodifiableMap = Collections.unmodifiableMap(new HashMap<>());
-    private static final Map<?, ?> unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap<>());
+    private static final SortedMap<?, ?> unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap<>());
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
@@ -143,6 +124,78 @@ public class MetaUtils
     }
 
     /**
+     * For JDK1.8 support.  Remove this and change to MetaUtils.listOf() for JDK11+
+     */
+    @SafeVarargs
+    public static <T> List<T> listOf(T... items)
+    {
+        if (items == null || items.length ==0)
+        {
+            return Collections.unmodifiableList(new ArrayList<>());
+        }
+        List<T> list = new ArrayList<>();
+        Collections.addAll(list, items);
+        return Collections.unmodifiableList(list);
+    }
+
+    /**
+     * For JDK1.8 support.  Remove this and change to Set.of() for JDK11+
+     */
+    @SafeVarargs
+    public static <T> Set<T> setOf(T... items)
+    {
+        if (items == null || items.length ==0)
+        {
+            return (Set<T>) unmodifiableSet;
+        }
+        Set<T> set = new LinkedHashSet<>();
+        Collections.addAll(set, items);
+        return set;
+    }
+
+    /**
+     * For JDK1.8 support.  Remove this and change to Map.of() for JDK11+
+     */
+    public static <K, V> Map<K, V> mapOf()
+    {
+        return Collections.unmodifiableMap(new LinkedHashMap<>());
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k, V v)
+    {
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(k, v);
+        return Collections.unmodifiableMap(map);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2)
+    {
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        return Collections.unmodifiableMap(map);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3)
+    {
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
+        return Collections.unmodifiableMap(map);
+    }
+
+    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4)
+    {
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        map.put(k3, v3);
+        map.put(k4, v4);
+        return Collections.unmodifiableMap(map);
+    }
+
+    /**
      * Return an instance of the Java Field class corresponding to the passed in field name.
      * @param c class containing the field / field name
      * @param field String name of a field on the class.
@@ -204,7 +257,7 @@ public class MetaUtils
 
                 if (!Modifier.isPublic(modifiers) || !Modifier.isPublic(field.getDeclaringClass().getModifiers()))
                 {
-                    field.trySetAccessible();
+                    MetaUtils.trySetAccessible(field);
                 }
             }
 
@@ -514,6 +567,11 @@ public class MetaUtils
         throwIfSecurityConcern(Constructor.class, c);
         throwIfSecurityConcern(Method.class, c);
         throwIfSecurityConcern(Field.class, c);
+        // JDK11+ remove the line below
+        if (c.getName().equals("java.lang.ProcessImpl"))
+        {
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
+        }
 
         if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
         {
@@ -1109,6 +1167,19 @@ public class MetaUtils
         catch (IllegalAccessException e)
         {
             throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not acccessible.  Add a create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+        }
+    }
+
+    public static boolean trySetAccessible(Field field)
+    {
+        try
+        {
+            field.setAccessible(true);
+            return true;
+        }
+        catch (Exception ignore)
+        {
+            return false;
         }
     }
     

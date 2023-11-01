@@ -29,10 +29,10 @@ class ZonedDateTimeFactoryTests {
     @MethodSource("oldVariants")
     void newInstance_testObjectVariant(String dateTime, String zone, Number totalSeconds, Integer year, Integer month, Integer dayOfMonth, Integer hour, Integer minute, Integer second, Integer nano) {
 
-        var jsonObject = buildJsonObject(dateTime, zone, totalSeconds);
+        JsonObject jsonObject = buildJsonObject(dateTime, zone, totalSeconds);
 
-        var factory = new ZonedDateTimeFactory();
-        var zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
+        ZonedDateTimeFactory factory = new ZonedDateTimeFactory();
+        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
 
         assertZonedDateTime(zonedDateTime, year, month, dayOfMonth, hour, minute, second, nano, zone, totalSeconds);
     }
@@ -47,10 +47,10 @@ class ZonedDateTimeFactoryTests {
     @ParameterizedTest
     @MethodSource("primitiveVariants")
     void neweInstance_primitiveVariants(String dateTime, String zone, int year, int month, int day, int hour, int min, int sec, int nano, int offset) {
-        var jsonObject = buildJsonObject(dateTime);
+        JsonObject jsonObject = buildJsonObject(dateTime);
 
-        var factory = new ZonedDateTimeFactory();
-        var zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
+        ZonedDateTimeFactory factory = new ZonedDateTimeFactory();
+        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
 
         assertZonedDateTime(zonedDateTime, year, month, day, hour, min, sec, nano, zone, offset);
     }
@@ -90,11 +90,11 @@ class ZonedDateTimeFactoryTests {
     }
 
     private JsonObject buildJsonObject(String localDateTime, String zoneId, Number totalSeconds) {
-        var jsonObject = new JsonObject();
-        var zone = new JsonObject();
+        JsonObject jsonObject = new JsonObject();
+        JsonObject zone = new JsonObject();
         zone.put("id", zoneId);
 
-        var offset = new JsonObject();
+        JsonObject offset = new JsonObject();
         offset.put("totalSeconds", totalSeconds == null ? 0 : totalSeconds.intValue());
 
         jsonObject.put("dateTime", localDateTime);
@@ -104,7 +104,7 @@ class ZonedDateTimeFactoryTests {
     }
 
     private JsonObject buildJsonObject(String zonedDateTime) {
-        var jsonObject = new JsonObject();
+        JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", zonedDateTime);
         return jsonObject;
     }

@@ -20,11 +20,11 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
 
     @Test
     void testSimpleCase() {
-        var date = ZonedDateTime.of(LocalDate.now(), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
-        var date2 = ZonedDateTime.of(LocalDate.of(2022, 12, 23), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
-        var expected = new NestedZonedDateTime(date, date2);
+        ZonedDateTime date = ZonedDateTime.of(LocalDate.now(), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
+        ZonedDateTime date2 = ZonedDateTime.of(LocalDate.of(2022, 12, 23), LocalTime.now(), ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
+        NestedZonedDateTime expected = new NestedZonedDateTime(date, date2);
         String json = TestUtil.toJson(expected);
-        var result = (NestedZonedDateTime) TestUtil.toJava(json);
+        NestedZonedDateTime result = (NestedZonedDateTime) TestUtil.toJava(json);
         assertThat(result.date1).isEqualTo(date);
     }
 
@@ -62,32 +62,32 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
 
     @Override
     protected ZonedDateTime provideT1() {
-        var localDateTime = LocalDateTime.of(2019, 12, 15, 9, 7, 16, 2000);
+        LocalDateTime localDateTime = LocalDateTime.of(2019, 12, 15, 9, 7, 16, 2000);
         return ZonedDateTime.of(localDateTime, Z1);
     }
 
     @Override
     protected ZonedDateTime provideT2() {
-        var localDateTime = LocalDateTime.of(2027, 12, 23, 9, 7, 16, 2000);
+        LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 9, 7, 16, 2000);
         return ZonedDateTime.of(localDateTime, Z2);
     }
 
     @Override
     protected ZonedDateTime provideT3() {
-        var localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
+        LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return ZonedDateTime.of(localDateTime, Z3);
     }
 
     @Override
     protected ZonedDateTime provideT4() {
-        var localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
+        LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return ZonedDateTime.of(localDateTime, Z1);
     }
 
     @Override
     protected NestedZonedDateTime provideNestedInObject() {
-        var localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
-        var localDateTime2 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
+        LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
+        LocalDateTime localDateTime2 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
                 ZonedDateTime.of(localDateTime1, Z1),
                 ZonedDateTime.of(localDateTime2, Z2));
@@ -95,8 +95,8 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
 
     @Override
     protected void assertNestedInObject(Object expected, Object actual) {
-        var nestedExpected = (NestedZonedDateTime) expected;
-        var nestedActual = (NestedZonedDateTime) actual;
+        NestedZonedDateTime nestedExpected = (NestedZonedDateTime) expected;
+        NestedZonedDateTime nestedActual = (NestedZonedDateTime) actual;
 
         assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
         assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
@@ -104,15 +104,15 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
 
     @Override
     protected Object provideDuplicatesNestedInObject() {
-        var localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
+        LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
                 ZonedDateTime.of(localDateTime1, Z1));
     }
 
     @Override
     protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        var nestedExpected = (NestedZonedDateTime) expected;
-        var nestedActual = (NestedZonedDateTime) actual;
+        NestedZonedDateTime nestedExpected = (NestedZonedDateTime) expected;
+        NestedZonedDateTime nestedActual = (NestedZonedDateTime) actual;
 
         assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
         assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);

@@ -10,14 +10,14 @@ public class TimeZoneFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class c, JsonObject job) {
 
-        var value = job.getValue();
+        Object value = job.getValue();
         if (value != null) {
             return fromString(job, (String) value);
         }
 
-        var zone = (String) job.get("zone");
+        String zone = (String) job.get("zone");
         if (zone != null) {
-            return fromString(job, (String) zone);
+            return fromString(job, (zone));
         }
 
         throw new JsonIoException("java.util.TimeZone missing 'value' field");

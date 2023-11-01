@@ -49,7 +49,7 @@ public class CustomClassHandlerTest
 
         Map<Class<WeirdDate>, WeirdDateWriter> map5 = new LinkedHashMap<>(1);
         map5.put(WeirdDate.class, new WeirdDateWriter());
-        json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map5).withNoCustomizationsFor(List.of(WeirdDate.class)).build());
+        json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map5).withNoCustomizationsFor(MetaUtils.listOf(WeirdDate.class)).build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);
     }

@@ -48,7 +48,7 @@ public class TestUtil
         {
             URL url = TestUtil.class.getResource("/" + name);
             Path resPath = Paths.get(url.toURI());
-            return Files.readString(resPath);
+            return new String(Files.readAllBytes(resPath));
         }
         catch (Exception e)
         {

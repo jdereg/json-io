@@ -16,7 +16,7 @@ public class OuterObject {
 
 
     public static OuterObject of(int x, int y, String message1, String message2) {
-        var object = new OuterObject();
+        OuterObject object = new OuterObject();
         object.x = x;
         object.y = y;
         object.message1Holder = new MessageOneHolder(message1);

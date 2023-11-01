@@ -48,108 +48,108 @@ public class CollectionTests {
     }
 
     private void assertCollection(ManyCollections root) {
-        assertTrue(root._cols.length == 3);
-        assertTrue(root._cols[0].getClass().equals(ArrayList.class));
-        assertTrue(root._cols[1].getClass().equals(HashSet.class));
-        assertTrue(root._cols[2].getClass().equals(TreeSet.class));
+        assertEquals(3, root._cols.length);
+        assertEquals(root._cols[0].getClass(), ArrayList.class);
+        assertEquals(root._cols[1].getClass(), HashSet.class);
+        assertEquals(root._cols[2].getClass(), TreeSet.class);
 
         Collection array = root._cols[0];
-        assertTrue(array.size() == 4);
-        assertTrue(array.getClass().equals(ArrayList.class));
+        assertEquals(4, array.size());
+        assertEquals(array.getClass(), ArrayList.class);
         List alist = (List) array;
-        assertTrue(alist.get(0).equals(_testDate));
-        assertTrue(alist.get(1).equals("Hello"));
-        assertTrue(alist.get(2).equals(new TestObject("fudge")));
-        assertTrue(alist.get(3).equals(_CONST_INT));
+        assertEquals(alist.get(0), _testDate);
+        assertEquals("Hello", alist.get(1));
+        assertEquals(alist.get(2), new TestObject("fudge"));
+        assertEquals(alist.get(3), _CONST_INT);
 
         Collection set = root._cols[1];
-        assertTrue(set.size() == 4);
-        assertTrue(set.getClass().equals(HashSet.class));
+        assertEquals(4, set.size());
+        assertEquals(set.getClass(), HashSet.class);
         assertTrue(set.contains(Map.class));
         assertTrue(set.contains(Boolean.TRUE));
         assertTrue(set.contains(null));
         assertTrue(set.contains(_CONST_INT));
 
         set = root._cols[2];
-        assertTrue(set.size() == 4);
-        assertTrue(set.getClass().equals(TreeSet.class));
+        assertEquals(4, set.size());
+        assertEquals(set.getClass(), TreeSet.class);
         assertTrue(set.contains(Integer.valueOf(Integer.MIN_VALUE)));
         assertTrue(set.contains(Integer.valueOf(1)));
         assertTrue(set.contains(Integer.valueOf(Integer.MAX_VALUE)));
         assertTrue(set.contains(_CONST_INT));
 
-        assertTrue(root._strings_a.size() == 4);
-        assertTrue(root._strings_a.get(0).equals("Alpha"));
-        assertTrue(root._strings_a.get(1).equals("Bravo"));
-        assertTrue(root._strings_a.get(2).equals("Charlie"));
-        assertTrue(root._strings_a.get(3).equals("Delta"));
+        assertEquals(4, root._strings_a.size());
+        assertEquals("Alpha", root._strings_a.get(0));
+        assertEquals("Bravo", root._strings_a.get(1));
+        assertEquals("Charlie", root._strings_a.get(2));
+        assertEquals("Delta", root._strings_a.get(3));
         assertTrue(root._strings_b.isEmpty());
         assertNull(root._strings_c);
 
-        assertTrue(root._dates_a.size() == 4);
-        assertTrue(root._dates_a.get(0).equals(new Date(0)));
-        assertTrue(root._dates_a.get(1).equals(_testDate));
-        assertTrue(root._dates_a.get(2).equals(new Date(Long.MAX_VALUE)));
+        assertEquals(4, root._dates_a.size());
+        assertEquals(root._dates_a.get(0), new Date(0));
+        assertEquals(root._dates_a.get(1), _testDate);
+        assertEquals(root._dates_a.get(2), new Date(Long.MAX_VALUE));
         assertNull(root._dates_a.get(3));
         assertTrue(root._dates_b.isEmpty());
         assertNull(root._dates_c);
 
-        assertTrue(root._classes_a.size() == 12);
-        assertTrue(root._classes_a.get(0).equals(Boolean.class));
-        assertTrue(root._classes_a.get(1).equals(Character.class));
-        assertTrue(root._classes_a.get(2).equals(Byte.class));
-        assertTrue(root._classes_a.get(3).equals(Short.class));
-        assertTrue(root._classes_a.get(4).equals(Integer.class));
-        assertTrue(root._classes_a.get(5).equals(Long.class));
-        assertTrue(root._classes_a.get(6).equals(Float.class));
-        assertTrue(root._classes_a.get(7).equals(Double.class));
-        assertTrue(root._classes_a.get(8).equals(String.class));
-        assertTrue(root._classes_a.get(9).equals(Date.class));
+        assertEquals(12, root._classes_a.size());
+        assertEquals(root._classes_a.get(0), Boolean.class);
+        assertEquals(root._classes_a.get(1), Character.class);
+        assertEquals(root._classes_a.get(2), Byte.class);
+        assertEquals(root._classes_a.get(3), Short.class);
+        assertEquals(root._classes_a.get(4), Integer.class);
+        assertEquals(root._classes_a.get(5), Long.class);
+        assertEquals(root._classes_a.get(6), Float.class);
+        assertEquals(root._classes_a.get(7), Double.class);
+        assertEquals(root._classes_a.get(8), String.class);
+        assertEquals(root._classes_a.get(9), Date.class);
         assertNull(root._classes_a.get(10));
-        assertTrue(root._classes_a.get(11).equals(Class.class));
+        assertEquals(root._classes_a.get(11), Class.class);
         assertTrue(root._classes_b.isEmpty());
         assertNull(root._classes_c);
 
-        assertTrue(root._sb_a.size() == 2);
-        assertTrue(root._sb_a.get(0).toString().equals("one"));
-        assertTrue(root._sb_a.get(1).toString().equals("two"));
+        assertEquals(2, root._sb_a.size());
+        assertEquals("one", root._sb_a.get(0).toString());
+        assertEquals("two", root._sb_a.get(1).toString());
         assertTrue(root._sb_b.isEmpty());
         assertNull(root._sb_c);
 
-        assertTrue(root._poly_a.size() == 17);
-        assertTrue(root._poly_a.get(0).equals(Boolean.TRUE));
-        assertTrue(root._poly_a.get(1).equals(Character.valueOf('a')));
-        assertTrue(root._poly_a.get(2).equals(Byte.valueOf((byte) 16)));
-        assertTrue(root._poly_a.get(3).equals(Short.valueOf((byte) 69)));
-        assertTrue(root._poly_a.get(4).equals(Integer.valueOf(714)));
-        assertTrue(root._poly_a.get(5).equals(Long.valueOf(420)));
-        assertTrue(root._poly_a.get(6).equals(Float.valueOf(0.4f)));
-        assertTrue(root._poly_a.get(7).equals(Double.valueOf(3.14)));
-        assertTrue(root._poly_a.get(8).equals("Jones'in\tfor\u0019a\ncoke"));
+        assertEquals(17, root._poly_a.size());
+        assertEquals(root._poly_a.get(0), Boolean.TRUE);
+        assertEquals(root._poly_a.get(1), Character.valueOf('a'));
+        assertEquals(root._poly_a.get(2), Byte.valueOf((byte) 16));
+        assertEquals(root._poly_a.get(3), Short.valueOf((byte) 69));
+        assertEquals(root._poly_a.get(4), Integer.valueOf(714));
+        assertEquals(root._poly_a.get(5), Long.valueOf(420));
+        assertEquals(root._poly_a.get(6), Float.valueOf(0.4f));
+        assertEquals(root._poly_a.get(7), Double.valueOf(3.14));
+        assertEquals("Jones'in\tfor\u0019a\ncoke", root._poly_a.get(8));
         assertNull(root._poly_a.get(9));
-        assertTrue(root._poly_a.get(10).toString().equals("eddie"));
-        assertTrue(root._poly_a.get(11).equals(_testDate));
-        assertTrue(root._poly_a.get(12).equals(Long.class));
+        assertEquals("eddie", root._poly_a.get(10).toString());
+        assertEquals(root._poly_a.get(11), _testDate);
+        assertEquals(root._poly_a.get(12), Long.class);
 
         String[] sa = (String[]) root._poly_a.get(13);
-        assertTrue(sa[0].equals("beatles"));
-        assertTrue(sa[1].equals("stones"));
+        assertEquals("beatles", sa[0]);
+        assertEquals("stones", sa[1]);
         TestObject[] to = (TestObject[]) root._poly_a.get(14);
-        assertTrue(to[0].getName().equals("flint"));
-        assertTrue(to[1].getName().equals("stone"));
+        assertEquals("flint", to[0].getName());
+        assertEquals("stone", to[1].getName());
         Object[] arrayInCol = (Object[]) root._poly_a.get(15);
-        assertTrue(arrayInCol[0].equals("fox"));
-        assertTrue(arrayInCol[1].equals("wolf"));
-        assertTrue(arrayInCol[2].equals("dog"));
-        assertTrue(arrayInCol[3].equals("hound"));
+        assertEquals("fox", arrayInCol[0]);
+        assertEquals("wolf", arrayInCol[1]);
+        assertEquals("dog", arrayInCol[2]);
+        assertEquals("hound", arrayInCol[3]);
 
         Set colors = (Set) root._poly_a.get(16);
-        assertTrue(colors.size() == 3);
+        assertEquals(3, colors.size());
         assertTrue(colors.contains(new TestObject("red")));
         assertTrue(colors.contains(new TestObject("green")));
         assertTrue(colors.contains(new TestObject("blue")));
 
-        assertTrue(root._strs_a.size() == 7);
+        assertEquals(7, root._strs_a.size());
         assertTrue(root._strs_a.contains("Dog"));
         assertTrue(root._strs_a.contains("Cat"));
         assertTrue(root._strs_a.contains("Cow"));
@@ -159,20 +159,20 @@ public class CollectionTests {
         assertTrue(root._strs_a.contains("Goose"));
         assertTrue(root._strs_b.isEmpty());
         assertNull(root._strs_c);
-        assertTrue(root._strs_d.size() == 7);
+        assertEquals(7, root._strs_d.size());
         assertTrue(root._strs_d instanceof TreeSet);
 
-        assertTrue(root._typedCol != null);
-        assertTrue(root._typedCol.size() == 6);
-        assertTrue("string".equals(root._typedCol.get(0)));
-        assertTrue(null == root._typedCol.get(1));
-        assertTrue((new Date(19)).equals(root._typedCol.get(2)));
+        assertNotNull(root._typedCol);
+        assertEquals(6, root._typedCol.size());
+        assertEquals("string", root._typedCol.get(0));
+        assertNull(root._typedCol.get(1));
+        assertEquals((new Date(19)), root._typedCol.get(2));
         assertTrue((Boolean) root._typedCol.get(3));
-        assertTrue(17.76 == (Double) root._typedCol.get(4));
-        assertTrue(TimeZone.getTimeZone("PST").equals(root._typedCol.get(5)));
+        assertEquals(17.76, (Double) root._typedCol.get(4));
+        assertEquals(TimeZone.getTimeZone("PST"), root._typedCol.get(5));
 
-        assertTrue(root._typedSet != null);
-        assertTrue(root._typedSet.size() == 6);
+        assertNotNull(root._typedSet);
+        assertEquals(6, root._typedSet.size());
         assertTrue(root._typedSet.contains("string"));
         assertTrue(root._typedCol.contains(null));
         assertTrue(root._typedCol.contains(new Date(19)));
@@ -187,14 +187,14 @@ public class CollectionTests {
         testCol.init();
         String json0 = TestUtil.toJson(testCol);
         TestUtil.printLine("json0=" + json0);
-        ManyCollections testCol2 = (ManyCollections) TestUtil.toJava(json0);
+        ManyCollections testCol2 = TestUtil.toJava(json0);
 
         String json1 = TestUtil.toJson(testCol2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyCollections testCol3 = (ManyCollections) TestUtil.toJava(json1);
+        ManyCollections testCol3 = TestUtil.toJava(json1);
         assertCollection(testCol3);// Re-written from Map of Maps and re-loaded correctly
-        assertTrue(json0.equals(json1));
+        assert DeepEquals.deepEquals(testCol2, testCol3);
     }
 
     @Test
@@ -256,7 +256,7 @@ public class CollectionTests {
         col.add(Float.valueOf(3.14f));
         String json = TestUtil.toJson(col);
         Collection col1 = TestUtil.toJava(json);
-        assertTrue(col.equals(col1));
+        assertEquals(col, col1);
     }
 
     @Test
@@ -276,7 +276,7 @@ public class CollectionTests {
         points.contains(new Point(30, 40));
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[],\"bar\":null}}";
-        pCol = (ParameterizedCollection) TestUtil.toJava(json);
+        pCol = TestUtil.toJava(json);
         points = pCol.getContent().get("foo");
         assertNotNull(points);
         assertEquals(0, points.size());
@@ -285,12 +285,12 @@ public class CollectionTests {
         assertNull(points);
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{}}";
-        pCol = (ParameterizedCollection) TestUtil.toJava(json);
+        pCol = TestUtil.toJava(json);
         assertNotNull(pCol.getContent());
         assertEquals(0, pCol.getContent().size());
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":null}";
-        pCol = (ParameterizedCollection) TestUtil.toJava(json);
+        pCol = TestUtil.toJava(json);
         assertNull(pCol.getContent());
     }
 
@@ -300,19 +300,19 @@ public class CollectionTests {
         String className = CollectionTests.class.getName();
         String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
         TestUtil.printLine("json = " + json);
-        emptyCols = (EmptyCols) TestUtil.toJava(json);
+        emptyCols = TestUtil.toJava(json);
 
-        assertTrue(emptyCols.getCol().size() == 0);
+        assertEquals(0, emptyCols.getCol().size());
         assertTrue(emptyCols.getCol() instanceof ArrayList);
-        assertTrue(emptyCols.getList().size() == 0);
+        assertEquals(0, emptyCols.getList().size());
         assertTrue(emptyCols.getList() instanceof ArrayList);
-        assertTrue(emptyCols.getMap().size() == 0);
+        assertEquals(0, emptyCols.getMap().size());
         assertTrue(emptyCols.getMap() instanceof LinkedHashMap);
-        assertTrue(emptyCols.getSet().size() == 0);
+        assertEquals(0, emptyCols.getSet().size());
         assertTrue(emptyCols.getSet() instanceof LinkedHashSet);
-        assertTrue(emptyCols.getSortedSet().size() == 0);
+        assertEquals(0, emptyCols.getSortedSet().size());
         assertTrue(emptyCols.getSortedSet() instanceof TreeSet);
-        assertTrue(emptyCols.getSortedMap().size() == 0);
+        assertEquals(0, emptyCols.getSortedMap().size());
         assertTrue(emptyCols.getSortedMap() instanceof TreeMap);
     }
 
@@ -334,16 +334,17 @@ public class CollectionTests {
 
         Map writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
 
-        List list = List.of(TestEnum4.B);
+        List list = MetaUtils.listOf(TestEnum4.B);
         String json = TestUtil.toJson(list, writeOptions);
-        assertEquals("{\"@type\":\"java.util.ImmutableCollections$List12\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.CollectionTests$TestEnum4\",\"name\":\"B\"}]}", json);
+        Object o = TestUtil.toJava(json);
+        assert DeepEquals.deepEquals(list, o);
     }
 
     @Test
     public void testGenericInfoCollection() {
         String className = PointList.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
-        PointList list = (PointList) TestUtil.toJava(json);
+        PointList list = TestUtil.toJava(json);
         assertTrue(list.getPoints().size() == 1);
         Point p1 = list.getPoints().get(0);
         assertTrue(p1.getX() == 1 && p1.getY() == 2);
@@ -356,9 +357,9 @@ public class CollectionTests {
         list.add(locale);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = (List) TestUtil.toJava(json);
-        assertTrue(list.size() == 1);
-        assertTrue(list.get(0).equals(locale));
+        list = TestUtil.toJava(json);
+        assertEquals(1, list.size());
+        assertEquals(list.get(0), locale);
     }
 
     @Test
@@ -372,25 +373,25 @@ public class CollectionTests {
         String json = TestUtil.toJson(stuff);
         TestUtil.printLine("json=" + json);
 
-        List map = (List) TestUtil.toJava(json);
+        List map = TestUtil.toJava(json);
         Object[] items = map.toArray();
-        assertTrue(items.length == 4);
-        assertTrue("Hello".equals(items[0]));
-        assertTrue(items[1].equals(items[2]));
+        assertEquals(4, items.length);
+        assertEquals("Hello", items[0]);
+        assertEquals(items[1], items[2]);
 
         List list = new ArrayList<>();
         list.add(new Object[]{123L, null, true, "Hello"});
         json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        map = (List) TestUtil.toJava(json);
+        map = TestUtil.toJava(json);
         items = map.toArray();
-        assertTrue(items.length == 1);
+        assertEquals(1, items.length);
         Object[] oa = (Object[]) items[0];
-        assertTrue(oa.length == 4);
-        assertTrue(oa[0].equals(123L));
-        assertTrue(oa[1] == null);
-        assertTrue(oa[2].equals(Boolean.TRUE));
-        assertTrue("Hello".equals(oa[3]));
+        assertEquals(4, oa.length);
+        assertEquals(123L, oa[0]);
+        assertNull(oa[1]);
+        assertEquals(oa[2], Boolean.TRUE);
+        assertEquals("Hello", oa[3]);
     }
 
     @Test
@@ -398,43 +399,43 @@ public class CollectionTests {
         TestObject to = new TestObject("football");
         Collection objs = new ArrayList<>();
         Date now = new Date();
-        ((ArrayList) objs).add(now);
-        ((ArrayList) objs).add(123.45);
-        ((ArrayList) objs).add("This is a string");
-        ((ArrayList) objs).add(null);
-        ((ArrayList) objs).add(to);
-        ((ArrayList) objs).add(new Object[]{"dog", new String[]{"a", "b", "c"}});
+        objs.add(now);
+        objs.add(123.45);
+        objs.add("This is a string");
+        objs.add(null);
+        objs.add(to);
+        objs.add(new Object[]{"dog", new String[]{"a", "b", "c"}});
         Collection two = new ArrayList<>();
-        ((ArrayList) two).add(objs);
-        ((ArrayList) two).add("bella");
-        ((ArrayList) two).add(objs);
+        two.add(objs);
+        two.add("bella");
+        two.add(objs);
 
         String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
-        List map = (List) TestUtil.toJava(json0);
+        List map = TestUtil.toJava(json0);
         map.hashCode();
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
-        List colOuter = (List) TestUtil.toJava(json1);
-        assertTrue(colOuter.get(0).equals(colOuter.get(2)));
-        assertTrue("bella".equals(colOuter.get(1)));
+        List colOuter = TestUtil.toJava(json1);
+        assertEquals(colOuter.get(0), colOuter.get(2));
+        assertEquals("bella", colOuter.get(1));
         List col1 = (List) colOuter.get(0);
-        assertTrue(col1.get(0).equals(now));
-        assertTrue(col1.get(1).equals(123.45));
-        assertTrue("This is a string".equals(col1.get(2)));
-        assertTrue(col1.get(3) == null);
-        assertTrue(col1.get(4).equals(to));
+        assertEquals(col1.get(0), now);
+        assertEquals(123.45, col1.get(1));
+        assertEquals("This is a string", col1.get(2));
+        assertNull(col1.get(3));
+        assertEquals(col1.get(4), to);
         assertTrue(col1.get(5) instanceof Object[]);
         Object[] oa = (Object[]) col1.get(5);
-        assertTrue("dog".equals(oa[0]));
+        assertEquals("dog", oa[0]);
         assertTrue(oa[1] instanceof String[]);
         String[] sa = (String[]) oa[1];
-        assertTrue("a".equals(sa[0]));
-        assertTrue("b".equals(sa[1]));
-        assertTrue("c".equals(sa[2]));
+        assertEquals("a", sa[0]);
+        assertEquals("b", sa[1]);
+        assertEquals("c", sa[2]);
 
-        assertTrue(json0.equals(json1));
+        assertEquals(json0, json1);
     }
 
     @Test
@@ -443,22 +444,22 @@ public class CollectionTests {
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        List map = (List) TestUtil.toJava(json0);
-        assertTrue(map != null);
+        List map = TestUtil.toJava(json0);
+        assertNotNull(map);
         assertTrue(map.isEmpty());
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
-        assertTrue(json0.equals(json1));
+        assertEquals(json0, json1);
 
         Object[] list = new Object[]{empty, empty};
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = (Object[]) TestUtil.toJava(json0);
-        assertTrue(array != null);
+        Object[] array = TestUtil.toJava(json0);
+        assertNotNull(array);
         list = array;
-        assertTrue(list.length == 2);
+        assertEquals(2, list.length);
         List e1 = (List) list[0];
         List e2 = (List) list[1];
         assertTrue(e1.isEmpty());
@@ -472,13 +473,13 @@ public class CollectionTests {
         TestUtil.printLine("json=" + json);
         assertTrue("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]".equals(json));
         Collection col = new ArrayList<>();
-        ((ArrayList) col).add("string");
-        ((ArrayList) col).add(Long.valueOf(16));
-        ((ArrayList) col).add(Double.valueOf(3.14159));
-        ((ArrayList) col).add(Boolean.TRUE);
-        ((ArrayList) col).add(Boolean.FALSE);
-        ((ArrayList) col).add(null);
-        ((ArrayList) col).add(Integer.valueOf(7));
+        col.add("string");
+        col.add(Long.valueOf(16));
+        col.add(Double.valueOf(3.14159));
+        col.add(Boolean.TRUE);
+        col.add(Boolean.FALSE);
+        col.add(null);
+        col.add(Integer.valueOf(7));
         json = TestUtil.toJson(col);
         TestUtil.printLine("json=" + json);
         assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[\"string\",16,3.14159,true,false,null,{\"@type\":\"int\",\"value\":7}]}", json);
@@ -491,7 +492,7 @@ public class CollectionTests {
         TestUtil.printLine(json);
         assertTrue(json.contains("list\":[]"));
 
-        EmptyArrayList obj = (EmptyArrayList) TestUtil.toJava(json);
+        EmptyArrayList obj = TestUtil.toJava(json);
         json = TestUtil.toJson(obj);
         TestUtil.printLine(json);
         assertTrue(json.contains("list\":[]"));
@@ -612,22 +613,22 @@ public class CollectionTests {
     private static class ManyCollections implements Serializable {
         private void init() {
             Collection array = new ArrayList<>();
-            ((ArrayList) array).add(_testDate);
-            ((ArrayList) array).add("Hello");
-            ((ArrayList) array).add(new TestObject("fudge"));
-            ((ArrayList) array).add(_CONST_INT);
+            array.add(_testDate);
+            array.add("Hello");
+            array.add(new TestObject("fudge"));
+            array.add(_CONST_INT);
 
             Collection set = new HashSet();
-            ((HashSet) set).add(Map.class);
-            ((HashSet) set).add(Boolean.TRUE);
-            ((HashSet) set).add(null);
-            ((HashSet) set).add(_CONST_INT);
+            set.add(Map.class);
+            set.add(Boolean.TRUE);
+            set.add(null);
+            set.add(_CONST_INT);
 
             Collection tree = new TreeSet();
-            ((TreeSet) tree).add(Integer.valueOf(Integer.MIN_VALUE));
-            ((TreeSet) tree).add(Integer.valueOf(1));
-            ((TreeSet) tree).add(Integer.valueOf(Integer.MAX_VALUE));
-            ((TreeSet) tree).add(_CONST_INT);
+            tree.add(Integer.valueOf(Integer.MIN_VALUE));
+            tree.add(Integer.valueOf(1));
+            tree.add(Integer.valueOf(Integer.MAX_VALUE));
+            tree.add(_CONST_INT);
 
             _cols = new Collection[]{array, set, tree};
 
@@ -722,8 +723,8 @@ public class CollectionTests {
             _typedSet.add(17.76);
             _typedSet.add(TimeZone.getTimeZone("PST"));
 
-            _imm_lst_0 = List.of();
-            _imm_lst_1 = List.of("One");
+            _imm_lst_0 = MetaUtils.listOf();
+            _imm_lst_1 = MetaUtils.listOf("One");
 
         }
 

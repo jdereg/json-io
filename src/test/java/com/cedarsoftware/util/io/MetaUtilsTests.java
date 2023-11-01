@@ -37,21 +37,21 @@ public class MetaUtilsTests {
 
     private static Stream<Arguments> ensureFillArgsInstanceOf() {
         return Stream.of(
-                Arguments.of(Set.class, List.of(LinkedHashSet.class, Set.class)),
-                Arguments.of(SortedSet.class, List.of(SortedSet.class, Set.class, TreeSet.class)),
-                Arguments.of(SortedMap.class, List.of(SortedMap.class, TreeMap.class)),
-                Arguments.of(Collection.class, List.of(Collection.class, ArrayList.class)),
-                Arguments.of(Calendar.class, List.of(Calendar.class)),
-                Arguments.of(TimeZone.class, List.of(TimeZone.class)),
-                Arguments.of(BigInteger.class, List.of(BigInteger.class)),
-                Arguments.of(BigDecimal.class, List.of(BigDecimal.class, BigDecimal.class)),
-                Arguments.of(StringBuilder.class, List.of(StringBuilder.class)),
-                Arguments.of(StringBuffer.class, List.of(StringBuffer.class)),
-                Arguments.of(Locale.class, List.of(Locale.class)),
-                Arguments.of(Timestamp.class, List.of(Timestamp.class)),
-                Arguments.of(Date.class, List.of(Date.class)),
-                Arguments.of(Class.class, List.of(Class.class)),
-                Arguments.of(Object.class, List.of(Object.class)));
+                Arguments.of(Set.class, MetaUtils.listOf(LinkedHashSet.class, Set.class)),
+                Arguments.of(SortedSet.class, MetaUtils.listOf(SortedSet.class, Set.class, TreeSet.class)),
+                Arguments.of(SortedMap.class, MetaUtils.listOf(SortedMap.class, TreeMap.class)),
+                Arguments.of(Collection.class, MetaUtils.listOf(Collection.class, ArrayList.class)),
+                Arguments.of(Calendar.class, MetaUtils.listOf(Calendar.class)),
+                Arguments.of(TimeZone.class, MetaUtils.listOf(TimeZone.class)),
+                Arguments.of(BigInteger.class, MetaUtils.listOf(BigInteger.class)),
+                Arguments.of(BigDecimal.class, MetaUtils.listOf(BigDecimal.class, BigDecimal.class)),
+                Arguments.of(StringBuilder.class, MetaUtils.listOf(StringBuilder.class)),
+                Arguments.of(StringBuffer.class, MetaUtils.listOf(StringBuffer.class)),
+                Arguments.of(Locale.class, MetaUtils.listOf(Locale.class)),
+                Arguments.of(Timestamp.class, MetaUtils.listOf(Timestamp.class)),
+                Arguments.of(Date.class, MetaUtils.listOf(Date.class)),
+                Arguments.of(Class.class, MetaUtils.listOf(Class.class)),
+                Arguments.of(Object.class, MetaUtils.listOf(Object.class)));
 
     }
 
@@ -122,33 +122,29 @@ public class MetaUtilsTests {
 
     @Test
     void getWithDefault_whenObjectIsFound_returnsObject() {
-        var map = Map.of("foo", "bar");
-
+        Map map = MetaUtils.mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForMissing(map, "foo", "qux");
         assertThat(actual).isEqualTo("bar");
     }
 
     @Test
     void getWithDefault_whenObjectIsNotFound_returnsDefaultObject() {
-        var map = Map.of("foo", "bar");
-
+        Map map = MetaUtils.mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForMissing(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
     @Test
     void getWithDefaultForNull_whenObjectIsNotFound_returnsDefaultObject() {
-        var map = Map.of("foo", "bar");
-
+        Map map = MetaUtils.mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForNull(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
     @Test
     void getWithDefaultForNull_whenObjectIsEqualToNull_returnsDefaultObject() {
-        var map = new HashMap<>();
+        Map map = new HashMap<>();
         map.put("foo", null);
-
         String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");
         assertThat(actual).isEqualTo("bar");
     }

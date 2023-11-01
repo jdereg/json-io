@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
@@ -79,13 +80,14 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     // object array unique
     @Test
     protected void testInObjectArray() {
-        var expected = List.of(provideT1(), "foo", 9L, provideT2());
+        List expected = MetaUtils.listOf(provideT1(), "foo", 9L, provideT2());
 
         // act
-        var actual = TestUtil.serializeDeserialize(expected);
+        List actual = TestUtil.serializeDeserialize(expected);
 
         // assert
         assertInObjectArray(expected, actual);
+        assert DeepEquals.deepEquals(expected, actual);
     }
 
     protected void assertInObjectArray(List expected, List actual) {
@@ -97,10 +99,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testDuplicatesInObjectArray() {
         T standalone = provideT1();
-        var expected = List.of(standalone, standalone, 5, "foo");
+        List expected = MetaUtils.listOf(standalone, standalone, 5, "foo");
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
 
         assertThat(json)
                 .contains("@i")
@@ -132,13 +134,14 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     @Test
     protected void testInCollection() {
-        var expected = List.of(provideT1(), provideT2(), provideT3(), provideT4());
+        List expected = MetaUtils.listOf(provideT1(), provideT2(), provideT3(), provideT4());
 
         // act
-        var actual = TestUtil.serializeDeserialize(expected);
+        List actual = TestUtil.serializeDeserialize(expected);
 
         // assert
         assertTestInCollection(expected, actual);
+        assert DeepEquals.deepEquals(expected, actual);
     }
 
     protected void assertTestInCollection(List<T> expected, List<T> actual) {
@@ -148,10 +151,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testDuplicatesInCollection() {
         T instance = provideT1();
-        var expected = List.of(instance, provideT2(), provideT3(), provideT4(), instance);
+        List expected = MetaUtils.listOf(instance, provideT2(), provideT3(), provideT4(), instance);
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
 
         assertThat(json)
                 .contains("@i")
@@ -170,7 +173,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     @Test
     protected void testAsValueInMap() {
-        var expected = Map.of("foo", provideT1(), "bar", provideT2(), "qux", provideT3());
+        Map expected = MetaUtils.mapOf("foo", provideT1(), "bar", provideT2(), "qux", provideT3());
 
         // act
         Map<String, T> actual = TestUtil.serializeDeserialize(expected);
@@ -185,11 +188,11 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     @Test
     protected void testAsDuplicateValuesInMap() {
-        var instance = provideT4();
-        var expected = Map.of("foo", instance, "bar", provideT2(), "qux", instance);
+        Object instance = provideT4();
+        Map expected = MetaUtils.mapOf("foo", instance, "bar", provideT2(), "qux", instance);
 
         // act
-        var json = TestUtil.toJson(expected);
+        String json = TestUtil.toJson(expected);
 
         assertThat(json).contains("@i")
                 .contains("@ref");

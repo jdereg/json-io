@@ -436,7 +436,7 @@ public class JsonWriter implements Closeable, Flushable
             JsonWriter writer = new JsonWriter(stream, optionalArgs);
             writer.write(item);
             writer.close();
-            return stream.toString(StandardCharsets.UTF_8);
+            return new String(stream.toByteArray(), StandardCharsets.UTF_8);
         }
         catch (Exception e)
         {
@@ -525,13 +525,13 @@ public class JsonWriter implements Closeable, Flushable
             args.put(CLASSLOADER, JsonWriter.class.getClassLoader());
         }
 
-        var customWriters = (Map<Class<?>, JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
+        Map<Class<?>, JsonClassWriter> customWriters = (Map) args.get(CUSTOM_WRITER_MAP);
         if (customWriters != null)
         {
             writers.putAll(customWriters);
         }
 
-        var notCustomClasses = (Collection<Class<?>>) args.get(NOT_CUSTOM_WRITER_MAP);
+        Collection<Class<?>> notCustomClasses = (Collection) args.get(NOT_CUSTOM_WRITER_MAP);
         if (notCustomClasses != null)
         {
             notCustom.addAll(notCustomClasses);

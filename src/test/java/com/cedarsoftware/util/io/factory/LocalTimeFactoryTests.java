@@ -24,8 +24,8 @@ class LocalTimeFactoryTests {
     @ParameterizedTest
     @MethodSource("nonValueVariants")
     void newInstance_testNonValueVariants(Integer hour, Integer minute, Integer second, Integer nano) {
-        var factory = new LocalTimeFactory();
-        var jsonObject = buildJsonObject(hour, minute, second, nano);
+        LocalTimeFactory factory = new LocalTimeFactory();
+        JsonObject jsonObject = buildJsonObject(hour, minute, second, nano);
 
         LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
 
@@ -37,8 +37,8 @@ class LocalTimeFactoryTests {
 
     @Test
     void newInstance_formattedTimeTest() {
-        var factory = new LocalTimeFactory();
-        var jsonObject = new JsonObject();
+        LocalTimeFactory factory = new LocalTimeFactory();
+        JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39");
 
         LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
@@ -51,8 +51,8 @@ class LocalTimeFactoryTests {
 
     @Test
     void newInstance_formatTimeUsingIsoOffsetFormat() {
-        var factory = new LocalTimeFactory(DateTimeFormatter.ISO_OFFSET_TIME);
-        var jsonObject = new JsonObject();
+        LocalTimeFactory factory = new LocalTimeFactory(DateTimeFormatter.ISO_OFFSET_TIME);
+        JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39+01:00");
 
         LocalTime time = factory.newInstance(LocalTime.class, jsonObject);

@@ -30,7 +30,7 @@ public class TypeSubstitutionTest
         LinkedHashMap<String, String> map = new LinkedHashMap<>(1);
         map.put("java.util.ArrayList", "al");
         Map<String, String> types = map;
-        List list = List.of("alpha", "bravo", "charlie");
+        List list = MetaUtils.listOf("alpha", "bravo", "charlie");
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().withCustomTypeNameMap(types).build());
         List test = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(types).build());
         assert DeepEquals.deepEquals(list, test);

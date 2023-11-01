@@ -28,9 +28,9 @@ public class LocalDateFactory extends AbstractTemporalFactory<LocalDate> {
 
     @Override
     protected LocalDate fromJsonObject(JsonObject job) {
-        var month = (Number) job.get("month");
-        var day = (Number) job.get("day");
-        var year = (Number) job.get("year");
+        Number month = (Number) job.get("month");
+        Number day = (Number) job.get("day");
+        Number year = (Number) job.get("year");
 
         return LocalDate.of(year.intValue(), month.intValue(), day.intValue());
     }

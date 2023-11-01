@@ -15,7 +15,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void failOnUnknownType() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .failOnUnknownType()
                 .build();
 
@@ -26,7 +26,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void setUnknownTypeClass() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .setUnknownTypeClass(LinkedHashMap.class)
                 .build();
 
@@ -37,7 +37,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void returnAsMaps() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .returnAsMaps()
                 .build();
 
@@ -48,9 +48,9 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeName_usingClassAsKey() {
-        var value = "foobar";
+        String value = "foobar";
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomTypeName(Date.class, value)
                 .build();
 
@@ -58,7 +58,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
+        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
 
         assertThat(typeNameMap).hasSize(1)
                 .containsEntry(Date.class.getName(), value);
@@ -66,10 +66,10 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeName_usingStringAsKey() {
-        var key = "javax.sql.Date";
-        var value = "foobar";
+        String key = "javax.sql.Date";
+        String value = "foobar";
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomTypeName(key, value)
                 .build();
 
@@ -77,7 +77,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
+        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
 
         assertThat(typeNameMap).hasSize(1)
                 .containsEntry(key, value);
@@ -85,7 +85,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeName_whenAddingNames_addsUniqueNames() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(Date.class.getName(), "foo1")
                 .withCustomTypeName(String.class, "bar2")
@@ -96,7 +96,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var map = (Map<String, String>)options.get(TYPE_NAME_MAP);
+        Map map = (Map<String, String>)options.get(TYPE_NAME_MAP);
 
         assertThat(map)
                 .containsAllEntriesOf(expectedTypeNameMap());
@@ -104,11 +104,11 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeName_withMixedCustomTypeNameInitialization_accumulates() {
-        Map<String, String> map = Map.of(
+        Map<String, String> map = MetaUtils.mapOf(
                 String.class.getName(), "char1",
                 "foo", "bar");
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomTypeNameMap(map)
                 .withCustomTypeName(String.class, "char2")
                 .withCustomTypeName(Date.class, "dt")
@@ -119,9 +119,9 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
+        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
 
-        Map<String, String> expected = Map.of(
+        Map<String, String> expected = MetaUtils.mapOf(
                 String.class.getName(), "char2",
                 "foo", "bar",
                 Date.class.getName(), "dt",
@@ -134,7 +134,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeNameMap_whenAddingNames_addsUniqueNames() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(String.class, "bar2")
                 .build();
@@ -143,7 +143,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(TYPE_NAME_MAP);
 
-        var map = new HashMap<>();
+        Map map = new HashMap<>();
         map.put(String.class.getName(), "bar2");
 
         assertThat(map)
@@ -152,7 +152,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReader() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomReader(Date.class, new Readers.DateReader())
                 .build();
 
@@ -160,7 +160,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var customWriterMap = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
+        Map customWriterMap = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(customWriterMap).hasSize(1)
                 .containsKey(Date.class);
@@ -170,7 +170,7 @@ class ReadOptionsBuilderTest {
     void withCustomReaderMap() {
         Map<Class<?>, JsonReader.JsonClassReader> map = new HashMap<>();
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomReaders(map)
                 .build();
 
@@ -181,7 +181,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReaderMap_whenCustomWriterMapAlreadyExists_throwsIllegalStateException() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withCustomReader(Date.class, new Readers.DateReader())
                 .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
                 .build();
@@ -190,7 +190,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(CUSTOM_READER_MAP);
 
-        var map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
+        Map map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
 
         assertThat(map)
                 .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
@@ -200,7 +200,7 @@ class ReadOptionsBuilderTest {
     void withClassLoader() {
         ClassLoader classLoader = this.getClass().getClassLoader();
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withClassLoader(classLoader)
                 .build();
 
@@ -211,7 +211,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withNonCustomizableClass() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .build();
 
@@ -219,7 +219,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_READER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
+        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
 
         assertThat(collection)
                 .hasSize(1)
@@ -228,7 +228,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withNonCustomizableClass_withTwoOfSameClass_isUsingSetUnderneath() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .withNonCustomizableClass(String.class)
                 .build();
@@ -237,7 +237,7 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_READER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
+        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
 
         assertThat(collection)
                 .hasSize(1)
@@ -245,9 +245,9 @@ class ReadOptionsBuilderTest {
     }
     @Test
     void withNonCustomizableClass_addsAdditionalUniqueClasses() {
-        Collection<Class<?>> list = List.of(HashMap.class, String.class);
+        Collection<Class<?>> list = MetaUtils.listOf(HashMap.class, String.class);
 
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .withNonCustomizableClass(Map.class)
                 .withNonCustomizableClasses(list)
@@ -257,34 +257,34 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_READER_MAP);
 
-        var collection = (Collection<Class<?>>) options.get(NOT_CUSTOM_READER_MAP);
+        Collection collection = (Collection<Class<?>>) options.get(NOT_CUSTOM_READER_MAP);
 
         assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(List.of(String.class, HashMap.class, Map.class));
+                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, HashMap.class, Map.class));
     }
 
     @Test
     void withNonCustomizableClasses_whenNonCustomizableClassesExist_addsUniqueItemsToTheCollection() {
-        var options = new ReadOptionsBuilder()
+        Map options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .withNonCustomizableClass(Date.class)
-                .withNonCustomizableClasses(List.of(String.class, List.class))
+                .withNonCustomizableClasses(MetaUtils.listOf(String.class, List.class))
                 .build();
 
         assertThat(options)
                 .hasSize(1)
                 .containsKey(NOT_CUSTOM_READER_MAP);
 
-        var collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
+        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
 
         assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(List.of(String.class, Date.class, List.class));
+                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, Date.class, List.class));
     }
 
     @Test
     void withClassFactory() {
-        var localDateFactory = new LocalDateFactory();
-        var options = new ReadOptionsBuilder()
+        LocalDateFactory localDateFactory = new LocalDateFactory();
+        Map options = new ReadOptionsBuilder()
                 .withClassFactory(LocalDate.class, localDateFactory)
                 .build();
 
@@ -292,14 +292,14 @@ class ReadOptionsBuilderTest {
                 .hasSize(1)
                 .containsKey(FACTORIES);
 
-        var collection = (Map<String, JsonReader.ClassFactory>) options.get(FACTORIES);
+        Map collection = (Map<String, JsonReader.ClassFactory>) options.get(FACTORIES);
 
         assertThat(collection)
-                .containsAllEntriesOf(Map.of(LocalDate.class.getName(), localDateFactory));
+                .containsAllEntriesOf(MetaUtils.mapOf(LocalDate.class.getName(), localDateFactory));
     }
 
     private Map<String, JsonReader.ClassFactory> getClassFactoryMap() {
-        return Map.of(
+        return MetaUtils.mapOf(
                 LocalDate.class.getName(), new LocalDateFactory(),
                 LocalTime.class.getName(), new LocalTimeFactory());
     }
