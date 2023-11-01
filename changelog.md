@@ -1,9 +1,11 @@
 ### Revision History
-* 4.15.0-SNAPSHOT
-  * Supporting JDK11, 17, 21.
-  * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values. 
+* 4.15.0
+  * Supports `JDK1.8, JDK11, 17, 21.` Test with these versions, and compiled in class file version 52 (`JDK1.8 `) format.
+  * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values.
+  * Fixed an issue with classes that used custom reader/writes being loaded when inside an array or collection. If there was circular references, they were not resolved correctly.  
 * 4.14.2
   * Enum/EnumSet support fully added @kpartlow
+  * `WARN` This version inadvertently slipped to `JDK11+` (which has been corrected in `4.15.0`).  Version `5.x.x` will be `JDK11 or JDK17`.
 * 4.14.1
   * JDK 1.8 is target class file format. @laurgarn
   * JDK 11 is source file format. @laurgarn
