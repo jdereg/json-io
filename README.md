@@ -4,9 +4,12 @@ json-io
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io)
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
 
-Perfect Java serialization to and from JSON format (available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io)).
-This library has <b>no dependencies</b> on other libraries for runtime.  Built purely on the JDK.
-This library is compatible with `JDK1.8` through `JDK 21`.  The classes in the .jar file are version 52 (`JDK 1.8`).   
+Excellent Java serialization to and from JSON format.
+Available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io).
+This library has <b>no dependencies</b> on other libraries for runtime.
+The`.jar`file is only`158K.`
+Works with`JDK 1.8`through`JDK 21`.
+The classes in the`.jar`file are version 52 (`JDK 1.8`).
 
 To include in your project:
 ##### Gradle
