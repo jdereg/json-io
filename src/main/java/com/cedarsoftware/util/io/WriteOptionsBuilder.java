@@ -93,6 +93,7 @@ public class WriteOptionsBuilder {
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
+        temp.put(Throwable.class, new Writers.ThrowableWriter());
 
         try {
             Class<?> zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
@@ -411,8 +412,6 @@ public class WriteOptionsBuilder {
 
         this.writeOptions.fieldSpecifiers.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldSpecifiers));
         this.writeOptions.fieldNameBlackList.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldNameBlackList));
-
-
         return writeOptions;
     }
 

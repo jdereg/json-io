@@ -1,5 +1,6 @@
-package com.cedarsoftware.util.io;
+package com.cedarsoftware.util;
 
+import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 
 /**

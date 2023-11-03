@@ -1,17 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.LocalDateFactory;
-import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
-import com.cedarsoftware.util.io.factory.LocalTimeFactory;
-import com.cedarsoftware.util.io.factory.TimeZoneFactory;
-import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+import com.cedarsoftware.util.io.factory.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -198,6 +193,11 @@ public class JsonReader implements Closeable
         temp.put(URL.class, new Readers.URLReader());
         temp.put(Enum.class, new Readers.EnumReader());
 
+        assignInstantiator(Throwable.class, new ThrowableFactory());
+        assignInstantiator(NullPointerException.class, new NullPointerExceptionFactory());
+        assignInstantiator(IllegalStateException.class, new IllegalStateExceptionFactory());
+        assignInstantiator(IllegalArgumentException.class, new IllegalArgumentExceptionFactory());
+
         // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
         addPossibleReader(temp, "java.lang.Record", Readers.RecordReader::new);
 
@@ -237,14 +237,10 @@ public class JsonReader implements Closeable
             // passing on args is for backwards compatibility.
             // also, once we remove the other new instances we
             // can probably remove args from the parameters.
-            Map args = new HashMap();
+            Map args = new HashMap<>();
             args.put("jsonObj", job);
 
             return this.newInstance(c, args);
-        }
-
-        default Object setTarget(JsonObject job, Object o) {
-            return job.setFinishedTarget(o, isObjectFinal());
         }
 
         @Deprecated
@@ -941,7 +937,7 @@ public class JsonReader implements Closeable
             else
             {
                 Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader) args.get(CLASSLOADER));
-                Object instance = resolver.createJavaObjectInstance(Object.class, root);
+                Object instance = resolver.createInstance(Object.class, root);
                 if (root.isFinished)
                 {   // Factory method instantiated and completely loaded the object.
                     graph = instance;

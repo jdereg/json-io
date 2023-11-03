@@ -684,4 +684,52 @@ public class FieldsTest
         private String[] _stringArray_5;
         private Object[] _stringArray_6;
     }
+
+    public static class P1
+    {
+        public int x,y;
+    }
+
+    public static class P2 extends P1
+    {
+        public String x, y, z;
+    }
+
+    @Test
+    public void testFieldNameShadowing()
+    {
+        P2 p2 = new P2();
+        p2.x = "1";
+        p2.y = "2";
+        p2.z = "3";
+
+        ((P1)p2).x = 4;
+        ((P1)p2).y = 5;
+
+        String json = TestUtil.toJson(p2);
+        assert json.contains("P1.x");
+        assert json.contains("P1.y");
+        P2 p2copy = TestUtil.toJava(json);
+        assert p2copy.x.equals("1");
+        assert p2copy.y.equals("2");
+        assert p2copy.z.equals("3");
+        assert ((P1)p2copy).x == 4;
+        assert ((P1)p2copy).y == 5;
+    }
+
+    @Test
+    public void testFieldNameNotShadowed()
+    {
+        P1 p1 = new P1();
+        p1.x = 10;
+        p1.y = 20;
+
+        String json = TestUtil.toJson(p1);
+        System.out.println("json = " + json);
+        assert !json.contains("P1.x");
+        assert !json.contains("P1.y");
+        P1 p1copy = TestUtil.toJava(json);
+        assert p1copy.x == 10;
+        assert p1copy.y == 20;
+    }
 }

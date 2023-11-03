@@ -146,6 +146,17 @@ public class SecurityTest
         }
     }
 
+    @Test
+    public void testInstantiateClassInstances()
+    {
+        //  {"@type":"class","value":"java.lang.String"}
+        String json = TestUtil.toJson(String.class);
+        Class c1 = TestUtil.toJava(json);
+        Class c2 = TestUtil.toJava(json);
+        assert c1 == c2;
+        assert c1.equals(c2);
+    }
+
     static class Fugazi
     {
         String desc = "fake";

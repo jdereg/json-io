@@ -190,7 +190,7 @@ public class ObjectResolver extends Resolver
             {
                 final JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
-                Object value = createJavaObjectInstance(fieldType, jObj);
+                Object value = createInstance(fieldType, jObj);
                 MetaUtils.setFieldValue(field, target, value);
             }
             else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
@@ -223,7 +223,7 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     jsonArray.put(ITEMS, elements);
-                    createJavaObjectInstance(fieldType, jsonArray);
+                    createInstance(fieldType, jsonArray);
                     MetaUtils.setFieldValue(field, target, jsonArray.target);
                     stack.addFirst(jsonArray);
                 }
@@ -248,7 +248,7 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
-                    Object fieldObject = createJavaObjectInstance(fieldType, jsRhs);
+                    Object fieldObject = createInstance(fieldType, jsRhs);
                     MetaUtils.setFieldValue(field, target, fieldObject);
                     if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
@@ -349,7 +349,7 @@ public class ObjectResolver extends Resolver
                     // check that jObj as a type
                     if (jObj.getType() != null)
                     {
-                        Object createJavaObjectInstance = createJavaObjectInstance(null, jObj);
+                        Object createJavaObjectInstance = createInstance(null, jObj);
                         if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
                         {
                             stack.addFirst((JsonObject) rhs);
@@ -476,7 +476,7 @@ public class ObjectResolver extends Resolver
             {
                 final JsonObject jObj = new JsonObject();
                 jObj.put(ITEMS, element);
-                createJavaObjectInstance(Object.class, jObj);
+                createInstance(Object.class, jObj);
                 col.add(jObj.target);
                 convertMapsToObjects(jObj);
             }
@@ -504,7 +504,7 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    createJavaObjectInstance(Object.class, jObj);
+                    createInstance(Object.class, jObj);
 
                     if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
                     {
@@ -609,7 +609,7 @@ public class ObjectResolver extends Resolver
             }
             else if (element == JsonParser.EMPTY_OBJECT)
             {    // Use either explicitly defined type in ObjectMap associated to JSON, or array component type.
-                Object arrayElement = createJavaObjectInstance(compType, new JsonObject());
+                Object arrayElement = createInstance(compType, new JsonObject());
                 Array.set(array, i, arrayElement);
             }
             else if ((special = readWithFactoryIfExists(element, compType, stack)) != null)
@@ -649,7 +649,7 @@ public class ObjectResolver extends Resolver
                 {
                     JsonObject jsonObject = new JsonObject();
                     jsonObject.put(ITEMS, element);
-                    Array.set(array, i, createJavaObjectInstance(compType, jsonObject));
+                    Array.set(array, i, createInstance(compType, jsonObject));
                     stack.addFirst(jsonObject);
                 }
             }
@@ -672,7 +672,7 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Convert JSON HashMap to Java Object instance and assign values
-                    Object arrayElement = createJavaObjectInstance(compType, jsonObject);
+                    Object arrayElement = createInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
                     if (!MetaUtils.isLogicalPrimitive(arrayElement.getClass()))
                     {    // Skip walking primitives, primitive wrapper classes, Strings, and Classes
@@ -700,85 +700,95 @@ public class ObjectResolver extends Resolver
      * associated to it, then have it convert the object.  If there is no custom reader, then return null.
      * @param o Object to read (convert).  Will be either a JsonObject or a JSON primitive String, long, boolean,
      *          double, or null.
-     * @param compType Class destination type to which the passed in object should be converted to.
+     * @param inferredType Class destination type to which the passed in object should be converted to.
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack)
+    protected Object readWithFactoryIfExists(final Object o, final Class inferredType, final Deque<JsonObject> stack)
     {
         if (o == null)
         {
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (compType != null && notCustom(compType))
+        if (inferredType != null && notCustom(inferredType))
         {
             return null;
         }
 
         final boolean isJsonObject = o instanceof JsonObject;
-        if (!isJsonObject && compType == null)
+        if (!isJsonObject && inferredType == null)
         {   // If not a JsonObject (like a Long that represents a date, then compType must be set)
             return null;
         }
+        JsonObject jsonObj;
+        if (isJsonObject)
+        {
+            jsonObj = (JsonObject)o;
+
+        }
+        else
+        {
+            jsonObj = new JsonObject();
+        }
 
         Class c;
-        boolean needsType = false;
 
         // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)
         if (isJsonObject)
         {
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.isReference())
-            {
+            if (jsonObj.isReference())
+            {   // Don't create a new instance for an @ref.  The pointer to the other instance will be placed
+                // where we are now (inside array, inside collection, as a map key, a map value, or a value
+                // pointed to by a field.
                 return null;
             }
 
-            if (jObj.target == null)
+            if (jsonObj.target == null)
             {   // '@type' parameter used (not target instance)
                 String typeStr = null;
                 try
                 {
-                    Object type =  jObj.type;
+                    String type =  jsonObj.type;
                     if (type != null)
                     {
-                        typeStr = (String) type;
-                        c = MetaUtils.classForName((String) type, classLoader);
+                        typeStr = type;
+                        c = MetaUtils.classForName(type, classLoader);
                     }
                     else
                     {
-                        if (compType != null)
+                        if (inferredType != null)
                         {
-                            c = compType;
-                            needsType = true;
+                            c = inferredType;
                         }
                         else
                         {
                             return null;
                         }
                     }
-                    Object factoryCreated = createJavaObjectInstance(c, jObj);
-                    if (jObj.isFinished) {
+                    Object factoryCreated = createInstance(c, jsonObj);
+                    if (jsonObj.isFinished)
+                    {   
                         return factoryCreated;
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     throw new JsonIoException("Class listed in @type [" + typeStr + "] is not found", e);
                 }
             }
             else
             {   // Type inferred from target object
-                c = jObj.target.getClass();
+                c = jsonObj.target.getClass();
             }
         }
         else
         {
-            c = compType;
+            c = inferredType;
         }
 
         if (notCustom(c))
-        {
+        {   // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
@@ -786,21 +796,21 @@ public class ObjectResolver extends Resolver
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null)
         {
-            JsonObject job;
-
             if (isJsonObject) {
-                job = (JsonObject) o;
+                if (jsonObj.type == null)
+                {
+                    jsonObj.setType(c.getName());
+                }
             } else {
-                job = new JsonObject();
-                job.setValue(o);
-                job.setType(c.getName());
+                jsonObj.setValue(o);
+                jsonObj.setType(c.getName());
             }
 
-            Object target = classFactory.newInstance(c, job);
+            Object target = classFactory.newInstance(c, jsonObj);
 
-            // NOTE: should we set target on job or is this safe?
             if (classFactory.isObjectFinal()) {
-                job.setFinishedTarget(target, true);
+                // Created and loaded, we're done
+                jsonObj.setFinishedTarget(target, true);
                 return target;
             }
         }
@@ -808,21 +818,19 @@ public class ObjectResolver extends Resolver
         // Use custom reader if ont exists
         JsonReader.JsonClassReader closestReader = getCustomReader(c);
         if (closestReader == null)
-        {
+        {  
             return null;
         }
 
-        if (needsType)
+        if (jsonObj.type == null)
         {
-            ((JsonObject)o).setType(c.getName());
+            jsonObj.setType(c.getName());
         }
-
+        
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
-        if (isJsonObject)
-        {   // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
-            // This way, references to it will be pointed back to the correct instance.
-            ((JsonObject) o).setFinishedTarget(read, true);
-        }
+        // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
+        // This way, references to it will be pointed back to the correct instance.
+        jsonObj.setFinishedTarget(read, true);
         return read;
     }
 

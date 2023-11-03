@@ -333,9 +333,8 @@ abstract class Resolver
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
-    protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj)
+    protected Object createInstance(Class clazz, JsonObject jsonObj)
     {
-        final boolean useMapsLocal = useMaps;
         String type = jsonObj.type;
 
         // We can't set values to an Object, so well try to use the contained type instead
@@ -353,183 +352,219 @@ abstract class Resolver
             if (mayEnumSpecial instanceof String)
             {
                 type = "java.util.EnumSet";
+                jsonObj.type = type;
             }
         }
-
-        Object mate;
 
         // @type always takes precedence over inferred Java (clazz) type.
         if (type != null)
         {    // @type is explicitly set, use that as it always takes precedence
-            Class c;
-            try
-            {
-                c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
-            }
-            catch (Exception e)
-            {
-                if (useMapsLocal)
-                {
-                    jsonObj.type = null;
-                    jsonObj.target = null;
-                    return jsonObj;
-                }
-                else
-                {
-                    String name = clazz == null ? "null" : clazz.getName();
-                    throw new JsonIoException("Unable to create class: " + name, e);
-                }
-            }
+            return createInstanceUsingType(clazz, jsonObj);
+        }
+        else
+        {
+            return createInstanceUsingClass(clazz, jsonObj);
+        }
+    }
 
-            // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
-            // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
-            // return.
-            JsonReader.ClassFactory classFactory = getClassFactory(c);
-            if (classFactory != null)
+    /**
+     * Create an instance of a Java class using the ".type" field on the jsonObj.  The clazz argument is not
+     * used for determining type, just for clarity in an exception message.
+     */
+    protected Object createInstanceUsingType(Class clazz, JsonObject jsonObj)
+    {
+        String type = jsonObj.type;
+
+        Class c;
+        try
+        {
+            c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
+        }
+        catch (Exception e)
+        {
+            if (useMaps)
             {
-                Object target = classFactory.newInstance(c, jsonObj);
-
-                if (classFactory.isObjectFinal())
-                {
-                    jsonObj.setFinishedTarget(target, true);
-                    return target;
-                }
-            }
-
-            // Use other methods to determine the type of class to be instantiated, including looking at the
-            // component type of an array.  Also, need to look at primitives, Enums, Immutable collection types.
-            if (c.isArray())
-            {    // Handle []
-                Object[] items = jsonObj.getArray();
-                int size = (items == null) ? 0 : items.length;
-                if (c == char[].class)
-                {
-                    jsonObj.moveCharsToMate();
-                    mate = jsonObj.target;
-                }
-                else
-                {
-                    mate = Array.newInstance(c.getComponentType(), size);
-                }
+                jsonObj.type = null;
+                jsonObj.target = null;
+                return jsonObj;
             }
             else
-            {   // Handle regular field.object reference
-                if (MetaUtils.isPrimitive(c))
-                {
-                    mate = MetaUtils.convert(c, jsonObj.getValue());
-                }
-                else if (c == Class.class)
-                {
-                    mate = MetaUtils.classForName((String) jsonObj.getValue(), reader.getClassLoader());
-                }
-                else if (c.isEnum())
-                {
-                    mate = getEnum(c, jsonObj);
-                }
-                else if (Enum.class.isAssignableFrom(c)) // anonymous subclass of an enum
-                {
-                    mate = getEnum(c.getSuperclass(), jsonObj);
-                }
-                else if (EnumSet.class.isAssignableFrom(c))
-                {
-                    mate = extractEnumSet(c, jsonObj);
-                }
-                else if ((mate = coerceCertainTypes(c.getName())) != null)
-                {   // if coerceCertainTypes() returns non-null, it did the work
-                }
-                else if (singletonMap.isAssignableFrom(c))
-                {
-                    Object key = jsonObj.keySet().iterator().next();
-                    Object value = jsonObj.values().iterator().next();
-                    mate = Collections.singletonMap(key, value);
-                }
-                else if (!c.getName().startsWith("java.util.Immutable"))
-                {
-                    //  for some statically create objects that we have factories for like TimeZone, LocalDate,
-                    //  this could be the end of the line because it creates the entire object in the factory
-                    //  but we continue parsing.  I think we need to see if there is a way we can acknowledge
-                    //  objects that are complete or done by using the target on JsonObject and a flag.
-                    mate = reader.newInstance(c, jsonObj);
-                }
-                else if (c.getName().contains("Set"))
-                {
-                    mate = new ArrayList<>();
-                }
-                else if (c.getName().contains("List"))
-                {
-                    mate = new ArrayList<>();
-                }
-                else if (c.getName().contains("Map"))
-                {
-                    mate = new LinkedHashMap<>();
-                }
+            {
+                String name = clazz == null ? "null" : clazz.getName();
+                throw new JsonIoException("Unable to create class: " + name, e);
+            }
+        }
+
+        // If a ClassFactory exists for a class, use it to instantiate the class.
+        Object mate = createInstanceUsingClassFactory(c, jsonObj);
+        if (mate != null)
+        {
+            return mate;
+        }
+
+        // Use other methods to determine the type of class to be instantiated, including looking at the
+        // component type of the array.  Also, need to look at primitives, Enums, Immutable collection types.
+        if (c.isArray())
+        {    // Handle []
+            Object[] items = jsonObj.getArray();
+            int size = (items == null) ? 0 : items.length;
+            if (c == char[].class)
+            {
+                jsonObj.moveCharsToMate();
+                mate = jsonObj.target;
+            }
+            else
+            {
+                mate = Array.newInstance(c.getComponentType(), size);
+            }
+        }
+        else
+        {   // Handle regular field.object reference
+            if (MetaUtils.isPrimitive(c))
+            {
+                mate = MetaUtils.convert(c, jsonObj.getValue());
+            }
+            else if (c == Class.class)
+            {
+                mate = MetaUtils.classForName((String) jsonObj.getValue(), reader.getClassLoader());
+            }
+            else if (c.isEnum())
+            {
+                mate = getEnum(c, jsonObj);
+            }
+            else if (Enum.class.isAssignableFrom(c)) // anonymous subclass of an enum
+            {
+                mate = getEnum(c.getSuperclass(), jsonObj);
+            }
+            else if (EnumSet.class.isAssignableFrom(c))
+            {
+                mate = extractEnumSet(c, jsonObj);
+            }
+            else if ((mate = coerceCertainTypes(c.getName())) != null)
+            {   // if coerceCertainTypes() returns non-null, it did the work
+            }
+            else if (singletonMap.isAssignableFrom(c))
+            {
+                Object key = jsonObj.keySet().iterator().next();
+                Object value = jsonObj.values().iterator().next();
+                mate = Collections.singletonMap(key, value);
+            }
+            else if (!c.getName().startsWith("java.util.Immutable"))
+            {
+                //  for some statically create objects that we have factories for like TimeZone, LocalDate,
+                //  this could be the end of the line because it creates the entire object in the factory
+                //  but we continue parsing.  I think we need to see if there is a way we can acknowledge
+                //  objects that are complete or done by using the target on JsonObject and a flag.
+                mate = reader.newInstance(c, jsonObj);
+            }
+            else if (c.getName().contains("Set"))
+            {
+                mate = new ArrayList<>();
+            }
+            else if (c.getName().contains("List"))
+            {
+                mate = new ArrayList<>();
+            }
+            else if (c.getName().contains("Map"))
+            {
+                mate = new LinkedHashMap<>();
+            }
+        }
+        jsonObj.setTarget(mate);
+        return mate;
+    }
+
+    /**
+     * Create an instance using the Class (clazz) provided and the values in the jsonObj.
+     */
+    protected Object createInstanceUsingClass(Class clazz, JsonObject jsonObj)
+    {
+        // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
+        // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
+        // return.
+        Object mate = createInstanceUsingClassFactory(clazz, jsonObj);
+        if (mate != null)
+        {
+            return mate;
+        }
+
+        Object[] items = jsonObj.getArray();
+
+        // if @items is specified, it must be an [] type.
+        // if clazz.isArray(), then it must be an [] type.
+        if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
+        {
+            int size = (items == null) ? 0 : items.length;
+            mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
+        }
+        else if (clazz.isEnum())
+        {
+            mate = getEnum(clazz, jsonObj);
+        }
+        else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an EnumSet
+        {
+            mate = extractEnumSet(clazz, jsonObj);
+        }
+        else if ((mate = coerceCertainTypes(clazz.getName())) != null)
+        {   // if coerceCertainTypes() returns non-null, it did the work
+        }
+        else if (clazz == Object.class && !useMaps)
+        {
+            if (unknownClass == null)
+            {
+                mate = new JsonObject();
+                ((JsonObject)mate).type = Map.class.getName();
+            }
+            else if (unknownClass instanceof String)
+            {
+                mate = reader.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()), jsonObj);
+            }
+            else if (unknownClass instanceof Class)
+            {
+                mate = unknownClass;
+            }
+            else
+            {
+                throw new JsonIoException("Unable to determine object type at column: " + jsonObj.col + ", line: " + jsonObj.line + ", content: " + jsonObj);
             }
         }
         else
         {
-            // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
-            // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
-            // return.
-            JsonReader.ClassFactory classFactory = getClassFactory(clazz);
-            if (classFactory != null)
-            {
-                Object target = classFactory.newInstance(clazz, jsonObj);
-
-                if (classFactory.isObjectFinal())
-                {
-                    jsonObj.setFinishedTarget(target, true);
-                    return target;
-                }
-            }
-
-            Object[] items = jsonObj.getArray();
-
-            // if @items is specified, it must be an [] type.
-            // if clazz.isArray(), then it must be an [] type.
-            if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
-            {
-                int size = (items == null) ? 0 : items.length;
-                mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-            }
-            else if (clazz.isEnum())
-            {
-                mate = getEnum(clazz, jsonObj);
-            }
-            else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an EnumSet
-            {
-                mate = extractEnumSet(clazz, jsonObj);
-            }
-            else if ((mate = coerceCertainTypes(clazz.getName())) != null)
-            {   // if coerceCertainTypes() returns non-null, it did the work
-            }
-            else if (clazz == Object.class && !useMapsLocal)
-            {
-                if (unknownClass == null)
-                {
-                    mate = new JsonObject();
-                    ((JsonObject)mate).type = Map.class.getName();
-                }
-                else if (unknownClass instanceof String)
-                {
-                    mate = reader.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()), jsonObj);
-                }
-                else if (unknownClass instanceof Class)
-                {
-                    mate = unknownClass;
-                }
-                else
-                {
-                    throw new JsonIoException("Unable to determine object type at column: " + jsonObj.col + ", line: " + jsonObj.line + ", content: " + jsonObj);
-                }
-            }
-            else
-            {
-                mate = reader.newInstance(clazz, jsonObj);
-            }
+            mate = reader.newInstance(clazz, jsonObj);
         }
 
         jsonObj.setTarget(mate);
         return jsonObj.getTarget();
+    }
+
+    /**
+     * If a ClassFactory is associated to the passed in Class (clazz), then use the ClassFactory
+     * to create an instance.  If a ClassFactory create the instance, it may optionall load
+     * the values into the instance, using the values from the passed in JsonObject.  If the
+     * ClassFactory instance creates AND loads the object, it is indicated on the ClassFactory
+     * by the isObjectFinal() method returning true.  Therefore the JsonObject instance that is
+     * loaded, is marked with 'isFinished=true' so that no more process is needed for this instance.
+     */
+    Object createInstanceUsingClassFactory(Class clazz, JsonObject jsonObj)
+    {
+        // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
+        // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
+        // return.
+        JsonReader.ClassFactory classFactory = getClassFactory(clazz);
+        if (classFactory != null)
+        {
+            Object target = classFactory.newInstance(clazz, jsonObj);
+            if (classFactory.isObjectFinal())
+            {
+                jsonObj.setFinishedTarget(target, true);
+            }
+            else
+            {
+                jsonObj.setTarget(target);
+            }
+            return target;
+        }
+        return null;
     }
 
     protected Object coerceCertainTypes(String type)

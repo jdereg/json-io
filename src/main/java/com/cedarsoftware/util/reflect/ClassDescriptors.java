@@ -28,7 +28,7 @@ public class ClassDescriptors {
     private static final ClassDescriptors instance = new ClassDescriptors();
 
     private ClassDescriptors() {
-        this.filters = new ArrayList();
+        this.filters = new ArrayList<>();
         this.filters.add(new StaticFilter());
         this.filters.add(new GroovyFilter());
         this.filters.add(new EnumFilter());
@@ -36,7 +36,7 @@ public class ClassDescriptors {
         // we can make this list be editable by user if they want to add their own
         // accessor factory.  Not sure how editable it woudl need tob be, but the
         // field accessor factory matches current functionality and would be a catch-all.
-        this.accessorFactories = new ArrayList();
+        this.accessorFactories = new ArrayList<>();
         this.accessorFactories.add(new GetMethodAccessorFactory());
         this.accessorFactories.add(new BooleanAccessorFactory());
         this.accessorFactories.add(new EnumNameAccessorFactory());
@@ -47,7 +47,6 @@ public class ClassDescriptors {
     public static ClassDescriptors instance() {
         return instance;
     }
-
 
     public Map<String, Accessor> getDeepClassAccessorMap(Class<?> classToTraverse) {
 
@@ -70,7 +69,6 @@ public class ClassDescriptors {
     public Collection<Accessor> getDeepAccessorsForClass(Class<?> c) {
         return this.getDeepClassAccessorMap(c).values();
     }
-
 
     public ClassDescriptor getClassDescriptor(Class<?> c) {
         return this.descriptors.computeIfAbsent(c, this::buildDescriptor);

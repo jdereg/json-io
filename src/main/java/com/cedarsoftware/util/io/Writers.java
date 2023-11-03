@@ -94,8 +94,7 @@ public class Writers
             writeJsonUtf8String(extractString(o), output);
         }
     }
-
-
+    
     public static class URLWriter extends PrimitiveUtf8StringWriter {}
 
     public static class TimeZoneWriter extends PrimitiveUtf8StringWriter
@@ -339,6 +338,26 @@ public class Writers
         }
     }
 
+    public static class ThrowableWriter implements JsonWriter.JsonClassWriter
+    {
+        /**
+         * Only serialize the 'detailMessage' and 'cause' field.  Serialize the cause as a String.
+         * Do not write the stackTrace lines out.
+         */
+        public void write(Object obj, boolean showType, Writer output) throws IOException
+        {
+            Throwable t = (Throwable) obj;
+            output.write("\"detailMessage\":");
+            writeBasicString(output, t.getMessage());
+            output.write(",\"cause\":");
+            Throwable cause = t.getCause();
+            String json = JsonWriter.objectToJson(cause);
+            output.write(json);
+        }
+
+        public boolean hasPrimitiveForm() { return false; }
+    }
+    
     // ========== Maintain knowledge about relationships below this line ==========
     static final String DATE_FORMAT = JsonWriter.DATE_FORMAT;
 
@@ -348,8 +367,6 @@ public class Writers
     }
 
     protected static void writeBasicString(Writer output, String string) throws IOException {
-        output.write("\"");
-        output.write(string);
-        output.write("\"");
+        JsonWriter.writeJsonUtf8String(string, output);
     }
 }

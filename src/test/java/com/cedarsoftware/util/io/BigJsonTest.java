@@ -29,7 +29,7 @@ class BigJsonTest
     @Test
     void testBigJsonToJava()
     {
-        for (int i=0; i < 1; i++)
+        for (int i=0; i < 2; i++)
         {
             String json = TestUtil.fetchResource("big5D.json");
             Map map = TestUtil.toJava(json);
@@ -43,7 +43,7 @@ class BigJsonTest
     @Test
     void testBigJsonToMaps()
     {
-        for (int i=0; i < 1; i++)
+        for (int i=0; i < 2; i++)
         {
             String json = TestUtil.fetchResource("big5D.json");
             Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());

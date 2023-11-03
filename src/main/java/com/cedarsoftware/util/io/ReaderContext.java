@@ -63,12 +63,23 @@ public class ReaderContext {
             return get(jObj.getReferenceId());
         }
 
-        public JsonObject get(Long id) {
+        public JsonObject get(Long id)
+        {
             JsonObject target = references.get(id);
             if (target == null) {
                 throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
             }
-            return get(target);
+
+            while (target.isReference())
+            {
+                target = references.get(target.getReferenceId());
+                if (target == null)
+                {
+                    throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
+                }
+            } 
+
+            return target;
         }
     }
 }

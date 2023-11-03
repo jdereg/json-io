@@ -218,4 +218,20 @@ class RefsTest
         assert ((Axis) d1.newValue).column != null;
         assert d2.newValue instanceof Column;
     }
+
+    @Test
+    public void testRefChain()
+    {
+        String json = TestUtil.fetchResource("references/chainRef.json");
+        JsonObject jsonObj = TestUtil.toJava(json);
+        assert jsonObj.get("name").equals("root");
+        Object[] children =  (Object[])jsonObj.get("children");
+        assert children.length == 5;
+        assert children[0] instanceof JsonObject;
+        JsonObject kid1 = (JsonObject)children[0];
+        JsonObject kid5 = (JsonObject)children[4];
+        assert kid1.get("name").equals("root");
+        assert kid5 == kid1;
+        assert kid1 == jsonObj;
+    }
 }
