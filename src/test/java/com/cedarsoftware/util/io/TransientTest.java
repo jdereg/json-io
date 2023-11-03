@@ -2,9 +2,16 @@ package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -63,7 +70,7 @@ class TransientTest
         assert json.contains("fullname");
 
         // Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue
-        Map<Class<?>, List<String>> specifiers = new HashMap<>();
+        Map<Class<?>, Collection<String>> specifiers = new HashMap<>();
         specifiers.put(Transient1.class, MetaUtils.listOf("fname", "lname", "map"));
         final WriteOptionsBuilder options2 = new WriteOptionsBuilder().withFieldSpecifiersMap(specifiers);
         assertDoesNotThrow(()-> {TestUtil.toJson(person, options2.build()); });

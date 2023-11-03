@@ -7,10 +7,25 @@ import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -679,9 +694,9 @@ public class ArrayTest
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
-        LinkedHashMap<String, Object> map = new LinkedHashMap<String, Object>(1);
-        map.put(JsonWriter.TYPE, true);
-        String json0 = TestUtil.toJson(ta, map);
+        WriteOptions options = new WriteOptionsBuilder().alwaysShowTypeInfo().build();
+
+        String json0 = TestUtil.toJson(ta, options);
         ManyArrays thatTa = TestUtil.toJava(json0);
         assertTrue(DeepEquals.deepEquals(ta, thatTa));
         String json1 = TestUtil.toJson(ta);
@@ -719,7 +734,7 @@ public class ArrayTest
         cat.chars_a = new Character[] {'a', '\t', '\u0005'};
         cat.chars_b = new Character[] {'b', '\t', '\u0002'};
 
-        String json0 = TestUtil.toJson(cat, new ReadOptionsBuilder().returnAsMaps().build());
+        String json0 = TestUtil.toJson(cat);
         TestUtil.printLine(json0);
 
         CharArrayTest cat2 = TestUtil.toJava(json0);
@@ -906,7 +921,7 @@ public class ArrayTest
         numbers.add(40);
 
         // Serialize the ArrayList to Json
-        String json = TestUtil.toJson(numbers, new WriteOptionsBuilder().noTypeInfo().build());
+        String json = TestUtil.toJson(numbers, new WriteOptionsBuilder().neverShowTypeInfo().build());
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"

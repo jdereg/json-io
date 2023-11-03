@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -53,7 +52,7 @@ class PrettyPrintTest
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
         String target = TestUtil.fetchResource("prettyPrint.json");
-        Map<String, Object> writeOptions = new WriteOptionsBuilder().withPrettyPrint().build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().build();
         String json = TestUtil.toJson(nice, writeOptions);
 
         assertThat(json).isEqualToIgnoringNewLines(target);

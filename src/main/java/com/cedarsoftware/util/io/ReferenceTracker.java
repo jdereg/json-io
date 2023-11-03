@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         Kenny Partlow (kpartlow@gmail.com)
@@ -21,40 +18,15 @@ import java.util.Map;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class ReferenceTracker {
+public interface ReferenceTracker {
 
-    private static final ThreadLocal<ReferenceTracker> referenceTracker = ThreadLocal.withInitial(ReferenceTracker::new);
+    JsonObject put(Long l, JsonObject o);
 
-    private final Map<Long, JsonObject> references = new HashMap<>();
+    JsonObject get(JsonObject jObj);
 
-    public static ReferenceTracker instance() {
-        return referenceTracker.get();
-    }
+    JsonObject get(Long jObj);
 
-    public JsonObject put(Long id, JsonObject target) {
-        return this.references.put(id, target);
-    }
+    void clear();
 
-    public void clear() {
-        references.clear();
-    }
-
-    public JsonObject getRef(Long id)
-    {
-        return getRefTarget(references.get(id));
-    }
-
-    public JsonObject getRefTarget(JsonObject jObj)
-    {
-        while (jObj != null && jObj.isReference())
-        {
-            jObj = references.get(jObj.getReferenceId());
-        }
-        if (jObj == null)
-        {
-            throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
-        }
-        return jObj;
-    }
-
+    int size();
 }

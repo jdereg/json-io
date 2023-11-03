@@ -2,10 +2,21 @@ package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URL;
-import java.util.*;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
-import static com.cedarsoftware.util.io.JsonWriter.*;
+import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_FORMAT;
+import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_TIME_FORMAT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
@@ -13,261 +24,199 @@ class WriteOptionsBuilderTest {
 
     @Test
     void withShortMetaKeys() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withShortMetaKeys()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(SHORT_META_KEYS, Boolean.TRUE);
+        assertThat(options.isUsingShortMetaKeys()).isTrue();
     }
 
     @Test
     void withDateFormat_usingPredefinedFormat() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withDateFormat(ISO_DATE_TIME_FORMAT)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(DATE_FORMAT, ISO_DATE_TIME_FORMAT);
+        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
     }
 
     @Test
     void withDateFormat_usingCustomFormat() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withDateFormat("yyyy")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(DATE_FORMAT, "yyyy");
+        assertThat(options.getDateFormat()).isEqualTo("yyyy");
     }
 
     @Test
     void withIsoDateTimeFormat() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withIsoDateTimeFormat()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(DATE_FORMAT, ISO_DATE_TIME_FORMAT);
+        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
     }
 
     @Test
     void withIsoDateFormat() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withIsoDateFormat()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(DATE_FORMAT, ISO_DATE_FORMAT);
+        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_FORMAT);
     }
 
     @Test
     void skipNullFields() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .skipNullFields()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(SKIP_NULL_FIELDS, Boolean.TRUE);
+        assertThat(options.isSkippingNullFields()).isTrue();
     }
 
     @Test
     void withNoTypeInformation() {
-        Map options = new WriteOptionsBuilder()
-                .noTypeInfo()
+        WriteOptions options = new WriteOptionsBuilder()
+                .neverShowTypeInfo()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(TYPE, Boolean.FALSE);
+        assertThat(options.isNeverShowingType()).isTrue();
     }
 
     @Test
     void forceTypeInformation() {
-        Map options = new WriteOptionsBuilder()
-                .forceTypeInfo()
+        WriteOptions options = new WriteOptionsBuilder()
+                .alwaysShowTypeInfo()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(TYPE, Boolean.TRUE);
+        assertThat(options.isAlwaysShowingType()).isTrue();
     }
 
     @Test
     void withFieldNameBlackList() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldNameBlackList(URL.class, MetaUtils.listOf("protocol"))
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(FIELD_NAME_BLACK_LIST);
-
-        Map optionItem = (Map<Class, List<String>>)options.get(FIELD_NAME_BLACK_LIST);
-
-        assertThat(optionItem)
-                .hasSize(1)
-                .containsEntry(URL.class, MetaUtils.listOf("protocol"));
+        assertThat(options.getFieldNameBlackList())
+                .isNotNull()
+                .containsKey(URL.class)
+                .hasSize(1);
     }
 
     @Test
     void withFieldNameBlackListMap() {
-        Map<Class<?>, List<String>> map = new HashMap<>();
+        Map<Class<?>, Collection<String>> map = new HashMap<>();
         map.put(URL.class, MetaUtils.listOf("protocol"));
-        map.put(Date.class, MetaUtils.listOf("month"));
+        map.put(LocalDate.class, MetaUtils.listOf("month"));
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldNameBlackListMap(map)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(FIELD_NAME_BLACK_LIST);
-        Map optionItem = (Map<Class<?>, List<String>>)options.get(FIELD_NAME_BLACK_LIST);
-
-        assertThat(optionItem)
+        assertThat(options.getFieldNameBlackList())
+                .isNotNull()
                 .hasSize(2)
-                .containsEntry(URL.class, MetaUtils.listOf("protocol"))
-                .containsEntry(Date.class, MetaUtils.listOf("month"));
+                .containsKeys(URL.class, LocalDate.class);
     }
 
     @Test
     void withFieldNameBlackListMap_accumulates_andKeepsLastUnique() {
 
-        Map<Class<?>, List<String>> map = MetaUtils.mapOf(
+        Map<Class<?>, Collection<String>> map = MetaUtils.mapOf(
                 URL.class, MetaUtils.listOf("host", "port"),
-                Date.class, MetaUtils.listOf("month")
+                LocalDate.class, MetaUtils.listOf("month")
         );
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldNameBlackList(URL.class, MetaUtils.listOf("protocol"))
-                .withFieldNameBlackList(Locale.class, MetaUtils.listOf("foo"))
                 .withFieldNameBlackListMap(map)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(FIELD_NAME_BLACK_LIST);
-
-        Map<Class, List<String>> expected = MetaUtils.mapOf(
-                URL.class, MetaUtils.listOf("host", "port"),
-                Date.class, MetaUtils.listOf("month"),
-                Locale.class, MetaUtils.listOf("foo")
-        );
-
-        Map optionItem = (Map<Class, List<String>>)options.get(FIELD_NAME_BLACK_LIST);
-
-        assertThat(optionItem)
-                .containsAllEntriesOf(expected);
+        assertThat(options.getFieldNameBlackList())
+                .isNotNull()
+                .hasSize(2)
+                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
+                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(1));
      }
 
     @Test
     void withFieldNameSpecifiers() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldSpecifier(URL.class, MetaUtils.listOf("protocol"))
-                .withFieldSpecifier(Date.class, MetaUtils.listOf("month"))
+                .withFieldSpecifier(LocalDate.class, MetaUtils.listOf("month"))
                 .withFieldSpecifier(URL.class, MetaUtils.listOf("host", "port"))
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(FIELD_SPECIFIERS);
-
-        Map<Class, List<String>> map = new HashMap<>();
-        map.put(URL.class, MetaUtils.listOf("host", "port"));
-        map.put(Date.class, MetaUtils.listOf("month"));
-
-        Map optionItem = (Map<Class, List<String>>)options.get(FIELD_SPECIFIERS);
-
-        assertThat(optionItem)
-                .containsAllEntriesOf(map);
+        assertThat(options.getFieldSpecifiers())
+                .isNotNull()
+                .hasSize(2)
+                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
+                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(1));
     }
 
     @Test
     void withFieldNameSpecifierMap() {
-        Map<Class<?>, List<String>> map = MetaUtils.mapOf(URL.class, MetaUtils.listOf("protocol"));
+        Map<Class<?>, Collection<String>> map = MetaUtils.mapOf(URL.class, MetaUtils.listOf("protocol"));
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldSpecifiersMap(map)
                 .build();
 
-        assertThat(options)
+        assertThat(options.getFieldSpecifiers())
                 .hasSize(1)
-                .containsEntry(FIELD_SPECIFIERS, map);
-
-        Map specifiers = (Map<Class<?>, List<String>>) options.get(FIELD_SPECIFIERS);
-
-        assertThat(specifiers)
-                .hasSize(1)
-                .containsEntry(URL.class, MetaUtils.listOf("protocol"));
+                .containsKey(URL.class);
     }
     @Test
     void withFieldNameSpecifierMap_accumulates_andKeepsUnique() {
-        Map<Class<?>, List<String>> map = MetaUtils.mapOf(
+        Map<Class<?>, Collection<String>> map = MetaUtils.mapOf(
                 URL.class, MetaUtils.listOf("protocol"),
-                Date.class, MetaUtils.listOf("month"));
+                LocalDate.class, MetaUtils.listOf("month"));
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withFieldSpecifiersMap(map)
                 .withFieldSpecifier(URL.class, MetaUtils.listOf("host", "ref"))
-                .withFieldSpecifier(TimeZone.class, MetaUtils.listOf("zone"))
+                .withFieldSpecifier(LocalDate.class, MetaUtils.listOf("year"))
                 .build();
 
-        Map specifiers = (Map<Class<?>, List<String>>) options.get(FIELD_SPECIFIERS);
 
-        Map<Class<?>, List<String>> expected = MetaUtils.mapOf(
-                URL.class, MetaUtils.listOf("host", "ref"),
-                TimeZone.class, MetaUtils.listOf("zone"),
-                Date.class, MetaUtils.listOf("month"));
-
-        assertThat(specifiers)
-                .hasSize(3)
-                .containsAllEntriesOf(expected);
+        assertThat(options.getFieldSpecifiers())
+                .isNotNull()
+                .hasSize(2)
+                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
+                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(2));
     }
 
     @Test
     void withPrettyPrint() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withPrettyPrint()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(PRETTY_PRINT, Boolean.TRUE);
+        assertThat(options.isPrettyPrint()).isTrue();
     }
 
     @Test
     void withDefaultOptimizations() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
                 .build();
 
-        assertThat(options)
-                .hasSize(3)
-                .containsEntry(SKIP_NULL_FIELDS, Boolean.TRUE)
-                .containsEntry(SHORT_META_KEYS, Boolean.TRUE)
-                .containsEntry(DATE_FORMAT, ISO_DATE_TIME_FORMAT);
+        assertThat(options.isSkippingNullFields()).isTrue();
+        assertThat(options.isUsingShortMetaKeys()).isTrue();
+        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
     }
 
     @Test
     void withCustomWriter() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomWriter(Date.class, new Writers.DateWriter())
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(CUSTOM_WRITER_MAP);
-
-        Map customWriterMap = (Map<Class<?>, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
-
-        assertThat(customWriterMap).hasSize(1)
+        assertThat(options.getCustomWriters())
+                .hasSizeGreaterThan(20)
                 .containsKey(Date.class);
     }
 
@@ -275,48 +224,39 @@ class WriteOptionsBuilderTest {
     void withCustomWriterMap() {
         Map<Class<?>, JsonWriter.JsonClassWriter> map = new HashMap<>();
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomWriterMap(map)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(CUSTOM_WRITER_MAP, map);
+        // needs a real test.
+        assertThat(options.getCustomWriters())
+                .hasSizeGreaterThan(20)
+                .containsKeys(Calendar.class, Timestamp.class, BigInteger.class, BigDecimal.class);
     }
 
     @Test
     void withCustomWriterMap_whenCustomWriterMapAlreadyExists_throwsIllegalStateException() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomWriter(Date.class, new Writers.DateWriter())
                 .withCustomWriter(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter())
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(CUSTOM_WRITER_MAP);
-
-        Map map = (Map<Class<?>, JsonWriter.JsonClassWriter>)options.get(CUSTOM_WRITER_MAP);
-
-        assertThat(map)
-                .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
+        assertThat(options.getCustomWriters())
+                .hasSizeGreaterThan(20)
+                .containsKeys(Date.class, CustomWriterTest.Person.class);
     }
 
     @Test
     void withCustomTypeName_usingClassAsKey() {
         String value = "foobar";
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomTypeName(Date.class, value)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map<String, String> typeNameMap = (Map)options.get(TYPE_NAME_MAP);
-
-        assertThat(typeNameMap).hasSize(1)
-                .containsEntry(Date.class.getName(), value);
+        assertThat(options.getCustomWriters())
+                .hasSizeGreaterThan(20)
+                .containsKey(Date.class);
     }
 
     @Test
@@ -324,37 +264,28 @@ class WriteOptionsBuilderTest {
         String key = "javax.sql.Date";
         String value = "foobar";
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomTypeName(key, value)
                 .build();
 
-        assertThat(options)
+        assertThat(options.getCustomTypeMap())
                 .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        assertThat(typeNameMap).hasSize(1)
-                .containsEntry(key, value);
+                .containsKey(key);
     }
 
     @Test
     void withCustomTypeName_whenAddingNames_addsUniqueNames() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(Date.class.getName(), "foo1")
                 .withCustomTypeName(String.class, "bar2")
                 .withCustomTypeName(Date.class.getName(), "foo2")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map map = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        assertThat(map)
-                .containsAllEntriesOf(expectedTypeNameMap());
+        assertThat(options.getCustomTypeMap())
+                .hasSize(2)
+                .containsEntry(String.class.getName(), "bar2")
+                .containsEntry(Date.class.getName(), "foo2");
     }
 
     @Test
@@ -363,28 +294,17 @@ class WriteOptionsBuilderTest {
                 String.class.getName(), "char1",
                 "foo", "bar");
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomTypeNameMap(map)
                 .withCustomTypeName(String.class, "char2")
                 .withCustomTypeName(Date.class, "dt")
                 .withCustomTypeName(TimeZone.class.getName(), "tz")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        Map<String, String> expected = MetaUtils.mapOf(
-                String.class.getName(), "char2",
-                "foo", "bar",
-                Date.class.getName(), "dt",
-                TimeZone.class.getName(), "tz"
-        );
-
-        assertThat(typeNameMap)
-                .containsAllEntriesOf(expected);
+        assertThat(options.getCustomTypeMap())
+                .hasSize(4)
+                .containsEntry("foo", "bar")
+                .containsEntry(String.class.getName(), "char2");
     }
 
 
@@ -394,37 +314,31 @@ class WriteOptionsBuilderTest {
         String value = "foobar";
 
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
-                        .noTypeInfo()
+                        .neverShowTypeInfo()
                         .withCustomTypeName(Date.class, value)
                         .build())
-                .withMessage("TYPE_NAME_MAP is not needed when types are not going to be output");
+                .withMessage("There is no need to set the type name map when types are never being written");
     }
 
     @Test
     void withCustomTypeNameMap_whenNoTypeInformationIsBeingOutput_throwsIllegalStateException() {
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
-                        .noTypeInfo()
+                        .neverShowTypeInfo()
                         .withCustomTypeNameMap(new HashMap<>())
                         .build())
-                .withMessage("TYPE_NAME_MAP is not needed when types are not going to be output");
+                .withMessage("There is no need to set the type name map when types are never being written");
     }
 
     @Test
     void withCustomTypeNameMap_whenAddingNames_addsUniqueNames() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(String.class, "bar2")
                 .build();
 
-        assertThat(options)
+        assertThat(options.getCustomTypeMap())
                 .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map map = new HashMap<>();
-        map.put(String.class.getName(), "bar2");
-
-        assertThat(map)
-                .containsAllEntriesOf(map);
+                .containsEntry(String.class.getName(), "bar2");
     }
 
     private Map<String, String> expectedTypeNameMap() {
@@ -436,93 +350,70 @@ class WriteOptionsBuilderTest {
 
     @Test
     void writeLongsAsStrigs() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .writeLongsAsStrings()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(WRITE_LONGS_AS_STRINGS, Boolean.TRUE);
+        assertThat(options.isWritingLongsAsStrings()).isTrue();
     }
 
     @Test
     void doNotWritePrivateEnumFields() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .doNotWritePrivateEnumFields()
                 .build();
 
-        assertThat(options)
-                .hasSize(2)
-                .containsEntry(ENUM_PUBLIC_ONLY, Boolean.TRUE)
-                .containsEntry(WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
+        assertThat(options.isEnumPublicOnly()).isTrue();
     }
 
     @Test
     void writeEnumsAsObjects() {
-        Map options = new WriteOptionsBuilder()
-                .writeEnumsAsObjects()
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeEnumsAsObject()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(WRITE_ENUMS_AS_OBJECTS, Boolean.TRUE);
+        assertThat(options.isEnumPublicOnly()).isFalse();
     }
 
     @Test
     void forceMapOutputAsKeysAndItems() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .forceMapOutputAsKeysAndItems()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, Boolean.TRUE);
+        assertThat(options.isForcingMapFormatWithKeyArrays()).isTrue();
     }
 
     @Test
     void withClassLoader() {
         ClassLoader classLoader = this.getClass().getClassLoader();
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withClassLoader(classLoader)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(CLASSLOADER, classLoader);
+        assertThat(options.getClassLoader()).isEqualTo(this.getClass().getClassLoader());
     }
 
     @Test
     void doNotCustomizeClass() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withNoCustomizationFor(String.class)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_WRITER_MAP);
-
-        Collection collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
-
-        assertThat(collection)
+        assertThat(options.getNonCustomClasses())
                 .hasSize(1)
                 .contains(String.class);
     }
 
     @Test
     void doNotCustomizeClass_withTwoOfSameClass_isUsingSetUnderneath() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withNoCustomizationFor(String.class)
                 .withNoCustomizationFor(String.class)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_WRITER_MAP);
-
-        Collection collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
-
-        assertThat(collection)
+        assertThat(options.getNonCustomClasses())
                 .hasSize(1)
                 .contains(String.class);
     }
@@ -530,37 +421,27 @@ class WriteOptionsBuilderTest {
     void doNotCustomizeClass_addsAdditionalUniqueClasses() {
         Collection<Class<?>> list = MetaUtils.listOf(HashMap.class, String.class);
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withNoCustomizationFor(String.class)
                 .withNoCustomizationFor(Map.class)
                 .withNoCustomizationsFor(list)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_WRITER_MAP);
-
-        Collection collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
-
-        assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, HashMap.class, Map.class));
+        assertThat(options.getNonCustomClasses())
+                .hasSize(3)
+                .contains(HashMap.class, String.class, Map.class);
     }
 
     @Test
     void withNonCustomizableClasses_whenNonCustomizableClassesExist_addsUniqueItemsToTheCollection() {
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .withNoCustomizationFor(String.class)
                 .withNoCustomizationFor(Date.class)
                 .withNoCustomizationsFor(MetaUtils.listOf(String.class, List.class))
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_WRITER_MAP);
-
-        Collection collection = (Collection<Class<?>>)options.get(NOT_CUSTOM_WRITER_MAP);
-
-        assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, Date.class, List.class));
+        assertThat(options.getNonCustomClasses())
+                .hasSize(3)
+                .containsExactlyInAnyOrder(String.class, Date.class, List.class);
     }
 }

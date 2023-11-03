@@ -3,13 +3,24 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.awt.*;
+import java.awt.Point;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -474,8 +485,8 @@ public class MapOfMapsTest
         pCopy.setBirthYear(1975);
         pCopy.setIq(new BigInteger("140"));
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
-        
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().noTypeInfo().build());
+
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().neverShowTypeInfo().build());
         Object[] array = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
 
         assert array[0] == array[1];    // same instance
@@ -501,7 +512,7 @@ public class MapOfMapsTest
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
         List<List<Person>> holder = MetaUtils.listOf(list, list);
 
-        String json = TestUtil.toJson(holder, new WriteOptionsBuilder().noTypeInfo().build());
+        String json = TestUtil.toJson(holder, new WriteOptionsBuilder().neverShowTypeInfo().build());
         Object[] array = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         
         assert array[0] == array[1];                // Same instance of List

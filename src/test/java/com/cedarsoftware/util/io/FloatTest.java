@@ -3,9 +3,16 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -90,7 +97,7 @@ public class FloatTest
     @Test
     public void testNanAsRoot()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(Float.NaN, args);
         assert json.contains("null");
 
@@ -104,7 +111,7 @@ public class FloatTest
     @Test
     public void testNanMapKey()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         LinkedHashMap<String, Float> map = new LinkedHashMap<>(1);
         map.put("field", Float.NaN);
         String json = TestUtil.toJson(map, args);
@@ -127,7 +134,7 @@ public class FloatTest
         Simple holder = new Simple();
         holder.setX(Float.NaN);
 
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -143,7 +150,7 @@ public class FloatTest
     @Test
     public void testNanArrayElement()
     {
-        Map<String, Object> args = new WriteOptionsBuilder().noTypeInfo().build();
+        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Float.NaN)), args);
         assert json.contains("null");
 

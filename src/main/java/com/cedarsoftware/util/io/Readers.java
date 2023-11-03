@@ -193,7 +193,7 @@ public class Readers
 
             jObj.target = getEnum(cls.orElse(c), jObj);
 
-            ObjectResolver resolver = (ObjectResolver) args.get(JsonReader.OBJECT_RESOLVER);
+            Resolver resolver = ReaderContext.instance().getResolver();
             resolver.traverseFields(stack, jObj, excludedFields);
             Object target = jObj.getTarget();
             return target;

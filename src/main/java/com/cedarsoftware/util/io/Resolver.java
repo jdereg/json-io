@@ -4,7 +4,21 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -125,6 +139,7 @@ abstract class Resolver
     {
         this.reader = reader;
         Map<String, Object> optionalArgs = reader.getArgs();
+        ReaderContext.instance().setResolver(this);
         optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
         useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
         unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
@@ -197,6 +212,9 @@ abstract class Resolver
 
     public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 
+    public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields);
+
+
     protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 
     protected abstract void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj);
@@ -205,7 +223,7 @@ abstract class Resolver
     {
         patchUnresolvedReferences();
         rehashMaps();
-        ReferenceTracker.instance().clear();
+        ReaderContext.instance().clearAll();
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
@@ -528,7 +546,7 @@ abstract class Resolver
     protected JsonObject getReferencedObj(Long ref)
     {
         // Get deep referenced object.
-        JsonObject refObject = ReferenceTracker.instance().getRef(ref);
+        JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
         if (refObject == null)
         {
             throw new JsonIoException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
@@ -643,7 +661,7 @@ abstract class Resolver
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.target;
-            JsonObject objReferenced = ReferenceTracker.instance().getRef(ref.refId);
+            JsonObject objReferenced = ReaderContext.instance().getReferenceTracker().get(ref.refId);
 
             if (ref.index >= 0)
             {    // Fix []'s and Collections containing a forward reference.

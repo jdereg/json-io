@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -152,18 +154,14 @@ class URLTest
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());
     }
 
+
+    @Getter
+    @AllArgsConstructor
     private static class NestedUrl {
         private final URL url;
-
-        public NestedUrl(URL url) {
-            this.url = url;
-        }
-
-        public URL getUrl() {
-            return this.url;
-        }
     }
 
+    @Getter
     private static class NestedTwice {
         private final URL url1;
 
@@ -172,14 +170,6 @@ class URLTest
         public NestedTwice(URL url) {
             this.url1 = url;
             this.url2 = url;
-        }
-
-        public URL getUrl1() {
-            return url1;
-        }
-
-        public URL getUrl2() {
-            return url2;
         }
     }
 }

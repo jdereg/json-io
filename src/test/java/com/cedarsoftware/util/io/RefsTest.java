@@ -178,7 +178,7 @@ class RefsTest
             JsonObject b1 = (JsonObject) jObj.get("_other");
             JsonObject aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            JsonObject aTarget = ReferenceTracker.instance().getRefTarget(aRef);
+            JsonObject aTarget = ReaderContext.instance().getReferenceTracker().get(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;

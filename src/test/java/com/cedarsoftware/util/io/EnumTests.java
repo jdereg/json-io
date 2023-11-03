@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -7,7 +10,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class EnumTests {
 
-    private static final Map<String, Object> basicWriteOptions = new WriteOptionsBuilder().writeEnumsAsObjects().build();
-    private static final Map<String, Object> enumAsPrimitiveOptions = new WriteOptionsBuilder().build();
+    private static final WriteOptions basicWriteOptions = new WriteOptionsBuilder().writeEnumsAsObject().build();
+    private static final WriteOptions enumAsPrimitiveOptions = new WriteOptionsBuilder().writeEnumsAsPrimitives().build();
 
     private static Stream<Arguments> testDifferentWriteOptions() {
         return Stream.of(
@@ -43,7 +49,7 @@ class EnumTests {
 
     @ParameterizedTest
     @MethodSource("testDifferentWriteOptions")
-    void testNestedEnum(Map<String, Object> writeOptions) {
+    void testNestedEnum(WriteOptions writeOptions) {
         NestedEnum expected = new NestedEnum();
         expected.setTestEnum3(TestEnum3.A);
         expected.setTestEnum4(TestEnum4.B);
@@ -58,8 +64,8 @@ class EnumTests {
 
     @ParameterizedTest
     @MethodSource("testDifferentWriteOptions")
-    void testDuplicateRef(Map<String, Object> writeOptions) {
-        DuplicateRefEnum expected = new DuplicateRefEnum(TestEnum3.A);
+    void testDuplicateRef(WriteOptions writeOptions) {
+        DuplicateRefEnum expected = new DuplicateRefEnum(TestEnum3.A, TestEnum3.A);
 
         String json = TestUtil.toJson(expected, writeOptions);
 
@@ -76,7 +82,7 @@ class EnumTests {
 
     @ParameterizedTest
     @MethodSource("testDifferentWriteOptions")
-    void testCollectionOfEnums(Map<String, Object> writeOptions) {
+    void testCollectionOfEnums(WriteOptions writeOptions) {
 
         List input = new LinkedList<>();
         input.addAll(MetaUtils.listOf(TestEnum1.values()));
@@ -107,13 +113,13 @@ class EnumTests {
 
     @ParameterizedTest
     @MethodSource("testArraysWithDifferentWriteOptions")
-    void testEnumsIndividually_doesRoundTrip_successfully(Enum[] enums, Map<String, Object> writeOptions) {
+    void testEnumsIndividually_doesRoundTrip_successfully(Enum[] enums, WriteOptions writeOptions) {
         Arrays.stream(enums).forEach(e -> readWriteAndCompareEnum(e, writeOptions));
     }
 
     @ParameterizedTest
     @MethodSource("testArraysWithDifferentWriteOptions")
-    void testArrayOfEnums_doesRoundTrip_successfully(Enum[] values, Map<String, Object> writeOptions) {
+    void testArrayOfEnums_doesRoundTrip_successfully(Enum[] values, WriteOptions writeOptions) {
         readWriteAndCompareEnumArray(values, writeOptions);
     }
 
@@ -162,8 +168,8 @@ class EnumTests {
     void testEnumWithPrivateMembersAsField_withPrivatesOn() {
         TestEnum4 x = TestEnum4.B;
 
-        Map options = new WriteOptionsBuilder()
-                .writeEnumsAsObjects()
+        WriteOptions options = new WriteOptionsBuilder()
+                .writeEnumsAsObject()
                 .build();
 
         String json = TestUtil.toJson(x, options);
@@ -177,8 +183,8 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        Map options = new WriteOptionsBuilder()
-                .noTypeInfo()
+        WriteOptions options = new WriteOptionsBuilder()
+                .neverShowTypeInfo()
                 .build();
 
         JsonWriter writer = new JsonWriter(ba, options);
@@ -194,7 +200,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        Map options = new WriteOptionsBuilder()
+        WriteOptions options = new WriteOptionsBuilder()
                 .doNotWritePrivateEnumFields()
                 .build();
 
@@ -210,8 +216,8 @@ class EnumTests {
     void testEnumNoOrdinal_enumsAsPrimitive() {
         List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
-        Map options = new WriteOptionsBuilder()
-                .noTypeInfo()
+        WriteOptions options = new WriteOptionsBuilder()
+                .neverShowTypeInfo()
                 .doNotWritePrivateEnumFields()
                 .build();
 
@@ -222,7 +228,7 @@ class EnumTests {
 
     @Test
     void testEnumField() {
-        SimpleClass mc = new SimpleClass(this, "Dude", SimpleEnum.ONE);
+        SimpleClass mc = new SimpleClass("Dude", SimpleEnum.ONE);
         String json = TestUtil.toJson(mc);
         assertThat(json).contains("Dude");
 
@@ -362,54 +368,24 @@ class EnumTests {
     private enum TestEnum4 {
         A, B, C;
 
-        public String getFoo() {
-            return foo;
-        }
-
-        public void setFoo(String foo) {
-            this.foo = foo;
-        }
-
         private int internal = 6;
         protected long age = 21;
+
+        @Getter
+        @Setter
         private String foo = "bar";
     }
 
+    @Getter
+    @Setter
     private static class NestedEnum {
-        public TestEnum3 getTestEnum3() {
-            return testEnum3;
-        }
-
-        public void setTestEnum3(Enum testEnum3) {
-            this.testEnum3 = (TestEnum3) testEnum3;
-        }
-
-        public TestEnum4 getTestEnum4() {
-            return testEnum4;
-        }
-
-        public void setTestEnum4(Enum testEnum4) {
-            this.testEnum4 = (TestEnum4) testEnum4;
-        }
-
         private TestEnum3 testEnum3;
         private TestEnum4 testEnum4;
     }
 
+    @AllArgsConstructor
+    @Getter
     public class DuplicateRefEnum {
-        private DuplicateRefEnum(TestEnum3 value) {
-            this.enum1 = value;
-            this.enum2 = value;
-        }
-
-        public TestEnum3 getEnum1() {
-            return enum1;
-        }
-
-        public TestEnum3 getEnum2() {
-            return enum2;
-        }
-
         private final TestEnum3 enum1;
         private final TestEnum3 enum2;
     }
@@ -446,36 +422,21 @@ class EnumTests {
         ONE, TWO;
     }
 
+    @Getter
+    @Setter
+    @AllArgsConstructor
     private class SimpleClass {
-        public SimpleClass(EnumTests enclosing, String name, SimpleEnum myEnum) {
-            this.name = name;
-            this.myEnum = myEnum;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public SimpleEnum getMyEnum() {
-            return myEnum;
-        }
-
         private final String name;
         private final SimpleEnum myEnum;
     }
 
+
     private enum EnumNestedWithinEnum {
         ONE, TWO, THREE;
 
+        @Getter
+        @Setter
         private SimpleEnum simpleEnum;
-
-        public void setSimpleEnum(SimpleEnum simpleEnum) {
-            this.simpleEnum = simpleEnum;
-        }
-
-        public SimpleEnum getSimpleEnum() {
-            return this.simpleEnum;
-        }
     }
 
     private String loadJson(String fileName) {
@@ -488,15 +449,15 @@ class EnumTests {
 
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static <T> T readWriteAndCompareEnum(T input, Map<String, Object> writeOptions) {
-        String json = TestUtil.toJson(input);
+    private static <T> T readWriteAndCompareEnum(T input, WriteOptions writeOptions) {
+        String json = TestUtil.toJson(input, writeOptions);
         Enum actual = TestUtil.toJava(json);
         assertThat(actual).isEqualTo(input);
         return (T) actual;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static <T> T readWriteAndCompareEnumArray(T[] enumArray, Map<String, Object> writeOptions) {
+    private static <T> T readWriteAndCompareEnumArray(T[] enumArray, WriteOptions writeOptions) {
         String json = TestUtil.toJson(enumArray, writeOptions);
         T[] actual = TestUtil.toJava(json);
         assertThat(actual).isEqualTo(enumArray);

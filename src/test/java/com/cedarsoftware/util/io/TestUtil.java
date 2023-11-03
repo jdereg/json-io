@@ -1,12 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,13 +72,13 @@ public class TestUtil
         Object obj;
     }
 
-    private static TestInfo writeJsonIo(Object obj, Map<String, Object> args)
+    private static TestInfo writeJsonIo(Object obj, WriteOptions writeOptions)
     {
         TestInfo testInfo = new TestInfo();
         try
         {
             long start = System.nanoTime();
-            testInfo.json = JsonWriter.objectToJson(obj, args);
+            testInfo.json = JsonWriter.toJson(obj, writeOptions);
             testInfo.nanos = System.nanoTime() - start;
         }
         catch (Exception e)
@@ -86,7 +88,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo writeJDK(Object obj, Map<String, Object> args)
+    private static TestInfo writeJDK(Object obj)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -105,7 +107,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo writeGSON(Object obj, Map<String, Object> args)
+    private static TestInfo writeGSON(Object obj, WriteOptions writeOptions)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -123,7 +125,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo writeJackson(Object obj, Map<String, Object> args)
+    private static TestInfo writeJackson(Object obj)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -142,21 +144,21 @@ public class TestUtil
 
     public static String toJson(Object obj)
     {
-        return toJson(obj, new LinkedHashMap<>());
+        return toJson(obj, new WriteOptionsBuilder().build());
     }
 
     /**
      * Generally, use this API to write JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.
      */
-    public static String toJson(Object obj, Map<String, Object> args)
+    public static String toJson(Object obj, WriteOptions writeOptions)
     {
         totalWrites++;
         // json-io
-        TestInfo jsonIoTestInfo = writeJsonIo(obj, args);
-        TestInfo jdkTestInfo = writeJDK(obj, args);
-        TestInfo gsonTestInfo = writeGSON(obj, args);
-        TestInfo jacksonTestInfo = writeJackson(obj, args);
+        TestInfo jsonIoTestInfo = writeJsonIo(obj, writeOptions);
+        TestInfo jdkTestInfo = writeJDK(obj);
+        TestInfo gsonTestInfo = writeGSON(obj, writeOptions);
+        TestInfo jacksonTestInfo = writeJackson(obj);
 
         if (jsonIoTestInfo.json != null)
         {
