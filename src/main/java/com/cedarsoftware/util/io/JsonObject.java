@@ -131,45 +131,45 @@ public class JsonObject extends LinkedHashMap<Object, Object>
 
     public Object getPrimitiveValue()
     {
+        final Object value = getValue();
         if ("boolean".equals(type) || "double".equals(type) || "long".equals(type))
         {
-            return get("value");
+            return value;
         }
         else if ("byte".equals(type))
         {
-            Number b = (Number) get("value");
+            Number b = (Number) value;
             return b.byteValue();
         }
         else if ("char".equals(type))
         {
-            String c = (String) get("value");
+            String c = (String) value;
             return c.charAt(0);
         }
         else if ("float".equals(type))
         {
-            Number f = (Number) get("value");
+            Number f = (Number) value;
             return f.floatValue();
         }
         else if ("int".equals(type))
         {
-            Number integer = (Number) get("value");
+            Number integer = (Number) value;
             return integer.intValue();
         }
         else if ("short".equals(type))
         {
-            Number s = (Number) get("value");
+            Number s = (Number) value;
             return s.shortValue();
         }
         else if ("date".equals(type))
         {
-            Object date = get("value");
-            if (date instanceof Long)
+            if (value instanceof Long)
             {
-                return new Date((Long)(date));
+                return new Date((Long)value);
             }
-            else if (date instanceof String)
+            else if (value instanceof String)
             {
-                return Readers.DateReader.parseDate((String) date);
+                return Readers.DateReader.parseDate((String)value);
             }
             else
             {
@@ -178,12 +178,10 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         }
         else if ("java.math.BigInteger".equals(type))
         {
-            Object value = get("value");
             return Readers.bigIntegerFrom(value);
         }
         else if ("java.math.BigDecimal".equals(type))
         {
-            Object value = get("value");
             return Readers.bigDecimalFrom(value);
         }
         else

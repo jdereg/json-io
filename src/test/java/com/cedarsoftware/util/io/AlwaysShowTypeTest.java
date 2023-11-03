@@ -3,9 +3,6 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -33,7 +30,7 @@ class AlwaysShowTypeTest
         TestObject btc = new TestObject("Bitcoin");
         btc._other = new TestObject("Satoshi");
         String json0 = TestUtil.toJson(btc, new WriteOptionsBuilder().forceTypeInfo().build());
-        TestObject thatBtc = (TestObject) TestUtil.toJava(json0);
+        TestObject thatBtc = TestUtil.toJava(json0);
         assertTrue(DeepEquals.deepEquals(btc, thatBtc));
         String json1 = TestUtil.toJson(btc);
         assertTrue(json0.length() > json1.length());

@@ -2,19 +2,14 @@ package com.cedarsoftware.util.io;
 
 import lombok.Getter;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This class adds significant performance increase over using the JDK
  * PushbackReader.  This is due to this class not using synchronization
  * as it is not needed.
  * <p>
- * All custom writers for json-io subclass this class.  Special writers are not needed for handling
- * user-defined classes.  However, special writers are built/supplied by json-io for many of the
- * primitive types and other JDK classes simply to allow for a more concise form.
- *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <p>
  *         Copyright (c) Cedar Software LLC
@@ -31,73 +26,48 @@ import java.io.Reader;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class FastPushbackBufferedReader extends BufferedReader implements FastPushbackReader
+public class FastPushbackBufferedReader implements FastPushbackReader
 {
-    private final int[] buf = new int[256];
-    private int idx = 0;
+    private final Reader in;
+    private final char[] cb;
+    private int nChars, nextChar;
     private int unread = Integer.MAX_VALUE;
     @Getter
     protected int line = 1;
     @Getter
     protected int col = 0;
 
-    public FastPushbackBufferedReader(Reader reader)
+    public FastPushbackBufferedReader(InputStream inputStream)
     {
-        super(reader);
+        in = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+        cb = new char[1024];
+        nextChar = nChars = 0;
     }
 
     public String getLastSnippet()
     {
         StringBuilder s = new StringBuilder();
-        for (int i=idx; i < buf.length; i++)
+        for (int i=Math.max(nextChar - 1, 0); i < nChars; i++)
         {
-            if (appendChar(s, i))
-            {
-                break;
-            }
-        }
-        for (int i=0; i < idx; i++)
-        {
-            if (appendChar(s, i))
-            {
-                break;
-            }
+            s.append(cb[i]);
         }
         return s.toString();
     }
-
-    private boolean appendChar(StringBuilder s, int i)
-    {
-        try
-        {
-            final int snip = buf[i];
-            if (snip == 0)
-            {
-                return true;
-            }
-            s.appendCodePoint(snip);
-        }
-        catch (Exception e)
-        {
-            return true;
-        }
-        return false;
-    }
-
+    
     public int read() throws IOException
     {
         int ch;
-        if (unread == 0x7fffffff)
+        if (unread == Integer.MAX_VALUE)
         {
-            ch = super.read();
+            ch = realRead();
         }
         else
         {
             ch = unread;
-            unread = 0x7fffffff;
+            unread = Integer.MAX_VALUE;
         }
 
-        if ((buf[idx++] = ch) == 0x0a)
+        if (ch == 0x0a)
         {
             line++;
             col = 0;
@@ -107,14 +77,10 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
             col++;
         }
 
-        if (idx >= buf.length)
-        {
-            idx = 0;
-        }
         return ch;
     }
 
-    public void unread(int c) throws IOException
+    public void unread(int c)
     {
         if ((unread = c) == 0x0a)
         {
@@ -124,14 +90,53 @@ public class FastPushbackBufferedReader extends BufferedReader implements FastPu
         {
             col--;
         }
+    }
 
-        if (idx < 1)
+    /**
+     * Read bytes in from original stream and add to buffer
+     */
+    private void fill() throws IOException
+    {
+        int n;
+        
+        do
         {
-            idx = buf.length - 1;
-        }
-        else
+            n = in.read(cb, 0, cb.length);
+        } while (n == 0);
+
+        if (n > 0)
         {
-            idx--;
+            nChars = n;
+            nextChar = 0;
         }
+    }
+
+    /**
+     * Read a single UTF-8 character.  Return -1 if EOF, otherwise the int value of the character.
+     */
+    public int realRead() throws IOException
+    {
+        while (true)
+        {
+            if (nextChar >= nChars)
+            {
+                fill();
+                if (nextChar >= nChars)
+                {
+                    return -1;
+                }
+            }
+            return cb[nextChar++];
+        }
+    }
+
+    public int read(char[] cbuf, int off, int len) throws IOException
+    {
+        throw new UnsupportedEncodingException("This method not implemented.");
+    }
+
+    public void close() throws IOException
+    {
+        in.close();
     }
 }

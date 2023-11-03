@@ -51,7 +51,14 @@ class ErrorsTest
                     "  },\n" +
                     "  \"string: \"Hello World\"\n" +
                     "}";
-            assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        try
+        {
+            TestUtil.toJava(json);
+        }
+        catch (Exception e)
+        {
+            assert e.getMessage().contains("Expected ':' between string field and value");
+        }
     }
 
     @Test

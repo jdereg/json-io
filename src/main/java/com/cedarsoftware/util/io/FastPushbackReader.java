@@ -25,7 +25,7 @@ public interface FastPushbackReader extends Closeable {
 
     int getLine();
 
-    void unread(int c) throws IOException;
+    void unread(int c);
 
     int read() throws IOException;
 

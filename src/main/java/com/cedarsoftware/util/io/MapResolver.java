@@ -53,7 +53,7 @@ public class MapResolver extends Resolver
         super(reader);
     }
 
-    protected Object readWithCustomReaderIfOneExists(Object o, Class compType, Deque<JsonObject> stack)
+    protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
     {
         // No custom reader support for maps
         return null;

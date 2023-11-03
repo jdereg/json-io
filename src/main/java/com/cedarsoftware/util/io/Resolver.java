@@ -180,7 +180,7 @@ abstract class Resolver
             else
             {
                 Object special;
-                if ((special = readWithCustomReaderIfOneExists(jsonObj, null, stack)) != null)
+                if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
                 {
                     jsonObj.target = special;
                 }
@@ -193,7 +193,7 @@ abstract class Resolver
         return root.target;
     }
 
-    protected abstract Object readWithCustomReaderIfOneExists(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
 
     public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 
@@ -244,7 +244,7 @@ abstract class Resolver
         {
             if (keys != items)
             {
-                throw new JsonIoException("JSON has " + KEYS + " or " + ITEMS + " empty");
+                throw new JsonIoException("Unbalanced Object in JSON, it has " + KEYS + " or " + ITEMS + " empty");
             }
             return;
         }
@@ -323,7 +323,7 @@ abstract class Resolver
         // We can't set values to an Object, so well try to use the contained type instead
         if ("java.lang.Object".equals(type))
         {
-            Object value = jsonObj.get("value");
+            Object value = jsonObj.getValue();
             if (jsonObj.keySet().size() == 1 && value != null)
             {
                 type = value.getClass().getName();
@@ -363,6 +363,23 @@ abstract class Resolver
                 }
             }
 
+            // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
+            // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
+            // return.
+            JsonReader.ClassFactory classFactory = getClassFactory(c);
+            if (classFactory != null)
+            {
+                Object target = classFactory.newInstance(c, jsonObj);
+
+                if (classFactory.isObjectFinal())
+                {
+                    jsonObj.setFinishedTarget(target, true);
+                    return target;
+                }
+            }
+
+            // Use other methods to determine the type of class to be instantiated, including looking at the
+            // component type of an array.  Also, need to look at primitives, Enums, Immutable collection types.
             if (c.isArray())
             {    // Handle []
                 Object[] items = jsonObj.getArray();
@@ -378,14 +395,14 @@ abstract class Resolver
                 }
             }
             else
-            {    // Handle regular field.object reference
+            {   // Handle regular field.object reference
                 if (MetaUtils.isPrimitive(c))
                 {
-                    mate = MetaUtils.convert(c, jsonObj.get("value"));
+                    mate = MetaUtils.convert(c, jsonObj.getValue());
                 }
                 else if (c == Class.class)
                 {
-                    mate = MetaUtils.classForName((String) jsonObj.get("value"), reader.getClassLoader());
+                    mate = MetaUtils.classForName((String) jsonObj.getValue(), reader.getClassLoader());
                 }
                 else if (c.isEnum())
                 {
@@ -431,7 +448,22 @@ abstract class Resolver
             }
         }
         else
-        {    // @type, not specified, figure out appropriate type
+        {
+            // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
+            // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
+            // return.
+            JsonReader.ClassFactory classFactory = getClassFactory(clazz);
+            if (classFactory != null)
+            {
+                Object target = classFactory.newInstance(clazz, jsonObj);
+
+                if (classFactory.isObjectFinal())
+                {
+                    jsonObj.setFinishedTarget(target, true);
+                    return target;
+                }
+            }
+
             Object[] items = jsonObj.getArray();
 
             // if @items is specified, it must be an [] type.

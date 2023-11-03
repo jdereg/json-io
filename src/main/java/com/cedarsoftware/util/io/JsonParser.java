@@ -292,7 +292,7 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private Object readArray(JsonObject object) throws IOException
+    private Object[] readArray(JsonObject object) throws IOException
     {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
@@ -477,7 +477,7 @@ class JsonParser
                 }
                 else
                 {
-                    str.appendCodePoint(c);
+                    str.append((char)c);
                 }
             }
             else if (state == STRING_SLASH)
@@ -485,31 +485,31 @@ class JsonParser
                 switch(c)
                 {
                     case '\\':
-                        str.appendCodePoint('\\');
+                        str.append('\\');
                         break;
                     case '/':
-                        str.appendCodePoint('/');
+                        str.append('/');
                         break;
                     case '"':
-                        str.appendCodePoint('"');
+                        str.append('"');
                         break;
                     case '\'':
-                        str.appendCodePoint('\'');
+                        str.append('\'');
                         break;
                     case 'b':
-                        str.appendCodePoint('\b');
+                        str.append('\b');
                         break;
                     case 'f':
-                        str.appendCodePoint('\f');
+                        str.append('\f');
                         break;
                     case 'n':
-                        str.appendCodePoint('\n');
+                        str.append('\n');
                         break;
                     case 'r':
-                        str.appendCodePoint('\r');
+                        str.append('\r');
                         break;
                     case 't':
-                        str.appendCodePoint('\t');
+                        str.append('\t');
                         break;
                     case 'u':
                         hex.setLength(0);
@@ -528,11 +528,11 @@ class JsonParser
             {
                 if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
                 {
-                    hex.appendCodePoint((char) c);
+                    hex.append((char) c);
                     if (hex.length() == 4)
                     {
                         int value = Integer.parseInt(hex.toString(), 16);
-                        str.appendCodePoint(value);
+                        str.append((char)value);
                         state = STRING_START;
                     }
                 }

@@ -750,7 +750,7 @@ public class JsonReader implements Closeable
 
     public JsonReader(InputStream inp, boolean useMaps, int maxDepth)
     {
-        this(inp, makeArgMap(new HashMap<String, Object>(), useMaps), maxDepth);
+        this(inp, makeArgMap(new HashMap<>(), useMaps), maxDepth);
     }
 
     public JsonReader(InputStream inp, boolean useMaps)
@@ -761,8 +761,7 @@ public class JsonReader implements Closeable
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
-
-        input = new FastPushbackBufferedReader(new InputStreamReader(inp, StandardCharsets.UTF_8));
+        input = new FastPushbackBufferedReader(inp);
         maxParseDepth = maxDepth;
     }
 
@@ -775,7 +774,7 @@ public class JsonReader implements Closeable
     {
         initializeFromArgs(optionalArgs);
         byte[] bytes = inp.getBytes(StandardCharsets.UTF_8);
-        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
+        input = new FastPushbackBufferedReader(new ByteArrayInputStream(bytes));
         maxParseDepth = maxDepth;
     }
 
@@ -787,7 +786,7 @@ public class JsonReader implements Closeable
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
-        input = new FastPushbackBufferedReader(new InputStreamReader(new ByteArrayInputStream(inp), StandardCharsets.UTF_8));
+        input = new FastPushbackBufferedReader(new ByteArrayInputStream(inp));
         maxParseDepth = maxDepth;
     }
 
@@ -823,7 +822,6 @@ public class JsonReader implements Closeable
         }
 
         setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
-
 
         Map<Class<?>, JsonClassReader> customReaders = (Map) args.get(CUSTOM_READER_MAP);
         if (customReaders != null) {

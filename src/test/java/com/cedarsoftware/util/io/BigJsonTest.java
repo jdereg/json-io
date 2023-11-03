@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
-import com.google.gson.Gson;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,22 +29,28 @@ class BigJsonTest
     @Test
     void testBigJsonToJava()
     {
-        String json = TestUtil.fetchResource("big5D.json");
-        Map map = TestUtil.toJava(json);
-        assertEquals("big5D", map.get("ncube"));
-        assertEquals(0L, map.get("defaultCellValue"));
-        assertNotNull(map.get("axes"));
-        assertNotNull(map.get("cells"));
+        for (int i=0; i < 1; i++)
+        {
+            String json = TestUtil.fetchResource("big5D.json");
+            Map map = TestUtil.toJava(json);
+            assertEquals("big5D", map.get("ncube"));
+            assertEquals(0L, map.get("defaultCellValue"));
+            assertNotNull(map.get("axes"));
+            assertNotNull(map.get("cells"));
+        }
     }
 
     @Test
     void testBigJsonToMaps()
     {
-        String json = TestUtil.fetchResource("big5D.json");
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
-        assertEquals("big5D", map.get("ncube"));
-        assertEquals(0L, map.get("defaultCellValue"));
-        assertNotNull(map.get("axes"));
-        assertNotNull(map.get("cells"));
+        for (int i=0; i < 1; i++)
+        {
+            String json = TestUtil.fetchResource("big5D.json");
+            Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+            assertEquals("big5D", map.get("ncube"));
+            assertEquals(0L, map.get("defaultCellValue"));
+            assertNotNull(map.get("axes"));
+            assertNotNull(map.get("cells"));
+        }
     }
 }

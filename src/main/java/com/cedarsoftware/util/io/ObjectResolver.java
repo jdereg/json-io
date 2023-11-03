@@ -165,7 +165,7 @@ public class ObjectResolver extends Resolver
                 return;
             }
 
-            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the subobjects may not have an
+            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the sub-objects may not have a
             // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
             // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
             // exists).
@@ -176,7 +176,7 @@ public class ObjectResolver extends Resolver
                     markUntypedObjects(field.getGenericType(), rhs, MetaUtils.getDeepDeclaredFields(fieldType));
                 }
 
-                // Ensure .type field set on JsonObject
+                // Ensure 'type' field set on JsonObject
                 final JsonObject job = (JsonObject) rhs;
                 final String type = job.type;
                 if (type == null || type.isEmpty())
@@ -193,7 +193,7 @@ public class ObjectResolver extends Resolver
                 Object value = createJavaObjectInstance(fieldType, jObj);
                 MetaUtils.setFieldValue(field, target, value);
             }
-            else if ((special = readWithCustomReaderIfOneExists(rhs, fieldType, stack)) != null)
+            else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
             {
                 if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
                     MetaUtils.setFieldValue(field, target, Enum.valueOf(fieldType, (String) special));
@@ -269,7 +269,7 @@ public class ObjectResolver extends Resolver
                 if (MetaUtils.isPrimitive(fieldType))
                 {
                     Object converted = MetaUtils.convert(fieldType, rhs);
-                    if(isBasicWrapperType(targetClass)) {
+                    if (isBasicWrapperType(targetClass)) {
                         jsonObj.target = converted;
                     } else {
                         MetaUtils.setFieldValue(field, target, converted);
@@ -325,7 +325,7 @@ public class ObjectResolver extends Resolver
             {
                 storeMissingField(target, missingField, null);
             }
-            else if ((special = readWithCustomReaderIfOneExists(rhs, null, stack)) != null)
+            else if ((special = readWithFactoryIfExists(rhs, null, stack)) != null)
             {
                 storeMissingField(target, missingField, special);
             }
@@ -461,7 +461,7 @@ public class ObjectResolver extends Resolver
             {   // Handles {}
                 col.add(new JsonObject());
             }
-            else if ((special = readWithCustomReaderIfOneExists(element, null, stack)) != null)
+            else if ((special = readWithFactoryIfExists(element, null, stack)) != null)
             {
                 col.add(special);
             }
@@ -601,8 +601,8 @@ public class ObjectResolver extends Resolver
         for (int i=0; i < len; i++)
         {
             final Object element = items[i];
-
             Object special;
+            
             if (element == null)
             {
                 Array.set(array, i, null);
@@ -612,7 +612,7 @@ public class ObjectResolver extends Resolver
                 Object arrayElement = createJavaObjectInstance(compType, new JsonObject());
                 Array.set(array, i, arrayElement);
             }
-            else if ((special = readWithCustomReaderIfOneExists(element, compType, stack)) != null)
+            else if ((special = readWithFactoryIfExists(element, compType, stack)) != null)
             {
                 if (compType.isEnum() && special instanceof String) {
                     special = Enum.valueOf(compType, (String)special);
@@ -704,7 +704,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readWithCustomReaderIfOneExists(final Object o, final Class compType, final Deque<JsonObject> stack)
+    protected Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack)
     {
         if (o == null)
         {
@@ -771,7 +771,6 @@ public class ObjectResolver extends Resolver
             {   // Type inferred from target object
                 c = jObj.target.getClass();
             }
-
         }
         else
         {
@@ -783,6 +782,7 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
+        // Use custom classFactory if one exists
         JsonReader.ClassFactory classFactory = getClassFactory(c);
         if (classFactory != null)
         {
@@ -800,12 +800,13 @@ public class ObjectResolver extends Resolver
 
             // NOTE: should we set target on job or is this safe?
             if (classFactory.isObjectFinal()) {
+                job.setFinishedTarget(target, true);
                 return target;
             }
         }
 
+        // Use custom reader if ont exists
         JsonReader.JsonClassReader closestReader = getCustomReader(c);
-
         if (closestReader == null)
         {
             return null;
