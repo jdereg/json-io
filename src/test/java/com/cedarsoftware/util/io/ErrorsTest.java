@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -222,5 +223,39 @@ class ErrorsTest
         assert list.get(1) != null;
         Map map2 = (Map)list.get(2);
         assert map2.get("fingers").equals(5L);
+    }
+
+    private boolean errorContains(String json, String errMsg)
+    {
+        try
+        {
+            TestUtil.toJava(json);
+            fail();
+            return false;
+        }
+        catch (Exception e)
+        {
+            if (e.getMessage().toLowerCase().contains(errMsg.toLowerCase()))
+            {
+                return true;
+            }
+            throw e;
+        }
+    }
+
+    @Test
+    public void testBadJsonFormats()
+    {
+        errorContains("{\"age\":25)", "not ended with '}");
+        errorContains("[25, 50)", "expected ',' or ']' inside array");
+        errorContains("{\"name\", 50}", "expected ':' between string field and value");
+        errorContains("{\"name\":, }", "unknown JSON value type");
+        errorContains("[1, 3, 99d ]", "Expected ',' or ']' inside array");
+        Object x = TestUtil.toJava("\"\\/ should be one char\"");
+        assert x.equals("/ should be one char");
+        x = TestUtil.toJava("\"' should be one char\"");
+        assert x.equals("' should be one char");
+        x = TestUtil.toJava("\"a \\' char\"");
+        assert x.equals("a ' char");
     }
 }

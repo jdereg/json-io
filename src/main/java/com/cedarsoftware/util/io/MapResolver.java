@@ -3,12 +3,7 @@ package com.cedarsoftware.util.io;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Deque;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
@@ -82,10 +77,6 @@ public class MapResolver extends Resolver
             {
                 jsonObj.put(fieldName, null);
             }
-            else if (rhs == JsonParser.EMPTY_OBJECT)
-            {
-                jsonObj.put(fieldName, new JsonObject());
-            }
             else if (rhs.getClass().isArray())
             {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
@@ -145,7 +136,7 @@ public class MapResolver extends Resolver
     }
 
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields) {
-        this.traverseFields(stack, jsonObj);
+        traverseFields(stack, jsonObj);
     }
 
 
@@ -172,12 +163,6 @@ public class MapResolver extends Resolver
 
         for (Object element : items)
         {
-            if (element == JsonParser.EMPTY_OBJECT)
-            {
-                copy.add(new JsonObject());
-                continue;
-            }
-
             copy.add(element);
 
             if (element instanceof Object[])

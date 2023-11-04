@@ -138,24 +138,18 @@ class JsonParser
             switch (state)
             {
                 case STATE_READ_START_OBJECT:
+                    // c read and pushed back before STATE_READ_START_OBJECT, so 'c' always '{' here.
                     c = skipWhitespaceRead();
-                    if (c == '{')
-                    {
-                        object.line = in.getLine();
-                        object.col = in.getCol();
-                        c = skipWhitespaceRead();
-                        if (c == '}')
-                        {    // empty object
-                            return new JsonObject();
-                        }
-                        in.unread(c);
-                        state = STATE_READ_FIELD;
-                        ++curParseDepth;
+                    object.line = in.getLine();
+                    object.col = in.getCol();
+                    c = skipWhitespaceRead();
+                    if (c == '}')
+                    {    // empty object
+                        return new JsonObject();
                     }
-                    else
-                    {
-                        error("Input is invalid JSON; object does not start with '{', c=" + c);
-                    }
+                    in.unread(c);
+                    state = STATE_READ_FIELD;
+                    ++curParseDepth;
                     break;
 
                 case STATE_READ_FIELD:

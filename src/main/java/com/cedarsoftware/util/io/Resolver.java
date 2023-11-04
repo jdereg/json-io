@@ -150,10 +150,9 @@ abstract class Resolver
     protected Object convertMapsToObjects(final JsonObject root)
     {
         if (root.isFinished) {
-            return root.getTarget();
+            return root.target;
         }
 
-        Set<JsonObject> visited = new HashSet<>();
         final Deque<JsonObject> stack = new ArrayDeque<>();
         stack.addFirst(root);
 

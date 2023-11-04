@@ -368,19 +368,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     {
         if (containsKey(ITEMS))
         {
-            Object value = get(ITEMS);
-            if (value instanceof Object[])
-            {
-                return ((Object[])value).length;
-            }
-            else if (value == null)
-            {
-                return 0;
-            }
-            else
-            {
-                throw new JsonIoException("JsonObject with @items, but no array [] associated to it, line " + line + ", col " + col);
-            }
+            return getArray().length;
         }
         else if (containsKey(REF))
         {
@@ -393,29 +381,19 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     private int calculateArrayHash()
     {
         int hashCode = 0;
-        Object things = get(ITEMS);
-        if (things != null && things.getClass().isArray())
+        Object array = get(ITEMS);
+        if (array != null)
         {
-            Object array = getArray();
-            if (array != null)
+            int len = Array.getLength(array);
+            for (int j = 0; j < len; j++)
             {
-                int len = Array.getLength(array);
-                for (int j = 0; j < len; j++)
-                {
-                    Object elem = Array.get(array, j);
-                    hashCode += elem == null ? 0 : elem.hashCode();
-                }
-            }
-        }
-        else if (things instanceof Collection)
-        {
-            Collection col = (Collection) things;
-            Iterator i = col.iterator();
-            while (i.hasNext())
-            {
-                Object elem = i.next();
+                Object elem = Array.get(array, j);
                 hashCode += elem == null ? 0 : elem.hashCode();
             }
+        }
+        else
+        {
+            hashCode = super.hashCode();
         }
         return hashCode;
     }
