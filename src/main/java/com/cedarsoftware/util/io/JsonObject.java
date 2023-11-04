@@ -288,6 +288,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         {
             bytes[i] = ((Number) items[i]).byteValue();
         }
+        hash = null;
     }
 
     void moveCharsToMate()
@@ -310,6 +311,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         {
             throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
         }
+        hash = null;
     }
 
     public Object put(Object key, Object value)
@@ -388,58 +390,54 @@ public class JsonObject extends LinkedHashMap<Object, Object>
         return super.size();
     }
 
+    private int calculateArrayHash()
+    {
+        int hashCode = 0;
+        Object things = get(ITEMS);
+        if (things != null && things.getClass().isArray())
+        {
+            Object array = getArray();
+            if (array != null)
+            {
+                int len = Array.getLength(array);
+                for (int j = 0; j < len; j++)
+                {
+                    Object elem = Array.get(array, j);
+                    hashCode += elem == null ? 0 : elem.hashCode();
+                }
+            }
+        }
+        else if (things instanceof Collection)
+        {
+            Collection col = (Collection) things;
+            Iterator i = col.iterator();
+            while (i.hasNext())
+            {
+                Object elem = i.next();
+                hashCode += elem == null ? 0 : elem.hashCode();
+            }
+        }
+        return hashCode;
+    }
+
     public int hashCode()
     {
         if (hash == null)
         {
-            hash = keySet().hashCode() + values().hashCode();
+            if (isArray() || isCollection())
+            {
+                hash = calculateArrayHash();
+            }
+            else
+            {
+                hash = keySet().hashCode() + values().hashCode();
+            }
         }
         return hash;
     }
+
     public boolean equals(Object other)
     {
-        if (other == null)
-        {
-            return false;
-        }
-        if (this == other)
-        {
-            return true;
-        }
-        if (!getClass().isAssignableFrom(other.getClass()))
-        {
-            return false;
-        }
-        JsonObject that = (JsonObject) other;
-        if (size() != that.size())
-        {
-            return false;
-        }         
-        if (hashCode() != that.hashCode())
-        {
-            return false;
-        }
-
-        return compareEntrySet(that);
-    }
-
-    private boolean compareEntrySet(JsonObject that)
-    {
-        Iterator i = entrySet().iterator();
-        Iterator j = entrySet().iterator();
-        while (i.hasNext())
-        {
-            Map.Entry entry = (Map.Entry) i.next();
-            Map.Entry thatEntry = (Map.Entry) j.next();
-            if (!Objects.equals(entry.getKey(), thatEntry.getKey()))
-            {
-                return false;
-            }
-            if (!Objects.equals(entry.getValue(), thatEntry.getValue()))
-            {
-                return false;
-            }
-        }
-        return true;
+        return this == other;
     }
 }

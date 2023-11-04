@@ -6,16 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.ID;
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
-import static com.cedarsoftware.util.io.JsonObject.REF;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_ID;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_KEYS;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_REF;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_TYPE;
-import static com.cedarsoftware.util.io.JsonObject.TYPE;
+import static com.cedarsoftware.util.io.JsonObject.*;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -50,8 +41,8 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
  */
 class JsonParser
 {
-    public static final String EMPTY_OBJECT = "~!o~";  // compared with ==
-    private static final String EMPTY_ARRAY = "~!a~";  // compared with ==
+    public static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
+    private static final JsonObject EMPTY_ARRAY = new JsonObject();
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
@@ -111,6 +102,11 @@ class JsonParser
         stringCache.put("7", "7");
         stringCache.put("8", "8");
         stringCache.put("9", "9");
+
+        EMPTY_OBJECT.type = JsonObject.class.getName();
+//        EMPTY_OBJECT.isFinished = true;
+        EMPTY_ARRAY.type = Object[].class.getName();
+        EMPTY_ARRAY.put(ITEMS, new Object[]{});
     }
 
     JsonParser(FastPushbackReader reader, Map<String, Object> args, int maxDepth)
@@ -149,7 +145,7 @@ class JsonParser
                         c = skipWhitespaceRead();
                         if (c == '}')
                         {    // empty object
-                            return EMPTY_OBJECT;
+                            return new JsonObject();
                         }
                         in.unread(c);
                         state = STATE_READ_FIELD;

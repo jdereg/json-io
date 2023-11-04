@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -8,9 +9,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -148,5 +147,21 @@ class JsonObjectTest
         TestUtil.printLine("json = " + json);
         o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         assert o instanceof JsonObject;
+    }
+
+    @Test
+    public void testAsArray()
+    {
+        JsonObject jObj = new JsonObject();
+        assert !jObj.isArray();
+        assert !jObj.isCollection();
+        assert !jObj.isMap;
+        jObj.put(JsonObject.ITEMS, new Object[] {"hello", "goodbye"});
+        assert jObj.isArray();
+        assert !jObj.isCollection();
+        assert !jObj.isMap;
+        JsonObject jObj2 = new JsonObject();
+        jObj2.put(JsonObject.ITEMS, new Object[] {"hello", "goodbye"});
+        assert DeepEquals.deepEquals(jObj, jObj2);
     }
 }

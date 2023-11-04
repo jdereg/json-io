@@ -4,14 +4,7 @@ import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import lombok.Getter;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.Flushable;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -19,21 +12,8 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TimeZone;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -925,14 +905,13 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their subobjects correctly we should be ok removing
+    // since we're caching all classes and their sub-objects correctly we should be ok removing
     // the distance check since we walk up the chain of the class being written.
     private static Collection<Accessor> getAccessorsUsingSpecifiers(final Class<?> classBeingWritten, final Map<Class<?>, Collection<Accessor>> specifiers)
     {
         Class<?> curr = classBeingWritten;
         List<Collection<Accessor>> accessorLists = new ArrayList<>();
-
-
+        
         while (curr != null) {
             Collection<Accessor> accessorList = specifiers.get(curr);
 
@@ -947,8 +926,8 @@ public class JsonWriter implements Closeable, Flushable
             return null;
         }
 
-        Collection<Accessor> accessors = new ArrayList<Accessor>();
-        accessorLists.forEach(l -> accessors.addAll(l));
+        Collection<Accessor> accessors = new ArrayList<>();
+        accessorLists.forEach(accessors::addAll);
         return accessors;
     }
 
@@ -1221,7 +1200,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         Class<?> arrayType = array.getClass();
         int len = Array.getLength(array);
-        boolean referenced = this.objsReferenced.containsKey(array);
+        boolean referenced = objsReferenced.containsKey(array);
         boolean typeWritten = showType && !(arrayType.equals(Object[].class));
         final Writer output = this.out; // performance opt: place in final local for quicker access
         

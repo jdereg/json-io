@@ -247,8 +247,7 @@ class RefsTest
     public void testRefChainAsJavaObjects()
     {
         DateWithChildren dc = new DateWithChildren();
-        System.out.println("dc.getClass().getName() = " + dc.getClass().getName());
-        
+
         String json = TestUtil.fetchResource("references/chainRef.json");
         DateWithChildren root = TestUtil.toJava(json);
         DateWithChildren[] children =  root.children;

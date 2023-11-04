@@ -4,21 +4,7 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -174,11 +160,6 @@ abstract class Resolver
         while (!stack.isEmpty())
         {
             final JsonObject jsonObj = stack.removeFirst();
-            if (visited.contains(jsonObj))
-            {   // Must detect graph cycle in Map of Map type graphs
-                continue;
-            }
-            visited.add(jsonObj);
 
             if (jsonObj.isArray())
             {
