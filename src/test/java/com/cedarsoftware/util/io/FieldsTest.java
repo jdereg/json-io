@@ -7,21 +7,10 @@ import org.junit.jupiter.api.Test;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -725,7 +714,6 @@ public class FieldsTest
         p1.y = 20;
 
         String json = TestUtil.toJson(p1);
-        System.out.println("json = " + json);
         assert !json.contains("P1.x");
         assert !json.contains("P1.y");
         P1 p1copy = TestUtil.toJava(json);

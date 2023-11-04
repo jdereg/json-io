@@ -107,7 +107,6 @@ class ExceptionSerializeTest
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         String json = TestUtil.toJson(ia);
-        System.out.println("json = " + json);
         Throwable ia2 = TestUtil.toJava(json);
         assert ia2.getCause() instanceof NullPointerException;
         assert ia2.getCause() != npe;
@@ -123,7 +122,6 @@ class ExceptionSerializeTest
         JsonReader.assignInstantiator(MyException.class, new MyExceptionFactory());
         JsonWriter.addWriterPermanent(MyException.class, new MyExceptionWriter());
         String json = TestUtil.toJson(q);
-        System.out.println("json = " + json);
         Throwable r = TestUtil.toJava(json);
         assert q.getCause() == ia;
         assert r instanceof MyException;

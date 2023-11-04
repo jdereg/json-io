@@ -104,9 +104,10 @@ class JsonParser
         stringCache.put("9", "9");
 
         EMPTY_OBJECT.type = JsonObject.class.getName();
-//        EMPTY_OBJECT.isFinished = true;
+        EMPTY_OBJECT.isFinished = true;
         EMPTY_ARRAY.type = Object[].class.getName();
         EMPTY_ARRAY.put(ITEMS, new Object[]{});
+        EMPTY_ARRAY.isFinished = true;
     }
 
     JsonParser(FastPushbackReader reader, Map<String, Object> args, int maxDepth)
