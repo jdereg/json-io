@@ -3,24 +3,13 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.awt.Point;
+import java.awt.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -74,7 +63,7 @@ public class MapOfMapsTest
     @Test
     public void testForwardRefNegId()
     {
-        Object doc = TestUtil.toJava(TestUtil.fetchResource("forwardRefNegId.json"), new ReadOptionsBuilder().returnAsMaps().build());
+        Object doc = TestUtil.toJava(TestUtil.fetchResource("references/forwardRefNegId.json"), new ReadOptionsBuilder().returnAsMaps().build());
         Object[] items = (Object[]) doc;
         assertEquals(2, items.length);
         Map male = (Map) items[0];

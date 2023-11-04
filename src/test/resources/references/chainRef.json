@@ -1,11 +1,15 @@
 {
   "@id": 1,
-  "name": "root",
+  "@type": "com.cedarsoftware.util.io.RefsTest$DateWithChildren",
+  "date": "2023/12/25",
   "children": [
     {"@id": 2, "@ref": 1},
     {"@id": 3, "@ref": 2},
     {"@id": 4, "@ref": 3},
     {"@id": 5, "@ref": 4},
-    {"@id": 6, "@ref": 5}
+    {"@id": 6, "@ref": 5},
+    {"date": "2023/11/17",
+      "children": null
+    }
   ]
 }

@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -66,5 +67,18 @@ class LocalDateTimeFactoryTests {
         object.put("date", DateTimeFormatter.ISO_LOCAL_DATE.format(date));
         object.put("time", DateTimeFormatter.ISO_LOCAL_TIME.format(time));
         return object;
+    }
+
+    @Test
+    public void testToughFormatToParse()
+    {
+        String json = TestUtil.fetchResource("localdatetime/wideFormatSupport.json");
+        LocalDateTime dt = TestUtil.toJava(json);
+        assert dt.getYear() == 2023;
+        assert dt.getMonthValue() == 12;
+        assert dt.getDayOfMonth() == 25;
+        assert dt.getHour() == 15;
+        assert dt.getMinute() == 0;
+        assert dt.getSecond() == 0;
     }
 }

@@ -3,15 +3,13 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -105,6 +103,12 @@ class RefsTest
         {
             newValue = n;
         }
+    }
+
+    public static class DateWithChildren
+    {
+        public LocalDate date;
+        public DateWithChildren[] children;
     }
 
     @Test
@@ -220,18 +224,43 @@ class RefsTest
     }
 
     @Test
-    public void testRefChain()
+    public void testRefChainAsJsonObjects()
     {
         String json = TestUtil.fetchResource("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toJava(json);
-        assert jsonObj.get("name").equals("root");
+        JsonObject jsonObj = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
-        assert children.length == 5;
+        assert children.length == 6;
         assert children[0] instanceof JsonObject;
         JsonObject kid1 = (JsonObject)children[0];
         JsonObject kid5 = (JsonObject)children[4];
-        assert kid1.get("name").equals("root");
+        assert kid1.get("date").equals(christmas);
         assert kid5 == kid1;
         assert kid1 == jsonObj;
+        JsonObject kid6 = (JsonObject) children[5];
+        assert kid6 != kid5;
+        Object date = jsonObj.get("date");
+        assert kid6.get("date").equals("2023/11/17");
+    }
+
+    @Test
+    public void testRefChainAsJavaObjects()
+    {
+        DateWithChildren dc = new DateWithChildren();
+        System.out.println("dc.getClass().getName() = " + dc.getClass().getName());
+        
+        String json = TestUtil.fetchResource("references/chainRef.json");
+        DateWithChildren root = TestUtil.toJava(json);
+        DateWithChildren[] children =  root.children;
+        assert children.length == 6;
+        DateWithChildren kid1 = children[0];
+        DateWithChildren kid5 = children[4];
+        assert kid1.date.equals(root.date);
+        assert kid5 == kid1;
+        assert kid1 == root;
+        DateWithChildren kid6 = children[5];
+        assert kid6 != kid5;
+        assert root.date.equals(LocalDate.of(2023, 12, 25));
+        assert kid6.date.equals(LocalDate.of(2023, 11, 17));
     }
 }
