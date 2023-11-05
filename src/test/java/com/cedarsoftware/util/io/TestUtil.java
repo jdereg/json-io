@@ -13,7 +13,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -206,13 +205,13 @@ public class TestUtil
         return jsonIoTestInfo.json;
     }
 
-    private static TestInfo readJsonIo(String json, Map<String, Object> args)
+    private static TestInfo readJsonIo(String json, ReadOptions options)
     {
         TestInfo testInfo = new TestInfo();
         try
         {
             long start = System.nanoTime();
-            testInfo.obj = JsonReader.jsonToJava(json, args);
+            testInfo.obj = JsonReader.toObjects(json, options);
             testInfo.nanos = System.nanoTime() - start;
         }
         catch (Exception e)
@@ -222,13 +221,13 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo readJdk(String json, Map<String, Object> args)
+    private static TestInfo readJdk(String json, ReadOptions readOptions)
     {
         TestInfo testInfo = new TestInfo();
         try
         {
             // Must convert to Java Maps, then write out in JDK binary, and then start timer and read in JDK binary
-            Object o = JsonReader.jsonToMaps(json, args);  // Get the JSON into Java Object for JDK serializer to write out
+            Object o = JsonReader.toMaps(json, readOptions);  // Get the JSON into Java Object for JDK serializer to write out
             ByteArrayOutputStream bout = new ByteArrayOutputStream();
             ObjectOutputStream out = new ObjectOutputStream(bout);
             out.writeObject(o);
@@ -249,7 +248,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo readGson(String json, Map<String, Object> args)
+    private static TestInfo readGson(String json)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -267,7 +266,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo readJackson(String json, Map<String, Object> args)
+    private static TestInfo readJackson(String json)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -291,14 +290,14 @@ public class TestUtil
      */
     public static <T> T toJava(String json)
     {
-        return toJava(json, new LinkedHashMap<>());
+        return toJava(json, new ReadOptionsBuilder().build());
     }
 
     /**
      * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.  This version is more capable, as it supports build options.
      */
-    public static <T> T toJava(final String json, Map<String, Object> args)
+    public static <T> T toJava(final String json, ReadOptions readOptions)
     {
         if (null == json || "".equals(json.trim()))
         {
@@ -306,10 +305,10 @@ public class TestUtil
         }
         totalReads++;
 
-        TestInfo jsonIoTestInfo = readJsonIo(json, args);
-        TestInfo jdkTestInfo = readJdk(json, args);
-        TestInfo gsonTestInfo = readGson(json, args);
-        TestInfo jacksonTestInfo = readJackson(json, args);
+        TestInfo jsonIoTestInfo = readJsonIo(json, readOptions);
+        TestInfo jdkTestInfo = readJdk(json, readOptions);
+        TestInfo gsonTestInfo = readGson(json);
+        TestInfo jacksonTestInfo = readJackson(json);
 
         if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // only add times when all parsers succeeded

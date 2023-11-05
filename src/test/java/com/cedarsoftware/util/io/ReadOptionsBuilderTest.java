@@ -2,66 +2,69 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.PersonFactory;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.time.ZonedDateTime;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static com.cedarsoftware.util.io.JsonReader.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ReadOptionsBuilderTest {
 
     @Test
     void failOnUnknownType() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .failOnUnknownType()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(FAIL_ON_UNKNOWN_TYPE, Boolean.TRUE);
+        assertThat(options.isFailOnUnknownType()).isTrue();
     }
 
     @Test
     void setUnknownTypeClass() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .setUnknownTypeClass(LinkedHashMap.class)
                 .build();
-
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(UNKNOWN_OBJECT, LinkedHashMap.class.getName());
     }
 
     @Test
     void returnAsMaps() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .returnAsMaps()
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(USE_MAPS, Boolean.TRUE);
+        assertThat(options.isUsingMaps()).isTrue();
     }
 
     @Test
     void withCustomTypeName_usingClassAsKey() {
         String value = "foobar";
 
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withCustomTypeName(Date.class, value)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        assertThat(typeNameMap).hasSize(1)
-                .containsEntry(Date.class.getName(), value);
+        assertThat(options.getTypeName(value)).isEqualTo(Date.class.getName());
     }
 
     @Test
@@ -69,37 +72,27 @@ class ReadOptionsBuilderTest {
         String key = "javax.sql.Date";
         String value = "foobar";
 
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withCustomTypeName(key, value)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        assertThat(typeNameMap).hasSize(1)
-                .containsEntry(key, value);
+        assertThat(options.getTypeName("foobar")).isEqualTo("javax.sql.Date");
     }
 
     @Test
     void withCustomTypeName_whenAddingNames_addsUniqueNames() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(Date.class.getName(), "foo1")
                 .withCustomTypeName(String.class, "bar2")
                 .withCustomTypeName(Date.class.getName(), "foo2")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
+        assertThat(options.getTypeName("bar2")).isEqualTo(String.class.getName());
+        assertThat(options.getTypeName("foo2")).isEqualTo(Date.class.getName());
 
-        Map map = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        assertThat(map)
-                .containsAllEntriesOf(expectedTypeNameMap());
+        assertThat(options.getTypeName("bar1")).isNull();
+        assertThat(options.getTypeName("foo1")).isNull();
     }
 
     @Test
@@ -108,200 +101,164 @@ class ReadOptionsBuilderTest {
                 String.class.getName(), "char1",
                 "foo", "bar");
 
-        Map options = new ReadOptionsBuilder()
-                .withCustomTypeNameMap(map)
+        ReadOptions options = new ReadOptionsBuilder()
+                .withCustomTypeNames(map)
                 .withCustomTypeName(String.class, "char2")
                 .withCustomTypeName(Date.class, "dt")
                 .withCustomTypeName(TimeZone.class.getName(), "tz")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map typeNameMap = (Map<String, String>)options.get(TYPE_NAME_MAP);
-
-        Map<String, String> expected = MetaUtils.mapOf(
-                String.class.getName(), "char2",
-                "foo", "bar",
-                Date.class.getName(), "dt",
-                TimeZone.class.getName(), "tz"
-        );
-
-        assertThat(typeNameMap)
-                .containsAllEntriesOf(expected);
+        assertThat(options.getTypeName("char2")).isEqualTo(String.class.getName());
+        assertThat(options.getTypeName("dt")).isEqualTo(Date.class.getName());
+        assertThat(options.getTypeName("bar")).isEqualTo("foo");
+        assertThat(options.getTypeName("tz")).isEqualTo(TimeZone.class.getName());
     }
 
     @Test
     void withCustomTypeNameMap_whenAddingNames_addsUniqueNames() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withCustomTypeName(String.class, "bar1")
                 .withCustomTypeName(String.class, "bar2")
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(TYPE_NAME_MAP);
-
-        Map map = new HashMap<>();
-        map.put(String.class.getName(), "bar2");
-
-        assertThat(map)
-                .containsAllEntriesOf(map);
+        assertThat(options.getTypeName("bar2")).isEqualTo(String.class.getName());
+        assertThat(options.getTypeName("bar1")).isNull();
     }
 
     @Test
     void withCustomReader() {
-        Map options = new ReadOptionsBuilder()
-                .withCustomReader(Date.class, new Readers.DateReader())
+        JsonReader.JsonClassReader reader = new Readers.DateReader();
+        ReadOptions options = new ReadOptionsBuilder()
+                .withCustomReader(Date.class, reader)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(CUSTOM_READER_MAP);
-
-        Map customWriterMap = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
-
-        assertThat(customWriterMap).hasSize(1)
-                .containsKey(Date.class);
+        assertThat(options.getReader(Date.class)).isSameAs(reader);
     }
 
     @Test
-    void withCustomReaderMap() {
+    void withCustomReaderMap_withNoAdditionalReaders_containsBaseReaders() {
         Map<Class<?>, JsonReader.JsonClassReader> map = new HashMap<>();
 
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withCustomReaders(map)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(CUSTOM_READER_MAP, map);
-    }
-
-    @Test
-    void withCustomReaderMap_whenCustomWriterMapAlreadyExists_throwsIllegalStateException() {
-        Map options = new ReadOptionsBuilder()
-                .withCustomReader(Date.class, new Readers.DateReader())
-                .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
-                .build();
-
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(CUSTOM_READER_MAP);
-
-        Map map = (Map<Class, JsonReader.JsonClassReader>)options.get(CUSTOM_READER_MAP);
-
-        assertThat(map)
-                .containsOnlyKeys(Date.class, CustomWriterTest.Person.class);
+        assertThat(options.getReader(String.class)).isNotNull();
+        assertThat(options.getReader(Date.class)).isNotNull();
+        assertThat(options.getReader(AtomicBoolean.class)).isNotNull();
+        assertThat(options.getReader(AtomicInteger.class)).isNotNull();
+        assertThat(options.getReader(AtomicLong.class)).isNotNull();
+        assertThat(options.getReader(BigInteger.class)).isNotNull();
+        assertThat(options.getReader(BigDecimal.class)).isNotNull();
+        assertThat(options.getReader(java.sql.Date.class)).isNotNull();
+        assertThat(options.getReader(Timestamp.class)).isNotNull();
+        assertThat(options.getReader(Calendar.class)).isNotNull();
     }
 
     @Test
     void withClassLoader() {
         ClassLoader classLoader = this.getClass().getClassLoader();
 
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withClassLoader(classLoader)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsEntry(CLASSLOADER, classLoader);
+        assertThat(options.getClassLoader()).isNotNull();
     }
 
     @Test
     void withNonCustomizableClass() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_READER_MAP);
-
-        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
-
-        assertThat(collection)
-                .hasSize(1)
-                .contains(String.class);
+        assertThat(options.isNonCustomizable(String.class)).isTrue();
+        assertThat(options.isNonCustomizable(Map.class)).isFalse();
     }
 
-    @Test
-    void withNonCustomizableClass_withTwoOfSameClass_isUsingSetUnderneath() {
-        Map options = new ReadOptionsBuilder()
-                .withNonCustomizableClass(String.class)
-                .withNonCustomizableClass(String.class)
-                .build();
-
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_READER_MAP);
-
-        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
-
-        assertThat(collection)
-                .hasSize(1)
-                .contains(String.class);
-    }
     @Test
     void withNonCustomizableClass_addsAdditionalUniqueClasses() {
         Collection<Class<?>> list = MetaUtils.listOf(HashMap.class, String.class);
 
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .withNonCustomizableClass(Map.class)
                 .withNonCustomizableClasses(list)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_READER_MAP);
-
-        Collection collection = (Collection<Class<?>>) options.get(NOT_CUSTOM_READER_MAP);
-
-        assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, HashMap.class, Map.class));
+        assertThat(options.isNonCustomizable(String.class)).isTrue();
+        assertThat(options.isNonCustomizable(HashMap.class)).isTrue();
+        assertThat(options.isNonCustomizable(Map.class)).isTrue();
     }
 
     @Test
     void withNonCustomizableClasses_whenNonCustomizableClassesExist_addsUniqueItemsToTheCollection() {
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withNonCustomizableClass(String.class)
                 .withNonCustomizableClass(Date.class)
                 .withNonCustomizableClasses(MetaUtils.listOf(String.class, List.class))
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(NOT_CUSTOM_READER_MAP);
-
-        Collection collection = (Collection<Class>)options.get(NOT_CUSTOM_READER_MAP);
-
-        assertThat(collection)
-                .containsExactlyInAnyOrderElementsOf(MetaUtils.listOf(String.class, Date.class, List.class));
+        assertThat(options.isNonCustomizable(String.class)).isTrue();
+        assertThat(options.isNonCustomizable(Date.class)).isTrue();
+        assertThat(options.isNonCustomizable(List.class)).isTrue();
     }
 
     @Test
     void withClassFactory() {
         LocalDateFactory localDateFactory = new LocalDateFactory();
-        Map options = new ReadOptionsBuilder()
+        ReadOptions options = new ReadOptionsBuilder()
                 .withClassFactory(LocalDate.class, localDateFactory)
                 .build();
 
-        assertThat(options)
-                .hasSize(1)
-                .containsKey(FACTORIES);
-
-        Map collection = (Map<String, JsonReader.ClassFactory>) options.get(FACTORIES);
-
-        assertThat(collection)
-                .containsAllEntriesOf(MetaUtils.mapOf(LocalDate.class.getName(), localDateFactory));
+        assertThat(options.getClassFactory(LocalDate.class)).isSameAs(localDateFactory);
     }
 
     private Map<String, JsonReader.ClassFactory> getClassFactoryMap() {
         return MetaUtils.mapOf(
                 LocalDate.class.getName(), new LocalDateFactory(),
                 LocalTime.class.getName(), new LocalTimeFactory());
+    }
+
+    @Test
+    void testConstructor_whenNoArgsArePassed_classFactoriesIsInstantiatedWithGlobalFactories() {
+        ReadOptions options = new ReadOptionsBuilder().build();
+        assertThat(options.getClassFactory(Map.class)).isNotNull();
+        assertThat(options.getClassFactory(SortedMap.class)).isNotNull();
+        assertThat(options.getClassFactory(Collection.class)).isNotNull();
+        assertThat(options.getClassFactory(List.class)).isNotNull();
+        assertThat(options.getClassFactory(Set.class)).isNotNull();
+        assertThat(options.getClassFactory(SortedSet.class)).isNotNull();
+        assertThat(options.getClassFactory(LocalDate.class)).isNotNull();
+        assertThat(options.getClassFactory(LocalTime.class)).isNotNull();
+        assertThat(options.getClassFactory(LocalDateTime.class)).isNotNull();
+        assertThat(options.getClassFactory(ZonedDateTime.class)).isNotNull();
+    }
+
+    @Test
+    void testConstructor_whenOptionsContainsClassFactories_thoseAreAppendedToBaseClassFactories() {
+        ReadOptions options = new ReadOptionsBuilder()
+                .withClassFactory(CustomWriterTest.Person.class, new PersonFactory())
+                .build();
+
+        assertThat(options.getClassFactory(CustomWriterTest.Person.class)).isNotNull();
+    }
+
+    @Test
+    void testConstructor_whenNoArgs_readersAreInstantiatedWithBaseReaders() {
+        ReadOptions options = new ReadOptionsBuilder().build();
+
+        assertThat(options.getReader(AtomicInteger.class)).isNotNull();
+    }
+
+    @Test
+    void testConstructor_whenOptionsContainsReaders_thoseAreAppendedToBaseReaders() {
+        JsonReader.JsonClassReader reader = new CustomWriterTest.CustomPersonReader();
+        ReadOptions options = new ReadOptionsBuilder()
+                .withCustomReader(CustomWriterTest.Person.class, reader)
+                .build();
+
+        assertThat(options.getReader(CustomWriterTest.Person.class)).isSameAs(reader);
     }
 
 

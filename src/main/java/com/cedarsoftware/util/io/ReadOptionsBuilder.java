@@ -1,12 +1,65 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import com.cedarsoftware.util.io.factory.IllegalArgumentExceptionFactory;
+import com.cedarsoftware.util.io.factory.IllegalStateExceptionFactory;
+import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.NullPointerExceptionFactory;
+import com.cedarsoftware.util.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.io.factory.TimeZoneFactory;
+import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+import sun.util.calendar.ZoneInfo;
 
-import static com.cedarsoftware.util.io.JsonReader.*;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.URL;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
+import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
+import static com.cedarsoftware.util.io.JsonReader.MISSING_FIELD_HANDLER;
+import static com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP_REVERSE;
+import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
+import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -26,31 +79,193 @@ import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
  */
 public class ReadOptionsBuilder {
 
-    private final ConcurrentMap<String, Object> readOptions = new ConcurrentHashMap<>();
+    private final ReadOptionsImplementation readOptions = new ReadOptionsImplementation();
+
+    private final Map<String, String> typeNameMap = new LinkedHashMap<>();
+
+    private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
+
+    private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
+
+    private static final Map<String, Class<?>> BASE_COERCED_TYPES = new LinkedHashMap<>();
+
+    static {
+        // ClassFactories
+        JsonReader.ClassFactory mapFactory = new JsonReader.MapFactory();
+        assignInstantiator(Map.class, mapFactory);
+        assignInstantiator(SortedMap.class, mapFactory);
+
+        JsonReader.ClassFactory colFactory = new JsonReader.CollectionFactory();
+
+        assignInstantiator(Collection.class, colFactory);
+        assignInstantiator(List.class, colFactory);
+        assignInstantiator(Set.class, colFactory);
+        assignInstantiator(SortedSet.class, colFactory);
+
+        assignInstantiator(LocalDate.class, new LocalDateFactory());
+        assignInstantiator(LocalTime.class, new LocalTimeFactory());
+        assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
+        assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
+
+        TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
+        assignInstantiator(TimeZone.class, timeZoneFactory);
+        assignInstantiator(ZoneInfo.class, timeZoneFactory);
+
+        assignInstantiator(Throwable.class, new ThrowableFactory());
+        assignInstantiator(NullPointerException.class, new NullPointerExceptionFactory());
+        assignInstantiator(IllegalStateException.class, new IllegalStateExceptionFactory());
+        assignInstantiator(IllegalArgumentException.class, new IllegalArgumentExceptionFactory());
+
+        //  Readers
+        addReaderPermanent(String.class, new Readers.StringReader());
+        addReaderPermanent(Date.class, new Readers.DateReader());
+        addReaderPermanent(AtomicBoolean.class, new Readers.AtomicBooleanReader());
+        addReaderPermanent(AtomicInteger.class, new Readers.AtomicIntegerReader());
+        addReaderPermanent(AtomicLong.class, new Readers.AtomicLongReader());
+        addReaderPermanent(BigInteger.class, new Readers.BigIntegerReader());
+        addReaderPermanent(BigDecimal.class, new Readers.BigDecimalReader());
+        addReaderPermanent(java.sql.Date.class, new Readers.SqlDateReader());
+        addReaderPermanent(Timestamp.class, new Readers.TimestampReader());
+        addReaderPermanent(Calendar.class, new Readers.CalendarReader());
+
+        addReaderPermanent(Locale.class, new Readers.LocaleReader());
+        addReaderPermanent(Class.class, new Readers.ClassReader());
+        addReaderPermanent(StringBuilder.class, new Readers.StringBuilderReader());
+        addReaderPermanent(StringBuffer.class, new Readers.StringBufferReader());
+        addReaderPermanent(UUID.class, new Readers.UUIDReader());
+        addReaderPermanent(URL.class, new Readers.URLReader());
+        addReaderPermanent(Enum.class, new Readers.EnumReader());
+
+        //  JVM Readers > 1.8
+
+        // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
+        addPossiblePermanentReader(BASE_READERS, "java.lang.Record", Readers.RecordReader::new);
+
+
+        // Coerced Types
+        addPermanentCoercedType("java.util.Arrays$ArrayList", ArrayList.class);
+        addPermanentCoercedType("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
+        addPermanentCoercedType("java.util.HashMap$KeySet", HashSet.class);
+        addPermanentCoercedType("java.util.HashMap$Values", ArrayList.class);
+        addPermanentCoercedType("java.util.TreeMap$KeySet", TreeSet.class);
+        addPermanentCoercedType("java.util.TreeMap$Values", ArrayList.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$KeySet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$Values", ArrayList.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
+        addPermanentCoercedType("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.IdentityHashMap$Values", ArrayList.class);
+        addPermanentCoercedType("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
+    }
+
+    static void addPossiblePermanentReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader) {
+        try {
+            map.put(Class.forName(fqClassName), reader.get());
+        } catch (ClassNotFoundException e) {
+            // we can just ignore it - this class is not in this jvm or possibly expected to not be found
+        }
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) coercion of one
+     * class to another for creatint into an object.  Examples of classes
+     * that might need this are proxied classes such as HibernateBags, etc.
+     * That you want to create as regular jvm collections.
+     *
+     * @param fqName Class to assign a custom JSON reader to
+     * @param c      The JsonClassReader which will read the custom JSON format of 'c'
+     */
+    public static void addPermanentCoercedType(String fqName, Class<?> c) {
+        BASE_COERCED_TYPES.put(fqName, c);
+    }
+
+
+    /**
+     * Call this method to add a custom JSON reader to json-io.  It will
+     * associate the Class 'c' to the reader you pass in.  The readers are
+     * found with isAssignableFrom().  If this is too broad, causing too
+     * many classes to be associated to the custom reader, you can indicate
+     * that json-io should not use a custom reader for a particular class,
+     * by calling the addNotCustomReader() method.  This method will add
+     * the customer reader such that it will be there permanently, for the
+     * life of the JVM (static).
+     *
+     * @param c      Class to assign a custom JSON reader to
+     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
+     */
+    public static void addReaderPermanent(Class c, JsonReader.JsonClassReader reader) {
+        BASE_READERS.put(c, reader);
+    }
+
+
+    /**
+     * For difficult to instantiate classes, you can add your own ClassFactory
+     * which will be called when the passed in class 'c' is encountered.  Your ClassFactory
+     * will be called with newInstance(class, Object) and your factory is expected to return
+     * a new instance of 'c' and can use values from Object (JsonMap or simple value) to
+     * initialize the created class with the appropriate values.
+     * <p>
+     * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
+     * and is useful when you encounter a class that JsonReader cannot instantiate using its
+     * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
+     *
+     * @param className Class name to assign an ClassFactory to
+     * @param factory   ClassFactory that will create 'c' instances
+     */
+    public static void assignInstantiator(String className, JsonReader.ClassFactory factory) {
+        BASE_CLASS_FACTORIES.put(MetaUtils.classForName(className, JsonReader.class.getClassLoader()), factory);
+    }
+
+    /**
+     * See comment on method JsonReader.assignInstantiator(String, ClassFactory)
+     */
+    public static void assignInstantiator(Class c, JsonReader.ClassFactory factory) {
+        BASE_CLASS_FACTORIES.put(c, factory);
+    }
+
+
+    public ReadOptionsBuilder setUnknownTypeClassName(String fqClassName) {
+        return setUnknownTypeClassName(fqClassName, getClass().getClassLoader());
+    }
+
+    public ReadOptionsBuilder setUnknownTypeClassName(String fqClassName, ClassLoader loader) {
+        return setUnknownTypeClass(MetaUtils.classForName(fqClassName, loader));
+    }
 
     public ReadOptionsBuilder setUnknownTypeClass(Class<?> c) {
-        readOptions.put(JsonReader.UNKNOWN_OBJECT, c.getName());
+        this.readOptions.setUnknownTypeClass(c);
         return this;
     }
 
-    public ReadOptionsBuilder setMissingFieldHandler(MissingFieldHandler missingFieldHandler)
-    {
-        readOptions.put(MISSING_FIELD_HANDLER, missingFieldHandler);
+    public ReadOptionsBuilder setMissingFieldHandler(MissingFieldHandler missingFieldHandler) {
+        readOptions.setMissingFieldHandler(missingFieldHandler);
         return this;
     }
 
     public ReadOptionsBuilder failOnUnknownType() {
-        readOptions.put(JsonReader.FAIL_ON_UNKNOWN_TYPE, Boolean.TRUE);
+        readOptions.setFailOnUnknownType(true);
         return this;
     }
 
     public ReadOptionsBuilder withClassLoader(ClassLoader classLoader) {
-        readOptions.put(CLASSLOADER, classLoader);
+        readOptions.setClassLoader(classLoader);
         return this;
     }
 
     public ReadOptionsBuilder returnAsMaps() {
-        readOptions.put(USE_MAPS, Boolean.TRUE);
+        readOptions.setUsingMaps(true);
+        return this;
+    }
+
+    public ReadOptionsBuilder withCoercedType(Class<?> oldType, Class<?> newType) {
+        return withCoercedType(oldType.getName(), newType);
+    }
+
+    public ReadOptionsBuilder withCoercedType(String fullyQualifedNameOldType, Class<?> newType) {
+        this.readOptions.coercedTypes.put(fullyQualifedNameOldType, newType);
         return this;
     }
 
@@ -59,50 +274,305 @@ public class ReadOptionsBuilder {
     }
 
     public ReadOptionsBuilder withCustomTypeName(String type, String newTypeName) {
-        MetaUtils.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).put(type, newTypeName);
+        this.typeNameMap.put(type, newTypeName);
         return this;
     }
 
-    public ReadOptionsBuilder withCustomTypeNameMap(Map<String, String> map) {
-        MetaUtils.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).putAll(map);
+    public ReadOptionsBuilder withCustomTypeNames(Map<String, String> map) {
+        this.typeNameMap.putAll(map);
         return this;
     }
 
+    /**
+     * Call this method to add a custom JSON reader to json-io.  It will
+     * associate the Class 'c' to the reader you pass in.  The readers are
+     * found with isAssignableFrom().  If this is too broad, causing too
+     * many classes to be associated to the custom reader, you can indicate
+     * that json-io should not use a custom reader for a particular class,
+     * by calling the addNotCustomReader() method.
+     *
+     * @param c      Class to assign a custom JSON reader to
+     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
+     */
     public ReadOptionsBuilder withCustomReader(Class<?> c, JsonReader.JsonClassReader reader) {
-        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, reader);
+        readOptions.readers.put(c, reader);
         return this;
     }
 
+    /**
+     * This call will add all entries from the current map into the readers map.
+     *
+     * @param map This map contains classes mapped to their respctive readers
+     */
     public ReadOptionsBuilder withCustomReaders(Map<? extends Class<?>, ? extends JsonReader.JsonClassReader> map) {
-        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
+        readOptions.readers.putAll(map);
         return this;
     }
 
     public ReadOptionsBuilder withNonCustomizableClass(Class<?> c) {
-        MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).add(c);
+        readOptions.getNonCustomizableClasses().add(c);
+        return this;
+    }
+
+    public ReadOptionsBuilder withMaxDepth(int maxDepth) {
+        readOptions.setMaxDepth(maxDepth);
         return this;
     }
 
     public ReadOptionsBuilder withNonCustomizableClasses(Collection<Class<?>> collection) {
-        MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).addAll(collection);
+        readOptions.getNonCustomizableClasses().addAll(collection);
         return this;
     }
 
     public ReadOptionsBuilder withClassFactory(Class<?> type, JsonReader.ClassFactory factory) {
-        return withClassFactory(type.getName(), factory);
-    }
-
-    public ReadOptionsBuilder withClassFactories(Map<String, ? extends JsonReader.ClassFactory> factories) {
-        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).putAll(factories);
+        readOptions.classFactoryMap.put(type, factory);
         return this;
     }
 
-    public ReadOptionsBuilder withClassFactory(String type, JsonReader.ClassFactory factory) {
-        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).put(type, factory);
+    public ReadOptionsBuilder withClassFactories(Map<Class<?>, ? extends JsonReader.ClassFactory> factories) {
+        readOptions.classFactoryMap.putAll(factories);
         return this;
     }
 
-    public Map<String, Object> build() {
-        return readOptions;
+    @SuppressWarnings("unchecked")
+    public static ReadOptionsBuilder fromMap(Map<String, Object> args) {
+        ReadOptionsBuilder builder = new ReadOptionsBuilder();
+
+        ClassLoader classLoader = args.get(CLASSLOADER) == null ?
+                ReadOptionsBuilder.class.getClassLoader() :
+                (ClassLoader) args.get(CLASSLOADER);
+
+        builder.withClassLoader(classLoader);
+
+        Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
+
+        if (typeNames != null) {
+            builder.withCustomTypeNames(typeNames);
+        }
+
+        MissingFieldHandler handler = (MissingFieldHandler) args.get(MISSING_FIELD_HANDLER);
+
+        if (handler != null) {
+            builder.setMissingFieldHandler(handler);
+        }
+
+        Map<Class<?>, JsonReader.JsonClassReader> customReaders = (Map) args.get(CUSTOM_READER_MAP);
+
+        if (customReaders != null) {
+            builder.withCustomReaders(customReaders);
+        }
+
+        boolean useMaps = ArgumentHelper.isTrue(args.get(USE_MAPS));
+        if (useMaps) {
+            builder.returnAsMaps();
+        }
+
+        boolean isFailOnUnknownType = ArgumentHelper.isTrue(args.get(FAIL_ON_UNKNOWN_TYPE));
+        if (isFailOnUnknownType) {
+            builder.failOnUnknownType();
+        }
+
+        Collection<Class<?>> nonCustomizableClasses = (Collection<Class<?>>) args.get(NOT_CUSTOM_READER_MAP);
+
+        if (nonCustomizableClasses != null) {
+            builder.withNonCustomizableClasses(nonCustomizableClasses);
+        }
+
+        Object unknownObjectClass = args.get(UNKNOWN_OBJECT);
+
+        if (unknownObjectClass instanceof String) {
+            try {
+                builder.setUnknownTypeClassName((String) unknownObjectClass);
+            } catch (Exception e) {
+                // if it fails coming in from map then we
+            }
+        } else if (unknownObjectClass instanceof Class) {
+            builder.setUnknownTypeClass((Class<?>) unknownObjectClass);
+        }
+
+        // pull all factories out and add them to the already added
+        // global class factories.  The global class factories are
+        // replaced by and ith the same name in this object.
+        Map<String, JsonReader.ClassFactory> factories = (Map) args.get(FACTORIES);
+        if (factories != null) {
+            factories.entrySet()
+                    .stream()
+                    .forEach(entry -> builder.withClassFactory(MetaUtils.classForName(entry.getKey(), classLoader), entry.getValue()));
+        }
+
+        return builder;
+    }
+
+    public ReadOptions build() {
+        // reverse type name mapping since we're on the read side.
+        this.readOptions.typeNameMap = this.typeNameMap.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
+
+        return new ReadOptionsImplementation(this.readOptions, this.readOptions.isUsingMaps());
+    }
+
+    @Setter(AccessLevel.PRIVATE)
+    private static class ReadOptionsImplementation implements ReadOptions {
+
+        private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
+
+        @Getter
+        private boolean isUsingMaps;
+
+        @Getter
+        private boolean isFailOnUnknownType;
+
+        @Getter
+        private int maxDepth;
+
+        @Getter
+        private ClassLoader classLoader;
+
+        @Getter
+        private JsonReader.MissingFieldHandler missingFieldHandler;
+
+        @Getter
+        private Class<?> unknownTypeClass;
+
+        @Getter
+        private final Collection<Class<?>> nonCustomizableClasses;
+
+        private final Map<Class<?>, JsonReader.JsonClassReader> readers;
+
+        private final Map<Class, JsonReader.ClassFactory> classFactoryMap;
+
+        private final Map<String, Object> customArguments;
+
+        private final Map<String, Class<?>> coercedTypes;
+
+        private Map<String, String> typeNameMap;
+
+        private ReadOptionsImplementation() {
+            this.maxDepth = DEFAULT_MAX_PARSE_DEPTH;
+            this.classLoader = ReadOptions.class.getClassLoader();
+            this.typeNameMap = new HashMap<>();
+            this.readers = new HashMap<>(BASE_READERS);
+            this.nonCustomizableClasses = new LinkedHashSet<>();
+            this.classFactoryMap = new HashMap<>(BASE_CLASS_FACTORIES);
+            this.customArguments = new HashMap<>();
+            this.coercedTypes = new LinkedHashMap<>(BASE_COERCED_TYPES);
+            this.unknownTypeClass = null;
+        }
+
+        private ReadOptionsImplementation(ReadOptionsImplementation options, boolean isUsingMaps) {
+            this.isUsingMaps = isUsingMaps;
+            this.maxDepth = options.maxDepth;
+            this.classLoader = options.classLoader;
+            this.typeNameMap = Collections.unmodifiableMap(options.typeNameMap);
+            this.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
+            this.customArguments = Collections.unmodifiableMap(options.customArguments);
+            this.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
+            this.isFailOnUnknownType = options.isFailOnUnknownType;
+            this.unknownTypeClass = options.unknownTypeClass;
+            this.missingFieldHandler = options.missingFieldHandler;
+
+            // Note: These 2 members cannot become unmodifiable until we fully deprecate JsonReader.addReader() and JsonReader.addNotCustomReader()
+            this.readers = options.readers;
+            this.nonCustomizableClasses = options.nonCustomizableClasses;
+        }
+
+        @Override
+        public JsonReader.JsonClassReader getReader(Class<?> c) {
+            return this.readers.get(c);
+        }
+
+        @Override
+        public JsonReader.ClassFactory getClassFactory(Class<?> c) {
+            return this.classFactoryMap.get(c);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getCustomArgument(String name) {
+            return (T) this.customArguments.get(name);
+        }
+
+        @Override
+        public Class<?> getCoercedType(String fqName) {
+            return this.coercedTypes.get(fqName);
+        }
+
+        @Override
+        public boolean isNonCustomizable(Class<?> c) {
+            return this.nonCustomizableClasses.contains(c);
+        }
+
+        @Override
+        public ReadOptions ensureUsingMaps() {
+            if (this.isUsingMaps) {
+                return this;
+            }
+
+            return new ReadOptionsImplementation(this, true);
+        }
+
+        @Override
+        public ReadOptions ensureUsingObjects() {
+            if (!this.isUsingMaps) {
+                return this;
+            }
+
+            return new ReadOptionsImplementation(this, false);
+        }
+
+        @Override
+        public void addReader(Class<?> c, JsonReader.JsonClassReader reader) {
+            this.readers.put(c, reader);
+        }
+
+        @Override
+        public void addNonCustomizableClass(Class<?> c) {
+            this.nonCustomizableClasses.add(c);
+        }
+
+        @Override
+        public Optional<JsonReader.JsonClassReader> getClosestReader(Class<?> c) {
+            Optional<JsonReader.JsonClassReader> closestReader = Optional.empty();
+            int minDistance = Integer.MAX_VALUE;
+
+            for (Map.Entry<Class<?>, JsonReader.JsonClassReader> entry : this.readers.entrySet()) {
+                Class<?> key = entry.getKey();
+
+                if (key == c) {
+                    return Optional.of(entry.getValue());
+                }
+
+                int distance = MetaUtils.getDistance(key, c);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestReader = Optional.of(entry.getValue());
+                }
+            }
+
+            return closestReader;
+        }
+
+        @Override
+        public String getTypeName(String name) {
+            return this.typeNameMap.get(name);
+        }
+
+        @Override
+        public Map toMap() {
+            Map args = new HashMap();
+            args.put(CLASSLOADER, this.classLoader);
+            args.put(TYPE_NAME_MAP_REVERSE, typeNameMap);
+            args.put(MISSING_FIELD_HANDLER, missingFieldHandler);
+            args.put(CUSTOM_READER_MAP, readers);
+            args.put(NOT_CUSTOM_READER_MAP, nonCustomizableClasses);
+            args.put(USE_MAPS, isUsingMaps);
+            args.put(UNKNOWN_OBJECT, unknownTypeClass);
+            args.put(FAIL_ON_UNKNOWN_TYPE, isFailOnUnknownType);
+            args.put(FACTORIES, classFactoryMap);
+
+            return args;
+        }
     }
 }

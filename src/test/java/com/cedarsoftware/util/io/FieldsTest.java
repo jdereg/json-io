@@ -258,7 +258,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        Map<String, Object> readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toJava(json, readOptions);

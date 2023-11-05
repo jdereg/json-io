@@ -4,7 +4,19 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -39,35 +51,11 @@ abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
-    private static final NullClass nullReader = new NullClass();
-    final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new HashMap<>();
+    final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
-    private final boolean useMaps;
-    private final Object unknownClass;
-    private final boolean failOnUnknownType;
-    private final static Map<String, Class> coercedTypes = new LinkedHashMap<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
     Class<?> singletonMap = Collections.singletonMap("foo", "bar").getClass();
-
-    static {
-        coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
-        coercedTypes.put("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
-        coercedTypes.put("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
-        coercedTypes.put("java.util.HashMap$KeySet", HashSet.class);
-        coercedTypes.put("java.util.HashMap$Values", ArrayList.class);
-        coercedTypes.put("java.util.TreeMap$KeySet", TreeSet.class);
-        coercedTypes.put("java.util.TreeMap$Values", ArrayList.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySet", LinkedHashSet.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$Values", ArrayList.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
-        coercedTypes.put("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
-        coercedTypes.put("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
-        coercedTypes.put("java.util.IdentityHashMap$Values", ArrayList.class);
-        coercedTypes.put("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
-    }
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -125,11 +113,9 @@ abstract class Resolver
     {
         this.reader = reader;
         Map<String, Object> optionalArgs = reader.getArgs();
-        ReaderContext.instance().setResolver(this);
         optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
-        useMaps = Boolean.TRUE.equals(optionalArgs.get(JsonReader.USE_MAPS));
-        unknownClass = optionalArgs.containsKey(JsonReader.UNKNOWN_OBJECT) ? optionalArgs.get(JsonReader.UNKNOWN_OBJECT) : null;
-        failOnUnknownType = Boolean.TRUE.equals(optionalArgs.get(JsonReader.FAIL_ON_UNKNOWN_TYPE));
+
+        ReaderContext.instance().setResolver(this);
     }
 
     protected JsonReader getReader()
@@ -213,7 +199,7 @@ abstract class Resolver
     // calls the missing field handler if any for each recorded missing field.
     private void handleMissingFields()
     {
-        MissingFieldHandler missingFieldHandler = reader.getMissingFieldHandler();
+        MissingFieldHandler missingFieldHandler = ReaderContext.instance().getReadOptions().getMissingFieldHandler();
         if (missingFieldHandler != null)
         {
             for (Missingfields mf : missingFields)
@@ -354,6 +340,8 @@ abstract class Resolver
     protected Object createInstanceUsingType(Class clazz, JsonObject jsonObj)
     {
         String type = jsonObj.type;
+        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
+        final boolean failOnUnknownType = ReaderContext.instance().getReadOptions().isFailOnUnknownType();
 
         Class c;
         try
@@ -467,6 +455,8 @@ abstract class Resolver
 
         Object[] items = jsonObj.getArray();
 
+        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
+
         // if @items is specified, it must be an [] type.
         // if clazz.isArray(), then it must be an [] type.
         if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
@@ -487,22 +477,17 @@ abstract class Resolver
         }
         else if (clazz == Object.class && !useMaps)
         {
+            final Class<?> unknownClass = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+
             if (unknownClass == null)
             {
-                mate = new JsonObject();
-                ((JsonObject)mate).type = Map.class.getName();
-            }
-            else if (unknownClass instanceof String)
-            {   // ClassFactory consulted above, no need to check it here.
-                mate = MetaUtils.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()));
-            }
-            else if (unknownClass instanceof Class)
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.type = Map.class.getName();
+
+                mate = jsonObject;
+            } else
             {
-                mate = unknownClass;
-            }
-            else
-            {
-                throw new JsonIoException("Unable to determine object type at column: " + jsonObj.col + ", line: " + jsonObj.line + ", content: " + jsonObj);
+                mate = MetaUtils.newInstance(unknownClass);
             }
         }
         else
@@ -528,7 +513,7 @@ abstract class Resolver
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
-        JsonReader.ClassFactory classFactory = getClassFactory(clazz);
+        JsonReader.ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(clazz);
         if (classFactory != null)
         {
             Object target = classFactory.newInstance(clazz, jsonObj);
@@ -547,7 +532,7 @@ abstract class Resolver
 
     protected Object coerceCertainTypes(String type)
     {
-        Class clazz = coercedTypes.get(type);
+        Class clazz = ReaderContext.instance().getReadOptions().getCoercedType(type);
         if (clazz == null)
         {
             return null;
@@ -569,35 +554,7 @@ abstract class Resolver
 
     protected JsonReader.JsonClassReader getCustomReader(Class c)
     {
-        JsonReader.JsonClassReader reader = readerCache.get(c);
-        if (reader == null)
-        {
-            reader = forceGetCustomReader(c);
-            readerCache.put(c, reader);
-        }
-        return reader == nullReader ? null : reader;
-    }
-
-    private JsonReader.JsonClassReader forceGetCustomReader(Class c)
-    {
-        JsonReader.JsonClassReader closestReader = nullReader;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (Map.Entry<Class<?>, JsonReader.JsonClassReader> entry : getReaders().entrySet())
-        {
-            Class clz = entry.getKey();
-            if (clz == c)
-            {
-                return entry.getValue();
-            }
-            int distance = MetaUtils.getDistance(clz, c);
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                closestReader = entry.getValue();
-            }
-        }
-        return closestReader;
+        return this.readerCache.computeIfAbsent(c, key -> ReaderContext.instance().getReadOptions().getClosestReader(key)).orElse(null);
     }
 
     /**
@@ -744,7 +701,8 @@ abstract class Resolver
      */
     protected void rehashMaps()
     {
-        final boolean useMapsLocal = useMaps;
+        final boolean useMapsLocal = ReaderContext.instance().getReadOptions().isUsingMaps();
+        ;
         for (Object[] mapPieces : prettyMaps)
         {
             JsonObject jObj = (JsonObject) mapPieces[0];
@@ -781,21 +739,4 @@ abstract class Resolver
             }
         }
     }
-
-    // ========== Keep relationship knowledge below the line ==========
-
-    protected Map<Class<?>, JsonReader.JsonClassReader> getReaders()
-    {
-        return reader.readers;
-    }
-
-    protected boolean notCustom(Class cls)
-    {
-        return reader.notCustom.contains(cls);
-    }
-
-    public JsonReader.ClassFactory getClassFactory(Class c) {
-        return reader.classFactories.get(c.getName());
-    }
-
 }

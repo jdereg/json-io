@@ -64,7 +64,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
-        Map<String, Object> readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
+        ReadOptions readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toJava(jsonCustom, readOptions0);
         assert "Michael".equals(obj.get("f"));
@@ -81,7 +81,7 @@ public class CustomWriterTest
         assert "Chi hua hua".equals(bella.get("t"));
         assert 3L == (long) bella.get("a");
 
-        Map<String, Object> readOptions = new ReadOptionsBuilder().withCustomReader(Person.class, new CustomPersonReader()).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().withCustomReader(Person.class, new CustomPersonReader()).build();
         Person personCustom = TestUtil.toJava(jsonCustom, readOptions);
 
         assert personCustom.getFirstName().equals("Michael");
@@ -155,7 +155,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
-        Map<String, Object> readOptions = new HashMap<>();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
 
         // Object[] { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
         // Works - not using custom writer/reader
@@ -175,7 +175,7 @@ public class CustomWriterTest
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
         writeOptions = new WriteOptionsBuilder().build();
-        readOptions = new HashMap<>();
+        readOptions = new ReadOptionsBuilder().build();
 
         // List of { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
         // Works - not using custom writer/reader
@@ -209,7 +209,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
-        Map<String, Object> readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         
         People people = new People(new Object[]{p, p});
         String json = TestUtil.toJson(people, writeOptions);    // Massive @ref JSON

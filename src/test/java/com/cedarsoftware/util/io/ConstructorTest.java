@@ -8,9 +8,18 @@ import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -224,7 +233,7 @@ public class ConstructorTest
         assert eddie.getName().equals("Eddie");
 
         inputStream = new ByteArrayInputStream(json.getBytes());
-        Map<String, Object> dogMap = JsonReader.jsonToJava(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
+        Map<String, Object> dogMap = JsonReader.toMaps(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
         assert dogMap.get("name").equals("Eddie");
     }
 

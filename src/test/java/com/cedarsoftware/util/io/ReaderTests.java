@@ -1,12 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.PersonFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.Date;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -39,45 +35,4 @@ class ReaderTests {
         assert "".equals(x);
         assert 0 == a;
     }
-
-    @Test
-    void testConstructor_whenNoArgsArePassed_classFactoriesIsInstantiatedWithGlobalFactories() {
-        JsonReader reader = new JsonReader();
-        assertThat(reader.classFactories).containsAllEntriesOf(JsonReader.BASE_CLASS_FACTORIES);
-    }
-
-    @Test
-    void testConstructor_whenOptionsContainsClassFactories_thoseAreAppendedToBaseClassFactories() {
-        Map options = new ReadOptionsBuilder()
-                .withClassFactory(CustomWriterTest.Person.class, new PersonFactory())
-                .build();
-
-        JsonReader reader = new JsonReader(options);
-
-        assertThat(reader.classFactories)
-                .containsAllEntriesOf(JsonReader.BASE_CLASS_FACTORIES)
-                .containsAllEntriesOf((Map<String, JsonReader.ClassFactory>) options.get(JsonReader.FACTORIES))
-                .hasSize(JsonReader.BASE_CLASS_FACTORIES.size() + 1);
-    }
-
-    @Test
-    void testConstructor_whenNoArgs_readersAreInstantiatedWithBaseReaders() {
-        JsonReader reader = new JsonReader();
-        assertThat(reader.readers).containsAllEntriesOf(JsonReader.BASE_READERS);
-    }
-
-    @Test
-    void testConstructor_whenOptionsContainsReaders_thoseAreAppendedToBaseReaders() {
-        Map options = new ReadOptionsBuilder()
-                .withCustomReader(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonReader())
-                .build();
-
-        JsonReader reader = new JsonReader(options);
-
-        assertThat(reader.readers)
-                .containsAllEntriesOf(JsonReader.BASE_READERS)
-                .containsAllEntriesOf((Map<Class<?>, JsonReader.JsonClassReader>) options.get(JsonReader.CUSTOM_READER_MAP))
-                .hasSize(JsonReader.BASE_READERS.size() + 1);
-    }
-
 }

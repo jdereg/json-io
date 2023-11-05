@@ -1,26 +1,44 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 
-public class ReadOptions {
-    // should we hold onto JsonReader here?  or in ReadContext?
+public interface ReadOptions {
 
-    private boolean useMaps;
+    boolean isUsingMaps();
 
-    private boolean failOnUnknownType;
+    boolean isFailOnUnknownType();
 
-    private ClassLoader classLoader = ReadOptions.class.getClassLoader();
+    int getMaxDepth();
 
-    private Map<String, String> typeNameMap;
+    ClassLoader getClassLoader();
 
-    private JsonReader.MissingFieldHandler missingFieldHandler;
+    JsonReader.MissingFieldHandler getMissingFieldHandler();
 
-    private Map<Class<?>, JsonReader.JsonClassReader> customReaderMap;
+    JsonReader.JsonClassReader getReader(Class<?> c);
 
-    private Collection<Class<?>> notCustomReaders;
+    JsonReader.ClassFactory getClassFactory(Class<?> c);
 
-    private Map<String, JsonReader.ClassFactory> classFactoryMap;
+    Optional<JsonReader.JsonClassReader> getClosestReader(Class<?> c);
 
-    private Map<String, Object> customArguments;
+    String getTypeName(String name);
+
+    <T> T getCustomArgument(String name);
+
+    Class<?> getUnknownTypeClass();
+
+    Class<?> getCoercedType(String fqName);
+
+    boolean isNonCustomizable(Class<?> c);
+
+    ReadOptions ensureUsingMaps();
+
+    ReadOptions ensureUsingObjects();
+
+    // Note: These 2 methods cannot become unmodifiable until we fully deprecate JsonReader.addReader() and JsonReader.addNotCustomReader()
+    void addReader(Class<?> c, JsonReader.JsonClassReader reader);
+
+    void addNonCustomizableClass(Class<?> c);
+
+    Map toMap();
 }
