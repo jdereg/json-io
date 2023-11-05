@@ -430,14 +430,14 @@ public class JsonWriter implements Closeable, Flushable
         this.args.putAll(new HashMap(optionalArgs == null ? new HashMap<>() : optionalArgs));
         this.args.put(JSON_WRITER, this);
 
-        this.out = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+        this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         WriteOptions writeOptions = WriteOptionsBuilder.fromMap(args);
         WriterContext.instance().initialize(writeOptions, this);
     }
 
     @SuppressWarnings("unchecked")
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
-        this.out = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+        this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
 
         // having to save these args to support old Writers for now.
         // once they are depcrecated we can remove the Map args.

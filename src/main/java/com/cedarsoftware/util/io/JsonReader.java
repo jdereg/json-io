@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -111,7 +112,7 @@ public class JsonReader implements Closeable
     protected final Set<Class<?>> notCustom = new HashSet<>();
     protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
 
-    private final FastPushbackReader input;
+    private final FastReader input;
     // Note:  this is not thread local.
     /**
      * _args is using ThreadLocal so that static inner classes can have access to them
@@ -726,6 +727,11 @@ public class JsonReader implements Closeable
         return args;
     }
 
+    protected FastReader getReader(InputStream inputStream)
+    {
+        return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8192, 10);
+    }
+
     public JsonReader(InputStream inp, boolean useMaps, int maxDepth)
     {
         this(inp, makeArgMap(new HashMap<>(), useMaps), maxDepth);
@@ -739,7 +745,7 @@ public class JsonReader implements Closeable
     public JsonReader(InputStream inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
-        input = new FastPushbackBufferedReader(inp);
+        input = getReader(inp);
         maxParseDepth = maxDepth;
     }
 
@@ -752,7 +758,7 @@ public class JsonReader implements Closeable
     {
         initializeFromArgs(optionalArgs);
         byte[] bytes = inp.getBytes(StandardCharsets.UTF_8);
-        input = new FastPushbackBufferedReader(new ByteArrayInputStream(bytes));
+        input = getReader(new ByteArrayInputStream(bytes));
         maxParseDepth = maxDepth;
     }
 
@@ -764,7 +770,7 @@ public class JsonReader implements Closeable
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs, int maxDepth)
     {
         initializeFromArgs(optionalArgs);
-        input = new FastPushbackBufferedReader(new ByteArrayInputStream(inp));
+        input = getReader(new ByteArrayInputStream(inp));
         maxParseDepth = maxDepth;
     }
 

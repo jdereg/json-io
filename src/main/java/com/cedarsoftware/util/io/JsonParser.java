@@ -49,7 +49,7 @@ class JsonParser
     private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<>();
     private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
-    private final FastPushbackReader input;
+    private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
@@ -110,7 +110,7 @@ class JsonParser
         EMPTY_ARRAY.isFinished = true;
     }
 
-    JsonParser(FastPushbackReader reader, Map<String, Object> args, int maxDepth)
+    JsonParser(FastReader reader, Map<String, Object> args, int maxDepth)
     {
         input = reader;
         useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
@@ -118,7 +118,7 @@ class JsonParser
         maxParseDepth = maxDepth;
     }
 
-    JsonParser(FastPushbackReader reader, Map<String, Object> args)
+    JsonParser(FastReader reader, Map<String, Object> args)
     {
         this(reader, args, DEFAULT_MAX_PARSE_DEPTH);
     }
@@ -129,7 +129,7 @@ class JsonParser
         String field = null;
         JsonObject object = new JsonObject();
         int state = STATE_READ_START_OBJECT;
-        final FastPushbackReader in = input;
+        final FastReader in = input;
         final ReferenceTracker refTracker = ReaderContext.instance().getReferenceTracker();
 
         while (!done)
@@ -139,7 +139,7 @@ class JsonParser
             {
                 case STATE_READ_START_OBJECT:
                     // c read and pushed back before STATE_READ_START_OBJECT, so 'c' always '{' here.
-                    c = skipWhitespaceRead();
+                    skipWhitespaceRead();
                     object.line = in.getLine();
                     object.col = in.getCol();
                     c = skipWhitespaceRead();
@@ -147,7 +147,7 @@ class JsonParser
                     {    // empty object
                         return new JsonObject();
                     }
-                    in.unread(c);
+                    in.pushback((char)c);
                     state = STATE_READ_FIELD;
                     ++curParseDepth;
                     break;
@@ -164,7 +164,7 @@ class JsonParser
                         }
 
                         if (field.startsWith("@"))
-                        {   // Expand short-hand meta keys
+                        {   // Expand shorthand meta keys
                             String temp = stringCache.get(field);
 
                             if (temp != null) {
@@ -254,12 +254,12 @@ class JsonParser
         switch(c)
         {
             case '{':
-                input.unread('{');
+                input.pushback('{');
                 return readJsonObject();
             case '[':
                 return readArray(object);
             case ']':   // empty array
-                input.unread(']');
+                input.pushback(']');
                 return EMPTY_ARRAY;
             case 'f':
             case 'F':
@@ -350,7 +350,7 @@ class JsonParser
      */
     private Number readNumber(int c) throws IOException
     {
-        final FastPushbackReader in = input;
+        final FastReader in = input;
         boolean isFloat = false;
 
         if (JsonReader.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
@@ -380,7 +380,7 @@ class JsonParser
             } else {
                 // This is (c) case, meaning there was c = '-' at the beginning.
                 // This is a number like "-2", but not "-Infinity". We let the normal code process.
-                input.unread(c);
+                input.pushback((char)c);
                 c = '-';
             }
         }
@@ -407,7 +407,7 @@ class JsonParser
             }
             else
             {
-                in.unread(c);
+                in.pushback((char)c);
                 break;
             }
         }
@@ -446,7 +446,7 @@ class JsonParser
         final StringBuilder hex = hexBuf;
         str.setLength(0);
         int state = STRING_START;
-        final FastPushbackReader in = input;
+        final FastReader in = input;
 
         while (true)
         {
@@ -548,7 +548,7 @@ class JsonParser
      */
     private int skipWhitespaceRead() throws IOException
     {
-        FastPushbackReader in = input;
+        FastReader in = input;
         int c;
         do
         {
