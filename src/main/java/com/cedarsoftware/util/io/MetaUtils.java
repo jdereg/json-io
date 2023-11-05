@@ -425,12 +425,31 @@ public class MetaUtils
      * Given the passed in String class name, return the named JVM class.
      * @param name String name of a JVM class.
      * @param classLoader ClassLoader to use when searching for JVM classes.
-     * @return Class the named JVM class.
-     * @throws JsonIoException if named Class is invalid.
+     * @return Class instance of the named JVM class or null if not found.
      */
     static Class<?> classForName(String name, ClassLoader classLoader)
     {
-        return classForName(name, classLoader, false);
+        if (name == null || name.isEmpty())
+        {
+            return null;
+        }
+        try
+        {
+            // TODO: This static variable is being removed soon...
+            loadClassException = null;
+            Class<?> c = nameToClass.get(name);
+            if (c != null)
+            {
+                return c;
+            }
+            return loadClass(name, classLoader);
+        }
+        catch (Exception e)
+        {
+            // TODO: Remove
+            loadClassException = e;
+            return null;
+        }
     }
 
     /**

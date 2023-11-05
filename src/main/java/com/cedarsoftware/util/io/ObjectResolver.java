@@ -1,20 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.*;
+import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -813,7 +800,12 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        // Use custom reader if ont exists
+        if (c == null)
+        {   // Class not found using multiple techniques.  There is no custom reader;
+            return null;
+        }
+        
+        // Use custom reader if one exists
         JsonReader.JsonClassReader closestReader = getCustomReader(c);
         if (closestReader == null) {
             return null;

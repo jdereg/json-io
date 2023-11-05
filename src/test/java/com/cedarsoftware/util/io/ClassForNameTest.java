@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.util.Map;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -43,14 +40,8 @@ public class ClassForNameTest
     @Test
     public void testClassForNameNullClassErrorHandling()
     {
-        try
-        {
-            MetaUtils.classForName(null, ClassForNameTest.class.getClassLoader());
-            fail();
-        }
-        catch (JsonIoException ignored)
-        { }
-        assert Map.class.isAssignableFrom(MetaUtils.classForName("Smith&Wesson", ClassForNameTest.class.getClassLoader()));
+        assert null == MetaUtils.classForName(null, ClassForNameTest.class.getClassLoader());
+        assert null == MetaUtils.classForName("Smith&Wesson", ClassForNameTest.class.getClassLoader());
     }
 
     @Test
