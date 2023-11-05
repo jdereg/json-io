@@ -361,7 +361,7 @@ abstract class Resolver
         }
 
         if (c == null)
-        {   // Unabled to find class in the JVM.
+        {   // Unable to find class in the JVM.
             if (failOnUnknownType)
             {
                 throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");

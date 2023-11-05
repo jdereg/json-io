@@ -69,4 +69,20 @@ public class UnknownObjectTypeTest
         assert map.get("age").equals(50L);
         assert map.size() == 2;
     }
+
+    @Test
+    public void testUnknownClassSwappedWithConcurrentSkipListMapButSetToThrowIfMissing()
+    {
+        String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\",\"age\":50}";
+        Throwable t = assertThrows(JsonIoException.class, () -> {
+            Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().
+                    setUnknownTypeClass(ConcurrentSkipListMap.class).
+                    failOnUnknownType().
+                    build());
+        });
+        String loMsg = t.getMessage().toLowerCase();
+        assert loMsg.contains("unable to create");
+        assert loMsg.contains("foo.bar.baz.qux");
+        assert loMsg.contains("turn off 'failonunknowntype'");
+    }
 }
