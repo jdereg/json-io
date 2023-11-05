@@ -3,16 +3,33 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.awt.*;
+import java.awt.Point;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -382,7 +399,7 @@ public class MapsTest
         quoteInKeyMap.put("\"one\"", 1L);
         quoteInKeyMap.put("\"two\"", 2L);
         String json = TestUtil.toJson(quoteInKeyMap);
-        Map ret = TestUtil.toJava(json, new LinkedHashMap<>());
+        Map ret = TestUtil.toJava(json, new ReadOptionsBuilder().build());
         assert ret.size() == 3;
 
         assert ret.get(0L).equals(0L);
@@ -394,7 +411,7 @@ public class MapsTest
         stringKeys.put("\"one\"", 1L);
         stringKeys.put("\"two\"", 2L);
         json = TestUtil.toJson(stringKeys);
-        ret = TestUtil.toJava(json, new LinkedHashMap<>());
+        ret = TestUtil.toJava(json, new ReadOptionsBuilder().build());
         assert ret.size() == 3;
 
         assert ret.get("\"zero\"").equals(0L);
@@ -425,7 +442,7 @@ public class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        final Map<String, Object> map2 = (Map) JsonReader.jsonToMaps(str);
+        final Map<String, Object> map2 = (Map) JsonReader.toMaps(str);
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())

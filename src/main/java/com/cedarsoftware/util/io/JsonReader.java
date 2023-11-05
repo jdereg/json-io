@@ -8,9 +8,6 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -70,6 +67,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  */
 public class JsonReader implements Closeable
 {
+    /** Once we've fully moved to read options, these static finals can be deleted **/
     /** If set, this maps class ==> CustomReader */
     public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
     /** If set, this indicates that no custom reader should be used for the specified class ==> CustomReader */
@@ -92,25 +90,11 @@ public class JsonReader implements Closeable
     public static final String CLASSLOADER = "CLASSLOADER";
     /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
-    /** Default maximum parsing depth */
-
     /**
      * If set, this map will contain Factory classes for creating hard to instantiate objects.
      */
     public static final String FACTORIES = "FACTORIES";
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
-
-    protected static Map<Class<?>, JsonClassReader> BASE_READERS;
-    protected final Map<Class<?>, JsonClassReader> readers = new HashMap<>(BASE_READERS);
-    protected final Map<String, ClassFactory> classFactories = new HashMap<>(BASE_CLASS_FACTORIES);
-
-
-    @Setter
-    @Getter(lombok.AccessLevel.PACKAGE)
-    protected MissingFieldHandler missingFieldHandler;
-
-    protected final Set<Class<?>> notCustom = new HashSet<>();
-    protected static final Map<String, ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
 
     private final FastReader input;
     // Note:  this is not thread local.
@@ -122,7 +106,6 @@ public class JsonReader implements Closeable
      */
     @Getter
     private final Map<String, Object> args = new HashMap<>();
-    private final int maxParseDepth;
 
     /**
      * -- GETTER --
@@ -133,67 +116,16 @@ public class JsonReader implements Closeable
     @Getter
     private static volatile boolean allowNanAndInfinity = false;
 
-    static
-    {
-        ClassFactory mapFactory = new MapFactory();
-        assignInstantiator(Map.class, mapFactory);
-        assignInstantiator(SortedMap.class, mapFactory);
-
-        ClassFactory colFactory = new CollectionFactory();
-
-        assignInstantiator(Collection.class, colFactory);
-        assignInstantiator(List.class, colFactory);
-        assignInstantiator(Set.class, colFactory);
-        assignInstantiator(SortedSet.class, colFactory);
-
-        assignInstantiator(LocalDate.class, new LocalDateFactory());
-        assignInstantiator(LocalTime.class, new LocalTimeFactory());
-        assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
-        assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
-
-        TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
-        assignInstantiator(TimeZone.class, timeZoneFactory);
-        assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
-
-        // jvm specific types
-        Map<Class<?>, JsonClassReader> temp = new HashMap<>();
-        temp.put(String.class, new Readers.StringReader());
-        temp.put(Date.class, new Readers.DateReader());
-        temp.put(AtomicBoolean.class, new Readers.AtomicBooleanReader());
-        temp.put(AtomicInteger.class, new Readers.AtomicIntegerReader());
-        temp.put(AtomicLong.class, new Readers.AtomicLongReader());
-        temp.put(BigInteger.class, new Readers.BigIntegerReader());
-        temp.put(BigDecimal.class, new Readers.BigDecimalReader());
-        temp.put(java.sql.Date.class, new Readers.SqlDateReader());
-        temp.put(Timestamp.class, new Readers.TimestampReader());
-        temp.put(Calendar.class, new Readers.CalendarReader());
-
-        temp.put(Locale.class, new Readers.LocaleReader());
-        temp.put(Class.class, new Readers.ClassReader());
-        temp.put(StringBuilder.class, new Readers.StringBuilderReader());
-        temp.put(StringBuffer.class, new Readers.StringBufferReader());
-        temp.put(UUID.class, new Readers.UUIDReader());
-        temp.put(URL.class, new Readers.URLReader());
-        temp.put(Enum.class, new Readers.EnumReader());
-
-        assignInstantiator(Throwable.class, new ThrowableFactory());
-        assignInstantiator(NullPointerException.class, new NullPointerExceptionFactory());
-        assignInstantiator(IllegalStateException.class, new IllegalStateExceptionFactory());
-        assignInstantiator(IllegalArgumentException.class, new IllegalArgumentExceptionFactory());
-
-        // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
-        addPossibleReader(temp, "java.lang.Record", Readers.RecordReader::new);
-
-        // why'd we do this for the readers, but not for the ClassFactories?
-        BASE_READERS = temp;
-    }
-
+    /**
+     * Deprecated - use ReadOptionsBuilder.addPossibleReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader);
+     *
+     * @param map
+     * @param fqClassName
+     * @param reader
+     */
+    @Deprecated
     private static void addPossibleReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader) {
-        try {
-            map.put(Class.forName(fqClassName), reader.get());
-        } catch (ClassNotFoundException e) {
-            // we can just ignore it - this class is not in this jvm or possibly expected to not be found
-        }
+        ReadOptionsBuilder.addPossiblePermanentReader(map, fqClassName, reader);
     }
 
     /**
@@ -385,29 +317,27 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * For difficult to instantiate classes, you can add your own ClassFactory
-     * which will be called when the passed in class 'c' is encountered.  Your ClassFactory
-     * will be called with newInstance(class, Object) and your factory is expected to return
-     * a new instance of 'c' and can use values from Object (JsonMap or simple value) to
-     * initialize the created class with the appropriate values.
-     * <p>
-     * This API is an 'escape hatch' to allow ANY object to be instantiated by JsonReader
-     * and is useful when you encounter a class that JsonReader cannot instantiate using its
-     * internal exhausting attempts (trying all constructors, varying arguments to them, etc.)
+     * Deprecated - use ReadOptionsBuilder.assignInstantiator(String, ClassFactory)
+     *
      * @param className Class name to assign an ClassFactory to
      * @param factory ClassFactory that will create 'c' instances
      */
+    @Deprecated
     public static void assignInstantiator(String className, ClassFactory factory)
     {
-        BASE_CLASS_FACTORIES.put(className, factory);
+        ReadOptionsBuilder.assignInstantiator(className, factory);
     }
 
     /**
-     * See comment on method JsonReader.assignInstantiator(String, ClassFactory)
+     * Deprecated - use ReadOptionsBuilder.assignInstantiator(Class, ClassFactory)
+     *
+     * @param c Class to assign on ClassFActory
+     * @param factory ClassFactory that wil create instance of that class.
      */
+    @Deprecated
     public static void assignInstantiator(Class c, ClassFactory factory)
     {
-        BASE_CLASS_FACTORIES.put(c.getName(), factory);
+        ReadOptionsBuilder.assignInstantiator(c, factory);
     }
 
     /**
@@ -419,30 +349,12 @@ public class JsonReader implements Closeable
      * by calling the addNotCustomReader() method.
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
-     * @deprecated use ReadOptionsBuilder to create any additional readers you'll need.
-     *
+     * @deprecated use ReadOptionsBuilder.withCustomReader() to create any additional readers you'll need.
      */
     @Deprecated
     public void addReader(Class c, JsonClassReader reader)
     {
-        readers.put(c, reader);
-    }
-
-    /**
-     * Call this method to add a custom JSON reader to json-io.  It will
-     * associate the Class 'c' to the reader you pass in.  The readers are
-     * found with isAssignableFrom().  If this is too broad, causing too
-     * many classes to be associated to the custom reader, you can indicate
-     * that json-io should not use a custom reader for a particular class,
-     * by calling the addNotCustomReader() method.  This method will add
-     * the customer reader such that it will be there permanently, for the
-     * life of the JVM (static).
-     * @param c Class to assign a custom JSON reader to
-     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
-     */
-    public static void addReaderPermanent(Class c, JsonClassReader reader)
-    {
-        BASE_READERS.put(c, reader);
+        ReaderContext.instance().getReadOptions().addReader(c, reader);
     }
 
     /**
@@ -450,14 +362,45 @@ public class JsonReader implements Closeable
      * passed in class, even if a Custom JSON reader is specified for its
      * parent class.
      * @param c Class to which to force no custom JSON reading to occur.
-     * Normally, this is not needed, however, if a reader is assigned to a
-     * parent class of 'c', then calling this method on 'c' will prevent
-     * any custom reader from processing class 'c'
+     * @deprecated use ReadOptionsBuilder.withNonCustomizableClass()
      */
+    @Deprecated
     public void addNotCustomReader(Class c)
     {
-        notCustom.add(c);
+        ReaderContext.instance().getReadOptions().addNonCustomizableClass(c);
     }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     *
+     * @param jsonString String JSON input
+     * @param options    Read options
+     * @return Java object graph matching JSON input
+     */
+    public static <T> T toObjects(String jsonString, ReadOptions options) {
+        String json = safeTrimToNull(jsonString);
+
+        if (json == null) {
+            return null;
+        }
+
+        JsonReader jr = new JsonReader(json, options);
+        Object obj = jr.readObject();
+        jr.close();
+        return (T) obj;
+    }
+
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     * Uses the default read options
+     *
+     * @param json String JSON input
+     * @return Java object graph matching JSON input
+     */
+    public static <T> T toObjects(String json) {
+        return (T) toObjects(json, new ReadOptionsBuilder().withMaxDepth(DEFAULT_MAX_PARSE_DEPTH).build());
+    }
+
 
     /**
      * Convert the passed in JSON string into a Java object graph.
@@ -465,25 +408,28 @@ public class JsonReader implements Closeable
      * @param json String JSON input
      * @return Java object graph matching JSON input
      */
+    @Deprecated
     public static <T> T jsonToJava(String json)
     {
-        return jsonToJava(json, null);
+        return toObjects(json);
     }
 
     /**
      * Convert the passed in JSON string into a Java object graph.
      *
-     * @param json String JSON input
+     * @param jsonString String JSON input
      * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @param maxDepth Maximum parsing depth.
      * @return Java object graph matching JSON input
      */
-    public static Object jsonToJava(String json, Map<String, Object> optionalArgs, int maxDepth)
+    public static Object jsonToJava(String jsonString, Map<String, Object> optionalArgs, int maxDepth)
     {
-        if (json == null || "".equals(json.trim()))
-        {
+        String json = safeTrimToNull(jsonString);
+
+        if (json == null) {
             return null;
         }
+
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap<>();
@@ -549,6 +495,8 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * Deprecated = use toMaps(String, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -557,12 +505,14 @@ public class JsonReader implements Closeable
      * @param maxDepth Maximum parsing depth.
      * @return Map representing JSON content.  Each object is represented by a Map.
      */
-    public static Map jsonToMaps(String json, int maxDepth)
-    {
-        return jsonToMaps(json, null, maxDepth);
+    @Deprecated
+    public static Map jsonToMaps(String json, int maxDepth) {
+        return toMaps(json, new ReadOptionsBuilder().withMaxDepth(maxDepth).build());
     }
 
     /**
+     * Deprecated = use toMaps(String, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -570,12 +520,14 @@ public class JsonReader implements Closeable
      * @param json String of JSON content
      * @return Map representing JSON content.  Each object is represented by a Map.
      */
-    public static Map jsonToMaps(String json)
-    {
-        return jsonToMaps(json, DEFAULT_MAX_PARSE_DEPTH);
+    @Deprecated
+    public static Map jsonToMaps(String json) {
+        return toMaps(json, new ReadOptionsBuilder().withMaxDepth(DEFAULT_MAX_PARSE_DEPTH).build());
     }
 
     /**
+     * Deprecated = use toMaps(String, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -586,15 +538,18 @@ public class JsonReader implements Closeable
      * @param maxDepth Maximum parsing depth.
      * @return Map where each Map representa an object in the JSON input.
      */
+    @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs, int maxDepth)
     {
         if (optionalArgs == null)
         {
             optionalArgs = new HashMap<>();
         }
-        optionalArgs.put(USE_MAPS, true);
+
+        ReadOptions options = ReadOptionsBuilder.fromMap(optionalArgs).returnAsMaps().build();
+
         ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-        JsonReader jr = new JsonReader(ba, optionalArgs, maxDepth);
+        JsonReader jr = new JsonReader(ba, options);
         Object ret = jr.readObject();
         jr.close();
 
@@ -602,6 +557,8 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * Deprecated = use toMaps(String, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(String json, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -611,12 +568,15 @@ public class JsonReader implements Closeable
      * details on these options.
      * @return Map where each Map representa an object in the JSON input.
      */
+    @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs)
     {
         return jsonToMaps(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     /**
+     * Deprecated = use toMaps(InputStream, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(inputStream, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -627,6 +587,7 @@ public class JsonReader implements Closeable
      * @param maxDepth Maximum parsing depth.
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
+    @Deprecated
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs, int maxDepth)
     {
         if (optionalArgs == null)
@@ -642,6 +603,8 @@ public class JsonReader implements Closeable
     }
 
     /**
+     * Deprecated = use toMaps(InputStream, ReadOptions);
+     *
      * Map args = ["USE_MAPS": true]
      * Use JsonReader.jsonToJava(inputStream, args)
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
@@ -651,9 +614,60 @@ public class JsonReader implements Closeable
      * details on these options.
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
+    @Deprecated
     public static Map jsonToMaps(InputStream inputStream, Map<String, Object> optionalArgs)
     {
         return jsonToMaps(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     *
+     * @param json json string
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
+     */
+    public static Map toMaps(String json) {
+        return toMaps(json, new ReadOptionsBuilder().build());
+    }
+
+
+    /**
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     *
+     * @param json        json string
+     * @param readOptions options to use when reading
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
+     */
+    public static Map toMaps(String json, ReadOptions readOptions) {
+        return toMaps(json.getBytes(StandardCharsets.UTF_8), readOptions);
+    }
+
+    /**
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     *
+     * @param bytes       bytes representing UTF-8 string
+     * @param readOptions options to use when reading
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
+     */
+    public static Map toMaps(byte[] bytes, ReadOptions readOptions) {
+        return toMaps(new ByteArrayInputStream(bytes), readOptions);
+    }
+
+    /**
+     * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
+     *
+     * @param inputStream bytes representing UTF-8 string
+     * @param readOptions options to use when reading
+     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
+     */
+    public static Map toMaps(InputStream inputStream, ReadOptions readOptions) {
+        ReadOptions options = readOptions.ensureUsingMaps();
+
+        JsonReader jr = new JsonReader(inputStream, options);
+        Object ret = jr.readObject();
+        jr.close();
+
+        return adjustOutputMap(ret);
     }
 
     private static Map adjustOutputMap(Object ret)
@@ -674,53 +688,84 @@ public class JsonReader implements Closeable
         return retMap;
     }
 
-    public JsonReader(int maxDepth)
-    {
+
+    /**
+     * Deprecated - use JsonReader(ReadOptions)
+     *
+     * @param maxDepth - maximum recursion depth
+     */
+    @Deprecated
+    public JsonReader(int maxDepth) {
+        args.put(USE_MAPS, false);
+        args.put(CLASSLOADER, JsonReader.class.getClassLoader());
+        args.put(JSON_READER, this);
+
+        ReadOptions readOptions = ReadOptionsBuilder.fromMap(args).withMaxDepth(maxDepth).build();
+        ReaderContext.instance().initialize(readOptions, this);
+
         input = null;
-        getArgs().put(USE_MAPS, false);
-        getArgs().put(CLASSLOADER, JsonReader.class.getClassLoader());
-        maxParseDepth = maxDepth;
     }
 
+    /**
+     * Deprecated - use JsonReader(ReadOptions)
+     */
+    @Deprecated
     public JsonReader()
     {
         this(DEFAULT_MAX_PARSE_DEPTH);
     }
 
-    public JsonReader(InputStream inp, int maxDepth)
-    {
-        this(inp, false, maxDepth);
-    }
 
-    public JsonReader(InputStream inp)
-    {
-        this(inp, DEFAULT_MAX_PARSE_DEPTH);
+    /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream - input stream to supply json
+     * @param maxDepth    - maximum recursion depth
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream, int maxDepth) {
+        this(inputStream, false, maxDepth);
     }
 
     /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream input stream
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream) {
+        this(inputStream, DEFAULT_MAX_PARSE_DEPTH);
+    }
+
+    /**
+     * Deprecated - use JsonReader(ReadOptions)
      * Use this constructor if you already have a JsonObject graph and want to parse it into
      * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
      * the JsonReader.
      * @param optionalArgs Map of optional arguments for the JsonReader.
      * @param maxDepth Maximum parsing depth.
      */
+    @Deprecated
     public JsonReader(Map<String, Object> optionalArgs, int maxDepth)
     {
         this(new ByteArrayInputStream(new byte[]{}), optionalArgs, maxDepth);
     }
 
     /**
+     * Deprecated - use JsonReader(ReadOptions)
      * Use this constructor if you already have a JsonObject graph and want to parse it into
      * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
      * the JsonReader.
      * @param optionalArgs Map of optional arguments for the JsonReader.
      */
+    @Deprecated
     public JsonReader(Map<String, Object> optionalArgs)
     {
         this(optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     // This method is needed to get around the fact that 'this()' has to be the first method of a constructor.
+    @Deprecated
     static Map makeArgMap(Map<String, Object> args, boolean useMaps)
     {
         args.put(USE_MAPS, useMaps);
@@ -732,99 +777,135 @@ public class JsonReader implements Closeable
         return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8192, 10);
     }
 
-    public JsonReader(InputStream inp, boolean useMaps, int maxDepth)
-    {
-        this(inp, makeArgMap(new HashMap<>(), useMaps), maxDepth);
+    /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream - json String
+     * @param useMaps     - return data in map of maps
+     * @param maxDepth    - maximum recursion depth
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream, boolean useMaps, int maxDepth) {
+        this(inputStream, makeArgMap(new HashMap<>(), useMaps), maxDepth);
     }
 
-    public JsonReader(InputStream inp, boolean useMaps)
-    {
-        this(inp, useMaps, DEFAULT_MAX_PARSE_DEPTH);
+    /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream - json String
+     * @param useMaps     - return data in map of maps
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream, boolean useMaps) {
+        this(inputStream, useMaps, DEFAULT_MAX_PARSE_DEPTH);
     }
 
-    public JsonReader(InputStream inp, Map<String, Object> optionalArgs, int maxDepth)
-    {
-        initializeFromArgs(optionalArgs);
-        input = getReader(inp);
-        maxParseDepth = maxDepth;
+    /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream  - json String
+     * @param optionalArgs - old way of passing reader arguments
+     * @param maxDepth     - max recursion depth
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream, Map<String, Object> optionalArgs, int maxDepth) {
+        args.putAll(optionalArgs == null ? new HashMap<>() : optionalArgs);
+        args.put(JSON_READER, this);
+
+        ReadOptions readOptions = ReadOptionsBuilder.fromMap(optionalArgs).withMaxDepth(maxDepth).build();
+        ReaderContext.instance().initialize(readOptions, this);
+        input = getReader(inputStream);
     }
 
-    public JsonReader(InputStream inp, Map<String, Object> optionalArgs)
-    {
-        this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    /**
+     * Deprecated - use JsonReader(InputStream, ReadOptions)
+     *
+     * @param inputStream  - json String
+     * @param optionalArgs - old way of passing reader arguments
+     */
+    @Deprecated
+    public JsonReader(InputStream inputStream, Map<String, Object> optionalArgs) {
+        this(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
-    public JsonReader(String inp, Map<String, Object> optionalArgs, int maxDepth)
-    {
-        initializeFromArgs(optionalArgs);
-        byte[] bytes = inp.getBytes(StandardCharsets.UTF_8);
-        input = getReader(new ByteArrayInputStream(bytes));
-        maxParseDepth = maxDepth;
+    /**
+     * Deprecated - use JsonReader(String, ReadOptions)
+     *
+     * @param json         - json String
+     * @param optionalArgs - old way of passing reader arguments
+     * @param maxDepth     - max recursion depth
+     */
+    @Deprecated
+    public JsonReader(String json, Map<String, Object> optionalArgs, int maxDepth) {
+        this(json.getBytes(StandardCharsets.UTF_8), optionalArgs, maxDepth);
     }
 
-    public JsonReader(String inp, Map<String, Object> optionalArgs)
-    {
-        this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
+    /**
+     * Deprecated - use JsonReader(String, ReadOptions)
+     *
+     * @param json         - json String
+     * @param optionalArgs - old way of passing reader arguments
+     */
+    @Deprecated
+    public JsonReader(String json, Map<String, Object> optionalArgs) {
+        this(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
-    public JsonReader(byte[] inp, Map<String, Object> optionalArgs, int maxDepth)
-    {
-        initializeFromArgs(optionalArgs);
-        input = getReader(new ByteArrayInputStream(inp));
-        maxParseDepth = maxDepth;
+    /**
+     * Deprecated - use JsonReader(byte[], ReadOptions)
+     *
+     * @param inp          - byte array with json data in it.
+     * @param optionalArgs - deprecated options.
+     * @param maxDepth     - max recursion depth
+     */
+    @Deprecated
+    public JsonReader(byte[] inp, Map<String, Object> optionalArgs, int maxDepth) {
+        this(new ByteArrayInputStream(inp), optionalArgs, maxDepth);
     }
 
+    /**
+     * Deprecated - use JsonReader(byte[], ReadOptions)
+     *
+     * @param inp          - byte array with json data in it.
+     * @param optionalArgs - deprecated options.
+     */
+    @Deprecated
     public JsonReader(byte[] inp, Map<String, Object> optionalArgs)
     {
         this(inp, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
-    private void initializeFromArgs(Map<String, Object> optionalArgs)
-    {
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<>();
-        }
-        Map<String, Object> args = getArgs();
-        args.putAll(optionalArgs);
-        args.put(JSON_READER, this);
-        if (!args.containsKey(CLASSLOADER))
-        {
-            args.put(CLASSLOADER, JsonReader.class.getClassLoader());
-        }
-        Map<String, String> typeNames = (Map<String, String>) args.get(TYPE_NAME_MAP);
 
-        if (typeNames != null)
-        { // Reverse the Map (this allows the users to only have a Map from type to short-hand name,
-            // and not keep a 2nd map from short-hand name to type.
-            Map<String, String> typeNameMap = new HashMap<String, String>();
-            for (Map.Entry<String, String> entry : typeNames.entrySet())
-            {
-                typeNameMap.put(entry.getValue(), entry.getKey());
-            }
-            args.put(TYPE_NAME_MAP_REVERSE, typeNameMap); // replace with our reversed Map.
-        }
-
-        setMissingFieldHandler((MissingFieldHandler) args.get(MISSING_FIELD_HANDLER));
-
-        Map<Class<?>, JsonClassReader> customReaders = (Map) args.get(CUSTOM_READER_MAP);
-        if (customReaders != null) {
-            this.readers.putAll(customReaders);
-        }
-
-        Collection<Class<?>> notCustomReaders = (Collection) args.get(NOT_CUSTOM_READER_MAP);
-        if (notCustomReaders != null) {
-            this.notCustom.addAll(notCustomReaders);
-        }
-
-        // pull all factories out and add them to the already added
-        // global class factories.  The global class factories are
-        // replaced by and ith the same name in this object.
-        Map<String, ClassFactory> factories = (Map) args.get(FACTORIES);
-        if (factories != null) {
-            this.classFactories.putAll(factories);
-        }
+    public JsonReader(String json) {
+        this(json, new ReadOptionsBuilder().build());
     }
+
+    public JsonReader(String json, ReadOptions readOptions) {
+        this(json.getBytes(StandardCharsets.UTF_8), readOptions);
+    }
+
+    public JsonReader(byte[] bytes, ReadOptions readOptions) {
+        this(new ByteArrayInputStream(bytes), readOptions);
+    }
+
+    public JsonReader(InputStream inp, ReadOptions readOptions) {
+        this.args.putAll(readOptions.toMap());
+        this.args.put(JSON_READER, this);
+        ReaderContext.instance().initialize(readOptions, this);
+        input = getReader(inp);
+    }
+
+    /**
+     * Use this constructor if you already have a JsonObject graph and want to parse it into
+     * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
+     * the JsonReader.
+     *
+     * @param options - read options
+     */
+    public JsonReader(ReadOptions options) {
+        this(new byte[]{}, options);
+    }
+
 
     /**
      * Read JSON input from the stream that was set up in the constructor, turning it into
@@ -834,9 +915,9 @@ public class JsonReader implements Closeable
      * @return Java Object graph constructed from InputStream supplying
      *         JSON serialized content.
      */
-    public Object readObject()
-    {
-        JsonParser parser = new JsonParser(input, getArgs(), maxParseDepth);
+    public Object readObject() {
+        int maxDepth = ReaderContext.instance().getReadOptions().getMaxDepth();
+        JsonParser parser = new JsonParser(input, getArgs(), maxDepth);
         JsonObject root = new JsonObject();
         Object o;
         try
@@ -883,12 +964,14 @@ public class JsonReader implements Closeable
     public Object jsonObjectsToJava(JsonObject root)
     {
         getArgs().put(USE_MAPS, false);
+        final ReadOptions options = ReaderContext.instance().getReadOptions();
+        ReaderContext.instance().initialize(options.ensureUsingObjects(), this);
         return convertParsedMapsToJava(root);
     }
 
     protected boolean useMaps()
     {
-        return Boolean.TRUE.equals(getArgs().get(USE_MAPS));
+        return ReaderContext.instance().getReadOptions().isUsingMaps();
     }
 
     /**
@@ -896,7 +979,7 @@ public class JsonReader implements Closeable
      */
     ClassLoader getClassLoader()
     {
-        return (ClassLoader) args.get(CLASSLOADER);
+        return ReaderContext.instance().getReadOptions().getClassLoader();
     }
 
     /**
@@ -920,7 +1003,7 @@ public class JsonReader implements Closeable
             }
             else
             {
-                Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, (ClassLoader) args.get(CLASSLOADER));
+                Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, ReaderContext.instance().getReadOptions().getClassLoader());
                 Object instance = resolver.createInstance(Object.class, root);
                 if (root.isFinished)
                 {   // Factory method instantiated and completely loaded the object.
@@ -931,8 +1014,6 @@ public class JsonReader implements Closeable
                     graph = resolver.convertMapsToObjects(root);
                 }
                 resolver.cleanup();
-                readers.clear();
-                classFactories.clear();
             }
             return graph;
         }
@@ -951,6 +1032,26 @@ public class JsonReader implements Closeable
             }
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         }
+    }
+
+    private static String safeTrimToNull(String string) {
+        if (string == null) {
+            return null;
+        }
+
+        String trimmedString = string.trim();
+        return trimmedString.isEmpty() ? null : trimmedString;
+    }
+
+    public Object newInstance(Class<?> c, JsonObject jsonObject) {
+        ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(c);
+
+        if (classFactory != null) {
+            Object o = classFactory.newInstance(c, jsonObject);
+            return jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
+        }
+
+        return MetaUtils.newInstance(c);
     }
 
     @Override

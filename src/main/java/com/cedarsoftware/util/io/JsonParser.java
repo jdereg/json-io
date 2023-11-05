@@ -6,7 +6,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.*;
+import static com.cedarsoftware.util.io.JsonObject.ID;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+import static com.cedarsoftware.util.io.JsonObject.REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ID;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_KEYS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_TYPE;
+import static com.cedarsoftware.util.io.JsonObject.TYPE;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -53,10 +62,6 @@ class JsonParser
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
-    private final boolean useMaps;
-    private final Map<String, String> typeNameMap;
-    private final int maxParseDepth;
-
     private int curParseDepth = 0;
 
     static
@@ -113,9 +118,6 @@ class JsonParser
     JsonParser(FastReader reader, Map<String, Object> args, int maxDepth)
     {
         input = reader;
-        useMaps = Boolean.TRUE.equals(args.get(JsonReader.USE_MAPS));
-        typeNameMap = (Map<String, String>) args.get(JsonReader.TYPE_NAME_MAP_REVERSE);
-        maxParseDepth = maxDepth;
     }
 
     JsonParser(FastReader reader, Map<String, Object> args)
@@ -187,9 +189,9 @@ class JsonParser
                     }
 
                     Object value = readValue(object);
-                    if (TYPE.equals(field) && typeNameMap != null)
+                    if (TYPE.equals(field))
                     {
-                        final String substitute = typeNameMap.get(value);
+                        final String substitute = ReaderContext.instance().getReadOptions().getTypeName(value.toString());
                         if (substitute != null)
                         {
                             value = substitute;
@@ -228,6 +230,8 @@ class JsonParser
             }
         }
 
+        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
+
         if (useMaps && object.isLogicalPrimitive())
         {
             return object.getPrimitiveValue();
@@ -238,6 +242,7 @@ class JsonParser
 
     Object readValue(JsonObject object) throws IOException
     {
+        final int maxParseDepth = ReaderContext.instance().getReadOptions().getMaxDepth();
         if (curParseDepth > maxParseDepth) {
             return error("Maximum parsing depth exceeded");
         }

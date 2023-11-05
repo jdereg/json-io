@@ -75,7 +75,7 @@ public class ObjectResolver extends Resolver
     {
         super(reader);
         this.classLoader = classLoader;
-        missingFieldHandler = reader.getMissingFieldHandler();
+        this.missingFieldHandler = ReaderContext.instance().getReadOptions().getMissingFieldHandler();
     }
 
     /**
@@ -711,7 +711,7 @@ public class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (inferredType != null && notCustom(inferredType))
+        if (inferredType != null && ReaderContext.instance().getReadOptions().isNonCustomizable(inferredType))
         {
             return null;
         }
@@ -767,8 +767,7 @@ public class ObjectResolver extends Resolver
                         }
                     }
                     Object factoryCreated = createInstance(c, jsonObj);
-                    if (jsonObj.isFinished)
-                    {   
+                    if (jsonObj.isFinished) {
                         return factoryCreated;
                     }
                 }
@@ -787,13 +786,12 @@ public class ObjectResolver extends Resolver
             c = inferredType;
         }
 
-        if (notCustom(c))
-        {   // Explicitly instructed not to use a custom reader for this class.
+        if (ReaderContext.instance().getReadOptions().isNonCustomizable(c)) {// Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
         // Use custom classFactory if one exists
-        JsonReader.ClassFactory classFactory = getClassFactory(c);
+        JsonReader.ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(c);
         if (classFactory != null)
         {
             if (isJsonObject) {
@@ -817,8 +815,7 @@ public class ObjectResolver extends Resolver
 
         // Use custom reader if ont exists
         JsonReader.JsonClassReader closestReader = getCustomReader(c);
-        if (closestReader == null)
-        {  
+        if (closestReader == null) {
             return null;
         }
 
@@ -826,7 +823,7 @@ public class ObjectResolver extends Resolver
         {
             jsonObj.setType(c.getName());
         }
-        
+
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.

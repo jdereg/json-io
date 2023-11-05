@@ -18,6 +18,12 @@ public class ReaderContext {
     @Setter
     private Resolver resolver;
 
+    @Getter
+    private JsonReader reader;
+
+    @Getter
+    private ReadOptions readOptions;
+
 
     public static ReaderContext instance() {
         return conversionContext.get();
@@ -35,6 +41,11 @@ public class ReaderContext {
         this.referenceTracker.clear();
     }
 
+    public void initialize(ReadOptions readOptions, JsonReader reader) {
+        this.referenceTracker.clear();
+        this.reader = reader;
+        this.readOptions = readOptions;
+    }
 
     /**
      * Implementation of ReferenceTracker
@@ -66,7 +77,8 @@ public class ReaderContext {
         public JsonObject get(Long id)
         {
             JsonObject target = references.get(id);
-            if (target == null) {
+            if (target == null)
+            {
                 throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
             }
 
@@ -77,7 +89,7 @@ public class ReaderContext {
                 {
                     throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
                 }
-            } 
+            }
 
             return target;
         }

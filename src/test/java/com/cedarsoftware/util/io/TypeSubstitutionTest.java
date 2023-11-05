@@ -3,7 +3,10 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -32,7 +35,7 @@ public class TypeSubstitutionTest
         Map<String, String> types = map;
         List list = MetaUtils.listOf("alpha", "bravo", "charlie");
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().withCustomTypeNameMap(types).build());
-        List test = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(types).build());
+        List test = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNames(types).build());
         assert DeepEquals.deepEquals(list, test);
     }
 
@@ -51,7 +54,7 @@ public class TypeSubstitutionTest
         map1.put("com.cedarsoftware.util.io.TestTypeSubstitution$Person", "person");
         Map<String, String> types = map1;
         String json = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomTypeNameMap(types).build());
-        Person clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNameMap(types).build());
+        Person clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNames(types).build());
         assert clone.getName().equals("John");
         assert DeepEquals.deepEquals(clone.getPets(), p.getPets());
     }
