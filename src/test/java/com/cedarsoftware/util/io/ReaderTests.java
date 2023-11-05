@@ -28,11 +28,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ReaderTests {
     @Test
     void testNewInstance() {
-        JsonReader reader = new JsonReader();
-
-        Date d = (Date) reader.newInstance(Date.class, new JsonObject());
-        Integer a = (Integer) reader.newInstance(Integer.class, new JsonObject());
-        String x = (String) reader.newInstance(String.class, new JsonObject());
+        Date d = (Date) MetaUtils.newInstance(Date.class);
+        Integer a = (Integer) MetaUtils.newInstance(Integer.class);
+        String x = (String) MetaUtils.newInstance(String.class);
 
         assert d instanceof Date;
         assert a instanceof Integer;

@@ -252,9 +252,12 @@ public class Readers
                     c = classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
                 }
 
-                Calendar calendar = (Calendar) reader.newInstance(c, jObj);
+                // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
+                // the special Calendar class, don't try to do that via a custom reader.  That is why only
+                // MetaUtils.newInstance() is used below.
+                Calendar calendar = (Calendar) MetaUtils.newInstance(c);
                 calendar.setTime(date);
-                jObj.setTarget(calendar);
+                jObj.setFinishedTarget(calendar, true);
                 String zone = (String) jObj.get("zone");
                 if (zone != null)
                 {
@@ -648,7 +651,7 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                value = jObj.get("value");
+                value = jObj.getValue();
             }
             else
             {
@@ -669,7 +672,7 @@ public class Readers
                 jObj = (JsonObject) o;
                 if (jObj.containsKey("value"))
                 {
-                    value = jObj.get("value");
+                    value = jObj.getValue();
                 }
                 else
                 {

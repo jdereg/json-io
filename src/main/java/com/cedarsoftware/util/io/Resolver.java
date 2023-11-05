@@ -431,11 +431,8 @@ abstract class Resolver
             }
             else if (!c.getName().startsWith("java.util.Immutable"))
             {
-                //  for some statically create objects that we have factories for like TimeZone, LocalDate,
-                //  this could be the end of the line because it creates the entire object in the factory
-                //  but we continue parsing.  I think we need to see if there is a way we can acknowledge
-                //  objects that are complete or done by using the target on JsonObject and a flag.
-                mate = reader.newInstance(c, jsonObj);
+                // ClassFactory already consulted above
+                mate = MetaUtils.newInstance(c);
             }
             else if (c.getName().contains("Set"))
             {
@@ -496,8 +493,8 @@ abstract class Resolver
                 ((JsonObject)mate).type = Map.class.getName();
             }
             else if (unknownClass instanceof String)
-            {
-                mate = reader.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()), jsonObj);
+            {   // ClassFactory consulted above, no need to check it here.
+                mate = MetaUtils.newInstance(MetaUtils.classForName(((String) unknownClass).trim(), reader.getClassLoader()));
             }
             else if (unknownClass instanceof Class)
             {
@@ -510,7 +507,8 @@ abstract class Resolver
         }
         else
         {
-            mate = reader.newInstance(clazz, jsonObj);
+            // ClassFactory consulted above, no need to check it here.
+            mate = MetaUtils.newInstance(clazz);
         }
 
         jsonObj.setTarget(mate);

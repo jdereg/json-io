@@ -947,17 +947,6 @@ public class JsonReader implements Closeable
         }
     }
 
-    public Object newInstance(Class<?> c, JsonObject jsonObject) {
-        ClassFactory classFactory = classFactories.get(c.getName());
-
-        if (classFactory != null) {
-            Object o = classFactory.newInstance(c, jsonObject);
-            return jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
-        }
-
-        return MetaUtils.newInstance(c);
-    }
-
     @Override
     public void close()
     {
@@ -982,5 +971,4 @@ public class JsonReader implements Closeable
         }
         return msg;
     }
-
 }
