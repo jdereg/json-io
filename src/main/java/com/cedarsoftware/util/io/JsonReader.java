@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,16 +8,19 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -541,19 +543,8 @@ public class JsonReader implements Closeable
     @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs, int maxDepth)
     {
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<>();
-        }
-
-        ReadOptions options = ReadOptionsBuilder.fromMap(optionalArgs).returnAsMaps().build();
-
-        ByteArrayInputStream ba = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
-        JsonReader jr = new JsonReader(ba, options);
-        Object ret = jr.readObject();
-        jr.close();
-
-        return adjustOutputMap(ret);
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        return jsonToMaps(new ByteArrayInputStream(bytes), optionalArgs, maxDepth);
     }
 
     /**
@@ -876,18 +867,39 @@ public class JsonReader implements Closeable
     }
 
 
+    /**
+     * Creates a json reader using default read options
+     *
+     * @param json - json String
+     */
     public JsonReader(String json) {
         this(json, new ReadOptionsBuilder().build());
     }
 
+    /**
+     * Creates a json reader using custom read options
+     *
+     * @param json        json String
+     * @param readOptions Read Options
+     */
     public JsonReader(String json, ReadOptions readOptions) {
         this(json.getBytes(StandardCharsets.UTF_8), readOptions);
     }
 
+    /**
+     * Creates a json reader using custom read options
+     * @param bytes utf-8 encoded bytes
+     * @param readOptions Read Options
+     */
     public JsonReader(byte[] bytes, ReadOptions readOptions) {
         this(new ByteArrayInputStream(bytes), readOptions);
     }
 
+    /**
+     * Creates a json reader using custom read options
+     * @param inp InputStream of utf-encoded json
+     * @param readOptions Read Options
+     */
     public JsonReader(InputStream inp, ReadOptions readOptions) {
         this.args.putAll(readOptions.toMap());
         this.args.put(JSON_READER, this);
@@ -1041,17 +1053,6 @@ public class JsonReader implements Closeable
 
         String trimmedString = string.trim();
         return trimmedString.isEmpty() ? null : trimmedString;
-    }
-
-    public Object newInstance(Class<?> c, JsonObject jsonObject) {
-        ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(c);
-
-        if (classFactory != null) {
-            Object o = classFactory.newInstance(c, jsonObject);
-            return jsonObject.setFinishedTarget(o, classFactory.isObjectFinal());
-        }
-
-        return MetaUtils.newInstance(c);
     }
 
     @Override
