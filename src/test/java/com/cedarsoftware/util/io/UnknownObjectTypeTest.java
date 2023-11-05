@@ -1,10 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentSkipListMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -28,11 +30,11 @@ public class UnknownObjectTypeTest
     @Test
     public void testUnknownObjects()
     {
-        String json = "{\"DashboardController.updateFilter\":{\"dto\":{\"@type\":\"java.util.Map\",\"assignedToList\":[\"1000004947\"],\"assignedToMap\":{\"1000004947\":\"Me\"},\"claimsExistIndicator\":true,\"defaultFilter\":false,\"defaultSortField\":\"trnEffectiveDate\",\"defaultSortOrder\":\"asc\",\"effectiveDateFrom\":null,\"effectiveDateTo\":null,\"fieldList\":[],\"needByDateFrom\":null,\"needByDateTo\":null,\"overdueIndicator\":true,\"pendedOption\":null,\"previouslyPendedIndicator\":true,\"producerCodeList\":[],\"producerCodesPCTerrField\":[],\"producerCodeMap\":null,\"profitCenterList\":[],\"rushIndicator\":true,\"territoryList\":[],\"underwriterList\":[],\"underwriterMap\":{},\"viewByOption\":\"view_by_actvity\",\"countOnly\":false,\"newFilterName\":\"My Assigned To\",\"originalFilterName\":\"My Assigned To\",\"filterRanIndicator\":false,\"filterRanIndicatorMap\":{\"@type\":\"java.util.LinkedHashMap\",\"1000004947\":true,\"0000029443\":false,\"0000020985\":false,\"0000020994\":false},\"rowLimit\":0,\"filterType\":null,\"filterName\":\"My Assigned To\",\"com.gaic.bue.uwd.ra.common.dto.AbstractFilterDto.defaultFilter\":false,\"filterAppCode\":\"RADashboardFilter\",\"createDate\":null,\"updateDate\":null,\"createHid\":\"1000004947\",\"updateHid\":null,\"sourceNumber\":0,\"disabledFields\":{},\"screenCommands\":{},\"rpmSession\":null}}}";
+        String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
         JsonObject myParams = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
         Object inputParams = new JsonReader().jsonObjectsToJava(myParams);
+        assert inputParams instanceof Map;
         String json2 = TestUtil.toJson(inputParams);
-        assert json2.length() > 100;
     }
 
     @Test
@@ -56,5 +58,17 @@ public class UnknownObjectTypeTest
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
         assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json, new ReadOptionsBuilder().failOnUnknownType().build()); });
+    }
+
+    @Disabled
+    @Test
+    public void testUnknownClassSwappedWithConcurrentSkipListMap()
+    {
+        String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\",\"age\":50}";
+        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentSkipListMap.class).build());
+        assert map instanceof ConcurrentSkipListMap;
+        assert map.get("name").equals("Joe");
+        assert map.get("age").equals(50L);
+        assert map.size() == 2;
     }
 }

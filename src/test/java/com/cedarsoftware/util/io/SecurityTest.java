@@ -141,8 +141,9 @@ public class SecurityTest
         catch (JsonIoException e)
         {
             String msg = e.getMessage().toLowerCase();
-            assert (msg.contains("class listed") && msg.contains("not found")) ||
-                   (msg.contains("security") && msg.contains("instantiation"));
+            String msg2 = e.getCause() == null ? "no cause" : e.getCause().getMessage().toLowerCase();
+            assert msg.contains("security") && msg.contains("not allow instantiation") ||
+                    msg2.contains("security") && msg2.contains("not allow instantiation");
         }
     }
 

@@ -11,21 +11,14 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +58,13 @@ public class MetaUtilsTests {
                 Arguments.of(Timestamp.class, MetaUtils.listOf(Timestamp.class)),
                 Arguments.of(Date.class, MetaUtils.listOf(Date.class)),
                 Arguments.of(Class.class, MetaUtils.listOf(Class.class)),
+                Arguments.of(LocalDate.class, MetaUtils.listOf(LocalDate.class)),
+                Arguments.of(LocalDateTime.class, MetaUtils.listOf(LocalDateTime.class)),
+                Arguments.of(ZonedDateTime.class, MetaUtils.listOf(ZonedDateTime.class)),
+                Arguments.of(ZoneId.class, MetaUtils.listOf(ZoneId.class)),
+                Arguments.of(AtomicBoolean.class, MetaUtils.listOf(AtomicBoolean.class)),
+                Arguments.of(AtomicInteger.class, MetaUtils.listOf(AtomicInteger.class)),
+                Arguments.of(AtomicLong.class, MetaUtils.listOf(AtomicLong.class)),
                 Arguments.of(Object.class, MetaUtils.listOf(Object.class)));
 
     }

@@ -4,19 +4,7 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -363,6 +351,20 @@ abstract class Resolver
             }
         }
 
+//        if (c == null)
+//        {
+//            if (failOnUnknownType)
+//            {
+//                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
+//            }
+//
+//            c = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+//            if (c == null)
+//            {
+//                c = LinkedHashMap.class;
+//            }
+//        }
+
         // If a ClassFactory exists for a class, use it to instantiate the class.
         Object mate = createInstanceUsingClassFactory(c, jsonObj);
         if (mate != null)
@@ -391,6 +393,7 @@ abstract class Resolver
             if (MetaUtils.isPrimitive(c))
             {
                 mate = MetaUtils.convert(c, jsonObj.getValue());
+                jsonObj.isFinished = true;
             }
             else if (c == Class.class)
             {
@@ -403,10 +406,12 @@ abstract class Resolver
             else if (Enum.class.isAssignableFrom(c)) // anonymous subclass of an enum
             {
                 mate = getEnum(c.getSuperclass(), jsonObj);
+                jsonObj.isFinished = true;
             }
             else if (EnumSet.class.isAssignableFrom(c))
             {
                 mate = extractEnumSet(c, jsonObj);
+                jsonObj.isFinished = true;
             }
             else if ((mate = coerceCertainTypes(c.getName())) != null)
             {   // if coerceCertainTypes() returns non-null, it did the work
@@ -417,22 +422,45 @@ abstract class Resolver
                 Object value = jsonObj.values().iterator().next();
                 mate = Collections.singletonMap(key, value);
             }
-            else if (!c.getName().startsWith("java.util.Immutable"))
+            else if (c.getName().startsWith("java.util.Immutable"))
+            {
+                if (c.getName().contains("Set"))
+                {
+                    mate = new LinkedHashSet<>();
+                }
+                else if (c.getName().contains("List"))
+                {
+                    mate = new ArrayList<>();
+                }
+                else if (c.getName().contains("Map"))
+                {
+                    mate = new LinkedHashMap<>();
+                }
+                else
+                {
+                    throw new JsonIoException("Unknown Immutable class type: " + c.getName());
+                }
+            }
+            else
             {
                 // ClassFactory already consulted above
                 mate = MetaUtils.newInstance(c);
-            }
-            else if (c.getName().contains("Set"))
-            {
-                mate = new ArrayList<>();
-            }
-            else if (c.getName().contains("List"))
-            {
-                mate = new ArrayList<>();
-            }
-            else if (c.getName().contains("Map"))
-            {
-                mate = new LinkedHashMap<>();
+                if (mate == null)
+                {
+                    final Class<?> unknownClass = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+
+                    if (unknownClass == null)
+                    {
+                        JsonObject jsonObject = new JsonObject();
+                        mate = jsonObject;
+                        jsonObject.type = mate.getClass().getName();
+                    }
+                    else
+                    {
+                        // ClassFactory already consulted above
+                        mate = MetaUtils.newInstance(unknownClass);
+                    }
+                }
             }
         }
         jsonObj.setTarget(mate);

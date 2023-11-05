@@ -542,7 +542,7 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = jObj.get("value");
+                jObj.target = jObj.getValue();
                 return jObj.target;
             }
             throw new JsonIoException("String missing 'value' field");

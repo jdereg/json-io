@@ -11,9 +11,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -406,7 +413,7 @@ public class MetaUtils
         {
             // Remember why in case later we have a problem
             loadClassException = e;
-            if(failOnClassLoadingError) {
+            if (failOnClassLoadingError) {
                 throw new JsonIoException("Unable to create class: " + name, e);
             }
             return LinkedHashMap.class;
@@ -904,6 +911,34 @@ public class MetaUtils
                 else if (argType == java.sql.Date.class)
                 {
                     values[i] = new java.sql.Date(System.currentTimeMillis());
+                }
+                else if (argType == LocalDate.class)
+                {
+                    values[i] = LocalDate.of(2023, 12, 25);
+                }
+                else if (argType == LocalDateTime.class)
+                {
+                    values[i] = LocalDateTime.of(2023, 12, 25, 8, 0, 0);
+                }
+                else if (argType == ZonedDateTime.class)
+                {
+                    values[i] = ZonedDateTime.of(2023, 12, 25, 8, 0, 0, 0, ZoneId.systemDefault());
+                }
+                else if (argType == ZoneId.class)
+                {
+                    values[i] = ZoneId.systemDefault();
+                }
+                else if (argType == AtomicBoolean.class)
+                {
+                    values[i] = new AtomicBoolean(true);
+                }
+                else if (argType == AtomicInteger.class)
+                {
+                    values[i] = new AtomicInteger(7);
+                }
+                else if (argType == AtomicLong.class)
+                {
+                    values[i] = new AtomicLong(7L);
                 }
                 else if (argType == URL.class)
                 {
