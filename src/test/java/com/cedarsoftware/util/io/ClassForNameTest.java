@@ -47,20 +47,14 @@ public class ClassForNameTest
     @Test
     public void testClassForNameFailOnClassLoaderErrorTrue()
     {
-        try
-        {
-            MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader(), true);
-        }
-        catch (JsonIoException ignore)
-        { }
+        assert null == MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorFalse()
     {
-        Class<?> testObjectClass = MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader(), false);
-        assert testObjectClass instanceof Class<?>;
-        assert "java.util.LinkedHashMap".equals(testObjectClass.getName());
+        Class<?> testObjectClass = MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
+        assert testObjectClass == null;
     }
 
     private static class AlternateNameClassLoader extends ClassLoader
@@ -77,7 +71,7 @@ public class ClassForNameTest
             return findClass(className);
         }
 
-        protected Class<?> findClass(String className) throws ClassNotFoundException
+        protected Class<?> findClass(String className)
         {
             try
             {

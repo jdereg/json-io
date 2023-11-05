@@ -67,7 +67,6 @@ public class MetaUtils
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
-    static Exception loadClassException;
 
     /**
      * Globally turn on (or off) the 'unsafe' option of Class construction.  The unsafe option
@@ -391,40 +390,6 @@ public class MetaUtils
      * Given the passed in String class name, return the named JVM class.
      * @param name String name of a JVM class.
      * @param classLoader ClassLoader to use when searching for JVM classes.
-     * @param failOnClassLoadingError If named class is not loadable off classpath: true will raise JsonIoException,
-     * false will return default LinkedHashMap.
-     * @return Class the named JVM class.
-     * @throws JsonIoException if named Class is invalid or not loadable via the classLoader and failOnClassLoadingError is
-     * true
-     */
-    static Class<?> classForName(String name, ClassLoader classLoader, boolean failOnClassLoadingError)
-    {
-        if (name == null || name.isEmpty())
-        {
-            throw new JsonIoException("Class name cannot be null or empty.");
-        }
-        Class<?> c = nameToClass.get(name);
-        try
-        {
-            loadClassException = null;
-            return c == null ? loadClass(name, classLoader) : c;
-        }
-        catch (Exception e)
-        {
-            // Remember why in case later we have a problem
-            loadClassException = e;
-            if (failOnClassLoadingError) {
-                throw new JsonIoException("Unable to create class: " + name, e);
-            }
-            return LinkedHashMap.class;
-        }
-    }
-
-
-    /**
-     * Given the passed in String class name, return the named JVM class.
-     * @param name String name of a JVM class.
-     * @param classLoader ClassLoader to use when searching for JVM classes.
      * @return Class instance of the named JVM class or null if not found.
      */
     static Class<?> classForName(String name, ClassLoader classLoader)
@@ -435,8 +400,6 @@ public class MetaUtils
         }
         try
         {
-            // TODO: This static variable is being removed soon...
-            loadClassException = null;
             Class<?> c = nameToClass.get(name);
             if (c != null)
             {
@@ -446,8 +409,6 @@ public class MetaUtils
         }
         catch (Exception e)
         {
-            // TODO: Remove
-            loadClassException = e;
             return null;
         }
     }

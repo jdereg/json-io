@@ -50,7 +50,11 @@ public class MapOfMapsTest
         final String json2 = "{\"@type\":\"" + testObjectClassName + "\",\"_name\":\"alpha\",\"_other\":{\"@type\":\"com.baz.Qux\",\"_name\":\"beta\",\"_other\":null}}";
 
         Exception e = assertThrows(Exception.class, () -> { TestUtil.toJava(json2);});
-        assert e.getMessage().toLowerCase().contains("setting field \'_other\'");
+        String msg = e.getMessage().toLowerCase();
+        assert msg.contains("unable to set field");
+        assert msg.contains("target");
+        assert msg.contains("alpha");
+        assert msg.contains("with value");
 
         map = TestUtil.toJava(json2, new ReadOptionsBuilder().returnAsMaps().build());
         assertEquals("alpha", map.get("_name"));

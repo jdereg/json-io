@@ -1,12 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
 
 /**
  * @author Balazs Bessenyei (h143570@gmail.com)
@@ -45,11 +46,13 @@ public class UUIDTest
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json2); });
-        assertTrue(thrown.getCause().getMessage().contains("mostSigBits"));
+        assert thrown.getMessage().toLowerCase().contains("mostsigbits");
+        assert thrown.getMessage().toLowerCase().contains("cannot be empty");
 
         String json3 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json3); });
-        assertTrue(thrown.getCause().getMessage().contains("leastSigBits"));
+        assert thrown.getMessage().toLowerCase().contains("leastsigbits");
+        assert thrown.getMessage().toLowerCase().contains("cannot be empty");
     }
 
     @Test

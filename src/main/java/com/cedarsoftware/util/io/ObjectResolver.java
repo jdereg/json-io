@@ -274,12 +274,12 @@ public class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            String message = e.getClass().getSimpleName() + " setting field '" + field.getName() + "' on target: " + safeToString(target) + " with value: " + rhs;
-            if (MetaUtils.loadClassException != null)
+            if (e instanceof JsonIoException)
             {
-                message += " Caused by: " + MetaUtils.loadClassException + " (which created a LinkedHashMap instead of the desired class)";
+                throw e;
             }
-            throw new JsonIoException(message, e);
+
+            throw new JsonIoException("Unable to set field: " + field.getName() + " on target: " + safeToString(target) + " with value: " + rhs, e);
         }
     }
 
@@ -356,13 +356,12 @@ public class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
+            if (e instanceof JsonIoException)
+            {
+                throw e;
+            }
             String message = e.getClass().getSimpleName() + " missing field '" + missingField + "' on target: "
                     + safeToString(target) + " with value: " + rhs;
-            if (MetaUtils.loadClassException != null)
-            {
-                message += " Caused by: " + MetaUtils.loadClassException
-                        + " (which created a LinkedHashMap instead of the desired class)";
-            }
             throw new JsonIoException(message, e);
         }
     }

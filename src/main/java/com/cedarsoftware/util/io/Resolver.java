@@ -343,7 +343,7 @@ abstract class Resolver
         Class c;
         try
         {
-            c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
+            c = MetaUtils.classForName(type, reader.getClassLoader());
         }
         catch (Exception e)
         {
@@ -360,19 +360,19 @@ abstract class Resolver
             }
         }
 
-//        if (c == null)
-//        {
-//            if (failOnUnknownType)
-//            {
-//                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
-//            }
-//
-//            c = getReadOptions().getUnknownTypeClass();
-//            if (c == null)
-//            {
-//                c = LinkedHashMap.class;
-//            }
-//        }
+        if (c == null)
+        {
+            if (failOnUnknownType)
+            {
+                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
+            }
+
+            c = getReadOptions().getUnknownTypeClass();
+            if (c == null)
+            {
+                c = LinkedHashMap.class;
+            }
+        }
 
         // If a ClassFactory exists for a class, use it to instantiate the class.
         Object mate = createInstanceUsingClassFactory(c, jsonObj);

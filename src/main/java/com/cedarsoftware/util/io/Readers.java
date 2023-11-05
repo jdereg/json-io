@@ -932,23 +932,29 @@ public class Readers
     {
         public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
         {
-
             // to use the String representation
             if (o instanceof String)
             {
-                return UUID.fromString((String) o);
+                try
+                {
+                    return UUID.fromString((String) o);
+                }
+                catch (Exception e)
+                {
+                    throw new JsonIoException("Unable to load UUID from JSON string: " + o, e);
+                }
             }
 
             JsonObject jObj = (JsonObject) o;
             Long mostSigBits = (Long) jObj.get("mostSigBits");
             if (mostSigBits == null)
             {
-                throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field");
+                throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field and it cannot be empty in JSON");
             }
             Long leastSigBits = (Long) jObj.get("leastSigBits");
             if (leastSigBits == null)
             {
-                throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field");
+                throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field and it cannot be empty in JSON");
             }
 
             UUID uuid = new UUID(mostSigBits, leastSigBits);
