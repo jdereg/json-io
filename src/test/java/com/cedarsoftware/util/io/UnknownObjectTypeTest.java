@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -60,7 +59,6 @@ public class UnknownObjectTypeTest
         assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json, new ReadOptionsBuilder().failOnUnknownType().build()); });
     }
 
-    @Disabled
     @Test
     public void testUnknownClassSwappedWithConcurrentSkipListMap()
     {

@@ -361,15 +361,17 @@ abstract class Resolver
         }
 
         if (c == null)
-        {
+        {   // Unabled to find class in the JVM.
             if (failOnUnknownType)
             {
                 throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
             }
 
+            // Try "unknown" class the user may have set up.
             c = getReadOptions().getUnknownTypeClass();
             if (c == null)
-            {
+            {   // They did not set up an unknown class, use a LinkedHashMap.  It will be use to catch the fields
+                // of the JSON object graph.  Works well with returnAsMaps() setting.
                 c = LinkedHashMap.class;
             }
         }
@@ -452,22 +454,18 @@ abstract class Resolver
             }
             else
             {
-                // ClassFactory already consulted above
+                // ClassFactory already consulted above, so use UnknownClass if set.
                 mate = MetaUtils.newInstance(c);
                 if (mate == null)
                 {
-                    final Class<?> unknownClass = getReadOptions().getUnknownTypeClass();
-
-                    if (unknownClass == null)
+                    if (failOnUnknownType)
                     {
-                        JsonObject jsonObject = new JsonObject();
-                        mate = jsonObject;
-                        jsonObject.type = mate.getClass().getName();
+                        throw new JsonIoException("Unable to instantiate class: " + c.getName());
                     }
                     else
-                    {
-                        // ClassFactory already consulted above
-                        mate = MetaUtils.newInstance(unknownClass);
+                    {   // Specified unknown class to load was not found.  Dropping to LinkedHashMap, which
+                        // is good for returnAsMaps().
+                        mate = new LinkedHashMap<>();
                     }
                 }
             }
