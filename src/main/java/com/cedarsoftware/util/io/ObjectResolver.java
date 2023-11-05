@@ -62,7 +62,7 @@ public class ObjectResolver extends Resolver
     {
         super(reader);
         this.classLoader = classLoader;
-        this.missingFieldHandler = ReaderContext.instance().getReadOptions().getMissingFieldHandler();
+        this.missingFieldHandler = getReadOptions().getMissingFieldHandler();
     }
 
     /**
@@ -698,7 +698,7 @@ public class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (inferredType != null && ReaderContext.instance().getReadOptions().isNonCustomizable(inferredType))
+        if (inferredType != null && getReadOptions().isNonCustomizable(inferredType))
         {
             return null;
         }
@@ -773,12 +773,12 @@ public class ObjectResolver extends Resolver
             c = inferredType;
         }
 
-        if (ReaderContext.instance().getReadOptions().isNonCustomizable(c)) {// Explicitly instructed not to use a custom reader for this class.
+        if (getReadOptions().isNonCustomizable(c)) {// Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
         // Use custom classFactory if one exists
-        JsonReader.ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(c);
+        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
         if (classFactory != null)
         {
             if (isJsonObject) {

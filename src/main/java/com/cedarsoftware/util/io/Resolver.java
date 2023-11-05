@@ -44,7 +44,7 @@ abstract class Resolver
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
     Class<?> singletonMap = Collections.singletonMap("foo", "bar").getClass();
-
+    private ReadOptions readOptionsCache = null;
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -109,6 +109,15 @@ abstract class Resolver
     protected JsonReader getReader()
     {
         return reader;
+    }
+
+    ReadOptions getReadOptions()
+    {
+        if (readOptionsCache == null)
+        {
+            readOptionsCache = ReaderContext.instance().getReadOptions();
+        }
+        return readOptionsCache;
     }
 
     /**
@@ -329,7 +338,7 @@ abstract class Resolver
     {
         String type = jsonObj.type;
         final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
-        final boolean failOnUnknownType = ReaderContext.instance().getReadOptions().isFailOnUnknownType();
+        final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
 
         Class c;
         try
@@ -358,7 +367,7 @@ abstract class Resolver
 //                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
 //            }
 //
-//            c = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+//            c = getReadOptions().getUnknownTypeClass();
 //            if (c == null)
 //            {
 //                c = LinkedHashMap.class;
@@ -447,7 +456,7 @@ abstract class Resolver
                 mate = MetaUtils.newInstance(c);
                 if (mate == null)
                 {
-                    final Class<?> unknownClass = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+                    final Class<?> unknownClass = getReadOptions().getUnknownTypeClass();
 
                     if (unknownClass == null)
                     {
@@ -483,7 +492,7 @@ abstract class Resolver
 
         Object[] items = jsonObj.getArray();
 
-        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
+        final boolean useMaps = getReadOptions().isUsingMaps();
 
         // if @items is specified, it must be an [] type.
         // if clazz.isArray(), then it must be an [] type.
@@ -505,7 +514,7 @@ abstract class Resolver
         }
         else if (clazz == Object.class && !useMaps)
         {
-            final Class<?> unknownClass = ReaderContext.instance().getReadOptions().getUnknownTypeClass();
+            final Class<?> unknownClass = getReadOptions().getUnknownTypeClass();
 
             if (unknownClass == null)
             {
@@ -541,7 +550,7 @@ abstract class Resolver
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
-        JsonReader.ClassFactory classFactory = ReaderContext.instance().getReadOptions().getClassFactory(clazz);
+        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(clazz);
         if (classFactory != null)
         {
             Object target = classFactory.newInstance(clazz, jsonObj);
@@ -560,7 +569,7 @@ abstract class Resolver
 
     protected Object coerceCertainTypes(String type)
     {
-        Class clazz = ReaderContext.instance().getReadOptions().getCoercedType(type);
+        Class clazz = getReadOptions().getCoercedType(type);
         if (clazz == null)
         {
             return null;
@@ -582,7 +591,7 @@ abstract class Resolver
 
     protected JsonReader.JsonClassReader getCustomReader(Class c)
     {
-        return this.readerCache.computeIfAbsent(c, key -> ReaderContext.instance().getReadOptions().getClosestReader(key)).orElse(null);
+        return this.readerCache.computeIfAbsent(c, key -> getReadOptions().getClosestReader(key)).orElse(null);
     }
 
     /**
@@ -729,7 +738,7 @@ abstract class Resolver
      */
     protected void rehashMaps()
     {
-        final boolean useMapsLocal = ReaderContext.instance().getReadOptions().isUsingMaps();
+        final boolean useMapsLocal = getReadOptions().isUsingMaps();
         ;
         for (Object[] mapPieces : prettyMaps)
         {
