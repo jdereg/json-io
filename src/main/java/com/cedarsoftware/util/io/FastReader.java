@@ -18,7 +18,7 @@ public class FastReader extends Reader {
     protected int line = 1;
     @Getter
     protected int col = 0;
-    
+
     public FastReader(Reader in, int bufferSize, int pushbackBufferSize) {
         super(in);
         if (bufferSize <= 0 || pushbackBufferSize < 0) {
@@ -68,6 +68,9 @@ public class FastReader extends Reader {
     }
 
     public int read() throws IOException {
+        if (in == null) {
+            throw new IOException("FastReader stream is closed.");
+        }
         char ch;
         if (pushbackPosition < pushbackBufferSize) {
             ch = pushbackBuffer[pushbackPosition++];
@@ -86,6 +89,9 @@ public class FastReader extends Reader {
     }
 
     public int read(char[] cbuf, int off, int len) throws IOException {
+        if (in == null) {
+            throw new IOException("FastReader stream is closed.");
+        }
         int bytesRead = 0;
 
         while (len > 0) {
@@ -124,7 +130,7 @@ public class FastReader extends Reader {
     public String getLastSnippet()
     {
         StringBuilder s = new StringBuilder();
-        for (int i=0; i < limit; i++)
+        for (int i=0; i < position; i++)
         {
             s.append(buf[i]);
         }

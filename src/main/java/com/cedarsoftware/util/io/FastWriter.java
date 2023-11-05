@@ -33,6 +33,9 @@ public class FastWriter extends Writer {
     }
 
     public void write(int c) throws IOException {
+        if (out == null) {
+            throw new IOException("FastWriter stream is closed.");
+        }
         if (nextChar >= cb.length) {
             flushBuffer();
         }
@@ -40,6 +43,9 @@ public class FastWriter extends Writer {
     }
 
     public void write(char[] cbuf, int off, int len) throws IOException {
+        if (out == null) {
+            throw new IOException("FastWriter stream is closed.");
+        }
         if ((off < 0) || (off > cbuf.length) || (len < 0) ||
                 ((off + len) > cbuf.length) || ((off + len) < 0)) {
             throw new IndexOutOfBoundsException();
@@ -61,6 +67,9 @@ public class FastWriter extends Writer {
     }
 
     public void write(String str, int off, int len) throws IOException {
+        if (out == null) {
+            throw new IOException("FastWriter stream is closed.");
+        }
         int b = off, t = off + len;
         while (b < t) {
             int d = Math.min(cb.length - nextChar, t - b);
