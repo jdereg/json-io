@@ -117,6 +117,15 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
                 .hasDayOfMonth(12);
     }
 
+    @Test
+    public void testLocalDateAsTimeStamp()
+    {
+        LocalDate ld = LocalDate.of(2023, 12, 25);
+        String json = TestUtil.toJson(ld, new WriteOptionsBuilder().writeLocalDateAsTimeStamp().build());
+        LocalDate ld2 = TestUtil.toJava(json);
+        assert ld.equals(ld2);
+    }
+    
     private String loadJsonForTest(String fileName) {
         return TestUtil.fetchResource("localdate/" + fileName);
     }

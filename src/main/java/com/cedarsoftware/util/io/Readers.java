@@ -177,7 +177,11 @@ public class Readers
         {
             String type = jObj.type;
             ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
-            Class c = classForName(type, loader);
+            Class c = MetaUtils.classForName(type, loader);
+            if (c == null)
+            {
+                throw new JsonIoException("Unable to load enum: " + type + ", class not found.");
+            }
 
             Optional<Class> cls = MetaUtils.getClassIfEnum(c);
 
@@ -249,7 +253,11 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                    c = MetaUtils.classForName((String) type, (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                    if (c == null)
+                    {
+                        throw new JsonIoException("Unabled to load class: " + type + ", a Calendar type.");
+                    }
                 }
 
                 // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
@@ -555,13 +563,24 @@ public class Readers
         {
             if (o instanceof String)
             {
-                return classForName((String) o, (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                String cname = (String) o;
+                Class c =  MetaUtils.classForName(cname, (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                if (c != null)
+                {   // The user is attempting to load a java.lang.Class
+                    return c;
+                }
+                throw new JsonIoException("Unable to load class: " + o);
             }
 
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = classForName((String) jObj.get("value"), (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                String value = (String) jObj.getValue();
+                jObj.target = MetaUtils.classForName(value, (ClassLoader)args.get(JsonReader.CLASSLOADER));
+                if (jObj.target == null)
+                {
+                    throw new JsonIoException("Unable to load Class: " + value + ", class not found in JVM.");
+                }
                 return jObj.target;
             }
             throw new JsonIoException("Class missing 'value' field");
@@ -863,7 +882,7 @@ public class Readers
         {
             return new BigDecimal(value.toString());
         }
-        throw new JsonIoException("Could not convert value: " + value.toString() + " to BigInteger.");
+        throw new JsonIoException("Could not convert value: " + value + " to BigInteger.");
     }
 
     public static class StringBuilderReader implements JsonReader.JsonClassReader
@@ -1018,11 +1037,5 @@ public class Readers
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    // ========== Maintain dependency knowledge in once place, down here =========
-    static Class<?> classForName(String name, ClassLoader classLoader)
-    {
-        return MetaUtils.classForName(name, classLoader);
     }
 }

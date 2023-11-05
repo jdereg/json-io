@@ -340,26 +340,7 @@ abstract class Resolver
         final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
         final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
 
-        Class c;
-        try
-        {
-            c = MetaUtils.classForName(type, reader.getClassLoader());
-        }
-        catch (Exception e)
-        {
-            if (useMaps)
-            {
-                jsonObj.type = null;
-                jsonObj.target = null;
-                return jsonObj;
-            }
-            else
-            {
-                String name = clazz == null ? "null" : clazz.getName();
-                throw new JsonIoException("Unable to create class: " + name, e);
-            }
-        }
-
+        Class c = MetaUtils.classForName(type, reader.getClassLoader());
         if (c == null)
         {   // Unable to find class in the JVM.
             if (failOnUnknownType)

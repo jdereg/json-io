@@ -359,8 +359,6 @@ public class Writers
     }
     
     // ========== Maintain knowledge about relationships below this line ==========
-    static final String DATE_FORMAT = JsonWriter.DATE_FORMAT;
-
     protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
     {
         JsonWriter.writeJsonUtf8String(s, output);

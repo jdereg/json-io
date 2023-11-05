@@ -103,6 +103,17 @@ public class UUIDTest
         assertSame(list.get(0), list.get(1));
     }
 
+    @Test
+    public void testUUIDasPrimitiveForm()
+    {
+        UUID uuid = UUID.randomUUID();
+        TestUUIDFields t = new TestUUIDFields();
+        t. fromString = uuid;
+        String json = TestUtil.toJson(t);
+        TestUUIDFields tut = TestUtil.toJava(json);
+        assert tut.fromString.equals(uuid);
+    }
+
     public static class TestUUIDFields
     {
         public UUID getFromString()

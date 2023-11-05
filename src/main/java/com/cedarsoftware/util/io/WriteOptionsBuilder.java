@@ -12,35 +12,13 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
-import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
-import static com.cedarsoftware.util.io.JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.PRETTY_PRINT;
-import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
-import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
+import static com.cedarsoftware.util.io.JsonWriter.*;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -95,14 +73,15 @@ public class WriteOptionsBuilder {
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
         temp.put(Throwable.class, new Writers.ThrowableWriter());
 
-        try {
-            Class<?> zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
+        Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
+        if (zoneInfoClass != null)
+        {
             temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
-        } catch (ClassNotFoundException ignore) {
         }
 
         BASE_WRITERS = temp;
     }
+    
     public WriteOptionsBuilder() {
         this.writeOptions = new WriteOptionsImplementation();
     }
