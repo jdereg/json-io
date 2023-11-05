@@ -5,9 +5,7 @@ import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.URL;
 import java.nio.file.Files;
@@ -167,7 +165,6 @@ public class TestUtil
         if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // Only add times when all parsers succeeded
             totalJsonWrite += jsonIoTestInfo.nanos;
-            totalJdkWrite += jdkTestInfo.nanos;
             totalGsonWrite += gsonTestInfo.nanos;
             totalJacksonWrite += jacksonTestInfo.nanos;
         }
@@ -176,10 +173,6 @@ public class TestUtil
             if (jsonIoTestInfo.t != null)
             {
                 jsonIoWriteFails++;
-            }
-            if (jdkTestInfo.t != null)
-            {
-                jdkWriteFails++;
             }
             if (gsonTestInfo.t != null)
             {
@@ -213,33 +206,6 @@ public class TestUtil
             long start = System.nanoTime();
             testInfo.obj = JsonReader.toObjects(json, options);
             testInfo.nanos = System.nanoTime() - start;
-        }
-        catch (Exception e)
-        {
-            testInfo.t = e;
-        }
-        return testInfo;
-    }
-
-    private static TestInfo readJdk(String json, ReadOptions readOptions)
-    {
-        TestInfo testInfo = new TestInfo();
-        try
-        {
-            // Must convert to Java Maps, then write out in JDK binary, and then start timer and read in JDK binary
-            Object o = JsonReader.toMaps(json, readOptions);  // Get the JSON into Java Object for JDK serializer to write out
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            ObjectOutputStream out = new ObjectOutputStream(bout);
-            out.writeObject(o);
-            out.flush();
-            out.close();
-            ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bout.toByteArray()));
-            long start = System.nanoTime();
-            testInfo.obj = in.readObject();
-            assert testInfo.obj instanceof JsonObject;
-            in.close();
-            testInfo.nanos = System.nanoTime() - start;
-            testInfo.obj = o;
         }
         catch (Exception e)
         {
@@ -306,14 +272,12 @@ public class TestUtil
         totalReads++;
 
         TestInfo jsonIoTestInfo = readJsonIo(json, readOptions);
-        TestInfo jdkTestInfo = readJdk(json, readOptions);
         TestInfo gsonTestInfo = readGson(json);
         TestInfo jacksonTestInfo = readJackson(json);
 
-        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
+        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // only add times when all parsers succeeded
             totalJsonRead += jsonIoTestInfo.nanos;
-            totalJdkRead += jdkTestInfo.nanos;
             totalGsonRead += gsonTestInfo.nanos;
             totalJacksonRead += jacksonTestInfo.nanos;
         }
@@ -322,10 +286,6 @@ public class TestUtil
             if (jsonIoTestInfo.t != null)
             {
                 jsonIoReadFails++;
-            }
-            if (jdkTestInfo.t != null)
-            {
-                jdkReadFails++;
             }
             if (gsonTestInfo.t != null)
             {
@@ -364,22 +324,18 @@ public class TestUtil
     {
         logger.info("Write JSON");
         logger.info("  json-io: " + (totalJsonWrite / 1000000.0) + " ms");
-        logger.info("  JDK binary: " + (totalJdkWrite / 1000000.0) + " ms");
         logger.info("  GSON: " + (totalGsonWrite / 1000000.0) + " ms");
         logger.info("  Jackson: " + (totalJacksonWrite / 1000000.0) + " ms");
         logger.info("Read JSON");
         logger.info("  json-io: " + (totalJsonRead / 1000000.0) + " ms");
-        logger.info("  JDK binary: " + (totalJdkRead / 1000000.0) + " ms");
         logger.info("  GSON: " + (totalGsonRead / 1000000.0) + " ms");
         logger.info("  Jackson: " + (totalJacksonRead / 1000000.0) + " ms");
         logger.info("Write Fails:");
         logger.info("  json-io: " + jsonIoWriteFails + " / " + totalWrites);
-        logger.info("  JDK: " + jdkWriteFails + " / " + totalWrites);
         logger.info("  GSON: " + gsonWriteFails + " / " + totalWrites);
         logger.info("  Jackson: " + jacksonWriteFails + " / " + totalWrites);
         logger.info("Read Fails");
         logger.info("  json-io: " + jsonIoReadFails + " / " + totalReads);
-        logger.info("  JDK: " + jdkReadFails + " / " + totalReads);
         logger.info("  GSON: " + gsonReadFails + " / " + totalReads);
         logger.info("  Jackson: " + jacksonReadFails + " / " + totalReads);
     }
@@ -420,19 +376,15 @@ public class TestUtil
     private static long totalJsonWrite;
     private static long totalGsonWrite;
     private static long totalJacksonWrite;
-    private static long totalJdkWrite;
     private static long totalJsonRead;
     private static long totalGsonRead;
     private static long totalJacksonRead;
-    private static long totalJdkRead;
     private static long jsonIoWriteFails;
     private static long gsonWriteFails;
     private static long jacksonWriteFails;
-    private static long jdkWriteFails;
     private static long jsonIoReadFails;
     private static long gsonReadFails;
     private static long jacksonReadFails;
-    private static long jdkReadFails;
     private static long totalReads;
     private static long totalWrites;
     private static boolean debug = false;
