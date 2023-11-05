@@ -1,5 +1,5 @@
 {
   "@type": "com.cedarsoftware.util.io.EnumTests$TestEnum4",
-  "foo": "bar",
-  "name": "B"
+  "name": "B",
+  "foo": "bar"
 }

@@ -4,7 +4,13 @@ import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import lombok.Getter;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -12,8 +18,21 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimeZone;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -661,12 +680,12 @@ public class JsonWriter implements Closeable, Flushable
             return writer;
         }
 
-        // right now until custom writer is correct
-        if (getWriteOptions().isEnumPublicOnly()) {
-            return null;
-        }
+        final JsonClassWriter enumWriter = getWriteOptions().getEnumWriter();
 
-        return MetaUtils.getClassIfEnum(c).isPresent() ? getWriteOptions().getEnumWriter() : null;
+        writer = MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : nullWriter;
+        writerCache.put(c, writer);
+
+        return writer == nullWriter ? null : writer;
     }
 
     /**

@@ -12,7 +12,6 @@ import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import sun.util.calendar.ZoneInfo;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -109,7 +108,12 @@ public class ReadOptionsBuilder {
 
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
-        assignInstantiator(ZoneInfo.class, timeZoneFactory);
+        
+        try {
+            assignInstantiator(Class.forName("sun.util.calendar.ZoneInfo"), timeZoneFactory);
+        } catch (Exception ignore) {
+            // ignore
+        }
 
         assignInstantiator(Throwable.class, new ThrowableFactory());
         assignInstantiator(NullPointerException.class, new NullPointerExceptionFactory());
@@ -224,15 +228,6 @@ public class ReadOptionsBuilder {
      */
     public static void assignInstantiator(Class c, JsonReader.ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(c, factory);
-    }
-
-
-    public ReadOptionsBuilder setUnknownTypeClassName(String fqClassName) {
-        return setUnknownTypeClassName(fqClassName, getClass().getClassLoader());
-    }
-
-    public ReadOptionsBuilder setUnknownTypeClassName(String fqClassName, ClassLoader loader) {
-        return setUnknownTypeClass(MetaUtils.classForName(fqClassName, loader));
     }
 
     public ReadOptionsBuilder setUnknownTypeClass(Class<?> c) {
@@ -380,9 +375,10 @@ public class ReadOptionsBuilder {
 
         Object unknownObjectClass = args.get(UNKNOWN_OBJECT);
 
+        // backword compatible support - map arguments allow both string or class as unknown clas provider.
         if (unknownObjectClass instanceof String) {
             try {
-                builder.setUnknownTypeClassName((String) unknownObjectClass);
+                builder.setUnknownTypeClass(MetaUtils.classForName((String) unknownObjectClass, classLoader));
             } catch (Exception e) {
                 // if it fails coming in from map then we
             }
