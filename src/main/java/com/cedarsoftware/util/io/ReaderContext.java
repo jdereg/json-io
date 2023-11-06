@@ -6,7 +6,6 @@ import lombok.Setter;
 import java.util.HashMap;
 import java.util.Map;
 
-// not hung up on this name, but I think this will apply to both serialization and deserialization, thus the conversion name
 public class ReaderContext {
 
     private static ThreadLocal<ReaderContext> conversionContext = ThreadLocal.withInitial(ReaderContext::new);

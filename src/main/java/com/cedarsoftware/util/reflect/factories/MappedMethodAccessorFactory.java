@@ -8,14 +8,19 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
+import java.util.Optional;
 
-public class GetMethodAccessorFactory implements AccessorFactory {
+public class MappedMethodAccessorFactory implements AccessorFactory {
     private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
 
     @Override
-    public Accessor createAccessor(Field field, Map<String, Method> possibleMethods) {
-        final String name = field.getName();
-        final Method method = possibleMethods.get(createGetterName(name));
+    public Accessor createAccessor(Field field, Map<String, Method> possibleAccessors) {
+        String fieldName = field.getName();
+
+        Optional<String> possibleMethod = NonStandardAccessorNames.instance()
+                .getMapping(field.getDeclaringClass(), fieldName);
+
+        Method method = possibleAccessors.get(possibleMethod.orElse(createGetterName(fieldName)));
 
         if (method == null || (method.getModifiers() & METHOD_MODIFIERS) != Modifier.PUBLIC) {
             return null;
@@ -25,7 +30,7 @@ public class GetMethodAccessorFactory implements AccessorFactory {
     }
 
     /**
-     * Creates the commone name for a get Method
+     * Creates the common name for a get Method
      *
      * @param fieldName - String representing the field name
      * @return String - returns the appropriate method name to access this fieldName.

@@ -10,11 +10,11 @@ import java.lang.reflect.Modifier;
 public class MethodAccessor extends AbstractAccessor {
     private final Method method;
 
-    private final Object[] EMPTY_ARGS = new Object[]{};
-
     public MethodAccessor(Field field, Method method) {
         super(field);
 
+        //  TODO:  should we only send back public methods and then allow and revert to FieldAccessor later in the chain to do work like it always ahs.
+        // class modifiers for static classes (like in our tests) may not be accessible if class is not public
         if (!Modifier.isPublic(method.getDeclaringClass().getModifiers())) {
             MetaUtils.trySetAccessible(method);
         }

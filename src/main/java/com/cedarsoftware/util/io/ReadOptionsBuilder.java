@@ -1,11 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.IllegalArgumentExceptionFactory;
-import com.cedarsoftware.util.io.factory.IllegalStateExceptionFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
-import com.cedarsoftware.util.io.factory.NullPointerExceptionFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
@@ -115,10 +112,10 @@ public class ReadOptionsBuilder {
             // ignore
         }
 
-        assignInstantiator(Throwable.class, new ThrowableFactory());
-        assignInstantiator(NullPointerException.class, new NullPointerExceptionFactory());
-        assignInstantiator(IllegalStateException.class, new IllegalStateExceptionFactory());
-        assignInstantiator(IllegalArgumentException.class, new IllegalArgumentExceptionFactory());
+        JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
+        assignInstantiator(Throwable.class, throwableFactory);
+        assignInstantiator(Exception.class, throwableFactory);
+        assignInstantiator(RuntimeException.class, throwableFactory);
 
         //  Readers
         addReaderPermanent(String.class, new Readers.StringReader());
@@ -444,6 +441,8 @@ public class ReadOptionsBuilder {
 
         private Map<String, String> typeNameMap;
 
+        private JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
+
         private ReadOptionsImplementation() {
             this.maxDepth = DEFAULT_MAX_PARSE_DEPTH;
             this.classLoader = ReadOptions.class.getClassLoader();
@@ -480,7 +479,21 @@ public class ReadOptionsBuilder {
 
         @Override
         public JsonReader.ClassFactory getClassFactory(Class<?> c) {
-            return this.classFactoryMap.get(c);
+            if (c == null) {
+                return null;
+            }
+
+            JsonReader.ClassFactory factory = this.classFactoryMap.get(c);
+
+            if (factory != null) {
+                return factory;
+            }
+
+            if (Throwable.class.isAssignableFrom(c)) {
+                return throwableFactory;
+            }
+
+            return null;
         }
 
         @SuppressWarnings("unchecked")
