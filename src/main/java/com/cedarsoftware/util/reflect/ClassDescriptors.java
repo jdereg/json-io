@@ -6,8 +6,8 @@ import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
 import com.cedarsoftware.util.reflect.filters.EnumFilter;
 import com.cedarsoftware.util.reflect.filters.GroovyFilter;
-import com.cedarsoftware.util.reflect.filters.KnownFilteredFields;
 import com.cedarsoftware.util.reflect.filters.StaticFilter;
+import lombok.Getter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -73,6 +73,10 @@ public class ClassDescriptors {
         return this.descriptors.computeIfAbsent(c, this::buildDescriptor);
     }
 
+    void clearDescriptorCache() {
+        this.descriptors.clear();
+    }
+
     private ClassDescriptor buildDescriptor(Class<?> c) {
         final Map<String, Method> possibleAccessors = ReflectionUtils.buildAccessorMap(c);
         final Map<String, Method> possibleInjectors = ReflectionUtils.buildInjectorMap(c);
@@ -100,16 +104,20 @@ public class ClassDescriptors {
     }
 
     public boolean addFilter(FieldFilter filter) {
+        clearDescriptorCache();
         return this.fieldFilters.add(filter);
     }
 
     public boolean removeFilter(FieldFilter filter) {
+        clearDescriptorCache();
         return this.fieldFilters.remove(filter);
     }
 
     public class ClassDescriptorImpl implements ClassDescriptor {
 
+        @Getter
         private final Map<String, Accessor> accessors;
+        @Getter
         private final Map<String, Injector> injectors;
         private final Class describedClass;
 
@@ -126,15 +134,5 @@ public class ClassDescriptors {
         public void addInjector(String name, Injector injector) {
             this.injectors.put(name, injector);
         }
-
-        public Map<String, Accessor> getAccessors() {
-            return this.accessors;
-        }
-
-        public Map<String, Injector> getInjectors() {
-            return this.injectors;
-        }
-
-
     }
 }

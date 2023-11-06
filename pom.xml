@@ -345,7 +345,7 @@
             <scope>test</scope>
         </dependency>
 
-<!-- Attempting to get the Surefire Logger, so tests can write to it, and then SL4FJ and Logback are not needed -->
+        <!-- Attempting to get the Surefire Logger, so tests can write to it, and then SL4FJ and Logback are not needed -->
 <!--        <dependency>-->
 <!--            <groupId>org.apache.maven.surefire</groupId>-->
 <!--            <artifactId>surefire-api</artifactId>-->

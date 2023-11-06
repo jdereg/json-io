@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.KnownFilteredFields;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -12,13 +13,35 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
-import static com.cedarsoftware.util.io.JsonWriter.*;
+import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
+import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
+import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
+import static com.cedarsoftware.util.io.JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS;
+import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.PRETTY_PRINT;
+import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
+import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
+import static com.cedarsoftware.util.io.JsonWriter.TYPE;
+import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -47,7 +70,6 @@ public class WriteOptionsBuilder {
 
     private final Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
 
-
     static {
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
@@ -71,7 +93,6 @@ public class WriteOptionsBuilder {
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
-        //temp.put(Throwable.class, new Writers.ThrowableWriter());
 
         Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
         if (zoneInfoClass != null)
@@ -193,6 +214,11 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder showMinimalTypeInfo() {
         this.writeOptions.alwaysShowingType = false;
         this.writeOptions.neverShowingType = false;
+        return this;
+    }
+
+    public WriteOptionsBuilder sendStackTraceWithExceptions() {
+        KnownFilteredFields.instance().removeMapping(Throwable.class, "stackTrace");
         return this;
     }
 
@@ -388,7 +414,6 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptions build() {
-
         this.writeOptions.fieldSpecifiers.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldSpecifiers));
         this.writeOptions.fieldNameBlackList.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldNameBlackList));
         return writeOptions;

@@ -20,7 +20,26 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1220,25 +1239,39 @@ public class MetaUtils
 
     public static boolean trySetAccessible(Field field)
     {
-        try
-        {
+        return safelyIgnoreException(() -> {
             field.setAccessible(true);
             return true;
-        }
-        catch (Exception ignore)
-        {
-            return false;
-        }
+        }, false);
     }
 
     public static boolean trySetAccessible(Method method) {
-        try {
+        return safelyIgnoreException(() -> {
             method.setAccessible(true);
             return true;
-        } catch (Exception ignore) {
-            return false;
+        }, false);
+//
+//        try {
+//            method.setAccessible(true);
+//            return true;
+//        } catch (Exception ignore) {
+//            return false;
+//        }
+    }
+
+
+    public interface Callable<V> {
+        V call() throws Throwable;
+    }
+
+    public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
+        try {
+            return callable.call();
+        } catch (Throwable e) {
+            return defaultValue;
         }
     }
+
 
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
