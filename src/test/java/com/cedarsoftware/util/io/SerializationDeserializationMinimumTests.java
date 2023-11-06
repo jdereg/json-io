@@ -33,6 +33,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected void assertStandalone(T expected, T actual) {
+        assertThat(expected).isNotSameAs(actual);
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -91,6 +92,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected void assertInObjectArray(List expected, List actual) {
+        assertThat(expected).isNotSameAs(actual);
         assertThat(actual).hasSameElementsAs(expected);
     }
 
@@ -111,6 +113,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         List<Object> actual = TestUtil.toJava(json);
 
         // assert
+        assertThat(expected).isNotSameAs(actual);
         assertDuplicatesInObjectArray(expected, actual);
     }
 
@@ -141,10 +144,11 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
         // assert
         assertTestInCollection(expected, actual);
-        assert DeepEquals.deepEquals(expected, actual);
+        assertThat(DeepEquals.deepEquals(expected, actual)).isTrue();
     }
 
     protected void assertTestInCollection(List<T> expected, List<T> actual) {
+        assertThat(actual).isNotSameAs(expected);
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -172,7 +176,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     @Test
-    protected void testAsValueInMap() {
+    protected void testT1_and_T2_and_T3_providedAsValuesToMap() {
         Map expected = MetaUtils.mapOf("foo", provideT1(), "bar", provideT2(), "qux", provideT3());
 
         // act
@@ -204,6 +208,21 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected void assertAsDuplicateValuesInMap(Map<String, T> expected, Map<String, T> actual) {
+        assertThat(expected).isNotSameAs(actual);
         assertThat(expected).containsAllEntriesOf(actual);
     }
+
+    @Test
+    protected void testT1_serializedWithoutType_parsedAsMaps() {
+        // arrange
+        T expected = provideT1();
+
+        // act
+        Object actual = TestUtil.serializeDeserializeAsMaps(expected);
+
+        // assert
+        assertT1_serializedWithoutType_parsedAsMaps(expected, actual);
+    }
+
+    protected abstract void assertT1_serializedWithoutType_parsedAsMaps(T expected, Object actual);
 }

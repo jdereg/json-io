@@ -497,7 +497,7 @@ public class JsonReader implements Closeable
      */
     @Deprecated
     public static Map jsonToMaps(String json, int maxDepth) {
-        return toMaps(json, new ReadOptionsBuilder().withMaxDepth(maxDepth).build());
+        return jsonToMaps(json, new HashMap<>(), maxDepth);
     }
 
     /**
@@ -512,7 +512,7 @@ public class JsonReader implements Closeable
      */
     @Deprecated
     public static Map jsonToMaps(String json) {
-        return toMaps(json, new ReadOptionsBuilder().withMaxDepth(DEFAULT_MAX_PARSE_DEPTH).build());
+        return jsonToMaps(json, new HashMap<>(), DEFAULT_MAX_PARSE_DEPTH);
     }
 
     /**
@@ -605,7 +605,7 @@ public class JsonReader implements Closeable
      * @param json json string
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Map toMaps(String json) {
+    public static Object toMaps(String json) {
         return toMaps(json, new ReadOptionsBuilder().build());
     }
 
@@ -617,7 +617,7 @@ public class JsonReader implements Closeable
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Map toMaps(String json, ReadOptions readOptions) {
+    public static Object toMaps(String json, ReadOptions readOptions) {
         return toMaps(json.getBytes(StandardCharsets.UTF_8), readOptions);
     }
 
@@ -628,7 +628,7 @@ public class JsonReader implements Closeable
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Map toMaps(byte[] bytes, ReadOptions readOptions) {
+    public static Object toMaps(byte[] bytes, ReadOptions readOptions) {
         return toMaps(new ByteArrayInputStream(bytes), readOptions);
     }
 
@@ -639,14 +639,14 @@ public class JsonReader implements Closeable
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Map toMaps(InputStream inputStream, ReadOptions readOptions) {
+    public static Object toMaps(InputStream inputStream, ReadOptions readOptions) {
         ReadOptions options = readOptions.ensureUsingMaps();
 
         JsonReader jr = new JsonReader(inputStream, options);
         Object ret = jr.readObject();
         jr.close();
 
-        return adjustOutputMap(ret);
+        return ret;
     }
 
     private static Map adjustOutputMap(Object ret)

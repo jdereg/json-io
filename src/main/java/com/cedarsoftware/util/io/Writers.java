@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -108,11 +109,6 @@ public class Writers
     
     public static class TimeZoneWriter extends PrimitiveUtf8StringWriter
     {
-        @Override
-        protected String getKey() {
-           return "zone";
-        }
-
         @Override
         public String extractString(Object o) { return ((TimeZone)o).getID(); }
     }
@@ -256,7 +252,9 @@ public class Writers
     }
 
     public static class YearWriter extends PrimitiveValueWriter {
-
+        public String extractString(Object o) {
+            return Integer.toString(((Year) o).getValue());
+        }
     }
 
     public static class OffsetTimeWriter extends TemporalWriter<OffsetTime> {

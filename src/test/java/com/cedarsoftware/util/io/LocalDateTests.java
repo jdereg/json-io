@@ -73,6 +73,11 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         assertThat(actualDate.getValue()).isEqualTo(expectedDate.getValue());
     }
 
+    @Override
+    protected void assertT1_serializedWithoutType_parsedAsMaps(LocalDate expected, Object actual) {
+        assertThat(actual).isEqualTo("1970-06-24");
+    }
+
     @Test
     void testTopLevel_serializesAsISODate() {
         LocalDate date = LocalDate.of(2014, 10, 17);

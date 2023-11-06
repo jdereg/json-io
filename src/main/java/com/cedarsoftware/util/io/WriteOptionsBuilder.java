@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -91,6 +92,7 @@ public class WriteOptionsBuilder {
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
+        temp.put(Year.class, new Writers.YearWriter());
 
         JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
         temp.put(StringBuilder.class, stringWriter);

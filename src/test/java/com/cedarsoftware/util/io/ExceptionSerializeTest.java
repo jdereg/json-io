@@ -2,6 +2,8 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.KnownFilteredFields;
+import lombok.Getter;
+import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ExceptionSerializeTest
 {
+    @Getter
+    @Setter
     public static class MyException extends RuntimeException
     {
         MyException(String message, Throwable cause, long val)
@@ -38,7 +42,7 @@ class ExceptionSerializeTest
             recordNumber = val;
         }
 
-        public Long recordNumber;
+        private Long recordNumber;
     }
 
     public static class ExceptionWithThrowableConstructor extends RuntimeException {
@@ -258,8 +262,6 @@ class ExceptionSerializeTest
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         Throwable q = new MyException("Subclassed exception with value field", ia, 16);
-        JsonReader.assignInstantiator(MyException.class, new MyExceptionFactory());
-        JsonWriter.addWriterPermanent(MyException.class, new MyExceptionWriter());
         String json = TestUtil.toJson(q);
         Throwable r = TestUtil.toJava(json);
         assert q.getCause() == ia;

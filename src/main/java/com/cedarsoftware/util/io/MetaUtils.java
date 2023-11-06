@@ -789,6 +789,125 @@ public class MetaUtils
         return 0;
     }
 
+
+    static Object getArgForType(Class<?> argType, boolean allowNull) {
+
+        if (argType.isPrimitive()) {
+            return convert(argType, null);
+        }
+
+        if (allowNull) {
+            return null;
+        }
+
+        if (prims.contains(argType)) {
+            return convert(argType, null);
+        }
+
+        if (argType == String.class) {
+            return "";
+        }
+
+        if (argType == Date.class) {
+            return new Date();
+        }
+
+        if (List.class.isAssignableFrom(argType)) {
+            return new ArrayList<>();
+        }
+
+        if (SortedSet.class.isAssignableFrom(argType)) {
+            return new TreeSet<>();
+        }
+
+        if (Set.class.isAssignableFrom(argType)) {
+            return new LinkedHashSet<>();
+        }
+
+        if (SortedMap.class.isAssignableFrom(argType)) {
+            return new TreeMap<>();
+        }
+
+        if (Map.class.isAssignableFrom(argType)) {
+            return new LinkedHashMap<>();
+        }
+
+        if (Collection.class.isAssignableFrom(argType)) {
+            return new ArrayList<>();
+        }
+
+        if (Calendar.class.isAssignableFrom(argType)) {
+            return Calendar.getInstance();
+        }
+
+        if (TimeZone.class.isAssignableFrom(argType)) {
+            return TimeZone.getDefault();
+        }
+
+        if (argType == BigInteger.class) {
+            return BigInteger.TEN;
+        }
+
+        if (argType == BigDecimal.class) {
+            return BigDecimal.TEN;
+        }
+
+        if (argType == StringBuilder.class) {
+            return new StringBuilder();
+        }
+        if (argType == StringBuffer.class) {
+            return new StringBuffer();
+        }
+        if (argType == Locale.class) {
+            return Locale.FRANCE;  // overwritten
+        }
+        if (argType == Class.class) {
+            return String.class;
+        }
+        if (argType == Timestamp.class) {
+            return new Timestamp(System.currentTimeMillis());
+        }
+        if (argType == java.sql.Date.class) {
+            return new java.sql.Date(System.currentTimeMillis());
+        }
+        if (argType == LocalDate.class) {
+            return LocalDate.now();
+        }
+        if (argType == LocalDateTime.class) {
+            return LocalDateTime.now();
+        }
+        if (argType == ZonedDateTime.class) {
+            return ZonedDateTime.now();
+        }
+        if (argType == ZoneId.class) {
+            return ZoneId.systemDefault();
+        }
+        if (argType == AtomicBoolean.class) {
+            return new AtomicBoolean(true);
+        }
+        if (argType == AtomicInteger.class) {
+            return new AtomicInteger(7);
+        }
+        if (argType == AtomicLong.class) {
+            return new AtomicLong(7L);
+        }
+        if (argType == URL.class) {
+            try {
+                return new URL("http://localhost"); // overwritten
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+        if (argType == Object.class) {
+            return new Object();
+        }
+        if (argType.isArray()) {
+            return new Object[0];
+        }
+
+        return null;
+    }
+
     /**
      * Return an Object[] of instance values that can be passed into a given Constructor.  This method
      * will return an array of nulls if useNull is true, otherwise it will return sensible values for
@@ -802,147 +921,37 @@ public class MetaUtils
         for (int i = 0; i < argTypes.length; i++)
         {
             final Class<?> argType = argTypes[i];
-            if (argType.isPrimitive())
-            {
-                values[i] = convert(argType, null);
-            }
-            else if (useNull)
-            {
-                values[i] = null;
-            }
-            else if (prims.contains(argType))
-            {
-                values[i] = convert(argType, null);
-            }
-            else
-            {
-                if (argType == String.class)
-                {
-                    values[i] = "";
-                }
-                else if (argType == Date.class)
-                {
-                    values[i] = new Date();
-                }
-                else if (List.class.isAssignableFrom(argType))
-                {
-                    values[i] = new ArrayList<>();
-                }
-                else if (SortedSet.class.isAssignableFrom(argType))
-                {
-                    values[i] = new TreeSet<>();
-                }
-                else if (Set.class.isAssignableFrom(argType))
-                {
-                    values[i] = new LinkedHashSet<>();
-                }
-                else if (SortedMap.class.isAssignableFrom(argType))
-                {
-                    values[i] = new TreeMap<>();
-                }
-                else if (Map.class.isAssignableFrom(argType))
-                {
-                    values[i] = new LinkedHashMap<>();
-                }
-                else if (Collection.class.isAssignableFrom(argType))
-                {
-                    values[i] = new ArrayList<>();
-                }
-                else if (Calendar.class.isAssignableFrom(argType))
-                {
-                    values[i] = Calendar.getInstance();
-                }
-                else if (TimeZone.class.isAssignableFrom(argType))
-                {
-                    values[i] = TimeZone.getDefault();
-                }
-                else if (argType == BigInteger.class)
-                {
-                    values[i] = BigInteger.TEN;
-                }
-                else if (argType == BigDecimal.class)
-                {
-                    values[i] = BigDecimal.TEN;
-                }
-                else if (argType == StringBuilder.class)
-                {
-                    values[i] = new StringBuilder();
-                }
-                else if (argType == StringBuffer.class)
-                {
-                    values[i] = new StringBuffer();
-                }
-                else if (argType == Locale.class)
-                {
-                    values[i] = Locale.FRANCE;  // overwritten
-                }
-                else if (argType == Class.class)
-                {
-                    values[i] = String.class;
-                }
-                else if (argType == Timestamp.class)
-                {
-                    values[i] = new Timestamp(System.currentTimeMillis());
-                }
-                else if (argType == java.sql.Date.class)
-                {
-                    values[i] = new java.sql.Date(System.currentTimeMillis());
-                }
-                else if (argType == LocalDate.class)
-                {
-                    values[i] = LocalDate.of(2023, 12, 25);
-                }
-                else if (argType == LocalDateTime.class)
-                {
-                    values[i] = LocalDateTime.of(2023, 12, 25, 8, 0, 0);
-                }
-                else if (argType == ZonedDateTime.class)
-                {
-                    values[i] = ZonedDateTime.of(2023, 12, 25, 8, 0, 0, 0, ZoneId.systemDefault());
-                }
-                else if (argType == ZoneId.class)
-                {
-                    values[i] = ZoneId.systemDefault();
-                }
-                else if (argType == AtomicBoolean.class)
-                {
-                    values[i] = new AtomicBoolean(true);
-                }
-                else if (argType == AtomicInteger.class)
-                {
-                    values[i] = new AtomicInteger(7);
-                }
-                else if (argType == AtomicLong.class)
-                {
-                    values[i] = new AtomicLong(7L);
-                }
-                else if (argType == URL.class)
-                {
-                    try
-                    {
-                        values[i] = new URL("http://localhost"); // overwritten
-                    }
-                    catch (MalformedURLException e)
-                    {
-                        values[i] = null;
-                    }
-                }
-                else if (argType == Object.class)
-                {
-                    values[i] = new Object();
-                }
-                else if (argType.isArray())
-                {
-                    values[i] = new Object[0];
-                }
-                else
-                {
-                    values[i] = null;
-                }
-            }
+            values[i] = getArgForType(argType, useNull);
         }
 
         return values;
+    }
+
+    /**
+     * Return an Object[] of instance values that can be passed into a given Constructor.  This method
+     * will return an array of nulls if useNull is true, otherwise it will return sensible values for
+     * primitive classes, and null for non-known primitive / primitive wrappers.  This class is used
+     * when attempting to call constructors on Java objects to get them instantiated, since there is no
+     * 'malloc' in Java.
+     */
+    public static double fillArgsWithHints(Class<?>[] argTypes, Object[] values, boolean useNull, Map<Class<?>, Object> hints) {
+        int found = 0;
+        for (int i = 0; i < argTypes.length; i++) {
+            final Class<?> argType = argTypes[i];
+            final Object hint = hints.get(argType);
+
+            if (hint != null) {
+                found++;
+            }
+
+            values[i] = hint == null ? getArgForType(argType, useNull) : hint;
+        }
+
+        if (argTypes.length == 0) {
+            return 1;
+        }
+
+        return found / argTypes.length;
     }
 
     /**
@@ -1207,10 +1216,10 @@ public class MetaUtils
         }
     }
 
-    public static boolean trySetAccessible(AccessibleObject fieldOrMethod)
+    public static boolean trySetAccessible(AccessibleObject object)
     {
         return safelyIgnoreException(() -> {
-            fieldOrMethod.setAccessible(true);
+            object.setAccessible(true);
             return true;
         }, false);
     }

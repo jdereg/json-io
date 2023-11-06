@@ -3,9 +3,12 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
 import java.lang.reflect.Constructor;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -43,6 +46,9 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
         Throwable cause = causeMap == null ? null : reader.convertParsedMapsToJava(causeMap, Throwable.class);
         Throwable t = createException(c, msg, cause);
+        if (t.getCause() == null && cause != null) {
+            t.initCause(cause);
+        }
 
         Object[] stackTraces = (Object[]) jsonObj.get(STACK_TRACE);
         if (stackTraces != null && stackTraces.length > 0) {
@@ -60,43 +66,49 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
 
     protected Throwable createException(Class<?> type, String message, Throwable t) {
+
         try {
             final Constructor<?>[] constructors = type.getDeclaredConstructors();
+            final Object[] parameters = new Object[constructors.length];
 
-            Constructor<?> choice = null;
+            Map<Class<?>, Object> paramValues = new HashMap<>();
+            paramValues.put(Throwable.class, t);
+            paramValues.put(String.class, message);
 
-            Constructor<?> param2 = null, param1Throw = null, param1String = null, param0 = null;
+            double bestScore = Double.MIN_VALUE;
+            int choice = 0;
+            int choiceParameterCount = 0;
 
-            for (Constructor<?> c : constructors) {
-                if (c.getParameterCount() == 2 && c.getParameterTypes()[0] == String.class && c.getParameterTypes()[1] == Throwable.class) {
-                    param2 = c;
-                } else if (c.getParameterCount() == 1 && c.getParameterTypes()[0] == Throwable.class) {
-                    param1Throw = c;
-                } else if (c.getParameterCount() == 1 && c.getParameterTypes()[0] == String.class) {
-                    param1String = c;
-                } else if (c.getParameterCount() == 0) {
-                    param0 = c;
+            for (int i = 0; i < constructors.length; i++) {
+                Class<?>[] types = constructors[i].getParameterTypes();
+                Object[] values = new Object[types.length];
+                parameters[i] = values;
+
+                double score = MetaUtils.fillArgsWithHints(types, values, true, paramValues);
+
+                if (score >= bestScore && types.length >= choiceParameterCount) {
+                    bestScore = score;
+                    choice = i;
+                    choiceParameterCount = types.length;
                 }
             }
 
-            if (param2 != null && message != null) {
-                return (Throwable) param2.newInstance(message, t);
-            } else if (param1Throw != null && t != null) {
-                return (Throwable) param1Throw.newInstance(t);
-            } else if (param1String != null && message != null) {
-                return (Throwable) param1String.newInstance(message);
-            } else if (param0 != null) {
-                return (Throwable) param0.newInstance();
+            Constructor constructor = constructors[choice];
+            Object[] objects = (Object[]) parameters[choice];
+
+            try {
+                return (Throwable) constructor.newInstance(objects);
+            } catch (IllegalAccessException iae) {
+                MetaUtils.trySetAccessible(constructor);
+                return (Throwable) constructor.newInstance(objects);
             }
         } catch (Exception e) {
             throw new JsonIoException("Error instantiating constructor: " + type.getName(), e);
         }
-
-        throw new JsonIoException("Unable to find one of the four Throwable.class constructors on Class: " + type.getName() + ". Either implement your own writer or add one of the superclass constructors.");
     }
 
     public boolean isObjectFinal()
     {
-        return true;
+        return false;
     }
 }

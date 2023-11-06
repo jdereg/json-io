@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.reflect.factories;
 
+import java.time.Year;
+import java.time.YearMonth;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +23,8 @@ public class NonStandardAccessorNames {
         addMapping(Enum.class, "name", "name");
         addMapping(Throwable.class, "detailMessage", "getMessage");
         addMapping(StackTraceElement.class, "declaringClass", "getClassName");
+        addMapping(YearMonth.class, "month", "getMonthValue");
+        addMapping(Year.class, "year", "getValue");
     }
 
     public void addMapping(Class c, String fieldName, String methodName) {

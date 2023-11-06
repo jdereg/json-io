@@ -198,7 +198,7 @@ public class TimeZoneTests
 
         assertThat(actual)
                 .hasSize(1)
-                .containsEntry("zone", "America/Los_Angeles");
+                .containsEntry("value", "America/Los_Angeles");
     }
 
     @Test
@@ -228,6 +228,7 @@ public class TimeZoneTests
     private static Stream<Arguments> argumentsForOldFormatValidation() {
         return Stream.of(
                 Arguments.of("timezone-away-from-est.json", "Africa/Casablanca"),
+                Arguments.of("timezone-using-value.json", "Africa/Casablanca"),
                 Arguments.of("zoneinfo-with-type-and-zone.json", "America/New_York"),
                 Arguments.of("zoneinfo-zone.json", "EST")
         );
