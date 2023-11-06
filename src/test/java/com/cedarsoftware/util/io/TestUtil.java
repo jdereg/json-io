@@ -61,6 +61,11 @@ public class TestUtil
         return toJava(json);
     }
 
+    public static <T> Object serializeDeserializeAsMaps(T initial) {
+        String json = toJson(initial, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        return toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+    }
+
     private static class TestInfo
     {
         long nanos;

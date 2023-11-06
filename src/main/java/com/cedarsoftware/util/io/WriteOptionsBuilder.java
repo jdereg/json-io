@@ -11,6 +11,9 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
@@ -71,12 +74,10 @@ public class WriteOptionsBuilder {
     private final Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
 
     static {
+
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
-        temp.put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
-        temp.put(AtomicInteger.class, new Writers.AtomicIntegerWriter());
-        temp.put(AtomicLong.class, new Writers.AtomicLongWriter());
         temp.put(BigInteger.class, new Writers.BigIntegerWriter());
         temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
         temp.put(java.sql.Date.class, new Writers.DateWriter());
@@ -85,14 +86,24 @@ public class WriteOptionsBuilder {
         temp.put(TimeZone.class, new Writers.TimeZoneWriter());
         temp.put(Locale.class, new Writers.LocaleWriter());
         temp.put(Class.class, new Writers.ClassWriter());
-        temp.put(StringBuilder.class, new Writers.StringBuilderWriter());
-        temp.put(StringBuffer.class, new Writers.StringBufferWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
-        temp.put(URL.class, new Writers.URLWriter());
         temp.put(LocalDate.class, new Writers.LocalDateWriter());
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
+        temp.put(YearMonth.class, new Writers.YearMonthWriter());
+        temp.put(Year.class, new Writers.YearWriter());
+
+        JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
+        temp.put(StringBuilder.class, stringWriter);
+        temp.put(StringBuffer.class, stringWriter);
+        temp.put(URL.class, stringWriter);
+        temp.put(ZoneOffset.class, stringWriter);
+
+        JsonWriter.JsonClassWriter primitiveValueWriter = new Writers.PrimitiveValueWriter();
+        temp.put(AtomicBoolean.class, primitiveValueWriter);
+        temp.put(AtomicInteger.class, primitiveValueWriter);
+        temp.put(AtomicLong.class, primitiveValueWriter);
 
         Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
         if (zoneInfoClass != null)

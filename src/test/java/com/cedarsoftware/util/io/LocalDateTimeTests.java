@@ -70,6 +70,11 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
         assertThat(actualDate.value).isEqualTo(expectedDate.value);
     }
 
+    @Override
+    protected void assertT1_serializedWithoutType_parsedAsMaps(LocalDateTime expected, Object actual) {
+        assertThat(actual).isEqualTo("1970-06-24T00:19:15.000000999");
+    }
+
     private static Stream<Arguments> checkDifferentFormatsByFile() {
         return Stream.of(
                 Arguments.of("old-format-top-level.json", 2023, 4, 5),

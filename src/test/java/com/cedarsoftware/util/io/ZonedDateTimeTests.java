@@ -132,4 +132,10 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
         assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
         assertThat(nestedActual.date2).isSameAs(nestedActual.date1);
     }
+
+    @Override
+    protected void assertT1_serializedWithoutType_parsedAsMaps(ZonedDateTime expected, Object actual) {
+        String value = (String) actual;
+        assertThat(value).isEqualTo("2019-12-15T09:07:16.000002-06:00[America/Chicago]");
+    }
 }
