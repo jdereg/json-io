@@ -713,11 +713,7 @@ public class MetaUtils
         // Try each constructor (public, protected, private, package-private) with null values for non-primitives.
         for (Constructor<?> constructor : constructorList)
         {
-            try {
-                constructor.setAccessible(true);
-            } catch (Exception ignore) {
-                continue;
-            }
+            trySetAccessible(constructor);
             Class<?>[] argTypes = constructor.getParameterTypes();
             Object[] values = fillArgs(argTypes, true);
             try
@@ -747,7 +743,7 @@ public class MetaUtils
         }
 
         // Try instantiation via unsafe
-        // This may result in heapdumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
+        // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
         // Thats why we try ordinary constructors first
         if (useUnsafe)
         {
@@ -1207,7 +1203,7 @@ public class MetaUtils
         }
         catch (IllegalAccessException e)
         {
-            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not acccessible.  Add a create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not acccessible.  Add or create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
         }
     }
 

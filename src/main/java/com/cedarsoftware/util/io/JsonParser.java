@@ -6,16 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.ID;
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
-import static com.cedarsoftware.util.io.JsonObject.REF;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_ID;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_KEYS;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_REF;
-import static com.cedarsoftware.util.io.JsonObject.SHORT_TYPE;
-import static com.cedarsoftware.util.io.JsonObject.TYPE;
+import static com.cedarsoftware.util.io.JsonObject.*;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -51,7 +42,7 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
 class JsonParser
 {
     public static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
-    private static final JsonObject EMPTY_ARRAY = new JsonObject();
+    private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
