@@ -45,7 +45,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         Throwable t = createException(c, msg, cause);
 
         Object[] stackTraces = (Object[]) jsonObj.get(STACK_TRACE);
-        if (stackTraces != null) {
+        if (stackTraces != null && stackTraces.length > 0) {
             StackTraceElement[] elements = new StackTraceElement[stackTraces.length];
 
             for (int i = 0; i < stackTraces.length; i++) {
@@ -92,7 +92,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             throw new JsonIoException("Error instantiating constructor: " + type.getName(), e);
         }
 
-        throw new JsonIoException("Unable to find one of the four Throwable.class constructors on Class: " + type.getName());
+        throw new JsonIoException("Unable to find one of the four Throwable.class constructors on Class: " + type.getName() + ". Either implement your own writer or add one of the superclass constructors.");
     }
 
     public boolean isObjectFinal()

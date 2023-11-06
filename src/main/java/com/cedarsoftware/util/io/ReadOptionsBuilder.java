@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
@@ -116,6 +117,7 @@ public class ReadOptionsBuilder {
         assignInstantiator(Throwable.class, throwableFactory);
         assignInstantiator(Exception.class, throwableFactory);
         assignInstantiator(RuntimeException.class, throwableFactory);
+        assignInstantiator(StackTraceElement.class, new StackTraceElementFactory());
 
         //  Readers
         addReaderPermanent(String.class, new Readers.StringReader());

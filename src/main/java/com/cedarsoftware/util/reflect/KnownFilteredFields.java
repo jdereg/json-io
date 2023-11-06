@@ -1,4 +1,4 @@
-package com.cedarsoftware.util.reflect.filters;
+package com.cedarsoftware.util.reflect;
 
 import com.cedarsoftware.util.io.MetaUtils;
 
@@ -23,16 +23,23 @@ public class KnownFilteredFields {
     }
 
     private void addKnownFilters() {
-        addMapping(Throwable.class, MetaUtils.listOf("backtrace", "depth", "suppressedExceptions"));
-        addMapping(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
+        addMappings(Throwable.class, MetaUtils.listOf("backtrace", "depth", "suppressedExceptions", "stackTrace"));
+        addMappings(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
     }
 
     public void addMapping(Class c, String fieldName) {
         this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).add(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
     }
 
-    public void addMapping(Class c, Collection<String> fieldName) {
+    public void addMappings(Class c, Collection<String> fieldName) {
         this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).addAll(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
+    }
+
+    public void removeMapping(Class c, String fieldName) {
+        this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).remove(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
     }
 
     public boolean contains(Field field) {
