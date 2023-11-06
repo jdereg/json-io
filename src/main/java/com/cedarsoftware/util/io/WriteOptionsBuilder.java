@@ -71,7 +71,7 @@ public class WriteOptionsBuilder {
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
-        temp.put(Throwable.class, new Writers.ThrowableWriter());
+        //temp.put(Throwable.class, new Writers.ThrowableWriter());
 
         Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
         if (zoneInfoClass != null)

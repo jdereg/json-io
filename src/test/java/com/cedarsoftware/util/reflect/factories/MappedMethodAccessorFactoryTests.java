@@ -14,11 +14,11 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
+public class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
 
     @Override
     protected AccessorFactory provideAccessorFactory() {
-        return new GetMethodAccessorFactory();
+        return new MappedMethodAccessorFactory();
     }
 
     private static Stream<Arguments> checkSuccessfulCreationSituations() {

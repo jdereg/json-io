@@ -12,7 +12,13 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -338,26 +344,6 @@ public class Writers
         }
     }
 
-    public static class ThrowableWriter implements JsonWriter.JsonClassWriter
-    {
-        /**
-         * Only serialize the 'detailMessage' and 'cause' field.  Serialize the cause as a String.
-         * Do not write the stackTrace lines out.
-         */
-        public void write(Object obj, boolean showType, Writer output) throws IOException
-        {
-            Throwable t = (Throwable) obj;
-            output.write("\"detailMessage\":");
-            writeBasicString(output, t.getMessage());
-            output.write(",\"cause\":");
-            Throwable cause = t.getCause();
-            String json = JsonWriter.objectToJson(cause);
-            output.write(json);
-        }
-
-        public boolean hasPrimitiveForm() { return false; }
-    }
-    
     // ========== Maintain knowledge about relationships below this line ==========
     protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
     {

@@ -3,9 +3,10 @@ package com.cedarsoftware.util.reflect;
 import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
 import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.GetMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
 import com.cedarsoftware.util.reflect.filters.EnumFilter;
 import com.cedarsoftware.util.reflect.filters.GroovyFilter;
+import com.cedarsoftware.util.reflect.filters.KnownFilteredFields;
 import com.cedarsoftware.util.reflect.filters.StaticFilter;
 
 import java.lang.reflect.Field;
@@ -21,23 +22,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ClassDescriptors {
 
-    private final List<FieldFilter> filters;
+    private final List<FieldFilter> fieldFilters;
+
     private final List<AccessorFactory> accessorFactories;
+
     private final Map<Class<?>, ClassDescriptor> descriptors;
 
     private static final ClassDescriptors instance = new ClassDescriptors();
 
     private ClassDescriptors() {
-        this.filters = new ArrayList<>();
-        this.filters.add(new StaticFilter());
-        this.filters.add(new GroovyFilter());
-        this.filters.add(new EnumFilter());
+        this.fieldFilters = new ArrayList<>();
+        this.fieldFilters.add(new StaticFilter());
+        this.fieldFilters.add(new GroovyFilter());
+        this.fieldFilters.add(new EnumFilter());
 
-        // we can make this list be editable by user if they want to add their own
-        // accessor factory.  Not sure how editable it woudl need tob be, but the
-        // field accessor factory matches current functionality and would be a catch-all.
         this.accessorFactories = new ArrayList<>();
-        this.accessorFactories.add(new GetMethodAccessorFactory());
+        this.accessorFactories.add(new MappedMethodAccessorFactory());
         this.accessorFactories.add(new BooleanAccessorFactory());
         this.accessorFactories.add(new EnumNameAccessorFactory());
 
@@ -55,7 +55,6 @@ public class ClassDescriptors {
 
         while (c != null) {
             for (Map.Entry<String, Accessor> entry : this.getClassDescriptor(c).getAccessors().entrySet()) {
-
                 String key = accessors.containsKey(entry.getKey()) ? c.getSimpleName() + '.' + entry.getKey() : entry.getKey();
                 accessors.put(key, entry.getValue());
             }
@@ -75,35 +74,37 @@ public class ClassDescriptors {
     }
 
     private ClassDescriptor buildDescriptor(Class<?> c) {
+        final Map<String, Method> possibleAccessors = ReflectionUtils.buildAccessorMap(c);
+        final Map<String, Method> possibleInjectors = ReflectionUtils.buildInjectorMap(c);
         final ClassDescriptorImpl descriptor = new ClassDescriptorImpl(c);
         final Field[] declaredFields = c.getDeclaredFields();
-        final Map<String, Method> possibleMethods = ReflectionUtils.buildAccessorMap(c);
 
         for (Field field : declaredFields) {
 
-            if (filters.stream().anyMatch(f -> f.filter(field))) {
+            boolean isKnownFilter = KnownFilteredFields.instance().contains(field);
+
+            if (isKnownFilter || fieldFilters.stream().anyMatch(f -> f.filter(field))) {
                 continue;
             }
 
             Optional<Accessor> accessor = this.accessorFactories.stream()
-                    .map(factory -> factory.createAccessor(field, possibleMethods))
+                    .map(factory -> factory.createAccessor(field, possibleAccessors))
                     .filter(Objects::nonNull)
                     .findFirst();
 
-            //  If no accessor was found, let's use the default tried and true field accesor.
+            //  If no accessor was found, let's use the default tried and true field accessor.
             descriptor.addAccessor(field.getName(), accessor.orElseGet(() -> new FieldAccessor(field)));
-//            descriptor.addInjector(field.getName(), new FieldInjector(field));
         }
 
         return descriptor;
     }
 
     public boolean addFilter(FieldFilter filter) {
-        return this.filters.add(filter);
+        return this.fieldFilters.add(filter);
     }
 
     public boolean removeFilter(FieldFilter filter) {
-        return this.filters.remove(filter);
+        return this.fieldFilters.remove(filter);
     }
 
     public class ClassDescriptorImpl implements ClassDescriptor {

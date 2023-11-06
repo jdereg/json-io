@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 import static com.cedarsoftware.util.io.Writers.writeBasicString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -37,6 +38,19 @@ class ExceptionSerializeTest
 
         public Long recordNumber;
     }
+
+    public static class ExceptionWithThrowableConstructor extends RuntimeException {
+        public ExceptionWithThrowableConstructor(Throwable t) {
+            super(t);
+        }
+    }
+
+    public static class ExceptionWithStringConstructor extends RuntimeException {
+        public ExceptionWithStringConstructor(String s) {
+            super(s);
+        }
+    }
+
 
     public class MyExceptionFactory extends ThrowableFactory
     {
@@ -91,14 +105,110 @@ class ExceptionSerializeTest
 
 
     @Test
-    void testIllegalArgumentException()
+    void testIllegalArgumentException_withNoCause()
     {
         Throwable e1 = new Throwable("That argument did not taste well.", null);
         String json = TestUtil.toJson(e1);
         Throwable e2 = TestUtil.toJava(json);
-        assert e1.getCause() == null;
-        assert e1.getCause() == e2.getCause();
-        assert e1.getMessage().equals(e2.getMessage());
+
+        assertThat(e1.getCause()).isNull();
+        assertThat(e2.getCause()).isNull();
+
+        assertThat(e1.getMessage()).isEqualTo(e2.getMessage());
+    }
+
+    @Test
+    void testIllegalArgumentException_thrown_usingStringConstructor() {
+        Exception t1 = null;
+        try {
+            methodThatThrowsException();
+        } catch (Exception e) {
+            t1 = e;
+        }
+
+        String json = TestUtil.toJson(t1);
+        Throwable t2 = TestUtil.toJava(json);
+
+        assertThat(t1).hasCause(null);
+
+        assertThat(t2)
+                .hasCause(null)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("foo");
+
+        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+    }
+
+    @Test
+    void testExceptionWithOnlyStringConstructor() {
+
+        ExceptionWithStringConstructor t1 = new ExceptionWithStringConstructor("poo");
+
+        String json = TestUtil.toJson(t1);
+        Throwable t2 = TestUtil.toJava(json);
+
+        assertThat(t1).hasCause(null);
+
+        assertThat(t2)
+                .hasCause(null)
+                .isInstanceOf(ExceptionWithStringConstructor.class)
+                .hasMessage("poo");
+
+        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+    }
+
+    @Test
+    void testExceptionWithThrowableConstructor() {
+
+        ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
+
+        String json = TestUtil.toJson(t1);
+        Throwable t2 = TestUtil.toJava(json);
+
+        assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
+
+        assertThat(t2)
+                .isInstanceOf(ExceptionWithThrowableConstructor.class)
+                .hasMessage("com.cedarsoftware.util.io.ExceptionSerializeTest$ExceptionWithStringConstructor: doo");
+
+        assertThat(t2.getCause())
+                .isInstanceOf(ExceptionWithStringConstructor.class)
+                .hasMessage("doo");
+
+        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+        assertThat(t2.getCause().getStackTrace()).isEqualTo(t1.getCause().getStackTrace());
+    }
+
+    @Test
+    void testIllegalArgumentException_whenRethrown_usingThrowableConstructor() {
+        Exception t1 = null;
+        try {
+            methodThatReThrowsException();
+        } catch (Exception e) {
+            t1 = e;
+        }
+
+        String json = TestUtil.toJson(t1);
+        Throwable t2 = TestUtil.toJava(json);
+
+        assertThat(t2)
+                .isInstanceOf(JsonIoException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: foo");
+
+        assertThat(t2.getMessage()).isEqualTo(t1.getMessage());
+
+        assertThat(t2.getCause())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("foo");
+
+        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+        assertThat(t2.getCause().getStackTrace()).isEqualTo(t1.getCause().getStackTrace());
+
+        assertThat(t2.getCause().getCause()).isNull();
+        assertThat(t1.getCause().getCause()).isNull();
+
+        assertThat(t2.getMessage()).isEqualTo(t1.getMessage());
     }
 
     @Test
@@ -127,5 +237,17 @@ class ExceptionSerializeTest
         assert r instanceof MyException;
         MyException my = (MyException) r;
         assert my.recordNumber == 16L;
+    }
+
+    void methodThatThrowsException() {
+        throw new IllegalArgumentException("foo");
+    }
+
+    void methodThatReThrowsException() {
+        try {
+            methodThatThrowsException();
+        } catch (Exception e) {
+            throw new JsonIoException(e);
+        }
     }
 }

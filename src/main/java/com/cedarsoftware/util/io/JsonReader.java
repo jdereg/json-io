@@ -1001,29 +1001,30 @@ public class JsonReader implements Closeable
      * to parse a JSON graph (using the API that puts the graph
      * into Maps, not the typed representation).
      * @param root JsonObject instance that was the root object from the
+     * @param hint When you know the type you will be returning.
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    protected Object convertParsedMapsToJava(JsonObject root)
+    public <T> T convertParsedMapsToJava(JsonObject root, Class<T> hint)
     {
         try
         {
-            Object graph;
+            T graph;
             if (root.isFinished)
             {   // Called on a JsonObject that has already been converted
-                graph = root.target;
+                graph = (T) root.target;
             }
             else
             {
                 Resolver resolver = useMaps() ? new MapResolver(this) : new ObjectResolver(this, ReaderContext.instance().getReadOptions().getClassLoader());
-                Object instance = resolver.createInstance(Object.class, root);
+                Object instance = resolver.createInstance(hint, root);
                 if (root.isFinished)
                 {   // Factory method instantiated and completely loaded the object.
-                    graph = instance;
+                    graph = (T) instance;
                 }
                 else
                 {
-                    graph = resolver.convertMapsToObjects(root);
+                    graph = (T) resolver.convertMapsToObjects(root);
                 }
                 resolver.cleanup();
             }
@@ -1044,6 +1045,21 @@ public class JsonReader implements Closeable
             }
             throw new JsonIoException(getErrorMessage(e.getMessage()), e);
         }
+    }
+
+    /**
+     * This method converts a root Map, (which contains nested Maps
+     * and so forth representing a Java Object graph), to a Java
+     * object instance.  The root map came from using the JsonReader
+     * to parse a JSON graph (using the API that puts the graph
+     * into Maps, not the typed representation).
+     *
+     * @param root JsonObject instance that was the root object from the
+     *             JSON input that was parsed in an earlier call to JsonReader.
+     * @return a typed Java instance that was serialized into JSON.
+     */
+    public Object convertParsedMapsToJava(JsonObject root) {
+        return convertParsedMapsToJava(root, Object.class);
     }
 
     private static String safeTrimToNull(String string) {

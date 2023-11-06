@@ -35,7 +35,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  *         limitations under the License.*
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
-abstract class Resolver
+public abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
