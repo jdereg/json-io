@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -9,6 +11,9 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -101,8 +106,6 @@ public class Writers
         }
     }
     
-    public static class URLWriter extends PrimitiveUtf8StringWriter {}
-
     public static class TimeZoneWriter extends PrimitiveUtf8StringWriter
     {
         @Override
@@ -241,6 +244,42 @@ public class Writers
         }
     }
 
+    public static class YearMonthWriter extends TemporalWriter<YearMonth> {
+
+        public YearMonthWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public YearMonthWriter() {
+            this(YearMonthFactory.FORMATTER);
+        }
+    }
+
+    public static class YearWriter extends PrimitiveValueWriter {
+
+    }
+
+    public static class OffsetTimeWriter extends TemporalWriter<OffsetTime> {
+
+        public OffsetTimeWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public OffsetTimeWriter() {
+            this(DateTimeFormatter.ISO_OFFSET_TIME);
+        }
+    }
+
+    public static class OffsetDateTimeWriter extends TemporalWriter<OffsetDateTime> {
+
+        public OffsetDateTimeWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public OffsetDateTimeWriter() {
+            this(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        }
+    }
 
     public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {
@@ -298,12 +337,6 @@ public class Writers
         }
     }
 
-    public static class AtomicBooleanWriter extends PrimitiveValueWriter {}
-
-    public static class AtomicIntegerWriter extends PrimitiveValueWriter {}
-
-    public static class AtomicLongWriter extends PrimitiveValueWriter {}
-
     public static class BigDecimalWriter extends PrimitiveValueWriter
     {
         public void writePrimitiveForm(Object o, Writer output) throws IOException
@@ -312,10 +345,6 @@ public class Writers
             writeBasicString(output, big.toPlainString());
         }
     }
-
-    public static class StringBuilderWriter extends PrimitiveUtf8StringWriter {}
-
-    public static class StringBufferWriter extends PrimitiveUtf8StringWriter {}
 
     public static class UUIDWriter implements JsonWriter.JsonClassWriter
     {

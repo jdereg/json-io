@@ -432,19 +432,7 @@ public class JsonReader implements Closeable
             return null;
         }
 
-        if (optionalArgs == null)
-        {
-            optionalArgs = new HashMap<>();
-            optionalArgs.put(USE_MAPS, false);
-        }
-        if (!optionalArgs.containsKey(USE_MAPS))
-        {
-            optionalArgs.put(USE_MAPS, false);
-        }
-        JsonReader jr = new JsonReader(json, optionalArgs, maxDepth);
-        Object obj = jr.readObject();
-        jr.close();
-        return obj;
+        return jsonToJava(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), optionalArgs, maxDepth);
     }
 
     /**

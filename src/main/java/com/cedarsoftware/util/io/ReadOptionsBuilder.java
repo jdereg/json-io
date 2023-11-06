@@ -6,6 +6,8 @@ import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
+import com.cedarsoftware.util.io.factory.YearFactory;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,6 +20,8 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Year;
+import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -103,6 +107,8 @@ public class ReadOptionsBuilder {
         assignInstantiator(LocalTime.class, new LocalTimeFactory());
         assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
         assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
+        assignInstantiator(YearMonth.class, new YearMonthFactory());
+        assignInstantiator(Year.class, new YearFactory());
 
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
