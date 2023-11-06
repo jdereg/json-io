@@ -4,12 +4,7 @@ import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -20,26 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,9 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.isPrivate;
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.*;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -1237,28 +1211,13 @@ public class MetaUtils
         }
     }
 
-    public static boolean trySetAccessible(Field field)
+    public static boolean trySetAccessible(AccessibleObject fieldOrMethod)
     {
         return safelyIgnoreException(() -> {
-            field.setAccessible(true);
+            fieldOrMethod.setAccessible(true);
             return true;
         }, false);
     }
-
-    public static boolean trySetAccessible(Method method) {
-        return safelyIgnoreException(() -> {
-            method.setAccessible(true);
-            return true;
-        }, false);
-//
-//        try {
-//            method.setAccessible(true);
-//            return true;
-//        } catch (Exception ignore) {
-//            return false;
-//        }
-    }
-
 
     public interface Callable<V> {
         V call() throws Throwable;

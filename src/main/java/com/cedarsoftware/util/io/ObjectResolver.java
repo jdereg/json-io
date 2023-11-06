@@ -711,7 +711,6 @@ public class ObjectResolver extends Resolver
         if (isJsonObject)
         {
             jsonObj = (JsonObject)o;
-
         }
         else
         {
@@ -753,7 +752,7 @@ public class ObjectResolver extends Resolver
                         }
                     }
                     Object factoryCreated = createInstance(c, jsonObj);
-                    if (jsonObj.isFinished) {
+                    if (factoryCreated != null && jsonObj.isFinished) {
                         return factoryCreated;
                     }
                 }
@@ -780,12 +779,8 @@ public class ObjectResolver extends Resolver
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
         if (classFactory != null)
         {
-            if (isJsonObject) {
-                if (jsonObj.type == null)
-                {
-                    jsonObj.setType(c.getName());
-                }
-            } else {
+            if (!isJsonObject)
+            {   // 'o' was a primitive.
                 jsonObj.setValue(o);
                 jsonObj.setType(c.getName());
             }

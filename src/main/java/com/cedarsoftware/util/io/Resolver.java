@@ -435,20 +435,9 @@ public abstract class Resolver
             }
             else
             {
-                // ClassFactory already consulted above, so use UnknownClass if set.
+                // ClassFactory already consulted above, likely regular business/data classes.
+                // If the newInstance(c) fails, it throws a JsonIoException.
                 mate = MetaUtils.newInstance(c);
-                if (mate == null)
-                {
-                    if (failOnUnknownType)
-                    {
-                        throw new JsonIoException("Unable to instantiate class: " + c.getName());
-                    }
-                    else
-                    {   // Specified unknown class to load was not found.  Dropping to LinkedHashMap, which
-                        // is good for returnAsMaps().
-                        mate = new LinkedHashMap<>();
-                    }
-                }
             }
         }
         jsonObj.setTarget(mate);

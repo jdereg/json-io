@@ -93,7 +93,7 @@ public class MapResolver extends Resolver
 
                 if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
                 {
-                    jObj.put("value", MetaUtils.convert(field.getType(), jObj.get("value")));
+                    jObj.put("value", MetaUtils.convert(field.getType(), jObj.getValue()));
                     continue;
                 }
                 Long refId = jObj.getReferenceId();
