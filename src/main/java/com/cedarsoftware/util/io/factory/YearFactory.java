@@ -1,11 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.Readers;
 
+import java.time.OffsetDateTime;
 import java.time.Year;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
+import java.util.Date;
 
 import static java.time.temporal.ChronoField.YEAR;
 
@@ -28,7 +32,11 @@ public class YearFactory extends AbstractTemporalFactory<Year> {
         try {
             return Year.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            return Year.parse(s);
+            Date date = Readers.DateReader.parseDate(s);
+            OffsetDateTime dt = date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toOffsetDateTime();
+            return Year.of(dt.getYear());
         }
     }
 

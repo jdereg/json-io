@@ -2194,7 +2194,7 @@ public class JsonWriter implements Closeable, Flushable
 
         if (!enumSet.isEmpty())
         {
-            Map<String, Accessor> mapOfFields = ClassDescriptors.instance().getDeepClassAccessorMap(elementType);
+            Map<String, Accessor> mapOfFields = ClassDescriptors.instance().getDeepAccessorMap(elementType);
             int enumFieldsCount = mapOfFields.size();
 
             out.write(",");
@@ -2315,7 +2315,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else
         {   // Reflectively use fields, skipping transient and static fields
-            final Map<String, Accessor> classFields = ClassDescriptors.instance().getDeepClassAccessorMap(obj.getClass());
+            final Map<String, Accessor> classFields = ClassDescriptors.instance().getDeepAccessorMap(obj.getClass());
             for (Map.Entry<String, Accessor> entry : classFields.entrySet())
             {
                 final String fieldName = entry.getKey();

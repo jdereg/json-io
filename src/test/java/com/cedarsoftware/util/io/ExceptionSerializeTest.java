@@ -111,7 +111,7 @@ class ExceptionSerializeTest
 
     @BeforeEach
     public void beforeEach() {
-        KnownFilteredFields.instance().removeMapping(Throwable.class, "stackTrace");
+        KnownFilteredFields.instance().removeFieldFilters(Throwable.class, "stackTrace");
     }
 
     @Test
@@ -190,7 +190,7 @@ class ExceptionSerializeTest
 
     @Test
     void testExceptionWithThrowableConstructor_withNoStackTraces() {
-        KnownFilteredFields.instance().addMapping(Throwable.class, "stackTrace");
+        KnownFilteredFields.instance().addFieldFilter(Throwable.class, "stackTrace");
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
         String json = TestUtil.toJson(t1);

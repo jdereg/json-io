@@ -3,9 +3,13 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.Readers;
 
+import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 /**
  * Abstract class to help create temporal items.
@@ -42,12 +46,19 @@ public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
 
     @Override
     protected LocalTime fromString(String s) {
-        return LocalTime.parse(s, dateTimeFormatter);
+        try {
+            return LocalTime.parse(s, dateTimeFormatter);
+        } catch (Exception e) {
+            Date date = Readers.DateReader.parseDate(s);
+            return date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalTime();
+        }
     }
 
     @Override
     protected LocalTime fromNumber(Number l) {
-        throw new UnsupportedOperationException("Cannot convert to " + LocalTime.class + " from number value");
+        return LocalTime.from(Instant.ofEpochMilli(l.longValue()));
     }
 
     @Override

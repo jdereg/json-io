@@ -1,17 +1,16 @@
 package com.cedarsoftware.util.reflect.injectors;
 
-import com.cedarsoftware.util.reflect.Injector;
+import com.cedarsoftware.util.io.MetaUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
-public class FieldInjector implements Injector {
-    private final Field field;
-
+public class FieldInjector extends AbstractInjector {
     public FieldInjector(Field f) {
-        this.field = f;
-    }
+        super(f);
 
-    public void inject(Object object, Object value) throws IllegalAccessException {
-        this.field.set(object, value);
+        if (!(Modifier.isPublic(f.getModifiers()) && Modifier.isPublic(f.getDeclaringClass().getModifiers()))) {
+            MetaUtils.trySetAccessible(f);
+        }
     }
 }

@@ -10,7 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 public class KnownFilteredFields {
-    private final Map<Class, Set<String>> classToMapping = new ConcurrentHashMap<>();
+    private final Map<Class, Set<String>> knownFieldFilters = new ConcurrentHashMap<>();
+
+    private final Map<Class, Set<String>> knownInjectorFilters = new ConcurrentHashMap<>();
 
     private static final KnownFilteredFields instance = new KnownFilteredFields();
 
@@ -23,27 +25,44 @@ public class KnownFilteredFields {
     }
 
     private void addKnownFilters() {
-        addMappings(Throwable.class, MetaUtils.listOf("backtrace", "depth", "suppressedExceptions", "stackTrace"));
-        addMappings(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
+        addFieldFilters(Throwable.class, MetaUtils.listOf("backtrace", "depth", "suppressedExceptions", "stackTrace"));
+        addFieldFilters(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
+
+        addInjectionFilters(Throwable.class, MetaUtils.listOf("detailMessage", "cause", "stackTrace"));
     }
 
-    public void addMapping(Class c, String fieldName) {
-        this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).add(fieldName);
+    public void addFieldFilter(Class c, String fieldName) {
+        this.knownFieldFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).add(fieldName);
         ClassDescriptors.instance().clearDescriptorCache();
     }
 
-    public void addMappings(Class c, Collection<String> fieldName) {
-        this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).addAll(fieldName);
+    public void addFieldFilters(Class c, Collection<String> fieldName) {
+        this.knownFieldFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).addAll(fieldName);
         ClassDescriptors.instance().clearDescriptorCache();
     }
 
-    public void removeMapping(Class c, String fieldName) {
-        this.classToMapping.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).remove(fieldName);
+    public void removeFieldFilters(Class c, String fieldName) {
+        this.knownFieldFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).remove(fieldName);
         ClassDescriptors.instance().clearDescriptorCache();
     }
 
-    public boolean contains(Field field) {
-        Set<String> set = this.classToMapping.get(field.getDeclaringClass());
+    public void addInjectionFilter(Class c, String fieldName) {
+        this.knownInjectorFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).add(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
+    }
+
+    public void addInjectionFilters(Class c, Collection<String> fieldName) {
+        this.knownInjectorFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).addAll(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
+    }
+
+    public boolean isFieldFiltered(Field field) {
+        Set<String> set = this.knownFieldFilters.get(field.getDeclaringClass());
+        return set != null && set.contains(field.getName());
+    }
+
+    public boolean isInjectionFiltered(Field field) {
+        Set<String> set = this.knownInjectorFilters.get(field.getDeclaringClass());
         return set != null && set.contains(field.getName());
     }
 }
