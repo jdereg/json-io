@@ -72,8 +72,8 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             final Object[] parameters = new Object[constructors.length];
 
             Map<Class<?>, Object> paramValues = new HashMap<>();
-            paramValues.put(Throwable.class, t);
             paramValues.put(String.class, message);
+            paramValues.put(Throwable.class, t);
 
             double bestScore = Double.MIN_VALUE;
             int choice = 0;
@@ -107,6 +107,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         }
     }
 
+    @Override
     public boolean isObjectFinal()
     {
         return false;

@@ -1,9 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.Field;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
@@ -67,10 +74,12 @@ public class MapResolver extends Resolver
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final Object target = jsonObj.target;
+        final Map<String, Injector> injectorMap = (target == null) ? null : ClassDescriptors.instance().getDeepInjectorMap(target.getClass());
+
         for (Map.Entry<Object, Object> e : jsonObj.entrySet())
         {
             final String fieldName = (String) e.getKey();
-            final Field field = (target != null) ? MetaUtils.getField(target.getClass(), fieldName) : null;
+            final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
             final Object rhs = e.getValue();
 
             if (rhs == null)
@@ -91,9 +100,9 @@ public class MapResolver extends Resolver
             {
                 JsonObject jObj = (JsonObject) rhs;
 
-                if (field != null && MetaUtils.isLogicalPrimitive(field.getType()))
+                if (injector != null && MetaUtils.isLogicalPrimitive(injector.getType()))
                 {
-                    jObj.put("value", MetaUtils.convert(field.getType(), jObj.getValue()));
+                    jObj.put("value", MetaUtils.convert(injector.getType(), jObj.getValue()));
                     continue;
                 }
                 Long refId = jObj.getReferenceId();
@@ -107,15 +116,14 @@ public class MapResolver extends Resolver
                 {
                     stack.addFirst(jObj);
                 }
-            }
-            else if (field != null)
+            } else if (injector != null)
             {   // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
                 // by using the @type class name (when specified and exists), to coerce the vanilla
                 // JSON values into the proper types defined by the class listed in @type.  This is
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
-                final Class fieldType = field.getType();
+                final Class fieldType = injector.getType();
                 if (MetaUtils.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
                     jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));

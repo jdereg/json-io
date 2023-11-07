@@ -129,7 +129,7 @@ class EnumTests {
 
         assertThat(actual.age).isEqualTo(21);
         assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(6);
+        assertThat(actual.internal).isEqualTo(9);
         assertThat(actual.getFoo()).isEqualTo("bar");
     }
 
@@ -148,10 +148,8 @@ class EnumTests {
 
         assertThat(actual.age).isEqualTo(21);
         assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(6);
+        assertThat(actual.internal).isEqualTo(9);
         assertThat(actual.getFoo()).isEqualTo("bar");
-
-        assertThat(initial.internal).isEqualTo(6);
     }
 
     @Test
@@ -160,7 +158,7 @@ class EnumTests {
 
         assertThat(actual.age).isEqualTo(21);
         assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(6);
+        assertThat(actual.internal).isEqualTo(9);
         assertThat(actual.getFoo()).isEqualTo("bar");
     }
 

@@ -1,7 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.lang.reflect.Array;
-import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -102,16 +104,18 @@ public class ObjectResolver extends Resolver
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
+        final Map<String, Injector> injectorMap = ClassDescriptors.instance().getDeepInjectorMap(cls);
 
         while (i.hasNext())
         {
             Map.Entry<Object, Object> e = i.next();
             String key = (String) e.getKey();
-            final Field field = MetaUtils.getField(cls, key);
+            //final Field field = MetaUtils.getField(cls, key);
+            final Injector injector = injectorMap.get(key);
             Object rhs = e.getValue();
-            if (field != null)
+            if (injector != null)
             {
-                assignField(stack, jsonObj, field, rhs);
+                assignField(stack, jsonObj, injector, rhs);
             }
             else if (missingFieldHandler != null)
             {
@@ -133,18 +137,18 @@ public class ObjectResolver extends Resolver
      *
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
-     * @param field   a Java Field object representing where the jsonObj should be converted and stored.
+     * @param injector  instance of injector used for setting values on the object.
      * @param rhs     the JSON value that will be converted and stored in the 'field' on the associated
      *                Java target object.
      */
     protected void assignField(final Deque<JsonObject> stack, final JsonObject jsonObj,
-                               final Field field, final Object rhs)
+                               final Injector injector, final Object rhs)
     {
         final Object target = jsonObj.target;
         final Class targetClass = target.getClass();
         try
         {
-            final Class fieldType = field.getType();
+            final Class fieldType = injector.getType();
             if (rhs == null)
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
@@ -155,12 +159,12 @@ public class ObjectResolver extends Resolver
                     }
                     else
                     {
-                        MetaUtils.setFieldValue(field, target, MetaUtils.convert(fieldType, "0"));
+                        injector.inject(target, MetaUtils.convert(fieldType, "0"));
                     }
                 }
                 else
                 {
-                    MetaUtils.setFieldValue(field, target, null);
+                    injector.inject(target, null);
                 }
                 return;
             }
@@ -171,9 +175,9 @@ public class ObjectResolver extends Resolver
             // exists).
             if (rhs instanceof JsonObject)
             {
-                if (field.getGenericType() instanceof ParameterizedType)
+                if (injector.getGenericType() instanceof ParameterizedType)
                 {   // Only JsonObject instances could contain unmarked objects.
-                    markUntypedObjects(field.getGenericType(), rhs, MetaUtils.getDeepDeclaredFields(fieldType));
+                    markUntypedObjects(injector.getGenericType(), rhs, fieldType);
                 }
 
                 // Ensure 'type' field set on JsonObject
@@ -191,17 +195,17 @@ public class ObjectResolver extends Resolver
                 final JsonObject jObj = new JsonObject();
                 jObj.type = fieldType.getName();
                 Object value = createInstance(fieldType, jObj);
-                MetaUtils.setFieldValue(field, target, value);
+                injector.inject(target, value);
             }
             else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
             {
                 if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
-                    MetaUtils.setFieldValue(field, target, Enum.valueOf(fieldType, (String) special));
+                    injector.inject(target, Enum.valueOf(fieldType, (String) special));
                     //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
-                } else if (Enum.class.isAssignableFrom(field.getDeclaringClass()) && "name".equals(field.getName())) {
+                } else if (Enum.class.isAssignableFrom(injector.getDeclaringClass()) && "name".equals(injector.getName())) {
                     //no need to set for this case
                 } else {
-                    MetaUtils.setFieldValue(field, target, special);
+                    injector.inject(target, special);
                 }
             }
             else if (rhs.getClass().isArray())
@@ -213,18 +217,18 @@ public class ObjectResolver extends Resolver
                     // out as UTF8 strings for compactness and speed.
                     if (elements.length == 0)
                     {
-                        MetaUtils.setFieldValue(field, target, new char[]{});
+                        injector.inject(target, new char[]{});
                     }
                     else
                     {
-                        MetaUtils.setFieldValue(field, target, ((String) elements[0]).toCharArray());
+                        injector.inject(target, ((String) elements[0]).toCharArray());
                     }
                 }
                 else
                 {
                     jsonArray.put(ITEMS, elements);
                     createInstance(fieldType, jsonArray);
-                    MetaUtils.setFieldValue(field, target, jsonArray.target);
+                    injector.inject(target, jsonArray.target);
                     stack.addFirst(jsonArray);
                 }
             }
@@ -239,17 +243,17 @@ public class ObjectResolver extends Resolver
 
                     if (refObject.target != null)
                     {
-                        MetaUtils.setFieldValue(field, target, refObject.target);
+                        injector.inject(target, refObject.target);
                     }
                     else
                     {
-                        unresolvedRefs.add(new UnresolvedReference(jsonObj, field.getName(), ref));
+                        unresolvedRefs.add(new UnresolvedReference(jsonObj, injector.getName(), ref));
                     }
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createInstance(fieldType, jsRhs);
-                    MetaUtils.setFieldValue(field, target, fieldObject);
+                    injector.inject(target, fieldObject);
                     if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
                         // GOTCHA : if the field is an immutable collection,
@@ -259,7 +263,7 @@ public class ObjectResolver extends Resolver
                         Object javaObj = convertMapsToObjects(jsRhs);
                         if (javaObj != fieldObject)
                         {
-                            MetaUtils.setFieldValue(field, target, javaObj);
+                            injector.inject(target, javaObj);
                         }
                     }
                 }
@@ -272,16 +276,16 @@ public class ObjectResolver extends Resolver
                     if (isBasicWrapperType(targetClass)) {
                         jsonObj.target = converted;
                     } else {
-                        MetaUtils.setFieldValue(field, target, converted);
+                        injector.inject(target, converted);
                     }
                 }
                 else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
-                    MetaUtils.setFieldValue(field, target, null);
+                    injector.inject(target, null);
                 }
                 else
                 {
-                    MetaUtils.setFieldValue(field, target, rhs);
+                    injector.inject(target, rhs);
                 }
             }
         }
@@ -292,7 +296,7 @@ public class ObjectResolver extends Resolver
                 throw e;
             }
 
-            throw new JsonIoException("Unable to set field: " + field.getName() + " on target: " + safeToString(target) + " with value: " + rhs, e);
+            throw new JsonIoException("Unable to set field: " + injector.getName() + " on target: " + safeToString(target) + " with value: " + rhs, e);
         }
     }
 
@@ -830,11 +834,12 @@ public class ObjectResolver extends Resolver
         return read;
     }
 
-    private void markUntypedObjects(final Type type, final Object rhs, final Map<String, Field> classFields)
+    private void markUntypedObjects(final Type type, final Object rhs, final Class<?> fieldType)
     {
         final Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
 
+        Map<String, Injector> classFields = ClassDescriptors.instance().getDeepInjectorMap(fieldType);
         while (!stack.isEmpty())
         {
             Object[] item = stack.removeFirst();
@@ -929,14 +934,14 @@ public class ObjectResolver extends Resolver
                             if (!fieldName.startsWith("this$"))
                             {
                                 // TODO: If more than one type, need to associate correct typeArgs entry to value
-                                Field field = classFields.get(fieldName);
+                                Injector injector = classFields.get(fieldName);
 
-                                if (field != null && (field.getType().getTypeParameters().length > 0 || field.getGenericType() instanceof TypeVariable))
+                                if (injector != null && (injector.getType().getTypeParameters().length > 0 || injector.getGenericType() instanceof TypeVariable))
                                 {
                                     Object pt = typeArgs[0];
                                     if (entry.getValue() instanceof JsonObject && ((JsonObject)entry.getValue()).get("@enum") != null)
                                     {
-                                        pt = field.getGenericType();
+                                        pt = injector.getGenericType();
                                     }
                                     stack.addFirst(new Object[]{pt, entry.getValue()});
                                 }

@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.KnownFilteredFields;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -225,11 +224,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder showMinimalTypeInfo() {
         this.writeOptions.alwaysShowingType = false;
         this.writeOptions.neverShowingType = false;
-        return this;
-    }
-
-    public WriteOptionsBuilder sendStackTraceWithExceptions() {
-        KnownFilteredFields.instance().removeMapping(Throwable.class, "stackTrace");
         return this;
     }
 

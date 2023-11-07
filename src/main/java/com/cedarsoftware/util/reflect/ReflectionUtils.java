@@ -55,6 +55,6 @@ public class ReflectionUtils {
      * @return in the case over overloads choose the method with 0 parameters.
      */
     public static Method oneParameterMethodPreference(Method method1, Method method2) {
-        return method1.getParameterCount() == 0 ? method1 : method2;
+        return method1.getParameterCount() == 1 ? method1 : method2;
     }
 }

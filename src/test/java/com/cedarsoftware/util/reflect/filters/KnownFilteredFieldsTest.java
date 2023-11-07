@@ -33,8 +33,8 @@ class KnownFilteredFieldsTest {
 
     @BeforeEach
     void beforeEach() {
-        KnownFilteredFields.instance().addMapping(Throwable.class, "stackTrace");
-        KnownFilteredFields.instance().removeMapping(Throwable.class, "detailMessage");
+        KnownFilteredFields.instance().addFieldFilter(Throwable.class, "stackTrace");
+        KnownFilteredFields.instance().removeFieldFilters(Throwable.class, "detailMessage");
     }
 
     @ParameterizedTest
@@ -43,10 +43,12 @@ class KnownFilteredFieldsTest {
         Set set = MetaUtils.setOf(fieldNames);
         List<Field> fields = getFields(c, set);
 
+        assertThat(fields.size()).isEqualTo(fieldNames.length);
+
         KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
 
         for (Field f : fields) {
-            assertThat(knownFilteredFields.contains(f)).isTrue();
+            assertThat(knownFilteredFields.isFieldFiltered(f)).isTrue();
         }
     }
 
@@ -54,32 +56,32 @@ class KnownFilteredFieldsTest {
     void testAddMapping() {
         KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
         List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("detailMessage"));
-        assertThat(knownFilteredFields.contains(fields.get(0))).isFalse();
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isFalse();
 
-        knownFilteredFields.addMapping(Throwable.class, "detailMessage");
-        assertThat(knownFilteredFields.contains(fields.get(0))).isTrue();
+        knownFilteredFields.addFieldFilter(Throwable.class, "detailMessage");
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isTrue();
     }
 
     @Test
     void testAddMappings() {
         KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
         List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("detailMessage", "cause"));
-        assertThat(knownFilteredFields.contains(fields.get(0))).isFalse();
-        assertThat(knownFilteredFields.contains(fields.get(1))).isFalse();
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isFalse();
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(1))).isFalse();
 
-        knownFilteredFields.addMappings(Throwable.class, MetaUtils.listOf("detailMessage", "cause"));
-        assertThat(knownFilteredFields.contains(fields.get(0))).isTrue();
-        assertThat(knownFilteredFields.contains(fields.get(1))).isTrue();
+        knownFilteredFields.addFieldFilters(Throwable.class, MetaUtils.listOf("detailMessage", "cause"));
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isTrue();
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(1))).isTrue();
     }
 
     @Test
     void testRemoveMapping() {
         KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
         List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("stackTrace"));
-        assertThat(knownFilteredFields.contains(fields.get(0))).isTrue();
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isTrue();
 
-        knownFilteredFields.removeMapping(Throwable.class, "stackTrace");
-        assertThat(knownFilteredFields.contains(fields.get(0))).isFalse();
+        knownFilteredFields.removeFieldFilters(Throwable.class, "stackTrace");
+        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isFalse();
     }
 
 }
