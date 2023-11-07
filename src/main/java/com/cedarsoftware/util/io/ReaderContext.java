@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,10 +11,6 @@ public class ReaderContext {
 
     @Getter
     private final ReferenceTracker referenceTracker;
-
-    @Getter
-    @Setter
-    private Resolver resolver;
 
     @Getter
     private JsonReader reader;
@@ -78,19 +73,24 @@ public class ReaderContext {
             JsonObject target = references.get(id);
             if (target == null)
             {
-                throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
+                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
             }
 
             while (target.isReference())
             {
-                target = references.get(target.getReferenceId());
+                id = target.getReferenceId();
+                target = references.get(id);
                 if (target == null)
                 {
-                    throw new IllegalStateException("The JSON input had an @ref to an object that does not exist.");
+                    throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
                 }
             }
 
             return target;
         }
+    }
+
+    public Resolver getResolver() {
+        return this.reader.getResolver();
     }
 }

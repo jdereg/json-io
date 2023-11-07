@@ -2,8 +2,8 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.*;
 
-import java.lang.reflect.Constructor;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,75 +32,36 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     private static final String CAUSE = "cause";
     private static final String STACK_TRACE = "stackTrace";
 
-    public Object newInstance(Class<?> c, JsonObject jsonObj)
+    public Object newInstance(Class<?> c, JsonObject job)
     {
-        String msg = (String) jsonObj.get(DETAIL_MESSAGE);
-        JsonObject causeMap = (JsonObject) jsonObj.get(CAUSE);
-
-
         JsonReader reader = ReaderContext.instance().getReader();
 
-        Throwable cause = causeMap == null ? null : reader.convertParsedMapsToJava(causeMap, Throwable.class);
-        Throwable t = createException(c, msg, cause);
+        Map<Class<?>, List<MetaUtils.ParameterHint>> hints = new HashMap<>();
+
+        String message = (String) job.get(DETAIL_MESSAGE);
+        hints.put(String.class, MetaUtils.listOf(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message)));
+
+        Throwable cause = reader.convertParsedMapsToJava((JsonObject) job.get(CAUSE), Throwable.class);
+        hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
+
+        MetaUtils.buildHints(reader, job, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        Throwable t = (Throwable) MetaUtils.findAndConstructWithAppropriateConstructor(c, hints);
+
         if (t.getCause() == null && cause != null) {
-            t.initCause(cause);
+            t.initCause(t);
         }
 
-        Object[] stackTraces = (Object[]) jsonObj.get(STACK_TRACE);
-        if (stackTraces != null && stackTraces.length > 0) {
-            StackTraceElement[] elements = new StackTraceElement[stackTraces.length];
+        Object[] stackTrace = (Object[]) job.get(STACK_TRACE);
+        if (stackTrace != null) {
+            StackTraceElement[] elements = new StackTraceElement[stackTrace.length];
 
-            for (int i = 0; i < stackTraces.length; i++) {
-                JsonObject stackTraceMap = (JsonObject) stackTraces[i];
+            for (int i = 0; i < stackTrace.length; i++) {
+                JsonObject stackTraceMap = (JsonObject) stackTrace[i];
                 elements[i] = stackTraceMap == null ? null : reader.convertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }
-
         return t;
-    }
-
-
-    protected Throwable createException(Class<?> type, String message, Throwable t) {
-
-        try {
-            final Constructor<?>[] constructors = type.getDeclaredConstructors();
-            final Object[] parameters = new Object[constructors.length];
-
-            Map<Class<?>, Object> paramValues = new HashMap<>();
-            paramValues.put(String.class, message);
-            paramValues.put(Throwable.class, t);
-
-            double bestScore = Double.MIN_VALUE;
-            int choice = 0;
-            int choiceParameterCount = 0;
-
-            for (int i = 0; i < constructors.length; i++) {
-                Class<?>[] types = constructors[i].getParameterTypes();
-                Object[] values = new Object[types.length];
-                parameters[i] = values;
-
-                double score = MetaUtils.fillArgsWithHints(types, values, true, paramValues);
-
-                if (score >= bestScore && types.length >= choiceParameterCount) {
-                    bestScore = score;
-                    choice = i;
-                    choiceParameterCount = types.length;
-                }
-            }
-
-            Constructor constructor = constructors[choice];
-            Object[] objects = (Object[]) parameters[choice];
-
-            try {
-                return (Throwable) constructor.newInstance(objects);
-            } catch (IllegalAccessException iae) {
-                MetaUtils.trySetAccessible(constructor);
-                return (Throwable) constructor.newInstance(objects);
-            }
-        } catch (Exception e) {
-            throw new JsonIoException("Error calling constructor for: " + type.getName(), e);
-        }
     }
 
     @Override

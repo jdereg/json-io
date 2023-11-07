@@ -67,10 +67,6 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
 
     @Override
     protected LocalDateTime fromJsonObject(JsonObject job) {
-//        if (job.isReference()) {
-//            return ReaderContext.instance().getReferenceTracker().get(job);
-//        }
-
         String date = (String) job.get("date");
         String time = (String) job.get("time");
 

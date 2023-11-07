@@ -3,8 +3,17 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
-import java.lang.reflect.*;
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -15,7 +24,27 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,7 +53,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.*;
+import static java.lang.reflect.Modifier.isPrivate;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -917,6 +948,76 @@ public class MetaUtils
         return values;
     }
 
+    public static void buildHints(JsonReader reader, JsonObject job, Map<Class<?>, List<ParameterHint>> hints, Set<String> fieldsAlreadyInHints) {
+        Convention.throwIfNull(job, "JsonObject cannot be null");
+        Convention.throwIfNull(reader, "JsonReader cannot be null");
+
+        Iterator<Map.Entry<Object, Object>> iterator = job.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<Object, Object> entry = iterator.next();
+
+            if (!fieldsAlreadyInHints.contains(entry.getKey().toString())) {
+                Object o = entry.getValue();
+                Object value = null;
+
+                if (o instanceof JsonObject) {
+                    JsonObject sub = (JsonObject) o;
+                    value = reader.convertParsedMapsToJava(sub, sub.getTargetClass());
+
+                    if (value != null) {
+                        if (sub.getType() != null) {
+                            Class<?> typeClass = MetaUtils.classForName(sub.getType(), reader.getClassLoader());
+                            hints.computeIfAbsent(typeClass, k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
+                        }
+
+                        if (sub.getTargetClass() != null) {
+                            hints.computeIfAbsent(sub.getTargetClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
+                        }
+                    }
+                } else {
+                    hints.computeIfAbsent(o.getClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), o));
+                }
+            }
+        }
+    }
+
+    public static Object findAndConstructWithAppropriateConstructor(Class c, Map<Class<?>, List<ParameterHint>> paramHints) {
+        try {
+            final Constructor<?>[] constructors = c.getDeclaredConstructors();
+            final Object[] constructorArgs = new Object[constructors.length];
+
+            double bestScore = Double.MIN_VALUE;
+            int choice = 0;
+            int choiceParameterCount = 0;
+
+            for (int i = 0; i < constructors.length; i++) {
+                Parameter[] parameters = constructors[i].getParameters();
+                Object[] arguments = new Object[parameters.length];
+                constructorArgs[i] = arguments;
+
+                double score = fillArgsWithHints(parameters, arguments, paramHints);
+
+                if (score >= bestScore && parameters.length >= choiceParameterCount) {
+                    bestScore = score;
+                    choice = i;
+                    choiceParameterCount = parameters.length;
+                }
+            }
+
+            Object[] arguments = (Object[]) constructorArgs[choice];
+            Constructor<?> constructor = constructors[choice];
+
+            try {
+                return constructor.newInstance(arguments);
+            } catch (IllegalAccessException iae) {
+                return constructor.newInstance(arguments);
+            }
+        } catch (Exception e) {
+            throw new JsonIoException("Error calling constructor for: " + c.getName(), e);
+        }
+    }
+
     /**
      * Return an Object[] of instance values that can be passed into a given Constructor.  This method
      * will return an array of nulls if useNull is true, otherwise it will return sensible values for
@@ -924,24 +1025,66 @@ public class MetaUtils
      * when attempting to call constructors on Java objects to get them instantiated, since there is no
      * 'malloc' in Java.
      */
-    public static double fillArgsWithHints(Class<?>[] argTypes, Object[] values, boolean useNull, Map<Class<?>, Object> hints) {
+    public static double fillArgsWithHints(Parameter[] parameters, Object[] arguments, Map<Class<?>, List<ParameterHint>> hints) {
         int found = 0;
-        for (int i = 0; i < argTypes.length; i++) {
-            final Class<?> argType = argTypes[i];
-            final Object hint = hints.get(argType);
+        for (int i = 0; i < parameters.length; i++) {
+            final Parameter param = parameters[i];
+            final String name = param.isNamePresent() ? param.getName() : null;
+            arguments[i] = null;
 
-            if (hint != null) {
-                found++;
+            boolean wasSet = false;
+
+            List<ParameterHint> hintList = hints.get(param.getType());
+
+            if (hintList != null && !hintList.isEmpty()) {
+                wasSet = setParameterIfPossible(arguments, hintList, i, name);
+            } else {
+                Optional<List<ParameterHint>> optionalList = hints.entrySet().stream()
+                        .filter(entry -> param.getType()
+                                .isAssignableFrom(entry.getKey()))
+                        .map(Map.Entry::getValue)
+                        .findFirst();
+
+                List<ParameterHint> list = optionalList.orElse(new ArrayList<>());
+
+                wasSet = setParameterIfPossible(arguments, list, i, name);
             }
 
-            values[i] = hint == null ? getArgForType(argType, useNull) : hint;
+            if (arguments[i] == null && !wasSet) {
+                arguments[i] = MetaUtils.getArgForType(param.getType(), true);
+            }
+
+            if (wasSet) {
+                found++;
+            }
         }
 
-        if (argTypes.length == 0) {
+        if (parameters.length == 0) {
             return 1;
         }
 
-        return found / argTypes.length;
+        return found / parameters.length;
+    }
+
+    private static boolean setParameterIfPossible(Object[] arguments, List<ParameterHint> list, int i, String name) {
+        if (list == null || list.isEmpty()) {
+            return false;
+        }
+
+        if (list.size() == 1) {
+            arguments[i] = list.get(0).object;
+            return true;
+        }
+
+        Optional<ParameterHint> optional = list.stream().filter(h -> name == null || name.equalsIgnoreCase(h.parameterName)).findFirst();
+
+        if (optional.isPresent()) {
+            arguments[i] = optional.get().object;
+        } else {
+            arguments[i] = list.get(0);
+        }
+
+        return true;
     }
 
     /**
@@ -1226,6 +1369,12 @@ public class MetaUtils
         }
     }
 
+    @Getter
+    @AllArgsConstructor
+    public static class ParameterHint {
+        String parameterName;
+        Object object;
+    }
 
     /**
      * Wrapper for unsafe, decouples direct usage of sun.misc.* package.

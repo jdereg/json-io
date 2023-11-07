@@ -6,7 +6,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.cedarsoftware.util.io.JsonObject.*;
+import static com.cedarsoftware.util.io.JsonObject.ID;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+import static com.cedarsoftware.util.io.JsonObject.REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ID;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_KEYS;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_REF;
+import static com.cedarsoftware.util.io.JsonObject.SHORT_TYPE;
+import static com.cedarsoftware.util.io.JsonObject.TYPE;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -179,7 +188,7 @@ class JsonParser
                         field = ITEMS;
                     }
 
-                    Object value = readValue(object);
+                    Object value = readValue(object, false);
                     if (TYPE.equals(field))
                     {
                         final String substitute = ReaderContext.instance().getReadOptions().getTypeName(value.toString());
@@ -231,7 +240,7 @@ class JsonParser
         return object;
     }
 
-    Object readValue(JsonObject object) throws IOException
+    Object readValue(JsonObject object, boolean top) throws IOException
     {
         final int maxParseDepth = ReaderContext.instance().getReadOptions().getMaxDepth();
         if (curParseDepth > maxParseDepth) {
@@ -270,7 +279,7 @@ class JsonParser
                 readToken("true");
                 return Boolean.TRUE;
             case -1:
-                error("EOF reached prematurely");
+                return top ? null : error("EOF reached prematurely");
         }
 
         return error("Unknown JSON value type");
@@ -286,7 +295,7 @@ class JsonParser
 
         while (true)
         {
-            final Object o = readValue(object);
+            final Object o = readValue(object, false);
             if (o != EMPTY_ARRAY)
             {
                 array.add(o);
