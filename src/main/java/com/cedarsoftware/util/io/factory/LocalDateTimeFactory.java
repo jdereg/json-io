@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -53,7 +54,9 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
         catch (Exception e)
         {   // Increase date-time format flexibility - JSON not written by json-io.
             Date date = Readers.DateReader.parseDate(s);
-            return LocalDateTime.from(date.toInstant());
+            return date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
         }
     }
 
@@ -64,6 +67,10 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
 
     @Override
     protected LocalDateTime fromJsonObject(JsonObject job) {
+//        if (job.isReference()) {
+//            return ReaderContext.instance().getReferenceTracker().get(job);
+//        }
+
         String date = (String) job.get("date");
         String time = (String) job.get("time");
 

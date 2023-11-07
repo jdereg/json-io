@@ -97,7 +97,7 @@ public class ClassDescriptors {
         return this.descriptors.computeIfAbsent(c, this::buildDescriptor);
     }
 
-    void clearDescriptorCache() {
+    public void clearDescriptorCache() {
         this.descriptors.clear();
     }
 

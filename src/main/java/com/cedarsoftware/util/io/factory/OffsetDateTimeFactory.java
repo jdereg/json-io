@@ -1,11 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
+import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReaderContext;
 import com.cedarsoftware.util.io.Readers;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -35,17 +40,21 @@ import java.util.Date;
  */
 public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTime> {
 
-    public OffsetDateTimeFactory(DateTimeFormatter dateFormatter) {
+    private ZoneId zoneId;
+
+    public OffsetDateTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
         super(dateFormatter);
+        this.zoneId = zoneId;
     }
 
     public OffsetDateTimeFactory() {
-        super(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        this(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneOffset.systemDefault());
     }
 
     @Override
     protected OffsetDateTime fromNumber(Number l) {
-        return OffsetDateTime.from(Instant.ofEpochMilli(l.longValue()));
+        Instant instant = Instant.ofEpochMilli(l.longValue());
+        return OffsetDateTime.from(instant.atZone(zoneId));
     }
 
     @Override
@@ -62,6 +71,37 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
 
     @Override
     protected OffsetDateTime fromJsonObject(JsonObject job) {
+
+        LocalDateTime dateTime = parseLocalDateTime(job.get("dateTime"));
+        ZoneOffset zoneOffset = parseOffset(job.get("offset"));
+
+        if (dateTime == null || zoneOffset == null) {
+            throw new JsonIoException("Invalid json for OffsetDateTime");
+        }
+
+        return OffsetDateTime.of(dateTime, zoneOffset);
+    }
+
+    private LocalDateTime parseLocalDateTime(Object o) {
+        if (o instanceof String) {
+            return LocalDateTime.parse((String) o, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        } else if (o instanceof JsonObject) {
+            JsonReader reader = ReaderContext.instance().getReader();
+            JsonObject job = (JsonObject) o;
+            return (job == null) ? null : reader.convertParsedMapsToJava(job, LocalDateTime.class);
+        }
         return null;
     }
+
+    private ZoneOffset parseOffset(Object o) {
+        if (o instanceof String) {
+            return ZoneOffset.of((String) o);
+        } else if (o instanceof JsonObject) {
+            JsonReader reader = ReaderContext.instance().getReader();
+            JsonObject job = (JsonObject) o;
+            return (job == null) ? null : reader.convertParsedMapsToJava(job, ZoneOffset.class);
+        }
+        return null;
+    }
+
 }

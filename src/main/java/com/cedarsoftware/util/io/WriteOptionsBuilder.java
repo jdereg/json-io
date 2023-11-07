@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -90,6 +91,7 @@ public class WriteOptionsBuilder {
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
+        temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
         temp.put(Year.class, new Writers.YearWriter());
 

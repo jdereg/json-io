@@ -3,6 +3,8 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
 import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
@@ -20,6 +22,8 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
@@ -107,6 +111,8 @@ public class ReadOptionsBuilder {
         assignInstantiator(LocalTime.class, new LocalTimeFactory());
         assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
         assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
+        assignInstantiator(OffsetDateTime.class, new OffsetDateTimeFactory());
+        assignInstantiator(OffsetTime.class, new OffsetTimeFactory());
         assignInstantiator(YearMonth.class, new YearMonthFactory());
         assignInstantiator(Year.class, new YearFactory());
 

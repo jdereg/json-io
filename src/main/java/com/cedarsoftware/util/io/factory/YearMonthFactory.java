@@ -1,11 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.Readers;
 
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
+import java.util.Date;
 
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
@@ -32,7 +36,11 @@ public class YearMonthFactory extends AbstractTemporalFactory<YearMonth> {
         try {
             return YearMonth.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            return YearMonth.parse(s);
+            Date date = Readers.DateReader.parseDate(s);
+            OffsetDateTime dt = date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toOffsetDateTime();
+            return YearMonth.of(dt.getYear(), dt.getMonthValue());
         }
     }
 
