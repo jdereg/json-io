@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
-import jdk.nashorn.internal.ir.annotations.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -20,11 +20,8 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     private static final ZoneOffset Z3 = ZoneOffset.of("Z");
 
 
-    // "Currently, @ids and @refs aren't being handled correctly when calling
-    // reader.convertParsedMapsToJava(job, LocalDateTime.class) from within a factory instance  The ids
-    // aren't getting added to the refTracker so its not found when we come
-    // accross the reference later on.
-    @Ignore
+    @Disabled("Currently, @ids and @refs aren't being handled correctly when calling reader.convertParsedMapsToJava")
+    @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");
         NestedOffsetDateTime offsetDateTime = TestUtil.toJava(json);
