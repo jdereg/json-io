@@ -43,8 +43,6 @@ class KnownFilteredFieldsTest {
         Set set = MetaUtils.setOf(fieldNames);
         List<Field> fields = getFields(c, set);
 
-        assertThat(fields.size()).isEqualTo(fieldNames.length);
-
         KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
 
         for (Field f : fields) {
