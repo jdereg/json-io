@@ -3,10 +3,10 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.Readers;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -53,11 +53,13 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
         catch (Exception e)
         {   // Increase date-time format flexibility - JSON not written by json-io.
             Date date = Readers.DateReader.parseDate(s);
-            LocalDateTime localDateTime = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
-            return localDateTime;
+            return LocalDateTime.from(date.toInstant());
         }
+    }
+
+    @Override
+    protected LocalDateTime fromNumber(Number l) {
+        return LocalDateTime.from(Instant.ofEpochMilli(l.longValue()));
     }
 
     @Override
