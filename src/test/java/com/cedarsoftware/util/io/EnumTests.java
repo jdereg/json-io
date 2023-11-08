@@ -248,6 +248,25 @@ class EnumTests {
         assertThat(actual.name).isEqualTo("foo");
     }
 
+    @Test
+    void testPublicEnumWithGetterAndSetter_andAlsoShowEnumsAreBasicallySingletons() {
+        PublicEnumWithNestedName mc = PublicEnumWithNestedName.Z;
+        mc.name = "blech";
+
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(mc, options);
+
+        mc.name = "foo";
+
+        PublicEnumWithNestedName actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(EnumWithNestedName.Z);
+        assertThat(actual.name).isEqualTo("blech");
+
+        // there's a single instance so it actually changes the in memory-instance when it comes in, too.  :)
+        assertThat(mc.name).isEqualTo("blech");
+    }
+
 
     @Test
     void testEnumNestedWithinEnum() {
@@ -467,6 +486,14 @@ class EnumTests {
         X, Y, Z;
 
         public String name;
+    }
+
+    public enum PublicEnumWithNestedName {
+        X, Y, Z;
+
+        @Getter
+        @Setter
+        private String name;
     }
 
     private String loadJson(String fileName) {
