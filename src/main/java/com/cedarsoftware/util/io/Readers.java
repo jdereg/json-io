@@ -8,7 +8,15 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -149,57 +157,6 @@ public class Readers
                 builder.append("#" + ref);
             }
             return new URL(builder.toString());
-        }
-    }
-
-    public static class EnumReader implements JsonReader.JsonClassReader
-    {
-        private static final Set<String> excludedFields = MetaUtils.setOf("name", "ordinal", "internal");
-        
-        public Object read(Object o, Deque<JsonObject> stack, Map<String, Object> args)
-        {
-            try
-            {
-                if (o instanceof String)
-                {
-                    return o;
-                }
-
-                return createEnumFromJsonObject((JsonObject)o, stack, args);
-            }
-            catch(Exception e)
-            {
-                throw new JsonIoException("Exception loading Enum:  " + e.getMessage());
-            }
-        }
-
-        Object createEnumFromJsonObject(JsonObject jObj, Deque<JsonObject> stack, Map<String, Object> args)
-        {
-            String type = jObj.type;
-            ClassLoader loader = (ClassLoader)args.get(JsonReader.CLASSLOADER);
-            Class c = MetaUtils.classForName(type, loader);
-            if (c == null)
-            {
-                throw new JsonIoException("Unable to load enum: " + type + ", class not found.");
-            }
-
-            Optional<Class> cls = MetaUtils.getClassIfEnum(c);
-
-            jObj.target = getEnum(cls.orElse(c), jObj);
-
-            Resolver resolver = ReaderContext.instance().getResolver();
-            resolver.traverseFields(stack, jObj, excludedFields);
-            Object target = jObj.getTarget();
-            return target;
-        }
-
-        private Object getEnum(Class c, JsonObject jsonObj) {
-            try {
-                return Enum.valueOf(c, (String) jsonObj.get("name"));
-            } catch (
-                    Exception e) {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
-                return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
-            }
         }
     }
 

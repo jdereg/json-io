@@ -414,7 +414,7 @@ public class MetaUtils
      * @param classLoader ClassLoader to use when searching for JVM classes.
      * @return Class instance of the named JVM class or null if not found.
      */
-    static Class<?> classForName(String name, ClassLoader classLoader)
+    public static Class<?> classForName(String name, ClassLoader classLoader)
     {
         if (name == null || name.isEmpty())
         {

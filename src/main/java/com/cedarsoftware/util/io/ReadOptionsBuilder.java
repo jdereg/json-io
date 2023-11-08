@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
@@ -152,7 +153,6 @@ public class ReadOptionsBuilder {
         addReaderPermanent(StringBuffer.class, new Readers.StringBufferReader());
         addReaderPermanent(UUID.class, new Readers.UUIDReader());
         addReaderPermanent(URL.class, new Readers.URLReader());
-        addReaderPermanent(Enum.class, new Readers.EnumReader());
 
         //  JVM Readers > 1.8
 
@@ -459,6 +459,7 @@ public class ReadOptionsBuilder {
         private Map<String, String> typeNameMap;
 
         private JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
+        private JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         private ReadOptionsImplementation() {
             this.maxDepth = DEFAULT_MAX_PARSE_DEPTH;
@@ -508,6 +509,12 @@ public class ReadOptionsBuilder {
 
             if (Throwable.class.isAssignableFrom(c)) {
                 return throwableFactory;
+            }
+
+            Optional optional = MetaUtils.getClassIfEnum(c);
+
+            if (optional.isPresent()) {
+                return enumFactory;
             }
 
             return null;

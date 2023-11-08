@@ -535,7 +535,12 @@ public abstract class Resolver
         }
 
         Object target = classFactory.newInstance(c, jsonObj);
-        return jsonObj.setFinishedTarget(target, classFactory.isObjectFinal());
+
+        if (classFactory.isObjectFinal()) {
+            jsonObj.setFinishedTarget(target, true);
+        }
+
+        return target;
     }
 
     protected Object coerceCertainTypes(String type)
