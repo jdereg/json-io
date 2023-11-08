@@ -791,9 +791,9 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        // Use custom classFactory if one exists
+        // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
-        if (classFactory != null)
+        if (classFactory != null && jsonObj.target == null)
         {
             if (!isJsonObject)
             {   // 'o' was a primitive.
