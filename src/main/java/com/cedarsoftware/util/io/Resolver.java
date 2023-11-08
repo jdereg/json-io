@@ -517,32 +517,25 @@ public abstract class Resolver
      * by the isObjectFinal() method returning true.  Therefore the JsonObject instance that is
      * loaded, is marked with 'isFinished=true' so that no more process is needed for this instance.
      */
-    Object createInstanceUsingClassFactory(Class clazz, JsonObject jsonObj)
+    Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj)
     {
-        //  If a target exsts then the item has already gone through
-        //  the new instance process at least, don't recreae.
-        if (jsonObj.getTarget() != null) {
-            return jsonObj.getTarget();
+        //  If a target exists then the item has already gone through
+        //  the create instance process.  don't recreate
+        if (jsonObj.target != null) {
+            return jsonObj.target;
         }
 
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
-        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(clazz);
-        if (classFactory != null)
-        {
-            Object target = classFactory.newInstance(clazz, jsonObj);
-            if (classFactory.isObjectFinal())
-            {
-                jsonObj.setFinishedTarget(target, true);
-            }
-            else
-            {
-                jsonObj.setTarget(target);
-            }
-            return target;
+        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
+
+        if (classFactory == null) {
+            return null;
         }
-        return null;
+
+        Object target = classFactory.newInstance(c, jsonObj);
+        return jsonObj.setFinishedTarget(target, classFactory.isObjectFinal());
     }
 
     protected Object coerceCertainTypes(String type)
@@ -584,19 +577,14 @@ public abstract class Resolver
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
-			if (enumClass != null)
-			{
-				return EnumSet.noneOf(enumClass);
-			}
-			else
-			{
-				return EnumSet.noneOf(MetaUtils.Dumpty.class);
-			}
+            if (enumClass != null) {
+                return EnumSet.noneOf(enumClass);
+            } else {
+                return EnumSet.noneOf(MetaUtils.Dumpty.class);
+            }
+        } else if (enumClass == null) {
+            throw new JsonIoException("Could not figure out Enum of the not empty set " + jsonObj);
         }
-		else if (enumClass == null)
-		{
-			throw new JsonIoException("Could not figure out Enum of the not empty set " + jsonObj);
-		}
 
         EnumSet enumSet = null;
         for (Object item : items)
