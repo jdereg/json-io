@@ -1,10 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
+import com.cedarsoftware.util.io.*;
 
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
@@ -103,7 +99,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
                 return (Throwable) constructor.newInstance(objects);
             }
         } catch (Exception e) {
-            throw new JsonIoException("Error instantiating constructor: " + type.getName(), e);
+            throw new JsonIoException("Error calling constructor for: " + type.getName(), e);
         }
     }
 

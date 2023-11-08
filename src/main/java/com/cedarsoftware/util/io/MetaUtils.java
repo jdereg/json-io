@@ -4,13 +4,7 @@ import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
-import java.lang.reflect.AccessibleObject;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -21,26 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,9 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.isPrivate;
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.*;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -215,16 +188,6 @@ public class MetaUtils
         return Collections.unmodifiableMap(map);
     }
 
-    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3, K k4, V v4)
-    {
-        Map<K, V> map = new LinkedHashMap<>();
-        map.put(k1, v1);
-        map.put(k2, v2);
-        map.put(k3, v3);
-        map.put(k4, v4);
-        return Collections.unmodifiableMap(map);
-    }
-
     /**
      * Return an instance of the Java Field class corresponding to the passed in field name.
      * @param c class containing the field / field name
@@ -277,7 +240,8 @@ public class MetaUtils
                     }
                 }
                 if (classFields.containsKey(fieldName))
-                {
+                {   // Field name collision in inheritance hierarchy.  Use prefix of parent class name '.' field name to
+                    // disambiguate instances of the field (Each one can have it's own unique value).
                     classFields.put(curr.getSimpleName() + '.' + fieldName, field);
                 }
                 else
@@ -754,9 +718,8 @@ public class MetaUtils
         // Try each constructor (public, protected, private, package-private) with non-null values for non-primitives.
         for (Constructor<?> constructor : constructorList)
         {
-            try {
-                constructor.setAccessible(true);
-            } catch (Exception e) {
+            if (!trySetAccessible(constructor))
+            {
                 continue;
             }
             Class<?>[] argTypes = constructor.getParameterTypes();
