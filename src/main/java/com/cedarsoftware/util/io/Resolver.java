@@ -4,20 +4,7 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -514,7 +501,7 @@ public abstract class Resolver
      * to create an instance.  If a ClassFactory create the instance, it may optionall load
      * the values into the instance, using the values from the passed in JsonObject.  If the
      * ClassFactory instance creates AND loads the object, it is indicated on the ClassFactory
-     * by the isObjectFinal() method returning true.  Therefore the JsonObject instance that is
+     * by the isObjectFinal() method returning true.  Therefore, the JsonObject instance that is
      * loaded, is marked with 'isFinished=true' so that no more process is needed for this instance.
      */
     Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj)
