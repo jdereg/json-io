@@ -131,7 +131,7 @@ public class JsonWriter implements Closeable, Flushable
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    private static final NullClass nullWriter = new NullClass();
+    public static final NullClass nullWriter = new NullClass();
 
     private WriteOptions optionsCache = null;
     /**
@@ -2363,19 +2363,11 @@ public class JsonWriter implements Closeable, Flushable
 
         if (Enum.class.isAssignableFrom(fieldDeclaringClass))
         {
-            if (!"name".equals(accessor.getName()))
-            {
-                if (!accessor.isPublic() && getWriteOptions().isEnumPublicOnly())
-                {
-                    return first;
-                }
-
-                o = getValueByReflect(obj, accessor);
-            } else {
-                //not advised to use reflect to get name field value from enum since jdk17
-                //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
-                o = ((Enum)obj).name();
+            if (!accessor.isPublic() && getWriteOptions().isEnumPublicOnly()) {
+                return first;
             }
+
+            o = getValueByReflect(obj, accessor);
         }
         else if (ObjectResolver.isBasicWrapperType(fieldDeclaringClass))
         {

@@ -45,6 +45,7 @@ import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE;
 import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
 import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
+import static com.cedarsoftware.util.io.JsonWriter.nullWriter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -148,13 +149,13 @@ public class WriteOptionsBuilder {
      * @return
      */
     public WriteOptionsBuilder writeEnumsAsObject() {
-        writeOptions.enumWriter = new Writers.EnumAsObjectWriter();
+        writeOptions.enumWriter = nullWriter;
         return this;
     }
 
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
         writeOptions.enumPublicOnly = true;
-        writeOptions.enumWriter = new Writers.EnumAsObjectWriter();
+        writeOptions.enumWriter = nullWriter;
         return this;
     }
 

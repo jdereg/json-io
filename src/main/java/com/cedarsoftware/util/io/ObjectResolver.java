@@ -803,7 +803,7 @@ public class ObjectResolver extends Resolver
         {
             Object target = createInstanceUsingClassFactory(c, jsonObj);
 
-            if (classFactory.isObjectFinal()) {
+            if (jsonObj.isFinished()) {
                 return target;
             }
         }

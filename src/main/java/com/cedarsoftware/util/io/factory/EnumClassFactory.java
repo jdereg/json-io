@@ -4,14 +4,10 @@ import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
 
 import java.util.Optional;
-import java.util.Set;
 
 public class EnumClassFactory implements JsonReader.ClassFactory {
-
-    private static final Set<String> excludedFields = MetaUtils.setOf("name", "ordinal", "internal");
 
     @Override
     public Object newInstance(Class<?> c, JsonObject job) {
@@ -23,7 +19,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
             return job.setFinishedTarget(target, true);
         }
 
-        return fromJsonObject(job);
+        return fromJsonObject(c, job);
     }
 
     @SuppressWarnings("unchecked")
@@ -31,25 +27,20 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
         return Enum.valueOf((Class<Enum>) c, s);
     }
 
-    private Object fromJsonObject(JsonObject job) {
+    private Object fromJsonObject(Class<?> c, JsonObject job) {
+        Optional<Class> cls = MetaUtils.getClassIfEnum(c);
 
-        String type = job.getType();
-
-        ClassLoader loader = ReaderContext.instance().getReadOptions().getClassLoader();
-        Class c = MetaUtils.classForName(type, loader);
-
-        if (c == null) {
-            throw new JsonIoException("Unable to load enum: " + type + ", class not found.");
+        if (cls.isPresent()) {
+            return Enum.valueOf(cls.get(), findEnumName(job));
         }
 
-        Optional<Class> cls = MetaUtils.getClassIfEnum(c);
-        return Enum.valueOf(cls.orElse(c), findEnumName(job));
+        throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
     }
 
     private String findEnumName(JsonObject job) {
 
         // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
-        String name = (String) job.get("java.lang.Enum.name");
+        String name = (String) job.get("Enum.name");
         if (name != null) {
             return name;
         }
