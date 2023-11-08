@@ -963,7 +963,7 @@ public class MetaUtils
 
                 if (o instanceof JsonObject) {
                     JsonObject sub = (JsonObject) o;
-                    value = reader.convertParsedMapsToJava(sub, sub.getTargetClass());
+                    value = reader.convertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
 
                     if (value != null) {
                         if (sub.getType() != null) {

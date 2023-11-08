@@ -1,6 +1,9 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.*;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.util.HashMap;
 import java.util.List;
@@ -39,10 +42,14 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         Map<Class<?>, List<MetaUtils.ParameterHint>> hints = new HashMap<>();
 
         String message = (String) job.get(DETAIL_MESSAGE);
-        hints.put(String.class, MetaUtils.listOf(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message)));
+        if (message != null) {
+            hints.put(String.class, MetaUtils.listOf(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message)));
+        }
 
         Throwable cause = reader.convertParsedMapsToJava((JsonObject) job.get(CAUSE), Throwable.class);
-        hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
+        if (cause != null) {
+            hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
+        }
 
         MetaUtils.buildHints(reader, job, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
         Throwable t = (Throwable) MetaUtils.findAndConstructWithAppropriateConstructor(c, hints);

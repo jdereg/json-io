@@ -443,19 +443,17 @@ public class JsonReader implements Closeable
     /**
      * Convert the passed in JSON string into a Java object graph.
      *
-     * @param jsonString String JSON input
+     * @param json String JSON input
      * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @param maxDepth Maximum parsing depth.
      * @return Java object graph matching JSON input
      */
-    public static Object jsonToJava(String jsonString, Map<String, Object> optionalArgs, int maxDepth)
+    @Deprecated
+    public static Object jsonToJava(String json, Map<String, Object> optionalArgs, int maxDepth)
     {
-        String json = safeTrimToNull(jsonString);
-
         if (json == null) {
             return null;
         }
-
         return jsonToJava(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), optionalArgs, maxDepth);
     }
 
@@ -466,6 +464,7 @@ public class JsonReader implements Closeable
      * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @return Java object graph matching JSON input
      */
+    @Deprecated
     public static <T> T jsonToJava(String json, Map<String, Object> optionalArgs)
     {
         return (T) jsonToJava(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
@@ -479,6 +478,7 @@ public class JsonReader implements Closeable
      * @param maxDepth Maximum parsing depth.
      * @return Java object graph matching JSON input
      */
+    @Deprecated
     public static <T> T jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs, int maxDepth)
     {
         if (optionalArgs == null)
@@ -503,6 +503,7 @@ public class JsonReader implements Closeable
      * @param optionalArgs Map of optional parameters to control parsing.  See readme file for details.
      * @return Java object graph matching JSON input
      */
+    @Deprecated
     public static <T> T jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs)
     {
         return jsonToJava(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
@@ -630,7 +631,7 @@ public class JsonReader implements Closeable
      * @param json json string
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Object toMaps(String json) {
+    public static <T> T toMaps(String json) {
         return toMaps(json, new ReadOptionsBuilder().build());
     }
 
@@ -642,7 +643,7 @@ public class JsonReader implements Closeable
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Object toMaps(String json, ReadOptions readOptions) {
+    public static <T> T toMaps(String json, ReadOptions readOptions) {
         if (json == null) {
             return null;
         }
@@ -656,15 +657,16 @@ public class JsonReader implements Closeable
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static Object toMaps(InputStream inputStream, ReadOptions readOptions) {
+    public static <T> T toMaps(InputStream inputStream, ReadOptions readOptions) {
         Convention.throwIfNull(inputStream, "inputStream cannot be null");
         Convention.throwIfNull(readOptions, "readOptions cannot be null");
 
         try (JsonReader jr = new JsonReader(inputStream, readOptions.ensureUsingMaps())) {
-            return jr.readObject();
+            return (T) jr.readObject();
         }
     }
 
+    @Deprecated
     private static Map adjustOutputMap(Object ret)
     {
         if (ret instanceof Map)
@@ -1054,7 +1056,7 @@ public class JsonReader implements Closeable
      *             JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    public Object convertParsedMapsToJava(JsonObject root) {
+    private Object convertParsedMapsToJava(JsonObject root) {
         try {
             return convertParsedMapsToJava(root, Object.class);
         } catch (Exception e) {
