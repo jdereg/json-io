@@ -4,7 +4,20 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -38,7 +51,6 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
 public abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
-    protected final JsonReader reader;
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
@@ -97,26 +109,18 @@ public abstract class Resolver
      */
     private static final class NullClass implements JsonReader.JsonClassReader { }
 
-    protected Resolver(JsonReader reader)
-    {
-        this.reader = reader;
-        Map<String, Object> optionalArgs = reader.getArgs();
-        optionalArgs.put(JsonReader.OBJECT_RESOLVER, this);
-
-        ReaderContext.instance().setResolver(this);
-    }
-
+    @Deprecated
     protected JsonReader getReader()
     {
-        return reader;
+        return ReaderContext.instance().getReader();
+    }
+
+    protected Resolver(ReadOptions readOptions) {
+        this.readOptionsCache = readOptions;
     }
 
     ReadOptions getReadOptions()
     {
-        if (readOptionsCache == null)
-        {
-            readOptionsCache = ReaderContext.instance().getReadOptions();
-        }
         return readOptionsCache;
     }
 
@@ -130,10 +134,10 @@ public abstract class Resolver
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    protected Object convertMapsToObjects(final JsonObject root)
+    protected <T> T convertMapsToObjects(final JsonObject root)
     {
         if (root.isFinished) {
-            return root.target;
+            return (T) root.target;
         }
 
         final Deque<JsonObject> stack = new ArrayDeque<>();
@@ -168,7 +172,7 @@ public abstract class Resolver
                 }
             }
         }
-        return root.target;
+        return (T) root.target;
     }
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
@@ -340,7 +344,7 @@ public abstract class Resolver
         final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
         final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
 
-        Class c = MetaUtils.classForName(type, reader.getClassLoader());
+        Class c = MetaUtils.classForName(type, readOptionsCache.getClassLoader());
         if (c == null)
         {   // Unable to find class in the JVM.
             if (failOnUnknownType)
@@ -389,7 +393,7 @@ public abstract class Resolver
             }
             else if (c == Class.class)
             {
-                mate = MetaUtils.classForName((String) jsonObj.getValue(), reader.getClassLoader());
+                mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptionsCache.getClassLoader());
             }
             else if (c.isEnum())
             {
@@ -546,17 +550,6 @@ public abstract class Resolver
         return MetaUtils.newInstance(clazz);
     }
 
-    protected JsonObject getReferencedObj(Long ref)
-    {
-        // Get deep referenced object.
-        JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
-        if (refObject == null)
-        {
-            throw new JsonIoException("Forward reference @ref: " + ref + ", but no object defined (@id) with that value");
-        }
-        return refObject;
-    }
-
     protected JsonReader.JsonClassReader getCustomReader(Class c)
     {
         return this.readerCache.computeIfAbsent(c, key -> getReadOptions().getClosestReader(key)).orElse(null);
@@ -581,7 +574,7 @@ public abstract class Resolver
     {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
-			: MetaUtils.classForName(enumClassName, reader.getClassLoader());
+                : MetaUtils.classForName(enumClassName, readOptionsCache.getClassLoader());
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {

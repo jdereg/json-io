@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -128,7 +129,15 @@ public class Writers
         @Override
         public String extractString(Object o) { return ((Enum)o).name(); }
     }
-    
+
+    public static class ZoneOffsetWriter extends PrimitiveUtf8StringWriter {
+
+        @Override
+        public String extractString(Object o) {
+            return ((ZoneOffset) o).getId();
+        }
+    }
+
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException

@@ -85,22 +85,26 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
     private LocalDateTime parseLocalDateTime(Object o) {
         if (o instanceof String) {
             return LocalDateTime.parse((String) o, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        } else if (o instanceof JsonObject) {
-            JsonReader reader = ReaderContext.instance().getReader();
-            JsonObject job = (JsonObject) o;
-            return (job == null) ? null : reader.convertParsedMapsToJava(job, LocalDateTime.class);
         }
+
+        if (o instanceof JsonObject) {
+            JsonReader reader = ReaderContext.instance().getReader();
+            return reader.convertParsedMapsToJava((JsonObject) o, LocalDateTime.class);
+        }
+
         return null;
     }
 
     private ZoneOffset parseOffset(Object o) {
         if (o instanceof String) {
             return ZoneOffset.of((String) o);
-        } else if (o instanceof JsonObject) {
-            JsonReader reader = ReaderContext.instance().getReader();
-            JsonObject job = (JsonObject) o;
-            return (job == null) ? null : reader.convertParsedMapsToJava(job, ZoneOffset.class);
         }
+
+        if (o instanceof JsonObject) {
+            JsonReader reader = ReaderContext.instance().getReader();
+            return reader.convertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
+        }
+
         return null;
     }
 

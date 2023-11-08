@@ -66,18 +66,17 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
 public class ObjectResolver extends Resolver
 {
     private final ClassLoader classLoader;
-    protected JsonReader.MissingFieldHandler missingFieldHandler;
+    protected final JsonReader.MissingFieldHandler missingFieldHandler;
 
     /**
      * Constructor
-     * @param reader JsonReader instance being used
-     * @param classLoader ClassLoader that was set in the passed in 'options' arguments to JsonReader.
+     * @param readOptions Options to use while reading.
      */
-    protected ObjectResolver(JsonReader reader, ClassLoader classLoader)
+    protected ObjectResolver(ReadOptions readOptions)
     {
-        super(reader);
-        this.classLoader = classLoader;
-        this.missingFieldHandler = getReadOptions().getMissingFieldHandler();
+        super(readOptions);
+        this.classLoader = readOptions.getClassLoader();
+        this.missingFieldHandler = readOptions.getMissingFieldHandler();
     }
 
     /**
@@ -239,7 +238,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {    // Correct field references
-                    final JsonObject refObject = getReferencedObj(ref);
+                    final JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
 
                     if (refObject.target != null)
                     {
@@ -345,7 +344,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 { // Correct field references
-                    final JsonObject refObject = getReferencedObj(ref);
+                    final JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
                     storeMissingField(target, missingField, refObject.target);
                 }
                 else
@@ -490,7 +489,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
 
                     if (refObject.target != null)
                     {
@@ -663,7 +662,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {    // Connect reference
-                    JsonObject refObject = getReferencedObj(ref);
+                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
                     if (refObject.target != null)
                     {   // Array element with reference to existing object
                         Array.set(array, i, refObject.target);
@@ -827,6 +826,8 @@ public class ObjectResolver extends Resolver
             jsonObj.setType(c.getName());
         }
 
+        //  We've got to change this....need to remove arguments and the reader itself and then we can remove
+        //  the reference to the reader from the Resolver.
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.

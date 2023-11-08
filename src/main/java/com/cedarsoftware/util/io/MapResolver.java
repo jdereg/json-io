@@ -51,9 +51,9 @@ import java.util.Set;
 public class MapResolver extends Resolver
 {
 
-    protected MapResolver(JsonReader reader)
+    protected MapResolver(ReadOptions readOptions)
     {
-        super(reader);
+        super(readOptions);
     }
 
     protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
@@ -109,7 +109,7 @@ public class MapResolver extends Resolver
 
                 if (refId != null)
                 {    // Correct field references
-                    JsonObject refObject = getReferencedObj(refId);
+                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
                 }
                 else
@@ -186,7 +186,7 @@ public class MapResolver extends Resolver
 
                 if (refId != null)
                 {    // connect reference
-                    JsonObject refObject = getReferencedObj(refId);
+                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(refId);
                     copy.set(idx, refObject);
                 }
                 else

@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.KnownFilteredFields;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 
 import static com.cedarsoftware.util.io.Writers.writeBasicString;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -245,6 +247,14 @@ class ExceptionSerializeTest
     }
 
     @Test
+    void testExceptionWithNonStandardConstructors() {
+        ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
+
+        String json = TestUtil.toJson(t1);
+        Throwable t2 = TestUtil.toJava(json);
+    }
+
+    @Test
     void testNestedException()
     {
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
@@ -279,6 +289,42 @@ class ExceptionSerializeTest
             methodThatThrowsException();
         } catch (Exception e) {
             throw new JsonIoException(e);
+        }
+    }
+
+    @Getter
+    public static class ExceptionWithAThousandCuts extends RuntimeException {
+        List<StupidEmojis> emojis;
+
+        public ExceptionWithAThousandCuts(List<StupidEmojis> emojis) {
+            super(emojis == null ? null : emojis.toString());
+            this.emojis = emojis;
+        }
+
+        public ExceptionWithAThousandCuts(String s, List<StupidEmojis> emojis) {
+            super(s);
+            this.emojis = emojis;
+        }
+
+        public ExceptionWithAThousandCuts(String message, Throwable cause, List<StupidEmojis> emojis) {
+            super(message, cause);
+            this.emojis = emojis;
+        }
+
+        public ExceptionWithAThousandCuts(Throwable cause, List<StupidEmojis> emojis) {
+            super(cause);
+            this.emojis = emojis;
+        }
+    }
+
+    @AllArgsConstructor
+    @Getter
+    public static class StupidEmojis {
+        String emoji;
+
+        @Override
+        public String toString() {
+            return this.emoji;
         }
     }
 }

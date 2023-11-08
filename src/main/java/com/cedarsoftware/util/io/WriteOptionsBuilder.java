@@ -94,6 +94,7 @@ public class WriteOptionsBuilder {
         temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
         temp.put(Year.class, new Writers.YearWriter());
+        temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
 
         JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
         temp.put(StringBuilder.class, stringWriter);

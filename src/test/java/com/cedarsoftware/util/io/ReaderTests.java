@@ -1,8 +1,15 @@
 package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 import java.util.Date;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -34,5 +41,34 @@ class ReaderTests {
 
         assert "".equals(x);
         assert 0 == a;
+    }
+
+    private static Stream<Arguments> stringsThatAreEmptyWhenTrimmed() {
+        return Stream.of(Arguments.of("    "),
+                Arguments.of(" \n\t\r "));
+    }
+
+    @ParameterizedTest
+    @MethodSource("stringsThatAreEmptyWhenTrimmed")
+    @NullAndEmptySource
+    void testJsonToJavaVariant_returnsNullForEmptyOrNullString(String json) {
+        Object o = JsonReader.jsonToJava(json);
+        assertNull(o);
+    }
+
+    @ParameterizedTest
+    @MethodSource("stringsThatAreEmptyWhenTrimmed")
+    @NullAndEmptySource
+    void testToObjects_returnsNullForEmptyOrNullString(String json) {
+        Object o = JsonReader.toObjects(json);
+        assertNull(o);
+    }
+
+    @ParameterizedTest
+    @MethodSource("stringsThatAreEmptyWhenTrimmed")
+    @NullAndEmptySource
+    void testToMaps_returnsNullForEmptyOrNullString(String json) {
+        Object o = JsonReader.toMaps(json);
+        assertNull(o);
     }
 }

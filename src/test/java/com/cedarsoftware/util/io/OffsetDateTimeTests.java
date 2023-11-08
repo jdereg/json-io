@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -20,7 +19,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     private static final ZoneOffset Z3 = ZoneOffset.of("Z");
 
 
-    @Disabled("Currently, @ids and @refs aren't being handled correctly when calling reader.convertParsedMapsToJava")
+    //@Disabled("Currently, @ids and @refs aren't being handled correctly when calling reader.convertParsedMapsToJava")
     @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");
@@ -28,7 +27,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
 
         System.out.println(offsetDateTime.date1);
         assertOffsetDateTime(offsetDateTime.date1, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
-        assertOffsetDateTime(offsetDateTime.date2, 2022, 12, 23, 12, 03, 00, 4549357 * 100, "Asia/Aden");
+        assertOffsetDateTime(offsetDateTime.date2, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
         assertSame(offsetDateTime.date1.getOffset(), offsetDateTime.date2.getOffset());
     }
 
