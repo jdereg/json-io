@@ -235,6 +235,33 @@ class EnumTests {
         assertThat(actual.getMyEnum()).isEqualTo(SimpleEnum.ONE);
     }
 
+    @Test
+    void testEnumWithNestedName() {
+        EnumWithNestedName mc = EnumWithNestedName.Z;
+        mc.name = "foo";
+
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(mc, options);
+        EnumWithNestedName actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(EnumWithNestedName.Z);
+        assertThat(actual.name).isEqualTo("foo");
+    }
+
+
+    @Test
+    void testEnumNestedWithinEnum() {
+        EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
+        mc.setSimpleEnum(SimpleEnum.TWO);
+
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(mc, options);
+        EnumNestedWithinEnum actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(EnumNestedWithinEnum.THREE);
+        assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
+    }
+
 
     private static Stream<Arguments> testIsEnum_whenNotAnonymousInnerClass() {
         return Stream.of(
@@ -413,7 +440,6 @@ class EnumTests {
         public String toString() {
             return name();
         }
-
     }
 
     private enum SimpleEnum {
@@ -435,6 +461,12 @@ class EnumTests {
         @Getter
         @Setter
         private SimpleEnum simpleEnum;
+    }
+
+    private enum EnumWithNestedName {
+        X, Y, Z;
+
+        public String name;
     }
 
     private String loadJson(String fileName) {

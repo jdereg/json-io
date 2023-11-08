@@ -29,6 +29,7 @@ public class KnownFilteredFields {
         addFieldFilters(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
 
         addInjectionFilters(Throwable.class, MetaUtils.listOf("detailMessage", "cause", "stackTrace"));
+        addInjectionFilters(Enum.class, MetaUtils.listOf("name"));
     }
 
     public void addFieldFilter(Class c, String fieldName) {

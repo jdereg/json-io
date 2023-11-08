@@ -724,20 +724,13 @@ public class ObjectResolver extends Resolver
             return null;
         }
         JsonObject jsonObj;
-        if (isJsonObject)
-        {
-            jsonObj = (JsonObject)o;
-        }
-        else
-        {
-            jsonObj = new JsonObject();
-        }
 
         Class c;
 
         // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)
         if (isJsonObject)
         {
+            jsonObj = (JsonObject) o;
             if (jsonObj.isReference())
             {   // Don't create a new instance for an @ref.  The pointer to the other instance will be placed
                 // where we are now (inside array, inside collection, as a map key, a map value, or a value
@@ -785,45 +778,40 @@ public class ObjectResolver extends Resolver
         else
         {
             c = inferredType;
+
+            jsonObj = new JsonObject();
+            jsonObj.setValue(o);
+        }
+
+        if (null == c) {   // Class not found using multiple techniques.  There is no custom factory or reader;
+            return null;
+        }
+
+        if (jsonObj.type == null) {
+            jsonObj.setType(c.getName());
         }
 
         if (getReadOptions().isNonCustomizable(c)) {// Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
+
+        // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
         if (classFactory != null && jsonObj.target == null)
         {
-            if (!isJsonObject)
-            {   // 'o' was a primitive.
-                jsonObj.setValue(o);
-                jsonObj.setType(c.getName());
-            }
+            Object target = createInstanceUsingClassFactory(c, jsonObj);
 
-            Object target = classFactory.newInstance(c, jsonObj);
-
-            if (classFactory.isObjectFinal()) {
-                // Created and loaded, we're done
-                jsonObj.setFinishedTarget(target, true);
+            if (jsonObj.isFinished()) {
                 return target;
             }
         }
 
-        if (c == null)
-        {   // Class not found using multiple techniques.  There is no custom reader;
-            return null;
-        }
-        
         // Use custom reader if one exists
         JsonReader.JsonClassReader closestReader = getCustomReader(c);
         if (closestReader == null) {
             return null;
-        }
-
-        if (jsonObj.type == null)
-        {
-            jsonObj.setType(c.getName());
         }
 
         //  We've got to change this....need to remove arguments and the reader itself and then we can remove
@@ -831,8 +819,7 @@ public class ObjectResolver extends Resolver
         Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.
-        jsonObj.setFinishedTarget(read, true);
-        return read;
+        return jsonObj.setFinishedTarget(read, true);
     }
 
     private void markUntypedObjects(final Type type, final Object rhs, final Class<?> fieldType)

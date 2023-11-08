@@ -21,9 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -305,15 +305,13 @@ public class Writers
     public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
         // putting here to allow this to be the full enum object writer.
         // write now we're just calling back to the JsonWriter
-        private static final Set<String> excluded = MetaUtils.setOf("name", "ordinal", "internal");
-
         @Override
         public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {
             output.write("\"name\":");
             writeJsonUtf8String(((Enum)obj).name(), output);
             JsonWriter writer = getWriter(args);
-            writer.writeObject(obj, true, true, excluded);
+            writer.writeObject(obj, true, true, new HashSet<>());
         }
     }
 

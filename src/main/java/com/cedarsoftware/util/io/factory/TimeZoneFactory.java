@@ -47,7 +47,7 @@ public class TimeZoneFactory implements JsonReader.ClassFactory {
     }
 
     private Object fromString(JsonObject job, String value) {
-        return job.setFinishedTarget(TimeZone.getTimeZone(value), isObjectFinal());
+        return job.setFinishedTarget(TimeZone.getTimeZone(value), true);
     }
 
     @Override

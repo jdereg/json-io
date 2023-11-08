@@ -5,6 +5,7 @@ import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
         String message = (String) job.get(DETAIL_MESSAGE);
         if (message != null) {
-            hints.put(String.class, MetaUtils.listOf(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message)));
+            hints.computeIfAbsent(String.class, k -> new ArrayList()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
         }
 
         Throwable cause = reader.convertParsedMapsToJava((JsonObject) job.get(CAUSE), Throwable.class);
