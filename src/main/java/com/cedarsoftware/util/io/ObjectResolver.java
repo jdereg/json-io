@@ -109,7 +109,6 @@ public class ObjectResolver extends Resolver
         {
             Map.Entry<Object, Object> e = i.next();
             String key = (String) e.getKey();
-            //final Field field = MetaUtils.getField(cls, key);
             final Injector injector = injectorMap.get(key);
             Object rhs = e.getValue();
             if (injector != null)
@@ -198,14 +197,7 @@ public class ObjectResolver extends Resolver
             }
             else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
             {
-                if (Enum.class.isAssignableFrom(fieldType) && special instanceof String) {
-                    injector.inject(target, Enum.valueOf(fieldType, (String) special));
-                    //TODO enum class create a field also named : "name"? that's not good rule, so will not consider that
-                } else if (Enum.class.isAssignableFrom(injector.getDeclaringClass()) && "name".equals(injector.getName())) {
-                    //no need to set for this case
-                } else {
-                    injector.inject(target, special);
-                }
+                injector.inject(target, special);
             }
             else if (rhs.getClass().isArray())
             {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
