@@ -519,6 +519,12 @@ public abstract class Resolver
      */
     Object createInstanceUsingClassFactory(Class clazz, JsonObject jsonObj)
     {
+        //  If a target exsts then the item has already gone through
+        //  the new instance process at least, don't recreae.
+        if (jsonObj.getTarget() != null) {
+            return jsonObj.getTarget();
+        }
+
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.

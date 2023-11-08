@@ -251,7 +251,11 @@ class ExceptionSerializeTest
         ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        ExceptionWithAThousandCuts t2 = TestUtil.toJava(json);
+
+        assertThat(t2.getEmojis().size()).isEqualTo(3);
+        assertThat(t2.getStackTrace()).isNotNull();
+        assertThat(t2.getMessage()).isNotNull();
     }
 
     @Test
