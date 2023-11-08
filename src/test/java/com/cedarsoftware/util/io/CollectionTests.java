@@ -343,7 +343,7 @@ public class CollectionTests {
         String json = TestUtil.toJson(arrayList, writeOptions);
         TestUtil.printLine(json);
         String className = CollectionTests.class.getName();
-        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"name\":\"B\",\"age\":21,\"foo\":\"bar\"}]}", json);
+        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"age\":21,\"foo\":\"bar\",\"name\":\"B\"}]}", json);
     }
 
     @Test

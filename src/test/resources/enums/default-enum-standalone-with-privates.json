@@ -1,6 +1,6 @@
 {
   "@type": "com.cedarsoftware.util.io.EnumTests$TestEnum4",
-  "name": "B",
   "age": 21,
-  "foo": "bar"
+  "foo": "bar",
+  "name": "B"
 }

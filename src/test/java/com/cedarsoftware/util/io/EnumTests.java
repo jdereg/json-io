@@ -248,7 +248,6 @@ class EnumTests {
         assertThat(actual.name).isEqualTo("foo");
     }
 
-
     @Test
     void testEnumNestedWithinEnum() {
         EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
@@ -467,6 +466,14 @@ class EnumTests {
         X, Y, Z;
 
         public String name;
+    }
+
+    public enum PublicEnumWithNestedName {
+        X, Y, Z;
+
+        @Getter
+        @Setter
+        private String name;
     }
 
     private String loadJson(String fileName) {
