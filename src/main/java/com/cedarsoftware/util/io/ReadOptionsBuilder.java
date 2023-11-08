@@ -153,6 +153,7 @@ public class ReadOptionsBuilder {
         addReaderPermanent(StringBuffer.class, new Readers.StringBufferReader());
         addReaderPermanent(UUID.class, new Readers.UUIDReader());
         addReaderPermanent(URL.class, new Readers.URLReader());
+        addReaderPermanent(Enum.class, new Readers.EnumReader());
 
         //  JVM Readers > 1.8
 
@@ -511,11 +512,11 @@ public class ReadOptionsBuilder {
                 return throwableFactory;
             }
 
-            Optional optional = MetaUtils.getClassIfEnum(c);
-
-            if (optional.isPresent()) {
-                return enumFactory;
-            }
+//            Optional optional = MetaUtils.getClassIfEnum(c);
+//
+//            if (optional.isPresent()) {
+//                return enumFactory;
+//            }
 
             return null;
         }

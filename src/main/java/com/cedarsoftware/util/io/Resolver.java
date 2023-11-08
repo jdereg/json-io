@@ -536,10 +536,15 @@ public abstract class Resolver
 
         Object target = classFactory.newInstance(c, jsonObj);
 
+        // don't pass in classFactory.isObjectFinal, only set it to true if classFactory says its so.
+        // it allows the factory iteself to set final on the jsonObj internally where it depends
+        // on how the data comes back, but that value can be a hard true if the factory knows
+        // its always true.
         if (classFactory.isObjectFinal()) {
-            jsonObj.setFinishedTarget(target, true);
+            return jsonObj.setFinishedTarget(target, true);
         }
 
+        jsonObj.setTarget(target);
         return target;
     }
 
