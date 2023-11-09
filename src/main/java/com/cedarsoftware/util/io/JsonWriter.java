@@ -343,7 +343,7 @@ public class JsonWriter implements Closeable, Flushable
     @Deprecated
     public static String objectToJson(Object item)
     {
-        return toJson(item, null);
+        return toJson(item, new WriteOptionsBuilder().build());
     }
 
     /**
@@ -380,7 +380,7 @@ public class JsonWriter implements Closeable, Flushable
      * Convert a Java Object to a JSON String.
      *
      * @param item Object to convert to a JSON String.
-     * @param writeOptions (optional can be null) Map of extra arguments indicating how dates are
+     * @param writeOptions (optional can be null for defaults) Map of extra arguments indicating how dates are
      * formatted and what fields are written out (optional).  For Date parameters, use the public
      * static DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Or you can specify
      * your own custom SimpleDateFormat String, or you can associate a SimpleDateFormat object,
@@ -392,7 +392,7 @@ public class JsonWriter implements Closeable, Flushable
     public static String toJson(Object item, WriteOptions writeOptions) {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            JsonWriter writer = new JsonWriter(stream, writeOptions);
+            JsonWriter writer = new JsonWriter(stream, writeOptions == null ? new WriteOptionsBuilder().build() : writeOptions);
             writer.write(item);
             writer.close();
             return new String(stream.toByteArray(), StandardCharsets.UTF_8);
@@ -478,7 +478,7 @@ public class JsonWriter implements Closeable, Flushable
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
 
         // having to save these args to support old Writers for now.
-        // once they are depcrecated we can remove the Map args.
+        // once they are deprecated we can remove the Map args.
         this.args.putAll(WriteOptionsBuilder.toMap(writeOptions));
         this.args.put(JSON_WRITER, this);
 
