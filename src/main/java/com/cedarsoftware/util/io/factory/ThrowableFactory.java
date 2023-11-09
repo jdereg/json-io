@@ -36,30 +36,30 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     private static final String CAUSE = "cause";
     private static final String STACK_TRACE = "stackTrace";
 
-    public Object newInstance(Class<?> c, JsonObject job)
+    public Object newInstance(Class<?> c, JsonObject jObj)
     {
         JsonReader reader = ReaderContext.instance().getReader();
 
         Map<Class<?>, List<MetaUtils.ParameterHint>> hints = new HashMap<>();
 
-        String message = (String) job.get(DETAIL_MESSAGE);
+        String message = (String) jObj.get(DETAIL_MESSAGE);
         if (message != null) {
             hints.computeIfAbsent(String.class, k -> new ArrayList()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
         }
 
-        Throwable cause = reader.convertParsedMapsToJava((JsonObject) job.get(CAUSE), Throwable.class);
+        Throwable cause = reader.convertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
         if (cause != null) {
             hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
         }
 
-        MetaUtils.buildHints(reader, job, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        MetaUtils.buildHints(reader, jObj, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
         Throwable t = (Throwable) MetaUtils.findAndConstructWithAppropriateConstructor(c, hints);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(t);
         }
 
-        Object[] stackTrace = (Object[]) job.get(STACK_TRACE);
+        Object[] stackTrace = (Object[]) jObj.get(STACK_TRACE);
         if (stackTrace != null) {
             StackTraceElement[] elements = new StackTraceElement[stackTrace.length];
 

@@ -29,7 +29,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  * Read an object graph in JSON format and make it available in Java objects, or
  * in a "Map of Maps." (untyped representation).  This code handles cyclic references
  * and can deserialize any Object graph without requiring a class to be 'Serializeable'
- * or have any specific methods on it.  It will handle classes with non public constructors.
+ * or have any specific methods on it.  It will handle classes with non-public constructors.
  * <br><br>
  * Usages:
  * <ul><li>
@@ -84,7 +84,7 @@ public class JsonReader implements Closeable
     public static final String JSON_READER = "JSON_READER";
     /** Pointer to the current ObjectResolver (automatically placed in the Map) */
     public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";
-    /** If set, this map will be used when reading @type values - allows short-hand abbreviations type names */
+    /** If set, this map will be used when reading @type values - allows shorthand abbreviations type names */
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
     /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
     public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
@@ -135,39 +135,26 @@ public class JsonReader implements Closeable
 
     /**
      * Subclass this interface and create a class that will return a new instance of the
-     * passed in Class (c).  Your subclass will be called when json-io encounters an
-     * the new to instantiate an instance of (c). Use the passed in Object o which will
-     * be a JsonObject or value to source values for the construction or your class.
-     *
-     * Make json-io aware that it needs to call your class by calling the public
-     * JsonReader.assignInstantiator() API.
+     * passed in Class (c).  Your factory subclass will be called when json-io encounters an
+     * instance of (c) which you reigister with JsonReader.assignInstantiator().
+     * Use the passed in JsonObject o which is a JsonObject to source values for the construction
+     * of your class.
      */
     public interface ClassFactory
     {
         /**
          * Implement this method to return a new instance of the passed in Class.  Use the passed
-         * in Object to supply values to the construction of the object.
+         * in JsonObject to supply values to the construction of the object.
          * @param c Class of the object that needs to be created
-         * @param job JsonObject (if primitive type do job.getPrimitiveValue();
+         * @param jObj JsonObject (if primitive type do jObj.getPrimitiveValue();
          * @return a new instance of C.  If you completely fill the new instance using
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
-        default Object newInstance(Class<?> c, JsonObject job) {
-            // passing on args is for backwards compatibility.
-            // also, once we remove the other new instances we
-            // can probably remove args from the parameters.
-            Map args = new HashMap<>();
-            args.put("jsonObj", job);
-
-            return this.newInstance(c, args);
+        default Object newInstance(Class<?> c, JsonObject jObj)
+        {
+            return MetaUtils.newInstance(c);
         }
-
-        @Deprecated
-        default Object newInstance(Class<?> c, Map args) { return this.newInstance(c); }
-
-        @Deprecated
-        default Object newInstance(Class<?> c) { return MetaUtils.newInstance(c); }
 
         /**
          * @return true if this object is instantiated and completely filled using the contents
@@ -275,7 +262,7 @@ public class JsonReader implements Closeable
      * Use to create new instances of collection interfaces (needed for empty collections)
      */
     public static class CollectionFactory implements ClassFactory {
-        public Object newInstance(Class<?> c, JsonObject job)
+        public Object newInstance(Class<?> c, JsonObject jObj)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -307,11 +294,11 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class<?> c, JsonObject job)
+        public Object newInstance(Class<?> c, JsonObject jObj)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
-                return new TreeMap();
+                return new TreeMap<>();
             }
             else if (Map.class.isAssignableFrom(c))
             {
@@ -340,7 +327,7 @@ public class JsonReader implements Closeable
      * @param factory ClassFactory that wil create instance of that class.
      */
     @Deprecated
-    public static void assignInstantiator(Class c, ClassFactory factory)
+    public static void assignInstantiator(Class<?> c, ClassFactory factory)
     {
         ReadOptionsBuilder.assignInstantiator(c, factory);
     }
@@ -357,7 +344,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder.withCustomReader() to create any additional readers you'll need.
      */
     @Deprecated
-    public void addReader(Class c, JsonClassReader reader)
+    public void addReader(Class<?> c, JsonClassReader reader)
     {
         ReaderContext.instance().getReadOptions().addReader(c, reader);
     }
@@ -370,7 +357,7 @@ public class JsonReader implements Closeable
      * @deprecated use ReadOptionsBuilder.withNonCustomizableClass()
      */
     @Deprecated
-    public void addNotCustomReader(Class c)
+    public void addNotCustomReader(Class<?> c)
     {
         ReaderContext.instance().getReadOptions().addNonCustomizableClass(c);
     }
@@ -1039,7 +1026,7 @@ public class JsonReader implements Closeable
             if (root.isFinished) {   // Factory method instantiated and completely loaded the object.
                 graph = (T) instance;
             } else {
-                graph = (T) resolver.convertMapsToObjects(root);
+                graph = resolver.convertMapsToObjects(root);
             }
         }
         return graph;
@@ -1074,15 +1061,6 @@ public class JsonReader implements Closeable
             //  from the outer (initial) JsonReader and not from class factories.
             resolver.cleanup();
         }
-    }
-
-    private static String safeTrimToNull(String string) {
-        if (string == null) {
-            return null;
-        }
-
-        String trimmedString = string.trim();
-        return trimmedString.isEmpty() ? null : trimmedString;
     }
 
     @Override

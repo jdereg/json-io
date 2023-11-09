@@ -8,14 +8,14 @@ import java.time.ZoneOffset;
 
 public class ZoneOffsetFactory implements JsonReader.ClassFactory {
     @Override
-    public ZoneOffset newInstance(Class<?> c, JsonObject job) {
-        Object value = job.get("value");
+    public ZoneOffset newInstance(Class<?> c, JsonObject jObj) {
+        Object value = jObj.get("value");
 
         if (value instanceof String) {
             return fromString((String) value);
         }
 
-        return fromJsonObject(job);
+        return fromJsonObject(jObj);
     }
 
     protected ZoneOffset fromString(String id) {

@@ -62,10 +62,10 @@ class ExceptionSerializeTest
 
     public class MyExceptionFactory extends ThrowableFactory
     {
-        public Object newInstance(Class<?> c, JsonObject jsonObj)
+        public Object newInstance(Class<?> c, JsonObject jObj)
         {
-            String msg = (String)jsonObj.get("detailMessage");
-            JsonObject jObjCause = (JsonObject)jsonObj.get("cause");
+            String msg = (String) jObj.get("detailMessage");
+            JsonObject jObjCause = (JsonObject) jObj.get("cause");
             Throwable cause = null;
             if (jObjCause != null)
             {
@@ -74,7 +74,7 @@ class ExceptionSerializeTest
             }
 
             MyException myEx = (MyException) createException(msg, cause);
-            Long rn = (Long) jsonObj.get("recordNumber");
+            Long rn = (Long) jObj.get("recordNumber");
             if (rn != null)
             {
                 myEx.recordNumber = rn;

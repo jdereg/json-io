@@ -10,16 +10,16 @@ import java.util.Optional;
 public class EnumClassFactory implements JsonReader.ClassFactory {
 
     @Override
-    public Object newInstance(Class<?> c, JsonObject job) {
-        Object value = job.get("value");
+    public Object newInstance(Class<?> c, JsonObject jObj) {
+        Object value = jObj.get("value");
 
         if (value instanceof String) {
             // came in as string so we know we're done.
             Enum target = fromString(c, (String) value);
-            return job.setFinishedTarget(target, true);
+            return jObj.setFinishedTarget(target, true);
         }
 
-        return fromJsonObject(c, job);
+        return fromJsonObject(c, jObj);
     }
 
     @SuppressWarnings("unchecked")

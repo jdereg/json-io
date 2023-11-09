@@ -52,7 +52,7 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testJsonToJavaVariant_returnsNullForEmptyOrNullString(String json) {
-        Object o = JsonReader.jsonToJava(json);
+        Object o = JsonReader.toObjects(json);
         assertNull(o);
     }
 

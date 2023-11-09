@@ -46,15 +46,15 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
         constructor2 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, String.class, String.class, String.class, int.class), null);
     }
 
-    public Object newInstance(Class<?> c, JsonObject jsonObj) {
-        String declaringClass = (String) jsonObj.get(DECLARING_CLASS);
-        String methodName = (String) jsonObj.get(METHOD_NAME);
-        String fileName = (String) jsonObj.get(FILE_NAME);
-        Number lineNumber = (Number) jsonObj.get(LINE_NUMBER);
+    public Object newInstance(Class<?> c, JsonObject jObj) {
+        String declaringClass = (String) jObj.get(DECLARING_CLASS);
+        String methodName = (String) jObj.get(METHOD_NAME);
+        String fileName = (String) jObj.get(FILE_NAME);
+        Number lineNumber = (Number) jObj.get(LINE_NUMBER);
 
-        String classLoaderName = (String) jsonObj.get(CLASS_LOADER_NAME);
-        String moduleName = (String) jsonObj.get(MODULE_NAME);
-        String moduleVersion = (String) jsonObj.get(MODULE_VERSION);
+        String classLoaderName = (String) jObj.get(CLASS_LOADER_NAME);
+        String moduleName = (String) jObj.get(MODULE_NAME);
+        String moduleVersion = (String) jObj.get(MODULE_VERSION);
 
         if (constructor2 != null) {
             StackTraceElement element = MetaUtils.safelyIgnoreException(() -> (StackTraceElement) constructor2.newInstance(classLoaderName, moduleName, moduleVersion, declaringClass, methodName, fileName, lineNumber.intValue()), null);

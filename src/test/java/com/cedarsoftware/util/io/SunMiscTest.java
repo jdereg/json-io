@@ -41,7 +41,7 @@ public class SunMiscTest
         String workaroundString = TestUtil.toJson(array);
 
         JsonReader.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
-            public Object newInstance(Class<?> c, JsonObject o)
+            public Object newInstance(Class<?> c, JsonObject jObj)
             {
                 return Dog.Shoe.construct();
             }

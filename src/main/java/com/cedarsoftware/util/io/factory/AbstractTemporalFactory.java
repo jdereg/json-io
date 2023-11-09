@@ -37,8 +37,8 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     @Override
-    public T newInstance(Class<?> c, JsonObject job) {
-        Object value = job.get("value");
+    public T newInstance(Class<?> c, JsonObject jObj) {
+        Object value = jObj.get("value");
 
         if (value instanceof String) {
             return fromString((String) value);
@@ -48,7 +48,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
             return fromNumber((Number) value);
         }
 
-        return fromJsonObject(job);
+        return fromJsonObject(jObj);
     }
 
     protected abstract T fromString(String s);

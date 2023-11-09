@@ -51,9 +51,9 @@ public class SerializedExceptionTest
 
     public static class MyExceptionReader implements JsonReader.ClassFactory
     {
-        public Object newInstance(Class<?> c, JsonObject o)
+        public Object newInstance(Class<?> c, JsonObject jObj)
         {
-            Map map = (Map) o;
+            Map map = (Map) jObj;
             String name = (String) map.get("name");
             String detailMessage = (String) map.get("detailMessage");
             return new MyException(name, detailMessage);

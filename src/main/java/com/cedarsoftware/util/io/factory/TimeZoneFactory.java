@@ -31,16 +31,16 @@ import java.util.TimeZone;
  */
 public class TimeZoneFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class c, JsonObject job) {
+    public Object newInstance(Class c, JsonObject jObj) {
 
-        Object value = job.getValue();
+        Object value = jObj.getValue();
         if (value != null) {
-            return fromString(job, (String) value);
+            return fromString(jObj, (String) value);
         }
 
-        String zone = (String) job.get("zone");
+        String zone = (String) jObj.get("zone");
         if (zone != null) {
-            return fromString(job, (zone));
+            return fromString(jObj, (zone));
         }
 
         throw new JsonIoException("java.util.TimeZone missing 'value' field");
