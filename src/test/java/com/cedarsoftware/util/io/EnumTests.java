@@ -249,6 +249,26 @@ class EnumTests {
     }
 
     @Test
+    void testPublicEnumWithGetterAndSetter_andAlsoShowEnumsAreBasicallySingletons() {
+        PublicEnumWithNestedName mc = PublicEnumWithNestedName.Z;
+        mc.name = "blech";
+
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(mc, options);
+
+        mc.name = "foo";
+
+        PublicEnumWithNestedName actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(PublicEnumWithNestedName.Z);
+        assertThat(actual.name).isEqualTo("blech");
+
+        // basically ENUMS are singletons and editing the field name on one will also edit the name
+        assertThat(mc.name).isEqualTo("blech");
+    }
+
+
+    @Test
     void testEnumNestedWithinEnum() {
         EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
         mc.setSimpleEnum(SimpleEnum.TWO);
