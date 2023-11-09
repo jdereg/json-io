@@ -426,7 +426,7 @@ public class ReadOptionsBuilder {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
-        return new ReadOptionsImplementation(this.readOptions, this.readOptions.isUsingMaps());
+        return new ReadOptionsImplementation(this.readOptions);
     }
 
     @Setter(AccessLevel.PRIVATE)
@@ -480,8 +480,8 @@ public class ReadOptionsBuilder {
             this.unknownTypeClass = null;
         }
 
-        private ReadOptionsImplementation(ReadOptionsImplementation options, boolean isUsingMaps) {
-            this.isUsingMaps = isUsingMaps;
+        private ReadOptionsImplementation(ReadOptionsImplementation options) {
+            this.isUsingMaps = options.isUsingMaps;
             this.maxDepth = options.maxDepth;
             this.classLoader = options.classLoader;
             this.typeNameMap = Collections.unmodifiableMap(options.typeNameMap);

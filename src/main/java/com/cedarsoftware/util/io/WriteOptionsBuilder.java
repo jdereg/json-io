@@ -19,6 +19,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -428,7 +429,7 @@ public class WriteOptionsBuilder {
     public WriteOptions build() {
         this.writeOptions.fieldSpecifiers.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldSpecifiers));
         this.writeOptions.fieldNameBlackList.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldNameBlackList));
-        return writeOptions;
+        return new WriteOptionsImplementation(this.writeOptions);
     }
 
     private void assertTypesAreBeingOutput() {
@@ -437,7 +438,7 @@ public class WriteOptionsBuilder {
         }
     }
 
-    private class WriteOptionsImplementation implements WriteOptions {
+    private static class WriteOptionsImplementation implements WriteOptions {
         @Getter
         private boolean usingShortMetaKeys = false;
 
@@ -460,7 +461,7 @@ public class WriteOptionsBuilder {
         private JsonWriter.JsonClassWriter enumWriter;
 
         @Getter
-        private Map<Class<?>, JsonWriter.JsonClassWriter> customWriters;
+        private final Map<Class<?>, JsonWriter.JsonClassWriter> customWriters;
 
         @Getter
         private final Map<String, String> customTypeMap;
@@ -506,11 +507,11 @@ public class WriteOptionsBuilder {
             this.enumPublicOnly = options.enumPublicOnly;
             this.classLoader = options.classLoader;
             this.enumWriter = options.enumWriter;
-            this.customWriters = options.customWriters;
-            this.customTypeMap = options.customTypeMap;
-            this.nonCustomClasses = options.nonCustomClasses;
-            this.fieldSpecifiers = options.fieldSpecifiers;
-            this.fieldNameBlackList = options.fieldNameBlackList;
+            this.customWriters = Collections.unmodifiableMap(options.customWriters);
+            this.customTypeMap = Collections.unmodifiableMap(options.customTypeMap);
+            this.nonCustomClasses = Collections.unmodifiableCollection(options.nonCustomClasses);
+            this.fieldSpecifiers = Collections.unmodifiableMap(options.fieldSpecifiers);
+            this.fieldNameBlackList = Collections.unmodifiableMap(options.fieldNameBlackList);
             this.dateFormat = options.dateFormat;
             this.customArguments = options.customArguments;
         }
