@@ -1,18 +1,24 @@
 ### Revision History
+* 4.16.0
+  * `JsonReader/JSonWriter` Options are now specified using `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build().`
+  * For improved security, key JDK classes like `ClassLoader,` `Process` (and derived classes), `Method`, `Field`, `Constructor` and others are not serialized.
+  * Fixed Issue #185 Serializing/deserializing `SingletonMap/List/Set.`
+  * Performance improvement: Reads and Writes are much faster due to improved low-level stream handling.  More to come on read performance improvements.
+  * The public API on `JsonReader` and `JsonWriter` has been simplified to fewer options and many of the prior APIs have been deprecated.  The 5.0.0+ release will remove these deprecated APIs.
 * 4.15.0
-  * Supports `JDK1.8, JDK11, 17, 21.` Test with these versions, and compiled in class file version 52 (`JDK1.8 `) format.
+  * Supports `JDK1.8, JDK11, 17, 21.` Tested with these versions, and compiled in class file version 52 (`JDK1.8 `) format.
   * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values.
   * Fixed an issue with classes that used custom reader/writes being loaded when inside an array or collection. If there was circular references, they were not resolved correctly.
   * This version writes `Enums` in a more compact way with the field name associated to a JSON String name of the enum.  However, the prior versions of `json-io` wrote `Enums` out as JSON objects.  The JSON reader will read `Enums` either way.  If you want the output to continue to write `Enums` as a JSON Object, use the `.writeEnumsAsObjects()` on the `WriteOptionsBuilder`, and it will output enums as it used to.
   * Minor change: `JsonObject` was `JsonObject<K, V>` and is now `JsonObject` (no generics).  If you used `JsonObject` in your code, make sure to remove the generics.
   * Minor change: `JsonReader.ClassFactory::newInstance(Class c, Object)` has been changed to `JsonReader.ClassFactory::newInstance(Class<?>, JsonObject)`.  If you have written a `CustomClassFactory,` update the method signature to `newInstance(Class<?>, JsonObject).` 
 * 4.14.2
-  * Enum/EnumSet support fully added @kpartlow
+  * `Enum/EnumSet` support fully added @kpartlow
   * `WARN` This version inadvertently slipped to `JDK11+` (which has been corrected in `4.15.0`).  Version `5.x.x` will be `JDK11 or JDK17`.
 * 4.14.1
   * JDK 1.8 is target class file format. @laurgarn
   * JDK 11 is source file format. @laurgarn
-  * Bug fix: EnumSet support fixed. @laurgarn
+  * Bug fix: `EnumSet` support fixed. @laurgarn
   * Bug fix: Null boxed primitives are preserved round-trip. @laurgarn
   * Enhancement: Filter Blacklisted Fields Before Trying to Access them to prevent exceptions thrown by Proxies (improve hibernate support) @kpartlow
   * Bug fix: Stack overflow error caused by json-io parsing of untrusted JSON String @PoppingSnack
@@ -22,9 +28,9 @@
   * Enhancement: Bump gson from 2.6.2 to 2.8.9 @dependabot
   * Enhancement: support deserialization of Collections.EmptyList on JDK17 @ozhelezniak-talend
 * 4.14.0
-  * Bug fix: Enum serialization error with Java 17 #155.  According to @wweng-talend, if you set : "--illegal-access=deny" on jvm parameters, it works the same between jdk11 and jdk17. 
+  * Bug fix: `Enum` serialization error with Java 17 #155.  According to @wweng-talend, if you set : "--illegal-access=deny" on jvm parameters, it works the same between jdk11 and jdk17. 
   * Bug fix: java.lang primitives serialization - JDK-8256358 - JDK 17 support #154. Fix by @wwang-talend.
-  * Bug fix: failed to deserialize EnumSet with json without type #120.  Fix by @sgandon and @wwang-talend
+  * Bug fix: failed to deserialize `EnumSet` with json without type #120.  Fix by @sgandon and @wwang-talend
 * 4.13.0
    * Enhancement: Clear unresolved references after all have been processed, as opposed to removing each one after it was processed.  
 * 4.12.0

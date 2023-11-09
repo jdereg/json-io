@@ -323,7 +323,7 @@ public abstract class Resolver
         // @type always takes precedence over inferred Java (clazz) type.
         if (type != null)
         {    // @type is explicitly set, use that as it always takes precedence
-            return createInstanceUsingType(clazz, jsonObj);
+            return createInstanceUsingType(jsonObj);
         }
         else
         {
@@ -335,7 +335,7 @@ public abstract class Resolver
      * Create an instance of a Java class using the ".type" field on the jsonObj.  The clazz argument is not
      * used for determining type, just for clarity in an exception message.
      */
-    protected Object createInstanceUsingType(Class clazz, JsonObject jsonObj)
+    protected Object createInstanceUsingType(JsonObject jsonObj)
     {
         String type = jsonObj.type;
         final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();

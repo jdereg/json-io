@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.16.0-SNAPSHOT</version>
+    <version>4.16.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -20,9 +20,9 @@
 <!--        <maven.compiler.release>11</maven.compiler.release>-->
 
         <!-- testing only -->
-        <version.junit>5.10.0</version.junit>
+        <version.junit>5.10.1</version.junit>
         <version.assertj>3.24.2</version.assertj>
-        <version.java.util>2.2.0</version.java.util>
+        <version.java.util>2.3.0</version.java.util>
         <version.gson>2.10.1</version.gson>
         <version.jackson>2.15.3</version.jackson>
         <version.lombok>1.18.30</version.lombok>
@@ -35,8 +35,8 @@
         <!-- Build maven-***-plugins-->
         <version.plugin.gpg>3.1.0</version.plugin.gpg>
         <version.plugin.compiler>3.11.0</version.plugin.compiler>
-        <version.plugin.javadoc>3.6.0</version.plugin.javadoc>
-        <version.plugin.surefire>3.2.1</version.plugin.surefire>
+        <version.plugin.javadoc>3.6.2</version.plugin.javadoc>
+        <version.plugin.surefire>3.2.2</version.plugin.surefire>
         <version.plugin.source>3.3.0</version.plugin.source>
         <version.plugin.felix.scr>1.26.4</version.plugin.felix.scr>
         <version.plugin.felix.bundle>5.1.9</version.plugin.felix.bundle>

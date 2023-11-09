@@ -7,14 +7,14 @@ json-io
 Excellent Java serialization to and from JSON format.
 Available on [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cjson-io).
 This library has <b>no dependencies</b> on other libraries for runtime.
-The`.jar`file is only`158K.`
+The`.jar`file is only`227K.`
 Works with`JDK 1.8`through`JDK 21`.
 The classes in the`.jar`file are version 52 (`JDK 1.8`).
 ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.15.0'
+implementation 'com.cedarsoftware:json-io:4.16.0'
 ```
 
 ##### Maven
@@ -22,7 +22,7 @@ implementation 'com.cedarsoftware:json-io:4.15.0'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.15.0</version>
+      <version>4.16.0</version>
     </dependency>
 ```
 ___
