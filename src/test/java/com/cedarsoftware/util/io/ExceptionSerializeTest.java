@@ -271,7 +271,7 @@ class ExceptionSerializeTest
     }
 
     @Test
-    void tesSubclassedException()
+    void testSubclassedException()
     {
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);

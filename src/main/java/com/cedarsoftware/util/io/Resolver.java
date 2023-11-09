@@ -7,13 +7,11 @@ import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,7 +53,6 @@ public abstract class Resolver
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
-    Class<?> singletonMap = Collections.singletonMap("foo", "bar").getClass();
     private ReadOptions readOptionsCache = null;
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -411,31 +408,6 @@ public abstract class Resolver
             else if ((mate = coerceCertainTypes(c.getName())) != null)
             {   // if coerceCertainTypes() returns non-null, it did the work
             }
-            else if (singletonMap.isAssignableFrom(c))
-            {
-                Object key = jsonObj.keySet().iterator().next();
-                Object value = jsonObj.values().iterator().next();
-                mate = Collections.singletonMap(key, value);
-            }
-            else if (c.getName().startsWith("java.util.Immutable"))
-            {
-                if (c.getName().contains("Set"))
-                {
-                    mate = new LinkedHashSet<>();
-                }
-                else if (c.getName().contains("List"))
-                {
-                    mate = new ArrayList<>();
-                }
-                else if (c.getName().contains("Map"))
-                {
-                    mate = new LinkedHashMap<>();
-                }
-                else
-                {
-                    throw new JsonIoException("Unknown Immutable class type: " + c.getName());
-                }
-            }
             else
             {
                 // ClassFactory already consulted above, likely regular business/data classes.
@@ -491,9 +463,9 @@ public abstract class Resolver
             {
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.type = Map.class.getName();
-
                 mate = jsonObject;
-            } else
+            }
+            else
             {
                 mate = MetaUtils.newInstance(unknownClass);
             }
@@ -724,19 +696,12 @@ public abstract class Resolver
                 jObj.clear();
             }
 
-            if (singletonMap.isAssignableFrom(map.getClass()))
-            {   // Handle SingletonMaps - Do nothing here.  They are single entry maps.  The code before here
-                // has already instantiated the SingletonMap, and has filled in its values.
-            }
-            else
-            {
-                int j = 0;
+            int j = 0;
 
-                while (javaKeys != null && j < javaKeys.length)
-                {
-                    map.put(javaKeys[j], javaValues[j]);
-                    j++;
-                }
+            while (javaKeys != null && j < javaKeys.length)
+            {
+                map.put(javaKeys[j], javaValues[j]);
+                j++;
             }
         }
     }

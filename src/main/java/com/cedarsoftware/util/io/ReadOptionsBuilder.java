@@ -178,6 +178,12 @@ public class ReadOptionsBuilder {
         addPermanentCoercedType("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
         addPermanentCoercedType("java.util.IdentityHashMap$Values", ArrayList.class);
         addPermanentCoercedType("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
+        addPermanentCoercedType("java.util.Collections$SingletonSet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.Collections$SingletonList", ArrayList.class);
+        addPermanentCoercedType("java.util.Collections$SingletonMap", LinkedHashMap.class);
+        addPermanentCoercedType("java.util.Collections$UnmodifiableRandomAccessList", ArrayList.class);
+        addPermanentCoercedType("java.util.Collections$UnmodifiableSet", LinkedHashSet.class);
+        addPermanentCoercedType("java.util.Collections$UnmodifiableMap", LinkedHashMap.class);
     }
 
     static void addPossiblePermanentReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader) {

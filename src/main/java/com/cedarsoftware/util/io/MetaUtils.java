@@ -86,7 +86,6 @@ public class MetaUtils
     private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
-    private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("(\"*)([^\"]*)(\"*)");
     private static final Class<?>[] emptyClassArray = new Class[]{};
     private static final ConcurrentMap<Class<?>, Object[]> constructors = new ConcurrentHashMap<>();
@@ -929,11 +928,11 @@ public class MetaUtils
         return values;
     }
 
-    public static void buildHints(JsonReader reader, JsonObject job, Map<Class<?>, List<ParameterHint>> hints, Set<String> fieldsAlreadyInHints) {
-        Convention.throwIfNull(job, "JsonObject cannot be null");
+    public static void buildHints(JsonReader reader, JsonObject jObj, Map<Class<?>, List<ParameterHint>> hints, Set<String> fieldsAlreadyInHints) {
+        Convention.throwIfNull(jObj, "JsonObject cannot be null");
         Convention.throwIfNull(reader, "JsonReader cannot be null");
 
-        Iterator<Map.Entry<Object, Object>> iterator = job.entrySet().iterator();
+        Iterator<Map.Entry<Object, Object>> iterator = jObj.entrySet().iterator();
 
         while (iterator.hasNext()) {
             Map.Entry<Object, Object> entry = iterator.next();
