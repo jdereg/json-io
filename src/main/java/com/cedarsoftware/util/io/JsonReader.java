@@ -107,6 +107,7 @@ public class JsonReader implements Closeable
      * @return The arguments used to configure the JsonReader.  These are thread local.
      */
     @Getter
+    @Deprecated
     private final Map<String, Object> args = new HashMap<>();
 
     /**
@@ -120,6 +121,11 @@ public class JsonReader implements Closeable
 
     @Getter
     private final Resolver resolver;
+
+    @Getter
+    private final ReadOptions readOptions;
+
+    private final JsonParser parser;
 
     /**
      * Deprecated - use ReadOptionsBuilder.addPossibleReader(Map map, String fqClassName, Supplier<JsonReader.JsonClassReader> reader);
@@ -191,6 +197,7 @@ public class JsonReader implements Closeable
     /**
      * Common ancestor for JsonClassReader
      */
+    @Deprecated
     public interface JsonClassReaderBase  {
         /**
          * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
@@ -207,11 +214,25 @@ public class JsonReader implements Closeable
     public interface JsonClassReader extends JsonClassReaderBase
     {
         /**
+         * @param jOb         Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack       Deque of objects that have been read (Map of Maps view).
+         * @param readOptions Map of argument settings that were passed to JsonReader when instantiated.
+         * @return Java Object you wish to convert the the passed in jOb into.
+         */
+        default Object read(Object jOb, Deque<JsonObject> stack, ReadOptions readOptions) {
+            // The toMap is expensive, but only if you do not override this default method....and the other
+            // methods are soon to be deprecated.
+            return this.read(jOb, stack, readOptions.toMap(), ReaderContext.instance().getReader());
+        }
+
+
+        /**
          * @param jOb   Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
          * @param stack Deque of objects that have been read (Map of Maps view).
          * @param args  Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
+        @Deprecated
         default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args, JsonReader reader) {
             return this.read(jOb, stack, args);
         }
@@ -222,6 +243,7 @@ public class JsonReader implements Closeable
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
+        @Deprecated
         default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args) {
             return this.read(jOb, stack);
         }
@@ -239,11 +261,13 @@ public class JsonReader implements Closeable
     /**
      * Implement this interface to add a custom JSON reader.
      */
+    @Deprecated
     public interface JsonClassReaderEx extends JsonClassReader
     {
         /**
          * Allow custom readers to have access to the JsonReader
          */
+        @Deprecated
         class Support
         {
             /**
@@ -251,9 +275,9 @@ public class JsonReader implements Closeable
              * @param args Map that was passed to your read(jOb, stack, args) method.
              * @return JsonReader instance
              */
-            public static JsonReader getReader(Map<String, Object> args)
-            {
-                return (JsonReader) args.get(JSON_READER);
+            @Deprecated
+            public static JsonReader getReader(Map<String, Object> args) {
+                return ReaderContext.instance().getReader();
             }
         }
     }
@@ -346,7 +370,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public void addReader(Class<?> c, JsonClassReader reader)
     {
-        ReaderContext.instance().getReadOptions().addReader(c, reader);
+        this.readOptions.addReader(c, reader);
     }
 
     /**
@@ -359,7 +383,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public void addNotCustomReader(Class<?> c)
     {
-        ReaderContext.instance().getReadOptions().addNonCustomizableClass(c);
+        this.readOptions.addNonCustomizableClass(c);
     }
 
 
@@ -411,7 +435,7 @@ public class JsonReader implements Closeable
      * @return Java object graph matching JSON input
      */
     public static <T> T toObjects(String json) {
-        return toObjects(json, new ReadOptionsBuilder().withMaxDepth(DEFAULT_MAX_PARSE_DEPTH).build());
+        return toObjects(json, new ReadOptionsBuilder().build());
     }
 
 
@@ -684,13 +708,16 @@ public class JsonReader implements Closeable
         args.put(CLASSLOADER, JsonReader.class.getClassLoader());
         args.put(JSON_READER, this);
 
-        ReadOptions readOptions = ReadOptionsBuilder.fromMap(args).withMaxDepth(maxDepth).build();
-        ReaderContext.instance().initialize(readOptions, this);
-
-        this.resolver = readOptions.isUsingMaps() ? new MapResolver(readOptions) : new ObjectResolver(readOptions);
+        this.readOptions = ReadOptionsBuilder.fromMap(args).withMaxDepth(maxDepth).build();
         this.input = null;
+        this.parser = null;
 
+
+        ReferenceTracker references = new DefaultReferenceTracker();
+        this.resolver = readOptions.isUsingMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
         args.put(JsonReader.OBJECT_RESOLVER, this.resolver);
+
+        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -799,13 +826,15 @@ public class JsonReader implements Closeable
         args.putAll(optionalArgs == null ? new HashMap<>() : optionalArgs);
         args.put(JSON_READER, this);
 
-        ReadOptions readOptions = ReadOptionsBuilder.fromMap(optionalArgs).withMaxDepth(maxDepth).build();
-        ReaderContext.instance().initialize(readOptions, this);
+        this.readOptions = ReadOptionsBuilder.fromMap(optionalArgs).withMaxDepth(maxDepth).build();
 
-        this.resolver = readOptions.isUsingMaps() ? new MapResolver(readOptions) : new ObjectResolver(readOptions);
+        ReferenceTracker references = new DefaultReferenceTracker();
+        this.resolver = readOptions.isUsingMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
         this.input = getReader(inputStream);
+        this.parser = new JsonParser(input, this.readOptions, references);
 
         args.put(JsonReader.OBJECT_RESOLVER, this.resolver);
+        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -901,11 +930,17 @@ public class JsonReader implements Closeable
      * @param readOptions Read Options
      */
     public JsonReader(InputStream inp, ReadOptions readOptions) {
+        this(inp, readOptions, new DefaultReferenceTracker());
+    }
+
+    public JsonReader(InputStream input, ReadOptions readOptions, ReferenceTracker references) {
         this.args.putAll(readOptions.toMap());
         this.args.put(JSON_READER, this);
-        ReaderContext.instance().initialize(readOptions, this);
-        this.resolver = useMaps() ? new MapResolver(readOptions) : new ObjectResolver(readOptions);
-        this.input = getReader(inp);
+        this.readOptions = readOptions;
+        this.input = getReader(input);
+        this.resolver = useMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
+        this.parser = new JsonParser(this.input, this.readOptions, references);
+        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -929,8 +964,7 @@ public class JsonReader implements Closeable
      *         JSON serialized content.
      */
     public Object readObject() {
-        int maxDepth = ReaderContext.instance().getReadOptions().getMaxDepth();
-        JsonParser parser = new JsonParser(input, getArgs(), maxDepth);
+        int maxDepth = this.readOptions.getMaxDepth();
         JsonObject root = new JsonObject();
         Object o;
         try
@@ -978,23 +1012,22 @@ public class JsonReader implements Closeable
     public Object jsonObjectsToJava(JsonObject root)
     {
         getArgs().put(USE_MAPS, false);
-        final ReadOptions options = ReaderContext.instance().getReadOptions();
-        ReaderContext.instance().initialize(options.ensureUsingObjects(), this);
+        final ReadOptions options = this.readOptions.ensureUsingObjects();
+        ReaderContext.instance().initialize(this);
         return convertParsedMapsToJava(root);
     }
 
     protected boolean useMaps()
     {
-        return ReaderContext.instance().getReadOptions().isUsingMaps();
+        return this.readOptions.isUsingMaps();
     }
 
     /**
      * @return ClassLoader to be used by Custom Writers
      */
-    @Deprecated
-    ClassLoader getClassLoader()
+    public ClassLoader getClassLoader()
     {
-        return ReaderContext.instance().getReadOptions().getClassLoader();
+        return this.readOptions.getClassLoader();
     }
 
     /**
@@ -1008,14 +1041,14 @@ public class JsonReader implements Closeable
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    public <T> T convertParsedMapsToJava(JsonObject root, Class<T> hint)
+    public <T> T reentrantConvertParsedMapsToJava(JsonObject root, Class<T> hint)
     {
         if (root == null) {
             return null;
         }
-        
+
         if (root.isReference()) {
-            root = ReaderContext.instance().getReferenceTracker().get(root);
+            root = this.resolver.getReferences().get(root);
         }
 
         T graph;
@@ -1045,12 +1078,9 @@ public class JsonReader implements Closeable
      */
     private Object convertParsedMapsToJava(JsonObject root) {
         try {
-            return convertParsedMapsToJava(root, Object.class);
+            return reentrantConvertParsedMapsToJava(root, Object.class);
         } catch (Exception e) {
-            try {
-                close();
-            } catch (Exception ignored) {   // Exception handled in close()
-            }
+            MetaUtils.safelyIgnoreException(() -> close());
             if (e instanceof JsonIoException) {
                 throw (JsonIoException) e;
             }
@@ -1086,5 +1116,50 @@ public class JsonReader implements Closeable
             return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.getLine() + ", col: " + input.getCol();
         }
         return msg;
+    }
+
+    /**
+     * Implementation of ReferenceTracker
+     */
+    private static class DefaultReferenceTracker implements ReferenceTracker {
+
+        final Map<Long, JsonObject> references = new HashMap<>();
+
+        public JsonObject put(Long l, JsonObject o) {
+            return this.references.put(l, o);
+        }
+
+        public void clear() {
+            this.references.clear();
+        }
+
+        public int size() {
+            return this.references.size();
+        }
+
+        public JsonObject get(JsonObject jObj) {
+            if (!jObj.isReference()) {
+                return jObj;
+            }
+
+            return get(jObj.getReferenceId());
+        }
+
+        public JsonObject get(Long id) {
+            JsonObject target = references.get(id);
+            if (target == null) {
+                throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
+            }
+
+            while (target.isReference()) {
+                id = target.getReferenceId();
+                target = references.get(id);
+                if (target == null) {
+                    throw new JsonIoException("Forward reference @ref: " + id + ", but no object defined (@id) with that value");
+                }
+            }
+
+            return target;
+        }
     }
 }

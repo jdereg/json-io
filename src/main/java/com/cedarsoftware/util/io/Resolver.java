@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import lombok.AccessLevel;
+import lombok.Getter;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -50,10 +52,17 @@ public abstract class Resolver
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
+
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
-    private ReadOptions readOptionsCache = null;
+
+    @Getter(AccessLevel.PROTECTED)
+    private final ReadOptions readOptions;
+
+    @Getter(AccessLevel.PROTECTED)
+    private final ReferenceTracker references;
+
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -112,13 +121,9 @@ public abstract class Resolver
         return ReaderContext.instance().getReader();
     }
 
-    protected Resolver(ReadOptions readOptions) {
-        this.readOptionsCache = readOptions;
-    }
-
-    ReadOptions getReadOptions()
-    {
-        return readOptionsCache;
+    protected Resolver(ReadOptions readOptions, ReferenceTracker references) {
+        this.readOptions = readOptions;
+        this.references = references;
     }
 
     /**
@@ -187,7 +192,7 @@ public abstract class Resolver
     {
         patchUnresolvedReferences();
         rehashMaps();
-        ReaderContext.instance().clearAll();
+        references.clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
@@ -197,7 +202,7 @@ public abstract class Resolver
     // calls the missing field handler if any for each recorded missing field.
     private void handleMissingFields()
     {
-        MissingFieldHandler missingFieldHandler = ReaderContext.instance().getReadOptions().getMissingFieldHandler();
+        MissingFieldHandler missingFieldHandler = this.readOptions.getMissingFieldHandler();
         if (missingFieldHandler != null)
         {
             for (Missingfields mf : missingFields)
@@ -340,7 +345,7 @@ public abstract class Resolver
         String type = jsonObj.type;
         final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
 
-        Class c = MetaUtils.classForName(type, readOptionsCache.getClassLoader());
+        Class c = MetaUtils.classForName(type, readOptions.getClassLoader());
         if (c == null)
         {   // Unable to find class in the JVM.
             if (failOnUnknownType)
@@ -389,16 +394,7 @@ public abstract class Resolver
             }
             else if (c == Class.class)
             {
-                mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptionsCache.getClassLoader());
-            }
-            else if (c.isEnum())
-            {
-                mate = getEnum(c, jsonObj);
-            }
-            else if (Enum.class.isAssignableFrom(c)) // anonymous subclass of an enum
-            {
-                mate = getEnum(c.getSuperclass(), jsonObj);
-                jsonObj.isFinished = true;
+                mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
             }
             else if (EnumSet.class.isAssignableFrom(c))
             {
@@ -443,14 +439,6 @@ public abstract class Resolver
         {
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-        }
-        else if (clazz.isEnum())
-        {
-            mate = getEnum(clazz, jsonObj);
-        }
-        else if (EnumSet.class.isAssignableFrom(clazz)) // anonymous subclass of an EnumSet
-        {
-            mate = extractEnumSet(clazz, jsonObj);
         }
         else if ((mate = coerceCertainTypes(clazz.getName())) != null)
         {   // if coerceCertainTypes() returns non-null, it did the work
@@ -535,26 +523,11 @@ public abstract class Resolver
         return this.readerCache.computeIfAbsent(c, key -> getReadOptions().getClosestReader(key)).orElse(null);
     }
 
-    /**
-     * Fetch enum value (may need to try twice, due to potential 'name' field shadowing by enum subclasses
-     */
-    private Object getEnum(Class c, JsonObject jsonObj)
-    {
-        try
-        {
-            return Enum.valueOf(c, (String) jsonObj.get("name"));
-        }
-        catch (Exception e)
-        {   // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
-            return Enum.valueOf(c, (String) jsonObj.get("java.lang.Enum.name"));
-        }
-    }
-
     protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj)
     {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
-                : MetaUtils.classForName(enumClassName, readOptionsCache.getClassLoader());
+                : MetaUtils.classForName(enumClassName, readOptions.getClassLoader());
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
@@ -604,7 +577,7 @@ public abstract class Resolver
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.target;
-            JsonObject objReferenced = ReaderContext.instance().getReferenceTracker().get(ref.refId);
+            JsonObject objReferenced = this.references.get(ref.refId);
 
             if (ref.index >= 0)
             {    // Fix []'s and Collections containing a forward reference.

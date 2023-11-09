@@ -89,7 +89,7 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
 
         if (o instanceof JsonObject) {
             JsonReader reader = ReaderContext.instance().getReader();
-            return reader.convertParsedMapsToJava((JsonObject) o, LocalDateTime.class);
+            return reader.reentrantConvertParsedMapsToJava((JsonObject) o, LocalDateTime.class);
         }
 
         return null;
@@ -102,7 +102,7 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
 
         if (o instanceof JsonObject) {
             JsonReader reader = ReaderContext.instance().getReader();
-            return reader.convertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
+            return reader.reentrantConvertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
         }
 
         return null;

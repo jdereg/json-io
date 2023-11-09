@@ -4,9 +4,18 @@ import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Map;
+import java.util.TimeZone;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -473,7 +482,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(null, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(null, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -490,7 +499,7 @@ public class DatesTest
         Date now = new Date();
         String nowStr = now.toString();
         Readers.DateReader reader = new Readers.DateReader();
-        Date now2 = (Date) reader.read(nowStr, new ArrayDeque<>(), new LinkedHashMap<>());
+        Date now2 = (Date) reader.read(nowStr, new ArrayDeque<>(), new ReadOptionsBuilder().build());
         assert nowStr.equals(now2.toString());
     }
 
@@ -499,7 +508,7 @@ public class DatesTest
     {
         String date = "9 July 1930 11:02-05:00";
         Readers.DateReader reader = new Readers.DateReader();
-        Date then = (Date) reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+        Date then = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
 
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         cal.clear();
@@ -512,7 +521,7 @@ public class DatesTest
     {
         String date = "sat 6 Jun 2015";
         Readers.DateReader reader = new Readers.DateReader();
-        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
 
         Calendar c = Calendar.getInstance();
         c.setTime(date1);
@@ -528,7 +537,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -545,7 +554,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -562,7 +571,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -579,7 +588,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -596,7 +605,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -613,7 +622,7 @@ public class DatesTest
         Readers.DateReader reader = new Readers.DateReader();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
            fail();
         }
         catch (JsonIoException e)
@@ -628,7 +637,7 @@ public class DatesTest
     {
         String date = "2015/9/30 20:55Z";
         Readers.DateReader reader = new Readers.DateReader();
-        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new LinkedHashMap<>());
+        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
         // Not having exception while including the 'Z' is the test (no assertion)
     }
 

@@ -41,4 +41,7 @@ public interface WriteOptions {
     Map<Class<?>, Collection<Accessor>> getFieldNameBlackList();
 
     Object getCustomArgument(String name);
+
+    WriteOptions ensurePrettyPrint();
+
 }

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.PrintStyle;
 import com.cedarsoftware.util.reflect.Accessor;
 import lombok.Getter;
 
@@ -133,7 +134,12 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder withPrettyPrint() {
-        writeOptions.isPrettyPrint = true;
+        writeOptions.printStyle = PrintStyle.PRETTY_PRINT;
+        return this;
+    }
+
+    public WriteOptionsBuilder withPrintStyle(PrintStyle style) {
+        writeOptions.printStyle = style;
         return this;
     }
 
@@ -214,20 +220,17 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder neverShowTypeInfo() {
-        this.writeOptions.neverShowingType = true;
-        this.writeOptions.alwaysShowingType = false;
+        this.writeOptions.typeWriter = TypeWriter.NEVER;
         return this;
     }
 
     public WriteOptionsBuilder alwaysShowTypeInfo() {
-        this.writeOptions.alwaysShowingType = true;
-        this.writeOptions.neverShowingType = false;
+        this.writeOptions.typeWriter = TypeWriter.ALWAYS;
         return this;
     }
 
     public WriteOptionsBuilder showMinimalTypeInfo() {
-        this.writeOptions.alwaysShowingType = false;
-        this.writeOptions.neverShowingType = false;
+        this.writeOptions.typeWriter = TypeWriter.MINIMAL;
         return this;
     }
 
@@ -346,7 +349,7 @@ public class WriteOptionsBuilder {
         return args;
     }
 
-    public static WriteOptions fromMap(Map args) {
+    public static WriteOptionsBuilder fromMap(Map args) {
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
 
         if (isTrue(args.get(SHORT_META_KEYS))) {
@@ -369,7 +372,7 @@ public class WriteOptionsBuilder {
         }
 
         if (isTrue(args.get(PRETTY_PRINT))) {
-            builder.withPrettyPrint();
+            builder.withPrintStyle(PrintStyle.PRETTY_PRINT);
         }
 
         if (isTrue(args.get(WRITE_LONGS_AS_STRINGS))) {
@@ -419,7 +422,7 @@ public class WriteOptionsBuilder {
             builder.withFieldNameBlackListMap(stringBlackList);
         }
 
-        return builder.build();
+        return builder;
     }
 
     public WriteOptions build() {
@@ -429,7 +432,7 @@ public class WriteOptionsBuilder {
     }
 
     private void assertTypesAreBeingOutput() {
-        if (writeOptions.neverShowingType) {
+        if (writeOptions.typeWriter == TypeWriter.NEVER) {
             throw new IllegalStateException("There is no need to set the type name map when types are never being written");
         }
     }
@@ -437,15 +440,6 @@ public class WriteOptionsBuilder {
     private class WriteOptionsImplementation implements WriteOptions {
         @Getter
         private boolean usingShortMetaKeys = false;
-
-        @Getter
-        private boolean alwaysShowingType = false;
-
-        @Getter
-        private boolean neverShowingType = false;
-
-        @Getter
-        private boolean isPrettyPrint = false;
 
         @Getter
         private boolean writingLongsAsStrings = false;
@@ -463,7 +457,7 @@ public class WriteOptionsBuilder {
         private ClassLoader classLoader = WriteOptionsImplementation.class.getClassLoader();
 
         @Getter
-        private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
+        private JsonWriter.JsonClassWriter enumWriter;
 
         @Getter
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWriters;
@@ -483,6 +477,10 @@ public class WriteOptionsBuilder {
         @Getter
         private String dateFormat;
 
+        private PrintStyle printStyle;
+
+        private TypeWriter typeWriter;
+
         private final Map<String, Object> customArguments;
 
 
@@ -493,10 +491,58 @@ public class WriteOptionsBuilder {
             this.customTypeMap = new HashMap<>();
             this.customArguments = new HashMap<>();
             this.nonCustomClasses = new HashSet<>();
+            this.printStyle = PrintStyle.ONE_LINE;
+            this.typeWriter = TypeWriter.MINIMAL;
+            this.enumWriter = new Writers.EnumsAsStringWriter();
+        }
+
+        private WriteOptionsImplementation(WriteOptionsImplementation options) {
+            this.usingShortMetaKeys = options.usingShortMetaKeys;
+            this.typeWriter = options.typeWriter;
+            this.printStyle = options.printStyle;
+            this.writingLongsAsStrings = options.writingLongsAsStrings;
+            this.skippingNullFields = options.skippingNullFields;
+            this.forcingMapFormatWithKeyArrays = options.forcingMapFormatWithKeyArrays;
+            this.enumPublicOnly = options.enumPublicOnly;
+            this.classLoader = options.classLoader;
+            this.enumWriter = options.enumWriter;
+            this.customWriters = options.customWriters;
+            this.customTypeMap = options.customTypeMap;
+            this.nonCustomClasses = options.nonCustomClasses;
+            this.fieldSpecifiers = options.fieldSpecifiers;
+            this.fieldNameBlackList = options.fieldNameBlackList;
+            this.dateFormat = options.dateFormat;
+            this.customArguments = options.customArguments;
+        }
+
+
+        @Override
+        public boolean isAlwaysShowingType() {
+            return typeWriter == TypeWriter.ALWAYS;
+        }
+
+        @Override
+        public boolean isNeverShowingType() {
+            return typeWriter == TypeWriter.NEVER;
+        }
+
+        @Override
+        public boolean isPrettyPrint() {
+            return this.printStyle == PrintStyle.PRETTY_PRINT;
         }
 
         public Object getCustomArgument(String name) {
             return customArguments.get(name);
+        }
+
+        /**
+         * We're cheating here because the booleans are needed to be mutable by the builder.
+         *
+         * @return
+         */
+        public WriteOptions ensurePrettyPrint() {
+            this.printStyle = PrintStyle.PRETTY_PRINT;
+            return this;
         }
     }
 

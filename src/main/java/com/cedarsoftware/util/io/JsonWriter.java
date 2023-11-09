@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -177,23 +178,15 @@ public class JsonWriter implements Closeable, Flushable
         BASE_STATICALLY_INITIALIZED_CLASSES = staticallyInitializedClasses;
     }
 
-    private static volatile boolean allowNanAndInfinity = false;
-
     /**
+     * -- GETTER --
+     *
      * @return boolean the allowsNanAndInfinity flag
      */
-    public static boolean isAllowNanAndInfinity() {
-        return allowNanAndInfinity;
-    }
+    @Setter
+    @Getter
+    private static volatile boolean allowNanAndInfinity = false;
 
-    /**
-     * Set the writer to be out of RFC 4627: it will accept "NaN", "-Infinity" and "Infinity" values.
-     * @param lenient boolean true allows Nan and Infinity, -Infinity to be used within JSON.
-     */
-    public static void setAllowNanAndInfinity(boolean lenient) {
-        JsonWriter.allowNanAndInfinity = lenient;
-    }
-    
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */
@@ -399,42 +392,41 @@ public class JsonWriter implements Closeable, Flushable
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object to JSON", e);
         }
-
     }
 
     /**
      * Format the passed in JSON string in a nice, human-readable format.
      * @param json String input JSON
      * @return String containing equivalent JSON, formatted nicely for human readability.
+     * @deprecated use JsonUtilities.formatJson(json);
      */
+    @Deprecated
     public static String formatJson(String json)
     {
-        return formatJson(json, null, null);
+        return JsonUtilities.formatJson(json);
     }
 
     /**
      * Format the passed in JSON string in a nice, human-readable format.
+     *
      * @param json String input JSON
      * @param readingArgs (optional) Map of extra arguments for parsing json.  Can be null.
      * @param writingArgs (optional) Map of extra arguments for writing out json.  Can be null.
      * @return String containing equivalent JSON, formatted nicely for human readability.
+     * @deprecated use JsonUtilities.formatJson(json, readOption, writeOptions);
      */
+    @Deprecated
     public static String formatJson(String json, Map readingArgs, Map writingArgs)
     {
-        Map args = new HashMap<>();
-        if (readingArgs != null)
-        {
-            args.putAll(readingArgs);
-        }
-        args.put(JsonReader.USE_MAPS, true);
-        Object obj = JsonReader.jsonToJava(json, args);
-        args.clear();
-        if (writingArgs != null)
-        {
-            args.putAll(writingArgs);
-        }
-        args.put(PRETTY_PRINT, true);
-        return objectToJson(obj, args);
+        ReadOptions readOptions = ReadOptionsBuilder.fromMap(readingArgs)
+                .returnAsMaps()
+                .build();
+        
+        WriteOptions writeOptions = WriteOptionsBuilder.fromMap(writingArgs)
+                .withPrettyPrint()
+                .build();
+
+        return JsonUtilities.formatJson(json, readOptions, writeOptions);
     }
 
     /**
@@ -469,7 +461,7 @@ public class JsonWriter implements Closeable, Flushable
         this.args.put(JSON_WRITER, this);
 
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        WriteOptions writeOptions = WriteOptionsBuilder.fromMap(args);
+        WriteOptions writeOptions = WriteOptionsBuilder.fromMap(args).build();
         WriterContext.instance().initialize(writeOptions, this);
     }
 

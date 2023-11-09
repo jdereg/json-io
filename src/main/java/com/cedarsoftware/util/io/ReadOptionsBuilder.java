@@ -122,7 +122,7 @@ public class ReadOptionsBuilder {
 
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
-        
+
         try {
             assignInstantiator(Class.forName("sun.util.calendar.ZoneInfo"), timeZoneFactory);
         } catch (Exception ignore) {
@@ -543,22 +543,25 @@ public class ReadOptionsBuilder {
             return this.nonCustomizableClasses.contains(c);
         }
 
+        /**
+         * We're cheating here because the booleans are needed to be mutable by the builder.
+         *
+         * @return
+         */
         @Override
         public ReadOptions ensureUsingMaps() {
-            if (this.isUsingMaps) {
-                return this;
-            }
-
-            return new ReadOptionsImplementation(this, true);
+            this.isUsingMaps = true;
+            return this;
         }
 
+        /**
+         * We're cheating here because the booleans are needed to be mutable by the builder.
+         * @return
+         */
         @Override
         public ReadOptions ensureUsingObjects() {
-            if (!this.isUsingMaps) {
-                return this;
-            }
-
-            return new ReadOptionsImplementation(this, false);
+            this.isUsingMaps = false;
+            return this;
         }
 
         @Override

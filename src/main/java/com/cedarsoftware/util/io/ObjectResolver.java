@@ -72,9 +72,9 @@ public class ObjectResolver extends Resolver
      * Constructor
      * @param readOptions Options to use while reading.
      */
-    protected ObjectResolver(ReadOptions readOptions)
+    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references)
     {
-        super(readOptions);
+        super(readOptions, references);
         this.classLoader = readOptions.getClassLoader();
         this.missingFieldHandler = readOptions.getMissingFieldHandler();
     }
@@ -230,7 +230,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {    // Correct field references
-                    final JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
+                    final JsonObject refObject = this.getReferences().get(ref);
 
                     if (refObject.target != null)
                     {
@@ -336,7 +336,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 { // Correct field references
-                    final JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
+                    final JsonObject refObject = this.getReferences().get(ref);
                     storeMissingField(target, missingField, refObject.target);
                 }
                 else
@@ -481,7 +481,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {
-                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
+                    JsonObject refObject = this.getReferences().get(ref);
 
                     if (refObject.target != null)
                     {
@@ -518,7 +518,7 @@ public class ObjectResolver extends Resolver
         jsonObj.remove(ITEMS);   // Reduce memory required during processing
     }
 
-    static public void reconcileCollection(JsonObject jsonObj, Collection col)
+    public static void reconcileCollection(JsonObject jsonObj, Collection col)
     {
         final String className = jsonObj.type;
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
@@ -654,7 +654,7 @@ public class ObjectResolver extends Resolver
 
                 if (ref != null)
                 {    // Connect reference
-                    JsonObject refObject = ReaderContext.instance().getReferenceTracker().get(ref);
+                    JsonObject refObject = this.getReferences().get(ref);
                     if (refObject.target != null)
                     {   // Array element with reference to existing object
                         Array.set(array, i, refObject.target);
@@ -808,7 +808,7 @@ public class ObjectResolver extends Resolver
 
         //  We've got to change this....need to remove arguments and the reader itself and then we can remove
         //  the reference to the reader from the Resolver.
-        Object read = closestReader.read(o, stack, getReader().getArgs(), getReader());
+        Object read = closestReader.read(o, stack, getReadOptions());
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.
         return jsonObj.setFinishedTarget(read, true);

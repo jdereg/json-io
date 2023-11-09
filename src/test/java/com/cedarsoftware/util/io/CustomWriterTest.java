@@ -456,7 +456,7 @@ public class CustomWriterTest
     {
         public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
         {
-            JsonReader reader = JsonReader.JsonClassReaderEx.Support.getReader(args);
+            JsonReader reader = ReaderContext.instance().getReader();
             assert reader != null;
             JsonObject map = (JsonObject) jOb;
             Person p = new Person();
