@@ -4,7 +4,20 @@ import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -328,7 +341,6 @@ public abstract class Resolver
     protected Object createInstanceUsingType(Class clazz, JsonObject jsonObj)
     {
         String type = jsonObj.type;
-        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
         final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
 
         Class c = MetaUtils.classForName(type, readOptionsCache.getClassLoader());
@@ -507,7 +519,7 @@ public abstract class Resolver
     Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj)
     {
         //  If a target exists then the item has already gone through
-        //  the create instance process.  don't recreate
+        //  the create instance process. Don't recreate
         if (jsonObj.target != null) {
             return jsonObj.target;
         }

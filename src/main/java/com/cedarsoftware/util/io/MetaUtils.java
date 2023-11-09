@@ -143,17 +143,10 @@ public class MetaUtils
         nameToClass.put("date", Date.class);
         nameToClass.put("class", Class.class);
 
-
         // Save memory by re-using all byte instances (Bytes are immutable)
         for (int i = 0; i < byteCache.length; i++)
         {
             byteCache[i] = (byte) (i - 128);
-        }
-
-        // Save memory by re-using common Characters (Characters are immutable)
-        for (int i = 0; i < charCache.length; i++)
-        {
-            charCache[i] = (char) i;
         }
     }
 
@@ -509,18 +502,6 @@ public class MetaUtils
             }
         }
         return currentClass;
-    }
-
-    /**
-     * This is a performance optimization.  The lowest 128 characters are re-used.
-     *
-     * @param c char to match to a Character.
-     * @return a Character that matches the passed in char.  If the value is
-     *         less than 127, then the same Character instances are re-used.
-     */
-    static Character valueOf(char c)
-    {
-        return c <= 127 ? charCache[(int) c] : c;
     }
 
     /**
@@ -982,7 +963,7 @@ public class MetaUtils
         }
     }
 
-    public static Object findAndConstructWithAppropriateConstructor(Class c, Map<Class<?>, List<ParameterHint>> paramHints) {
+    public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
         try {
             final Constructor<?>[] constructors = c.getDeclaredConstructors();
             final Object[] constructorArgs = new Object[constructors.length];
@@ -1032,7 +1013,7 @@ public class MetaUtils
             final String name = param.isNamePresent() ? param.getName() : null;
             arguments[i] = null;
 
-            boolean wasSet = false;
+            boolean wasSet;
 
             List<ParameterHint> hintList = hints.get(param.getType());
 
@@ -1305,14 +1286,6 @@ public class MetaUtils
         return copy;
     }
 
-    public static <K, V> Map<K, V> computeMapIfAbsent(Map<String, Object> map, String keyName) {
-        return (Map<K, V>)map.computeIfAbsent(keyName, k -> new HashMap<K, V>());
-    }
-
-    public static <T> Set<T> computeSetIfAbsent(Map<String, Object> map, String keyName) {
-        return (Set<T>)map.computeIfAbsent(keyName, k -> new HashSet<T>());
-    }
-
     public static <K, V> V getValue(Map map, K key) {
         return (V) map.get(key);
     }
@@ -1342,7 +1315,7 @@ public class MetaUtils
         }
         catch (IllegalAccessException e)
         {
-            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not acccessible.  Add or create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add or create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
         }
     }
 
