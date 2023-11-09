@@ -50,7 +50,7 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
  */
 class JsonParser
 {
-    public static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
+    protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
@@ -63,6 +63,10 @@ class JsonParser
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
+
+    private final ReadOptions readOptions;
+
+    private final ReferenceTracker references;
 
     static
     {
@@ -115,14 +119,22 @@ class JsonParser
         EMPTY_ARRAY.isFinished = true;
     }
 
-    JsonParser(FastReader reader, Map<String, Object> args, int maxDepth)
+    @Deprecated
+    JsonParser(FastReader reader, Map<String, Object> args, int maxDepth, ReferenceTracker references)
     {
-        input = reader;
+        this(reader, ReadOptionsBuilder.fromMap(args).withMaxDepth(maxDepth).build(), references);
     }
 
-    JsonParser(FastReader reader, Map<String, Object> args)
+    @Deprecated
+    JsonParser(FastReader reader, Map<String, Object> args, ReferenceTracker references)
     {
-        this(reader, args, DEFAULT_MAX_PARSE_DEPTH);
+        this(reader, args, DEFAULT_MAX_PARSE_DEPTH, references);
+    }
+
+    JsonParser(FastReader reader, ReadOptions readOptions, ReferenceTracker references) {
+        this.input = reader;
+        this.readOptions = readOptions;
+        this.references = references;
     }
 
     private Object readJsonObject() throws IOException
@@ -132,7 +144,6 @@ class JsonParser
         JsonObject object = new JsonObject();
         int state = STATE_READ_START_OBJECT;
         final FastReader in = input;
-        final ReferenceTracker refTracker = ReaderContext.instance().getReferenceTracker();
 
         while (!done)
         {
@@ -191,7 +202,7 @@ class JsonParser
                     Object value = readValue(object, false);
                     if (TYPE.equals(field))
                     {
-                        final String substitute = ReaderContext.instance().getReadOptions().getTypeName(value.toString());
+                        final String substitute = this.readOptions.getTypeName(value.toString());
                         if (substitute != null)
                         {
                             value = substitute;
@@ -202,7 +213,7 @@ class JsonParser
                     // If object is referenced (has @id), then add it to the ReferenceTracker
                     if (ID.equals(field))
                     {
-                        ReaderContext.instance().getReferenceTracker().put((Long) value, object);
+                        this.references.put((Long) value, object);
                     }
                     state = STATE_READ_POST_VALUE;
                     break;
@@ -230,7 +241,7 @@ class JsonParser
             }
         }
 
-        final boolean useMaps = ReaderContext.instance().getReadOptions().isUsingMaps();
+        final boolean useMaps = this.readOptions.isUsingMaps();
 
         if (useMaps && object.isLogicalPrimitive())
         {
@@ -242,7 +253,7 @@ class JsonParser
 
     Object readValue(JsonObject object, boolean top) throws IOException
     {
-        final int maxParseDepth = ReaderContext.instance().getReadOptions().getMaxDepth();
+        final int maxParseDepth = this.readOptions.getMaxDepth();
         if (curParseDepth > maxParseDepth) {
             return error("Maximum parsing depth exceeded");
         }

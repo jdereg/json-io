@@ -74,7 +74,7 @@ public class ClassDescriptors {
 
     public Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse) {
 
-        final Map<String, Injector> injectors = new LinkedHashMap<>();
+        Map<String, Injector> injectors = new LinkedHashMap<>();
         Class<?> c = classToTraverse;
 
         while (c != null) {

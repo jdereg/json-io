@@ -45,7 +45,7 @@ public class CustomReaderObjectTest
 	{
         public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
 		{
-            Resolver resolver = ReaderContext.instance().getResolver();
+            Resolver resolver = ReaderContext.instance().getReader().getResolver();
             resolver.traverseFields(stack, (JsonObject) jOb);
             Object target = ((JsonObject) jOb).getTarget();
 			madeItHere = true;

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ReconstructionType;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
@@ -13,9 +14,7 @@ import com.cedarsoftware.util.io.factory.YearFactory;
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
 import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -122,7 +121,7 @@ public class ReadOptionsBuilder {
 
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
-        
+
         try {
             assignInstantiator(Class.forName("sun.util.calendar.ZoneInfo"), timeZoneFactory);
         } catch (Exception ignore) {
@@ -252,27 +251,27 @@ public class ReadOptionsBuilder {
     }
 
     public ReadOptionsBuilder setUnknownTypeClass(Class<?> c) {
-        this.readOptions.setUnknownTypeClass(c);
+        this.readOptions.unknownTypeClass = c;
         return this;
     }
 
     public ReadOptionsBuilder setMissingFieldHandler(MissingFieldHandler missingFieldHandler) {
-        readOptions.setMissingFieldHandler(missingFieldHandler);
+        readOptions.missingFieldHandler = missingFieldHandler;
         return this;
     }
 
     public ReadOptionsBuilder failOnUnknownType() {
-        readOptions.setFailOnUnknownType(true);
+        readOptions.isFailOnUnknownType = true;
         return this;
     }
 
     public ReadOptionsBuilder withClassLoader(ClassLoader classLoader) {
-        readOptions.setClassLoader(classLoader);
+        readOptions.classLoader = classLoader;
         return this;
     }
 
     public ReadOptionsBuilder returnAsMaps() {
-        readOptions.setUsingMaps(true);
+        readOptions.reconstructionType = ReconstructionType.MAPS;
         return this;
     }
 
@@ -331,7 +330,7 @@ public class ReadOptionsBuilder {
     }
 
     public ReadOptionsBuilder withMaxDepth(int maxDepth) {
-        readOptions.setMaxDepth(maxDepth);
+        readOptions.maxDepth = maxDepth;
         return this;
     }
 
@@ -426,16 +425,15 @@ public class ReadOptionsBuilder {
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
 
-        return new ReadOptionsImplementation(this.readOptions, this.readOptions.isUsingMaps());
+        return new ReadOptionsImplementation(this.readOptions);
     }
 
-    @Setter(AccessLevel.PRIVATE)
     private static class ReadOptionsImplementation implements ReadOptions {
 
         private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
-        @Getter
-        private boolean isUsingMaps;
+
+        ReconstructionType reconstructionType;
 
         @Getter
         private boolean isFailOnUnknownType;
@@ -469,6 +467,7 @@ public class ReadOptionsBuilder {
         private JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         private ReadOptionsImplementation() {
+            this.reconstructionType = ReconstructionType.JAVA_OBJECTS;
             this.maxDepth = DEFAULT_MAX_PARSE_DEPTH;
             this.classLoader = ReadOptions.class.getClassLoader();
             this.typeNameMap = new HashMap<>();
@@ -480,8 +479,8 @@ public class ReadOptionsBuilder {
             this.unknownTypeClass = null;
         }
 
-        private ReadOptionsImplementation(ReadOptionsImplementation options, boolean isUsingMaps) {
-            this.isUsingMaps = isUsingMaps;
+        private ReadOptionsImplementation(ReadOptionsImplementation options) {
+            this.reconstructionType = options.reconstructionType;
             this.maxDepth = options.maxDepth;
             this.classLoader = options.classLoader;
             this.typeNameMap = Collections.unmodifiableMap(options.typeNameMap);
@@ -495,6 +494,11 @@ public class ReadOptionsBuilder {
             // Note: These 2 members cannot become unmodifiable until we fully deprecate JsonReader.addReader() and JsonReader.addNotCustomReader()
             this.readers = options.readers;
             this.nonCustomizableClasses = options.nonCustomizableClasses;
+        }
+
+        @Override
+        public boolean isUsingMaps() {
+            return reconstructionType == ReconstructionType.MAPS;
         }
 
         @Override
@@ -543,22 +547,25 @@ public class ReadOptionsBuilder {
             return this.nonCustomizableClasses.contains(c);
         }
 
+        /**
+         * We're cheating here because the booleans are needed to be mutable by the builder.
+         *
+         * @return
+         */
         @Override
         public ReadOptions ensureUsingMaps() {
-            if (this.isUsingMaps) {
-                return this;
-            }
-
-            return new ReadOptionsImplementation(this, true);
+            this.reconstructionType = ReconstructionType.MAPS;
+            return this;
         }
 
+        /**
+         * We're cheating here because the booleans are needed to be mutable by the builder.
+         * @return
+         */
         @Override
         public ReadOptions ensureUsingObjects() {
-            if (!this.isUsingMaps) {
-                return this;
-            }
-
-            return new ReadOptionsImplementation(this, false);
+            this.reconstructionType = ReconstructionType.JAVA_OBJECTS;
+            return this;
         }
 
         @Override
@@ -607,7 +614,7 @@ public class ReadOptionsBuilder {
             args.put(MISSING_FIELD_HANDLER, missingFieldHandler);
             args.put(CUSTOM_READER_MAP, readers);
             args.put(NOT_CUSTOM_READER_MAP, nonCustomizableClasses);
-            args.put(USE_MAPS, isUsingMaps);
+            args.put(USE_MAPS, reconstructionType == ReconstructionType.MAPS);
             args.put(UNKNOWN_OBJECT, unknownTypeClass);
             args.put(FAIL_ON_UNKNOWN_TYPE, isFailOnUnknownType);
             args.put(FACTORIES, classFactoryMap);

@@ -68,6 +68,13 @@ class ReadOptionsBuilderTest {
     }
 
     @Test
+    void test() {
+        ReadOptions readOptions = new ReadOptionsBuilder().withMaxDepth(2).build();
+
+
+    }
+
+    @Test
     void withCustomTypeName_usingStringAsKey() {
         String key = "javax.sql.Date";
         String value = "foobar";

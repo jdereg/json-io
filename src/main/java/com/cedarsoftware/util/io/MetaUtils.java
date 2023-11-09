@@ -45,6 +45,7 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -943,7 +944,7 @@ public class MetaUtils
 
                 if (o instanceof JsonObject) {
                     JsonObject sub = (JsonObject) o;
-                    value = reader.convertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
+                    value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
 
                     if (value != null) {
                         if (sub.getType() != null) {
@@ -955,7 +956,7 @@ public class MetaUtils
                             hints.computeIfAbsent(sub.getTargetClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
                         }
                     }
-                } else if (o != null) {
+                } else {
                     hints.computeIfAbsent(o.getClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), o));
                 }
             }
@@ -1326,15 +1327,19 @@ public class MetaUtils
         }, false);
     }
 
-    public interface Callable<V> {
-        V call() throws Throwable;
-    }
-
     public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
         try {
             return callable.call();
         } catch (Throwable e) {
             return defaultValue;
+        }
+    }
+
+    public static void safelyIgnoreException(Runnable runnable) {
+        try {
+            runnable.run();
+        } catch (Throwable e) {
+            // ignored
         }
     }
 

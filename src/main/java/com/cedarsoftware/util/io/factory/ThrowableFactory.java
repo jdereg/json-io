@@ -47,7 +47,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             hints.computeIfAbsent(String.class, k -> new ArrayList()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
         }
 
-        Throwable cause = reader.convertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
+        Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
         if (cause != null) {
             hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
         }
@@ -65,7 +65,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
-                elements[i] = stackTraceMap == null ? null : reader.convertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
+                elements[i] = stackTraceMap == null ? null : reader.reentrantConvertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }
