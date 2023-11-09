@@ -956,7 +956,7 @@ public class MetaUtils
                             hints.computeIfAbsent(sub.getTargetClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
                         }
                     }
-                } else {
+                } else if (o != null) {
                     hints.computeIfAbsent(o.getClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), o));
                 }
             }
