@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.KnownFilteredFields;
 import lombok.AllArgsConstructor;
@@ -259,6 +260,21 @@ class ExceptionSerializeTest
     }
 
     @Test
+    void testMultiParameterExceptionWithNullFields() {
+        MultipleParameterConstructor t1 = new MultipleParameterConstructor("foobar",
+                "some random thoughts",
+                null,
+                MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)")),
+                null);
+
+        String json = TestUtil.toJson(t1);
+        MultipleParameterConstructor t2 = TestUtil.toJava(json);
+
+        assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
+    }
+
+
+    @Test
     void testNestedException()
     {
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
@@ -329,6 +345,24 @@ class ExceptionSerializeTest
         @Override
         public String toString() {
             return this.emoji;
+        }
+    }
+
+
+    @AllArgsConstructor
+    @Getter
+    public static class MultipleParameterConstructor extends RuntimeException {
+
+        private List<StupidEmojis> emojis;
+        private Long errorCount;
+        private String randomThoughts;
+
+        public MultipleParameterConstructor(String message, String randomThoughts, Long errorCount, List<StupidEmojis> emojis, Exception cause) {
+            super(message, cause);
+
+            this.randomThoughts = randomThoughts;
+            this.errorCount = errorCount;
+            this.emojis = emojis;
         }
     }
 }
