@@ -123,7 +123,7 @@ public class JsonWriter implements Closeable, Flushable
     /** classes where the implementation type will be different from the field declaration type, so it would always
      *  force the type if not for our custom writer.  These will typically be sun style classes where there is
      *  a static initializer */
-    private static Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES;
+    private static final Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES;
     private final Set<Class<?>> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
     private final Map<Class<?>, JsonClassWriter> writerCache = new HashMap<>();
     public static final Set<String> EMPTY_SET = new HashSet<>();
@@ -336,13 +336,14 @@ public class JsonWriter implements Closeable, Flushable
     }
 
     /**
-     * @see JsonWriter#objectToJson(Object, java.util.Map)
+     * @see JsonWriter#toJson(Object, WriteOptions)
      * @param item Object (root) to serialized to JSON String.
      * @return String of JSON format representing complete object graph rooted by item.
      */
+    @Deprecated
     public static String objectToJson(Object item)
     {
-        return objectToJson(item, null);
+        return toJson(item, null);
     }
 
     /**
@@ -358,6 +359,7 @@ public class JsonWriter implements Closeable, Flushable
      * be turned back into a date by using 'new Date(longValue)'.
      * @return String containing JSON representation of passed in object root.
      */
+    @Deprecated
     public static String objectToJson(Object item, Map<String, Object> optionalArgs)
     {
         try
@@ -374,6 +376,19 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
+    /**
+     * Convert a Java Object to a JSON String.
+     *
+     * @param item Object to convert to a JSON String.
+     * @param writeOptions (optional can be null) Map of extra arguments indicating how dates are
+     * formatted and what fields are written out (optional).  For Date parameters, use the public
+     * static DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Or you can specify
+     * your own custom SimpleDateFormat String, or you can associate a SimpleDateFormat object,
+     * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
+     * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
+     * be turned back into a date by using 'new Date(longValue)'.
+     * @return String containing JSON representation of passed in object root.
+     */
     public static String toJson(Object item, WriteOptions writeOptions) {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -440,13 +455,17 @@ public class JsonWriter implements Closeable, Flushable
      * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
      * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
      * be turned back into a date by using 'new Date(longValue)'.
+     * <p>
+     * This method  is deprecated, but the constructor that takes OutputStream and a WriteOptions
+     * instance instead.
      */
     @SuppressWarnings("unchecked")
+    @Deprecated
     public JsonWriter(OutputStream out, Map<String, Object> optionalArgs)
     {
         // having to save these args to support old Writers for now.
         // once they are depcrecated we can remove the Map args.
-        this.args.putAll(new HashMap(optionalArgs == null ? new HashMap<>() : optionalArgs));
+        this.args.putAll(new HashMap<>(optionalArgs == null ? new HashMap<>() : optionalArgs));
         this.args.put(JSON_WRITER, this);
 
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
@@ -466,6 +485,9 @@ public class JsonWriter implements Closeable, Flushable
         WriterContext.instance().initialize(writeOptions, this);
     }
 
+    /**
+     * Get a copy of the writeOptions that are in effect for this instance of the JsonWriter.
+     */
     public WriteOptions getWriteOptions()
     {
         if (optionsCache == null)
@@ -785,7 +807,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             return;
         }
-        final Deque<Object> stack = new ArrayDeque<Object>();
+        final Deque<Object> stack = new ArrayDeque<>();
         stack.addFirst(root);
         final Map<Object, Long> visited = this.objVisited;
         final Map<Object, Long> referenced = this.objsReferenced;
@@ -1123,53 +1145,44 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         String s = c.getName();
-        if (s.equals("java.lang.Boolean"))
+        switch (s)
         {
-            output.write("boolean");
-        }
-        else if (s.equals("java.lang.Byte"))
-        {
-            output.write("byte");
-        }
-        else if (s.equals("java.lang.Character"))
-        {
-            output.write("char");
-        }
-        else if (s.equals("java.lang.Class"))
-        {
-            output.write("class");
-        }
-        else if (s.equals("java.lang.Double"))
-        {
-            output.write("double");
-        }
-        else if (s.equals("java.lang.Float"))
-        {
-            output.write("float");
-        }
-        else if (s.equals("java.lang.Integer"))
-        {
-            output.write("int");
-        }
-        else if (s.equals("java.lang.Long"))
-        {
-            output.write("long");
-        }
-        else if (s.equals("java.lang.Short"))
-        {
-            output.write("short");
-        }
-        else if (s.equals("java.lang.String"))
-        {
-            output.write("string");
-        }
-        else if (s.equals("java.util.Date"))
-        {
-            output.write("date");
-        }
-        else
-        {
-            output.write(c.getName());
+            case "java.lang.Boolean":
+                output.write("boolean");
+                break;
+            case "java.lang.Byte":
+                output.write("byte");
+                break;
+            case "java.lang.Character":
+                output.write("char");
+                break;
+            case "java.lang.Class":
+                output.write("class");
+                break;
+            case "java.lang.Double":
+                output.write("double");
+                break;
+            case "java.lang.Float":
+                output.write("float");
+                break;
+            case "java.lang.Integer":
+                output.write("int");
+                break;
+            case "java.lang.Long":
+                output.write("long");
+                break;
+            case "java.lang.Short":
+                output.write("short");
+                break;
+            case "java.lang.String":
+                output.write("string");
+                break;
+            case "java.util.Date":
+                output.write("date");
+                break;
+            default:
+                output.write(c.getName());
+                break;
         }
 
         output.write('"');
@@ -1922,7 +1935,8 @@ public class JsonWriter implements Closeable, Flushable
             if (value == null)
             {
                 output.write("null");
-            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass()))
+            }
+            else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass()))
             {
                 writePrimitive(value, false);
             }
@@ -2133,7 +2147,7 @@ public class JsonWriter implements Closeable, Flushable
             writePrimitive(o, getWriteOptions().isWritingLongsAsStrings());
         }
         else if (o instanceof String)
-        {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
+        {   // Never do a @ref to a String (they are treated as logical primitives and interned on read)
             writeJsonUtf8String((String) o, out);
         } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(o.getClass()))
         {   // If neverShowType, then force primitives (and primitive wrappers)
@@ -2146,7 +2160,7 @@ public class JsonWriter implements Closeable, Flushable
         }
     }
 
-    public void writeEnumSet(final EnumSet<?> enumSet) throws IOException
+    private void writeEnumSet(final EnumSet<?> enumSet) throws IOException
     {
         out.write('{');
         tabIn();
@@ -2265,7 +2279,6 @@ public class JsonWriter implements Closeable, Flushable
      * @param fieldsToExclude field that should be excluded when writing out object (per class bases for custom writers)
      * @throws IOException if an error occurs writing to the output stream.
      */
-    @SuppressWarnings("unchecked")
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly, Set<String> fieldsToExclude) throws IOException
     {
         if (getWriteOptions().isNeverShowingType())
@@ -2310,7 +2323,7 @@ public class JsonWriter implements Closeable, Flushable
                 if ((fieldBlackListForClass == null || !fieldBlackListForClass.contains(accessor)) && !fieldsToExclude.contains(accessor.getName())) {
                     // Not currently supporting overwritten field names in hierarchy when using external field specifier
                     first = writeField(obj, first, accessor.getName(), accessor, true);
-                }//else field is black listed.
+                }//else field is blacklisted.
             }
         }
         else
@@ -2324,7 +2337,7 @@ public class JsonWriter implements Closeable, Flushable
                 if ((fieldBlackListForClass == null || !fieldBlackListForClass.contains(field)) && !fieldsToExclude.contains(field.getName()))
                 {
                     first = writeField(obj, first, fieldName, field, false);
-                }//else field is black listed.
+                }//else field is blacklisted.
             }
         }
 
@@ -2359,7 +2372,7 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
-        Object o = null;
+        Object o;
 
         if (Enum.class.isAssignableFrom(fieldDeclaringClass))
         {
@@ -2478,7 +2491,7 @@ public class JsonWriter implements Closeable, Flushable
                 output.write(c);
             }
             else
-            {   // Anything else - write in UTF-8 form (multi-byte encoded) (OutputStreamWriter is UTF-8)
+            {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
                 output.write(c);
             }
         }
