@@ -4,7 +4,6 @@ import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-import com.cedarsoftware.util.io.Readers;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -62,7 +61,7 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
         try {
             return OffsetDateTime.parse(s, dateTimeFormatter);
         } catch (Exception e) {   // Increase date-time format flexibility - JSON not written by json-io.
-            Date date = Readers.DateReader.parseDate(s);
+            Date date = DateFactory.parseDate(s);
             return date.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toOffsetDateTime();

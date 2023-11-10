@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -124,8 +123,6 @@ public class JsonWriter implements Closeable, Flushable
     /** classes where the implementation type will be different from the field declaration type, so it would always
      *  force the type if not for our custom writer.  These will typically be sun style classes where there is
      *  a static initializer */
-    private static final Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES = new ConcurrentSkipListSet<>();
-    private final Set<Class<?>> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
     private final Map<Class<?>, JsonClassWriter> writerCache = new HashMap<>();
     public static final Set<String> EMPTY_SET = new HashSet<>();
     
@@ -162,8 +159,6 @@ public class JsonWriter implements Closeable, Flushable
             char[] chars = Integer.toString(i).toCharArray();
             byteStrings[i + 128] = chars;
         }
-
-
     }
 
     /**
@@ -741,18 +736,6 @@ public class JsonWriter implements Closeable, Flushable
     public void addNotCustomWriter(Class<?> c)
     {
         getWriteOptions().getNonCustomClasses().add(c);
-    }
-
-    /**
-     * Adds in Classes that are statically initialized with a possible sun.* class implementation beneath the
-     * scenes.  These classes will never match their Field declaration and will usually cause the writer
-     * to show the @Type.  Adding to this class and providing a custom writer and reader gives you the power
-     * to eliminate the type in those cases and possibly provide a primitive writer/reader.
-     * @param c Class that has custom writer implementation and will never match declared field.
-     */
-    public static void addStaticallyInitializedClasses(Class<?> c)
-    {
-        BASE_STATICALLY_INITIALIZED_CLASSES.add(c);
     }
 
     /**
@@ -2416,10 +2399,6 @@ public class JsonWriter implements Closeable, Flushable
         if (declaredType.isEnum() && declaredType.isAssignableFrom(objectClass)) {
             Optional<Class> optionalClass = MetaUtils.getClassIfEnum(objectClass);
             return declaredType != optionalClass.orElse(null);
-        }
-
-        if (!this.staticallyInitializedClasses.contains(declaredType)) {
-            return true;
         }
 
         return this.getCustomWriter(declaredType) == null;

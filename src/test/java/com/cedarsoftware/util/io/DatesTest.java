@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.sql.Timestamp;
-import java.util.ArrayDeque;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
@@ -479,16 +479,17 @@ public class DatesTest
     @Test
     public void testDateReaderNullHandling()
     {
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(null, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(null);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
         {
-            assert e.getMessage().toLowerCase().contains("unable to parse");
-            assert e.getMessage().toLowerCase().contains("null");
+            assert e.getMessage().toLowerCase().contains("must be specified");
         }
 
     }
@@ -498,8 +499,10 @@ public class DatesTest
     {
         Date now = new Date();
         String nowStr = now.toString();
-        Readers.DateReader reader = new Readers.DateReader();
-        Date now2 = (Date) reader.read(nowStr, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+        DateFactory factory = new DateFactory();
+        JsonObject object = new JsonObject();
+        object.setValue(nowStr);
+        Date now2 = (Date) factory.newInstance(Date.class, object);
         assert nowStr.equals(now2.toString());
     }
 
@@ -507,8 +510,11 @@ public class DatesTest
     public void testDateWithTimeZoneOffsetParsing()
     {
         String date = "9 July 1930 11:02-05:00";
-        Readers.DateReader reader = new Readers.DateReader();
-        Date then = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+        DateFactory factory = new DateFactory();
+        JsonObject object = new JsonObject();
+        object.setValue(date);
+
+        Date then = (Date) factory.newInstance(Date.class, object);
 
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         cal.clear();
@@ -520,8 +526,10 @@ public class DatesTest
     public void testDayRemainderRemoval()
     {
         String date = "sat 6 Jun 2015";
-        Readers.DateReader reader = new Readers.DateReader();
-        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+        DateFactory factory = new DateFactory();
+        JsonObject object = new JsonObject();
+        object.setValue(date);
+        Date date1 = (Date) factory.newInstance(Date.class, object);
 
         Calendar c = Calendar.getInstance();
         c.setTime(date1);
@@ -534,10 +542,12 @@ public class DatesTest
     public void testBadDayOfWeek()
     {
         String date = "crunchy 6 Jun 2015";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -551,10 +561,12 @@ public class DatesTest
     public void testBadMonth()
     {
         String date = "2015/13/1";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -568,10 +580,12 @@ public class DatesTest
     public void testBadDay()
     {
         String date = "2015/9/34";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -585,10 +599,12 @@ public class DatesTest
     public void testBadHour()
     {
         String date = "2015/9/30 25:30";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -602,10 +618,12 @@ public class DatesTest
     public void testBadMinute()
     {
         String date = "2015/9/30 20:65";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -619,10 +637,12 @@ public class DatesTest
     public void testBadSecond()
     {
         String date = "2015/9/30 20:55:70";
-        Readers.DateReader reader = new Readers.DateReader();
+        DateFactory factory = new DateFactory();
         try
         {
-            reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
+            JsonObject object = new JsonObject();
+            object.setValue(date);
+            factory.newInstance(Date.class, object);
            fail();
         }
         catch (JsonIoException e)
@@ -636,9 +656,11 @@ public class DatesTest
     public void testZForGMT()
     {
         String date = "2015/9/30 20:55Z";
-        Readers.DateReader reader = new Readers.DateReader();
-        Date date1 = (Date) reader.read(date, new ArrayDeque<>(), new ReadOptionsBuilder().build());
-        // Not having exception while including the 'Z' is the test (no assertion)
+        DateFactory factory = new DateFactory();
+        JsonObject object = new JsonObject();
+        object.setValue(date);
+        Date date1 = (Date) factory.newInstance(Date.class, object);
+        assertNotNull(date1);
     }
 
     public static class DateTest

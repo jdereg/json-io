@@ -1,10 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.DateFactory;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.lang.reflect.Array;
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -169,7 +175,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             }
             else if (value instanceof String)
             {
-                return Readers.DateReader.parseDate((String)value);
+                return DateFactory.parseDate((String) value);
             }
             else
             {

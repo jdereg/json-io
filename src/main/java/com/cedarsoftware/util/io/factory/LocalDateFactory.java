@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.Readers;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -50,7 +49,7 @@ public class LocalDateFactory extends AbstractTemporalFactory<LocalDate> {
         }
         catch (Exception e)
         {   // Increase date format flexibility - JSON not written by json-io.
-            Date date = Readers.DateReader.parseDate(s);
+            Date date = DateFactory.parseDate(s);
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         }
     }

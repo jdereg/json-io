@@ -1,12 +1,15 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.ReconstructionType;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
+import com.cedarsoftware.util.io.factory.DateFactory;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
 import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
 import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
+import com.cedarsoftware.util.io.factory.SqlDateFactory;
 import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
@@ -34,6 +37,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -119,14 +123,20 @@ public class ReadOptionsBuilder {
         assignInstantiator(Year.class, new YearFactory());
         assignInstantiator(ZoneOffset.class, new ZoneOffsetFactory());
 
+        CalendarFactory calendarFactory = new CalendarFactory();
+        assignInstantiator(GregorianCalendar.class, calendarFactory);
+        assignInstantiator(Calendar.class, calendarFactory);
+
+        DateFactory dateFactory = new DateFactory();
+        assignInstantiator(Date.class, dateFactory);
+        assignInstantiator(Timestamp.class, dateFactory);
+
+        assignInstantiator(java.sql.Date.class, new SqlDateFactory());
+
+
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
-
-        try {
-            assignInstantiator(Class.forName("sun.util.calendar.ZoneInfo"), timeZoneFactory);
-        } catch (Exception ignore) {
-            // ignore
-        }
+        assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
 
         JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         assignInstantiator(Throwable.class, throwableFactory);
@@ -136,15 +146,11 @@ public class ReadOptionsBuilder {
 
         //  Readers
         addReaderPermanent(String.class, new Readers.StringReader());
-        addReaderPermanent(Date.class, new Readers.DateReader());
         addReaderPermanent(AtomicBoolean.class, new Readers.AtomicBooleanReader());
         addReaderPermanent(AtomicInteger.class, new Readers.AtomicIntegerReader());
         addReaderPermanent(AtomicLong.class, new Readers.AtomicLongReader());
         addReaderPermanent(BigInteger.class, new Readers.BigIntegerReader());
         addReaderPermanent(BigDecimal.class, new Readers.BigDecimalReader());
-        addReaderPermanent(java.sql.Date.class, new Readers.SqlDateReader());
-        addReaderPermanent(Timestamp.class, new Readers.TimestampReader());
-        addReaderPermanent(Calendar.class, new Readers.CalendarReader());
 
         addReaderPermanent(Locale.class, new Readers.LocaleReader());
         addReaderPermanent(Class.class, new Readers.ClassReader());
@@ -239,7 +245,11 @@ public class ReadOptionsBuilder {
      * @param factory   ClassFactory that will create 'c' instances
      */
     public static void assignInstantiator(String className, JsonReader.ClassFactory factory) {
-        BASE_CLASS_FACTORIES.put(MetaUtils.classForName(className, JsonReader.class.getClassLoader()), factory);
+        Class<?> c = MetaUtils.safelyIgnoreException(() -> MetaUtils.classForName(className, JsonReader.class.getClassLoader()), (Class<?>) null);
+
+        if (c != null) {
+            BASE_CLASS_FACTORIES.put(c, factory);
+        }
     }
 
     /**

@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.Readers;
 
 import java.time.Instant;
 import java.time.LocalTime;
@@ -49,7 +48,7 @@ public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
         try {
             return LocalTime.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            Date date = Readers.DateReader.parseDate(s);
+            Date date = DateFactory.parseDate(s);
             return date.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalTime();

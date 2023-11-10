@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.ReaderContext;
-import com.cedarsoftware.util.io.Readers;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -48,7 +47,7 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
         try {
             return ZonedDateTime.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            Date date = Readers.DateReader.parseDate(s);
+            Date date = DateFactory.parseDate(s);
             return date.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDateTime()
