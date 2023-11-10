@@ -233,7 +233,7 @@ public class ConstructorTest
         assert eddie.getName().equals("Eddie");
 
         inputStream = new ByteArrayInputStream(json.getBytes());
-        Map<String, Object> dogMap = (Map) JsonReader.toMaps(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
+        Map<String, Object> dogMap = JsonReader.toMaps(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
         assert dogMap.get("name").equals("Eddie");
     }
 

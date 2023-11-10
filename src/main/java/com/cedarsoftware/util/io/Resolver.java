@@ -356,7 +356,7 @@ public abstract class Resolver
             // Try "unknown" class the user may have set up.
             c = getReadOptions().getUnknownTypeClass();
             if (c == null)
-            {   // They did not set up an unknown class, use a LinkedHashMap.  It will be use to catch the fields
+            {   // They did not set up an unknown class, use a LinkedHashMap.  It will be used to catch the fields
                 // of the JSON object graph.  Works well with returnAsMaps() setting.
                 c = LinkedHashMap.class;
             }
@@ -550,8 +550,8 @@ public abstract class Resolver
             }
             else
             {
-                JsonObject jsItem = (JsonObject) item;
-                enumItem = Enum.valueOf(enumClass, (String) jsItem.get("name"));
+                JsonObject jObj = (JsonObject) item;
+                enumItem = Enum.valueOf(enumClass, (String) jObj.get("name"));
             }
 
             if (enumSet == null)

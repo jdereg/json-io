@@ -56,7 +56,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         Throwable t = (Throwable) MetaUtils.findAndConstructWithAppropriateConstructor(c, hints);
 
         if (t.getCause() == null && cause != null) {
-            t.initCause(t);
+            t.initCause(cause);
         }
 
         Object[] stackTrace = (Object[]) jObj.get(STACK_TRACE);
