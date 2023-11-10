@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.Readers;
 
 import java.time.OffsetDateTime;
 import java.time.Year;
@@ -32,7 +31,7 @@ public class YearFactory extends AbstractTemporalFactory<Year> {
         try {
             return Year.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            Date date = Readers.DateReader.parseDate(s);
+            Date date = DateFactory.parseDate(s);
             OffsetDateTime dt = date.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toOffsetDateTime();

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.DateFactory;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
@@ -1200,7 +1201,7 @@ public class MetaUtils
             {
                 if (rhs instanceof String)
                 {
-                    return Readers.DateReader.parseDate((String) rhs);
+                    return DateFactory.parseDate((String) rhs);
                 }
                 else if (rhs instanceof Long)
                 {

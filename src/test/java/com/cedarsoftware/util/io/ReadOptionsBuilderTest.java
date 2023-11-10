@@ -7,12 +7,10 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -23,6 +21,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -134,12 +133,12 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomReader() {
-        JsonReader.JsonClassReader reader = new Readers.DateReader();
+        JsonReader.JsonClassReader reader = new Readers.UUIDReader();
         ReadOptions options = new ReadOptionsBuilder()
-                .withCustomReader(Date.class, reader)
+                .withCustomReader(UUID.class, reader)
                 .build();
 
-        assertThat(options.getReader(Date.class)).isSameAs(reader);
+        assertThat(options.getReader(UUID.class)).isSameAs(reader);
     }
 
     @Test
@@ -151,15 +150,11 @@ class ReadOptionsBuilderTest {
                 .build();
 
         assertThat(options.getReader(String.class)).isNotNull();
-        assertThat(options.getReader(Date.class)).isNotNull();
         assertThat(options.getReader(AtomicBoolean.class)).isNotNull();
         assertThat(options.getReader(AtomicInteger.class)).isNotNull();
         assertThat(options.getReader(AtomicLong.class)).isNotNull();
         assertThat(options.getReader(BigInteger.class)).isNotNull();
         assertThat(options.getReader(BigDecimal.class)).isNotNull();
-        assertThat(options.getReader(java.sql.Date.class)).isNotNull();
-        assertThat(options.getReader(Timestamp.class)).isNotNull();
-        assertThat(options.getReader(Calendar.class)).isNotNull();
     }
 
     @Test
