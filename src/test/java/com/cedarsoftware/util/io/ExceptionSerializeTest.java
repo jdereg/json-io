@@ -270,7 +270,12 @@ class ExceptionSerializeTest
         String json = TestUtil.toJson(t1);
         MultipleParameterConstructor t2 = TestUtil.toJava(json);
 
+        // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
         assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
+
+        // Here's the issue to verify - can the code that instantiates a derived exception class, get its
+        // detail message up to the detailMessage field on Throwable?
+        assert t1.getMessage().equals(t2.getMessage());
     }
 
 
