@@ -964,40 +964,61 @@ public class MetaUtils
         }
     }
 
-    public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
-        try {
-            final Constructor<?>[] constructors = c.getDeclaredConstructors();
-            final Object[] constructorArgs = new Object[constructors.length];
+    private static class ConstructorWithScore implements Comparable<ConstructorWithScore>
+    {
+        double score;
+        Constructor constructor;
+        Object[] args;
 
-            double bestScore = Double.MIN_VALUE;
-            int choice = 0;
-            int choiceParameterCount = 0;
+        public ConstructorWithScore(double score, Constructor constructor, Object[] args)
+        {
+            this.score = score;
+            this.constructor = constructor;
+            this.args = args;
+        }
 
-            for (int i = 0; i < constructors.length; i++) {
-                Parameter[] parameters = constructors[i].getParameters();
-                Object[] arguments = new Object[parameters.length];
-                constructorArgs[i] = arguments;
-
-                double score = fillArgsWithHints(parameters, arguments, paramHints);
-
-                if (score >= bestScore && parameters.length >= choiceParameterCount) {
-                    bestScore = score;
-                    choice = i;
-                    choiceParameterCount = parameters.length;
-                }
+        public int compareTo(ConstructorWithScore other)
+        {
+            if (score < other.score)
+            {
+                return 1;
             }
+            else if (score == other.score)
+            {
+                return 0;
+            }
+            return -1;
+        }
+    }
 
-            Object[] arguments = (Object[]) constructorArgs[choice];
-            Constructor<?> constructor = constructors[choice];
+    public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
+        final Constructor<?>[] constructors = c.getDeclaredConstructors();
+        Set<ConstructorWithScore> constructorsWithScores = new TreeSet<>();
+
+        for (int i = 0; i < constructors.length; i++) {
+            Constructor constructor = constructors[i];
+            Parameter[] parameters = constructor.getParameters();
+            Object[] arguments = new Object[parameters.length];
+            double score = fillArgsWithHints(parameters, arguments, paramHints);
+            constructorsWithScores.add(new ConstructorWithScore(score, constructor, arguments));
+        }
+
+        Iterator<ConstructorWithScore> i = constructorsWithScores.iterator();
+        while (i.hasNext())
+        {
+            ConstructorWithScore constructorWithScore = i.next();
+            Constructor<?> constructor = constructorWithScore.constructor;
 
             try {
-                return constructor.newInstance(arguments);
-            } catch (IllegalAccessException iae) {
-                return constructor.newInstance(arguments);
+                // Be nice to debugging
+                Object o = constructor.newInstance(constructorWithScore.args);
+                return o;
+            } catch (Exception ignore) {
+                // will get reported below if the class is never instantiated with a constructor.
             }
-        } catch (Exception e) {
-            throw new JsonIoException("Error calling constructor for: " + c.getName(), e);
         }
+
+        throw new JsonIoException("Unable to instantiate: " + c.getName() + " using: " + paramHints);
     }
 
     /**
