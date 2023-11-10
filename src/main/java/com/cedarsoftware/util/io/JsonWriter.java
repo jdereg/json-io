@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TimeZone;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -124,7 +124,7 @@ public class JsonWriter implements Closeable, Flushable
     /** classes where the implementation type will be different from the field declaration type, so it would always
      *  force the type if not for our custom writer.  These will typically be sun style classes where there is
      *  a static initializer */
-    private static final Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES;
+    private static final Set<Class<?>> BASE_STATICALLY_INITIALIZED_CLASSES = new ConcurrentSkipListSet<>();
     private final Set<Class<?>> staticallyInitializedClasses = new HashSet<>(BASE_STATICALLY_INITIALIZED_CLASSES);  // Add customer writers (these make common classes more succinct)
     private final Map<Class<?>, JsonClassWriter> writerCache = new HashMap<>();
     public static final Set<String> EMPTY_SET = new HashSet<>();
@@ -163,19 +163,7 @@ public class JsonWriter implements Closeable, Flushable
             byteStrings[i + 128] = chars;
         }
 
-        // initialize friendly defaults.
 
-        Set<Class<?>> staticallyInitializedClasses = new HashSet<>();
-        staticallyInitializedClasses.add(TimeZone.class);
-
-        try
-        {
-            Class<?> zoneInfoClass = Class.forName("sun.util.calendar.ZoneInfo");
-            staticallyInitializedClasses.add(zoneInfoClass);
-        }
-        catch (ClassNotFoundException ignore) { }
-
-        BASE_STATICALLY_INITIALIZED_CLASSES = staticallyInitializedClasses;
     }
 
     /**
@@ -738,6 +726,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param writer JsonClassWriter which implements the appropriate
      * subclass of JsonClassWriter.
      */
+    @Deprecated
     public static void addWriterPermanent(Class<?> c, JsonClassWriter writer)
     {
         WriteOptionsBuilder.addBaseWriter(c, writer);
@@ -748,6 +737,7 @@ public class JsonWriter implements Closeable, Flushable
      * @param c Class which should NOT have any custom writer associated to it.  Use this
      * to prevent a custom writer from being used due to inheritance.
      */
+    @Deprecated
     public void addNotCustomWriter(Class<?> c)
     {
         getWriteOptions().getNonCustomClasses().add(c);
