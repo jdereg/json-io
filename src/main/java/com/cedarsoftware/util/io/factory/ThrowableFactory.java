@@ -44,7 +44,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
         String message = (String) jObj.get(DETAIL_MESSAGE);
         if (message != null) {
-            hints.computeIfAbsent(String.class, k -> new ArrayList()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
+            hints.computeIfAbsent(String.class, k -> new ArrayList<>()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
         }
 
         Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);

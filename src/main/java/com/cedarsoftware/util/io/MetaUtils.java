@@ -1045,7 +1045,7 @@ public class MetaUtils
             return 1;
         }
 
-        return found / parameters.length;
+        return (double) found / parameters.length;
     }
 
     private static boolean setParameterIfPossible(Object[] arguments, List<ParameterHint> list, int i, String name) {
