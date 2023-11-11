@@ -705,8 +705,8 @@ public class JsonWriter implements Closeable, Flushable
             {
                 return entry.getValue();
             }
-            int distance = MetaUtils.getDistance(clz, c);
-            if (distance < minDistance)
+            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            if (distance != -1 && distance < minDistance)
             {
                 minDistance = distance;
                 closestWriter = entry.getValue();

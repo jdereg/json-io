@@ -15,7 +15,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -110,11 +124,11 @@ public class MetaUtilsTests {
 
     @Test
     public void testGetDistance() {
-        int x = MetaUtils.getDistance(Serializable.class, Externalizable.class);
-        assert x == 1;
+        int x = MetaUtils.computeInheritanceDistance(Serializable.class, Externalizable.class);
+        assert x == -1;
 
-        x = MetaUtils.getDistance(Externalizable.class, Serializable.class);
-        assert x == Integer.MAX_VALUE;
+        x = MetaUtils.computeInheritanceDistance(Externalizable.class, Serializable.class);
+        assert x == 1;
     }
 
     @Test

@@ -39,21 +39,28 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     public Object newInstance(Class<?> c, JsonObject jObj)
     {
         JsonReader reader = ReaderContext.instance().getReader();
-
         Map<Class<?>, List<MetaUtils.ParameterHint>> hints = new HashMap<>();
-
         String message = (String) jObj.get(DETAIL_MESSAGE);
+        Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
+
         if (message != null) {
             hints.computeIfAbsent(String.class, k -> new ArrayList<>()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
         }
 
-        Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
         if (cause != null) {
             hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
         }
 
         MetaUtils.buildHints(reader, jObj, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
-        Throwable t = (Throwable) MetaUtils.findAndConstructWithAppropriateConstructor(c, hints);
+
+        // Only need the values
+        List<Object> argumentValues = new ArrayList<>();
+        for (List<MetaUtils.ParameterHint> hint : hints.values()) {
+            for (MetaUtils.ParameterHint arg : hint) {
+                argumentValues.add(arg.getObject());
+            }
+        }
+        Throwable t = (Throwable) MetaUtils.newInstance(c, argumentValues);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(cause);

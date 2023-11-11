@@ -6,7 +6,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -32,7 +31,8 @@ public class InternalAPIsTest
     public void testDistanceToInterface()
     {
         // The values below can differ depending on the JDK versions, so be careful the classes chosen
-        assertEquals(1, MetaUtils.getDistance(Resolver.class, ObjectResolver.class));
+        assert MetaUtils.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
+        assert MetaUtils.computeInheritanceDistance(ObjectResolver.class, Resolver.class) > 0;
     }
 
     @Test

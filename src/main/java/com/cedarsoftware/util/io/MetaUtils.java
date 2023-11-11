@@ -36,10 +36,12 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -80,7 +82,7 @@ import static java.lang.reflect.Modifier.isPublic;
  */
 public class MetaUtils
 {
-    public enum Dumpty {}
+    enum Dumpty {}
 
     private MetaUtils () {}
 
@@ -288,75 +290,60 @@ public class MetaUtils
     }
 
     /**
-     * @param a Class source class
-     * @param b Class target class
-     * @return inheritance distance between two classes, or Integer.MAX_VALUE if they are not related. Each
-     * step upward in the inheritance from one class to the next (calling class.getSuperclass()) is counted
-     * as 1. This can be a lot of computational effort, therefore the results of this determination should be cached.
+     * Computes the inheritance distance between two classes/interfaces.
+     *
+     * @param source      The source class or interface.
+     * @param destination The destination class or interface.
+     * @return The number of steps from the source to the destination, or -1 if no path exists.
      */
-    public static int getDistance(Class<?> a, Class<?> b)
-    {
-        if (a.isInterface())
-        {
-            return getDistanceToInterface(a, b);
+    public static int computeInheritanceDistance(Class<?> source, Class<?> destination) {
+        if (source == null || destination == null) {
+            return -1;
         }
-        Class<?> curr = b;
+
+        if (source.equals(destination)) {
+            return 0;
+        }
+
+        Queue<Class<?>> queue = new LinkedList<>();
+        Set<Class<?>> visited = new HashSet<>();
+        queue.add(source);
+        visited.add(source);
+
         int distance = 0;
 
-        while (curr != a)
-        {
+        while (!queue.isEmpty()) {
+            int levelSize = queue.size();
             distance++;
-            curr = curr.getSuperclass();
-            if (curr == null)
-            {
-                return Integer.MAX_VALUE;
+
+            for (int i = 0; i < levelSize; i++) {
+                Class<?> current = queue.poll();
+
+                // Check superclass
+                if (current.getSuperclass() != null) {
+                    if (current.getSuperclass().equals(destination)) {
+                        return distance;
+                    }
+                    if (!visited.contains(current.getSuperclass())) {
+                        queue.add(current.getSuperclass());
+                        visited.add(current.getSuperclass());
+                    }
+                }
+
+                // Check interfaces
+                for (Class<?> interfaceClass : current.getInterfaces()) {
+                    if (interfaceClass.equals(destination)) {
+                        return distance;
+                    }
+                    if (!visited.contains(interfaceClass)) {
+                        queue.add(interfaceClass);
+                        visited.add(interfaceClass);
+                    }
+                }
             }
         }
 
-        return distance;
-    }
-
-    /**
-     * @return int distance between two passed in classes.  This method performs an exhaustive
-     * walk up the inheritance chain to compute the distance.  This can be a lot of
-     * computational effort, therefore the results of this determination should be cached internally.
-     */
-    static int getDistanceToInterface(Class<?> to, Class<?> from)
-    {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
-
-        Class<?>[] interfaces = from.getInterfaces();
-        // is the interface direct inherited or via interfaces extends interface?
-        for (Class<?> interfase : interfaces)
-        {
-            if (to.equals(interfase))
-            {
-                return 1;
-            }
-            // because of multi-inheritance from interfaces
-            if (to.isAssignableFrom(interfase))
-            {
-                possibleCandidates.add(interfase);
-            }
-        }
-
-        // it is also possible, that the interface is included in superclasses
-        if (from.getSuperclass() != null  && to.isAssignableFrom(from.getSuperclass()))
-        {
-            possibleCandidates.add(from.getSuperclass());
-        }
-
-        int minimum = Integer.MAX_VALUE;
-        for (Class<?> candidate : possibleCandidates)
-        {
-            // Could do that in a non recursive way later
-            int distance = getDistanceToInterface(to, candidate);
-            if (distance < minimum)
-            {
-                minimum = ++distance;
-            }
-        }
-        return minimum;
+        return -1; // No path found
     }
 
     /**
@@ -930,6 +917,91 @@ public class MetaUtils
         return values;
     }
 
+    /**
+     * Build a List the same size of parameterTypes, where the objects in the list are ordered
+     * to best match the parameters.  Values from the passed in list are used only once or never.
+     * @param values A list of potential arguments.  This list can be smaller than parameterTypes
+     *               or larger.
+     * @param parameterTypes A list of classes that the values will be matched against.
+     * @return List of values that are best ordered to match the passed in parameter types.  This
+     * list will be the same length as the passed in parameterTypes list.
+     */
+    public static List<Object> matchArgumentsToParameters(Collection<Object> values, Parameter[] parameterTypes) {
+        if (values.isEmpty() || parameterTypes.length == 0) {
+            return new ArrayList<>();
+        }
+        List<Object> answer = new ArrayList<>();
+        List<Object> copyValues = new ArrayList<>(values);
+
+        for (Parameter paramType : parameterTypes) {
+            Object value = pickBestValue(paramType.getType(), copyValues);
+            answer.add(value);
+        }
+        return answer;
+    }
+
+    private static Object pickBestValue(Class<?> param, List<Object> values) {
+        int[] distances = new int[values.size()];
+        int i=0;
+
+        for (Object value : values) {
+            if (value == null) {
+                distances[i] = -1;
+            } else {
+                Class<?> srcType = value.getClass();
+                if (isPrimitive(srcType)) {
+                    // Must handle primitives specially. For example, 'Long' is not a subclass of 'long'
+                    try {
+                        if (srcType.getField("TYPE").get(null).equals(param)) {
+                            distances[i] = 0;
+                        } else {
+                            distances[i] = -1;
+                        }
+                    }
+                    catch (Exception e) {
+                        distances[i] = -1;
+                    }
+                } else {
+                    distances[i] = computeInheritanceDistance(value.getClass(), param);
+                }
+            }
+            i++;
+        }
+
+        int index = indexOfBestValue(distances);
+        if (index >= 0) {
+            Object valueBestMatching = values.get(index);
+            values.remove(index);
+            return valueBestMatching;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Returns the index of the smallest value in an array.
+     *
+     * @param array The array to search.
+     * @return The index of the smallest value, or -1 if the array is empty.
+     */
+    public static int indexOfBestValue(int[] array) {
+        if (array == null || array.length == 0) {
+            return -1; // Return -1 for null or empty array.
+        }
+
+        int minValue = Integer.MAX_VALUE;
+        int minIndex = -1;
+
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] < minValue & array[i] > -1) {
+                minValue = array[i];
+                minIndex = i;
+            }
+        }
+
+        return minIndex;
+    }
+
     public static void buildHints(JsonReader reader, JsonObject jObj, Map<Class<?>, List<ParameterHint>> hints, Set<String> fieldsAlreadyInHints) {
         Convention.throwIfNull(jObj, "JsonObject cannot be null");
         Convention.throwIfNull(reader, "JsonReader cannot be null");
@@ -970,35 +1042,35 @@ public class MetaUtils
      * the same, so then it looks at values passed into the arguments, non-null being more
      * valuable than null, as well as number of argument types - more is better than fewer.
      */
-    private static class ConstructorComparator implements Comparable<ConstructorComparator>
+    private static class ConstructorWithValues implements Comparable<ConstructorWithValues>
     {
         final Constructor<?> constructor;
         final Object[] args;
 
-        ConstructorComparator(Constructor<?> constructor, Object[] args)
+        ConstructorWithValues(Constructor<?> constructor, Object[] args)
         {
             this.constructor = constructor;
             this.args = args;
         }
 
-        public int compareTo(ConstructorComparator other)
+        public int compareTo(ConstructorWithValues other)
         {
             final int mods = constructor.getModifiers();
             final int otherMods = other.constructor.getModifiers();
 
             // Rule 1: Visibility: favor public over non-public
-            if (!Modifier.isPublic(mods) && Modifier.isPublic(otherMods)) {
+            if (!isPublic(mods) && isPublic(otherMods)) {
                 return 1;
             }
-            else if (Modifier.isPublic(mods) && !Modifier.isPublic(otherMods)) {
+            else if (isPublic(mods) && !isPublic(otherMods)) {
                 return -1;
             }
 
             // Rule 2: Visibility: favor protected over private
-            if (!Modifier.isProtected(mods) && Modifier.isProtected(otherMods)) {
+            if (!isProtected(mods) && isProtected(otherMods)) {
                 return 1;
             }
-            else if (Modifier.isProtected(mods) && !Modifier.isProtected(otherMods)) {
+            else if (isProtected(mods) && !isProtected(otherMods)) {
                 return -1;
             }
 
@@ -1054,88 +1126,32 @@ public class MetaUtils
         }
     }
 
-    public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
+    public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
         final Constructor<?>[] constructors = c.getDeclaredConstructors();
-        Set<ConstructorComparator> constructorOrder = new TreeSet<>();
+        Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
+        List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
 
+        // Spin through all constructors, adding the constructor and the best match of arguments for it, as an
+        // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
         for (Constructor<?> constructor : constructors) {
             Parameter[] parameters = constructor.getParameters();
-            Object[] arguments = new Object[parameters.length];
-            fillArgsWithHints(parameters, arguments, paramHints);
-            constructorOrder.add(new ConstructorComparator(constructor, arguments));
+            List<Object> arguments = matchArgumentsToParameters(argValues, parameters);
+            constructorOrder.add(new ConstructorWithValues(constructor, arguments.toArray()));
         }
 
-        for (ConstructorComparator constructorComparator : constructorOrder) {
-            Constructor<?> constructor = constructorComparator.constructor;
+        for (ConstructorWithValues constructorWithValues : constructorOrder) {
+            Constructor<?> constructor = constructorWithValues.constructor;
 
             try {
                 // Be nice to person debugging
-                Object o = constructor.newInstance(constructorComparator.args);
+                Object o = constructor.newInstance(constructorWithValues.args);
                 return o;
             }
             catch (Exception ignore) {
-                // will get reported below if the class is never instantiated with a constructor.
             }
         }
 
-        throw new JsonIoException("Unable to instantiate: " + c.getName() + " using: " + paramHints);
-    }
-
-    /**
-     * Return an Object[] of instance values that can be passed into a given Constructor.  This method
-     * will return an array of nulls if useNull is true, otherwise it will return sensible values for
-     * primitive classes, and null for non-known primitive / primitive wrappers.  This class is used
-     * when attempting to call constructors on Java objects to get them instantiated, since there is no
-     * 'malloc' in Java.
-     */
-    public static void fillArgsWithHints(Parameter[] parameters, Object[] arguments, Map<Class<?>, List<ParameterHint>> hints) {
-        for (int i = 0; i < parameters.length; i++) {
-            final Parameter param = parameters[i];
-            final String name = param.isNamePresent() ? param.getName() : null;
-            arguments[i] = null;
-
-            boolean wasSet;
-
-            List<ParameterHint> hintList = hints.get(param.getType());
-
-            if (hintList != null && !hintList.isEmpty()) {
-                wasSet = setParameterIfPossible(arguments, hintList, i, name);
-            } else {
-                Optional<List<ParameterHint>> optionalList = hints.entrySet().stream()
-                        .filter(entry -> param.getType()
-                                .isAssignableFrom(entry.getKey()))
-                        .map(Map.Entry::getValue)
-                        .findFirst();
-
-                List<ParameterHint> list = optionalList.orElse(new ArrayList<>());
-                wasSet = setParameterIfPossible(arguments, list, i, name);
-            }
-
-            if (arguments[i] == null && !wasSet) {
-                arguments[i] = MetaUtils.getArgForType(param.getType(), true);
-            }
-        }
-    }
-
-    private static boolean setParameterIfPossible(Object[] arguments, List<ParameterHint> list, int i, String name) {
-        if (list == null || list.isEmpty()) {
-            return false;
-        }
-
-        if (list.size() == 1) {
-            arguments[i] = list.get(0).object;
-            return true;
-        }
-
-        Optional<ParameterHint> optional = list.stream().filter(h -> name == null || name.equalsIgnoreCase(h.parameterName)).findFirst();
-
-        if (optional.isPresent()) {
-            arguments[i] = optional.get().object;
-        } else {
-            arguments[i] = list.get(0).object;
-        }
-
-        return true;
+        throw new JsonIoException("Unable to instantiate: " + c.getName());
     }
 
     /**
@@ -1275,6 +1291,10 @@ public class MetaUtils
                 else if (rhs instanceof Long)
                 {
                     return new Date((Long)(rhs));
+                }
+                else
+                {
+                    return new Date();
                 }
             }
             else if (c == BigInteger.class)

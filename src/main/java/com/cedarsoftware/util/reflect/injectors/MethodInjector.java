@@ -5,7 +5,8 @@ import com.cedarsoftware.util.io.MetaUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+
+import static java.lang.reflect.Modifier.isPublic;
 
 public class MethodInjector extends AbstractInjector {
     private final Method method;
@@ -13,7 +14,7 @@ public class MethodInjector extends AbstractInjector {
     public MethodInjector(Field field, Method method) {
         super(field);
 
-        if (!Modifier.isPublic(method.getDeclaringClass().getModifiers())) {
+        if (!isPublic(method.getDeclaringClass().getModifiers())) {
             MetaUtils.trySetAccessible(method);
         }
 

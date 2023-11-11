@@ -276,8 +276,28 @@ class ExceptionSerializeTest
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
         assert t1.getMessage().equals(t2.getMessage());
+        assert t1.getMessage().equals("foobar");                // Going through arg values in order, will pick up first string.
     }
 
+    @Test
+    void testMultiParameterExceptionWithNullFields1() {
+        MultipleParameterConstructor t1 = new MultipleParameterConstructor("some random thoughts",
+                "message",
+                null,
+                MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)")),
+                null);
+
+        String json = TestUtil.toJson(t1);
+        MultipleParameterConstructor t2 = TestUtil.toJava(json);
+
+        // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
+        assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
+
+        // Here's the issue to verify - can the code that instantiates a derived exception class, get its
+        // detail message up to the detailMessage field on Throwable?
+        assert t1.getMessage().equals(t2.getMessage());
+        assert t1.getMessage().equals("some random thoughts");  // Going through arg values in order, will pick up first string.
+    }
 
     @Test
     void testNestedException()
