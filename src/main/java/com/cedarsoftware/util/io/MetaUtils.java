@@ -290,19 +290,54 @@ public class MetaUtils
     }
 
     /**
-     * Computes the inheritance distance between two classes/interfaces.
+     * Compare two primitives.
      *
-     * @param source      The source class or interface.
-     * @param destination The destination class or interface.
+     * @return 0 if they are the same, -1 if not.  Primitive wrapper classes are consider the same as primitive classes.
+     */
+    public static int comparePrimitiveToWrapper(Class<?> source, Class<?> destination)
+    {
+        try
+        {
+            return source.getField("TYPE").get(null).equals(destination) ? 0 : -1;
+        }
+        catch (Exception e)
+        {
+            throw new JsonIoException("Error while attempting comparison of primitive types: " + source.getName() + " vs " + destination.getName(), e);
+        }
+    }
+
+    /**
+     * Computes the inheritance distance between two classes/interfaces/primitive types.
+     *
+     * @param source      The source class, interface, or primitive type.
+     * @param destination The destination class, interface, or primitive type.
      * @return The number of steps from the source to the destination, or -1 if no path exists.
      */
     public static int computeInheritanceDistance(Class<?> source, Class<?> destination) {
         if (source == null || destination == null) {
             return -1;
         }
-
         if (source.equals(destination)) {
             return 0;
+        }
+
+        // Check for primitive types
+        if (source.isPrimitive()) {
+            if (destination.isPrimitive()) {
+                // Not equal because source.equals(destination) already chceked.
+                return -1;
+            }
+            if (!MetaUtils.isPrimitive(destination)) {
+                return -1;
+            }
+            return comparePrimitiveToWrapper(destination, source);
+        }
+
+        if (destination.isPrimitive()) {
+            if (!MetaUtils.isPrimitive(source)) {
+                return -1;
+            }
+            return comparePrimitiveToWrapper(source, destination);
         }
 
         Queue<Class<?>> queue = new LinkedList<>();
@@ -353,7 +388,6 @@ public class MetaUtils
      */
     public static boolean isPrimitive(Class<?> c)
     {
-
         return c.isPrimitive() || prims.contains(c);
     }
 
@@ -945,27 +979,7 @@ public class MetaUtils
         int i=0;
 
         for (Object value : values) {
-            if (value == null) {
-                distances[i] = -1;
-            } else {
-                Class<?> srcType = value.getClass();
-                if (isPrimitive(srcType)) {
-                    // Must handle primitives specially. For example, 'Long' is not a subclass of 'long'
-                    try {
-                        if (srcType.getField("TYPE").get(null).equals(param)) {
-                            distances[i] = 0;
-                        } else {
-                            distances[i] = -1;
-                        }
-                    }
-                    catch (Exception e) {
-                        distances[i] = -1;
-                    }
-                } else {
-                    distances[i] = computeInheritanceDistance(value.getClass(), param);
-                }
-            }
-            i++;
+            distances[i++] = value == null ? -1 : computeInheritanceDistance(value.getClass(), param);
         }
 
         int index = indexOfBestValue(distances);
