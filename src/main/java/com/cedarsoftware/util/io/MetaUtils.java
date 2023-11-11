@@ -970,18 +970,18 @@ public class MetaUtils
      * the same, so then it looks at values passed into the arguments, non-null being more
      * valuable than null, as well as number of argument types - more is better than fewer.
      */
-    private static class ConstructorWithScore implements Comparable<ConstructorWithScore>
+    private static class ConstructorComparator implements Comparable<ConstructorComparator>
     {
         final Constructor<?> constructor;
         final Object[] args;
 
-        ConstructorWithScore(Constructor<?> constructor, Object[] args)
+        ConstructorComparator(Constructor<?> constructor, Object[] args)
         {
             this.constructor = constructor;
             this.args = args;
         }
 
-        public int compareTo(ConstructorWithScore other)
+        public int compareTo(ConstructorComparator other)
         {
             final int mods = constructor.getModifiers();
             final int otherMods = other.constructor.getModifiers();
@@ -1013,7 +1013,7 @@ public class MetaUtils
             }
 
             // Rule 4: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
-            // are dropped from the Set.
+            // are dropped from the Set.  Although an "arbitrary" rule, it is consistent.
             String params1 = buildParameterTypeString(constructor);
             String params2 = buildParameterTypeString(other.constructor);
             return params1.compareTo(params2);
@@ -1046,9 +1046,9 @@ public class MetaUtils
             Class<?>[] paramTypes = constructor.getParameterTypes();
             StringBuilder s = new StringBuilder();
 
-            for (int i=0; i < paramTypes.length; i++)
+            for (Class<?> paramType : paramTypes)
             {
-                s.append(paramTypes[i].getName() + ".");
+                s.append(paramType.getName()).append(".");
             }
             return s.toString();
         }
@@ -1056,27 +1056,24 @@ public class MetaUtils
 
     public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
         final Constructor<?>[] constructors = c.getDeclaredConstructors();
-        Set<ConstructorWithScore> constructorsWithScores = new TreeSet<>();
+        Set<ConstructorComparator> constructorOrder = new TreeSet<>();
 
-        for (int i = 0; i < constructors.length; i++) {
-            Constructor constructor = constructors[i];
+        for (Constructor<?> constructor : constructors) {
             Parameter[] parameters = constructor.getParameters();
             Object[] arguments = new Object[parameters.length];
             fillArgsWithHints(parameters, arguments, paramHints);
-            constructorsWithScores.add(new ConstructorWithScore(constructor, arguments));
+            constructorOrder.add(new ConstructorComparator(constructor, arguments));
         }
 
-        Iterator<ConstructorWithScore> i = constructorsWithScores.iterator();
-        while (i.hasNext())
-        {
-            ConstructorWithScore constructorWithScore = i.next();
-            Constructor<?> constructor = constructorWithScore.constructor;
+        for (ConstructorComparator constructorComparator : constructorOrder) {
+            Constructor<?> constructor = constructorComparator.constructor;
 
             try {
                 // Be nice to person debugging
-                Object o = constructor.newInstance(constructorWithScore.args);
+                Object o = constructor.newInstance(constructorComparator.args);
                 return o;
-            } catch (Exception ignore) {
+            }
+            catch (Exception ignore) {
                 // will get reported below if the class is never instantiated with a constructor.
             }
         }
@@ -1111,7 +1108,6 @@ public class MetaUtils
                         .findFirst();
 
                 List<ParameterHint> list = optionalList.orElse(new ArrayList<>());
-
                 wasSet = setParameterIfPossible(arguments, list, i, name);
             }
 
