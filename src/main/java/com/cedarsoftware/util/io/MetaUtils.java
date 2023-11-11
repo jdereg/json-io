@@ -964,31 +964,100 @@ public class MetaUtils
         }
     }
 
+    /**
+     * Ideal class to hold all constructors for a Class, so that they are sorted in the most
+     * appeasing construction order, in terms of public vs protected vs private.  That could be
+     * the same, so then it looks at values passed into the arguments, non-null being more
+     * valuable than null, as well as number of argument types - more is better than fewer.
+     */
     private static class ConstructorWithScore implements Comparable<ConstructorWithScore>
     {
-        double score;
-        Constructor constructor;
-        Object[] args;
+        final Constructor<?> constructor;
+        final Object[] args;
 
-        public ConstructorWithScore(double score, Constructor constructor, Object[] args)
+        ConstructorWithScore(Constructor<?> constructor, Object[] args)
         {
-            this.score = score;
             this.constructor = constructor;
             this.args = args;
         }
 
         public int compareTo(ConstructorWithScore other)
         {
-            if (score < other.score)
-            {
+            final int mods = constructor.getModifiers();
+            final int otherMods = other.constructor.getModifiers();
+
+            // Rule 1: Favor public over non-public
+            if (!Modifier.isPublic(mods) && Modifier.isPublic(otherMods)) {
                 return 1;
             }
-            else if (score == other.score)
-            {
-                return 0;
+            else if (Modifier.isPublic(mods) && !Modifier.isPublic(otherMods)) {
+                return -1;
             }
-            return -1;
+
+            // Rule 2: Favor protected over private (will only reach this if neither constructor is public)
+            if (!Modifier.isProtected(mods) && Modifier.isProtected(otherMods)) {
+                return 1;
+            }
+            else if (Modifier.isProtected(mods) && !Modifier.isProtected(otherMods)) {
+                return -1;
+            }
+
+            // Rule 3: Favor more arguments over less.
+            if (args.length < other.args.length) {
+                return 1;
+            }
+            else if (args.length > other.args.length) {
+                return -1;
+            }
+
+            // Rule 4: Favor fewer null values being passed in.
+            double score1 = scoreArgumentValues(args);
+            double score2 = scoreArgumentValues(other.args);
+            if (score1 < score2) {
+                return 1;
+            }
+            else if (score1 > score2) {
+                return -1;
+            }
+
+            // Rule 5: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
+            // are dropped from the Set.
+            String params1 = buildParameterTypeString(constructor);
+            String params2 = buildParameterTypeString(other.constructor);
+            return params1.compareTo(params2);
         }
+    }
+
+    /**
+     * The more non-null arguments you have, the higher your score.  1.0 would mean all args are not-null.
+     */
+    private static double scoreArgumentValues(Object[] args)
+    {
+        if (args.length == 0) {
+            return 0.0d;
+        }
+        
+        int nonNull = 0;
+
+        for (Object arg : args) {
+            if (arg != null) {
+                nonNull++;
+            }
+        }
+
+        return (double) nonNull / args.length;
+    }
+
+    private static String buildParameterTypeString(Constructor<?> constructor)
+    {
+        Class<?>[] paramTypes = constructor.getParameterTypes();
+        StringBuilder s = new StringBuilder();
+
+        for (int i=0; i < paramTypes.length; i++)
+        {
+            s.append(paramTypes[i].getName() + ".");
+        }
+        return s.toString();
     }
 
     public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
@@ -999,8 +1068,8 @@ public class MetaUtils
             Constructor constructor = constructors[i];
             Parameter[] parameters = constructor.getParameters();
             Object[] arguments = new Object[parameters.length];
-            double score = fillArgsWithHints(parameters, arguments, paramHints);
-            constructorsWithScores.add(new ConstructorWithScore(score, constructor, arguments));
+            fillArgsWithHints(parameters, arguments, paramHints);
+            constructorsWithScores.add(new ConstructorWithScore(constructor, arguments));
         }
 
         Iterator<ConstructorWithScore> i = constructorsWithScores.iterator();
@@ -1010,7 +1079,7 @@ public class MetaUtils
             Constructor<?> constructor = constructorWithScore.constructor;
 
             try {
-                // Be nice to debugging
+                // Be nice to person debugging
                 Object o = constructor.newInstance(constructorWithScore.args);
                 return o;
             } catch (Exception ignore) {
@@ -1028,8 +1097,7 @@ public class MetaUtils
      * when attempting to call constructors on Java objects to get them instantiated, since there is no
      * 'malloc' in Java.
      */
-    public static double fillArgsWithHints(Parameter[] parameters, Object[] arguments, Map<Class<?>, List<ParameterHint>> hints) {
-        int found = 0;
+    public static void fillArgsWithHints(Parameter[] parameters, Object[] arguments, Map<Class<?>, List<ParameterHint>> hints) {
         for (int i = 0; i < parameters.length; i++) {
             final Parameter param = parameters[i];
             final String name = param.isNamePresent() ? param.getName() : null;
@@ -1056,17 +1124,7 @@ public class MetaUtils
             if (arguments[i] == null && !wasSet) {
                 arguments[i] = MetaUtils.getArgForType(param.getType(), true);
             }
-
-            if (wasSet) {
-                found++;
-            }
         }
-
-        if (parameters.length == 0) {
-            return 1;
-        }
-
-        return (double) found / parameters.length;
     }
 
     private static boolean setParameterIfPossible(Object[] arguments, List<ParameterHint> list, int i, String name) {
@@ -1084,7 +1142,7 @@ public class MetaUtils
         if (optional.isPresent()) {
             arguments[i] = optional.get().object;
         } else {
-            arguments[i] = list.get(0);
+            arguments[i] = list.get(0).object;
         }
 
         return true;

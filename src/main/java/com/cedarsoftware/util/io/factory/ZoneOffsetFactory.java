@@ -9,7 +9,7 @@ import java.time.ZoneOffset;
 public class ZoneOffsetFactory implements JsonReader.ClassFactory {
     @Override
     public ZoneOffset newInstance(Class<?> c, JsonObject jObj) {
-        Object value = jObj.get("value");
+        Object value = jObj.getValue();
 
         if (value instanceof String) {
             return fromString((String) value);

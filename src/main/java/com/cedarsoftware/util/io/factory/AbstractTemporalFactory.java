@@ -38,7 +38,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
 
     @Override
     public T newInstance(Class<?> c, JsonObject jObj) {
-        Object value = jObj.get("value");
+        Object value = jObj.getValue();
 
         if (value instanceof String) {
             return fromString((String) value);

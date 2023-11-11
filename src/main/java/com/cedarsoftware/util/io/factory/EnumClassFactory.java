@@ -11,7 +11,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
 
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj) {
-        Object value = jObj.get("value");
+        Object value = jObj.getValue();
 
         if (value instanceof String) {
             // came in as string so we know we're done.

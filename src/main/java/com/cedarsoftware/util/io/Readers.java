@@ -78,7 +78,7 @@ public class Readers
 
         URL createUrlNewWay(JsonObject jObj) throws MalformedURLException
         {
-            return URI.create((String)jObj.get("value")).toURL();
+            return URI.create((String)jObj.getValue()).toURL();
         }
 
         URL createUrlOldWay(JsonObject jObj) throws MalformedURLException {
@@ -371,7 +371,7 @@ public class Readers
                 }
                 else
                 {
-                    return bigIntegerFrom(valueObj.get("value"));
+                    return bigIntegerFrom(valueObj.getValue());
                 }
             }
 
@@ -455,7 +455,7 @@ public class Readers
                 jObj = (JsonObject) o;
                 if (jObj.containsKey("value"))
                 {
-                    value = jObj.get("value");
+                    value = jObj.getValue();
                 }
                 else
                 {
@@ -477,7 +477,7 @@ public class Readers
                 }
                 else
                 {
-                    return bigDecimalFrom(valueObj.get("value"));
+                    return bigDecimalFrom(valueObj.getValue());
                 }
             }
 
@@ -555,7 +555,7 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = new StringBuilder((String) jObj.get("value"));
+                jObj.target = new StringBuilder((String) jObj.getValue());
                 return jObj.target;
             }
             throw new JsonIoException("StringBuilder missing 'value' field");
@@ -574,7 +574,7 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = new StringBuffer((String) jObj.get("value"));
+                jObj.target = new StringBuffer((String) jObj.getValue());
                 return jObj.target;
             }
             throw new JsonIoException("StringBuffer missing 'value' field");
@@ -652,7 +652,7 @@ public class Readers
                     if(parameterValueJsonObj.isLogicalPrimitive())
                         lParameterValues.add(parameterValueJsonObj.getPrimitiveValue());
                     else
-                        lParameterValues.add(parameterValueJsonObj.get("value"));
+                        lParameterValues.add(parameterValueJsonObj.getValue());
                 }
 
                 Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
