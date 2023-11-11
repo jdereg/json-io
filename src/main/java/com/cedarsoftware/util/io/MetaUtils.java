@@ -986,7 +986,7 @@ public class MetaUtils
             final int mods = constructor.getModifiers();
             final int otherMods = other.constructor.getModifiers();
 
-            // Rule 1: Favor public over non-public
+            // Rule 1: Visibility: favor public over non-public
             if (!Modifier.isPublic(mods) && Modifier.isPublic(otherMods)) {
                 return 1;
             }
@@ -994,7 +994,7 @@ public class MetaUtils
                 return -1;
             }
 
-            // Rule 2: Favor protected over private (will only reach this if neither constructor is public)
+            // Rule 2: Visibility: favor protected over private
             if (!Modifier.isProtected(mods) && Modifier.isProtected(otherMods)) {
                 return 1;
             }
@@ -1002,17 +1002,9 @@ public class MetaUtils
                 return -1;
             }
 
-            // Rule 3: Favor more arguments over less.
-            if (args.length < other.args.length) {
-                return 1;
-            }
-            else if (args.length > other.args.length) {
-                return -1;
-            }
-
-            // Rule 4: Favor fewer null values being passed in.
-            double score1 = scoreArgumentValues(args);
-            double score2 = scoreArgumentValues(other.args);
+            // Rule 3: Favor fewer null values being passed in.
+            long score1 = scoreArgumentValues(args);
+            long score2 = scoreArgumentValues(other.args);
             if (score1 < score2) {
                 return 1;
             }
@@ -1020,44 +1012,46 @@ public class MetaUtils
                 return -1;
             }
 
-            // Rule 5: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
+            // Rule 4: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
             // are dropped from the Set.
             String params1 = buildParameterTypeString(constructor);
             String params2 = buildParameterTypeString(other.constructor);
             return params1.compareTo(params2);
         }
-    }
 
-    /**
-     * The more non-null arguments you have, the higher your score.  1.0 would mean all args are not-null.
-     */
-    private static double scoreArgumentValues(Object[] args)
-    {
-        if (args.length == 0) {
-            return 0.0d;
-        }
-        
-        int nonNull = 0;
-
-        for (Object arg : args) {
-            if (arg != null) {
-                nonNull++;
-            }
-        }
-
-        return (double) nonNull / args.length;
-    }
-
-    private static String buildParameterTypeString(Constructor<?> constructor)
-    {
-        Class<?>[] paramTypes = constructor.getParameterTypes();
-        StringBuilder s = new StringBuilder();
-
-        for (int i=0; i < paramTypes.length; i++)
+        /**
+         * The more non-null arguments you have, the higher your score. 100 points for each non-null argument.
+         * 50 points for each parameter.  So non-null values are twice as high (100 points versus 50 points) as
+         * parameter "slots."
+         */
+        private long scoreArgumentValues(Object[] args)
         {
-            s.append(paramTypes[i].getName() + ".");
+            if (args.length == 0) {
+                return 0L;
+            }
+
+            long nonNull = 0;
+
+            for (Object arg : args) {
+                if (arg != null) {
+                    nonNull += 100L;
+                }
+            }
+
+            return nonNull + args.length * 50L;
         }
-        return s.toString();
+
+        private String buildParameterTypeString(Constructor<?> constructor)
+        {
+            Class<?>[] paramTypes = constructor.getParameterTypes();
+            StringBuilder s = new StringBuilder();
+
+            for (int i=0; i < paramTypes.length; i++)
+            {
+                s.append(paramTypes[i].getName() + ".");
+            }
+            return s.toString();
+        }
     }
 
     public static Object findAndConstructWithAppropriateConstructor(Class<?> c, Map<Class<?>, List<ParameterHint>> paramHints) {
