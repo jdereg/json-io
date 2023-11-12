@@ -5,6 +5,7 @@ import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
@@ -60,7 +61,7 @@ public class CalendarFactory implements JsonReader.ClassFactory {
             if (c == Calendar.class) {
                 calendar = Calendar.getInstance();
             } else {
-                calendar = (Calendar) MetaUtils.newInstance(c);
+                calendar = (Calendar) MetaUtils.newInstance(c, new ArrayList<>());
             }
 
             calendar.setTime(date);

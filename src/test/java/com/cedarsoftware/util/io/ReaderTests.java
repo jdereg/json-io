@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.stream.Stream;
 
@@ -31,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class ReaderTests {
     @Test
     void testNewInstance() {
-        Date d = (Date) MetaUtils.newInstance(Date.class);
-        Integer a = (Integer) MetaUtils.newInstance(Integer.class);
-        String x = (String) MetaUtils.newInstance(String.class);
+        Date d = (Date) MetaUtils.newInstance(Date.class, new ArrayList<>());
+        Integer a = (Integer) MetaUtils.newInstance(Integer.class, new ArrayList<>());
+        String x = (String) MetaUtils.newInstance(String.class, new ArrayList<>());
 
         assert d instanceof Date;
         assert a instanceof Integer;

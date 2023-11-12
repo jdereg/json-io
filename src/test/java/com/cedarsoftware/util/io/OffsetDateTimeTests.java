@@ -25,7 +25,6 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
         String json = loadJsonForTest("old-format-with-ref.json");
         NestedOffsetDateTime offsetDateTime = TestUtil.toJava(json);
 
-        System.out.println(offsetDateTime.date1);
         assertOffsetDateTime(offsetDateTime.date1, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
         assertOffsetDateTime(offsetDateTime.date2, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
         assertSame(offsetDateTime.date1.getOffset(), offsetDateTime.date2.getOffset());

@@ -819,63 +819,48 @@ public class MetaUtils
         if (argType.isPrimitive()) {
             return convert(argType, null);
         }
-
         if (allowNull) {
             return null;
         }
-
         if (prims.contains(argType)) {
             return convert(argType, null);
         }
-
         if (argType == String.class) {
             return "";
         }
-
         if (argType == Date.class) {
             return new Date();
         }
-
         if (List.class.isAssignableFrom(argType)) {
             return new ArrayList<>();
         }
-
         if (SortedSet.class.isAssignableFrom(argType)) {
             return new TreeSet<>();
         }
-
         if (Set.class.isAssignableFrom(argType)) {
             return new LinkedHashSet<>();
         }
-
         if (SortedMap.class.isAssignableFrom(argType)) {
             return new TreeMap<>();
         }
-
         if (Map.class.isAssignableFrom(argType)) {
             return new LinkedHashMap<>();
         }
-
         if (Collection.class.isAssignableFrom(argType)) {
             return new ArrayList<>();
         }
-
         if (Calendar.class.isAssignableFrom(argType)) {
             return Calendar.getInstance();
         }
-
         if (TimeZone.class.isAssignableFrom(argType)) {
             return TimeZone.getDefault();
         }
-
         if (argType == BigInteger.class) {
-            return BigInteger.TEN;
+            return BigInteger.ZERO;
         }
-
         if (argType == BigDecimal.class) {
-            return BigDecimal.TEN;
+            return BigDecimal.ZERO;
         }
-
         if (argType == StringBuilder.class) {
             return new StringBuilder();
         }
@@ -883,7 +868,7 @@ public class MetaUtils
             return new StringBuffer();
         }
         if (argType == Locale.class) {
-            return Locale.FRANCE;  // overwritten
+            return Locale.US;
         }
         if (argType == Class.class) {
             return String.class;
@@ -907,13 +892,13 @@ public class MetaUtils
             return ZoneId.systemDefault();
         }
         if (argType == AtomicBoolean.class) {
-            return new AtomicBoolean(true);
+            return new AtomicBoolean(false);
         }
         if (argType == AtomicInteger.class) {
-            return new AtomicInteger(7);
+            return new AtomicInteger(0);
         }
         if (argType == AtomicLong.class) {
-            return new AtomicLong(7L);
+            return new AtomicLong(0L);
         }
         if (argType == URL.class) {
             try {
@@ -961,14 +946,17 @@ public class MetaUtils
      * list will be the same length as the passed in parameterTypes list.
      */
     public static List<Object> matchArgumentsToParameters(Collection<Object> values, Parameter[] parameterTypes) {
-        if (values.isEmpty() || parameterTypes.length == 0) {
-            return new ArrayList<>();
-        }
         List<Object> answer = new ArrayList<>();
+        if (parameterTypes == null || parameterTypes.length == 0) {
+            return answer;
+        }
         List<Object> copyValues = new ArrayList<>(values);
 
-        for (Parameter paramType : parameterTypes) {
-            Object value = pickBestValue(paramType.getType(), copyValues);
+        for (Parameter parameter : parameterTypes) {
+            Object value = pickBestValue(parameter.getType(), copyValues);
+            if (value == null) {
+                value = getArgForType(parameter.getType(), false);
+            }
             answer.add(value);
         }
         return answer;
@@ -1141,6 +1129,17 @@ public class MetaUtils
     }
 
     public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
+        throwIfSecurityConcern(ProcessBuilder.class, c);
+        throwIfSecurityConcern(Process.class, c);
+        throwIfSecurityConcern(ClassLoader.class, c);
+        throwIfSecurityConcern(Constructor.class, c);
+        throwIfSecurityConcern(Method.class, c);
+        throwIfSecurityConcern(Field.class, c);
+        // JDK11+ remove the line below
+        if (c.getName().equals("java.lang.ProcessImpl"))
+        {
+            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
+        }
         final Constructor<?>[] constructors = c.getDeclaredConstructors();
         Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
         List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction

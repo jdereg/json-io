@@ -461,7 +461,7 @@ public abstract class Resolver
         else
         {
             // ClassFactory consulted above, no need to check it here.
-            mate = MetaUtils.newInstance(clazz);
+            mate = MetaUtils.newInstance(clazz, new ArrayList<>());
         }
 
         jsonObj.setTarget(mate);
