@@ -26,11 +26,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,7 +57,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.isPrivate;
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 
@@ -308,7 +307,6 @@ public class MetaUtils
 
     /**
      * Computes the inheritance distance between two classes/interfaces/primitive types.
-     *
      * @param source      The source class, interface, or primitive type.
      * @param destination The destination class, interface, or primitive type.
      * @return The number of steps from the source to the destination, or -1 if no path exists.
@@ -547,273 +545,6 @@ public class MetaUtils
         }
     }
 
-    /**
-     * <p>C language malloc() for Java
-     * </p><p>
-     * Create a new instance of the passed in Class.  This method will make a valiant effort to instantiate
-     * the passed in Class, including calling all of its constructors until successful.  The order they
-     * are tried are public with the fewest arguments first to private with the most arguments.  If, after
-     * exhausting all constructors, then it will attempt using the 'unsafe allocate' from Sun.  This step is
-     * optional - by default it will use this if on a Sun (Oracle) JVM unless MetaUtil.setUseUnsafe(false) is called.
-     * </p><p>
-     * This method will handle common interfaces, such as Collection, Map, etc. which commonly show up in
-     * parameterized types.  Any other interface passed to this method will cause a JsonIoException to be thrown.
-     * </p><p>
-     * To improve performance, when called a 2nd time for the same Class, the constructor that was successfully
-     * used to construct the instance will be retrieved from an internal cache.
-     * </p>
-     * @param c Class to instantiate
-     * @return an instance of the instantiated class.  This instance is intended to have its fields 'stuffed' by
-     * direct assignment, not called via setter methods.
-     * @throws JsonIoException if it cannot instantiate the passed in class.
-     */
-    @SuppressWarnings("unchecked")
-    public static Object newInstance(Class<?> c)
-    {
-        throwIfSecurityConcern(ProcessBuilder.class, c);
-        throwIfSecurityConcern(Process.class, c);
-        throwIfSecurityConcern(ClassLoader.class, c);
-        throwIfSecurityConcern(Constructor.class, c);
-        throwIfSecurityConcern(Method.class, c);
-        throwIfSecurityConcern(Field.class, c);
-        // JDK11+ remove the line below
-        if (c.getName().equals("java.lang.ProcessImpl"))
-        {
-            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
-        }
-
-        if (unmodifiableSortedMap.getClass().isAssignableFrom(c))
-        {
-            return new TreeMap<>();
-        }
-        if (unmodifiableMap.getClass().isAssignableFrom(c))
-        {
-            return new LinkedHashMap<>();
-        }
-        if (unmodifiableSortedSet.getClass().isAssignableFrom(c))
-        {
-            return new TreeSet<>();
-        }
-        if (unmodifiableSet.getClass().isAssignableFrom(c))
-        {
-            return new LinkedHashSet<>();
-        }
-        if (unmodifiableCollection.getClass().isAssignableFrom(c))
-        {
-            return new ArrayList<>();
-        }
-        if (Collections.EMPTY_LIST.getClass().equals(c)) {
-            return Collections.emptyList();
-        }
-
-        if (c.isInterface())
-        {
-            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
-        }
-
-        // Fetch constructor from cache
-        Object[] constructorInfo = constructors.get(c);
-        if (constructorInfo != null)
-        {   // Constructor was cached
-            Constructor<?> constructor = (Constructor<?>) constructorInfo[0];
-
-            if (constructor == null && useUnsafe)
-            {   // null constructor --> set to null when object instantiated with unsafe.allocateInstance()
-                try
-                {
-                    return unsafe.allocateInstance(c);
-                }
-                catch (Exception e)
-                {
-                    // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    throw new JsonIoException("Could not instantiate " + c.getName(), e);
-                }
-            }
-
-            if (constructor == null)
-            {
-                throw new JsonIoException("No constructor found to instantiate " + c.getName());
-            }
-
-            Boolean useNull = (Boolean) constructorInfo[1];
-            Class<?>[] paramTypes = constructor.getParameterTypes();
-            if (paramTypes.length == 0)
-            {
-                try
-                {
-                    return constructor.newInstance();
-                }
-                catch (Exception e)
-                {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                    throw new JsonIoException("Could not instantiate " + c.getName(), e);
-                }
-            }
-            Object[] values = fillArgs(paramTypes, useNull);
-            try
-            {
-                return constructor.newInstance(values);
-            }
-            catch (Exception e)
-            {   // Should never happen, as the code that fetched the constructor was able to instantiate it once already
-                throw new JsonIoException("Could not instantiate " + c.getName(), e);
-            }
-        }
-
-        Object[] ret = newInstanceEx(c);
-        // Cache constructor so it can be quickly obtained next time.
-        constructors.put(c, new Object[]{ret[1], ret[2]});
-        return ret[0];
-    }
-
-    /**
-     * Returns an array with the following:
-     * <ol>
-     *     <li>object instance</li>
-     *     <li>constructor</li>
-     *     <li>a Boolean, true if all constructor arguments are to be "null"</li>
-     * </ol>
-     */
-    private static Object[] newInstanceEx(Class<?> c)
-    {
-        try
-        {
-            Constructor<?> constructor = c.getConstructor(emptyClassArray);
-            return new Object[] {constructor.newInstance(), constructor, true};
-        }
-        catch (Exception e)
-        {
-            // OK, this class does not have a public no-arg constructor.  Instantiate with
-            // first constructor found, filling in constructor values with null or
-            // defaults for primitives.
-            return tryOtherConstruction(c);
-        }
-    }
-
-    /**
-     * Brute force attempt to locate a constructor to construct the passed in Class.  This involves trying all
-     * constructors, public, protected, package-private, and private.  It will try with null arguments as well
-     * as it will make a 2nd attempt with populated values for some known types (Collection classes, Dates, Strings,
-     * primitive wrappers, TimeZone, Calendar).
-     * @param c Class to instantiate
-     * @return an Object[] containing three (3) elements.  Position 0 is the instance of the class, position 1
-     * is the constructor used, and position 2 indicates whether fillArgs was called with useNull or !useNull.
-     */
-    static Object[] tryOtherConstruction(Class<?> c)
-    {
-        Constructor<?>[] constructors = c.getDeclaredConstructors();
-        if (constructors.length == 0)
-        {
-            throw new JsonIoException("Cannot instantiate '" + c.getName() + "' - Primitive, interface, array[] or void");
-        }
-
-        // Sort constructors - public, protected, private, package-private
-        List<Constructor<?>> constructorList = Arrays.asList(constructors);
-        constructorList.sort((c1, c2) -> {
-            int c1Vis = c1.getModifiers();
-            int c2Vis = c2.getModifiers();
-
-            if (c1Vis == c2Vis)
-            {   // both are public, protected, private, etc.  Compare by arguments.
-                return compareConstructors(c1, c2);
-            }
-
-            if (isPublic(c1Vis) != isPublic(c2Vis))
-            {   // favor 'public' as first
-                return isPublic(c1Vis) ? -1 : 1;
-            }
-
-            if (isProtected(c1Vis) != isProtected(c2Vis))
-            {   // favor protected 2nd
-                return isProtected(c1Vis) ? -1 : 1;
-            }
-
-            if (isPrivate(c1Vis) != isPrivate(c2Vis))
-            {   // favor private last
-                return isPrivate(c1Vis) ? 1 : -1;
-            }
-
-            return 0;
-        });
-
-        // Try each constructor (public, protected, private, package-private) with null values for non-primitives.
-        for (Constructor<?> constructor : constructorList)
-        {
-            trySetAccessible(constructor);
-            Class<?>[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, true);
-            try
-            {
-                return new Object[] {constructor.newInstance(values), constructor, true};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        // Try each constructor (public, protected, private, package-private) with non-null values for non-primitives.
-        for (Constructor<?> constructor : constructorList)
-        {
-            if (!trySetAccessible(constructor))
-            {
-                continue;
-            }
-            Class<?>[] argTypes = constructor.getParameterTypes();
-            Object[] values = fillArgs(argTypes, false);
-            try
-            {
-                return new Object[] {constructor.newInstance(values), constructor, false};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        // Try instantiation via unsafe
-        // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when the class is not initialized
-        // Thats why we try ordinary constructors first
-        if (useUnsafe)
-        {
-            try
-            {
-                return new Object[]{unsafe.allocateInstance(c), null, null};
-            }
-            catch (Exception ignored)
-            { }
-        }
-
-        throw new JsonIoException("Could not instantiate " + c.getName() + " using any constructor");
-    }
-
-    /**
-     * When two constructors have the same access type (both public, both private, etc.)
-     * then compare constructors by parameter length (fewer params comes before more params).
-     * If parameter count is the same, then compare by parameter Class names.  If those are equal,
-     * which should never happen, then the constructors are equal.
-     */
-    private static int compareConstructors(Constructor<?> c1, Constructor<?> c2)
-    {
-        Class<?>[] c1ParamTypes = c1.getParameterTypes();
-        Class<?>[] c2ParamTypes = c2.getParameterTypes();
-        if (c1ParamTypes.length != c2ParamTypes.length)
-        {   // negative value if c1 has less (less parameters will be chosen ahead of more), positive value otherwise.
-            return c1ParamTypes.length - c2ParamTypes.length;
-        }
-
-        // Has same number of parameters.s
-        int len = c1ParamTypes.length;
-        for (int i=0; i < len; i++)
-        {
-            Class<?> class1 = c1ParamTypes[i];
-            Class<?> class2 = c2ParamTypes[i];
-            int compare = class1.getName().compareTo(class2.getName());
-            if (compare != 0)
-            {
-                return compare;
-            }
-        }
-
-        return 0;
-    }
-
-
     static Object getArgForType(Class<?> argType, boolean allowNull) {
 
         if (argType.isPrimitive()) {
@@ -830,6 +561,9 @@ public class MetaUtils
         }
         if (argType == Date.class) {
             return new Date();
+        }
+        if (EnumSet.class.isAssignableFrom(argType)) {
+            return null;
         }
         if (List.class.isAssignableFrom(argType)) {
             return new ArrayList<>();
@@ -911,29 +645,10 @@ public class MetaUtils
             return new Object();
         }
         if (argType.isArray()) {
-            return new Object[0];
+            return Array.newInstance(argType.getComponentType(), 0);
         }
 
         return null;
-    }
-
-    /**
-     * Return an Object[] of instance values that can be passed into a given Constructor.  This method
-     * will return an array of nulls if useNull is true, otherwise it will return sensible values for
-     * primitive classes, and null for non-known primitive / primitive wrappers.  This class is used
-     * when attempting to call constructors on Java objects to get them instantiated, since there is no
-     * 'malloc' in Java.
-     */
-    static Object[] fillArgs(Class<?>[] argTypes, boolean useNull)
-    {
-        final Object[] values = new Object[argTypes.length];
-        for (int i = 0; i < argTypes.length; i++)
-        {
-            final Class<?> argType = argTypes[i];
-            values[i] = getArgForType(argType, useNull);
-        }
-
-        return values;
     }
 
     /**
@@ -962,6 +677,16 @@ public class MetaUtils
         return answer;
     }
 
+    /**
+     * Pick the best value from the list that has the least 'distance' from the passed in Class 'param.'
+     * Note: this method has a side effect - it will remove the value that was chosen from the list.
+     * Note: If none of the instances in the 'values' list are instances of the 'param class,
+     * then the values list is not modified.
+     * @param param Class driving the choice.
+     * @param values List of potential argument values to pick from, that would best match the param (class).
+     * @return a the value from the 'values' list that best matched the 'param,' or null if there
+     * none of the values were assignable to the 'param'.
+     */
     private static Object pickBestValue(Class<?> param, List<Object> values) {
         int[] distances = new int[values.size()];
         int i=0;
@@ -1015,11 +740,10 @@ public class MetaUtils
 
             if (!fieldsAlreadyInHints.contains(entry.getKey().toString())) {
                 Object o = entry.getValue();
-                Object value = null;
 
                 if (o instanceof JsonObject) {
                     JsonObject sub = (JsonObject) o;
-                    value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
+                    Object value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
 
                     if (value != null) {
                         if (sub.getType() != null) {
@@ -1128,7 +852,29 @@ public class MetaUtils
         }
     }
 
+    /**
+     * Create a new instance of the passed in class c.  You can optionally pass in argument values that will
+     * be best-matched to a constructor on c.  You can pass in null or an empty list, in which case, other
+     * techniques will be used to attempt to instantiate the class.  For security reasons, Process, ClassLoader,
+     * ProcessBuilder, Constructor, Method, and Field cannot be instantiated.
+     * @param c Class to instantiate.
+     * @param argumentValues List of values to supply to a constructor on 'c'.  The constructor chosen on 'c'
+     *                       will be the one with a combination of the most fields that are satisfied with
+     *                       non-null values from the 'argumentsValues.'  The method will attempt to use values
+     *                       from the list as constructor arguments for the passed in class c, ordering them
+     *                       to best-fit the constructor, by matching the class type of the argument values
+     *                       to the class types of the parameters on 'c' constructors.  It will use all
+     *                       constructors exhaustively, until it is successful.  If not, then it will look at
+     *                       the 'unsafe' setting and attempt to use that.
+     * @return an instance of the passed in class.
+     * @throws JsonIoException if it could not instantiate the passed in class.  In that case, it is best to
+     * create a ClassFactory for this specific class, and add that to the ReadOptions as an instantiator
+     * that is associated to the class 'c' that is not constructing for you.
+     */
     public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
+        if (argumentValues == null) {
+            argumentValues = new ArrayList<>();
+        }
         throwIfSecurityConcern(ProcessBuilder.class, c);
         throwIfSecurityConcern(Process.class, c);
         throwIfSecurityConcern(ClassLoader.class, c);
@@ -1136,10 +882,35 @@ public class MetaUtils
         throwIfSecurityConcern(Method.class, c);
         throwIfSecurityConcern(Field.class, c);
         // JDK11+ remove the line below
-        if (c.getName().equals("java.lang.ProcessImpl"))
-        {
+        if (c.getName().equals("java.lang.ProcessImpl")) {
             throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
         }
+
+        if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
+            return new TreeMap<>();
+        }
+        if (unmodifiableMap.getClass().isAssignableFrom(c)) {
+            return new LinkedHashMap<>();
+        }
+        if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
+            return new TreeSet<>();
+        }
+        if (unmodifiableSet.getClass().isAssignableFrom(c)) {
+            return new LinkedHashSet<>();
+        }
+        if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
+            return new ArrayList<>();
+        }
+        if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
+            return new ArrayList<>();
+        }
+        if (Collections.EMPTY_LIST.getClass().equals(c)) {
+            return Collections.emptyList();
+        }
+        if (c.isInterface()) {
+            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
+        }
+        
         final Constructor<?>[] constructors = c.getDeclaredConstructors();
         Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
         List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
@@ -1154,13 +925,25 @@ public class MetaUtils
 
         for (ConstructorWithValues constructorWithValues : constructorOrder) {
             Constructor<?> constructor = constructorWithValues.constructor;
+            MetaUtils.trySetAccessible(constructor);
 
             try {
                 // Be nice to person debugging
                 Object o = constructor.newInstance(constructorWithValues.args);
                 return o;
             }
-            catch (Exception ignore) {
+            catch (Exception ignored) {
+            }
+        }
+
+        // Try instantiation via unsafe.
+        // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
+        // the class is not initialized, thats why we try ordinary constructors first.
+        if (useUnsafe) {
+            try {
+                return unsafe.allocateInstance(c);
+            }
+            catch (Exception ignored) {
             }
         }
 

@@ -159,7 +159,7 @@ public class JsonReader implements Closeable
          */
         default Object newInstance(Class<?> c, JsonObject jObj)
         {
-            return MetaUtils.newInstance(c, new ArrayList<>());
+            return MetaUtils.newInstance(c, null);  // can add constructor arg values (pull from jObj)
         }
 
         /**

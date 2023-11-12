@@ -88,7 +88,7 @@ public class SunMiscTest
         }
         catch (JsonIoException e)
         {
-            assert e.getMessage().toLowerCase().contains("no constructor found");
+            assert e.getMessage().toLowerCase().contains("unable to instantiate");
         }
 
 

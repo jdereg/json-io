@@ -173,7 +173,7 @@ public class Readers
                 // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
                 // the special Calendar class, don't try to do that via a custom reader.  That is why only
                 // MetaUtils.newInstance() is used below.
-                Calendar calendar = (Calendar) MetaUtils.newInstance(c, new ArrayList<>());
+                Calendar calendar = (Calendar) MetaUtils.newInstance(c, null); // can add constructor arg values
                 calendar.setTime(date);
                 jObj.setFinishedTarget(calendar, true);
                 String zone = (String) jObj.get("zone");

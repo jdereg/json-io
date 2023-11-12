@@ -133,7 +133,6 @@ public class ReadOptionsBuilder {
 
         assignInstantiator(java.sql.Date.class, new SqlDateFactory());
 
-
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
         assignInstantiator("sun.util.calendar.ZoneInfo", timeZoneFactory);
@@ -163,7 +162,6 @@ public class ReadOptionsBuilder {
 
         // we can just ignore it - we are at java < 16 now. This is for code compatibility Java<16
         addPossiblePermanentReader(BASE_READERS, "java.lang.Record", Readers.RecordReader::new);
-
 
         // Coerced Types
         addPermanentCoercedType("java.util.Arrays$ArrayList", ArrayList.class);

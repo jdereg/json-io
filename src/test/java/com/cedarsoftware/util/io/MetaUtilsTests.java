@@ -87,10 +87,8 @@ public class MetaUtilsTests {
     @MethodSource("ensureFillArgsInstanceOf")
     void testFillArgs_ensureInstanceOf(final Class<?> input, final List<Class<?>> expected) {
 
-        final Object[] actual = MetaUtils.fillArgs(new Class[]{input}, false);
-        assertThat(actual).hasSize(1);
-
-        expected.forEach(e -> assertThat(actual[0]).isInstanceOf(e));
+        Object obj = MetaUtils.getArgForType(input, false);
+        assertThat(obj).isInstanceOf(input);
     }
 
     @Test
@@ -109,17 +107,6 @@ public class MetaUtilsTests {
         }
 
         assertThat((Character) MetaUtils.convert(Character.class, '0')).isEqualTo(Character.valueOf('0'));
-    }
-
-    @Test
-    public void tryOtherConstructors() {
-        try {
-            MetaUtils.tryOtherConstruction(Byte.TYPE);
-        } catch (JsonIoException e) {
-            assert e.getMessage().toLowerCase().contains("cannot instantiate");
-            assert e.getMessage().toLowerCase().contains("byte");
-        }
-
     }
 
     @Test

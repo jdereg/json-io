@@ -408,7 +408,7 @@ public abstract class Resolver
             {
                 // ClassFactory already consulted above, likely regular business/data classes.
                 // If the newInstance(c) fails, it throws a JsonIoException.
-                mate = MetaUtils.newInstance(c);
+                mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
             }
         }
         jsonObj.setTarget(mate);
@@ -455,13 +455,13 @@ public abstract class Resolver
             }
             else
             {
-                mate = MetaUtils.newInstance(unknownClass);
+                mate = MetaUtils.newInstance(unknownClass, null);   // can add constructor arg values
             }
         }
         else
         {
             // ClassFactory consulted above, no need to check it here.
-            mate = MetaUtils.newInstance(clazz, new ArrayList<>());
+            mate = MetaUtils.newInstance(clazz, null);  // can add constructor arg values
         }
 
         jsonObj.setTarget(mate);
@@ -515,7 +515,7 @@ public abstract class Resolver
             return null;
         }
 
-        return MetaUtils.newInstance(clazz);
+        return MetaUtils.newInstance(clazz, null);  // can add constructor arg values
     }
 
     protected JsonReader.JsonClassReader getCustomReader(Class c)
