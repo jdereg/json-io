@@ -81,17 +81,14 @@ import static java.lang.reflect.Modifier.isPublic;
  */
 public class MetaUtils
 {
-    enum Dumpty {}
-
     private MetaUtils () {}
-
+    enum Dumpty {}
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Pattern extraQuotes = Pattern.compile("(\"*)([^\"]*)(\"*)");
-    private static final Class<?>[] emptyClassArray = new Class[]{};
-    private static final ConcurrentMap<Class<?>, Object[]> constructors = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class<?>, Constructor<?>> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
     private static final SortedSet<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
@@ -872,9 +869,6 @@ public class MetaUtils
      * that is associated to the class 'c' that is not constructing for you.
      */
     public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
-        if (argumentValues == null) {
-            argumentValues = new ArrayList<>();
-        }
         throwIfSecurityConcern(ProcessBuilder.class, c);
         throwIfSecurityConcern(Process.class, c);
         throwIfSecurityConcern(ClassLoader.class, c);
@@ -886,64 +880,96 @@ public class MetaUtils
             throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
         }
 
-        if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
-            return new TreeMap<>();
+        if (argumentValues == null) {
+            argumentValues = new ArrayList<>();
         }
-        if (unmodifiableMap.getClass().isAssignableFrom(c)) {
-            return new LinkedHashMap<>();
-        }
-        if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
-            return new TreeSet<>();
-        }
-        if (unmodifiableSet.getClass().isAssignableFrom(c)) {
-            return new LinkedHashSet<>();
-        }
-        if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
-            return new ArrayList<>();
-        }
-        if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
-            return new ArrayList<>();
-        }
-        if (Collections.EMPTY_LIST.getClass().equals(c)) {
-            return Collections.emptyList();
-        }
-        if (c.isInterface()) {
-            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
-        }
-        
-        final Constructor<?>[] constructors = c.getDeclaredConstructors();
-        Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
-        List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
+        Constructor<?> cachedConstructor = constructors.get(c);
+        if (cachedConstructor == null)
+        {
+            if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
+                return new TreeMap<>();
+            }
+            if (unmodifiableMap.getClass().isAssignableFrom(c)) {
+                return new LinkedHashMap<>();
+            }
+            if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
+                return new TreeSet<>();
+            }
+            if (unmodifiableSet.getClass().isAssignableFrom(c)) {
+                return new LinkedHashSet<>();}
+            if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
+                return new ArrayList<>();
+            }
+            if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
+                return new ArrayList<>();
+            }
+            if (Collections.EMPTY_LIST.getClass().equals(c)) {
+                return Collections.emptyList();
+            }
+            if (c.isInterface()) {
+                throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
+            }
 
-        // Spin through all constructors, adding the constructor and the best match of arguments for it, as an
-        // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
-        for (Constructor<?> constructor : constructors) {
-            Parameter[] parameters = constructor.getParameters();
+            final Constructor<?>[] declaredConstructors = c.getDeclaredConstructors();
+            Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
+            List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
+
+            // Spin through all constructors, adding the constructor and the best match of arguments for it, as an
+            // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
+            for (Constructor<?> constructor : declaredConstructors) {
+                Parameter[] parameters = constructor.getParameters();
+                List<Object> arguments = matchArgumentsToParameters(argValues, parameters);
+                constructorOrder.add(new ConstructorWithValues(constructor, arguments.toArray()));
+            }
+
+            for (ConstructorWithValues constructorWithValues : constructorOrder) {
+                Constructor<?> constructor = constructorWithValues.constructor;
+                MetaUtils.trySetAccessible(constructor);
+
+                try {
+                    // Be nice to person debugging
+                    Object o = constructor.newInstance(constructorWithValues.args);
+                    constructors.put(c, constructor);   // cache constructor search effort.
+                    return o;
+                }
+                catch (Exception ignored) {
+                }
+            }
+
+            // Try instantiation via unsafe.
+            // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
+            // the class is not initialized, that's why we try ordinary constructors first.
+            if (useUnsafe) {
+                try {
+                    Object o = unsafe.allocateInstance(c);
+                    return o;
+                }
+                catch (Exception ignored) {
+                }
+            }
+        } else {
+            List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
+            Parameter[] parameters = cachedConstructor.getParameters();
             List<Object> arguments = matchArgumentsToParameters(argValues, parameters);
-            constructorOrder.add(new ConstructorWithValues(constructor, arguments.toArray()));
-        }
-
-        for (ConstructorWithValues constructorWithValues : constructorOrder) {
-            Constructor<?> constructor = constructorWithValues.constructor;
-            MetaUtils.trySetAccessible(constructor);
 
             try {
                 // Be nice to person debugging
-                Object o = constructor.newInstance(constructorWithValues.args);
+                Object o = cachedConstructor.newInstance(arguments.toArray());
                 return o;
             }
             catch (Exception ignored) {
             }
-        }
 
-        // Try instantiation via unsafe.
-        // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
-        // the class is not initialized, thats why we try ordinary constructors first.
-        if (useUnsafe) {
-            try {
-                return unsafe.allocateInstance(c);
-            }
-            catch (Exception ignored) {
+            // Try instantiation via unsafe.
+            // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
+            // the class is not initialized, thats why we try ordinary constructors first.
+            if (useUnsafe) {
+                try {
+                    Object o = unsafe.allocateInstance(c);
+                    return o;
+                }
+                catch (Exception ignored) {
+                }
             }
         }
 

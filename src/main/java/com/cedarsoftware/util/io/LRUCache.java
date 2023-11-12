@@ -1,92 +1,165 @@
 package com.cedarsoftware.util.io;
-import java.util.HashMap;
-import java.util.Map;
 
-public class LRUCache<K, V> {
-    private final Map<K, Node<K, V>> cacheMap;
-    private final DoublyLinkedList<K, V> doublyLinkedList;
-    private final int capacity;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * This class provides a Least Recently Used (LRU) cache API that will evict the least recently used items,
+ * once a threshold is met.  It implements the Map interface for convenience.
+ * <p>
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
+ */
+public class LRUCache<K, V> implements Map<K, V> {
+    private final Map<K, V> cache;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public LRUCache(int capacity) {
-        this.capacity = capacity;
-        this.cacheMap = new HashMap<>();
-        this.doublyLinkedList = new DoublyLinkedList<>();
-    }
-
-    public V get(K key) {
-        if (cacheMap.containsKey(key)) {
-            Node<K, V> node = cacheMap.get(key);
-            doublyLinkedList.moveToHead(node);
-            return node.value;
-        }
-        return null;
-    }
-
-    public void put(K key, V value) {
-        if (cacheMap.containsKey(key)) {
-            Node<K, V> node = cacheMap.get(key);
-            node.value = value;
-            doublyLinkedList.moveToHead(node);
-        } else {
-            if (cacheMap.size() == capacity) {
-                K removedKey = doublyLinkedList.removeTail();
-                cacheMap.remove(removedKey);
+        this.cache = Collections.synchronizedMap(new LinkedHashMap<K, V>(capacity, 0.75f, true) {
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > capacity;
             }
-            Node<K, V> newNode = new Node<>(key, value);
-            cacheMap.put(key, newNode);
-            doublyLinkedList.addToHead(newNode);
+        });
+    }
+
+    // Implement Map interface
+    public int size() {
+        lock.readLock().lock();
+        try {
+            return cache.size();
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
-    private static class Node<K, V> {
-        K key;
-        V value;
-        Node<K, V> prev;
-        Node<K, V> next;
-
-        Node(K key, V value) {
-            this.key = key;
-            this.value = value;
+    public boolean isEmpty() {
+        lock.readLock().lock();
+        try {
+            return cache.isEmpty();
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
-    private static class DoublyLinkedList<K, V> {
-        private final Node<K, V> head;
-        private final Node<K, V> tail;
-
-        DoublyLinkedList() {
-            head = new Node<>(null, null);
-            tail = new Node<>(null, null);
-            head.next = tail;
-            tail.prev = head;
+    public boolean containsKey(Object key) {
+        lock.readLock().lock();
+        try {
+            return cache.containsKey(key);
+        } finally {
+            lock.readLock().unlock();
         }
+    }
 
-        void moveToHead(Node<K, V> node) {
-            removeNode(node);
-            addToHead(node);
+    public boolean containsValue(Object value) {
+        lock.readLock().lock();
+        try {
+            return cache.containsValue(value);
+        } finally {
+            lock.readLock().unlock();
         }
+    }
 
-        void addToHead(Node<K, V> node) {
-            node.prev = head;
-            node.next = head.next;
-            head.next.prev = node;
-            head.next = node;
+    public V get(Object key) {
+        lock.readLock().lock();
+        try {
+            return cache.get(key);
+        } finally {
+            lock.readLock().unlock();
         }
+    }
 
-        void removeNode(Node<K, V> node) {
-            Node<K, V> prevNode = node.prev;
-            Node<K, V> nextNode = node.next;
-            prevNode.next = nextNode;
-            nextNode.prev = prevNode;
+    public V put(K key, V value) {
+        lock.writeLock().lock();
+        try {
+            return cache.put(key, value);
+        } finally {
+            lock.writeLock().unlock();
         }
+    }
 
-        K removeTail() {
-            if (tail.prev == head) {
+    public V remove(Object key) {
+        lock.writeLock().lock();
+        try {
+            return cache.remove(key);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void putAll(Map<? extends K, ? extends V> m) {
+        lock.writeLock().lock();
+        try {
+            cache.putAll(m);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public void clear() {
+        lock.writeLock().lock();
+        try {
+            cache.clear();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public Set<K> keySet() {
+        lock.readLock().lock();
+        try {
+            return cache.keySet();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public Collection<V> values() {
+        lock.readLock().lock();
+        try {
+            return cache.values();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public Set<Map.Entry<K, V>> entrySet() {
+        lock.readLock().lock();
+        try {
+            return cache.entrySet();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    public V putIfAbsent(K key, V value) {
+        lock.writeLock().lock();
+        try {
+            V existingValue = cache.get(key);
+            if (existingValue == null) {
+                cache.put(key, value);
                 return null;
             }
-            Node<K, V> tailItem = tail.prev;
-            removeNode(tailItem);
-            return tailItem.key;
+            return existingValue;
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 }

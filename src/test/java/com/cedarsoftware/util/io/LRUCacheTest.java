@@ -3,11 +3,19 @@ package com.cedarsoftware.util.io;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-class LRUCacheTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public class LRUCacheTest {
 
     private LRUCache<Integer, String> lruCache;
 
@@ -17,78 +25,142 @@ class LRUCacheTest {
     }
 
     @Test
-    void shouldRetrieveExistingItem() {
-        lruCache.put(1, "Item1");
-        assertEquals("Item1", lruCache.get(1), "Retrieved item should match the stored item.");
+    void testPutAndGet() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+        lruCache.put(3, "C");
+
+        assertEquals("A", lruCache.get(1));
+        assertEquals("B", lruCache.get(2));
+        assertEquals("C", lruCache.get(3));
     }
 
     @Test
-    void shouldReturnNullForNonExistingItem() {
-        assertNull(lruCache.get(99), "Retrieving a non-existing item should return null.");
+    void testEvictionPolicy() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+        lruCache.put(3, "C");
+        lruCache.get(1);
+        lruCache.put(4, "D");
+
+        assertNull(lruCache.get(2));
+        assertEquals("A", lruCache.get(1));
     }
 
     @Test
-    void shouldInsertNewItem() {
-        lruCache.put(2, "Item2");
-        assertEquals("Item2", lruCache.get(2), "The inserted item should be retrievable.");
+    void testSize() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+
+        assertEquals(2, lruCache.size());
     }
 
     @Test
-    void shouldUpdateExistingItem() {
-        lruCache.put(1, "Item1");
-        lruCache.put(1, "NewItem1");
-        assertEquals("NewItem1", lruCache.get(1), "The updated item should have the new value.");
+    void testIsEmpty() {
+        assertTrue(lruCache.isEmpty());
+
+        lruCache.put(1, "A");
+
+        assertFalse(lruCache.isEmpty());
     }
 
     @Test
-    void shouldRemoveOldestItemWhenCapacityIsExceeded() {
-        lruCache.put(1, "Item1");
-        lruCache.put(2, "Item2");
-        lruCache.put(3, "Item3");
-        lruCache.put(4, "Item4"); // This should evict key 1
-        assertNull(lruCache.get(1), "The oldest item should be evicted when capacity is exceeded.");
+    void testRemove() {
+        lruCache.put(1, "A");
+        lruCache.remove(1);
+
+        assertNull(lruCache.get(1));
     }
 
     @Test
-    void shouldUpdateRecentlyUsedStatusOnRetrieval() {
-        lruCache.put(1, "Item1");
-        lruCache.put(2, "Item2");
-        lruCache.put(3, "Item3");
-        lruCache.get(1); // This should make key 1 the most recently used
-        lruCache.put(4, "Item4"); // This should evict key 2
-        assertNull(lruCache.get(2), "Least recently used item should be evicted.");
-        assertNotNull(lruCache.get(1), "Recently accessed item should not be evicted.");
+    void testContainsKey() {
+        lruCache.put(1, "A");
+
+        assertTrue(lruCache.containsKey(1));
+        assertFalse(lruCache.containsKey(2));
     }
 
     @Test
-    void shouldInsertItemsUpToCapacity() {
-        lruCache.put(1, "Item1");
-        lruCache.put(2, "Item2");
-        lruCache.put(3, "Item3");
-        assertNotNull(lruCache.get(1));
-        assertNotNull(lruCache.get(2));
-        assertNotNull(lruCache.get(3));
+    void testContainsValue() {
+        lruCache.put(1, "A");
+
+        assertTrue(lruCache.containsValue("A"));
+        assertFalse(lruCache.containsValue("B"));
     }
 
     @Test
-    void shouldInsertItemsBeyondCapacity() {
-        lruCache.put(1, "Item1");
-        lruCache.put(2, "Item2");
-        lruCache.put(3, "Item3");
-        lruCache.put(4, "Item4");
-        assertNull(lruCache.get(1), "The first item should be evicted when a fourth is inserted.");
+    void testKeySet() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+
+        assertTrue(lruCache.keySet().contains(1));
+        assertTrue(lruCache.keySet().contains(2));
     }
 
     @Test
-    void shouldAllowNullKeysAndValuesIfSupported() {
-        lruCache.put(null, "NullKeyItem");
-        assertEquals("NullKeyItem", lruCache.get(null), "Should retrieve item with null key.");
-        lruCache.put(5, null);
-        assertNull(lruCache.get(5), "Should allow null values.");
+    void testValues() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+
+        assertTrue(lruCache.values().contains("A"));
+        assertTrue(lruCache.values().contains("B"));
     }
 
-    // Additional tests could include:
-    // - Testing for concurrent modifications
-    // - Ensuring the cache behaves correctly after many insertions and retrievals
-    // - Verifying the internal structure of the cache (like the order of the doubly linked list)
+    @Test
+    void testClear() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+        lruCache.clear();
+
+        assertTrue(lruCache.isEmpty());
+    }
+
+    @Test
+    void testPutAll() {
+        Map<Integer, String> map = new LinkedHashMap<>();
+        map.put(1, "A");
+        map.put(2, "B");
+        lruCache.putAll(map);
+
+        assertEquals("A", lruCache.get(1));
+        assertEquals("B", lruCache.get(2));
+    }
+
+    @Test
+    void testEntrySet() {
+        lruCache.put(1, "A");
+        lruCache.put(2, "B");
+
+        assertEquals(2, lruCache.entrySet().size());
+    }
+
+    @Test
+    void testPutIfAbsent() {
+        lruCache.putIfAbsent(1, "A");
+        lruCache.putIfAbsent(1, "B");
+
+        assertEquals("A", lruCache.get(1));
+    }
+
+    @Test
+    void testConcurrency() throws InterruptedException {
+        ExecutorService service = Executors.newFixedThreadPool(3);
+
+        // Perform a mix of put and get operations from multiple threads
+        for (int i = 0; i < 10000; i++) {
+            final int key = i % 3;  // Keys will be 0, 1, 2
+            final String value = "Value" + i;
+
+            service.submit(() -> lruCache.put(key, value));
+            service.submit(() -> lruCache.get(key));
+        }
+
+        service.shutdown();
+        assertTrue(service.awaitTermination(1, TimeUnit.MINUTES));
+
+        // Assert the final state of the cache
+        assertEquals(3, lruCache.size());
+        Set<Integer> keys = lruCache.keySet();
+        assertTrue(keys.contains(0) || keys.contains(1) || keys.contains(2));
+    }
 }

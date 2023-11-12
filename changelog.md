@@ -1,6 +1,13 @@
 ### Revision History
+* 4.17.0
+  * Java class instantiation has been improved and the related code has been refactored to a much better state.
+  * More built-in types are moving to use the ClassFactory and JsonClassWriter, simplifying the code base further.
+  * Continuing to refine the JsonReader/JsonWriter API, Deprecated older redundant methods.  
+  * There will be more releases of the 4.x branch, including support for specifying a root class to load from, removing the @type output for root fields (Issue #122, #150), support for field names without quotes and JSON comments, to name a few.
+  * Upcoming version 5.0.0 will drop the dedicated methods.  
+  * Upcoming version 6.0.0 will move to JDK 11 syntax.  
 * 4.16.0
-  * `JsonReader/JSonWriter` Options are now specified using `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build().`
+  * `JsonReader/JsonWriter` Options are now specified using `ReadOptionsBuilder.build()` and `WriteOptionsBuilder.build().`
   * For improved security, key JDK classes like `ClassLoader,` `Process` (and derived classes), `Method`, `Field`, `Constructor` and others are not serialized.
   * Fixed Issue #185 Serializing/deserializing `SingletonMap/List/Set.`
   * Performance improvement: Reads and Writes are much faster due to improved low-level stream handling.  More to come on read performance improvements.
