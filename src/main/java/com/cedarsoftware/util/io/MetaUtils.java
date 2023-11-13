@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -865,7 +864,8 @@ public class MetaUtils
             argumentValues = new ArrayList<>();
         }
 
-        Constructor<?> cachedConstructor = constructors.get(createCacheKey(c, argumentValues));
+        final String cacheKey = createCacheKey(c, argumentValues);
+        Constructor<?> cachedConstructor = constructors.get(cacheKey);
         if (cachedConstructor == null)
         {
             if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
@@ -908,8 +908,7 @@ public class MetaUtils
                     MetaUtils.trySetAccessible(constructor);
                     // Be nice to person debugging
                     Object o = constructor.newInstance(constructorWithValues.args);
-                    String key = createCacheKey(c, Arrays.asList(constructorWithValues.args));
-                    constructors.put(key, constructor);   // cache constructor search effort.
+                    constructors.put(cacheKey, constructor);   // cache constructor search effort.
                     return o;
                 }
                 catch (Exception ignored) {
