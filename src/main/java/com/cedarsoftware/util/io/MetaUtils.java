@@ -129,8 +129,8 @@ public class MetaUtils
         DIRECT_CLASS_MAPPING.put(Instant.class, Instant::now);
 
         // order is important
-        // TODO:  These are generic isAssignables. We could let people customize, but probably dno't want them to
-        // TODO: change teh defaults because of ordering.
+        // TODO: These are generic isAssignables. We could let people customize, but probably don't want them to
+        // TODO: change the defaults because of ordering.
         ASSIGNABLE_CLASS_MAPPING.put(EnumSet.class, () -> null);
         ASSIGNABLE_CLASS_MAPPING.put(List.class, ArrayList::new);
         ASSIGNABLE_CLASS_MAPPING.put(SortedSet.class, TreeSet::new);
@@ -584,9 +584,6 @@ public class MetaUtils
             throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
         }
     }
-
-    private static final Locale REPLACEABLE_LOCALE = Locale.getDefault();
-    private static final TimeZone REPLACEABLE_TIMEZONE = TimeZone.getDefault();
 
     static Object getArgForType(Class<?> argType) {
         if (argType.isPrimitive()) {
