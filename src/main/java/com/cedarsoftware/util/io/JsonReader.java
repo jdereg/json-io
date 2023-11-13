@@ -1076,7 +1076,7 @@ public class JsonReader implements Closeable
      *             JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    private Object convertParsedMapsToJava(JsonObject root) {
+    protected Object convertParsedMapsToJava(JsonObject root) {
         try {
             return reentrantConvertParsedMapsToJava(root, Object.class);
         } catch (Exception e) {

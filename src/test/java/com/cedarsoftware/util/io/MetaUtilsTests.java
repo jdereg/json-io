@@ -87,7 +87,7 @@ public class MetaUtilsTests {
     @MethodSource("ensureFillArgsInstanceOf")
     void testFillArgs_ensureInstanceOf(final Class<?> input, final List<Class<?>> expected) {
 
-        Object obj = MetaUtils.getArgForType(input, false);
+        Object obj = MetaUtils.getArgForType(input);
         assertThat(obj).isInstanceOf(input);
     }
 

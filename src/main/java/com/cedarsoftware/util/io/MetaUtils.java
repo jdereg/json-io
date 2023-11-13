@@ -13,7 +13,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -26,6 +25,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -59,6 +59,7 @@ import java.util.regex.Pattern;
 
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -88,7 +89,7 @@ public class MetaUtils
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Pattern extraQuotes = Pattern.compile("(\"*)([^\"]*)(\"*)");
-    private static final ConcurrentMap<Class<?>, Constructor<?>> constructors = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, Constructor<?>> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
     private static final SortedSet<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
@@ -245,7 +246,7 @@ public class MetaUtils
             for (Field field : local)
             {
                 int modifiers = field.getModifiers();
-                if (Modifier.isStatic(modifiers))
+                if (isStatic(modifiers))
                 {   // skip static fields (allow transient, because  that is an option for json-io)
                     continue;
                 }
@@ -272,7 +273,7 @@ public class MetaUtils
                     classFields.put(fieldName, field);
                 }
 
-                if (!Modifier.isPublic(modifiers) || !Modifier.isPublic(field.getDeclaringClass().getModifiers()))
+                if (!isPublic(modifiers) || !isPublic(field.getDeclaringClass().getModifiers()))
                 {
                     MetaUtils.trySetAccessible(field);
                 }
@@ -286,8 +287,7 @@ public class MetaUtils
     }
 
     /**
-     * Compare two primitives.
-     *
+     * Compare a primitive to a primitive Wrapper.
      * @return 0 if they are the same, -1 if not.  Primitive wrapper classes are consider the same as primitive classes.
      */
     public static int comparePrimitiveToWrapper(Class<?> source, Class<?> destination)
@@ -339,7 +339,6 @@ public class MetaUtils
         Set<Class<?>> visited = new HashSet<>();
         queue.add(source);
         visited.add(source);
-
         int distance = 0;
 
         while (!queue.isEmpty()) {
@@ -405,7 +404,7 @@ public class MetaUtils
                 c.equals(Class.class);
     }
 
-    public static Optional<Class> getClassIfEnum(Class c) {
+    public static Optional<Class> getClassIfEnum(Class<?> c) {
         if (c.isEnum()) {
             return Optional.of(c);
         }
@@ -414,7 +413,7 @@ public class MetaUtils
             return Optional.empty();
         }
 
-        Class enclosingClass = c.getEnclosingClass();
+        Class<?> enclosingClass = c.getEnclosingClass();
         return enclosingClass != null && enclosingClass.isEnum() ? Optional.of(enclosingClass) : Optional.empty();
     }
 
@@ -542,16 +541,13 @@ public class MetaUtils
         }
     }
 
-    static Object getArgForType(Class<?> argType, boolean allowNull) {
+    static Object getArgForType(Class<?> argType) {
 
         if (argType.isPrimitive()) {
-            return convert(argType, null);
-        }
-        if (allowNull) {
-            return null;
+            return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
         }
         if (prims.contains(argType)) {
-            return convert(argType, null);
+            return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
         }
         if (argType == String.class) {
             return "";
@@ -642,9 +638,8 @@ public class MetaUtils
             return new Object();
         }
         if (argType.isArray()) {
-            return Array.newInstance(argType.getComponentType(), 0);
+            return Array.newInstance(argType.getComponentType(), 0);    // empty [] of the right type
         }
-
         return null;
     }
 
@@ -667,7 +662,7 @@ public class MetaUtils
         for (Parameter parameter : parameterTypes) {
             Object value = pickBestValue(parameter.getType(), copyValues);
             if (value == null) {
-                value = getArgForType(parameter.getType(), false);
+                value = getArgForType(parameter.getType());
             }
             answer.add(value);
         }
@@ -704,7 +699,6 @@ public class MetaUtils
 
     /**
      * Returns the index of the smallest value in an array.
-     *
      * @param array The array to search.
      * @return The index of the smallest value, or -1 if the array is empty.
      */
@@ -775,7 +769,7 @@ public class MetaUtils
             this.constructor = constructor;
             this.args = args;
         }
-
+        
         public int compareTo(ConstructorWithValues other)
         {
             final int mods = constructor.getModifiers();
@@ -849,6 +843,20 @@ public class MetaUtils
         }
     }
 
+    public static String createCacheKey(Class<?> c, Collection<?> args)
+    {
+        StringBuilder s = new StringBuilder(c.getName());
+        for (Object o : args) {
+            if (o == null) {
+                s.append(":null");
+            } else {
+                s.append(':');
+                s.append(o.getClass().getSimpleName());
+            }
+        }
+        return s.toString();
+    }
+
     /**
      * Create a new instance of the passed in class c.  You can optionally pass in argument values that will
      * be best-matched to a constructor on c.  You can pass in null or an empty list, in which case, other
@@ -883,7 +891,8 @@ public class MetaUtils
         if (argumentValues == null) {
             argumentValues = new ArrayList<>();
         }
-        Constructor<?> cachedConstructor = constructors.get(c);
+
+        Constructor<?> cachedConstructor = constructors.get(createCacheKey(c, argumentValues));
         if (cachedConstructor == null)
         {
             if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
@@ -896,9 +905,7 @@ public class MetaUtils
                 return new TreeSet<>();
             }
             if (unmodifiableSet.getClass().isAssignableFrom(c)) {
-                return new LinkedHashSet<>();}
-            if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
-                return new ArrayList<>();
+                return new LinkedHashSet<>();
             }
             if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
                 return new ArrayList<>();
@@ -923,13 +930,13 @@ public class MetaUtils
             }
 
             for (ConstructorWithValues constructorWithValues : constructorOrder) {
-                Constructor<?> constructor = constructorWithValues.constructor;
-                MetaUtils.trySetAccessible(constructor);
-
                 try {
+                    Constructor<?> constructor = constructorWithValues.constructor;
+                    MetaUtils.trySetAccessible(constructor);
                     // Be nice to person debugging
                     Object o = constructor.newInstance(constructorWithValues.args);
-                    constructors.put(c, constructor);   // cache constructor search effort.
+                    String key = createCacheKey(c, Arrays.asList(constructorWithValues.args));
+                    constructors.put(key, constructor);   // cache constructor search effort.
                     return o;
                 }
                 catch (Exception ignored) {
@@ -1275,19 +1282,16 @@ public class MetaUtils
          * Constructs unsafe object, acting as a wrapper.
          * @throws InvocationTargetException
          */
-        public Unsafe() throws InvocationTargetException
-        {
-            try
-            {
+        public Unsafe() throws InvocationTargetException {
+            try {
                 Constructor<?> unsafeConstructor = classForName("sun.misc.Unsafe", MetaUtils.class.getClassLoader()).getDeclaredConstructor();
-                unsafeConstructor.setAccessible(true);
+                trySetAccessible(unsafeConstructor);
                 sunUnsafe = unsafeConstructor.newInstance();
                 allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);
-                allocateInstance.setAccessible(true);
+                trySetAccessible(allocateInstance);
             }
-            catch(Exception e)
-            {
-                throw new InvocationTargetException(e);
+            catch (Exception e) {
+                throw new JsonIoException("Unable to use sun.misc.Unsafe to construct objects.", e);
             }
         }
 
@@ -1299,17 +1303,14 @@ public class MetaUtils
          */
         public Object allocateInstance(Class<?> clazz)
         {
-            try
-            {
+            try {
                 return allocateInstance.invoke(sunUnsafe, clazz);
             }
-            catch (IllegalAccessException | IllegalArgumentException e )
-            {
+            catch (IllegalAccessException | IllegalArgumentException e ) {
                 String name = clazz == null ? "null" : clazz.getName();
                 throw new JsonIoException("Unable to create instance of class: " + name, e);
             }
-            catch (InvocationTargetException e)
-            {
+            catch (InvocationTargetException e) {
                 String name = clazz == null ? "null" : clazz.getName();
                 throw new JsonIoException("Unable to create instance of class: " + name, e.getCause() != null ? e.getCause() : e);
             }
