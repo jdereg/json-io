@@ -6,7 +6,6 @@ import com.cedarsoftware.util.reflect.Injector;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
-import java.util.Objects;
 
 public abstract class AbstractInjector implements Injector {
 
@@ -14,20 +13,6 @@ public abstract class AbstractInjector implements Injector {
 
     protected AbstractInjector(Field field) {
         this.field = field;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        AbstractInjector that = (AbstractInjector) o;
-        return Objects.equals(field, that.field);
     }
 
     @Override
@@ -51,7 +36,7 @@ public abstract class AbstractInjector implements Injector {
     }
 
 
-    public String getExceptionDisplayName() {
+    private String getExceptionDisplayName() {
         return this.getName();
     }
 

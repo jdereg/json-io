@@ -17,10 +17,10 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -54,6 +54,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -97,6 +98,49 @@ public class MetaUtils
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
+
+    private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
+
+    private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
+
+    static {
+        //  TODO: These might need to go into ReadOptions to allow people to customize?
+        DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
+        DIRECT_CLASS_MAPPING.put(StringBuilder.class, StringBuilder::new);
+        DIRECT_CLASS_MAPPING.put(StringBuffer.class, StringBuffer::new);
+        DIRECT_CLASS_MAPPING.put(Locale.class, Locale::getDefault);
+        DIRECT_CLASS_MAPPING.put(TimeZone.class, TimeZone::getDefault);
+        DIRECT_CLASS_MAPPING.put(Timestamp.class, () -> new Timestamp(System.currentTimeMillis()));
+        DIRECT_CLASS_MAPPING.put(java.sql.Date.class, () -> new java.sql.Date(System.currentTimeMillis()));
+        DIRECT_CLASS_MAPPING.put(LocalDate.class, LocalDate::now);
+        DIRECT_CLASS_MAPPING.put(LocalDateTime.class, LocalDateTime::now);
+        DIRECT_CLASS_MAPPING.put(ZonedDateTime.class, ZonedDateTime::now);
+        DIRECT_CLASS_MAPPING.put(ZoneId.class, ZoneId::systemDefault);
+        DIRECT_CLASS_MAPPING.put(AtomicBoolean.class, AtomicBoolean::new);
+        DIRECT_CLASS_MAPPING.put(AtomicInteger.class, AtomicInteger::new);
+        DIRECT_CLASS_MAPPING.put(AtomicLong.class, AtomicLong::new);
+        DIRECT_CLASS_MAPPING.put(URL.class, () -> safelyIgnoreException(() -> new URL("http://localhost"), null));
+        DIRECT_CLASS_MAPPING.put(Object.class, Object::new);
+        DIRECT_CLASS_MAPPING.put(String.class, () -> "");
+        DIRECT_CLASS_MAPPING.put(BigInteger.class, () -> BigInteger.ZERO);
+        DIRECT_CLASS_MAPPING.put(BigDecimal.class, () -> BigDecimal.ZERO);
+        DIRECT_CLASS_MAPPING.put(Class.class, () -> String.class);
+        DIRECT_CLASS_MAPPING.put(Calendar.class, Calendar::getInstance);
+        DIRECT_CLASS_MAPPING.put(Instant.class, Instant::now);
+
+        // order is important
+        // TODO:  These are generic isAssignables. We could let people customize, but probably dno't want them to
+        // TODO: change teh defaults because of ordering.
+        ASSIGNABLE_CLASS_MAPPING.put(EnumSet.class, () -> null);
+        ASSIGNABLE_CLASS_MAPPING.put(List.class, ArrayList::new);
+        ASSIGNABLE_CLASS_MAPPING.put(SortedSet.class, TreeSet::new);
+        ASSIGNABLE_CLASS_MAPPING.put(Set.class, LinkedHashSet::new);
+        ASSIGNABLE_CLASS_MAPPING.put(SortedMap.class, TreeMap::new);
+        ASSIGNABLE_CLASS_MAPPING.put(Map.class, LinkedHashMap::new);
+        ASSIGNABLE_CLASS_MAPPING.put(Collection.class, ArrayList::new);
+        ASSIGNABLE_CLASS_MAPPING.put(Calendar.class, Calendar::getInstance);
+        ASSIGNABLE_CLASS_MAPPING.put(LinkedHashSet.class, LinkedHashSet::new);
+    }
 
     /**
      * Globally turn on (or off) the 'unsafe' option of Class construction.  The unsafe option
@@ -150,7 +194,7 @@ public class MetaUtils
     }
 
     /**
-     * For JDK1.8 support.  Remove this and change to MetaUtils.listOf() for JDK11+
+     * For JDK1.8 support.  Remove this and change to List.of() for JDK11+
      */
     @SafeVarargs
     public static <T> List<T> listOf(T... items)
@@ -257,6 +301,7 @@ public class MetaUtils
 
                 if (field.getDeclaringClass().isAssignableFrom(Enum.class))
                 {   // For Enum fields, do not add .hash or .ordinal fields to output
+                    // TODO:  We may want to use ClassDescriptor logic since it filters these for us already?
                     if ("hash".equals(fieldName) || "ordinal".equals(fieldName) || "internal".equals(fieldName))
                     {
                         continue;
@@ -319,7 +364,7 @@ public class MetaUtils
         // Check for primitive types
         if (source.isPrimitive()) {
             if (destination.isPrimitive()) {
-                // Not equal because source.equals(destination) already chceked.
+                // Not equal because source.equals(destination) already checked.
                 return -1;
             }
             if (!MetaUtils.isPrimitive(destination)) {
@@ -534,6 +579,7 @@ public class MetaUtils
         return s;
     }
 
+
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
     {
         if (securityConcern.isAssignableFrom(c))
@@ -542,6 +588,8 @@ public class MetaUtils
         }
     }
 
+    private static final Locale REPLACEABLE_LOCALE = Locale.getDefault();
+    private static final TimeZone REPLACEABLE_TIMEZONE = TimeZone.getDefault();
     static Object getArgForType(Class<?> argType, boolean allowNull) {
 
         if (argType.isPrimitive()) {
@@ -553,94 +601,19 @@ public class MetaUtils
         if (prims.contains(argType)) {
             return convert(argType, null);
         }
-        if (argType == String.class) {
-            return "";
+
+        Supplier<Object> directClassMapping = DIRECT_CLASS_MAPPING.get(argType);
+
+        if (directClassMapping != null) {
+            return directClassMapping.get();
         }
-        if (argType == Date.class) {
-            return new Date();
-        }
-        if (EnumSet.class.isAssignableFrom(argType)) {
-            return null;
-        }
-        if (List.class.isAssignableFrom(argType)) {
-            return new ArrayList<>();
-        }
-        if (SortedSet.class.isAssignableFrom(argType)) {
-            return new TreeSet<>();
-        }
-        if (Set.class.isAssignableFrom(argType)) {
-            return new LinkedHashSet<>();
-        }
-        if (SortedMap.class.isAssignableFrom(argType)) {
-            return new TreeMap<>();
-        }
-        if (Map.class.isAssignableFrom(argType)) {
-            return new LinkedHashMap<>();
-        }
-        if (Collection.class.isAssignableFrom(argType)) {
-            return new ArrayList<>();
-        }
-        if (Calendar.class.isAssignableFrom(argType)) {
-            return Calendar.getInstance();
-        }
-        if (TimeZone.class.isAssignableFrom(argType)) {
-            return TimeZone.getDefault();
-        }
-        if (argType == BigInteger.class) {
-            return BigInteger.ZERO;
-        }
-        if (argType == BigDecimal.class) {
-            return BigDecimal.ZERO;
-        }
-        if (argType == StringBuilder.class) {
-            return new StringBuilder();
-        }
-        if (argType == StringBuffer.class) {
-            return new StringBuffer();
-        }
-        if (argType == Locale.class) {
-            return Locale.US;
-        }
-        if (argType == Class.class) {
-            return String.class;
-        }
-        if (argType == Timestamp.class) {
-            return new Timestamp(System.currentTimeMillis());
-        }
-        if (argType == java.sql.Date.class) {
-            return new java.sql.Date(System.currentTimeMillis());
-        }
-        if (argType == LocalDate.class) {
-            return LocalDate.now();
-        }
-        if (argType == LocalDateTime.class) {
-            return LocalDateTime.now();
-        }
-        if (argType == ZonedDateTime.class) {
-            return ZonedDateTime.now();
-        }
-        if (argType == ZoneId.class) {
-            return ZoneId.systemDefault();
-        }
-        if (argType == AtomicBoolean.class) {
-            return new AtomicBoolean(false);
-        }
-        if (argType == AtomicInteger.class) {
-            return new AtomicInteger(0);
-        }
-        if (argType == AtomicLong.class) {
-            return new AtomicLong(0L);
-        }
-        if (argType == URL.class) {
-            try {
-                return new URL("http://localhost"); // overwritten
-            } catch (MalformedURLException e) {
-                return null;
+
+        for (Map.Entry<Class<?>, Supplier<Object>> entry : ASSIGNABLE_CLASS_MAPPING.entrySet()) {
+            if (entry.getKey().isAssignableFrom(argType)) {
+                return entry.getValue().get();
             }
         }
-        if (argType == Object.class) {
-            return new Object();
-        }
+
         if (argType.isArray()) {
             return Array.newInstance(argType.getComponentType(), 0);
         }
@@ -1231,12 +1204,15 @@ public class MetaUtils
         }
     }
 
-    public static boolean trySetAccessible(AccessibleObject object)
+    public static void trySetAccessible(AccessibleObject object)
     {
-        return safelyIgnoreException(() -> {
+        if (object.isAccessible()) {
+            return;
+        }
+
+        safelyIgnoreException(() -> {
             object.setAccessible(true);
-            return true;
-        }, false);
+        });
     }
 
     public static <T> T safelyIgnoreException(Callable<T> callable, T defaultValue) {
