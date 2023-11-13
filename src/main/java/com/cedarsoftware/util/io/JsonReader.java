@@ -173,12 +173,12 @@ public class JsonReader implements Closeable
             return false;
         }
 
-        default void gatherRemainingValues(JsonObject jObj, Map<Class<?>, List<Object>> hints, Set<String> fieldsAlreadyInHints) {
+        default void gatherRemainingValues(JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
             JsonReader reader = ReaderContext.instance().getReader();
             Convention.throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-                if (!fieldsAlreadyInHints.contains(entry.getKey().toString())) {
+                if (!excludedFields.contains(entry.getKey().toString())) {
                     Object o = entry.getValue();
 
                     if (o instanceof JsonObject) {
@@ -187,16 +187,13 @@ public class JsonReader implements Closeable
 
                         if (value != null) {
                             if (sub.getType() != null) {
-                                Class<?> typeClass = MetaUtils.classForName(sub.getType(), reader.getClassLoader());
-                                hints.computeIfAbsent(typeClass, k -> new ArrayList<>()).add(value);
-                            }
-
-                            if (sub.getTargetClass() != null) {
-                                hints.computeIfAbsent(sub.getTargetClass(), k -> new ArrayList<>()).add(value);
+                                arguments.add(value);
+                            } else if (sub.getTargetClass() != null) {
+                                arguments.add(value);
                             }
                         }
                     } else if (o != null) {
-                        hints.computeIfAbsent(o.getClass(), k -> new ArrayList<>()).add(o);
+                        arguments.add(o);
                     }
                 }
             }

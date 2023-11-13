@@ -6,9 +6,7 @@ import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -39,26 +37,22 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     public Object newInstance(Class<?> c, JsonObject jObj)
     {
         JsonReader reader = ReaderContext.instance().getReader();
-        Map<Class<?>, List<Object>> values = new HashMap<>();
+        List<Object> arguments = new ArrayList<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
         Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
 
         if (message != null) {
-            values.computeIfAbsent(String.class, k -> new ArrayList<>()).add(message);
+            arguments.add(message);
         }
 
         if (cause != null) {
-            values.computeIfAbsent(Throwable.class, k -> new ArrayList<>()).add(cause);
+            arguments.add(cause);
         }
 
-        gatherRemainingValues(jObj, values, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        gatherRemainingValues(jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
-        List<Object> argumentValues = new ArrayList<>();
-        for (List<Object> hint : values.values()) {
-            argumentValues.addAll(hint);
-        }
-        Throwable t = (Throwable) MetaUtils.newInstance(c, argumentValues);
+        Throwable t = (Throwable) MetaUtils.newInstance(c, arguments);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(cause);
