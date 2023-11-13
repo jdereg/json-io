@@ -21,18 +21,10 @@ public class MethodInjector extends AbstractInjector {
         this.method = method;
     }
 
-    @Override
-    public String getExceptionDisplayName() {
-        return this.method.getName();
-    }
-
-    @Override
     public Class<?> getDeclaringClass() {
         return this.method.getDeclaringClass();
     }
-
-
-    @Override
+    
     protected void tryInject(Object object, Object value) throws InvocationTargetException, IllegalAccessException {
         method.invoke(object, value);
     }
