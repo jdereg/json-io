@@ -13,11 +13,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -1103,11 +1101,11 @@ public class MetaUtils
             }
             else if (c == BigInteger.class)
             {
-                return Readers.bigIntegerFrom(rhs);
+                return rhs == null ? BigInteger.ZERO : Readers.bigIntegerFrom(rhs);
             }
             else if (c == BigDecimal.class)
             {
-                return Readers.bigDecimalFrom(rhs);
+                return rhs == null ? BigDecimal.ZERO : Readers.bigDecimalFrom(rhs);
             }
         }
         catch (Exception e)
