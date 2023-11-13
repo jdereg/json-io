@@ -328,7 +328,6 @@ class ExceptionSerializeTest
     @Test
     void testThrowableConstructors()
     {
-
         Throwable t1 = new Throwable("hello");
         Throwable t2 = new Throwable("goodbye", t1);
         Throwable t3 = new Throwable(t1);
@@ -352,7 +351,7 @@ class ExceptionSerializeTest
         assert t3.getMessage().equals("java.lang.Throwable: hello"); // Throwable took the causes message and back-copied it to the outer Throwable
         assert t3.getCause().getMessage().equals("hello");
 
-        assert t4.getMessage().equals("");
+        assert t4.getMessage().isEmpty();
         assert t4.getCause() == null;
     }
 

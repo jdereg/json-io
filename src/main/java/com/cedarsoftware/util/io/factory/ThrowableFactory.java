@@ -39,26 +39,24 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     public Object newInstance(Class<?> c, JsonObject jObj)
     {
         JsonReader reader = ReaderContext.instance().getReader();
-        Map<Class<?>, List<MetaUtils.ParameterHint>> hints = new HashMap<>();
+        Map<Class<?>, List<Object>> values = new HashMap<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
         Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
 
         if (message != null) {
-            hints.computeIfAbsent(String.class, k -> new ArrayList<>()).add(new MetaUtils.ParameterHint(DETAIL_MESSAGE, message));
+            values.computeIfAbsent(String.class, k -> new ArrayList<>()).add(message);
         }
 
         if (cause != null) {
-            hints.put(Throwable.class, MetaUtils.listOf(new MetaUtils.ParameterHint(CAUSE, cause)));
+            values.computeIfAbsent(Throwable.class, k -> new ArrayList<>()).add(cause);
         }
 
-        MetaUtils.buildHints(reader, jObj, hints, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        gatherRemainingValues(jObj, values, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
         List<Object> argumentValues = new ArrayList<>();
-        for (List<MetaUtils.ParameterHint> hint : hints.values()) {
-            for (MetaUtils.ParameterHint arg : hint) {
-                argumentValues.add(arg.getObject());
-            }
+        for (List<Object> hint : values.values()) {
+            argumentValues.addAll(hint);
         }
         Throwable t = (Throwable) MetaUtils.newInstance(c, argumentValues);
 

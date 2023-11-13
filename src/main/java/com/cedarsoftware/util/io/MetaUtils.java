@@ -4,8 +4,6 @@ import com.cedarsoftware.util.io.factory.DateFactory;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
@@ -32,7 +30,6 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -104,7 +101,7 @@ public class MetaUtils
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
 
     static {
-        //  TODO: These might need to go into ReadOptions to allow people to customize?
+        //  TODO: These might need to go into ReadOptions to allow people to customize?  JD: Agreed.
         DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
         DIRECT_CLASS_MAPPING.put(StringBuilder.class, StringBuilder::new);
         DIRECT_CLASS_MAPPING.put(StringBuffer.class, StringBuffer::new);
@@ -129,8 +126,6 @@ public class MetaUtils
         DIRECT_CLASS_MAPPING.put(Instant.class, Instant::now);
 
         // order is important
-        // TODO: These are generic isAssignables. We could let people customize, but probably don't want them to
-        // TODO: change the defaults because of ordering.
         ASSIGNABLE_CLASS_MAPPING.put(EnumSet.class, () -> null);
         ASSIGNABLE_CLASS_MAPPING.put(List.class, ArrayList::new);
         ASSIGNABLE_CLASS_MAPPING.put(SortedSet.class, TreeSet::new);
@@ -335,14 +330,11 @@ public class MetaUtils
      * Compare a primitive to a primitive Wrapper.
      * @return 0 if they are the same, -1 if not.  Primitive wrapper classes are consider the same as primitive classes.
      */
-    public static int comparePrimitiveToWrapper(Class<?> source, Class<?> destination)
-    {
-        try
-        {
+    public static int comparePrimitiveToWrapper(Class<?> source, Class<?> destination) {
+        try {
             return source.getField("TYPE").get(null).equals(destination) ? 0 : -1;
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             throw new JsonIoException("Error while attempting comparison of primitive types: " + source.getName() + " vs " + destination.getName(), e);
         }
     }
@@ -690,39 +682,6 @@ public class MetaUtils
         return minIndex;
     }
 
-    public static void buildHints(JsonReader reader, JsonObject jObj, Map<Class<?>, List<ParameterHint>> hints, Set<String> fieldsAlreadyInHints) {
-        Convention.throwIfNull(jObj, "JsonObject cannot be null");
-        Convention.throwIfNull(reader, "JsonReader cannot be null");
-
-        Iterator<Map.Entry<Object, Object>> iterator = jObj.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<Object, Object> entry = iterator.next();
-
-            if (!fieldsAlreadyInHints.contains(entry.getKey().toString())) {
-                Object o = entry.getValue();
-
-                if (o instanceof JsonObject) {
-                    JsonObject sub = (JsonObject) o;
-                    Object value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
-
-                    if (value != null) {
-                        if (sub.getType() != null) {
-                            Class<?> typeClass = MetaUtils.classForName(sub.getType(), reader.getClassLoader());
-                            hints.computeIfAbsent(typeClass, k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
-                        }
-
-                        if (sub.getTargetClass() != null) {
-                            hints.computeIfAbsent(sub.getTargetClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), value));
-                        }
-                    }
-                } else if (o != null) {
-                    hints.computeIfAbsent(o.getClass(), k -> new ArrayList<>()).add(new ParameterHint(entry.getKey().toString(), o));
-                }
-            }
-        }
-    }
-
     /**
      * Ideal class to hold all constructors for a Class, so that they are sorted in the most
      * appeasing construction order, in terms of public vs protected vs private.  That could be
@@ -805,8 +764,7 @@ public class MetaUtils
             Class<?>[] paramTypes = constructor.getParameterTypes();
             StringBuilder s = new StringBuilder();
 
-            for (Class<?> paramType : paramTypes)
-            {
+            for (Class<?> paramType : paramTypes) {
                 s.append(paramType.getName()).append(".");
             }
             return s.toString();
@@ -1204,7 +1162,7 @@ public class MetaUtils
         }
         catch (IllegalAccessException e)
         {
-            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add or create a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
+            throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
         }
     }
 
@@ -1230,16 +1188,7 @@ public class MetaUtils
     public static void safelyIgnoreException(Runnable runnable) {
         try {
             runnable.run();
-        } catch (Throwable e) {
-            // ignored
-        }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    public static class ParameterHint {
-        String parameterName;
-        Object object;
+        } catch (Throwable ignored) { }
     }
 
     /**

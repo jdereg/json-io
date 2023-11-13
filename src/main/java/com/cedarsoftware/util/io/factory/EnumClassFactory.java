@@ -15,7 +15,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
 
         if (value instanceof String) {
             // came in as string so we know we're done.
-            Enum target = fromString(c, (String) value);
+            Enum<?> target = fromString(c, (String) value);
             return jObj.setFinishedTarget(target, true);
         }
 
