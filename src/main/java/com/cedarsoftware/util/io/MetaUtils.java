@@ -100,6 +100,8 @@ public class MetaUtils
 
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
 
+    private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
+
     static {
         //  TODO: These might need to go into ReadOptions to allow people to customize?  JD: Agreed.
         DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
@@ -135,6 +137,23 @@ public class MetaUtils
         ASSIGNABLE_CLASS_MAPPING.put(Collection.class, ArrayList::new);
         ASSIGNABLE_CLASS_MAPPING.put(Calendar.class, Calendar::getInstance);
         ASSIGNABLE_CLASS_MAPPING.put(LinkedHashSet.class, LinkedHashSet::new);
+
+        FROM_NULL.put(Boolean.class, Boolean.FALSE);
+        FROM_NULL.put(boolean.class, Boolean.FALSE);
+        FROM_NULL.put(byte.class, new Byte((byte) 0));
+        FROM_NULL.put(Byte.class, FROM_NULL.get(byte.class));
+        FROM_NULL.put(short.class, new Short((short) 0));
+        FROM_NULL.put(Short.class, FROM_NULL.get(short.class));
+        FROM_NULL.put(int.class, new Integer(0));
+        FROM_NULL.put(Integer.class, FROM_NULL.get(int.class));
+        FROM_NULL.put(long.class, new Long(0L));
+        FROM_NULL.put(Long.class, FROM_NULL.get(long.class));
+        FROM_NULL.put(double.class, new Double(0.0));
+        FROM_NULL.put(Double.class, FROM_NULL.get(double.class));
+        FROM_NULL.put(float.class, new Float(0.0f));
+        FROM_NULL.put(Float.class, FROM_NULL.get(float.class));
+        FROM_NULL.put(char.class, '\u0000');
+        FROM_NULL.put(Character.class, FROM_NULL.get(char.class));
     }
 
     /**
@@ -573,6 +592,7 @@ public class MetaUtils
         return input;
     }
 
+
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
     {
         if (securityConcern.isAssignableFrom(c))
@@ -914,6 +934,7 @@ public class MetaUtils
         return null;
     }
 
+
     /**
      * @return a new primitive wrapper instance for the given class, using the
      * rhs parameter as a hint.  For example, convert(long.class, "45")
@@ -925,6 +946,10 @@ public class MetaUtils
     static Object convert(Class<?> c, Object rhs)
     {
         try {
+            if (rhs == null) {
+                return FROM_NULL.get(c);
+            }
+
             if (c == boolean.class || c == Boolean.class) {
                 if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
@@ -1075,26 +1100,30 @@ public class MetaUtils
     // Currently, still returning DEEP declared fields.
     public static Map<Class<?>, Collection<Accessor>> convertStringFieldNamesToAccessors(Map<Class<?>, Collection<String>> map) {
 
-        Map<Class<?>, Collection<Accessor>> copy = new HashMap<>();
+        final Map<Class<?>, Collection<Accessor>> copy = new HashMap<>();
 
         if (map == null) {
             return copy;
         }
 
         for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
-            Class<?> c = entry.getKey();
-            Collection<String> fields = entry.getValue();
-            Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(c);
+            final Class<?> c = entry.getKey();
+            final Collection<String> fields = entry.getValue();
 
-            for (String field : fields) {
-                Field f = classFields.get(field);
-                if (f == null) {
-                    throw new JsonIoException("Unable to locate field: " + field + " on class: " + c.getName() + ". Make sure the fields in the FIELD_SPECIFIERS map existing on the associated class.");
+            Class<?> current = c;
+
+            while (current != null) {
+                final ClassDescriptor descriptor = ClassDescriptors.instance().getClassDescriptor(current);
+                final Map<String, Accessor> accessorMap = descriptor.getAccessors();
+
+                for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
+
+                    if (fields.contains(acessorEntry.getKey())) {
+                        final Collection<Accessor> list = copy.computeIfAbsent(c, l -> new LinkedHashSet<>());
+                        list.add(acessorEntry.getValue());
+                    }
                 }
-
-                ClassDescriptor descriptor = ClassDescriptors.instance().getClassDescriptor(f.getDeclaringClass());
-                final Collection<Accessor> list = copy.computeIfAbsent(f.getDeclaringClass(), l -> new LinkedHashSet<>());
-                list.add(descriptor.getAccessors().get(f.getName()));
+                current = current.getSuperclass();
             }
         }
 
