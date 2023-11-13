@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,7 @@ import java.util.Map;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <br><br>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">...</a>
  * <br><br>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,11 +36,6 @@ import java.util.Map;
 public class TestUtil
 {
     final static Logger logger = LoggerFactory.getLogger(TestUtil.class);
-
-    public static boolean isDebug()
-    {
-        return debug;
-    }
 
     public static String fetchResource(String name)
     {
@@ -109,7 +105,7 @@ public class TestUtil
         return testInfo;
     }
 
-    private static TestInfo writeGSON(Object obj, WriteOptions writeOptions)
+    private static TestInfo writeGSON(Object obj)
     {
         TestInfo testInfo = new TestInfo();
         try
@@ -159,7 +155,7 @@ public class TestUtil
         // json-io
         TestInfo jsonIoTestInfo = writeJsonIo(obj, writeOptions);
         TestInfo jdkTestInfo = writeJDK(obj);
-        TestInfo gsonTestInfo = writeGSON(obj, writeOptions);
+        TestInfo gsonTestInfo = writeGSON(obj);
         TestInfo jacksonTestInfo = writeJackson(obj);
 
         if (jsonIoTestInfo.json != null)
@@ -270,7 +266,7 @@ public class TestUtil
      */
     public static <T> T toJava(final String json, ReadOptions readOptions)
     {
-        if (null == json || "".equals(json.trim()))
+        if (null == json || json.trim().isEmpty())
         {
             return null;
         }
@@ -313,7 +309,8 @@ public class TestUtil
                 throw (RuntimeException) t;
             }
         }
-        
+
+        //noinspection unchecked
         return (T) jsonIoTestInfo.obj;
     }
 
@@ -373,8 +370,8 @@ public class TestUtil
             {
                 return answer;
             }
-            answer = ++answer;
-            idx = ++idx;
+            ++answer;
+            ++idx;
         }
     }
 
@@ -392,5 +389,6 @@ public class TestUtil
     private static long jacksonReadFails;
     private static long totalReads;
     private static long totalWrites;
-    private static boolean debug = false;
+    @Getter
+    private static final boolean debug = false;
 }
