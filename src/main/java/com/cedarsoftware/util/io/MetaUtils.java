@@ -174,7 +174,6 @@ public class MetaUtils
         prims.add(Boolean.class);
         prims.add(Short.class);
 
-        nameToClass.put("string", String.class);
         nameToClass.put("boolean", boolean.class);
         nameToClass.put("char", char.class);
         nameToClass.put("byte", byte.class);
@@ -183,6 +182,8 @@ public class MetaUtils
         nameToClass.put("long", long.class);
         nameToClass.put("float", float.class);
         nameToClass.put("double", double.class);
+        // Logical primitives
+        nameToClass.put("string", String.class);
         nameToClass.put("date", Date.class);
         nameToClass.put("class", Class.class);
 

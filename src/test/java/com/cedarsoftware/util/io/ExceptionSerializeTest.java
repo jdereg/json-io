@@ -325,6 +325,37 @@ class ExceptionSerializeTest
         assert my.recordNumber == 16L;
     }
 
+    @Test
+    void testThrowableConstructors()
+    {
+
+        Throwable t1 = new Throwable("hello");
+        Throwable t2 = new Throwable("goodbye", t1);
+        Throwable t3 = new Throwable(t1);
+        Throwable t4 = new Throwable();
+
+        String json = TestUtil.toJson(t1);
+        t1 = TestUtil.toJava(json);
+
+        json = TestUtil.toJson(t2);
+        t2 = TestUtil.toJava(json);
+
+        json = TestUtil.toJson(t3);
+        t3 = TestUtil.toJava(json);
+
+        json = TestUtil.toJson(t4);
+        t4 = TestUtil.toJava(json);
+
+        assert t2.getMessage().equals("goodbye");
+        assert t2.getCause().getMessage().equals("hello");
+
+        assert t3.getMessage().equals("java.lang.Throwable: hello"); // Throwable took the causes message and back-copied it to the outer Throwable
+        assert t3.getCause().getMessage().equals("hello");
+
+        assert t4.getMessage().equals("");
+        assert t4.getCause() == null;
+    }
+
     void methodThatThrowsException() {
         throw new IllegalArgumentException("foo");
     }
