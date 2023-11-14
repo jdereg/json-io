@@ -8,7 +8,7 @@ import java.util.Date;
 @Getter
 @Setter
 public class Entity {
-    String id;
+    Long id;
     Date updated;
     Date created;
 }
