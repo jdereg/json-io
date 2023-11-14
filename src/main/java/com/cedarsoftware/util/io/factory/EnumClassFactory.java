@@ -15,8 +15,13 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
 
         if (value instanceof String) {
             // came in as string so we know we're done.
-            Enum<?> target = fromString(c, (String) value);
-            return jObj.setFinishedTarget(target, true);
+            try {
+                Enum<?> target = fromString(c, (String) value);
+                return jObj.setFinishedTarget(target, true);
+            } catch (Exception e) {
+                //  may have had a value member variable, let's try parsing as an object
+                return fromJsonObject(c, jObj);
+            }
         }
 
         return fromJsonObject(c, jObj);
@@ -27,7 +32,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
         return Enum.valueOf((Class<Enum>) c, s);
     }
 
-    private Object fromJsonObject(Class<?> c, JsonObject job) {
+    protected Object fromJsonObject(Class<?> c, JsonObject job) {
         Optional<Class> cls = MetaUtils.getClassIfEnum(c);
 
         if (cls.isPresent()) {
@@ -37,9 +42,9 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
         throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
     }
 
-    private String findEnumName(JsonObject job) {
+    protected String findEnumName(JsonObject job) {
 
-        // In case the enum class has it's own 'name' member variable (shadowing the 'name' variable on Enum)
+        // In case the enum class has its own 'name' member variable (shadowing the 'name' variable on Enum)
         String name = (String) job.get("Enum.name");
         if (name != null) {
             return name;

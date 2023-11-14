@@ -7,6 +7,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
@@ -282,6 +283,32 @@ class EnumTests {
     }
 
 
+    @ParameterizedTest
+    @EnumSource(EnumWithValueField.class)
+    void testEnum_thatHasValueField_parsedAsObject() {
+        EnumWithValueField mc = EnumWithValueField.FOO;
+
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(mc, options);
+        EnumWithValueField actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(EnumWithValueField.FOO);
+    }
+
+
+    @ParameterizedTest
+    @EnumSource(EnumWithValueField.class)
+    void testEnum_thatHasValueField_parsedAsPrimitive() {
+        EnumWithValueField mc = EnumWithValueField.FOO;
+
+        WriteOptions options = new WriteOptionsBuilder().build();
+        String json = TestUtil.toJson(mc, options);
+        EnumWithValueField actual = TestUtil.toJava(json);
+
+        assertThat(actual).isEqualTo(EnumWithValueField.FOO);
+    }
+
+
     private static Stream<Arguments> testIsEnum_whenNotAnonymousInnerClass() {
         return Stream.of(
                 Arguments.of(TestEnum1.A),
@@ -519,5 +546,16 @@ class EnumTests {
         T[] actual = TestUtil.toJava(json);
         assertThat(actual).isEqualTo(enumArray);
         return (T) actual;
+    }
+
+    public enum EnumWithValueField {
+        FOO("foo.com"), BAR("bar.gov");
+
+        @Getter
+        private String value;
+
+        EnumWithValueField(String domain) {
+            this.value = domain;
+        }
     }
 }
