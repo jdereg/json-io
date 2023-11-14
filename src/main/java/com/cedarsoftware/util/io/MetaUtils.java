@@ -748,15 +748,15 @@ public class MetaUtils
                 return 0L;
             }
 
-            long nonNull = 0;
+            int nonNull = 0;
 
             for (Object arg : args) {
                 if (arg != null) {
-                    nonNull += 100L;
+                    nonNull++;
                 }
             }
 
-            return nonNull + args.length * 50L;
+            return nonNull * 100L + args.length * 50L;
         }
 
         private String buildParameterTypeString(Constructor<?> constructor)
@@ -871,16 +871,9 @@ public class MetaUtils
                 }
             }
 
-            // Try instantiation via unsafe.
-            // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
-            // the class is not initialized, that's why we try ordinary constructors first.
-            if (useUnsafe) {
-                try {
-                    Object o = unsafe.allocateInstance(c);
-                    return o;
-                }
-                catch (Exception ignored) {
-                }
+            Object o = tryUnsafeInstantiation(c);
+            if (o != null) {
+                return o;
             }
         } else {
             List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
@@ -895,20 +888,30 @@ public class MetaUtils
             catch (Exception ignored) {
             }
 
-            // Try instantiation via unsafe.
-            // This may result in heap-dumps for e.g. ConcurrentHashMap or can cause problems when
-            // the class is not initialized, thats why we try ordinary constructors first.
-            if (useUnsafe) {
-                try {
-                    Object o = unsafe.allocateInstance(c);
-                    return o;
-                }
-                catch (Exception ignored) {
-                }
+            Object o = tryUnsafeInstantiation(c);
+            if (o != null) {
+                return o;
             }
         }
 
         throw new JsonIoException("Unable to instantiate: " + c.getName());
+    }
+
+    // Try instantiation via unsafe (if turned on.  It is off by default.  Use
+    // MetaUtils.setUseUnsafe(true) to enable it. This may result in heap-dumps
+    // for e.g. ConcurrentHashMap or can cause problems when the class is not initialized,
+    // that's why we try ordinary constructors first.
+    private static Object tryUnsafeInstantiation(Class<?> c)
+    {
+        if (useUnsafe) {
+            try {
+                Object o = unsafe.allocateInstance(c);
+                return o;
+            }
+            catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     /**
