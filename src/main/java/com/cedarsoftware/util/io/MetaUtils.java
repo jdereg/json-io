@@ -85,7 +85,7 @@ public class MetaUtils
     private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
-    private static final Pattern extraQuotes = Pattern.compile("(\"*)([^\"]*)(\"*)");
+    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
     private static final ConcurrentMap<String, Constructor<?>> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
@@ -425,10 +425,11 @@ public class MetaUtils
     /**
      * @param c Class to test
      * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
-     * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
-     * considered 'logical' primitives is that they are immutable and therefore can be written without references
-     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape)
-     * of the object graph being written.
+     * as all Java primitives, the primitive wrapper classes, String, Number, and Date.  This covers BigDecimal,
+     * BigInteger, AtomicInteger, AtomicLong, as these are 'Number instances. The reason these are considered
+     * 'logical' primitives is that they are immutable and therefore can be written without references in JSON
+     * content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape) of the
+     * object graph being written.
      */
     public static boolean isLogicalPrimitive(Class<?> c)
     {
@@ -558,16 +559,18 @@ public class MetaUtils
     }
 
     /**
-     * Strip leading and trailing double quotes from the passed in String.
+     * Strip leading and trailing double quotes from the passed in String. If there are more than one
+     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
+     * this is weird.  Note that: """this is "really" weird" will be: this is "really" weird.
      */
-    static String removeLeadingAndTrailingQuotes(String s)
+    static String removeLeadingAndTrailingQuotes(String input)
     {
-        Matcher m = extraQuotes.matcher(s);
+        Matcher m = extraQuotes.matcher(input);
         if (m.find())
         {
-            s = m.group(2);
+            input = m.group(1);
         }
-        return s;
+        return input;
     }
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
@@ -579,10 +582,7 @@ public class MetaUtils
     }
 
     static Object getArgForType(Class<?> argType) {
-        if (argType.isPrimitive()) {
-            return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
-        }
-        if (prims.contains(argType)) {
+        if (argType.isPrimitive() || prims.contains(argType)) {
             return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
         }
 
@@ -924,150 +924,115 @@ public class MetaUtils
      */
     static Object convert(Class<?> c, Object rhs)
     {
-        try
-        {
-            if (c == boolean.class || c == Boolean.class)
-            {
-                if (rhs instanceof String)
-                {
+        try {
+            if (c == boolean.class || c == Boolean.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "false";
                     }
                     return Boolean.parseBoolean((String) rhs);
                 }
                 return rhs != null ? rhs : Boolean.FALSE;
             }
-            else if (c == byte.class || c == Byte.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == byte.class || c == Byte.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0";
                     }
                     return Byte.parseByte((String) rhs);
                 }
                 return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
             }
-            else if (c == char.class || c == Character.class)
-            {
-                if (rhs == null)
-                {
+            else if (c == char.class || c == Character.class) {
+                if (rhs == null) {
                     return '\u0000';
                 }
-                if (rhs instanceof String)
-                {
-                    if (rhs.equals("\""))
-                    {
+                if (rhs instanceof String) {
+                    if (rhs.equals("\"")) {
                         return '\"';
                     }
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "\u0000";
                     }
                     return ((CharSequence) rhs).charAt(0);
                 }
-                if (rhs instanceof Character)
-                {
+                if (rhs instanceof Character) {
                     return rhs;
                 }
                 // Let it throw exception
             }
-            else if (c == double.class || c == Double.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == double.class || c == Double.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0.0";
                     }
                     return Double.parseDouble((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).doubleValue() : 0.0d;
             }
-            else if (c == float.class || c == Float.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == float.class || c == Float.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0.0f";
                     }
                     return Float.parseFloat((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
             }
-            else if (c == int.class || c == Integer.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == int.class || c == Integer.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0";
                     }
                     return Integer.parseInt((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).intValue() : 0;
             }
-            else if (c == long.class || c == Long.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == long.class || c == Long.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0";
                     }
                     return Long.parseLong((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).longValue() : 0L;
             }
-            else if (c == short.class || c == Short.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == short.class || c == Short.class) {
+                if (rhs instanceof String) {
                     rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs))
-                    {
+                    if ("".equals(rhs)) {
                         rhs = "0";
                     }
                     return Short.parseShort((String) rhs);
                 }
                 return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
             }
-            else if (c == Date.class)
-            {
-                if (rhs instanceof String)
-                {
+            else if (c == Date.class) {
+                if (rhs instanceof String) {
                     return DateFactory.parseDate((String) rhs);
                 }
-                else if (rhs instanceof Long)
-                {
+                else if (rhs instanceof Long) {
                     return new Date((Long)(rhs));
                 }
-                else
-                {
+                else {
                     return new Date();
                 }
             }
-            else if (c == BigInteger.class)
-            {
+            else if (c == BigInteger.class) {
                 return rhs == null ? BigInteger.ZERO : Readers.bigIntegerFrom(rhs);
             }
-            else if (c == BigDecimal.class)
-            {
+            else if (c == BigDecimal.class) {
                 return rhs == null ? BigDecimal.ZERO : Readers.bigDecimalFrom(rhs);
             }
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             String className = c == null ? "null" : c.getName();
             throw new JsonIoException("Error creating primitive wrapper instance for Class: " + className, e);
         }
@@ -1192,53 +1157,5 @@ public class MetaUtils
         try {
             runnable.run();
         } catch (Throwable ignored) { }
-    }
-
-    /**
-     * Wrapper for unsafe, decouples direct usage of sun.misc.* package.
-     * @author Kai Hufenback
-     */
-    static final class Unsafe
-    {
-        private final Object sunUnsafe;
-        private final Method allocateInstance;
-
-        /**
-         * Constructs unsafe object, acting as a wrapper.
-         * @throws InvocationTargetException
-         */
-        public Unsafe() throws InvocationTargetException {
-            try {
-                Constructor<?> unsafeConstructor = classForName("sun.misc.Unsafe", MetaUtils.class.getClassLoader()).getDeclaredConstructor();
-                trySetAccessible(unsafeConstructor);
-                sunUnsafe = unsafeConstructor.newInstance();
-                allocateInstance = sunUnsafe.getClass().getMethod("allocateInstance", Class.class);
-                trySetAccessible(allocateInstance);
-            }
-            catch (Exception e) {
-                throw new JsonIoException("Unable to use sun.misc.Unsafe to construct objects.", e);
-            }
-        }
-
-        /**
-         * Creates an object without invoking constructor or initializing variables.
-         * <b>Be careful using this with JDK objects, like URL or ConcurrentHashMap this may bring your VM into troubles.</b>
-         * @param clazz to instantiate
-         * @return allocated Object
-         */
-        public Object allocateInstance(Class<?> clazz)
-        {
-            try {
-                return allocateInstance.invoke(sunUnsafe, clazz);
-            }
-            catch (IllegalAccessException | IllegalArgumentException e ) {
-                String name = clazz == null ? "null" : clazz.getName();
-                throw new JsonIoException("Unable to create instance of class: " + name, e);
-            }
-            catch (InvocationTargetException e) {
-                String name = clazz == null ? "null" : clazz.getName();
-                throw new JsonIoException("Unable to create instance of class: " + name, e.getCause() != null ? e.getCause() : e);
-            }
-        }
     }
 }

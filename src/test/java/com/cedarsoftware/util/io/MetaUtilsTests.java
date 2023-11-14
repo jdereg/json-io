@@ -165,9 +165,10 @@ public class MetaUtilsTests {
     }
 
     @Test
-    void convertStringFieldNamesToFields() {
-
-        // toto:
+    void convertTrimQuotes() {
+        String s = "\"\"\"This is \"really\" weird.\"\"\"";
+        String x = MetaUtils.removeLeadingAndTrailingQuotes(s);
+        assert "This is \"really\" weird.".equals(x);
     }
 
     private static Stream<Arguments> createGetterNameTests() {
