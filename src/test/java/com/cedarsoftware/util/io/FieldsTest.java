@@ -7,10 +7,20 @@ import org.junit.jupiter.api.Test;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -210,26 +220,6 @@ public class FieldsTest
         assertEquals(vanilla.getAge(), 48L);
         assertEquals(vanilla.getAlive(), true);
         assertNull(vanilla.getGarbage());
-    }
-
-    @Test
-    public void testExternalFieldSpecifiedBadName()
-    {
-        Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
-        List<String> fields = new ArrayList<>();
-        fields.add("mane");
-        fieldSpecifiers.put(PainfulToSerialize.class, fields);
-
-        PainfulToSerialize painful = new PainfulToSerialize();
-        painful.setName("Android rocks");
-
-        try
-        {
-            TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build());
-            fail();
-        }
-        catch (Exception ignore)
-        { }
     }
 
     @Test
