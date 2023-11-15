@@ -109,7 +109,7 @@ class ClassDescriptorsTests {
     }
 
     private Car createCar() {
-        Car car = create(new Car(), "VIN123456");
+        Car car = create(new Car(), 1L);
         car.setMake("Ford");
         car.setModel("Mustang");
         car.setColor(ColorEnum.RED);
@@ -119,15 +119,15 @@ class ClassDescriptorsTests {
     }
 
     private List<Part> createParts() {
-        Part tire = create(new Part(), "P55");
+        Part tire = create(new Part(), 55L);
         tire.setName("Pirelli");
         tire.setDescription("Pirelli blah blah blah");
 
-        Part steeringWheel = create(new Part(), "Yoke");
+        Part steeringWheel = create(new Part(), 99L);
         steeringWheel.setDescription("Yolk style steering wheel");
         steeringWheel.setName("Yolk");
 
-        Part exhaust = create(new Part(), "B77");
+        Part exhaust = create(new Part(), 87L);
         exhaust.setDescription("Brand Dual Exhast");
         exhaust.setName("Brando");
 
@@ -135,22 +135,22 @@ class ClassDescriptorsTests {
     }
 
     private List<Part> createAccessories() {
-        Part tire = create(new Part(), "HM29");
+        Part tire = create(new Part(), 29L);
         tire.setName("Heated Mirrors");
         tire.setDescription("Heated Mirrors");
 
-        Part steeringWheel = create(new Part(), "HS31");
+        Part steeringWheel = create(new Part(), 31L);
         steeringWheel.setDescription("Heated Seats");
         steeringWheel.setName("Heated Seats");
 
-        Part exhaust = create(new Part(), "FM22");
+        Part exhaust = create(new Part(), 22L);
         exhaust.setDescription("Floor Mats");
         exhaust.setName("Floor Mats");
 
         return MetaUtils.listOf(tire, steeringWheel, exhaust);
     }
 
-    private <T extends Entity> T create(T entity, String id) {
+    private <T extends Entity> T create(T entity, Long id) {
         entity.setId(id);
         entity.setCreated(new Date());
         entity.setUpdated(entity.getCreated());

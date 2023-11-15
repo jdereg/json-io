@@ -471,6 +471,7 @@ public class ReadOptionsBuilder {
         private Map<String, String> typeNameMap;
 
         private JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
+        
         private JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         private ReadOptionsImplementation() {

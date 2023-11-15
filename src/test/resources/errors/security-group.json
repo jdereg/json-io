@@ -1,0 +1,24 @@
+{
+  "@t": "sg",
+  "type": "LEVEL1",
+  "name": "Level 1",
+  "permissions": {
+    "@t": "set",
+    "@e": [
+      {
+        "@i": 1,
+        "@t": "perm",
+        "id": 89,
+        "code": "ALLOW_VIEW",
+        "description": "Allow viewing"
+      },
+      {
+        "@i": 2,
+        "@t": "perm",
+        "id": 90,
+        "code": "ALLOW_MOVING_MONEY",
+        "description": "Allow moving money"
+      }
+    ]
+  }
+}
