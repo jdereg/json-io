@@ -138,22 +138,22 @@ public class MetaUtils
         ASSIGNABLE_CLASS_MAPPING.put(Calendar.class, Calendar::getInstance);
         ASSIGNABLE_CLASS_MAPPING.put(LinkedHashSet.class, LinkedHashSet::new);
 
-        FROM_NULL.put(Boolean.class, Boolean.FALSE);
-        FROM_NULL.put(boolean.class, Boolean.FALSE);
-        FROM_NULL.put(byte.class, new Byte((byte) 0));
-        FROM_NULL.put(Byte.class, FROM_NULL.get(byte.class));
-        FROM_NULL.put(short.class, new Short((short) 0));
-        FROM_NULL.put(Short.class, FROM_NULL.get(short.class));
-        FROM_NULL.put(int.class, new Integer(0));
-        FROM_NULL.put(Integer.class, FROM_NULL.get(int.class));
-        FROM_NULL.put(long.class, new Long(0L));
-        FROM_NULL.put(Long.class, FROM_NULL.get(long.class));
-        FROM_NULL.put(double.class, new Double(0.0));
-        FROM_NULL.put(Double.class, FROM_NULL.get(double.class));
-        FROM_NULL.put(float.class, new Float(0.0f));
-        FROM_NULL.put(Float.class, FROM_NULL.get(float.class));
+        FROM_NULL.put(Boolean.class, false);
+        FROM_NULL.put(boolean.class, false);
+        FROM_NULL.put(byte.class, (byte) 0);
+        FROM_NULL.put(Byte.class, (byte) 0);
+        FROM_NULL.put(short.class, (short) 0);
+        FROM_NULL.put(Short.class, short.class);
+        FROM_NULL.put(int.class, 0);
+        FROM_NULL.put(Integer.class, 0);
+        FROM_NULL.put(long.class, 0L);
+        FROM_NULL.put(Long.class, 0L);
+        FROM_NULL.put(double.class, 0.0d);
+        FROM_NULL.put(Double.class, 0.0d);
+        FROM_NULL.put(float.class, 0.0f);
+        FROM_NULL.put(Float.class, 0.0f);
         FROM_NULL.put(char.class, '\u0000');
-        FROM_NULL.put(Character.class, FROM_NULL.get(char.class));
+        FROM_NULL.put(Character.class, '\u0000');
     }
 
     /**
@@ -493,7 +493,9 @@ public class MetaUtils
             {
                 return c;
             }
-            return loadClass(name, classLoader);
+            c = loadClass(name, classLoader);
+            nameToClass.put(name, c);
+            return c;
         }
         catch (Exception e)
         {
@@ -591,7 +593,6 @@ public class MetaUtils
         }
         return input;
     }
-
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
     {

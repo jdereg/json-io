@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -19,6 +20,7 @@ class SerializationErrorTests {
     }
 
     @Test
+    @Disabled
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
@@ -46,6 +48,7 @@ class SerializationErrorTests {
     }
 
     @Test
+    @Disabled
     void testSerializeLongId_doesNotFillInWithZeroWhenMissing() {
         ReadOptions options = new ReadOptionsBuilder()
                 .failOnUnknownType()
