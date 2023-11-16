@@ -5,7 +5,7 @@ json-io
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
 
 Excellent Java serialization to and from JSON format.
-Available on [Maven Central]([http://search.maven.org/#search%7Cga%7C1%7Cjson-io](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware)).
+Available on [Maven Central]([https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware)]).
 This library has <b>no dependencies</b> on other libraries for runtime.
 The`.jar`file is only`227K.`
 Works with`JDK 1.8`through`JDK 21`.
