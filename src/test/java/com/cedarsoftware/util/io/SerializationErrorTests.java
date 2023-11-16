@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -20,7 +19,6 @@ class SerializationErrorTests {
     }
 
     @Test
-    @Disabled
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
@@ -31,7 +29,7 @@ class SerializationErrorTests {
         group.setId(45L);
         group.setType("Level 1");
         group.setName("Level 1 Security");
-        group.setPermissions(new HashSet());
+        group.setPermissions(new HashSet<>());
 
         String json = TestUtil.toJson(group, writeOptions);
 
@@ -42,13 +40,12 @@ class SerializationErrorTests {
         SecurityGroup actual = TestUtil.toJava(json, readOptions);
 
         assertThat(actual.getId()).isNull();
-        assertThat(actual.getType()).isEqualTo("LEVEL1");
-        assertThat(actual.getName()).isEqualTo("Level 1");
+        assertThat(actual.getType()).isEqualTo("Level 1");
+        assertThat(actual.getName()).isEqualTo("Level 1 Security");
         assertThat(actual.getPermissions()).isEmpty();
     }
 
     @Test
-    @Disabled
     void testSerializeLongId_doesNotFillInWithZeroWhenMissing() {
         ReadOptions options = new ReadOptionsBuilder()
                 .failOnUnknownType()
@@ -64,7 +61,7 @@ class SerializationErrorTests {
         assertThat(actual.getType()).isEqualTo("LEVEL1");
         assertThat(actual.getName()).isEqualTo("Level 1");
         assertThat(actual.getPermissions()).containsExactlyInAnyOrder(
-                new Permission(89L, "ALLOW_VIEW", "Allow viwing"),
+                new Permission(89L, "ALLOW_VIEW", "Allow viewing"),
                 new Permission(90L, "ALLOW_MOVING_MONEY", "Allow moving money"));
     }
 

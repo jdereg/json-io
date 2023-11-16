@@ -17,9 +17,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     private static final ZoneOffset Z2 = ZoneOffset.of("+05:00");
 
     private static final ZoneOffset Z3 = ZoneOffset.of("Z");
-
-
-    //@Disabled("Currently, @ids and @refs aren't being handled correctly when calling reader.convertParsedMapsToJava")
+    
     @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");

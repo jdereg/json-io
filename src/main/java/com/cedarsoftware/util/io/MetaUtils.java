@@ -86,7 +86,7 @@ public class MetaUtils
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
-    private static final ConcurrentMap<String, Constructor<?>> constructors = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
     private static final SortedSet<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
@@ -635,7 +635,7 @@ public class MetaUtils
      * @return List of values that are best ordered to match the passed in parameter types.  This
      * list will be the same length as the passed in parameterTypes list.
      */
-    public static List<Object> matchArgumentsToParameters(Collection<Object> values, Parameter[] parameterTypes) {
+    public static List<Object> matchArgumentsToParameters(Collection<Object> values, Parameter[] parameterTypes, boolean useNull) {
         List<Object> answer = new ArrayList<>();
         if (parameterTypes == null || parameterTypes.length == 0) {
             return answer;
@@ -643,9 +643,15 @@ public class MetaUtils
         List<Object> copyValues = new ArrayList<>(values);
 
         for (Parameter parameter : parameterTypes) {
-            Object value = pickBestValue(parameter.getType(), copyValues);
+            final Class<?> paramType = parameter.getType();
+            Object value = pickBestValue(paramType, copyValues);
             if (value == null) {
-                value = getArgForType(parameter.getType());
+                if (useNull) {
+                    value = paramType.isPrimitive() ? convert(paramType, null) : null;  // don't send null to a primitive parameter
+                }
+                else {
+                    value = getArgForType(paramType);
+                }
             }
             answer.add(value);
         }
@@ -712,12 +718,14 @@ public class MetaUtils
     private static class ConstructorWithValues implements Comparable<ConstructorWithValues>
     {
         final Constructor<?> constructor;
-        final Object[] args;
+        final Object[] argsNull;
+        final Object[] argsNonNull;
 
-        ConstructorWithValues(Constructor<?> constructor, Object[] args)
+        ConstructorWithValues(Constructor<?> constructor, Object[] argsNull, Object[] argsNonNull)
         {
             this.constructor = constructor;
-            this.args = args;
+            this.argsNull = argsNull;
+            this.argsNonNull = argsNonNull;
         }
 
         public int compareTo(ConstructorWithValues other)
@@ -741,9 +749,9 @@ public class MetaUtils
                 return -1;
             }
 
-            // Rule 3: Favor fewer null values being passed in.
-            long score1 = scoreArgumentValues(args);
-            long score2 = scoreArgumentValues(other.args);
+            // Rule 3: Sort by score of the argsNull list
+            long score1 = scoreArgumentValues(argsNull);
+            long score2 = scoreArgumentValues(other.argsNull);
             if (score1 < score2) {
                 return 1;
             }
@@ -751,7 +759,17 @@ public class MetaUtils
                 return -1;
             }
 
-            // Rule 4: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
+            // Rule 4: Sort by score of the argsNonNull list
+            score1 = scoreArgumentValues(argsNonNull);
+            score2 = scoreArgumentValues(other.argsNonNull);
+            if (score1 < score2) {
+                return 1;
+            }
+            else if (score1 > score2) {
+                return -1;
+            }
+
+            // Rule 5: Favor by Class of parameter type alphabetically.  Mainly, distinguish so that no constructors
             // are dropped from the Set.  Although an "arbitrary" rule, it is consistent.
             String params1 = buildParameterTypeString(constructor);
             String params2 = buildParameterTypeString(other.constructor);
@@ -806,6 +824,16 @@ public class MetaUtils
         return s.toString();
     }
 
+    private static class CachedConstructor {
+        private final Constructor<?> constructor;
+        private final boolean useNullSetting;
+
+        CachedConstructor(Constructor<?> constructor, boolean useNullSetting) {
+            this.constructor = constructor;
+            this.useNullSetting = useNullSetting;
+        }
+    }
+
     /**
      * Create a new instance of the passed in class c.  You can optionally pass in argument values that will
      * be best-matched to a constructor on c.  You can pass in null or an empty list, in which case, other
@@ -842,7 +870,7 @@ public class MetaUtils
         }
 
         final String cacheKey = createCacheKey(c, argumentValues);
-        Constructor<?> cachedConstructor = constructors.get(cacheKey);
+        CachedConstructor cachedConstructor = constructors.get(cacheKey);
         if (cachedConstructor == null)
         {
             if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
@@ -875,20 +903,28 @@ public class MetaUtils
             // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
             for (Constructor<?> constructor : declaredConstructors) {
                 Parameter[] parameters = constructor.getParameters();
-                List<Object> arguments = matchArgumentsToParameters(argValues, parameters);
-                constructorOrder.add(new ConstructorWithValues(constructor, arguments.toArray()));
+                List<Object> argumentsNull = matchArgumentsToParameters(argValues, parameters, true);
+                List<Object> argumentsNonNull = matchArgumentsToParameters(argValues, parameters, false);
+                constructorOrder.add(new ConstructorWithValues(constructor, argumentsNull.toArray(), argumentsNonNull.toArray()));
             }
 
             for (ConstructorWithValues constructorWithValues : constructorOrder) {
+                Constructor<?> constructor = constructorWithValues.constructor;
                 try {
-                    Constructor<?> constructor = constructorWithValues.constructor;
                     MetaUtils.trySetAccessible(constructor);
-                    // Be nice to person debugging
-                    Object o = constructor.newInstance(constructorWithValues.args);
-                    constructors.put(cacheKey, constructor);   // cache constructor search effort.
+                    Object o = constructor.newInstance(constructorWithValues.argsNull);
+                    // cache constructor search effort (null used for parameters of common types not matched to arguments)
+                    constructors.put(cacheKey, new CachedConstructor(constructor, true));
                     return o;
-                }
-                catch (Exception ignored) {
+                } catch (Exception ignore) {
+                    try {
+                        Object o = constructor.newInstance(constructorWithValues.argsNonNull);
+                        // cache constructor search effort (non-null used for parameters of common types not matched to arguments)
+                        constructors.put(cacheKey, new CachedConstructor(constructor, false));
+                        return o;
+                    }
+                    catch (Exception ignored) {
+                    }
                 }
             }
 
@@ -898,12 +934,12 @@ public class MetaUtils
             }
         } else {
             List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
-            Parameter[] parameters = cachedConstructor.getParameters();
-            List<Object> arguments = matchArgumentsToParameters(argValues, parameters);
+            Parameter[] parameters = cachedConstructor.constructor.getParameters();
+            List<Object> arguments = matchArgumentsToParameters(argValues, parameters, cachedConstructor.useNullSetting);
 
             try {
                 // Be nice to person debugging
-                Object o = cachedConstructor.newInstance(arguments.toArray());
+                Object o = cachedConstructor.constructor.newInstance(arguments.toArray());
                 return o;
             }
             catch (Exception ignored) {
@@ -934,7 +970,6 @@ public class MetaUtils
         }
         return null;
     }
-
 
     /**
      * @return a new primitive wrapper instance for the given class, using the
