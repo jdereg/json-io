@@ -665,8 +665,8 @@ public class MetaUtils
      * then the values list is not modified.
      * @param param Class driving the choice.
      * @param values List of potential argument values to pick from, that would best match the param (class).
-     * @return a the value from the 'values' list that best matched the 'param,' or null if there
-     * none of the values were assignable to the 'param'.
+     * @return a value from the 'values' list that best matched the 'param,' or null if none of the values
+     * were assignable to the 'param'.
      */
     private static Object pickBestValue(Class<?> param, List<Object> values) {
         int[] distances = new int[values.size()];
