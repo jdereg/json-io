@@ -131,7 +131,7 @@ public class SimpleValuesTest
         final String json = TestUtil.toJson(testObj);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
-        final Object newObj = TestUtil.toJava(json);
+        final Object newObj = TestUtil.toObjects(json, null);
         TestUtil.printLine("newObj = " + newObj);
 
         assertEquals(testObj, newObj);

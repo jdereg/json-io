@@ -122,7 +122,7 @@ class RefsTest
         String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        TestReferences root = (TestReferences) TestUtil.toJava(jsonOut);
+        TestReferences root = (TestReferences) TestUtil.toObjects(jsonOut, null);
 
         assertEquals(1, root._a.length);
         assertNotNull(root._b);
@@ -173,7 +173,7 @@ class RefsTest
         String json = TestUtil.toJson(a);
         Map<Class<TestObject>, JsonReader.JsonClassReader> readers = new HashMap<>();
         readers.put(TestObject.class, new TestObjectReader());
-        TestObject aa = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(readers).build());
+        TestObject aa = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(readers).build(), null);
     }
 
     private static class TestObjectReader implements JsonReader.JsonClassReader {
@@ -207,7 +207,7 @@ class RefsTest
 
         // With forward reference
         String json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}, {\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}}]}";
-        List<Object> newList = TestUtil.toJava(json);
+        List<Object> newList = TestUtil.toObjects(json, null);
         Delta d1 = (Delta) newList.get(0);
         Delta d2 = (Delta) newList.get(1);
 
@@ -217,7 +217,7 @@ class RefsTest
 
         // Backward reference
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Axis\",\"name\":\"state\",\"column\":{\"@id\":1,\"value\":\"foo\"}}},{\"@type\":\"com.cedarsoftware.util.io.RefsTest$Delta\",\"newValue\":{\"@ref\":1}}]}";
-        newList = TestUtil.toJava(json);
+        newList = TestUtil.toObjects(json, null);
         d1 = (Delta) newList.get(0);
         d2 = (Delta) newList.get(1);
 
@@ -230,7 +230,7 @@ class RefsTest
     public void testRefChainAsJsonObjects()
     {
         String json = TestUtil.fetchResource("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;
@@ -252,7 +252,7 @@ class RefsTest
         DateWithChildren dc = new DateWithChildren();
 
         String json = TestUtil.fetchResource("references/chainRef.json");
-        DateWithChildren root = TestUtil.toJava(json);
+        DateWithChildren root = TestUtil.toObjects(json, null);
         DateWithChildren[] children =  root.children;
         assert children.length == 6;
         DateWithChildren kid1 = children[0];

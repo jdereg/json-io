@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.YearMonth;
 
-import static com.cedarsoftware.util.io.TestUtil.toJava;
 import static com.cedarsoftware.util.io.TestUtil.toJson;
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth> {
@@ -76,7 +76,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
     @Test
     void testOldFormat_objectType() {
         String json = "{\"@type\":\"java.time.YearMonth\",\"year\":1970,\"month\":6}";
-        YearMonth date = toJava(json);
+        YearMonth date = toObjects(json, null);
         assertThat(date.getYear()).isEqualTo(1970);
         assertThat(date.getMonthValue()).isEqualTo(6);
     }
@@ -84,7 +84,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.YearMonthTests$NestedYearMonth\",\"dateTime1\":{\"@id\":1,\"year\":1970,\"month\":6},\"dateTime2\":{\"@ref\":1}}";
-        NestedYearMonth date = toJava(json);
+        NestedYearMonth date = toObjects(json, null);
         assertThat(date.dateTime1.getYear()).isEqualTo(1970);
         assertThat(date.dateTime1.getMonthValue()).isEqualTo(6);
         assertThat(date.dateTime1).isSameAs(date.dateTime2);
@@ -94,7 +94,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
     void testTopLevel_serializesAsISODate() {
         YearMonth date = YearMonth.of(2014, 10);
         String json = TestUtil.toJson(date);
-        YearMonth result = toJava(json);
+        YearMonth result = toObjects(json, null);
         assertThat(result).isEqualTo(date);
     }
 

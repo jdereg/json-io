@@ -31,7 +31,7 @@ public class PrimitivesTest
     public void testPrimitivesSetWithStrings()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"true\",\"bb\":\"true\",\"by\":\"9\",\"bby\":\"9\",\"c\":\"B\",\"cc\":\"B\",\"d\":\"9.0\",\"dd\":\"9.0\",\"f\":\"9.0\",\"ff\":\"9.0\",\"i\":\"9\",\"ii\":\"9\",\"l\":\"9\",\"ll\":\"9\",\"s\":\"9\",\"ss\":\"9\"}";
-        AllPrimitives ap = TestUtil.toJava(json);
+        AllPrimitives ap = TestUtil.toObjects(json, null);
         assertTrue(ap.getB());
         assertTrue(ap.getBb());
         assertEquals(9, ap.getBy());
@@ -54,7 +54,7 @@ public class PrimitivesTest
     public void testAbilityToNullPrimitivesWithEmptyString()
     {
         String json = "{\"@type\":\"" + AllPrimitives.class.getName() + "\",\"b\":\"\",\"bb\":\"\",\"by\":\"\",\"bby\":\"\",\"c\":\"\",\"cc\":\"\",\"d\":\"\",\"dd\":\"\",\"f\":\"\",\"ff\":\"\",\"i\":\"\",\"ii\":\"\",\"l\":\"\",\"ll\":\"\",\"s\":\"\",\"ss\":\"\"}";
-        AllPrimitives ap = TestUtil.toJava(json);
+        AllPrimitives ap = TestUtil.toObjects(json, null);
         assertFalse(ap.getB());
         assertFalse(ap.getBb());
         assertEquals(0, ap.getBy());
@@ -77,49 +77,49 @@ public class PrimitivesTest
     public void testEmptyPrimitives()
     {
         String json = "{\"@type\":\"byte\"}";
-        Byte b = TestUtil.toJava(json);
+        Byte b = TestUtil.toObjects(json, null);
         assertEquals(b.getClass(), Byte.class);
         assertEquals(0, (byte) b);
 
         json = "{\"@type\":\"short\"}";
-        Short s = TestUtil.toJava(json);
+        Short s = TestUtil.toObjects(json, null);
         assertEquals(s.getClass(), Short.class);
         assertEquals(0, (short) s);
 
         json = "{\"@type\":\"int\"}";
-        Integer i = TestUtil.toJava(json);
+        Integer i = TestUtil.toObjects(json, null);
         assertEquals(i.getClass(), Integer.class);
         assertEquals(0, (int) i);
 
         json = "{\"@type\":\"long\"}";
-        Long l = TestUtil.toJava(json);
+        Long l = TestUtil.toObjects(json, null);
         assertEquals(l.getClass(), Long.class);
         assertEquals(0, (long) l);
 
         json = "{\"@type\":\"float\"}";
-        Float f = TestUtil.toJava(json);
+        Float f = TestUtil.toObjects(json, null);
         assertEquals(f.getClass(), Float.class);
         assertEquals(0.0f, f);
 
         json = "{\"@type\":\"double\"}";
-        Double d = TestUtil.toJava(json);
+        Double d = TestUtil.toObjects(json, null);
         assertEquals(d.getClass(), Double.class);
         assertEquals(0.0d, d);
 
         json = "{\"@type\":\"char\"}";
-        Character c = TestUtil.toJava(json);
+        Character c = TestUtil.toObjects(json, null);
         assertEquals(c.getClass(), Character.class);
         assert c.equals('\u0000');
 
         json = "{\"@type\":\"boolean\"}";
-        Boolean bool = TestUtil.toJava(json);
+        Boolean bool = TestUtil.toObjects(json, null);
         assertEquals(bool, Boolean.FALSE);
 
         json = "{\"@type\":\"string\"}";
         String str = null;
         try
         {
-            str = TestUtil.toJava(json);
+            str = TestUtil.toObjects(json, null);
             fail();
         }
         catch (Exception e)
@@ -134,7 +134,7 @@ public class PrimitivesTest
     public void testAssignPrimitiveToString()
     {
         String json = "{\"@type\":\"" + TestStringField.class.getName() + "\",\"intField\":16,\"booleanField\":true,\"doubleField\":345.12321,\"nullField\":null,\"values\":[10,true,3.14159,null]}";
-        TestStringField tsf = TestUtil.toJava(json);
+        TestStringField tsf = TestUtil.toObjects(json, null);
         assertEquals("16", tsf.getIntField());
         assertEquals("true", tsf.getBooleanField());
         assertEquals("345.12321", tsf.getDoubleField());

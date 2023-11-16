@@ -112,14 +112,14 @@ class JsonObjectTest
 
         String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
         TestUtil.printLine("json = " + json);
-        Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         json = TestUtil.toJson(o);
         TestUtil.printLine("json = " + json);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         json = TestUtil.toJson(o); // Before JsonWriter.adjustIfReferenced, it did not write "@id":1 for Batman's Map, so bad reference is written
         assert TestUtil.count(json, "@id") == 1;
         TestUtil.printLine("json = " + json);
-        o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assert o instanceof JsonObject;
     }
 
@@ -140,14 +140,14 @@ class JsonObjectTest
 
         String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
         TestUtil.printLine("json = " + json);
-        Object o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         json = TestUtil.toJson(o);
         TestUtil.printLine("json = " + json);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         json = TestUtil.toJson(o); // Before JsonWriter.adjustIfReferenced, it did not write "@id":1 for Batman's Map, so bad reference is written
         assert TestUtil.count(json, "@id") == 1;
         TestUtil.printLine("json = " + json);
-        o = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assert o instanceof JsonObject;
     }
 

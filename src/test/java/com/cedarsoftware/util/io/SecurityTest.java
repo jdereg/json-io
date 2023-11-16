@@ -59,13 +59,13 @@ public class SecurityTest
         // attempt to write as root
         assert obj != null;
         String json = TestUtil.toJson(obj);
-        Object o = TestUtil.toJava(json);
+        Object o = TestUtil.toObjects(json, null);
         assert o == null;
 
         // attempt to write inside Object[]
         Object[] arrayOfObj = new Object[] {obj};
         json = TestUtil.toJson(arrayOfObj);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         Object[] array = (Object[]) o;
         assert array.length == 1;
         assert array[0] == null;
@@ -73,7 +73,7 @@ public class SecurityTest
         // attempt to write inside List
         List listOfObj = MetaUtils.listOf(obj);
         json = TestUtil.toJson(listOfObj);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         List list = (List) o;
         assert list.size() == 1;
         assert list.get(0) == null;
@@ -82,7 +82,7 @@ public class SecurityTest
         Map<String, Object> mapStringObj = new HashMap<>();
         mapStringObj.put("test", obj);
         json = TestUtil.toJson(mapStringObj);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         Map map = (Map) o;
         assert map.size() == 1;
         Map.Entry entry = (Map.Entry)map.entrySet().iterator().next();
@@ -93,7 +93,7 @@ public class SecurityTest
         Map<Long, Object> mapLongObj = new HashMap<>();
         mapLongObj.put(17L, obj);
         json = TestUtil.toJson(mapLongObj);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         map = (Map) o;
         assert map.size() == 1;
         entry = (Map.Entry)map.entrySet().iterator().next();
@@ -104,7 +104,7 @@ public class SecurityTest
         Map<Object, String> mapObjString = new HashMap<>();
         mapObjString.put(obj, "test");
         json = TestUtil.toJson(mapObjString);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         map = (Map) o;
         assert map.size() == 1;
         entry = (Map.Entry)map.entrySet().iterator().next();
@@ -114,7 +114,7 @@ public class SecurityTest
         // attempt to write as field on an class
         Fugazi fugazi = new Fugazi(obj);
         json = TestUtil.toJson(fugazi);
-        o = TestUtil.toJava(json);
+        o = TestUtil.toObjects(json, null);
         Fugazi fugazi2 = (Fugazi) o;
         assert fugazi2.desc.equals("fake");
         assert fugazi2.value == null;
@@ -135,7 +135,7 @@ public class SecurityTest
     {
         try
         {
-            Object obj = TestUtil.toJava(json);
+            Object obj = TestUtil.toObjects(json, null);
             fail();
         }
         catch (JsonIoException e)
@@ -152,8 +152,8 @@ public class SecurityTest
     {
         //  {"@type":"class","value":"java.lang.String"}
         String json = TestUtil.toJson(String.class);
-        Class c1 = TestUtil.toJava(json);
-        Class c2 = TestUtil.toJava(json);
+        Class c1 = TestUtil.toObjects(json, null);
+        Class c2 = TestUtil.toObjects(json, null);
         assert c1 == c2;
         assert c1.equals(c2);
     }

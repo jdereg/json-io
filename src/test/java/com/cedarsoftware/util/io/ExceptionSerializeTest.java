@@ -122,7 +122,7 @@ class ExceptionSerializeTest
     {
         Throwable e1 = new Throwable("That argument did not taste well.", null);
         String json = TestUtil.toJson(e1);
-        Throwable e2 = TestUtil.toJava(json);
+        Throwable e2 = TestUtil.toObjects(json, null);
 
         assertThat(e1.getCause()).isNull();
         assertThat(e2.getCause()).isNull();
@@ -140,7 +140,7 @@ class ExceptionSerializeTest
         }
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t1).hasCause(null);
 
@@ -158,7 +158,7 @@ class ExceptionSerializeTest
         ExceptionWithStringConstructor t1 = new ExceptionWithStringConstructor("poo");
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t1).hasCause(null);
 
@@ -175,7 +175,7 @@ class ExceptionSerializeTest
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
 
@@ -197,7 +197,7 @@ class ExceptionSerializeTest
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
 
@@ -225,7 +225,7 @@ class ExceptionSerializeTest
         }
 
         String json = TestUtil.toJson(t1);
-        Throwable t2 = TestUtil.toJava(json);
+        Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t2)
                 .isInstanceOf(JsonIoException.class)
@@ -252,7 +252,7 @@ class ExceptionSerializeTest
         ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
 
         String json = TestUtil.toJson(t1);
-        ExceptionWithAThousandCuts t2 = TestUtil.toJava(json);
+        ExceptionWithAThousandCuts t2 = TestUtil.toObjects(json, null);
 
         assertThat(t2.getEmojis().size()).isEqualTo(3);
         assertThat(t2.getStackTrace()).isNotNull();
@@ -268,7 +268,7 @@ class ExceptionSerializeTest
                 null);
 
         String json = TestUtil.toJson(t1);
-        MultipleParameterConstructor t2 = TestUtil.toJava(json);
+        MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
 
         // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
         assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
@@ -288,7 +288,7 @@ class ExceptionSerializeTest
                 null);
 
         String json = TestUtil.toJson(t1);
-        MultipleParameterConstructor t2 = TestUtil.toJava(json);
+        MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
 
         // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
         assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
@@ -305,7 +305,7 @@ class ExceptionSerializeTest
         Throwable npe = new NullPointerException("you accessed a null with '.' fool.");
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         String json = TestUtil.toJson(ia);
-        Throwable ia2 = TestUtil.toJava(json);
+        Throwable ia2 = TestUtil.toObjects(json, null);
         assert ia2.getCause() instanceof NullPointerException;
         assert ia2.getCause() != npe;
         assert ia.getMessage().equals(ia2.getMessage());
@@ -318,7 +318,7 @@ class ExceptionSerializeTest
         Throwable ia = new IllegalArgumentException("That argument did not taste well.", npe);
         Throwable q = new MyException("Subclassed exception with value field", ia, 16);
         String json = TestUtil.toJson(q);
-        Throwable r = TestUtil.toJava(json);
+        Throwable r = TestUtil.toObjects(json, null);
         assert q.getCause() == ia;
         assert r instanceof MyException;
         MyException my = (MyException) r;
@@ -334,16 +334,16 @@ class ExceptionSerializeTest
         Throwable t4 = new Throwable();
 
         String json = TestUtil.toJson(t1);
-        t1 = TestUtil.toJava(json);
+        t1 = TestUtil.toObjects(json, null);
 
         json = TestUtil.toJson(t2);
-        t2 = TestUtil.toJava(json);
+        t2 = TestUtil.toObjects(json, null);
 
         json = TestUtil.toJson(t3);
-        t3 = TestUtil.toJava(json);
+        t3 = TestUtil.toObjects(json, null);
 
         json = TestUtil.toJson(t4);
-        t4 = TestUtil.toJava(json);
+        t4 = TestUtil.toObjects(json, null);
 
         assert t2.getMessage().equals("goodbye");
         assert t2.getCause().getMessage().equals("hello");

@@ -43,7 +43,7 @@ public class MapOutputFormatTest
         assert json1.contains("@items");
         assert !json2.contains("@keys");
         assert !json2.contains("@items");
-        Map map2 = TestUtil.toJava(json2);
+        Map map2 = TestUtil.toObjects(json2, null);
         assert DeepEquals.deepEquals(map, map2);
     }
 }

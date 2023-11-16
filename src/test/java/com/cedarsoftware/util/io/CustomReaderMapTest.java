@@ -42,7 +42,7 @@ public class CustomReaderMapTest
         customReaders.put(CustomPoint.class, new CustomPointReader());
         
         String json = TestUtil.toJson(data);
-        Map<String, CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
+        Map<String, CustomPoint> clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
 
         CustomPoint clonePoint = clone.get("pt");
         assertEquals(pt.x, clonePoint.x);
@@ -62,7 +62,7 @@ public class CustomReaderMapTest
         Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
         String json = TestUtil.toJson(list);
-        List<CustomPoint> clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
+        List<CustomPoint> clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
 
         CustomPoint clonePoint = clone.get(0);
         assertEquals(pt.x, clonePoint.x);
@@ -83,7 +83,7 @@ public class CustomReaderMapTest
         customReaders.put(CustomPoint.class, new CustomPointReader());
 
         String json = TestUtil.toJson(list);
-        Object[] clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build());
+        Object[] clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
 
         CustomPoint clonePoint = (CustomPoint) clone[0];
         assertEquals(pt.x, clonePoint.x);

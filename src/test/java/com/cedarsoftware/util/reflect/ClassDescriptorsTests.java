@@ -60,7 +60,7 @@ class ClassDescriptorsTests {
         Car initial = createCar();
 
         String json = TestUtil.toJson(initial, options);
-        Car car = TestUtil.toJava(json);
+        Car car = TestUtil.toObjects(json, null);
 
         assertThat(car.getId()).isNull();
         assertThat(car.getUpdated()).isNull();
@@ -89,7 +89,7 @@ class ClassDescriptorsTests {
         Car initial = createCar();
 
         String json = TestUtil.toJson(initial, options);
-        Car car = TestUtil.toJava(json);
+        Car car = TestUtil.toObjects(json, null);
 
         assertThat(car.getId()).isNull();
         assertThat(car.getUpdated()).isNull();

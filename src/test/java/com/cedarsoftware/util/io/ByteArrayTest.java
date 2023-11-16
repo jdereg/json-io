@@ -32,7 +32,7 @@ class ByteArrayTest
         Random r = new Random();
         r.nextBytes(bytes);
         String json = TestUtil.toJson(bytes);
-        byte[] bytes2 = TestUtil.toJava(json);
+        byte[] bytes2 = TestUtil.toObjects(json, null);
 
         for (int i = 0; i < bytes.length; i++)
         {

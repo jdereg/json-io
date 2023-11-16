@@ -36,7 +36,7 @@ public class HardToInstantiateTest
     public void testHardToInstantiateClass()
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.HardToInstantiateTest$Tough\",\"name\":\"Joe\",\"number\":9}";
-        Throwable t = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json); });
+        Throwable t = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, null); });
         assert t.getMessage().toLowerCase().contains("unable to instantiate");
     }
 }

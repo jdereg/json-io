@@ -47,7 +47,7 @@ public class CalendarTest
         String json = TestUtil.toJson(tc);
         TestUtil.printLine("json=" + json);
 
-        tc = TestUtil.toJava(json);
+        tc = TestUtil.toObjects(json, null);
         Assertions.assertEquals(now, tc._cal);
         Assertions.assertEquals(greg, tc._greg);
     }
@@ -58,18 +58,18 @@ public class CalendarTest
         GregorianCalendar[] gregs = new GregorianCalendar[]{new GregorianCalendar()};
         String json = TestUtil.toJson(gregs);
         TestUtil.printLine("json=" + json);
-        GregorianCalendar[] gregs2 = (GregorianCalendar[]) TestUtil.toJava(json);
+        GregorianCalendar[] gregs2 = (GregorianCalendar[]) TestUtil.toObjects(json, null);
         Assertions.assertEquals(gregs2[0], gregs[0]);
     }
 
     @Test
     public void testCalendarUntypedArray()
     {
-        Calendar estCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\",\"zone\":\"EST\"}");
-        Calendar utcCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}");
+        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\",\"zone\":\"EST\"}", null);
+        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}", null);
         String json = TestUtil.toJson(new Object[]{estCal, utcCal});
         TestUtil.printLine("json=" + json);
-        Object[] oa = TestUtil.toJava(json);
+        Object[] oa = TestUtil.toObjects(json, null);
         Assertions.assertEquals(2, oa.length);
         Assertions.assertEquals((oa[0]), estCal);
         Assertions.assertEquals((oa[1]), utcCal);
@@ -82,7 +82,7 @@ public class CalendarTest
         gregs.add(new GregorianCalendar());
         String json = TestUtil.toJson(gregs);
         TestUtil.printLine("json=" + json);
-        List<Calendar> gregs2 = TestUtil.toJava(json);
+        List<Calendar> gregs2 = TestUtil.toObjects(json, null);
         Assertions.assertEquals(1, gregs2.size());
         Assertions.assertEquals(gregs2.get(0), gregs.get(0));
     }
@@ -121,7 +121,7 @@ public class CalendarTest
         String json = TestUtil.toJson(new Object[]{now});
         TestUtil.printLine("json=" + json);
 
-        Object[] items = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         Map item = (Map) items[0];
         Assertions.assertTrue(item.containsKey("time"));
         Assertions.assertTrue(item.containsKey("zone"));
@@ -132,7 +132,7 @@ public class CalendarTest
     {
         try
         {
-            TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"2011-12-08X13:29:58.822-0500\",\"zone\":\"bad zone\"}");
+            TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"2011-12-08X13:29:58.822-0500\",\"zone\":\"bad zone\"}", null);
             fail();
         }
         catch (Exception ignored)
@@ -148,7 +148,7 @@ public class CalendarTest
         String json = TestUtil.toJson(greg);
         TestUtil.printLine("json = " + json);
 
-        Calendar cal = (Calendar) TestUtil.toJava(json);
+        Calendar cal = (Calendar) TestUtil.toObjects(json, null);
         Assertions.assertEquals(cal, greg);
 
         greg = new GregorianCalendar();
@@ -160,7 +160,7 @@ public class CalendarTest
         Calendar[] cals = new Calendar[]{greg};
         json = TestUtil.toJson(cals);
         TestUtil.printLine("json=" + json);
-        cals = TestUtil.toJava(json);
+        cals = TestUtil.toObjects(json, null);
         Assertions.assertEquals(cals[0], greg);
         TestUtil.printLine("json=" + json);
 
@@ -170,16 +170,16 @@ public class CalendarTest
         json = TestUtil.toJson(testCal);
         TestUtil.printLine("json=" + json);
 
-        testCal = TestUtil.toJava(json);
+        testCal = TestUtil.toObjects(json, null);
         Assertions.assertEquals(testCal._cal, cal);
         Assertions.assertEquals(testCal._greg, greg);
 
-        Calendar estCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\"}");
-        Calendar utcCal = TestUtil.toJava("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}");
+        Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\"}", null);
+        Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}", null);
         Assertions.assertEquals(estCal, utcCal);
 
         json = TestUtil.toJson(new Object[]{estCal, utcCal});
-        Object[] oa = TestUtil.toJava(json);
+        Object[] oa = TestUtil.toObjects(json, null);
         Assertions.assertEquals(2, oa.length);
         Assertions.assertEquals((oa[0]), estCal);
         Assertions.assertEquals((oa[1]), utcCal);

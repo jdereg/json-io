@@ -59,7 +59,7 @@ class LocalDateFactoryTests {
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
         String json = loadJsonForTest(fileName);
-        LocalDate localDate = TestUtil.toJava(json);
+        LocalDate localDate = TestUtil.toObjects(json, null);
 
         assertThat(localDate)
                 .hasYear(year)
@@ -71,7 +71,7 @@ class LocalDateFactoryTests {
     void testOldFormat_nestedLevel() {
 
         String json = loadJsonForTest("old-format-nested-level.json");
-        NestedLocalDate nested = TestUtil.toJava(json);
+        NestedLocalDate nested = TestUtil.toObjects(json, null);
 
         assertThat(nested.getDate1())
                 .hasYear(2014)

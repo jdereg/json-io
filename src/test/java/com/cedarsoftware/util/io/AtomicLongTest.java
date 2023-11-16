@@ -44,7 +44,7 @@ class AtomicLongTest
     void testAssignAtomicLong()
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicLongTest$TestAtomicLongField\",\"value\":16,\"nullValue\":null,\"strValue\":\"50\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":-9},\"values\":[-5,null,5, \"45\"]}";
-        TestAtomicLongField atom2 = TestUtil.toJava(json);
+        TestAtomicLongField atom2 = TestUtil.toObjects(json, null);
 
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
@@ -64,7 +64,7 @@ class AtomicLongTest
 
         try
         {
-            TestUtil.toJava(json);
+            TestUtil.toObjects(json, null);
             fail("should not make it here");
         }
         catch (JsonIoException ignore)
@@ -75,7 +75,7 @@ class AtomicLongTest
     void testAssignAtomicLongStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicLongField.class.getName() + "\",\"strValue\":\"\"}";
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -88,7 +88,7 @@ class AtomicLongTest
         list.add(atomicInt);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toJava(json);
+        list = TestUtil.toObjects(json, null);
         assert list.size() == 2;
         atomicInt = list.get(0);
         assert atomicInt.get() == new AtomicLong(12345).get();

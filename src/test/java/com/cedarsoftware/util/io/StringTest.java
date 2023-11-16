@@ -35,7 +35,7 @@ public class StringTest
         ManyStrings test = new ManyStrings();
         String jsonOut = TestUtil.toJson(test);
         TestUtil.printLine("json=" + jsonOut);
-        ManyStrings that = TestUtil.toJava(jsonOut);
+        ManyStrings that = TestUtil.toObjects(jsonOut, null);
 
         for (int i = 0; i < ManyStrings.MAX_UTF8_CHAR; i++)
         {
@@ -74,9 +74,9 @@ public class StringTest
     public void testRootString()
     {
         String s = "\"root string\"";
-        Object o = TestUtil.toJava(s, new ReadOptionsBuilder().returnAsMaps().build());
+        Object o = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals("root string", o);
-        o = TestUtil.toJava(s);
+        o = TestUtil.toObjects(s, null);
         assertEquals("root string", o);
     }
 
@@ -84,7 +84,7 @@ public class StringTest
     public void testStringAsObject()
     {
         String json = "{\"@type\":\"string\",\"value\":\"Sledge Hammer\"}";
-        String x = TestUtil.toJava(json);
+        String x = TestUtil.toObjects(json, null);
         assert x.equals("Sledge Hammer");
     }
 
@@ -92,7 +92,7 @@ public class StringTest
     public void testFrenchChar()
     {
         String json = "\"Réunion\"";
-        String x = TestUtil.toJava(json);
+        String x = TestUtil.toObjects(json, null);
         assert x.equals("Réunion");
     }
 
@@ -100,14 +100,14 @@ public class StringTest
     public void testEmptyString()
     {
         // Ensure no exception is thrown
-        TestUtil.toJava("");
+        TestUtil.toObjects("", null);
     }
 
     @Test
     public void testNullInput()
     {
         // Ensure no exception is thrown
-        TestUtil.toJava(null);
+        TestUtil.toObjects(null, null);
     }
 
     private static class ManyStrings implements Serializable

@@ -45,7 +45,7 @@ class AtomicBooleanTest
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":\"true\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":false},\"values\":[false,null,true, \"true\"]}";
 
-        TestAtomicBooleanField atom2 = TestUtil.toJava(json);
+        TestAtomicBooleanField atom2 = TestUtil.toObjects(json, null);
 
         assert atom2.value.get();
         assert atom2.nullValue == null;
@@ -64,7 +64,7 @@ class AtomicBooleanTest
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":16.5}";
         try
         {
-            Object x = TestUtil.toJava(json);
+            Object x = TestUtil.toObjects(json, null);
             fail("should not make it here");
         }
         catch (Exception ignore)
@@ -75,7 +75,7 @@ class AtomicBooleanTest
     void testAssignAtomicBooleanStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicBooleanField.class.getName() + "\",\"strValue\":\"\"}";
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -88,7 +88,7 @@ class AtomicBooleanTest
         list.add(atomicBoolean);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toJava(json);
+        list = TestUtil.toObjects(json, null);
         assert list.size() == 2;
         atomicBoolean = list.get(0);
         assert atomicBoolean.get() == new AtomicBoolean(true).get();

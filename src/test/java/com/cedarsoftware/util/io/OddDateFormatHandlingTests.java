@@ -39,7 +39,7 @@ public class OddDateFormatHandlingTests {
     <T> void testFormat1_AllTimeTypesPass(Class<T> c) {
         String oddDate = "'{'\"@type\": \"{0}\",\"value\": \"2023/12/25 15:00\"'}'";
         String json = MessageFormat.format(oddDate, c.getName());
-        T dt = TestUtil.toJava(json);
+        T dt = TestUtil.toObjects(json, null);
 
         assertNotNull(dt);
     }
@@ -49,7 +49,7 @@ public class OddDateFormatHandlingTests {
     <T> void testFormat2_AllTimeTypesPass(Class<T> c) {
         String oddDate = "'{'\"@type\": \"{0}\",\"value\": \"2023-12-25\"'}'";
         String json = MessageFormat.format(oddDate, c.getName());
-        T dt = TestUtil.toJava(json);
+        T dt = TestUtil.toObjects(json, null);
 
         assertNotNull(dt);
     }

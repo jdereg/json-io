@@ -30,7 +30,7 @@ class ErrorsTest
     @Test
     void testBadJson()
     {
-        assertThrows(Exception.class, () -> { TestUtil.toJava("[\"bad JSON input\""); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects("[\"bad JSON input\"", null); });
     }
 
     @Test
@@ -54,7 +54,7 @@ class ErrorsTest
                     "}";
         try
         {
-            TestUtil.toJava(json);
+            TestUtil.toObjects(json, null);
         }
         catch (Exception e)
         {
@@ -80,7 +80,7 @@ class ErrorsTest
                 "},\n" +
                 "\"string:\" \"Hello World\"\n" +
                 "}";
-        Object x = TestUtil.toJava(json);
+        Object x = TestUtil.toObjects(json, null);
         assert "array".equals(x);
     }
 
@@ -102,122 +102,122 @@ class ErrorsTest
                     "    \"e\": \"f\"\n" +
                     "  },\n" +
                     "  \"string\": \"Hello World\"\n";
-            assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+            assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseMissingLastBracket()
     {
         String json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10]";
-        TestUtil.toJava(json);
+        TestUtil.toObjects(json, null);
 
         String json2 = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json2); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null); });
     }
 
     @Test
     void testParseBadValueInArray()
     {
         String json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseObjectWithoutClosingBrace()
     {
         String json = "{\"key\": true{";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseBadHex()
     {
         String json = "\"\\u5h1t\"";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseBadEscapeChar()
     {
         String json = "\"What if I try to escape incorrectly \\L1CK\"";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseUnfinishedString()
     {
         String json = "\"This is an unfinished string...";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseEOFInToken()
     {
         String json = "falsz";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseEOFReadingToken()
     {
         String json = "tru";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testParseEOFinArray()
     {
         String json = "[true, false,";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
     }
 
     @Test
     void testMalformedJson()
     {
         final String json = "{\"field\"0}";  // colon expected between fields
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json1 = "{field:0}";  // not quoted field name
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json1, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json2, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json3 = "{\"field\":true";  // object not terminated correctly (ending in token)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json3, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json4 = "{\"field\":\"test\"";  // object not terminated correctly (ending in string)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json4, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json4, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json5 = "{\"field\":{}";  // object not terminated correctly (ending in another object)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json5, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json5, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json6 = "{\"field\":[]";  // object not terminated correctly (ending in an array)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json6, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json6, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json7 = "{\"field\":3.14";  // object not terminated correctly (ending in double precision number)
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json7, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json7, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json8 = "[1,2,3";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json8, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json8, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json9 = "[false,true,false";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json9, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json9, new ReadOptionsBuilder().returnAsMaps().build(), null); });
 
         final String json10 = "[\"unclosed string]";
-        assertThrows(Exception.class, () -> { TestUtil.toJava(json10, new ReadOptionsBuilder().returnAsMaps().build()); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json10, new ReadOptionsBuilder().returnAsMaps().build(), null); });
     }
 
     @Test
     void testBadType()
     {
         String json = "{\"@type\":\"non.existent.class.Non\"}";
-        Map map = TestUtil.toJava(json);
+        Map map = TestUtil.toObjects(json, null);
         assert map.size() == 0;
 
         // Bad class inside a Collection
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[null, true, {\"@type\":\"bogus.class.Name\", \"fingers\":5}]}";
-        List list = TestUtil.toJava(json);
+        List list = TestUtil.toObjects(json, null);
         assert list.size() == 3;
         assert list.get(0) == null;
         assert list.get(1) != null;
@@ -229,7 +229,7 @@ class ErrorsTest
     {
         try
         {
-            TestUtil.toJava(json);
+            TestUtil.toObjects(json, null);
             fail();
             return false;
         }
@@ -251,11 +251,11 @@ class ErrorsTest
         errorContains("{\"name\", 50}", "expected ':' between string field and value");
         errorContains("{\"name\":, }", "unknown JSON value type");
         errorContains("[1, 3, 99d ]", "Expected ',' or ']' inside array");
-        Object x = TestUtil.toJava("\"\\/ should be one char\"");
+        Object x = TestUtil.toObjects("\"\\/ should be one char\"", null);
         assert x.equals("/ should be one char");
-        x = TestUtil.toJava("\"' should be one char\"");
+        x = TestUtil.toObjects("\"' should be one char\"", null);
         assert x.equals("' should be one char");
-        x = TestUtil.toJava("\"a \\' char\"");
+        x = TestUtil.toObjects("\"a \\' char\"", null);
         assert x.equals("a ' char");
     }
 }

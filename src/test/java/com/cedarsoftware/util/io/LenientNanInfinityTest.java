@@ -99,7 +99,7 @@ public class LenientNanInfinityTest
         String json = TestUtil.toJson(a);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
-        A newA = (A) TestUtil.toJava(json);
+        A newA = (A) TestUtil.toObjects(json, null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();

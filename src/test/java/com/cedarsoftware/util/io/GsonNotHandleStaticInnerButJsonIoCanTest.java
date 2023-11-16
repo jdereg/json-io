@@ -48,14 +48,14 @@ public class GsonNotHandleStaticInnerButJsonIoCanTest
 
         String json = TestUtil.toJson(a);
         TestUtil.printLine("json = " + json);
-        A o1 = (A) TestUtil.toJava(json);
+        A o1 = (A) TestUtil.toObjects(json, null);
         assertTrue(o1.a.equals("Tesla"));
 
         A.B b = a.new B();
         b.b = "Elon Musk";
         json = TestUtil.toJson(b);
         TestUtil.printLine("json = " + json);
-        A.B b1 = (A.B) TestUtil.toJava(json);
+        A.B b1 = (A.B) TestUtil.toObjects(json, null);
         assertTrue(b1.b.equals("Elon Musk"));
 
         // gson fail

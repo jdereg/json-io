@@ -38,26 +38,26 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
-        Locale us = TestUtil.toJava(json);
+        Locale us = TestUtil.toObjects(json, null);
         assertEquals(locale, us);
 
         locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry(), "johnson");
         json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
-        us = TestUtil.toJava(json);
+        us = TestUtil.toObjects(json, null);
         assertEquals(locale, us);
         
-        Throwable e = assertThrows(Exception.class, () -> { TestUtil.toJava("{\"@type\":\"java.util.Locale\"}"); });
+        Throwable e = assertThrows(Exception.class, () -> { TestUtil.toObjects("{\"@type\":\"java.util.Locale\"}", null); });
         assertTrue(e.getMessage().toLowerCase().contains("must specify 'language'"));
 
         json = "{\"@type\":\"java.util.Locale\",\"language\":\"en\"}";
-        locale = TestUtil.toJava(json);
+        locale = TestUtil.toObjects(json, null);
         assertEquals("en", locale.getLanguage());
         assertEquals("", locale.getCountry());
         assertEquals("", locale.getVariant());
 
         json = "{\"@type\":\"java.util.Locale\",\"language\":\"en\",\"country\":\"US\"}";
-        locale = TestUtil.toJava(json);
+        locale = TestUtil.toObjects(json, null);
         assertEquals("en", locale.getLanguage());
         assertEquals("US", locale.getCountry());
         assertEquals("", locale.getVariant());
@@ -69,14 +69,14 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(new Object[]{locale});
         TestUtil.printLine("json=" + json);
-        Object[] oArray = TestUtil.toJava(json);
+        Object[] oArray = TestUtil.toObjects(json, null);
         assertEquals(1, oArray.length);
         Locale us = (Locale) oArray[0];
         assertEquals(locale, us);
 
         json = TestUtil.toJson(new Locale[]{locale});
         TestUtil.printLine("json=" + json);
-        Locale[] lArray = TestUtil.toJava(json);
+        Locale[] lArray = TestUtil.toObjects(json, null);
         assertEquals(1, lArray.length);
         us = lArray[0];
         assertEquals(locale, us);
@@ -90,7 +90,7 @@ public class LocaleTest
         map.put("us", locale);
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json=" + json);
-        map = TestUtil.toJava(json);
+        map = TestUtil.toObjects(json, null);
         assertEquals(1, map.size());
         assertEquals(map.get("us"), locale);
     }
@@ -103,7 +103,7 @@ public class LocaleTest
         map.put(locale, "us");
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json=" + json);
-        map = TestUtil.toJava(json);
+        map = TestUtil.toObjects(json, null);
         assertEquals(1, map.size());
         Iterator i = map.keySet().iterator();
         assertEquals(i.next(), locale);
@@ -115,7 +115,7 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals("en", map.get("language"));
         assertEquals("US", map.get("country"));
     }
@@ -126,7 +126,7 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(new Object[]{locale, locale});
         TestUtil.printLine("json=" + json);
-        Object[] oArray = TestUtil.toJava(json);
+        Object[] oArray = TestUtil.toObjects(json, null);
         assertEquals(2, oArray.length);
         Locale us = (Locale) oArray[0];
         assertEquals(locale, us);
@@ -143,7 +143,7 @@ public class LocaleTest
         Map<Locale, String> map = map1;
 
         String json = TestUtil.toJson(map);
-        Map map2 = TestUtil.toJava(json);
+        Map map2 = TestUtil.toObjects(json, null);
         assertTrue(DeepEquals.deepEquals(map, map2));
     }
 

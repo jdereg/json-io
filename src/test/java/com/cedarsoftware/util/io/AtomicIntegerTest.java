@@ -44,7 +44,7 @@ class AtomicIntegerTest
     void testAssignAtomicInteger()
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":\"50\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":-9},\"values\":[-5,null,5, \"45\"]}";
-        TestAtomicIntegerField atom2 = (TestAtomicIntegerField) TestUtil.toJava(json);
+        TestAtomicIntegerField atom2 = (TestAtomicIntegerField) TestUtil.toObjects(json, null);
 
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
@@ -63,7 +63,7 @@ class AtomicIntegerTest
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16.5}";
         try
         {
-            TestUtil.toJava(json);
+            TestUtil.toObjects(json, null);
             fail("should not make it here");
         }
         catch (JsonIoException ignore)
@@ -74,7 +74,7 @@ class AtomicIntegerTest
     void testAssignAtomicIntegerStringToMaps()
     {
         String json = "{\"@type\":\"" + TestAtomicIntegerField.class.getName() + "\",\"strValue\":\"\"}";
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
     }
 
@@ -87,7 +87,7 @@ class AtomicIntegerTest
         list.add(atomicInt);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toJava(json);
+        list = TestUtil.toObjects(json, null);
         assert list.size() == 2;
         atomicInt = list.get(0);
         assert atomicInt.get() == new AtomicInteger(12345).get();

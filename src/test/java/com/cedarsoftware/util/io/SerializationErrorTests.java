@@ -13,7 +13,7 @@ class SerializationErrorTests {
     @Test
     void testEnumWithValue_makeSureEnumCanBeParsed() {
         String json = loadJsonForTest("enum-with-value.json");
-        EnumTests.EnumWithValueField actual = TestUtil.toJava(json);
+        EnumTests.EnumWithValueField actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumTests.EnumWithValueField.FOO);
     }
@@ -37,7 +37,7 @@ class SerializationErrorTests {
                 .failOnUnknownType()
                 .build();
 
-        SecurityGroup actual = TestUtil.toJava(json, readOptions);
+        SecurityGroup actual = TestUtil.toObjects(json, readOptions, null);
 
         assertThat(actual.getId()).isNull();
         assertThat(actual.getType()).isEqualTo("Level 1");
@@ -55,7 +55,7 @@ class SerializationErrorTests {
                 .build();
 
         String json = loadJsonForTest("security-group.json");
-        SecurityGroup actual = TestUtil.toJava(json, options);
+        SecurityGroup actual = TestUtil.toObjects(json, options, null);
 
         assertThat(actual.getId()).isNull();
         assertThat(actual.getType()).isEqualTo("LEVEL1");

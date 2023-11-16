@@ -82,7 +82,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     void testTopLevel_serializesAsISODate() {
         LocalDate date = LocalDate.of(2014, 10, 17);
         String json = TestUtil.toJson(date);
-        LocalDate result = TestUtil.toJava(json);
+        LocalDate result = TestUtil.toObjects(json, null);
         assertThat(result).isEqualTo(date);
     }
 
@@ -97,7 +97,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
         String json = loadJsonForTest(fileName);
-        LocalDate localDate = TestUtil.toJava(json);
+        LocalDate localDate = TestUtil.toObjects(json, null);
 
         assertThat(localDate)
                 .hasYear(year)
@@ -109,7 +109,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     void testOldFormat_nestedLevel() {
 
         String json = loadJsonForTest("old-format-nested-level.json");
-        NestedLocalDate nested = TestUtil.toJava(json);
+        NestedLocalDate nested = TestUtil.toObjects(json, null);
 
         assertThat(nested.getDate1())
                 .hasYear(2014)
@@ -127,7 +127,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     {
         LocalDate ld = LocalDate.of(2023, 12, 25);
         String json = TestUtil.toJson(ld, new WriteOptionsBuilder().writeLocalDateAsTimeStamp().build());
-        LocalDate ld2 = TestUtil.toJava(json);
+        LocalDate ld2 = TestUtil.toObjects(json, null);
         assert ld.equals(ld2);
     }
     

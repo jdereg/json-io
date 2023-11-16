@@ -32,27 +32,27 @@ public class UUIDTest
     public void testAssignUUID()
     {
         String json = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\",\"fromString\":\"6508db3c-52c5-42ad-91f3-621d6e1d6557\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861,\"leastSigBits\":-7929886640328317609}}";
-        TestUUIDFields tu = TestUtil.toJava(json);
+        TestUUIDFields tu = TestUtil.toObjects(json, null);
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         json = TestUtil.toJson(map);
-        tu = TestUtil.toJava(json);
+        tu = TestUtil.toObjects(json, null);
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
         String json1 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\",\"fromString\":\"\"}";
-        Throwable thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json1); });
+        Throwable thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json1, null); });
         assertEquals(IllegalArgumentException.class, thrown.getCause().getClass());
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
-        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json2); });
+        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null); });
         assert thrown.getMessage().toLowerCase().contains("mostsigbits");
         assert thrown.getMessage().toLowerCase().contains("cannot be empty");
 
         String json3 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861}}";
-        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json3); });
+        thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json3, null); });
         assert thrown.getMessage().toLowerCase().contains("leastsigbits");
         assert thrown.getMessage().toLowerCase().contains("cannot be empty");
     }
@@ -64,7 +64,7 @@ public class UUIDTest
         UUID uuid = UUID.fromString(s);
         String json = TestUtil.toJson(uuid);
         TestUtil.printLine("json=" + json);
-        uuid = TestUtil.toJava(json);
+        uuid = TestUtil.toObjects(json, null);
         assertEquals(UUID.fromString(s), uuid);
     }
 
@@ -78,7 +78,7 @@ public class UUIDTest
         String json = TestUtil.toJson(uuids);
         TestUtil.printLine("json=" + json);
 
-        uuids = TestUtil.toJava(json);
+        uuids = TestUtil.toObjects(json, null);
         assertEquals(2, uuids.length);
         assertSame(uuids[0], uuids[1]);
         assertEquals(UUID.fromString(s), uuids[0]);
@@ -99,7 +99,7 @@ public class UUIDTest
         list.add(uuid);
         String json = TestUtil.toJson(list);
         TestUtil.printLine("json=" + json);
-        list = TestUtil.toJava(json);
+        list = TestUtil.toObjects(json, null);
         assertEquals(2, list.size());
         assertEquals(UUID.fromString(s), list.get(0));
         assertSame(list.get(0), list.get(1));
@@ -112,7 +112,7 @@ public class UUIDTest
         TestUUIDFields t = new TestUUIDFields();
         t. fromString = uuid;
         String json = TestUtil.toJson(t);
-        TestUUIDFields tut = TestUtil.toJava(json);
+        TestUUIDFields tut = TestUtil.toObjects(json, null);
         assert tut.fromString.equals(uuid);
     }
 

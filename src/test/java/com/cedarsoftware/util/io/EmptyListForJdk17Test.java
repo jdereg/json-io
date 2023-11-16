@@ -33,7 +33,7 @@ public class EmptyListForJdk17Test
         final Object o = Collections.emptyList();
 
         String json = TestUtil.toJson(o);
-        List es = TestUtil.toJava(json);
+        List es = TestUtil.toObjects(json, null);
 
         assertTrue(es.isEmpty());
         assertEquals(Collections.EMPTY_LIST.getClass(), es.getClass());

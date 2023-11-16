@@ -30,7 +30,7 @@ public class UnknownObjectTypeTest
     public void testUnknownObjects()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        JsonObject myParams = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        JsonObject myParams = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         Object inputParams = new JsonReader().jsonObjectsToJava(myParams);
         assert inputParams instanceof Map;
         String json2 = TestUtil.toJson(inputParams);
@@ -40,7 +40,7 @@ public class UnknownObjectTypeTest
     public void testUnknownClassType()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        Map java = TestUtil.toJava(json);
+        Map java = TestUtil.toObjects(json, null);
         assert java.get("name").equals("Joe");
     }
 
@@ -48,7 +48,7 @@ public class UnknownObjectTypeTest
     public void testUnknownClassTypePassesWhenFailOptionFalse()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        Map java = TestUtil.toJava(json);// failOnUnknownType = false (default no need to set option)
+        Map java = TestUtil.toObjects(json, null);// failOnUnknownType = false (default no need to set option)
         assert java.get("name").equals("Joe");
     }
 
@@ -56,14 +56,14 @@ public class UnknownObjectTypeTest
     public void testUnknownClassTypeFailsWhenFailOptionTrue()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        assertThrows(JsonIoException.class, () -> { TestUtil.toJava(json, new ReadOptionsBuilder().failOnUnknownType().build()); });
+        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().failOnUnknownType().build(), null); });
     }
 
     @Test
     public void testUnknownClassSwappedWithConcurrentSkipListMap()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\",\"age\":50}";
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentSkipListMap.class).build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentSkipListMap.class).build(), null);
         assert map instanceof ConcurrentSkipListMap;
         assert map.get("name").equals("Joe");
         assert map.get("age").equals(50L);
@@ -75,10 +75,10 @@ public class UnknownObjectTypeTest
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\",\"age\":50}";
         Throwable t = assertThrows(JsonIoException.class, () -> {
-            Object obj = TestUtil.toJava(json, new ReadOptionsBuilder().
+            Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().
                     setUnknownTypeClass(ConcurrentSkipListMap.class).
                     failOnUnknownType().
-                    build());
+                    build(), null);
         });
         String loMsg = t.getMessage().toLowerCase();
         assert loMsg.contains("unable to create");

@@ -37,24 +37,24 @@ public class ForwardReferencesTest
         two._other = one;
         String pkg = TestObject.class.getName();
         String fwdRef = "[[{\"@id\":2,\"@type\":\"" + pkg + "\",\"_name\":\"Two\",\"_other\":{\"@ref\":1}}],[{\"@id\":1,\"@type\":\"" + pkg + "\",\"_name\":\"One\",\"_other\":{\"@ref\":2}}]]";
-        Object[] foo = TestUtil.toJava(fwdRef);
+        Object[] foo = TestUtil.toObjects(fwdRef, null);
         Object[] first = (Object[]) foo[0];
         Object[] second = (Object[]) foo[1];
         assertEquals(one, second[0]);
         assertEquals(two, first[0]);
 
         String json = "[{\"@ref\":2},{\"@id\":2,\"@type\":\"int\",\"value\":5}]";
-        Object[] ints = TestUtil.toJava(json);
+        Object[] ints = TestUtil.toObjects(json, null);
         assertEquals((Integer) ints[0], 5);
         assertEquals((Integer) ints[1], 5);
 
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@ref\":2},{\"@id\":2,\"@type\":\"int\",\"value\":5}]}";
-        List list = TestUtil.toJava(json);
+        List list = TestUtil.toObjects(json, null);
         assertEquals((Integer) list.get(0), 5);
         assertEquals((Integer) list.get(1), 5);
 
         json = "{\"@type\":\"java.util.TreeSet\",\"@items\":[{\"@type\":\"int\",\"value\":9},{\"@ref\":16},{\"@type\":\"int\",\"value\":4},{\"@id\":16,\"@type\":\"int\",\"value\":5}]}";
-        Set set = TestUtil.toJava(json);
+        Set set = TestUtil.toObjects(json, null);
         assertEquals(set.size(), 3);
         Iterator i = set.iterator();
         assertEquals((Integer) i.next(), 4);
@@ -62,7 +62,7 @@ public class ForwardReferencesTest
         assertEquals((Integer) i.next(), 9);
 
         json = "{\"@type\":\"java.util.HashMap\",\"@keys\":[1,2,3,4],\"@items\":[{\"@type\":\"int\",\"value\":9},{\"@ref\":16},{\"@type\":\"int\",\"value\":4},{\"@id\":16,\"@type\":\"int\",\"value\":5}]}";
-        Map map = TestUtil.toJava(json);
+        Map map = TestUtil.toObjects(json, null);
         assertEquals(map.size(), 4);
         assertEquals((Integer) map.get(1L), 9);
         assertEquals((Integer) map.get(2L), 5);

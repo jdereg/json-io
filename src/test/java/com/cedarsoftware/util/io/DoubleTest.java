@@ -37,7 +37,7 @@ public class DoubleTest
         ManyDoubles test = new ManyDoubles();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyDoubles that = TestUtil.toJava(json);
+        ManyDoubles that = TestUtil.toObjects(json, null);
 
         assertEquals(-1.0d, that._arrayElement);
         assertEquals(71.0d, that._polyRefTarget);

@@ -186,9 +186,7 @@ public class JsonReader implements Closeable
                         Object value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
 
                         if (value != null) {
-                            if (sub.getType() != null) {
-                                arguments.add(value);
-                            } else if (sub.getTargetClass() != null) {
+                            if (sub.getType() != null || sub.getTargetClass() != null) {
                                 arguments.add(value);
                             }
                         }
@@ -412,16 +410,18 @@ public class JsonReader implements Closeable
         this.readOptions.addNonCustomizableClass(c);
     }
 
-
     /**
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param input   Input stream of UTF-8 json string data
      * @param options Read options
      * @return Java object graph matching JSON input
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
     @SuppressWarnings("unchecked")
-    public static <T> T toObjects(InputStream input, ReadOptions options) {
+    public static <T> T toObjects(InputStream input, ReadOptions options, Class<?> root) {
         try (JsonReader jr = new JsonReader(input, options)) {
             return (T) jr.readObject();
         }
@@ -432,25 +432,30 @@ public class JsonReader implements Closeable
      *
      * @param bytes UTF-8 byte array
      * @param options    Read options
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      * @return Java object graph matching JSON input
      */
-    public static <T> T toObjects(byte[] bytes, ReadOptions options) {
-        return toObjects(new ByteArrayInputStream(bytes), options);
+    public static <T> T toObjects(byte[] bytes, ReadOptions options, Class<?> root) {
+        return toObjects(new ByteArrayInputStream(bytes), options, root);
     }
-
 
     /**
      * Convert the passed in JSON string into a Java object graph.
      *
      * @param jsonString String JSON input
      * @param options    Read options
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      * @return Java object graph matching JSON input
      */
-    public static <T> T toObjects(String jsonString, ReadOptions options) {
+    public static <T> T toObjects(String jsonString, ReadOptions options, Class<?> root) {
         if (jsonString == null) {
             return null;
         }
-        return toObjects(jsonString.getBytes(StandardCharsets.UTF_8), options);
+        return toObjects(jsonString.getBytes(StandardCharsets.UTF_8), options, root);
     }
 
     /**
@@ -458,10 +463,13 @@ public class JsonReader implements Closeable
      * Uses the default read options
      *
      * @param json String JSON input
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      * @return Java object graph matching JSON input
      */
-    public static <T> T toObjects(String json) {
-        return toObjects(json, new ReadOptionsBuilder().build());
+    public static <T> T toObjects(String json, Class<?> root) {
+        return toObjects(json, new ReadOptionsBuilder().build(), root);
     }
 
 
@@ -474,7 +482,7 @@ public class JsonReader implements Closeable
     @Deprecated
     public static <T> T jsonToJava(String json)
     {
-        return toObjects(json);
+        return toObjects(json, null);
     }
 
     /**

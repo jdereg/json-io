@@ -73,7 +73,7 @@ class LocalDateTimeFactoryTests {
     public void testToughFormatToParse()
     {
         String json = TestUtil.fetchResource("localdatetime/wideFormatSupport.json");
-        LocalDateTime dt = TestUtil.toJava(json);
+        LocalDateTime dt = TestUtil.toObjects(json, null);
         assert dt.getYear() == 2023;
         assert dt.getMonthValue() == 12;
         assert dt.getDayOfMonth() == 25;

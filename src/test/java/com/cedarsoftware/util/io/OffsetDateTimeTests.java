@@ -21,7 +21,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");
-        NestedOffsetDateTime offsetDateTime = TestUtil.toJava(json);
+        NestedOffsetDateTime offsetDateTime = TestUtil.toObjects(json, null);
 
         assertOffsetDateTime(offsetDateTime.date1, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
         assertOffsetDateTime(offsetDateTime.date2, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
@@ -31,7 +31,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     @Test
     void testOldFormat_nested() {
         String json = loadJsonForTest("old-format-nested.json");
-        NestedOffsetDateTime offsetDateTime = TestUtil.toJava(json);
+        NestedOffsetDateTime offsetDateTime = TestUtil.toObjects(json, null);
         assertOffsetDateTime(offsetDateTime.date1, 2027, 12, 23, 6, 7, 16, 20 * 100, "+05:00");
         assertNotSame(offsetDateTime.date1.getOffset(), offsetDateTime.date2.getOffset());
     }
@@ -39,7 +39,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     @Test
     void testOldFormat_simple() {
         String json = loadJsonForTest("old-format-simple.json");
-        OffsetDateTime offsetDateTime = TestUtil.toJava(json);
+        OffsetDateTime offsetDateTime = TestUtil.toObjects(json, null);
         assertOffsetDateTime(offsetDateTime, 2019, 12, 15, 9, 7, 16, 20 * 100, "Z");
     }
 

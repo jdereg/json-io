@@ -59,7 +59,7 @@ public class NoTypeTest
     {
         String json = "{\"groups\":[\"one\",\"two\",\"three\"],\"search\":{\"datalist\":[]}}";
 
-        Map map = TestUtil.toJava(json);
+        Map map = TestUtil.toObjects(json, null);
         Object[] groups = (Object[]) map.get("groups");
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -69,7 +69,7 @@ public class NoTypeTest
         Object[] dataList = (Object[]) search.get("datalist");
         assert dataList.length == 0;
 
-        map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         groups = (Object[]) (map.get("groups"));
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -88,7 +88,7 @@ public class NoTypeTest
         cols.setBars(new Object[]{1, 3, "5", 7});
 
         String json = TestUtil.toJson(cols, new WriteOptionsBuilder().neverShowTypeInfo().build());
-        Map map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
         assert listFoos[0].equals(1L);
@@ -115,7 +115,7 @@ public class NoTypeTest
     {
         Object[] array = new Object[]{new Object[]{1L, 2L, 3L}, new Object[] {'a', 'b', 'c'}};
         String json = TestUtil.toJson(array);
-        Object[] list = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Object[] list = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assert list.length == 2;
         Object[] list0 = (Object[]) list[0];
         assert list0.length == 3;

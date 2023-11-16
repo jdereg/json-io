@@ -43,7 +43,7 @@ public class CustomClassHandlerTest
 
         Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
         map3.put(WeirdDate.class, new WeirdDateReader());
-        WeirdDate date = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(map3).build());
+        WeirdDate date = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(map3).build(), null);
         assertEquals(now, date);
 
         Map<Class<WeirdDate>, WeirdDateWriter> map5 = new LinkedHashMap<>(1);

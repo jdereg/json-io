@@ -853,7 +853,7 @@ public class MetaUtils
      * create a ClassFactory for this specific class, and add that to the ReadOptions as an instantiator
      * that is associated to the class 'c'.  In the ClassFactory, the JsonObject containing the data from the
      * associated JsonObject { } is passed in, allowing you to instantiate and load the values in one operation.
-     * If you do that, and no further sub-objects need to be loaded, or you load the sub-objects in your ClassFactory,
+     * If you do that, and no further sub-objects exist, or you load the sub-objects in your ClassFactory,
      * make sure to return 'true' for isObjectFinal().
      */
     public static Object newInstance(Class<?> c, Collection<?> argumentValues) {

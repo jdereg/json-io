@@ -55,7 +55,7 @@ public class SunMiscTest
                 return jOb;
             }
         });
-        TestUtil.toJava(workaroundString, new ReadOptionsBuilder().withCustomReaders(customReader).build());
+        TestUtil.toObjects(workaroundString, new ReadOptionsBuilder().withCustomReaders(customReader).build(), null);
         // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
@@ -65,7 +65,7 @@ public class SunMiscTest
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.toJava(json, new ReadOptionsBuilder().withCustomReaders(customReader).build());
+        TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReader).build(), null);
     }
 
     @Test
@@ -74,16 +74,16 @@ public class SunMiscTest
         MetaUtils.setUseUnsafe(true);
         // this test will fail without directCreation
         Dog.OtherShoe shoe = Dog.OtherShoe.construct();
-        Dog.OtherShoe oShoe = TestUtil.toJava(TestUtil.toJson(shoe));
+        Dog.OtherShoe oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), null);
         assertEquals(shoe, oShoe);
-        oShoe = TestUtil.toJava(TestUtil.toJson(shoe));
+        oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), null);
         assertEquals(shoe, oShoe);
 
         try
         {
             MetaUtils.setUseUnsafe(false);
             shoe = Dog.OtherShoe.construct();
-            TestUtil.toJava(TestUtil.toJson(shoe));
+            TestUtil.toObjects(TestUtil.toJson(shoe), null);
             fail();
         }
         catch (JsonIoException e)
@@ -95,7 +95,7 @@ public class SunMiscTest
         MetaUtils.setUseUnsafe(true);
         // this test will fail without directCreation
         Dog.OtherShoe.construct();
-        oShoe = TestUtil.toJava(TestUtil.toJson(shoe));
+        oShoe = TestUtil.toObjects(TestUtil.toJson(shoe), null);
         assertEquals(shoe, oShoe);
     }
 
@@ -104,10 +104,10 @@ public class SunMiscTest
     {
         assertThrows(Exception.class, ShouldBeImpossibleToInstantiate::new);
         String json = "{\"@type\":\"" + ShouldBeImpossibleToInstantiate.class.getName() + "\", \"x\":50}";
-        assertThrows(Exception.class, () -> {  TestUtil.toJava(json); });
+        assertThrows(Exception.class, () -> {  TestUtil.toObjects(json, null); });
 
         MetaUtils.setUseUnsafe(true);
-        ShouldBeImpossibleToInstantiate s = TestUtil.toJava(json);
+        ShouldBeImpossibleToInstantiate s = TestUtil.toObjects(json, null);
         assert s.x == 50;
         MetaUtils.setUseUnsafe(false);
     }

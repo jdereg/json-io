@@ -57,7 +57,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(expected, writeOptions);
 
-        NestedEnum actual = TestUtil.toJava(json);
+        NestedEnum actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.getTestEnum3()).isSameAs(expected.getTestEnum3());
         assertThat(actual.getTestEnum4()).isSameAs(expected.getTestEnum4());
@@ -74,7 +74,7 @@ class EnumTests {
                 .contains("@ref")
                 .contains("@i");
 
-        DuplicateRefEnum actual = TestUtil.toJava(json);
+        DuplicateRefEnum actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.getEnum1())
                 .isSameAs(expected.getEnum1())
@@ -93,7 +93,7 @@ class EnumTests {
 
         String json = TestUtil.toJson(input, writeOptions);
 
-        Collection<Object> actual = TestUtil.toJava(json);
+        Collection<Object> actual = TestUtil.toObjects(json, null);
         assertThat(actual).containsExactlyInAnyOrderElementsOf(input);
     }
 
@@ -231,7 +231,7 @@ class EnumTests {
         String json = TestUtil.toJson(mc);
         assertThat(json).contains("Dude");
 
-        SimpleClass actual = TestUtil.toJava(json);
+        SimpleClass actual = TestUtil.toObjects(json, null);
         assertThat(actual.getName()).isEqualTo("Dude");
         assertThat(actual.getMyEnum()).isEqualTo(SimpleEnum.ONE);
     }
@@ -243,7 +243,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
         String json = TestUtil.toJson(mc, options);
-        EnumWithNestedName actual = TestUtil.toJava(json);
+        EnumWithNestedName actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumWithNestedName.Z);
         assertThat(actual.name).isEqualTo("foo");
@@ -259,7 +259,7 @@ class EnumTests {
 
         mc.name = "foo";
 
-        PublicEnumWithNestedName actual = TestUtil.toJava(json);
+        PublicEnumWithNestedName actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(PublicEnumWithNestedName.Z);
         assertThat(actual.name).isEqualTo("blech");
@@ -276,7 +276,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
         String json = TestUtil.toJson(mc, options);
-        EnumNestedWithinEnum actual = TestUtil.toJava(json);
+        EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumNestedWithinEnum.THREE);
         assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
@@ -290,7 +290,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
         String json = TestUtil.toJson(mc, options);
-        EnumWithValueField actual = TestUtil.toJava(json);
+        EnumWithValueField actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumWithValueField.FOO);
     }
@@ -303,7 +303,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptionsBuilder().build();
         String json = TestUtil.toJson(mc, options);
-        EnumWithValueField actual = TestUtil.toJava(json);
+        EnumWithValueField actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumWithValueField.FOO);
     }
@@ -528,14 +528,14 @@ class EnumTests {
     }
 
     private <T> T loadObject(String fileName) {
-        return (T) TestUtil.toJava(loadJson(fileName));
+        return (T) TestUtil.toObjects(loadJson(fileName), null);
     }
 
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnum(T input, WriteOptions writeOptions) {
         String json = TestUtil.toJson(input, writeOptions);
-        Enum actual = TestUtil.toJava(json);
+        Enum actual = TestUtil.toObjects(json, null);
         assertThat(actual).isEqualTo(input);
         return (T) actual;
     }
@@ -543,7 +543,7 @@ class EnumTests {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static <T> T readWriteAndCompareEnumArray(T[] enumArray, WriteOptions writeOptions) {
         String json = TestUtil.toJson(enumArray, writeOptions);
-        T[] actual = TestUtil.toJava(json);
+        T[] actual = TestUtil.toObjects(json, null);
         assertThat(actual).isEqualTo(enumArray);
         return (T) actual;
     }

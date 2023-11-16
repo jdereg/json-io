@@ -46,7 +46,7 @@ public class FieldsTest
         OuterObject expected = OuterObject.of(9, 12, "Happy Holidays", "Some Other Message");
         String json = TestUtil.toJson(expected);
         TestUtil.printLine(json);
-        OuterObject actual = TestUtil.toJava(json);
+        OuterObject actual = TestUtil.toObjects(json, null);
         assertThat(actual.getX()).isEqualTo(expected.getX());
         assertThat(actual.getY()).isEqualTo(expected.getY());
         assertThat(actual.getMessage1Holder().getMessage()).isEqualTo(expected.getMessage1Holder().getMessage());
@@ -61,7 +61,7 @@ public class FieldsTest
         String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        ManyFields root = TestUtil.toJava(jsonOut);
+        ManyFields root = TestUtil.toObjects(jsonOut, null);
         assertFields(root);
     }
 
@@ -199,12 +199,12 @@ public class FieldsTest
         testFields.init();
         String json0 = TestUtil.toJson(testFields);
         TestUtil.printLine("json0=" + json0);
-        Map testFields2 = TestUtil.toJava(json0, new ReadOptionsBuilder().returnAsMaps().build());
+        Map testFields2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
 
         String json1 = TestUtil.toJson(testFields2);
         TestUtil.printLine("json1=" + json1);
 
-        ManyFields testFields3 = TestUtil.toJava(json1);
+        ManyFields testFields3 = TestUtil.toObjects(json1, null);
         assertFields(testFields3);// Re-written from Map of Maps and re-loaded correctly
         assertEquals(json0, json1);
     }
@@ -214,7 +214,7 @@ public class FieldsTest
     {
         Class<TestVanillaFields> clazz = TestVanillaFields.class;
         String json = "{\"@type\":\"" + clazz.getName() + "\",\"name\":\"Nakamoto\",\"salary\":100.45,\"age\":48,\"alive\":true,\"garbage\":null}";
-        TestVanillaFields vanilla = (TestVanillaFields) TestUtil.toJava(json);
+        TestVanillaFields vanilla = (TestVanillaFields) TestUtil.toObjects(json, null);
         assertEquals(vanilla.getName(), "Nakamoto");
         assertEquals(vanilla.salary, 100.45d);
         assertEquals(vanilla.getAge(), 48L);
@@ -234,7 +234,7 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build());
-        Map check = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -251,7 +251,7 @@ public class FieldsTest
         ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
         WriteOptions writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
         String json = TestUtil.toJson(painful, writeOptions);
-        Map check = TestUtil.toJava(json, readOptions);
+        Map check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
 
@@ -261,7 +261,7 @@ public class FieldsTest
         fieldSpecifiers.put(MorePainfulToSerialize.class, fields2);
         writeOptions = new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).build();
         json = TestUtil.toJson(painful, writeOptions);
-        check = TestUtil.toJava(json, readOptions);
+        check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
         assertTrue(check.containsKey("age"));
@@ -276,7 +276,7 @@ public class FieldsTest
         String json = TestUtil.toJson(tl);
         TestUtil.printLine("json=" + json);
 
-        tl = TestUtil.toJava(json);
+        tl = TestUtil.toObjects(json, null);
         assertEquals(locale, tl._loc);
     }
 
@@ -290,7 +290,7 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldNameBlackListMap(blackLists).build());
-        Map check = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -306,7 +306,7 @@ public class FieldsTest
         painful.setAge(50);
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldNameBlackListMap(blackLists).build());
-        Map check = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
         assertTrue(check.containsKey("age"));
@@ -324,7 +324,7 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder().withFieldSpecifiersMap(fieldSpecifiers).withFieldNameBlackListMap(blackLists).build());
-        Map check = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -688,7 +688,7 @@ public class FieldsTest
         String json = TestUtil.toJson(p2);
         assert json.contains("P1.x");
         assert json.contains("P1.y");
-        P2 p2copy = TestUtil.toJava(json);
+        P2 p2copy = TestUtil.toObjects(json, null);
         assert p2copy.x.equals("1");
         assert p2copy.y.equals("2");
         assert p2copy.z.equals("3");
@@ -706,7 +706,7 @@ public class FieldsTest
         String json = TestUtil.toJson(p1);
         assert !json.contains("P1.x");
         assert !json.contains("P1.y");
-        P1 p1copy = TestUtil.toJava(json);
+        P1 p1copy = TestUtil.toObjects(json, null);
         assert p1copy.x == 10;
         assert p1copy.y == 20;
     }

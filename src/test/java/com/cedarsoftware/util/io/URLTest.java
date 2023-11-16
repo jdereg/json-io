@@ -44,7 +44,7 @@ class URLTest
     void testUrl_readingJsonWithOldFormat_stillWorks(String fileName, String expectedUrl) throws Exception
     {
         String json = TestUtil.fetchResource("url/" + fileName);
-        URL actual = TestUtil.toJava(json);
+        URL actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.toString()).isEqualTo(expectedUrl);
     }
@@ -85,7 +85,7 @@ class URLTest
         String json = TestUtil.toJson(url);
 
         TestUtil.printLine("json=" + json);
-        Object read = TestUtil.toJava(json);
+        Object read = TestUtil.toObjects(json, null);
         assertThat(read).isEqualTo(url);
     }
 
@@ -114,7 +114,7 @@ class URLTest
         String json = TestUtil.toJson(initial);
 
         TestUtil.printLine("json=" + json);
-        GenericSubObject actual = TestUtil.toJava(json);
+        GenericSubObject actual = TestUtil.toObjects(json, null);
         assertThat(actual.getObject()).isEqualTo(initial.getObject());
     }
 
@@ -126,7 +126,7 @@ class URLTest
         assertThatJsonIsNewStyle(json);
 
         TestUtil.printLine("json=" + json);
-        NestedUrl actual = TestUtil.toJava(json);
+        NestedUrl actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.getUrl()).isEqualTo(initial.getUrl());
     }
@@ -137,7 +137,7 @@ class URLTest
         List<URL> list = MetaUtils.listOf(url, url, url, url, url);
         String json = TestUtil.toJson(list);
 
-        List<URL> actual = TestUtil.toJava(json);
+        List<URL> actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).containsAll(list);
     }
@@ -148,7 +148,7 @@ class URLTest
 
         String json = TestUtil.toJson(expected);
 
-        NestedTwice actual = TestUtil.toJava(json);
+        NestedTwice actual = TestUtil.toObjects(json, null);
 
         assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());

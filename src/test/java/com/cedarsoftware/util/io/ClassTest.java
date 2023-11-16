@@ -35,7 +35,7 @@ public class ClassTest
         Class<?> c = Double.class;
         String json = TestUtil.toJson(c);
         TestUtil.printLine("json=" + json);
-        Class<?> r = TestUtil.toJava(json);
+        Class<?> r = TestUtil.toObjects(json, null);
         assertEquals(c.getName(), r.getName());
     }
 
@@ -47,7 +47,7 @@ public class ClassTest
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
-        OneNestedClass actual = TestUtil.toJava(json);
+        OneNestedClass actual = TestUtil.toObjects(json, null);
         assert expected.cls.equals(actual.cls);
     }
 
@@ -57,7 +57,7 @@ public class ClassTest
         ManyClasses test = new ManyClasses();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        ManyClasses that = TestUtil.toJava(json);
+        ManyClasses that = TestUtil.toObjects(json, null);
 
         assertEquals(that._classes_a.get(0), Character.class);
 

@@ -33,7 +33,7 @@ public class JDK9ImmutableTest
         final Object o = new ArrayList<>(MetaUtils.listOf());
 
         String json = TestUtil.toJson(o);
-        List<?> es = TestUtil.toJava(json);
+        List<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(0, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -44,7 +44,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.listOf();
 
         String json = TestUtil.toJson(o);
-        List<?> es = TestUtil.toJava(json);
+        List<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(0, es.size());
         assert DeepEquals.deepEquals(o, es);
@@ -55,7 +55,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.listOf("One");
 
         String json = TestUtil.toJson(o);
-        List<?> es = TestUtil.toJava(json);
+        List<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(1, es.size());
         assert DeepEquals.deepEquals(o, es);
@@ -66,7 +66,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.listOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        List<?> es = TestUtil.toJava(json);
+        List<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(2, es.size());
         assert DeepEquals.deepEquals(o, es);
@@ -77,7 +77,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.listOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        List<?> es = TestUtil.toJava(json);
+        List<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(3, es.size());
         assert DeepEquals.deepEquals(o, es);
@@ -88,7 +88,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.setOf();
 
         String json = TestUtil.toJson(o);
-        Set<?> es = TestUtil.toJava(json);
+        Set<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(0, es.size());
         assert Set.class.isAssignableFrom(o.getClass());
@@ -100,7 +100,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.setOf("One");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = TestUtil.toJava(json);
+        Set<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(1, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -111,7 +111,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.setOf("One", "Two");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = TestUtil.toJava(json);
+        Set<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(2, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -122,7 +122,7 @@ public class JDK9ImmutableTest
         final Object o = MetaUtils.setOf("One", "Two", "Three");
 
         String json = TestUtil.toJson(o);
-        Set<?> es = TestUtil.toJava(json);
+        Set<?> es = TestUtil.toObjects(json, null);
 
         assertEquals(3, es.size());
         assertEquals(o.getClass(), es.getClass());
@@ -139,7 +139,7 @@ public class JDK9ImmutableTest
         List<Rec> ol = new ArrayList<>(MetaUtils.listOf(rec1, rec2, rec1));
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = TestUtil.toJava(json);
+        List<Rec> recs = TestUtil.toObjects(json, null);
 
         assertEquals(ol.getClass(), recs.getClass());
         assertEquals(ol.size(), recs.size());
@@ -170,7 +170,7 @@ public class JDK9ImmutableTest
         List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        List<Rec> recs = TestUtil.toJava(json);
+        List<Rec> recs = TestUtil.toObjects(json, null);
 
         assert DeepEquals.deepEquals(ol, recs);
     }
@@ -188,7 +188,7 @@ public class JDK9ImmutableTest
         List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
-        Object es = TestUtil.toJava(json);
+        Object es = TestUtil.toObjects(json, null);
 
         assert DeepEquals.deepEquals(es, ol);
     }
@@ -204,7 +204,7 @@ public class JDK9ImmutableTest
 		rec1.smap = MetaUtils.mapOf();
 
         String json = TestUtil.toJson(ol);
-        Object es = TestUtil.toJava(json);
+        Object es = TestUtil.toObjects(json, null);
 
         assert DeepEquals.deepEquals(ol, es);
     }

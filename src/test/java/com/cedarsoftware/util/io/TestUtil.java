@@ -54,12 +54,12 @@ public class TestUtil
     public static <T> T serializeDeserialize(T initial)
     {
         String json = toJson(initial);
-        return toJava(json);
+        return toObjects(json, null);
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
         String json = toJson(initial, new WriteOptionsBuilder().neverShowTypeInfo().build());
-        return toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        return toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
     }
 
     private static class TestInfo
@@ -199,13 +199,13 @@ public class TestUtil
         return jsonIoTestInfo.json;
     }
 
-    private static TestInfo readJsonIo(String json, ReadOptions options)
+    private static TestInfo readJsonIo(String json, ReadOptions options, Class<?> root)
     {
         TestInfo testInfo = new TestInfo();
         try
         {
             long start = System.nanoTime();
-            testInfo.obj = JsonReader.toObjects(json, options);
+            testInfo.obj = JsonReader.toObjects(json, options, root);
             testInfo.nanos = System.nanoTime() - start;
         }
         catch (Exception e)
@@ -255,16 +255,16 @@ public class TestUtil
      * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.  This version is the simple (no build options version).
      */
-    public static <T> T toJava(String json)
+    public static <T> T toObjects(String json, Class<?> root)
     {
-        return toJava(json, new ReadOptionsBuilder().build());
+        return toObjects(json, new ReadOptionsBuilder().build(), root);
     }
 
     /**
      * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.  This version is more capable, as it supports build options.
      */
-    public static <T> T toJava(final String json, ReadOptions readOptions)
+    public static <T> T toObjects(final String json, ReadOptions readOptions, Class<?> root)
     {
         if (null == json || json.trim().isEmpty())
         {
@@ -272,7 +272,7 @@ public class TestUtil
         }
         totalReads++;
 
-        TestInfo jsonIoTestInfo = readJsonIo(json, readOptions);
+        TestInfo jsonIoTestInfo = readJsonIo(json, readOptions, root);
         TestInfo gsonTestInfo = readGson(json);
         TestInfo jacksonTestInfo = readJackson(json);
 

@@ -37,7 +37,7 @@ public class SetTest
         set.init();
         String json = TestUtil.toJson(set);
 
-        ManySets testSet = TestUtil.toJava(json);
+        ManySets testSet = TestUtil.toObjects(json, null);
         TestUtil.printLine("json = " + json);
 
         assertEquals(26, testSet._treeSet.size());
@@ -54,7 +54,7 @@ public class SetTest
         testSet._enumSet.remove(ManySets.EnumValues.E3);
         json = TestUtil.toJson(testSet);
         TestUtil.printLine(json);
-        testSet = TestUtil.toJava(json);
+        testSet = TestUtil.toObjects(json, null);
         testSet._enumSet.add(ManySets.EnumValues.E1);
     }
 

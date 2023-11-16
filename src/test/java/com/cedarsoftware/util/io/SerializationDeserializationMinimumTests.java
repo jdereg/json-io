@@ -68,7 +68,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
                 .contains("@i")
                 .contains("@ref");
 
-        Object actual = TestUtil.toJava(json);
+        Object actual = TestUtil.toObjects(json, null);
 
         // assert
         assertDuplicatesNestedInObject(expected, actual);
@@ -110,7 +110,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
                 .contains("@i")
                 .contains("@ref");
 
-        List<Object> actual = TestUtil.toJava(json);
+        List<Object> actual = TestUtil.toObjects(json, null);
 
         // assert
         assertThat(expected).isNotSameAs(actual);
@@ -164,7 +164,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
                 .contains("@i")
                 .contains("@ref");
 
-        List<T> actual = TestUtil.toJava(json);
+        List<T> actual = TestUtil.toObjects(json, null);
 
         // assert
         assertDuplicatesInCollection(expected, actual);
@@ -201,7 +201,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertThat(json).contains("@i")
                 .contains("@ref");
 
-        Map<String, T> actual = TestUtil.toJava(json);
+        Map<String, T> actual = TestUtil.toObjects(json, null);
 
         // assert
         assertAsDuplicateValuesInMap(expected, actual);

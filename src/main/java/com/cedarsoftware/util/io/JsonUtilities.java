@@ -5,7 +5,7 @@ import com.cedarsoftware.util.PrintStyle;
 public class JsonUtilities {
 
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        Object object = JsonReader.toObjects(json, readOptions.ensureUsingMaps());
+        Object object = JsonReader.toObjects(json, readOptions.ensureUsingMaps(), null);
         return JsonWriter.toJson(object, writeOptions.ensurePrettyPrint());
     }
 
@@ -21,6 +21,6 @@ public class JsonUtilities {
 
     public static <T> T deepCopy(Object o, ReadOptions readOptions, WriteOptions writeOptions) {
         String json = JsonWriter.toJson(o, writeOptions);
-        return JsonReader.toObjects(json, readOptions);
+        return JsonReader.toObjects(json, readOptions, null);
     }
 }

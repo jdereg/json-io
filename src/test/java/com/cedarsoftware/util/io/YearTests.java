@@ -8,8 +8,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.time.Year;
 import java.util.stream.Stream;
 
-import static com.cedarsoftware.util.io.TestUtil.toJava;
 import static com.cedarsoftware.util.io.TestUtil.toJson;
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class YearTests extends SerializationDeserializationMinimumTests<Year> {
@@ -87,14 +87,14 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     @ParameterizedTest
     @MethodSource("argumentsForOldFormat")
     void testOldFormat_objectType(String json) {
-        Year date = toJava(json);
+        Year date = toObjects(json, null);
         assertThat(date.getValue()).isEqualTo(1970);
     }
 
     @Test
     void testOldFormat_nestedObject() {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.YearTests$NestedYear\",\"dateTime1\":{\"@id\":1,\"year\":1970},\"dateTime2\":{\"@ref\":1}}";
-        NestedYear date = toJava(json);
+        NestedYear date = toObjects(json, null);
         assertThat(date.dateTime1.getValue()).isEqualTo(1970);
         assertThat(date.dateTime1).isSameAs(date.dateTime2);
     }
@@ -103,7 +103,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     void testTopLevel_serializesAsISODate() {
         Year date = Year.of(2014);
         String json = TestUtil.toJson(date);
-        Year result = toJava(json);
+        Year result = toObjects(json, null);
         assertThat(result).isEqualTo(date);
     }
 

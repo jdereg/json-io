@@ -49,7 +49,7 @@ public class GsonNotHandleCycleButJsonIoCanTest
 
         // json-io handles cycles just fine.
         String json = TestUtil.toJson(alpha);
-        Node a2 = (Node) TestUtil.toJava(json);
+        Node a2 = (Node) TestUtil.toObjects(json, null);
         assert "alpha".equals(a2.name);
         Node b2 = a2.next;
         assert "beta".equals(b2.name);

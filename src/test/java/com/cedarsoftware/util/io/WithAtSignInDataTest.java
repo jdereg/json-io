@@ -27,9 +27,9 @@ public class WithAtSignInDataTest
     public void testFormatThatUsesAtSign()
     {
         String json = "{\"PrincipalName\":{\"@type\":\"fir:IndividualNameType\",\"NamePrefix\":{\"NamePrefixText\":\"Ms\"},\"FirstName\":\"Marge\",\"LastName\":\"Simpson\",\"FullName\":\"Marge Simpson\"},\"JobTitle\":[{\"JobTitleText\":{\"$\":\"President\"}}],\"CurrentManagementResponsibility\":[{\"ManagementResponsibilityText\":{\"@ManagementResponsibilityCode\":\"A1A6\",\"$\":\"President\"}}],\"PrincipalIdentificationNumberDetail\":[{\"@DNBCodeValue\":24226,\"@TypeText\":\"Professional Contact Identifier\",\"PrincipalIdentificationNumber\":\"178125299\"}]}";
-        Map<String, Object> map = TestUtil.toJava(json);
+        Map<String, Object> map = TestUtil.toObjects(json, null);
         assertTheHeckOutOfThisStructure(map);
-        map = TestUtil.toJava(json, new ReadOptionsBuilder().returnAsMaps().build());
+        map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertTheHeckOutOfThisStructure(map);
     }
 

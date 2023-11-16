@@ -35,7 +35,7 @@ public class TypeSubstitutionTest
         Map<String, String> types = map;
         List list = MetaUtils.listOf("alpha", "bravo", "charlie");
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().withCustomTypeNameMap(types).build());
-        List test = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNames(types).build());
+        List test = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomTypeNames(types).build(), null);
         assert DeepEquals.deepEquals(list, test);
     }
 
@@ -54,7 +54,7 @@ public class TypeSubstitutionTest
         map1.put("com.cedarsoftware.util.io.TestTypeSubstitution$Person", "person");
         Map<String, String> types = map1;
         String json = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomTypeNameMap(types).build());
-        Person clone = TestUtil.toJava(json, new ReadOptionsBuilder().withCustomTypeNames(types).build());
+        Person clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomTypeNames(types).build(), null);
         assert clone.getName().equals("John");
         assert DeepEquals.deepEquals(clone.getPets(), p.getPets());
     }

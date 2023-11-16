@@ -50,7 +50,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableCollection(col);
         String json = TestUtil.toJson(col);
-        List<String> root = TestUtil.toJava(json);
+        List<String> root = TestUtil.toObjects(json, null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
 
@@ -61,7 +61,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableList((List<String>)col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toJava(json);
+        root = TestUtil.toObjects(json, null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
     }
@@ -76,7 +76,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSet(col);
         String json = TestUtil.toJson(col);
-        Set<String> root = TestUtil.toJava(json);
+        Set<String> root = TestUtil.toObjects(json, null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
 
@@ -87,7 +87,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSet(col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toJava(json);
+        root = TestUtil.toObjects(json, null);
         assert root instanceof Set;
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
@@ -99,7 +99,7 @@ public class UnmodifiableCollectionTest
         col.add("qux");
         col = Collections.unmodifiableSortedSet((SortedSet<String>) col);
         json = TestUtil.toJson(col);
-        root = TestUtil.toJava(json);
+        root = TestUtil.toObjects(json, null);
         assert root instanceof SortedSet;
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, MetaUtils.setOf("bar", "baz", "foo", "qux"));
@@ -117,7 +117,7 @@ public class UnmodifiableCollectionTest
         map.put("qux", "quixotic");
         map = Collections.unmodifiableMap(map);
         String json = TestUtil.toJson(map);
-        Map root = TestUtil.toJava(json);
+        Map root = TestUtil.toObjects(json, null);
         assert root instanceof Map;
         assert root.size() == 4;
         assert root.get("foo").equals("foot");
@@ -132,7 +132,7 @@ public class UnmodifiableCollectionTest
         map.put("qux", "quixotic");
         map = Collections.unmodifiableSortedMap((SortedMap<String, String>) map);
         json = TestUtil.toJson(map);
-        root = TestUtil.toJava(json);
+        root = TestUtil.toObjects(json, null);
         assert root instanceof SortedMap;
         assert root.size() == 4;
         assert root.get("foo").equals("foot");
@@ -148,7 +148,7 @@ public class UnmodifiableCollectionTest
     {
         UnmodifiableMapHolder holder = new UnmodifiableMapHolder();
         String json = TestUtil.toJson(holder);
-        UnmodifiableMapHolder holder1 = TestUtil.toJava(json);
+        UnmodifiableMapHolder holder1 = TestUtil.toObjects(json, null);
         assert holder1.getMap().get("North").equals(0);
         assert holder1.getMap().get("South").equals(1);
         assert holder1.getMap().get("East").equals(2);

@@ -23,7 +23,7 @@ public class ImmutableTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings);
-        Object o = TestUtil.toJava(json);
+        Object o = TestUtil.toObjects(json, null);
     }
 
     @Test
@@ -37,7 +37,7 @@ public class ImmutableTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings);
-        Object o = TestUtil.toJava(json);
+        Object o = TestUtil.toObjects(json, null);
     }
 
     @Test
@@ -53,6 +53,6 @@ public class ImmutableTest
 
         // Serialize foo with a singletonList, then deserialization throws
         String json = TestUtil.toJson(strings, null);
-        Object o = TestUtil.toJava(json);
+        Object o = TestUtil.toObjects(json, null);
     }
 }

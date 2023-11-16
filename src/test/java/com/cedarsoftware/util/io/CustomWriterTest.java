@@ -66,7 +66,7 @@ public class CustomWriterTest
         WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
         ReadOptions readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
-        Map obj = TestUtil.toJava(jsonCustom, readOptions0);
+        Map obj = TestUtil.toObjects(jsonCustom, readOptions0, null);
         assert "Michael".equals(obj.get("f"));
         assert "Bolton".equals(obj.get("l"));
         Object[] pets = (Object[]) obj.get("p");
@@ -82,7 +82,7 @@ public class CustomWriterTest
         assert 3L == (long) bella.get("a");
 
         ReadOptions readOptions = new ReadOptionsBuilder().withCustomReader(Person.class, new CustomPersonReader()).build();
-        Person personCustom = TestUtil.toJava(jsonCustom, readOptions);
+        Person personCustom = TestUtil.toObjects(jsonCustom, readOptions, null);
 
         assert personCustom.getFirstName().equals("Michael");
         assert personCustom.getLastName().equals("Bolton");
@@ -108,10 +108,10 @@ public class CustomWriterTest
 
         Map<Class<Person>, CustomPersonReader> customPersonReaderMap = new HashMap<>();
         customPersonReaderMap.put(Person.class, new CustomPersonReader());
-        Person personOrig = TestUtil.toJava(jsonOrig, new ReadOptionsBuilder().withCustomReaders(customPersonReaderMap).withNonCustomizableClasses(MetaUtils.listOf(Person.class)).build());
+        Person personOrig = TestUtil.toObjects(jsonOrig, new ReadOptionsBuilder().withCustomReaders(customPersonReaderMap).withNonCustomizableClasses(MetaUtils.listOf(Person.class)).build(), null);
         assert personOrig.equals(personCustom);
 
-        p = TestUtil.toJava(jsonCustom);
+        p = TestUtil.toObjects(jsonCustom, null);
         assert null == p.getFirstName();
     }
 
@@ -161,7 +161,7 @@ public class CustomWriterTest
         // Works - not using custom writer/reader
         Object people = new Object[]{p, p};
         String json = TestUtil.toJson(people, writeOptions);
-        Object obj = TestUtil.toJava(json, readOptions);
+        Object obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
@@ -170,7 +170,7 @@ public class CustomWriterTest
         writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
-        obj = TestUtil.toJava(json, readOptions);
+        obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
@@ -183,7 +183,7 @@ public class CustomWriterTest
         ((List<Person>)people).add(p);
         ((List<Person>)people).add(p);
         json = TestUtil.toJson(people, writeOptions);
-        obj = TestUtil.toJava(json, readOptions);
+        obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((List)people).get(0) == ((List) people).get(1);
 
@@ -192,7 +192,7 @@ public class CustomWriterTest
         writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
-        obj = TestUtil.toJava(json, readOptions);
+        obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((List)people).get(0) == ((List) people).get(1);
     }
@@ -213,7 +213,7 @@ public class CustomWriterTest
         
         People people = new People(new Object[]{p, p});
         String json = TestUtil.toJson(people, writeOptions);    // Massive @ref JSON
-        people = TestUtil.toJava(json, readOptions);
+        people = TestUtil.toObjects(json, readOptions, null);
         p = people.listPeeps.get(0);
         assert people.listPeeps.get(1) == p;
         assert people.arrayPeeps[0] == p;
