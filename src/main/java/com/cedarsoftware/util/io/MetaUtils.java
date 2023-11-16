@@ -918,10 +918,13 @@ public class MetaUtils
                     return o;
                 } catch (Exception ignore) {
                     try {
-                        Object o = constructor.newInstance(constructorWithValues.argsNonNull);
-                        // cache constructor search effort (non-null used for parameters of common types not matched to arguments)
-                        constructors.put(cacheKey, new CachedConstructor(constructor, false));
-                        return o;
+                        if (constructor.getParameterCount() > 0) {
+                            // The no-arg constructor should only be tried one time.
+                            Object o = constructor.newInstance(constructorWithValues.argsNonNull);
+                            // cache constructor search effort (non-null used for parameters of common types not matched to arguments)
+                            constructors.put(cacheKey, new CachedConstructor(constructor, false));
+                            return o;
+                        }
                     }
                     catch (Exception ignored) {
                     }
@@ -994,7 +997,7 @@ public class MetaUtils
                     }
                     return Boolean.parseBoolean((String) rhs);
                 }
-                return rhs != null ? rhs : Boolean.FALSE;
+                return rhs;
             }
             else if (c == byte.class || c == Byte.class) {
                 if (rhs instanceof String) {
@@ -1004,12 +1007,9 @@ public class MetaUtils
                     }
                     return Byte.parseByte((String) rhs);
                 }
-                return rhs != null ? byteCache[((Number) rhs).byteValue() + 128] : (byte) 0;
+                return byteCache[((Number) rhs).byteValue() + 128];
             }
             else if (c == char.class || c == Character.class) {
-                if (rhs == null) {
-                    return '\u0000';
-                }
                 if (rhs instanceof String) {
                     if (rhs.equals("\"")) {
                         return '\"';
@@ -1033,7 +1033,7 @@ public class MetaUtils
                     }
                     return Double.parseDouble((String) rhs);
                 }
-                return rhs != null ? ((Number) rhs).doubleValue() : 0.0d;
+                return ((Number) rhs).doubleValue();
             }
             else if (c == float.class || c == Float.class) {
                 if (rhs instanceof String) {
@@ -1043,7 +1043,7 @@ public class MetaUtils
                     }
                     return Float.parseFloat((String) rhs);
                 }
-                return rhs != null ? ((Number) rhs).floatValue() : 0.0f;
+                return ((Number) rhs).floatValue();
             }
             else if (c == int.class || c == Integer.class) {
                 if (rhs instanceof String) {
@@ -1053,7 +1053,7 @@ public class MetaUtils
                     }
                     return Integer.parseInt((String) rhs);
                 }
-                return rhs != null ? ((Number) rhs).intValue() : 0;
+                return ((Number) rhs).intValue();
             }
             else if (c == long.class || c == Long.class) {
                 if (rhs instanceof String) {
@@ -1063,7 +1063,7 @@ public class MetaUtils
                     }
                     return Long.parseLong((String) rhs);
                 }
-                return rhs != null ? ((Number) rhs).longValue() : 0L;
+                return ((Number) rhs).longValue();
             }
             else if (c == short.class || c == Short.class) {
                 if (rhs instanceof String) {
@@ -1073,7 +1073,7 @@ public class MetaUtils
                     }
                     return Short.parseShort((String) rhs);
                 }
-                return rhs != null ? ((Number) rhs).shortValue() : (short) 0;
+                return ((Number) rhs).shortValue();
             }
             else if (c == Date.class) {
                 if (rhs instanceof String) {
@@ -1087,10 +1087,10 @@ public class MetaUtils
                 }
             }
             else if (c == BigInteger.class) {
-                return rhs == null ? BigInteger.ZERO : Readers.bigIntegerFrom(rhs);
+                return Readers.bigIntegerFrom(rhs);
             }
             else if (c == BigDecimal.class) {
-                return rhs == null ? BigDecimal.ZERO : Readers.bigDecimalFrom(rhs);
+                return Readers.bigDecimalFrom(rhs);
             }
         }
         catch (Exception e) {

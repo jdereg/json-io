@@ -1,6 +1,6 @@
 ### Revision History
 * 4.18.0
-  * Bug fix: When Enums were sent the "old way," there was a bug in outputting additional fields defined on an Enum.
+  * Bug fix: When Enums were sent the "old way," (JSON object form) there was a bug in outputting additional fields defined on an Enum.
   * Enhancement: Improvements on Object construction for difficult to instantiate classes. 
 * 4.17.0
   * Java class instantiation has been improved and the related code has been refactored to a much better state.
