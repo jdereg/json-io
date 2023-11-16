@@ -14,7 +14,7 @@ ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.18.0-SNAPSHOT'
+implementation 'com.cedarsoftware:json-io:4.18.0'
 ```
 
 ##### Maven
