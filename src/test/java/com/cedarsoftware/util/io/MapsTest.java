@@ -3,7 +3,7 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.awt.Point;
+import java.awt.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <br><br>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  * <br><br>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,

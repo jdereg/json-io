@@ -69,7 +69,7 @@ import static java.lang.reflect.Modifier.isStatic;
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
  *         <br><br>
- *         http://www.apache.org/licenses/LICENSE-2.0
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  *         <br><br>
  *         Unless required by applicable law or agreed to in writing, software
  *         distributed under the License is distributed on an "AS IS" BASIS,
@@ -851,7 +851,10 @@ public class MetaUtils
      * @return an instance of the passed in class.
      * @throws JsonIoException if it could not instantiate the passed in class.  In that case, it is best to
      * create a ClassFactory for this specific class, and add that to the ReadOptions as an instantiator
-     * that is associated to the class 'c' that is not constructing for you.
+     * that is associated to the class 'c'.  In the ClassFactory, the JsonObject containing the data from the
+     * associated JsonObject { } is passed in, allowing you to instantiate and load the values in one operation.
+     * If you do that, and no further sub-objects need to be loaded, or you load the sub-objects in your ClassFactory,
+     * make sure to return 'true' for isObjectFinal().
      */
     public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
         throwIfSecurityConcern(ProcessBuilder.class, c);

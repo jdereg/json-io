@@ -4,7 +4,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -17,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <br><br>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  * <br><br>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,

@@ -1,11 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import java.awt.Point;
-import java.util.*;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+
+import java.awt.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -16,7 +21,7 @@ import org.junit.jupiter.api.Test;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <br><br>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
  * <br><br>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
