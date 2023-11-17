@@ -422,7 +422,7 @@ public class JsonReader implements Closeable
      */
     @SuppressWarnings("unchecked")
     public static <T> T toObjects(InputStream input, ReadOptions options, Class<?> root) {
-        try (JsonReader jr = new JsonReader(input, options)) {
+        try (JsonReader jr = new JsonReader(input, options, null)) {
             return (T) jr.readObject();
         }
     }
@@ -706,7 +706,7 @@ public class JsonReader implements Closeable
         Convention.throwIfNull(inputStream, "inputStream cannot be null");
         Convention.throwIfNull(readOptions, "readOptions cannot be null");
 
-        try (JsonReader jr = new JsonReader(inputStream, readOptions.ensureUsingMaps())) {
+        try (JsonReader jr = new JsonReader(inputStream, readOptions.ensureUsingMaps(), null)) {
             return (T) jr.readObject();
         }
     }
@@ -827,7 +827,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(InputStream, ReadOptions)
-     *
      * @param inputStream - json String
      * @param useMaps     - return data in map of maps
      * @param maxDepth    - maximum recursion depth
@@ -839,7 +838,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(InputStream, ReadOptions)
-     *
      * @param inputStream - json String
      * @param useMaps     - return data in map of maps
      */
@@ -850,7 +848,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(InputStream, ReadOptions)
-     *
      * @param inputStream  - json String
      * @param optionalArgs - old way of passing reader arguments
      * @param maxDepth     - max recursion depth
@@ -873,7 +870,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(InputStream, ReadOptions)
-     *
      * @param inputStream  - json String
      * @param optionalArgs - old way of passing reader arguments
      */
@@ -884,7 +880,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(String, ReadOptions)
-     *
      * @param json         - json String
      * @param optionalArgs - old way of passing reader arguments
      * @param maxDepth     - max recursion depth
@@ -896,7 +891,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(String, ReadOptions)
-     *
      * @param json         - json String
      * @param optionalArgs - old way of passing reader arguments
      */
@@ -907,7 +901,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(byte[], ReadOptions)
-     *
      * @param inp          - byte array with json data in it.
      * @param optionalArgs - deprecated options.
      * @param maxDepth     - max recursion depth
@@ -919,7 +912,6 @@ public class JsonReader implements Closeable
 
     /**
      * Deprecated - use JsonReader(byte[], ReadOptions)
-     *
      * @param inp          - byte array with json data in it.
      * @param optionalArgs - deprecated options.
      */
@@ -931,46 +923,48 @@ public class JsonReader implements Closeable
 
 
     /**
-     * Creates a json reader using default read options
-     *
-     * @param json - json String
-     */
-    public JsonReader(String json) {
-        this(json, new ReadOptionsBuilder().build());
-    }
-
-    /**
      * Creates a json reader using custom read options
-     *
      * @param json        json String
-     * @param readOptions Read Options
+     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
+     *                    etc. If null, readOptions will use all defaults.
+     * @param root        Class that indicates what the root class of the JSON is that is being written out.  You can
+     *                    specify null, however, it will not have the Class's field information to make inferences about
+     *                    the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
-    public JsonReader(String json, ReadOptions readOptions) {
-        this(json.getBytes(StandardCharsets.UTF_8), readOptions);
+    public JsonReader(String json, ReadOptions readOptions, Class<?> root) {
+        this(json.getBytes(StandardCharsets.UTF_8), readOptions, root);
     }
 
     /**
      * Creates a json reader using custom read options
-     * @param bytes utf-8 encoded bytes
-     * @param readOptions Read Options
+     * @param bytes       utf-8 encoded bytes
+     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
+     *                    etc. If null, readOptions will use all defaults.
+     * @param root        Class that indicates what the root class of the JSON is that is being written out.  You can
+     *                    specify null, however, it will not have the Class's field information to make inferences about
+     *                    the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
-    public JsonReader(byte[] bytes, ReadOptions readOptions) {
-        this(new ByteArrayInputStream(bytes), readOptions);
+    public JsonReader(byte[] bytes, ReadOptions readOptions, Class<?> root) {
+        this(new ByteArrayInputStream(bytes), readOptions, root);
     }
 
     /**
      * Creates a json reader using custom read options
-     * @param inp InputStream of utf-encoded json
-     * @param readOptions Read Options
+     * @param input         InputStream of utf-encoded json
+     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
+     *                    etc. If null, readOptions will use all defaults.
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
-    public JsonReader(InputStream inp, ReadOptions readOptions) {
-        this(inp, readOptions, new DefaultReferenceTracker());
+    public JsonReader(InputStream input, ReadOptions readOptions, Class<?> root) {
+        this(input, readOptions, new DefaultReferenceTracker(), root);
     }
 
-    public JsonReader(InputStream input, ReadOptions readOptions, ReferenceTracker references) {
-        this.args.putAll(readOptions.toMap());
+    public JsonReader(InputStream input, ReadOptions readOptions, ReferenceTracker references, Class<?> root) {
+        this.readOptions = readOptions == null ? new ReadOptionsBuilder().build() : readOptions;
+        this.args.putAll(readOptions.toMap());  // TODO: Do we still need to support the older args?
         this.args.put(JSON_READER, this);
-        this.readOptions = readOptions;
         this.input = getReader(input);
         this.resolver = useMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
         this.parser = new JsonParser(this.input, this.readOptions, references);
@@ -982,12 +976,15 @@ public class JsonReader implements Closeable
      * Java objects by calling jsonReader.jsonObjectsToJava(rootJsonObject) after constructing
      * the JsonReader.
      *
-     * @param options - read options
+     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
+     *                    etc. If null, readOptions will use all defaults.
+     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
+     *             specify null, however, it will not have the Class's field information to make inferences about
+     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
-    public JsonReader(ReadOptions options) {
-        this(new byte[]{}, options);
+    public JsonReader(ReadOptions readOptions, Class<?> root) {
+        this(new byte[]{}, readOptions, root);
     }
-
 
     /**
      * Read JSON input from the stream that was set up in the constructor, turning it into
@@ -1020,11 +1017,11 @@ public class JsonReader implements Closeable
             root.setType(Object[].class.getName());
             root.setTarget(o);
             root.put(ITEMS, o);
-            graph = convertParsedMapsToJava(root);
+            graph = convertParsedMapsToJava(root, null);
         }
         else
         {
-            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o) : o;
+            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o, null) : o;
         }
 
         // Allow a complete 'Map' return (Javascript style)
@@ -1048,7 +1045,7 @@ public class JsonReader implements Closeable
         getArgs().put(USE_MAPS, false);
         final ReadOptions options = this.readOptions.ensureUsingObjects();
         ReaderContext.instance().initialize(this);
-        return convertParsedMapsToJava(root);
+        return convertParsedMapsToJava(root, null);
     }
 
     protected boolean useMaps()
@@ -1065,56 +1062,60 @@ public class JsonReader implements Closeable
     }
 
     /**
-     * This method converts a root Map, (which contains nested Maps
+     * This method converts a rootObj Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
-     * object instance.  The root map came from using the JsonReader
+     * object instance.  The rootObj map came from using the JsonReader
      * to parse a JSON graph (using the API that puts the graph
      * into Maps, not the typed representation).
-     * @param root JsonObject instance that was the root object from the
-     * @param hint When you know the type you will be returning.
+     * @param rootObj JsonObject instance that was the rootObj object from the
+     * @param root When you know the type you will be returning.
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    public <T> T reentrantConvertParsedMapsToJava(JsonObject root, Class<T> hint)
+    public <T> T reentrantConvertParsedMapsToJava(JsonObject rootObj, Class<T> root)
     {
-        if (root == null) {
+        if (rootObj == null) {
             return null;
         }
 
-        if (root.isReference()) {
-            root = this.resolver.getReferences().get(root);
+        if (rootObj.isReference()) {
+            rootObj = this.resolver.getReferences().get(rootObj);
         }
 
         T graph;
-        if (root.isFinished) {   // Called on a JsonObject that has already been converted
-            graph = (T) root.target;
+        if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
+            graph = (T) rootObj.target;
         } else {
-            Object instance = resolver.createInstance(hint, root);
-            if (root.isFinished) {   // Factory method instantiated and completely loaded the object.
+            Object instance = resolver.createInstance(root, rootObj);
+            if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
                 graph = (T) instance;
             } else {
-                graph = resolver.convertMapsToObjects(root);
+                graph = resolver.convertMapsToObjects(rootObj);
             }
         }
         return graph;
     }
 
     /**
-     * This method converts a root Map, (which contains nested Maps
+     * This method converts a rootObj Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
-     * object instance.  The root map came from using the JsonReader
+     * object instance.  The rootObj map came from using the JsonReader
      * to parse a JSON graph (using the API that puts the graph
      * into Maps, not the typed representation).
      *
-     * @param root JsonObject instance that was the root object from the
+     * @param rootObj JsonObject instance that was the rootObj object from the
      *             JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    protected Object convertParsedMapsToJava(JsonObject root) {
+    protected <T> T convertParsedMapsToJava(JsonObject rootObj, Class<T> root) {
         try {
-            return reentrantConvertParsedMapsToJava(root, Object.class);
+            if (root == null) {
+                return reentrantConvertParsedMapsToJava(rootObj, (Class<T>)Object.class);
+            } else {
+                return reentrantConvertParsedMapsToJava(rootObj, root);
+            }
         } catch (Exception e) {
-            MetaUtils.safelyIgnoreException(() -> close());
+            MetaUtils.safelyIgnoreException(this::close);
             if (e instanceof JsonIoException) {
                 throw (JsonIoException) e;
             }
