@@ -245,7 +245,8 @@ public class ObjectResolver extends Resolver
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createInstance(fieldType, jsRhs);
                     injector.inject(target, fieldObject);
-                    if (!MetaUtils.isLogicalPrimitive(jsRhs.getTargetClass()))
+                    //NOTE:  Should we use JsonObject.isFinished here?
+                    if (!getReadOptions().isLogicalPrimitive(jsRhs.getTargetClass()))
                     {
                         // GOTCHA : if the field is an immutable collection,
                         // "work instance", where one can accumulate items in (ArrayList)
@@ -261,7 +262,7 @@ public class ObjectResolver extends Resolver
             }
             else
             {
-                if (MetaUtils.isPrimitive(fieldType))
+                if (Primitives.isPrimitive(fieldType))
                 {
                     Object converted = MetaUtils.convert(fieldType, rhs);
                     if (isBasicWrapperType(targetClass)) {
@@ -345,7 +346,7 @@ public class ObjectResolver extends Resolver
                     if (jObj.getType() != null)
                     {
                         Object createJavaObjectInstance = createInstance(null, jObj);
-                        if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                        if (!getReadOptions().isLogicalPrimitive(jObj.getTargetClass()))
                         {
                             stack.addFirst((JsonObject) rhs);
                         }
@@ -500,7 +501,7 @@ public class ObjectResolver extends Resolver
                 {
                     createInstance(Object.class, jObj);
 
-                    if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                    if (!getReadOptions().isLogicalPrimitive(jObj.getTargetClass()))
                     {
                         convertMapsToObjects(jObj);
                     }
@@ -588,7 +589,7 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        final boolean isPrimitive = MetaUtils.isPrimitive(compType);
+        final boolean isPrimitive = Primitives.isPrimitive(compType);
         final Object array = jsonObj.target;
         final Object[] items =  jsonObj.getArray();
 
@@ -668,7 +669,7 @@ public class ObjectResolver extends Resolver
                 {    // Convert JSON HashMap to Java Object instance and assign values
                     Object arrayElement = createInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
-                    if (!MetaUtils.isLogicalPrimitive(arrayElement.getClass()))
+                    if (!getReadOptions().isLogicalPrimitive(arrayElement.getClass()))
                     {    // Skip walking primitives, primitive wrapper classes, Strings, and Classes
                         stack.addFirst(jsonObject);
                     }

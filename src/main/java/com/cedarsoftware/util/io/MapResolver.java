@@ -100,7 +100,10 @@ public class MapResolver extends Resolver
             {
                 JsonObject jObj = (JsonObject) rhs;
 
-                if (injector != null && MetaUtils.isLogicalPrimitive(injector.getType()))
+                //TODO:  CAn't tell for sure, but the code below this looks like it could take
+                // advantage of the classFActory isFinished and maybe regular isPrimitiveCheck
+
+                if (injector != null && getReadOptions().isLogicalPrimitive(injector.getType()))
                 {
                     jObj.put("value", MetaUtils.convert(injector.getType(), jObj.getValue()));
                     continue;
@@ -124,7 +127,7 @@ public class MapResolver extends Resolver
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class fieldType = injector.getType();
-                if (MetaUtils.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
+                if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
                     jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));
                 }

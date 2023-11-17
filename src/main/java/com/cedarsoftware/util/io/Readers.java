@@ -200,7 +200,7 @@ public class Readers
                 return o;
             }
 
-            if (MetaUtils.isPrimitive(o.getClass()))
+            if (Primitives.isPrimitive(o.getClass()))
             {
                 return o.toString();
             }

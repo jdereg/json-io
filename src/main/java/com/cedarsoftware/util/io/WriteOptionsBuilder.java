@@ -27,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,7 +69,7 @@ import static com.cedarsoftware.util.io.JsonWriter.nullWriter;
  */
 public class WriteOptionsBuilder {
 
-    private static Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS;
+    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS;
 
     private final WriteOptionsImplementation writeOptions;
 
@@ -192,6 +193,16 @@ public class WriteOptionsBuilder {
 
     public static void addBaseWriter(Class<?> c, JsonWriter.JsonClassWriter writer) {
         BASE_WRITERS.put(c, writer);
+    }
+
+    public WriteOptionsBuilder withLogicalPrimitive(Class<?> c) {
+        this.writeOptions.logicalPrimitives.add(c);
+        return this;
+    }
+
+    public WriteOptionsBuilder withLogicalPrimitives(Collection<Class<?>> collection) {
+        this.writeOptions.logicalPrimitives.addAll(collection);
+        return this;
     }
 
     public WriteOptionsBuilder writeLocalDateAsTimeStamp() {
@@ -440,6 +451,9 @@ public class WriteOptionsBuilder {
 
     private static class WriteOptionsImplementation implements WriteOptions {
         @Getter
+        private final Set<Class<?>> logicalPrimitives;
+
+        @Getter
         private boolean usingShortMetaKeys = false;
 
         @Getter
@@ -475,6 +489,7 @@ public class WriteOptionsBuilder {
         @Getter
         private final Map<Class<?>, Collection<Accessor>> fieldNameBlackList;
 
+        @Deprecated
         @Getter
         private String dateFormat;
 
@@ -486,6 +501,7 @@ public class WriteOptionsBuilder {
 
 
         private WriteOptionsImplementation() {
+            this.logicalPrimitives = new HashSet<>(Primitives.PRIMITIVE_WRAPPERS);
             this.customWriters = new HashMap<>(BASE_WRITERS);
             this.fieldNameBlackList = new HashMap<>();
             this.fieldSpecifiers = new HashMap<>();
@@ -512,6 +528,7 @@ public class WriteOptionsBuilder {
             this.nonCustomClasses = Collections.unmodifiableCollection(options.nonCustomClasses);
             this.fieldSpecifiers = Collections.unmodifiableMap(options.fieldSpecifiers);
             this.fieldNameBlackList = Collections.unmodifiableMap(options.fieldNameBlackList);
+            this.logicalPrimitives = Collections.unmodifiableSet(options.logicalPrimitives);
             this.dateFormat = options.dateFormat;
             this.customArguments = options.customArguments;
         }
@@ -530,6 +547,11 @@ public class WriteOptionsBuilder {
         @Override
         public boolean isPrettyPrint() {
             return this.printStyle == PrintStyle.PRETTY_PRINT;
+        }
+
+        @Override
+        public boolean isLogicalPrimitive(Class<?> c) {
+            return Primitives.isLogicalPrimitive(c, logicalPrimitives);
         }
 
         public Object getCustomArgument(String name) {
