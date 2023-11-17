@@ -4,5 +4,3 @@ public enum PrintStyle {
     ONE_LINE,
     PRETTY_PRINT
 }
-
-

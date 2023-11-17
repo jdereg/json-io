@@ -85,7 +85,7 @@ public class CharacterTest
     {   // { "@type": "char", "value": "\\"" }
         String jsonString = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
         JsonReader jsonReader = new JsonReader(new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8)));
-        Object object = jsonReader.readObject();
+        Object object = jsonReader.readObject(char.class);
         assert (Character) object == '"';
     }
 

@@ -1946,7 +1946,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(type);
             Field field = classFields.get(fieldName);
-            return field != null && (value.getClass() == field.getType());
+            return field != null && field.getType().equals(value.getClass());
         }
         return false;
     }

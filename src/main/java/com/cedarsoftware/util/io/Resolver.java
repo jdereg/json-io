@@ -192,7 +192,9 @@ public abstract class Resolver
     {
         patchUnresolvedReferences();
         rehashMaps();
-        references.clear();
+        if (references != null) {
+            references.clear();
+        }
         unresolvedRefs.clear();
         prettyMaps.clear();
         readerCache.clear();
