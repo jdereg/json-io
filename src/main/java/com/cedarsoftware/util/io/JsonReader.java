@@ -986,21 +986,14 @@ public class JsonReader implements Closeable
         this(new byte[]{}, readOptions, root);
     }
 
-    /**
-     * Read JSON input from the stream that was set up in the constructor, turning it into
-     * Java Maps (JsonObject's).  Then, if requested, the JsonObjects can be converted
-     * into Java instances.
-     *
-     * @return Java Object graph constructed from InputStream supplying
-     *         JSON serialized content.
-     */
-    public Object readObject() {
-        int maxDepth = this.readOptions.getMaxDepth();
-        JsonObject root = new JsonObject();
-        Object o;
+    public <T> T readObject(Class<T> root)
+    {
+        int maxDepth = this.readOptions.getMaxDepth();  // TODO: This should be read from the readOptions.
+        JsonObject rootObj = new JsonObject();
+        T o;
         try
         {
-            o = parser.readValue(root, true);
+            o = (T) parser.readValue(rootObj, true);
         }
         catch (JsonIoException e)
         {
@@ -1011,17 +1004,17 @@ public class JsonReader implements Closeable
             throw new JsonIoException("error parsing JSON value", e);
         }
 
-        Object graph;
+        T graph;
         if (o instanceof Object[])
         {
-            root.setType(Object[].class.getName());
-            root.setTarget(o);
-            root.put(ITEMS, o);
-            graph = convertParsedMapsToJava(root, null);
+            rootObj.setType(Object[].class.getName());
+            rootObj.setTarget(o);
+            rootObj.put(ITEMS, o);
+            graph = convertParsedMapsToJava(rootObj, root);
         }
         else
         {
-            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o, null) : o;
+            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o, root) : o;
         }
 
         // Allow a complete 'Map' return (Javascript style)
@@ -1030,6 +1023,18 @@ public class JsonReader implements Closeable
             return o;
         }
         return graph;
+    }
+
+    /**
+     * Read JSON input from the stream that was set up in the constructor, turning it into
+     * Java Maps (JsonObject's).  Then, if requested, the JsonObjects can be converted
+     * into Java instances.
+     *
+     * @return Java Object graph constructed from InputStream supplying
+     *         JSON serialized content.
+     */
+    public Object readObject() {
+        return readObject(null);
     }
 
     /**
@@ -1068,7 +1073,7 @@ public class JsonReader implements Closeable
      * to parse a JSON graph (using the API that puts the graph
      * into Maps, not the typed representation).
      * @param rootObj JsonObject instance that was the rootObj object from the
-     * @param root When you know the type you will be returning.
+     * @param root When you know the type you will be returning.  Can be null (effectively Map.class)
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
