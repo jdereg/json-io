@@ -35,30 +35,30 @@ class JsonObjectTest
     @Test
     void testNewPrimitiveWrapper()
     {
-        assertTrue(MetaUtils.isLogicalPrimitive(Byte.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Byte.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Short.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Short.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Integer.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Integer.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Long.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Long.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Float.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Float.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Double.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Double.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Boolean.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Boolean.TYPE));
-        assertTrue(MetaUtils.isLogicalPrimitive(Character.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Character.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Byte.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Byte.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Short.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Short.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Integer.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Integer.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Long.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Long.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Float.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Float.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Double.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Double.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Boolean.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Boolean.TYPE));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Character.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Character.TYPE));
         // quasi-primitives (Date, String, BigInteger, BigDecimal) as defined by json-io (not true primitive wrappers)
-        assertTrue(MetaUtils.isLogicalPrimitive(Date.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(String.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(BigInteger.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(BigDecimal.class));
-        assertTrue(MetaUtils.isLogicalPrimitive(Number.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Date.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(String.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(BigInteger.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(BigDecimal.class));
+        assertTrue(LogicalPrimitives.isLogicalPrimitive(Number.class));
 
-        assertThrows(NullPointerException.class, () -> { MetaUtils.isLogicalPrimitive(null); });
+        assertThrows(NullPointerException.class, () -> { LogicalPrimitives.isLogicalPrimitive(null); });
     }
 
     @Test

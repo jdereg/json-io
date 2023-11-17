@@ -82,7 +82,6 @@ public class MetaUtils
     private MetaUtils () {}
     enum Dumpty {}
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
@@ -179,15 +178,6 @@ public class MetaUtils
 
     static
     {
-        prims.add(Byte.class);
-        prims.add(Integer.class);
-        prims.add(Long.class);
-        prims.add(Double.class);
-        prims.add(Character.class);
-        prims.add(Float.class);
-        prims.add(Boolean.class);
-        prims.add(Short.class);
-
         nameToClass.put("boolean", boolean.class);
         nameToClass.put("char", char.class);
         nameToClass.put("byte", byte.class);
@@ -378,14 +368,14 @@ public class MetaUtils
                 // Not equal because source.equals(destination) already checked.
                 return -1;
             }
-            if (!MetaUtils.isPrimitive(destination)) {
+            if (!LogicalPrimitives.isPrimitive(destination)) {
                 return -1;
             }
             return comparePrimitiveToWrapper(destination, source);
         }
 
         if (destination.isPrimitive()) {
-            if (!MetaUtils.isPrimitive(source)) {
+            if (!LogicalPrimitives.isPrimitive(source)) {
                 return -1;
             }
             return comparePrimitiveToWrapper(source, destination);
@@ -429,36 +419,6 @@ public class MetaUtils
         }
 
         return -1; // No path found
-    }
-
-    /**
-     * @param c Class to test
-     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
-     * Integer, Long, Boolean, etc. are considered primitives by this method.
-     */
-    public static boolean isPrimitive(Class<?> c)
-    {
-        return c.isPrimitive() || prims.contains(c);
-    }
-
-    /**
-     * @param c Class to test
-     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
-     * as all Java primitives, the primitive wrapper classes, String, Number, and Date.  This covers BigDecimal,
-     * BigInteger, AtomicInteger, AtomicLong, as these are 'Number instances. The reason these are considered
-     * 'logical' primitives is that they are immutable and therefore can be written without references in JSON
-     * content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape) of the
-     * object graph being written.
-     */
-    public static boolean isLogicalPrimitive(Class<?> c)
-    {
-        return  c.isPrimitive() ||
-                prims.contains(c) ||
-                String.class.isAssignableFrom(c) ||
-                Number.class.isAssignableFrom(c) ||
-                Date.class.isAssignableFrom(c) ||
-                c.isEnum() ||
-                c.equals(Class.class);
     }
 
     public static Optional<Class> getClassIfEnum(Class<?> c) {
@@ -603,7 +563,7 @@ public class MetaUtils
     }
 
     static Object getArgForType(Class<?> argType) {
-        if (argType.isPrimitive() || prims.contains(argType)) {
+        if (LogicalPrimitives.isPrimitive(argType)) {
             return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
         }
 

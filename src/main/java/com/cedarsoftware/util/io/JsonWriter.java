@@ -211,6 +211,7 @@ public class JsonWriter implements Closeable, Flushable
          * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
          * most custom writers will not have a primitive form.
          */
+        @Deprecated
         default boolean hasPrimitiveForm(Map args) { return hasPrimitiveForm(); }
 
 
@@ -249,6 +250,7 @@ public class JsonWriter implements Closeable, Flushable
          * @param args Map of settings initially passed to JsonWriter.
          * @return JsonWriter instance performing the work.
          */
+        @Deprecated
         default JsonWriter getWriter(Map<String, Object> args) {
             return WriterContext.instance().getWriter();
         }
@@ -781,7 +783,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             final Object obj = stack.removeFirst();
 
-            if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
+            if (!getWriteOptions().isLogicalPrimitive(obj.getClass()))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -805,7 +807,7 @@ public class JsonWriter implements Closeable, Flushable
 
             if (clazz.isArray())
             {
-                if (!MetaUtils.isLogicalPrimitive(clazz.getComponentType()))
+                if (!getWriteOptions().isLogicalPrimitive(clazz.getComponentType()))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -829,11 +831,11 @@ public class JsonWriter implements Closeable, Flushable
                         final Entry entry = (Entry) item;
                         Object key = entry.getKey();
                         Object value = entry.getValue();
-                        if (value != null && !MetaUtils.isLogicalPrimitive(value.getClass()))
+                        if (value != null && !getWriteOptions().isLogicalPrimitive(value.getClass()))
                         {
                             stack.addFirst(value);
                         }
-                        if (key != null && !MetaUtils.isLogicalPrimitive(key.getClass()))
+                        if (key != null && !getWriteOptions().isLogicalPrimitive(key.getClass()))
                         {
                             stack.addFirst(key);
                         }
@@ -850,7 +852,7 @@ public class JsonWriter implements Closeable, Flushable
             {
                 for (final Object item : (Collection)obj)
                 {
-                    if (item != null && !MetaUtils.isLogicalPrimitive(item.getClass()))
+                    if (item != null && !getWriteOptions().isLogicalPrimitive(item.getClass()))
                     {
                         stack.addFirst(item);
                     }
@@ -858,7 +860,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else
             {   // Speed up: do not traceReferences of primitives, they cannot reference anything
-                if (!MetaUtils.isLogicalPrimitive(obj.getClass()))
+                if (!getWriteOptions().isLogicalPrimitive(obj.getClass()))
                 {
                     final Map<Class<?>, Collection<Accessor>> fieldSpecifiers = getWriteOptions().getFieldSpecifiers();
                     traceFields(stack, obj, fieldSpecifiers);
@@ -908,7 +910,7 @@ public class JsonWriter implements Closeable, Flushable
                 if (fieldBlackListForClass == null || !fieldBlackListForClass.contains(accessor))
                 {
                     final Object o = accessor.retrieve(obj);
-                    if (o != null && !MetaUtils.isLogicalPrimitive(o.getClass()))
+                    if (o != null && !getWriteOptions().isLogicalPrimitive(o.getClass()))
                     {   // Trace through objects that can reference other objects
                         stack.addFirst(o);
                     }
@@ -947,7 +949,7 @@ public class JsonWriter implements Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
-        if (obj == null || MetaUtils.isLogicalPrimitive(obj.getClass()))
+        if (obj == null || getWriteOptions().isLogicalPrimitive(obj.getClass()))
         {
             return false;
         }
@@ -1294,7 +1296,7 @@ public class JsonWriter implements Closeable, Flushable
         else
         {
             final Class<?> componentClass = array.getClass().getComponentType();
-            final boolean isPrimitiveArray = MetaUtils.isPrimitive(componentClass);
+            final boolean isPrimitiveArray = LogicalPrimitives.isPrimitive(componentClass);
 
             for (int i = 0; i < len; i++)
             {
@@ -1308,7 +1310,7 @@ public class JsonWriter implements Closeable, Flushable
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
                     writePrimitive(value, value.getClass() != componentClass);
-                } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass()))
+                } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
                 {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
                     writePrimitive(value, false);
                 }
@@ -1635,7 +1637,7 @@ public class JsonWriter implements Closeable, Flushable
             else if (value instanceof Boolean || value instanceof Long || value instanceof Double)
             {
                 writePrimitive(value, value.getClass() != componentClass);
-            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass()))
+            } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
             {
                 writePrimitive(value, false);
             }
@@ -1900,8 +1902,7 @@ public class JsonWriter implements Closeable, Flushable
             if (value == null)
             {
                 output.write("null");
-            }
-            else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass()))
+            } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
             {
                 writePrimitive(value, false);
             }
@@ -2114,7 +2115,7 @@ public class JsonWriter implements Closeable, Flushable
         else if (o instanceof String)
         {   // Never do a @ref to a String (they are treated as logical primitives and interned on read)
             writeJsonUtf8String((String) o, out);
-        } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(o.getClass()))
+        } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(o.getClass()))
         {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
@@ -2380,7 +2381,7 @@ public class JsonWriter implements Closeable, Flushable
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         // When no type is written we can check the Object itself not the declaration
-        if (MetaUtils.isPrimitive(type) || (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(o.getClass())))
+        if (LogicalPrimitives.isPrimitive(type) || (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(o.getClass())))
         {
             writePrimitive(o, false);
         }
