@@ -1296,7 +1296,7 @@ public class JsonWriter implements Closeable, Flushable
         else
         {
             final Class<?> componentClass = array.getClass().getComponentType();
-            final boolean isPrimitiveArray = LogicalPrimitives.isPrimitive(componentClass);
+            final boolean isPrimitiveArray = Primitives.isPrimitive(componentClass);
 
             for (int i = 0; i < len; i++)
             {
@@ -1310,7 +1310,7 @@ public class JsonWriter implements Closeable, Flushable
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
                     writePrimitive(value, value.getClass() != componentClass);
-                } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
+                } else if (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(value.getClass()))
                 {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
                     writePrimitive(value, false);
                 }
@@ -1637,7 +1637,7 @@ public class JsonWriter implements Closeable, Flushable
             else if (value instanceof Boolean || value instanceof Long || value instanceof Double)
             {
                 writePrimitive(value, value.getClass() != componentClass);
-            } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
+            } else if (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(value.getClass()))
             {
                 writePrimitive(value, false);
             }
@@ -1902,7 +1902,7 @@ public class JsonWriter implements Closeable, Flushable
             if (value == null)
             {
                 output.write("null");
-            } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(value.getClass()))
+            } else if (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(value.getClass()))
             {
                 writePrimitive(value, false);
             }
@@ -2115,7 +2115,7 @@ public class JsonWriter implements Closeable, Flushable
         else if (o instanceof String)
         {   // Never do a @ref to a String (they are treated as logical primitives and interned on read)
             writeJsonUtf8String((String) o, out);
-        } else if (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(o.getClass()))
+        } else if (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(o.getClass()))
         {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
             writePrimitive(o, false);
@@ -2381,7 +2381,7 @@ public class JsonWriter implements Closeable, Flushable
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         // When no type is written we can check the Object itself not the declaration
-        if (LogicalPrimitives.isPrimitive(type) || (getWriteOptions().isNeverShowingType() && LogicalPrimitives.isPrimitive(o.getClass())))
+        if (Primitives.isPrimitive(type) || (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(o.getClass())))
         {
             writePrimitive(o, false);
         }

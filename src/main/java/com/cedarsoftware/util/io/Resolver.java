@@ -387,7 +387,7 @@ public abstract class Resolver
         }
         else
         {   // Handle regular field.object reference
-            if (LogicalPrimitives.isPrimitive(c))
+            if (Primitives.isPrimitive(c))
             {
                 mate = MetaUtils.convert(c, jsonObj.getValue());
                 jsonObj.isFinished = true;

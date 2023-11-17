@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-public class LogicalPrimitives {
+public class Primitives {
     static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
 
     static {

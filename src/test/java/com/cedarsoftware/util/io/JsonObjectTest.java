@@ -3,15 +3,10 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -32,35 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class JsonObjectTest
 {
-    @Test
-    void testNewPrimitiveWrapper()
-    {
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Byte.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Byte.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Short.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Short.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Integer.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Integer.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Long.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Long.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Float.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Float.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Double.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Double.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Boolean.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Boolean.TYPE));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Character.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Character.TYPE));
-        // quasi-primitives (Date, String, BigInteger, BigDecimal) as defined by json-io (not true primitive wrappers)
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Date.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(String.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(BigInteger.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(BigDecimal.class));
-        assertTrue(LogicalPrimitives.isLogicalPrimitive(Number.class));
-
-        assertThrows(NullPointerException.class, () -> { LogicalPrimitives.isLogicalPrimitive(null); });
-    }
-
     @Test
     void testGetId()
     {

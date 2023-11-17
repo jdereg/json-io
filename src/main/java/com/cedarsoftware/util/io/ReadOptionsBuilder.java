@@ -356,6 +356,16 @@ public class ReadOptionsBuilder {
         return this;
     }
 
+    public ReadOptionsBuilder withLogicalPrimitive(Class<?> c) {
+        this.readOptions.logicalPrimitives.add(c);
+        return this;
+    }
+
+    public ReadOptionsBuilder withLogicalPrimitives(Collection<Class<?>> collection) {
+        this.readOptions.logicalPrimitives.addAll(collection);
+        return this;
+    }
+
     @SuppressWarnings("unchecked")
     public static ReadOptionsBuilder fromMap(Map<String, Object> args) {
         ReadOptionsBuilder builder = new ReadOptionsBuilder();
@@ -470,6 +480,8 @@ public class ReadOptionsBuilder {
 
         private Map<String, String> typeNameMap;
 
+        private final Set<Class<?>> logicalPrimitives;
+
         private JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
         
         private JsonReader.ClassFactory enumFactory = new EnumClassFactory();
@@ -485,6 +497,7 @@ public class ReadOptionsBuilder {
             this.customArguments = new HashMap<>();
             this.coercedTypes = new LinkedHashMap<>(BASE_COERCED_TYPES);
             this.unknownTypeClass = null;
+            this.logicalPrimitives = new HashSet<>(Primitives.PRIMITIVE_WRAPPERS);
         }
 
         private ReadOptionsImplementation(ReadOptionsImplementation options) {
@@ -498,6 +511,7 @@ public class ReadOptionsBuilder {
             this.isFailOnUnknownType = options.isFailOnUnknownType;
             this.unknownTypeClass = options.unknownTypeClass;
             this.missingFieldHandler = options.missingFieldHandler;
+            this.logicalPrimitives = Collections.unmodifiableSet(options.logicalPrimitives);
 
             // Note: These 2 members cannot become unmodifiable until we fully deprecate JsonReader.addReader() and JsonReader.addNotCustomReader()
             this.readers = options.readers;
@@ -628,6 +642,11 @@ public class ReadOptionsBuilder {
             args.put(FACTORIES, classFactoryMap);
 
             return args;
+        }
+
+        @Override
+        public boolean isLogicalPrimitive(Class<?> c) {
+            return Primitives.isLogicalPrimitive(c, logicalPrimitives);
         }
     }
 }

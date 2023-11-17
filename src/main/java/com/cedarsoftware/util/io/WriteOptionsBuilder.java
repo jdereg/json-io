@@ -501,7 +501,7 @@ public class WriteOptionsBuilder {
 
 
         private WriteOptionsImplementation() {
-            this.logicalPrimitives = new HashSet<>(LogicalPrimitives.PRIMITIVE_WRAPPERS);
+            this.logicalPrimitives = new HashSet<>(Primitives.PRIMITIVE_WRAPPERS);
             this.customWriters = new HashMap<>(BASE_WRITERS);
             this.fieldNameBlackList = new HashMap<>();
             this.fieldSpecifiers = new HashMap<>();
@@ -551,7 +551,7 @@ public class WriteOptionsBuilder {
 
         @Override
         public boolean isLogicalPrimitive(Class<?> c) {
-            return LogicalPrimitives.isLogicalPrimitive(c);
+            return Primitives.isLogicalPrimitive(c, logicalPrimitives);
         }
 
         public Object getCustomArgument(String name) {

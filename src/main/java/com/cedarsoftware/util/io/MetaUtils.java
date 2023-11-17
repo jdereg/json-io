@@ -81,6 +81,7 @@ public class MetaUtils
 {
     private MetaUtils () {}
     enum Dumpty {}
+
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
@@ -102,6 +103,7 @@ public class MetaUtils
     private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
 
     static {
+
         //  TODO: These might need to go into ReadOptions to allow people to customize?  JD: Agreed.
         DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
         DIRECT_CLASS_MAPPING.put(StringBuilder.class, StringBuilder::new);
@@ -368,14 +370,14 @@ public class MetaUtils
                 // Not equal because source.equals(destination) already checked.
                 return -1;
             }
-            if (!LogicalPrimitives.isPrimitive(destination)) {
+            if (!Primitives.isPrimitive(destination)) {
                 return -1;
             }
             return comparePrimitiveToWrapper(destination, source);
         }
 
         if (destination.isPrimitive()) {
-            if (!LogicalPrimitives.isPrimitive(source)) {
+            if (!Primitives.isPrimitive(source)) {
                 return -1;
             }
             return comparePrimitiveToWrapper(source, destination);
@@ -563,7 +565,7 @@ public class MetaUtils
     }
 
     static Object getArgForType(Class<?> argType) {
-        if (LogicalPrimitives.isPrimitive(argType)) {
+        if (Primitives.isPrimitive(argType)) {
             return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
         }
 

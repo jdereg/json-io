@@ -237,16 +237,15 @@ class EnumTests {
     }
 
     @Test
-    void testEnumWithNestedName() {
-        EnumWithNestedName mc = EnumWithNestedName.Z;
-        mc.name = "foo";
+    void testEnum_whenHasNameMethodOverride_parsesCorrectly_and_nameGetsSet() {
+        PrivateEnumWithNameOverride mc = PrivateEnumWithNameOverride.Z;
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
         String json = TestUtil.toJson(mc, options);
-        EnumWithNestedName actual = TestUtil.toObjects(json, null);
+        PrivateEnumWithNameOverride actual = TestUtil.toObjects(json, null);
 
-        assertThat(actual).isEqualTo(EnumWithNestedName.Z);
-        assertThat(actual.name).isEqualTo("foo");
+        assertThat(actual).isEqualTo(PrivateEnumWithNameOverride.Z);
+        assertThat(actual.name).isEqualTo("little z");
     }
 
     @Test
@@ -282,17 +281,28 @@ class EnumTests {
         assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
     }
 
-
-    @ParameterizedTest
-    @EnumSource(EnumWithValueField.class)
-    void testEnum_thatHasValueField_parsedAsObject() {
-        EnumWithValueField mc = EnumWithValueField.FOO;
+    @Test
+    void testEnum_withPublicNameOverride() {
+        EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
+        mc.setSimpleEnum(SimpleEnum.TWO);
 
         WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
         String json = TestUtil.toJson(mc, options);
+        EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
+
+        assertThat(actual).isEqualTo(EnumNestedWithinEnum.THREE);
+        assertThat(actual.getSimpleEnum()).isEqualTo(SimpleEnum.TWO);
+    }
+
+
+    @ParameterizedTest
+    @EnumSource(EnumWithValueField.class)
+    void testEnum_thatHasValueField_parsedAsObject(EnumWithValueField field) {
+        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        String json = TestUtil.toJson(field, options);
         EnumWithValueField actual = TestUtil.toObjects(json, null);
 
-        assertThat(actual).isEqualTo(EnumWithValueField.FOO);
+        assertThat(actual).isEqualTo(field);
     }
 
 
@@ -509,10 +519,15 @@ class EnumTests {
         private SimpleEnum simpleEnum;
     }
 
-    private enum EnumWithNestedName {
-        X, Y, Z;
+    private enum PrivateEnumWithNameOverride {
+        X("little x"), Y("little y"), Z("little z");
 
-        public String name;
+        @Getter
+        private final String name;
+
+        PrivateEnumWithNameOverride(String name) {
+            this.name = name;
+        }
     }
 
     public enum PublicEnumWithNestedName {
