@@ -703,7 +703,6 @@ public class JsonReader implements Closeable
         return retMap;
     }
 
-
     /**
      * Deprecated - use JsonReader(ReadOptions)
      *

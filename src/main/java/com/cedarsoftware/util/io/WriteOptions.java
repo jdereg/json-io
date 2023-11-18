@@ -45,13 +45,10 @@ public interface WriteOptions {
     ClassLoader getClassLoader();
 
     Collection<Class<?>> getNonCustomClasses();
+    
+    Map<Class<?>, Collection<Accessor>> getIncludedFields();
 
-
-    Map<Class<?>, Collection<Accessor>> getFieldSpecifiers();
-
-    Map<Class<?>, Collection<Accessor>> getFieldNameBlackList();
-
-    Object getCustomArgument(String name);
+    Map<Class<?>, Collection<Accessor>> getExcludedFields();
 
     WriteOptions ensurePrettyPrint();
 }

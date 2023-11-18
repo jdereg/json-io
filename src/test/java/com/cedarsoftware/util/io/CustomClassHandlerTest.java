@@ -38,7 +38,7 @@ public class CustomClassHandlerTest
         WeirdDate now = new WeirdDate(System.currentTimeMillis());
         Map<Class<WeirdDate>, WeirdDateWriter> map1 = new LinkedHashMap<>(1);
         map1.put(WeirdDate.class, new WeirdDateWriter());
-        String json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map1).build());
+        String json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriters(map1).build());
         TestUtil.printLine("json=" + json);
 
         Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
@@ -48,7 +48,7 @@ public class CustomClassHandlerTest
 
         Map<Class<WeirdDate>, WeirdDateWriter> map5 = new LinkedHashMap<>(1);
         map5.put(WeirdDate.class, new WeirdDateWriter());
-        json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriterMap(map5).withNoCustomizationsFor(MetaUtils.listOf(WeirdDate.class)).build());
+        json = TestUtil.toJson(now, new WriteOptionsBuilder().withCustomWriters(map5).withNoCustomizationsFor(MetaUtils.listOf(WeirdDate.class)).build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);
     }

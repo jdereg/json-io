@@ -97,10 +97,10 @@ class WriteOptionsBuilderTest {
     @Test
     void withFieldNameBlackList() {
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldNameBlackList(URL.class, MetaUtils.listOf("protocol"))
+                .excludedFields(URL.class, MetaUtils.listOf("protocol"))
                 .build();
 
-        assertThat(options.getFieldNameBlackList())
+        assertThat(options.getExcludedFields())
                 .isNotNull()
                 .containsKey(URL.class)
                 .hasSize(1);
@@ -113,10 +113,10 @@ class WriteOptionsBuilderTest {
         map.put(LocalDate.class, MetaUtils.listOf("month"));
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldNameBlackListMap(map)
+                .excludedFields(map)
                 .build();
 
-        assertThat(options.getFieldNameBlackList())
+        assertThat(options.getExcludedFields())
                 .isNotNull()
                 .hasSize(2)
                 .containsKeys(URL.class, LocalDate.class);
@@ -131,11 +131,11 @@ class WriteOptionsBuilderTest {
         );
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldNameBlackList(URL.class, MetaUtils.listOf("protocol"))
-                .withFieldNameBlackListMap(map)
+                .excludedFields(URL.class, MetaUtils.listOf("protocol"))
+                .excludedFields(map)
                 .build();
 
-        assertThat(options.getFieldNameBlackList())
+        assertThat(options.getExcludedFields())
                 .isNotNull()
                 .hasSize(2)
                 .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
@@ -145,12 +145,12 @@ class WriteOptionsBuilderTest {
     @Test
     void withFieldNameSpecifiers() {
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldSpecifier(URL.class, MetaUtils.listOf("protocol"))
-                .withFieldSpecifier(LocalDate.class, MetaUtils.listOf("month"))
-                .withFieldSpecifier(URL.class, MetaUtils.listOf("host", "port"))
+                .includedFields(URL.class, MetaUtils.listOf("protocol"))
+                .includedFields(LocalDate.class, MetaUtils.listOf("month"))
+                .includedFields(URL.class, MetaUtils.listOf("host", "port"))
                 .build();
 
-        assertThat(options.getFieldSpecifiers())
+        assertThat(options.getIncludedFields())
                 .isNotNull()
                 .hasSize(2)
                 .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
@@ -162,10 +162,10 @@ class WriteOptionsBuilderTest {
         Map<Class<?>, Collection<String>> map = MetaUtils.mapOf(URL.class, MetaUtils.listOf("protocol"));
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldSpecifiersMap(map)
+                .includedFields(map)
                 .build();
 
-        assertThat(options.getFieldSpecifiers())
+        assertThat(options.getIncludedFields())
                 .hasSize(1)
                 .containsKey(URL.class);
     }
@@ -176,13 +176,13 @@ class WriteOptionsBuilderTest {
                 LocalDate.class, MetaUtils.listOf("month"));
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withFieldSpecifiersMap(map)
-                .withFieldSpecifier(URL.class, MetaUtils.listOf("host", "ref"))
-                .withFieldSpecifier(LocalDate.class, MetaUtils.listOf("year"))
+                .includedFields(map)
+                .includedFields(URL.class, MetaUtils.listOf("host", "ref"))
+                .includedFields(LocalDate.class, MetaUtils.listOf("year"))
                 .build();
 
 
-        assertThat(options.getFieldSpecifiers())
+        assertThat(options.getIncludedFields())
                 .isNotNull()
                 .hasSize(2)
                 .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
@@ -225,7 +225,7 @@ class WriteOptionsBuilderTest {
         Map<Class<?>, JsonWriter.JsonClassWriter> map = new HashMap<>();
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withCustomWriterMap(map)
+                .withCustomWriters(map)
                 .build();
 
         // needs a real test.
@@ -295,7 +295,7 @@ class WriteOptionsBuilderTest {
                 "foo", "bar");
 
         WriteOptions options = new WriteOptionsBuilder()
-                .withCustomTypeNameMap(map)
+                .withCustomTypeNames(map)
                 .withCustomTypeName(String.class, "char2")
                 .withCustomTypeName(Date.class, "dt")
                 .withCustomTypeName(TimeZone.class.getName(), "tz")
@@ -324,7 +324,7 @@ class WriteOptionsBuilderTest {
     void withCustomTypeNameMap_whenNoTypeInformationIsBeingOutput_throwsIllegalStateException() {
         assertThatIllegalStateException().isThrownBy(() ->new WriteOptionsBuilder()
                         .neverShowTypeInfo()
-                        .withCustomTypeNameMap(new HashMap<>())
+                        .withCustomTypeNames(new HashMap<>())
                         .build())
                 .withMessage("There is no need to set the type name map when types are never being written");
     }
@@ -378,7 +378,7 @@ class WriteOptionsBuilderTest {
     @Test
     void forceMapOutputAsKeysAndItems() {
         WriteOptions options = new WriteOptionsBuilder()
-                .forceMapOutputAsKeysAndItems()
+                .forceMapOutputAsKeysAndValues()
                 .build();
 
         assertThat(options.isForcingMapFormatWithKeyArrays()).isTrue();

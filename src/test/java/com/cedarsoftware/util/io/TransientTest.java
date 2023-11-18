@@ -62,7 +62,7 @@ class TransientTest
         assert json.contains("lname");
         assert !json.contains("fullname");
 
-        final WriteOptionsBuilder options = new WriteOptionsBuilder().withFieldSpecifier(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        final WriteOptionsBuilder options = new WriteOptionsBuilder().includedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
         json = TestUtil.toJson(person, options.build());
         assert json.contains("fname");
         assert json.contains("lname");
@@ -71,7 +71,7 @@ class TransientTest
         // Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue
         Map<Class<?>, Collection<String>> specifiers = new HashMap<>();
         specifiers.put(Transient1.class, MetaUtils.listOf("fname", "lname", "map"));
-        final WriteOptionsBuilder options2 = new WriteOptionsBuilder().withFieldSpecifiersMap(specifiers);
+        final WriteOptionsBuilder options2 = new WriteOptionsBuilder().includedFields(specifiers);
         assertDoesNotThrow(()-> {TestUtil.toJson(person, options2.build()); });
     }
 
@@ -97,7 +97,7 @@ class TransientTest
         person.lname = "DeRegnaucourt";
         person.buildFull();
 
-        WriteOptionsBuilder options = new WriteOptionsBuilder().withFieldSpecifier(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        WriteOptionsBuilder options = new WriteOptionsBuilder().includedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
         String json = TestUtil.toJson(person, options.build());
         assert json.contains("fullname");
 

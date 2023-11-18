@@ -54,7 +54,7 @@ class ClassDescriptorsTests {
     void testCloningObject_withFieldBlacklistedAtSubclassOfEntity_fieldsAreAvailableOnOtherSubsOfEntity() {
         WriteOptions options = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
-                .withFieldNameBlackList(Car.class, MetaUtils.listOf("id", "updated", "created"))
+                .excludedFields(Car.class, MetaUtils.listOf("id", "updated", "created"))
                 .build();
 
         Car initial = createCar();
@@ -83,7 +83,7 @@ class ClassDescriptorsTests {
     void testCloningObject_fieldBlacklistedAtSuperClassEntity_isNotAvailableOnAnySubClass() {
         WriteOptions options = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
-                .withFieldNameBlackList(Entity.class, MetaUtils.listOf("id", "updated", "created"))
+                .excludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created"))
                 .build();
 
         Car initial = createCar();

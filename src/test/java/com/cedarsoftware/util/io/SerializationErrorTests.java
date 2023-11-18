@@ -22,7 +22,7 @@ class SerializationErrorTests {
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
                 .withDefaultOptimizations()
-                .withFieldNameBlackList(SecurityGroup.class, MetaUtils.listOf("id"))
+                .excludedFields(SecurityGroup.class, MetaUtils.listOf("id"))
                 .build();
 
         SecurityGroup group = new SecurityGroup();

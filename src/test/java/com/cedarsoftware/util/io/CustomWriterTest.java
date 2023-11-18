@@ -63,7 +63,7 @@ public class CustomWriterTest
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
         ReadOptions readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toObjects(jsonCustom, readOptions0, null);
@@ -123,7 +123,7 @@ public class CustomWriterTest
         {
             Map<Class<Person>, BadCustomPWriter> badCustomPWriterMap = new HashMap<>();
             badCustomPWriterMap.put(Person.class, new BadCustomPWriter());
-            TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriterMap(badCustomPWriterMap).build());
+            TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriters(badCustomPWriterMap).build());
             fail();
         }
         catch (JsonIoException e)
@@ -138,7 +138,7 @@ public class CustomWriterTest
         Person p = createTestPerson();
         Map<Class<Person>, CustomPersonWriterAddField> customPersonWriterAddFieldMap = new HashMap<>();
         customPersonWriterAddFieldMap.put(Person.class, new CustomPersonWriterAddField());
-        String jsonCustom = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriterMap(customPersonWriterAddFieldMap).build());
+        String jsonCustom = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriters(customPersonWriterAddFieldMap).build());
         assert jsonCustom.contains("_version\":12");
         assert jsonCustom.contains("Michael");
     }
@@ -167,7 +167,7 @@ public class CustomWriterTest
 
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
-        writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
@@ -189,7 +189,7 @@ public class CustomWriterTest
 
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
-        writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
@@ -208,7 +208,7 @@ public class CustomWriterTest
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriterMap(customWriters).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
         ReadOptions readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         
         People people = new People(new Object[]{p, p});

@@ -73,9 +73,9 @@ public class WriteOptionsBuilder {
 
     private final WriteOptionsImplementation writeOptions;
 
-    private final Map<Class<?>, Collection<String>> fieldNameBlackList = new HashMap<>();
+    private final Map<Class<?>, Collection<String>> excludedFields = new HashMap<>();
 
-    private final Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
+    private final Map<Class<?>, Collection<String>> includedFields = new HashMap<>();
 
     static {
 
@@ -174,14 +174,14 @@ public class WriteOptionsBuilder {
     }
 
     // Map with all String keys, will still output in the @keys/@items approach
-    public WriteOptionsBuilder forceMapOutputAsKeysAndItems() {
+    public WriteOptionsBuilder forceMapOutputAsKeysAndValues() {
         writeOptions.forcingMapFormatWithKeyArrays = true;
         return this;
     }
 
     // Map with all String keys, will output as a JSON object, with the keys of the Map being the keys of the JSON
     // Object, which is the default and more natural.
-    public WriteOptionsBuilder doNotForceMapOutputAsKeysAndItems() {
+    public WriteOptionsBuilder doNotForceMapOutputAsKeysAndValues() {
         writeOptions.forcingMapFormatWithKeyArrays = false;
         return this;
     }
@@ -246,29 +246,29 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withFieldNameBlackList(Class<?> c, Collection<String> fields) {
-        Collection<String> collection = this.fieldNameBlackList.computeIfAbsent(c, f -> new LinkedHashSet<>());
+    public WriteOptionsBuilder excludedFields(Class<?> c, Collection<String> fields) {
+        Collection<String> collection = this.excludedFields.computeIfAbsent(c, f -> new LinkedHashSet<>());
         collection.addAll(fields);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldNameBlackListMap(Map<Class<?>, Collection<String>> map) {
+    public WriteOptionsBuilder excludedFields(Map<Class<?>, Collection<String>> map) {
         for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
-            Collection<String> collection = this.fieldNameBlackList.computeIfAbsent(entry.getKey(), f -> new LinkedHashSet<>());
+            Collection<String> collection = this.excludedFields.computeIfAbsent(entry.getKey(), f -> new LinkedHashSet<>());
             collection.addAll(entry.getValue());
         }
         return this;
     }
 
-    public WriteOptionsBuilder withFieldSpecifier(Class<?> c, List<String> fields) {
-        Collection<String> collection = this.fieldSpecifiers.computeIfAbsent(c, f -> new LinkedHashSet<>());
+    public WriteOptionsBuilder includedFields(Class<?> c, List<String> fields) {
+        Collection<String> collection = this.includedFields.computeIfAbsent(c, f -> new LinkedHashSet<>());
         collection.addAll(fields);
         return this;
     }
 
-    public WriteOptionsBuilder withFieldSpecifiersMap(Map<Class<?>, Collection<String>> map) {
+    public WriteOptionsBuilder includedFields(Map<Class<?>, Collection<String>> map) {
         for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
-            Collection<String> collection = this.fieldSpecifiers.computeIfAbsent(entry.getKey(), f -> new LinkedHashSet<>());
+            Collection<String> collection = this.includedFields.computeIfAbsent(entry.getKey(), f -> new LinkedHashSet<>());
             collection.addAll(entry.getValue());
         }
         return this;
@@ -284,7 +284,7 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withCustomTypeNameMap(Map<String, String> map) {
+    public WriteOptionsBuilder withCustomTypeNames(Map<String, String> map) {
         assertTypesAreBeingOutput();
         this.writeOptions.customTypeMap.putAll(map);
         return this;
@@ -295,7 +295,7 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public WriteOptionsBuilder withCustomWriterMap(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> map) {
+    public WriteOptionsBuilder withCustomWriters(Map<? extends Class<?>, ? extends JsonWriter.JsonClassWriter> map) {
         this.writeOptions.customWriters.putAll(map);
         return this;
     }
@@ -307,16 +307,6 @@ public class WriteOptionsBuilder {
 
     public WriteOptionsBuilder withNoCustomizationsFor(Collection<Class<?>> collection) {
         this.writeOptions.nonCustomClasses.addAll(collection);
-        return this;
-    }
-
-    public WriteOptionsBuilder withCustomArgument(String name, Object o) {
-        this.writeOptions.customArguments.put(name, o);
-        return this;
-    }
-
-    public WriteOptionsBuilder withCustomArguments(Map<String, Object> map) {
-        this.writeOptions.customArguments.putAll(map);
         return this;
     }
 
@@ -380,7 +370,7 @@ public class WriteOptionsBuilder {
         Map<String, String> typeNameMap = (Map<String, String>) args.get(TYPE_NAME_MAP);
 
         if (typeNameMap != null) {
-            builder.withCustomTypeNameMap(typeNameMap);
+            builder.withCustomTypeNames(typeNameMap);
         }
 
         if (isTrue(args.get(PRETTY_PRINT))) {
@@ -403,7 +393,7 @@ public class WriteOptionsBuilder {
         }
 
         if (isTrue(args.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS))) {
-            builder.forceMapOutputAsKeysAndItems();
+            builder.forceMapOutputAsKeysAndValues();
         }
 
         ClassLoader loader = (ClassLoader) args.get(CLASSLOADER);
@@ -411,7 +401,7 @@ public class WriteOptionsBuilder {
 
         Map<Class<?>, JsonWriter.JsonClassWriter> customWriters = (Map<Class<?>, JsonWriter.JsonClassWriter>) args.get(CUSTOM_WRITER_MAP);
         if (customWriters != null) {
-            builder.withCustomWriterMap(customWriters);
+            builder.withCustomWriters(customWriters);
         }
 
         Collection<Class<?>> notCustomClasses = (Collection<Class<?>>) args.get(NOT_CUSTOM_WRITER_MAP);
@@ -423,7 +413,7 @@ public class WriteOptionsBuilder {
         Map<Class<?>, Collection<String>> stringSpecifiers = (Map<Class<?>, Collection<String>>) args.get(FIELD_SPECIFIERS);
 
         if (stringSpecifiers != null) {
-            builder.withFieldSpecifiersMap(stringSpecifiers);
+            builder.includedFields(stringSpecifiers);
         }
 
         // may have to convert these to juse per class level, but that may be difficult.
@@ -431,15 +421,15 @@ public class WriteOptionsBuilder {
         Map<Class<?>, Collection<String>> stringBlackList = (Map<Class<?>, Collection<String>>) args.get(FIELD_NAME_BLACK_LIST);
 
         if (stringBlackList != null) {
-            builder.withFieldNameBlackListMap(stringBlackList);
+            builder.excludedFields(stringBlackList);
         }
 
         return builder;
     }
 
     public WriteOptions build() {
-        this.writeOptions.fieldSpecifiers.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldSpecifiers));
-        this.writeOptions.fieldNameBlackList.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.fieldNameBlackList));
+        this.writeOptions.includedFields.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.includedFields));
+        this.writeOptions.excludedFields.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.excludedFields));
         return new WriteOptionsImplementation(this.writeOptions);
     }
 
@@ -484,10 +474,10 @@ public class WriteOptionsBuilder {
         private final Collection<Class<?>> nonCustomClasses;
 
         @Getter
-        private final Map<Class<?>, Collection<Accessor>> fieldSpecifiers;
+        private final Map<Class<?>, Collection<Accessor>> includedFields;
 
         @Getter
-        private final Map<Class<?>, Collection<Accessor>> fieldNameBlackList;
+        private final Map<Class<?>, Collection<Accessor>> excludedFields;
 
         @Deprecated
         @Getter
@@ -497,16 +487,12 @@ public class WriteOptionsBuilder {
 
         private TypeWriter typeWriter;
 
-        private final Map<String, Object> customArguments;
-
-
         private WriteOptionsImplementation() {
             this.logicalPrimitives = new HashSet<>(Primitives.PRIMITIVE_WRAPPERS);
             this.customWriters = new HashMap<>(BASE_WRITERS);
-            this.fieldNameBlackList = new HashMap<>();
-            this.fieldSpecifiers = new HashMap<>();
+            this.excludedFields = new HashMap<>();
+            this.includedFields = new HashMap<>();
             this.customTypeMap = new HashMap<>();
-            this.customArguments = new HashMap<>();
             this.nonCustomClasses = new HashSet<>();
             this.printStyle = PrintStyle.ONE_LINE;
             this.typeWriter = TypeWriter.MINIMAL;
@@ -526,13 +512,11 @@ public class WriteOptionsBuilder {
             this.customWriters = Collections.unmodifiableMap(options.customWriters);
             this.customTypeMap = Collections.unmodifiableMap(options.customTypeMap);
             this.nonCustomClasses = Collections.unmodifiableCollection(options.nonCustomClasses);
-            this.fieldSpecifiers = Collections.unmodifiableMap(options.fieldSpecifiers);
-            this.fieldNameBlackList = Collections.unmodifiableMap(options.fieldNameBlackList);
+            this.includedFields = Collections.unmodifiableMap(options.includedFields);
+            this.excludedFields = Collections.unmodifiableMap(options.excludedFields);
             this.logicalPrimitives = Collections.unmodifiableSet(options.logicalPrimitives);
             this.dateFormat = options.dateFormat;
-            this.customArguments = options.customArguments;
         }
-
 
         @Override
         public boolean isAlwaysShowingType() {
@@ -553,11 +537,7 @@ public class WriteOptionsBuilder {
         public boolean isLogicalPrimitive(Class<?> c) {
             return Primitives.isLogicalPrimitive(c, logicalPrimitives);
         }
-
-        public Object getCustomArgument(String name) {
-            return customArguments.get(name);
-        }
-
+        
         /**
          * We're cheating here because the booleans are needed to be mutable by the builder.
          *

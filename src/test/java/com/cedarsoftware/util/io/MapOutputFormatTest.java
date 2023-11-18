@@ -36,8 +36,8 @@ public class MapOutputFormatTest
         map1.put("c", "baz");
         map1.put("d", "qux");
         Map map = map1;
-        String json1 = TestUtil.toJson(map, new WriteOptionsBuilder().forceMapOutputAsKeysAndItems().build());
-        String json2 = TestUtil.toJson(map, new WriteOptionsBuilder().doNotForceMapOutputAsKeysAndItems().build());
+        String json1 = TestUtil.toJson(map, new WriteOptionsBuilder().forceMapOutputAsKeysAndValues().build());
+        String json2 = TestUtil.toJson(map, new WriteOptionsBuilder().doNotForceMapOutputAsKeysAndValues().build());
         assert !json1.equals(json2);
         assert json1.contains("@keys");
         assert json1.contains("@items");

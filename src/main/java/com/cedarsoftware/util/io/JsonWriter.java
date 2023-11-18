@@ -862,7 +862,7 @@ public class JsonWriter implements Closeable, Flushable
             {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                 if (!getWriteOptions().isLogicalPrimitive(obj.getClass()))
                 {
-                    final Map<Class<?>, Collection<Accessor>> fieldSpecifiers = getWriteOptions().getFieldSpecifiers();
+                    final Map<Class<?>, Collection<Accessor>> fieldSpecifiers = getWriteOptions().getIncludedFields();
                     traceFields(stack, obj, fieldSpecifiers);
                 }
             }
@@ -891,7 +891,7 @@ public class JsonWriter implements Closeable, Flushable
             fields = ClassDescriptors.instance().getDeepAccessorsForClass(obj.getClass());
         }
 
-        final Collection<Accessor> fieldBlackListForClass = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getFieldNameBlackList());
+        final Collection<Accessor> fieldBlackListForClass = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getExcludedFields());
 
         for (final Accessor accessor : fields)
         {
@@ -2279,8 +2279,8 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        final Map<Class<?>, Collection<Accessor>> fieldSpecifiers = getWriteOptions().getFieldSpecifiers();
-        final Collection<Accessor> fieldBlackListForClass = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getFieldNameBlackList());
+        final Map<Class<?>, Collection<Accessor>> fieldSpecifiers = getWriteOptions().getIncludedFields();
+        final Collection<Accessor> fieldBlackListForClass = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getExcludedFields());
         final Collection<Accessor> externallySpecifiedFields = getAccessorsUsingSpecifiers(obj.getClass(), fieldSpecifiers);
         if (externallySpecifiedFields != null)
         {
