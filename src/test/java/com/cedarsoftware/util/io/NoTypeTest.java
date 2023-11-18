@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -31,8 +32,54 @@ import java.util.TimeZone;
  */
 public class NoTypeTest
 {
+    static class Person
+    {
+        String name;
+        int age;
+        double salary;
+        int creditScore;
+    }
+
     @Test
-    public void testNoType()
+    void personTestToPerson()
+    {
+        String json = TestUtil.fetchResource("noTypes/person.json");
+        Person person = JsonReader.toObjects(json, Person.class);
+        assert person.name.equals("Joe");
+        assert person.age == 50;
+        assert person.salary == 225000.0d;
+        assert person.creditScore == 0;
+    }
+
+    @Test
+    void personTestToMap()
+    {
+        String json = TestUtil.fetchResource("noTypes/person.json");
+        Map<String, Object> person = JsonReader.toObjects(json, Map.class);
+        assert person.get("name").equals("Joe");
+        assert (long)person.get("age") == 50L;  // Comes in as Long because all JSON integer values are long
+        assert (double)person.get("salary") == 225000.0d;
+        assert person.get("creditScore") == null;
+    }
+
+    @Test
+    @Disabled
+    void personsTestToPersons()
+    {
+        String json = TestUtil.fetchResource("noTypes/persons.json");
+        Person[] persons = JsonReader.toObjects(json, Person[].class);
+        assert persons[0].name.equals("Joe");
+        assert persons[0].age == 50;
+        assert persons[0].salary == 225000.0d;
+        assert persons[0].creditScore == 0;
+        assert persons[0].name.equals("Jane");
+        assert persons[0].age == 40;
+        assert persons[0].salary == 314000.0d;
+        assert persons[0].creditScore == 0;
+    }
+
+    @Test
+    void testNoType()
     {
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         cal.clear();
@@ -55,7 +102,7 @@ public class NoTypeTest
     }
 
     @Test
-    public void testItems()
+    void testItems()
     {
         String json = "{\"groups\":[\"one\",\"two\",\"three\"],\"search\":{\"datalist\":[]}}";
 
@@ -81,7 +128,7 @@ public class NoTypeTest
     }
 
     @Test
-    public void testCollections()
+    void testCollections()
     {
         CollectionTest cols = new CollectionTest();
         cols.setFoos(MetaUtils.listOf(1, 2, "4", 8));
@@ -111,7 +158,7 @@ public class NoTypeTest
     }
 
     @Test
-    public void testObjectArray()
+    void testObjectArray()
     {
         Object[] array = new Object[]{new Object[]{1L, 2L, 3L}, new Object[] {'a', 'b', 'c'}};
         String json = TestUtil.toJson(array);
