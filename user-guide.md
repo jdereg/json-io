@@ -55,9 +55,13 @@ can be read, modified, and then re-written by a JVM that does not contain any of
 ---
 #### The optional values below are public methods on the `WriteOptionsBuilder.`
 
-To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptionsBuilder` like this:
+To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptionsBuilder` like below.  The 
+`WriteOptionsBuilder` is used to create a `WriteOptions` instance, which contains all the settings.  The `WriteOptions`
+instance is what is fed into `JsonWriter.toJson(root, writeOptions).`  Below, we show the `WriteOptionsBuilder`
+APIs that help construct the `WriteOptions` instance, and the second set of APIs show the `WriteOptions` methods to check
+the settings. These are stateless options that can be kept at 'application scope' and re-used.
 
-    WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().isPublicEnumOnly().build();
+    WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().writeLongsAsStrings().build();
     JsonWriter.toJson(root, writeOptions);
 
 Set to String Class name, JsonWriter.JsonClassWriter to override the default
@@ -66,10 +70,7 @@ JSON output for a given class, or set a bunch of them at once:
     .withCustomWriter(Class, JsonWriter.JsonClassWriter)
     .withCustomWriters(Map<Class, JsonClassWriter>)
 
-If you want to add a custom writer that is 'application-lifecycle' scoped, so that you do not need to add it
-to the `WriteOptions` each time, use:
-    
-    WriteOptionsBuilder.addBaseWriter(Class, JsonWriter.JsonClassWriter)
+    writeOptions.getCustomWriters()     // Get all custom writers
  
 Prevent customized writer for a particular class.  Since these are inherited, you may
 want to "turn off" write-customization that was unintentionally picked up.
@@ -77,11 +78,15 @@ want to "turn off" write-customization that was unintentionally picked up.
     .withNoCustomizationFor(Class)
     .withNoCustomizationsFor(Collection<Class>)
 
+    writeOptions.getNonCustomClasses()  // Get classes that will not have custom writers
+
 Set the date format for how dates are written.  Example: "yyyy/MM/dd HH:mm".  
                                                                             
     .withDateFormat(String)
     .withIsoDateFormat()
     .withIsoDateTimeFormat()
+
+    writeOptions.getDateFormat()        // Get date format
 
 Force class types to be written out for all JSON objects, or never show Type info, or show the
 minimum amount of type info. Shows up as "@type" or "@t" fields on a JSON object.  Only needed
@@ -91,27 +96,40 @@ that is of type Object and the instance side is specific.  Same with Object[]'s 
     .alwaysShowTypeInfo()
     .neverShowTypeInfo()
     .showMinimalTypeInfo()
+
+    writeOptions.isAlwaysShowingType()  // To test setting
+    writeOptions.isNeverShowingType()
+    writeOptions..showMinimalTypeInfo()
  
 Force nicely formatted JSON output.  (See http://jsoneditoronline.org for example format)
 
     .withPrettyPrint()
+
+    writeOptions.isPrettyPrint()        // Test the setting
 
 Specify which fields to include in the output JSON for a particular class, or a many classes at once:
 
     .includedFields(Class, Collection<String>)
     .includedFields(Map<Class, Collection<String>>)
 
+    writeOptions.getIncludedFields()    // Get all the Classes and their included fields' lists.
+
 Specify which fields to exclude in the JSON output for a particular class, or many classes at once.
 
     .excludedFields(Class, Collection<String>)
     .excludedFields(Map<Class, Collection<String>>)
 
+    writeOptions.getExcludedFields()    // Get all the Classes and their excludeed fields' lists.
+
 Specify that only public variables of ENUMs are serialized:
 
-    .doNotWritePrivateEnumFields()                                                           
+    .doNotWritePrivateEnumFields()
+    .writePrivateEnumFields()
+
+    writeOptions.isEnumPublicOnly()     // To check setting.
 
 To have Longs written as strings in quotes, which is Javascript safe.  Obscure bugs happen in Javascript
-when a full 19 digit long is set as-is to Javascript (because Javascript stores them in a double internally).
+when a full 19 digit long is sent as-is to Javascript (because Javascript stores them in a double internally).
 
     .writeLongsAsStrings()
 

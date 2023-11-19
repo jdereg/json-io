@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,8 +79,7 @@ public class WriteOptionsBuilder {
     private final Map<Class<?>, Collection<String>> includedFields = new HashMap<>();
 
     static {
-
-        Map<Class<?>, JsonWriter.JsonClassWriter> temp = new HashMap<>();
+        Map<Class<?>, JsonWriter.JsonClassWriter> temp = new ConcurrentHashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
         temp.put(BigInteger.class, new Writers.BigIntegerWriter());
@@ -112,8 +112,7 @@ public class WriteOptionsBuilder {
         temp.put(AtomicLong.class, primitiveValueWriter);
 
         Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
-        if (zoneInfoClass != null)
-        {
+        if (zoneInfoClass != null) {
             temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
         }
 
@@ -167,6 +166,12 @@ public class WriteOptionsBuilder {
         return this;
     }
 
+    public WriteOptionsBuilder writePrivateEnumFields() {
+        writeOptions.enumPublicOnly = false;
+        writeOptions.enumWriter = nullWriter;
+        return this;
+    }
+
     public WriteOptionsBuilder writeEnumsAsPrimitives() {
         writeOptions.enumPublicOnly = false;
         writeOptions.enumWriter = new Writers.EnumsAsStringWriter();
@@ -189,10 +194,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder withClassLoader(ClassLoader classLoader) {
         writeOptions.classLoader = classLoader;
         return this;
-    }
-
-    public static void addBaseWriter(Class<?> c, JsonWriter.JsonClassWriter writer) {
-        BASE_WRITERS.put(c, writer);
     }
 
     public WriteOptionsBuilder withLogicalPrimitive(Class<?> c) {
@@ -310,47 +311,6 @@ public class WriteOptionsBuilder {
         return this;
     }
 
-    public static Map toMap(WriteOptions options) {
-        Map args = new HashMap();
-
-        if (options.isWritingLongsAsStrings()) {
-            args.put(WRITE_LONGS_AS_STRINGS, Boolean.TRUE);
-        }
-
-        if (options.isSkippingNullFields()) {
-            args.put(SKIP_NULL_FIELDS, Boolean.TRUE);
-        }
-
-        if (options.isForcingMapFormatWithKeyArrays()) {
-            args.put(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, Boolean.TRUE);
-        }
-
-        if (options.isEnumPublicOnly()) {
-            args.put(ENUM_PUBLIC_ONLY, Boolean.TRUE);
-        }
-
-        if (options.isNeverShowingType()) {
-            args.put(TYPE, Boolean.FALSE);
-        } else if (options.isAlwaysShowingType()) {
-            args.put(TYPE, Boolean.TRUE);
-        }
-
-        if (options.isPrettyPrint()) {
-            args.put(PRETTY_PRINT, Boolean.TRUE);
-        }
-
-        if (options.isUsingShortMetaKeys()) {
-            args.put(SHORT_META_KEYS, Boolean.TRUE);
-        }
-
-        args.put(NOT_CUSTOM_WRITER_MAP, options.getNonCustomClasses());
-
-        args.put(CUSTOM_WRITER_MAP, options.getCustomWriters());
-
-        args.put(CLASSLOADER, options.getClassLoader());
-        return args;
-    }
-
     public static WriteOptionsBuilder fromMap(Map args) {
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
 
@@ -390,6 +350,9 @@ public class WriteOptionsBuilder {
 
         if (isEnumPublicOnly) {
             builder.doNotWritePrivateEnumFields();
+        }
+        else {
+            builder.writePrivateEnumFields();
         }
 
         if (isTrue(args.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS))) {
@@ -548,5 +511,4 @@ public class WriteOptionsBuilder {
             return this;
         }
     }
-
 }

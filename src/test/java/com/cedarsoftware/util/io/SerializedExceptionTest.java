@@ -49,11 +49,11 @@ public class SerializedExceptionTest
         }
     }
 
-    public static class MyExceptionReader implements JsonReader.ClassFactory
+    public static class MyExceptionCreator implements JsonReader.ClassFactory
     {
         public Object newInstance(Class<?> c, JsonObject jObj)
         {
-            Map map = (Map) jObj;
+            Map map = jObj;
             String name = (String) map.get("name");
             String detailMessage = (String) map.get("detailMessage");
             return new MyException(name, detailMessage);
@@ -72,10 +72,10 @@ public class SerializedExceptionTest
      */
     void testAccessToPrivateField()
     {
-        JsonWriter.addWriterPermanent(MyException.class, new MyExceptionWriter());
-        JsonReader.assignInstantiator(MyException.class, new MyExceptionReader());
+        JsonReader.assignInstantiator(MyException.class, new MyExceptionCreator());
         MyException exp = new MyException("foo", "bar");
-        String json = TestUtil.toJson(exp);
+        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriter(MyException.class, new MyExceptionWriter()).build();
+        String json = TestUtil.toJson(exp, writeOptions);
         MyException exp2 = TestUtil.toObjects(json, null);
         assert "foo".equals(exp2.name);
         assert "bar".equals(exp2.getMessage());

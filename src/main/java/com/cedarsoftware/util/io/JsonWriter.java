@@ -453,12 +453,6 @@ public class JsonWriter implements Closeable, Flushable
     @SuppressWarnings("unchecked")
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-
-        // having to save these args to support old Writers for now.
-        // once they are deprecated we can remove the Map args.
-        this.args.putAll(WriteOptionsBuilder.toMap(writeOptions));
-        this.args.put(JSON_WRITER, this);
-
         WriterContext.instance().initialize(writeOptions, this);
     }
 
@@ -715,18 +709,6 @@ public class JsonWriter implements Closeable, Flushable
             }
         }
         return closestWriter;
-    }
-
-    /**
-     * Add a permanent Customer Writer (Lifetime of JVM)
-     * @param c Class to associate a custom JSON writer too
-     * @param writer JsonClassWriter which implements the appropriate
-     * subclass of JsonClassWriter.
-     */
-    @Deprecated
-    public static void addWriterPermanent(Class<?> c, JsonClassWriter writer)
-    {
-        WriteOptionsBuilder.addBaseWriter(c, writer);
     }
 
     /**

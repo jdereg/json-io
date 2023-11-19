@@ -304,7 +304,7 @@ public class Writers
 
     public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
         // putting here to allow this to be the full enum object writer.
-        // write now we're just calling back to the JsonWriter
+        // right now we're just calling back to the JsonWriter
         @Override
         public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
         {

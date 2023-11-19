@@ -367,6 +367,15 @@ class WriteOptionsBuilderTest {
     }
 
     @Test
+    void writePrivateEnumFields() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .writePrivateEnumFields()
+                .build();
+
+        assertThat(options.isEnumPublicOnly()).isFalse();
+    }
+
+    @Test
     void writeEnumsAsObjects() {
         WriteOptions options = new WriteOptionsBuilder()
                 .writeEnumsAsObject()
