@@ -52,7 +52,6 @@ public class ArrayTest
         ManyArrays obj = new ManyArrays();
         obj.init();
         String jsonOut = TestUtil.toJson(obj);
-        System.out.println("jsonOut = " + jsonOut);
         TestUtil.printLine(jsonOut);
 
         ManyArrays root = TestUtil.toObjects(jsonOut, null);

@@ -165,14 +165,6 @@ public class JsonWriter implements Closeable, Flushable
          * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
          * most custom writers will not have a primitive form.
          */
-        @Deprecated
-        default boolean hasPrimitiveForm(WriteOptions writeOPtions) { return hasPrimitiveForm(); }
-
-
-        /**
-         * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
-         * most custom writers will not have a primitive form.
-         */
         default boolean hasPrimitiveForm() { return false; }
 
         /**
@@ -196,18 +188,6 @@ public class JsonWriter implements Closeable, Flushable
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
         default void writePrimitiveForm(Object o, Writer output) throws IOException {}
-
-
-        /**
-         * return the JsonWriter instance performing the overall work.  This can be used to do some
-         * safe writes and utf8 writes that JsonWriter provides.
-         * @param args Map of settings initially passed to JsonWriter.
-         * @return JsonWriter instance performing the work.
-         */
-        @Deprecated
-        default JsonWriter getWriter(Map<String, Object> args) {
-            return WriterContext.instance().getWriter();
-        }
     }
 
     /**
@@ -1800,7 +1780,7 @@ public class JsonWriter implements Closeable, Flushable
         while (i.hasNext())
         {
             Map.Entry<Object, Object> entry = i.next();
-            if (writeOptions.isShortMetaKeys() && entry.getValue() == null)
+            if (writeOptions.isSkipNullFields() && entry.getValue() == null)
             {
                 continue;
             }
