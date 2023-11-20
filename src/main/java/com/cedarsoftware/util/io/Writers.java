@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -26,6 +24,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -152,38 +152,35 @@ public class Writers
         }
     }
 
-    public static class DateWriter implements JsonWriter.JsonClassWriter
-    {
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
-        {
-            if (showType)
-            {
-                output.write("\"value\":");
-            }
+    public static class DateAsTimestampWriter extends PrimitiveValueWriter {
+        @Override
+        public String extractString(Object o) {
+            return Long.toString(((Date) o).getTime());
+        }
+    }
 
-            writePrimitiveForm(obj, output, args);
+    public static class DateWriter extends PrimitiveUtf8StringWriter
+    {
+        // could change to DateFormatter.ofPattern to keep from creating new objects
+        private final String dateFormat;
+
+        public DateWriter(String format) {
+            this.dateFormat = format;
         }
 
-        public boolean hasPrimitiveForm() { return true; }
+        public DateWriter() {
+            this(JsonWriter.ISO_DATE_TIME_FORMAT);
+        }
 
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
-        {
-            final WriteOptions writeOptions = WriterContext.instance().getWriteOptions();
-            String format = writeOptions.getDateFormat();
+        @Override
+        public String extractString(Object o) {
             Date date = (Date) o;
-
-            if (format != null)
-            {
-                writeBasicString(output, new SimpleDateFormat(format).format(date));
-            }
-            else
-            {
-                output.write(Long.toString(((Date) o).getTime()));
-            }
+            return new SimpleDateFormat(dateFormat).format(date);
         }
     }
 
     public static class LocalDateAsTimestamp extends PrimitiveTypeWriter {
+        @Override
         public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException {
             LocalDate localDate = (LocalDate) o;
             output.write(Long.toString(localDate.toEpochDay()));

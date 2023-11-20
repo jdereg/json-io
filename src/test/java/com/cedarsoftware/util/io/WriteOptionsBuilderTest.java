@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,10 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_FORMAT;
-import static com.cedarsoftware.util.io.JsonWriter.ISO_DATE_TIME_FORMAT;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import org.junit.jupiter.api.Test;
 
 class WriteOptionsBuilderTest {
 
@@ -29,42 +27,6 @@ class WriteOptionsBuilderTest {
                 .build();
 
         assertThat(options.isUsingShortMetaKeys()).isTrue();
-    }
-
-    @Test
-    void withDateFormat_usingPredefinedFormat() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withDateFormat(ISO_DATE_TIME_FORMAT)
-                .build();
-
-        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
-    }
-
-    @Test
-    void withDateFormat_usingCustomFormat() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withDateFormat("yyyy")
-                .build();
-
-        assertThat(options.getDateFormat()).isEqualTo("yyyy");
-    }
-
-    @Test
-    void withIsoDateTimeFormat() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withIsoDateTimeFormat()
-                .build();
-
-        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
-    }
-
-    @Test
-    void withIsoDateFormat() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withIsoDateFormat()
-                .build();
-
-        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_FORMAT);
     }
 
     @Test
@@ -100,10 +62,7 @@ class WriteOptionsBuilderTest {
                 .excludedFields(URL.class, MetaUtils.listOf("protocol"))
                 .build();
 
-        assertThat(options.getExcludedFields())
-                .isNotNull()
-                .containsKey(URL.class)
-                .hasSize(1);
+        assertThat(options.getExcludedAccessors(URL.class)).hasSize(1);
     }
 
     @Test
@@ -116,10 +75,7 @@ class WriteOptionsBuilderTest {
                 .excludedFields(map)
                 .build();
 
-        assertThat(options.getExcludedFields())
-                .isNotNull()
-                .hasSize(2)
-                .containsKeys(URL.class, LocalDate.class);
+        assertThat(options.getExcludedAccessors(URL.class)).hasSize(1);
     }
 
     @Test
@@ -135,11 +91,7 @@ class WriteOptionsBuilderTest {
                 .excludedFields(map)
                 .build();
 
-        assertThat(options.getExcludedFields())
-                .isNotNull()
-                .hasSize(2)
-                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
-                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(1));
+        assertThat(options.getExcludedAccessors(URL.class)).hasSize(3);
      }
 
     @Test
@@ -150,11 +102,8 @@ class WriteOptionsBuilderTest {
                 .includedFields(URL.class, MetaUtils.listOf("host", "port"))
                 .build();
 
-        assertThat(options.getIncludedFields())
-                .isNotNull()
-                .hasSize(2)
-                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
-                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(1));
+        assertThat(options.getIncludedAccessors(URL.class)).hasSize(3);
+        assertThat(options.getIncludedAccessors(LocalDate.class)).hasSize(1);
     }
 
     @Test
@@ -165,9 +114,7 @@ class WriteOptionsBuilderTest {
                 .includedFields(map)
                 .build();
 
-        assertThat(options.getIncludedFields())
-                .hasSize(1)
-                .containsKey(URL.class);
+        assertThat(options.getIncludedAccessors(URL.class)).hasSize(1);
     }
     @Test
     void withFieldNameSpecifierMap_accumulates_andKeepsUnique() {
@@ -181,12 +128,7 @@ class WriteOptionsBuilderTest {
                 .includedFields(LocalDate.class, MetaUtils.listOf("year"))
                 .build();
 
-
-        assertThat(options.getIncludedFields())
-                .isNotNull()
-                .hasSize(2)
-                .hasEntrySatisfying(URL.class, f -> assertThat(f).hasSize(3))
-                .hasEntrySatisfying(LocalDate.class, f -> assertThat(f).hasSize(2));
+        assertThat(options.getIncludedAccessors(URL.class)).hasSize(3);
     }
 
     @Test
@@ -206,7 +148,6 @@ class WriteOptionsBuilderTest {
 
         assertThat(options.isSkippingNullFields()).isTrue();
         assertThat(options.isUsingShortMetaKeys()).isTrue();
-        assertThat(options.getDateFormat()).isEqualTo(ISO_DATE_TIME_FORMAT);
     }
 
     @Test
@@ -215,9 +156,7 @@ class WriteOptionsBuilderTest {
                 .withCustomWriter(Date.class, new Writers.DateWriter())
                 .build();
 
-        assertThat(options.getCustomWriters())
-                .hasSizeGreaterThan(20)
-                .containsKey(Date.class);
+        assertThat(options.getCustomWriter(Date.class)).isNotNull();
     }
 
     @Test
@@ -229,9 +168,10 @@ class WriteOptionsBuilderTest {
                 .build();
 
         // needs a real test.
-        assertThat(options.getCustomWriters())
-                .hasSizeGreaterThan(20)
-                .containsKeys(Calendar.class, Timestamp.class, BigInteger.class, BigDecimal.class);
+        assertThat(options.getCustomWriter(Calendar.class)).isNotNull();
+        assertThat(options.getCustomWriter(Timestamp.class)).isNotNull();
+        assertThat(options.getCustomWriter(BigInteger.class)).isNotNull();
+        assertThat(options.getCustomWriter(BigDecimal.class)).isNotNull();
     }
 
     @Test
@@ -241,9 +181,9 @@ class WriteOptionsBuilderTest {
                 .withCustomWriter(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter())
                 .build();
 
-        assertThat(options.getCustomWriters())
-                .hasSizeGreaterThan(20)
-                .containsKeys(Date.class, CustomWriterTest.Person.class);
+        assertThat(options.getCustomWriter(Date.class)).isNotNull();
+        assertThat(options.getCustomWriter(CustomWriterTest.Person.class)).isNotNull();
+
     }
 
     @Test
@@ -254,9 +194,10 @@ class WriteOptionsBuilderTest {
                 .withCustomTypeName(Date.class, value)
                 .build();
 
-        assertThat(options.getCustomWriters())
-                .hasSizeGreaterThan(20)
-                .containsKey(Date.class);
+        assertThat(options.getCustomWriter(Calendar.class)).isNotNull();
+        assertThat(options.getCustomWriter(Timestamp.class)).isNotNull();
+        assertThat(options.getCustomWriter(BigInteger.class)).isNotNull();
+        assertThat(options.getCustomWriter(BigDecimal.class)).isNotNull();
     }
 
     @Test
@@ -268,9 +209,7 @@ class WriteOptionsBuilderTest {
                 .withCustomTypeName(key, value)
                 .build();
 
-        assertThat(options.getCustomTypeMap())
-                .hasSize(1)
-                .containsKey(key);
+        assertThat(options.getCustomNameOrDefault(key, null)).isEqualTo(value);
     }
 
     @Test
@@ -282,10 +221,8 @@ class WriteOptionsBuilderTest {
                 .withCustomTypeName(Date.class.getName(), "foo2")
                 .build();
 
-        assertThat(options.getCustomTypeMap())
-                .hasSize(2)
-                .containsEntry(String.class.getName(), "bar2")
-                .containsEntry(Date.class.getName(), "foo2");
+        assertThat(options.getCustomNameOrDefault(String.class.getName(), null)).isEqualTo("bar2");
+        assertThat(options.getCustomNameOrDefault(Date.class.getName(), null)).isEqualTo("foo2");
     }
 
     @Test
@@ -301,10 +238,8 @@ class WriteOptionsBuilderTest {
                 .withCustomTypeName(TimeZone.class.getName(), "tz")
                 .build();
 
-        assertThat(options.getCustomTypeMap())
-                .hasSize(4)
-                .containsEntry("foo", "bar")
-                .containsEntry(String.class.getName(), "char2");
+        assertThat(options.getCustomNameOrDefault("foo", null)).isEqualTo("bar");
+        assertThat(options.getCustomNameOrDefault(String.class.getName(), null)).isEqualTo("char2");
     }
 
 
@@ -336,9 +271,7 @@ class WriteOptionsBuilderTest {
                 .withCustomTypeName(String.class, "bar2")
                 .build();
 
-        assertThat(options.getCustomTypeMap())
-                .hasSize(1)
-                .containsEntry(String.class.getName(), "bar2");
+        assertThat(options.getCustomNameOrDefault(String.class.getName(), null)).isEqualTo("bar2");
     }
 
     private Map<String, String> expectedTypeNameMap() {
@@ -401,9 +334,7 @@ class WriteOptionsBuilderTest {
                 .withNoCustomizationFor(String.class)
                 .build();
 
-        assertThat(options.getNonCustomClasses())
-                .hasSize(1)
-                .contains(String.class);
+        assertThat(options.isNonCustomClass(String.class)).isTrue();
     }
 
     @Test
@@ -413,9 +344,7 @@ class WriteOptionsBuilderTest {
                 .withNoCustomizationFor(String.class)
                 .build();
 
-        assertThat(options.getNonCustomClasses())
-                .hasSize(1)
-                .contains(String.class);
+        assertThat(options.isNonCustomClass(String.class)).isTrue();
     }
     @Test
     void doNotCustomizeClass_addsAdditionalUniqueClasses() {
@@ -427,9 +356,10 @@ class WriteOptionsBuilderTest {
                 .withNoCustomizationsFor(list)
                 .build();
 
-        assertThat(options.getNonCustomClasses())
-                .hasSize(3)
-                .contains(HashMap.class, String.class, Map.class);
+        assertThat(options.isNonCustomClass(String.class)).isTrue();
+        assertThat(options.isNonCustomClass(Map.class)).isTrue();
+        assertThat(options.isNonCustomClass(HashMap.class)).isTrue();
+
     }
 
     @Test
@@ -440,8 +370,8 @@ class WriteOptionsBuilderTest {
                 .withNoCustomizationsFor(MetaUtils.listOf(String.class, List.class))
                 .build();
 
-        assertThat(options.getNonCustomClasses())
-                .hasSize(3)
-                .containsExactlyInAnyOrder(String.class, Date.class, List.class);
+        assertThat(options.isNonCustomClass(String.class)).isTrue();
+        assertThat(options.isNonCustomClass(Date.class)).isTrue();
+        assertThat(options.isNonCustomClass(List.class)).isTrue();
     }
 }

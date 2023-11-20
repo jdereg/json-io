@@ -1,8 +1,20 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.PrintStyle;
-import com.cedarsoftware.util.reflect.Accessor;
-import lombok.Getter;
+import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
+import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
+import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
+import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
+import static com.cedarsoftware.util.io.JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS;
+import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.PRETTY_PRINT;
+import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
+import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
+import static com.cedarsoftware.util.io.JsonWriter.TYPE;
+import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
+import static com.cedarsoftware.util.io.JsonWriter.nullWriter;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -17,6 +29,7 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,21 +47,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
-import static com.cedarsoftware.util.io.JsonWriter.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonWriter.CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.ENUM_PUBLIC_ONLY;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_NAME_BLACK_LIST;
-import static com.cedarsoftware.util.io.JsonWriter.FIELD_SPECIFIERS;
-import static com.cedarsoftware.util.io.JsonWriter.FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS;
-import static com.cedarsoftware.util.io.JsonWriter.NOT_CUSTOM_WRITER_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.PRETTY_PRINT;
-import static com.cedarsoftware.util.io.JsonWriter.SHORT_META_KEYS;
-import static com.cedarsoftware.util.io.JsonWriter.SKIP_NULL_FIELDS;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE;
-import static com.cedarsoftware.util.io.JsonWriter.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonWriter.WRITE_LONGS_AS_STRINGS;
-import static com.cedarsoftware.util.io.JsonWriter.nullWriter;
+import com.cedarsoftware.util.PrintStyle;
+import com.cedarsoftware.util.reflect.Accessor;
+
+import lombok.Getter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -77,14 +79,36 @@ public class WriteOptionsBuilder {
 
     private final Map<Class<?>, Collection<String>> includedFields = new HashMap<>();
 
+
+    private boolean usingShortMetaKeys = false;
+
+
+    private boolean writingLongsAsStrings = false;
+
+
+    private boolean skippingNullFields = false;
+
+    private boolean forcingMapFormatWithKeyArrays = false;
+
+
+    private boolean enumPublicOnly = false;
+
+
+    private ClassLoader classLoader = WriteOptionsImplementation.class.getClassLoader();
+
+
+    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
+
+    private PrintStyle printStyle;
+
+    private TypeWriter typeWriter;
+
     static {
 
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
-        temp.put(Date.class, new Writers.DateWriter());
         temp.put(BigInteger.class, new Writers.BigIntegerWriter());
         temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
-        temp.put(java.sql.Date.class, new Writers.DateWriter());
         temp.put(Timestamp.class, new Writers.TimestampWriter());
         temp.put(Calendar.class, new Writers.CalendarWriter());
         temp.put(TimeZone.class, new Writers.TimeZoneWriter());
@@ -99,6 +123,10 @@ public class WriteOptionsBuilder {
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
         temp.put(Year.class, new Writers.YearWriter());
         temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
+
+        JsonWriter.JsonClassWriter dateWriter = new Writers.DateAsTimestampWriter();
+        temp.put(Date.class, dateWriter);
+        temp.put(java.sql.Date.class, dateWriter);
 
         JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
         temp.put(StringBuilder.class, stringWriter);
@@ -131,22 +159,22 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder skipNullFields() {
-        writeOptions.skippingNullFields = true;
+        this.skippingNullFields = true;
         return this;
     }
 
     public WriteOptionsBuilder withPrettyPrint() {
-        writeOptions.printStyle = PrintStyle.PRETTY_PRINT;
+        this.printStyle = PrintStyle.PRETTY_PRINT;
         return this;
     }
 
     public WriteOptionsBuilder withPrintStyle(PrintStyle style) {
-        writeOptions.printStyle = style;
+        this.printStyle = style;
         return this;
     }
 
     public WriteOptionsBuilder writeLongsAsStrings() {
-        writeOptions.writingLongsAsStrings = true;
+        this.writingLongsAsStrings = true;
         return this;
     }
 
@@ -157,37 +185,37 @@ public class WriteOptionsBuilder {
      * @return
      */
     public WriteOptionsBuilder writeEnumsAsObject() {
-        writeOptions.enumWriter = nullWriter;
+        this.enumWriter = nullWriter;
         return this;
     }
 
     public WriteOptionsBuilder doNotWritePrivateEnumFields() {
-        writeOptions.enumPublicOnly = true;
-        writeOptions.enumWriter = nullWriter;
+        this.enumPublicOnly = true;
+        this.enumWriter = nullWriter;
         return this;
     }
 
     public WriteOptionsBuilder writeEnumsAsPrimitives() {
-        writeOptions.enumPublicOnly = false;
-        writeOptions.enumWriter = new Writers.EnumsAsStringWriter();
+        this.enumPublicOnly = false;
+        this.enumWriter = new Writers.EnumsAsStringWriter();
         return this;
     }
 
     // Map with all String keys, will still output in the @keys/@items approach
     public WriteOptionsBuilder forceMapOutputAsKeysAndValues() {
-        writeOptions.forcingMapFormatWithKeyArrays = true;
+        this.forcingMapFormatWithKeyArrays = true;
         return this;
     }
 
     // Map with all String keys, will output as a JSON object, with the keys of the Map being the keys of the JSON
     // Object, which is the default and more natural.
     public WriteOptionsBuilder doNotForceMapOutputAsKeysAndValues() {
-        writeOptions.forcingMapFormatWithKeyArrays = false;
+        this.forcingMapFormatWithKeyArrays = false;
         return this;
     }
 
     public WriteOptionsBuilder withClassLoader(ClassLoader classLoader) {
-        writeOptions.classLoader = classLoader;
+        this.classLoader = classLoader;
         return this;
     }
 
@@ -218,31 +246,30 @@ public class WriteOptionsBuilder {
     }
 
     public WriteOptionsBuilder withIsoDateFormat() {
-        return withDateFormat(JsonWriter.ISO_DATE_FORMAT);
+        return this.withDateFormat(JsonWriter.ISO_DATE_FORMAT);
     }
 
     public WriteOptionsBuilder withDateFormat(String format) {
-        writeOptions.dateFormat = format;
-        return this;
+        return this.withCustomWriter(Date.class, new Writers.DateWriter(format));
     }
 
     public WriteOptionsBuilder withShortMetaKeys() {
-        this.writeOptions.usingShortMetaKeys = true;
+        this.usingShortMetaKeys = true;
         return this;
     }
 
     public WriteOptionsBuilder neverShowTypeInfo() {
-        this.writeOptions.typeWriter = TypeWriter.NEVER;
+        this.typeWriter = TypeWriter.NEVER;
         return this;
     }
 
     public WriteOptionsBuilder alwaysShowTypeInfo() {
-        this.writeOptions.typeWriter = TypeWriter.ALWAYS;
+        this.typeWriter = TypeWriter.ALWAYS;
         return this;
     }
 
     public WriteOptionsBuilder showMinimalTypeInfo() {
-        this.writeOptions.typeWriter = TypeWriter.MINIMAL;
+        this.typeWriter = TypeWriter.MINIMAL;
         return this;
     }
 
@@ -308,47 +335,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder withNoCustomizationsFor(Collection<Class<?>> collection) {
         this.writeOptions.nonCustomClasses.addAll(collection);
         return this;
-    }
-
-    public static Map toMap(WriteOptions options) {
-        Map args = new HashMap();
-
-        if (options.isWritingLongsAsStrings()) {
-            args.put(WRITE_LONGS_AS_STRINGS, Boolean.TRUE);
-        }
-
-        if (options.isSkippingNullFields()) {
-            args.put(SKIP_NULL_FIELDS, Boolean.TRUE);
-        }
-
-        if (options.isForcingMapFormatWithKeyArrays()) {
-            args.put(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, Boolean.TRUE);
-        }
-
-        if (options.isEnumPublicOnly()) {
-            args.put(ENUM_PUBLIC_ONLY, Boolean.TRUE);
-        }
-
-        if (options.isNeverShowingType()) {
-            args.put(TYPE, Boolean.FALSE);
-        } else if (options.isAlwaysShowingType()) {
-            args.put(TYPE, Boolean.TRUE);
-        }
-
-        if (options.isPrettyPrint()) {
-            args.put(PRETTY_PRINT, Boolean.TRUE);
-        }
-
-        if (options.isUsingShortMetaKeys()) {
-            args.put(SHORT_META_KEYS, Boolean.TRUE);
-        }
-
-        args.put(NOT_CUSTOM_WRITER_MAP, options.getNonCustomClasses());
-
-        args.put(CUSTOM_WRITER_MAP, options.getCustomWriters());
-
-        args.put(CLASSLOADER, options.getClassLoader());
-        return args;
     }
 
     public static WriteOptionsBuilder fromMap(Map args) {
@@ -430,11 +416,20 @@ public class WriteOptionsBuilder {
     public WriteOptions build() {
         this.writeOptions.includedFields.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.includedFields));
         this.writeOptions.excludedFields.putAll(MetaUtils.convertStringFieldNamesToAccessors(this.excludedFields));
-        return new WriteOptionsImplementation(this.writeOptions);
+        return new WriteOptionsImplementation(this.writeOptions,
+                typeWriter,
+                printStyle,
+                usingShortMetaKeys,
+                writingLongsAsStrings,
+                skippingNullFields,
+                forcingMapFormatWithKeyArrays,
+                enumPublicOnly,
+                enumWriter,
+                classLoader);
     }
 
     private void assertTypesAreBeingOutput() {
-        if (writeOptions.typeWriter == TypeWriter.NEVER) {
+        if (typeWriter == TypeWriter.NEVER) {
             throw new IllegalStateException("There is no need to set the type name map when types are never being written");
         }
     }
@@ -444,50 +439,53 @@ public class WriteOptionsBuilder {
         private final Set<Class<?>> logicalPrimitives;
 
         @Getter
-        private boolean usingShortMetaKeys = false;
+        private final boolean usingShortMetaKeys;
 
         @Getter
-        private boolean writingLongsAsStrings = false;
+        private final boolean writingLongsAsStrings;
 
         @Getter
-        private boolean skippingNullFields = false;
+        private final boolean skippingNullFields;
 
         @Getter
-        private boolean forcingMapFormatWithKeyArrays = false;
+        private final boolean forcingMapFormatWithKeyArrays;
 
         @Getter
-        private boolean enumPublicOnly = false;
+        private final boolean enumPublicOnly;
 
         @Getter
-        private ClassLoader classLoader = WriteOptionsImplementation.class.getClassLoader();
+        private final ClassLoader classLoader;
 
         @Getter
-        private JsonWriter.JsonClassWriter enumWriter;
+        private final JsonWriter.JsonClassWriter enumWriter;
 
-        @Getter
         private final Map<Class<?>, JsonWriter.JsonClassWriter> customWriters;
 
-        @Getter
         private final Map<String, String> customTypeMap;
 
-        @Getter
         private final Collection<Class<?>> nonCustomClasses;
 
-        @Getter
         private final Map<Class<?>, Collection<Accessor>> includedFields;
 
-        @Getter
         private final Map<Class<?>, Collection<Accessor>> excludedFields;
 
-        @Deprecated
-        @Getter
-        private String dateFormat;
+        /**
+         * classes where the implementation type will be different from the field declaration type, so it would always
+         * force the type if not for our custom writer.  These will typically be sun style classes where there is
+         * a static initializer
+         */
+        private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new HashMap<>();
 
-        private PrintStyle printStyle;
+        private final PrintStyle printStyle;
 
-        private TypeWriter typeWriter;
+        private final TypeWriter typeWriter;
 
         private WriteOptionsImplementation() {
+            this.usingShortMetaKeys = true;
+            this.writingLongsAsStrings = false;
+            this.skippingNullFields = false;
+            this.forcingMapFormatWithKeyArrays = false;
+            this.enumPublicOnly = false;
             this.logicalPrimitives = new HashSet<>(Primitives.PRIMITIVE_WRAPPERS);
             this.customWriters = new HashMap<>(BASE_WRITERS);
             this.excludedFields = new HashMap<>();
@@ -497,25 +495,110 @@ public class WriteOptionsBuilder {
             this.printStyle = PrintStyle.ONE_LINE;
             this.typeWriter = TypeWriter.MINIMAL;
             this.enumWriter = new Writers.EnumsAsStringWriter();
+            this.classLoader = WriteOptionsImplementation.class.getClassLoader();
         }
 
-        private WriteOptionsImplementation(WriteOptionsImplementation options) {
-            this.usingShortMetaKeys = options.usingShortMetaKeys;
-            this.typeWriter = options.typeWriter;
-            this.printStyle = options.printStyle;
-            this.writingLongsAsStrings = options.writingLongsAsStrings;
-            this.skippingNullFields = options.skippingNullFields;
-            this.forcingMapFormatWithKeyArrays = options.forcingMapFormatWithKeyArrays;
-            this.enumPublicOnly = options.enumPublicOnly;
-            this.classLoader = options.classLoader;
-            this.enumWriter = options.enumWriter;
+        private WriteOptionsImplementation(WriteOptionsImplementation options,
+                                           TypeWriter typeWriter,
+                                           PrintStyle printStyle,
+                                           boolean usingShortMetaKeys,
+                                           boolean writingLongsAsStrings,
+                                           boolean skippingNullFields,
+                                           boolean forcingMapFormatWithKeyArrays,
+                                           boolean enumPublicOnly,
+                                           JsonWriter.JsonClassWriter enumWriter,
+                                           ClassLoader classLoader) {
+            this.usingShortMetaKeys = usingShortMetaKeys;
+            this.typeWriter = typeWriter;
+            this.printStyle = printStyle;
+            this.writingLongsAsStrings = writingLongsAsStrings;
+            this.skippingNullFields = skippingNullFields;
+            this.forcingMapFormatWithKeyArrays = forcingMapFormatWithKeyArrays;
+            this.enumPublicOnly = enumPublicOnly;
+            this.classLoader = classLoader;
+            this.enumWriter = enumWriter;
             this.customWriters = Collections.unmodifiableMap(options.customWriters);
             this.customTypeMap = Collections.unmodifiableMap(options.customTypeMap);
             this.nonCustomClasses = Collections.unmodifiableCollection(options.nonCustomClasses);
             this.includedFields = Collections.unmodifiableMap(options.includedFields);
             this.excludedFields = Collections.unmodifiableMap(options.excludedFields);
             this.logicalPrimitives = Collections.unmodifiableSet(options.logicalPrimitives);
-            this.dateFormat = options.dateFormat;
+        }
+
+        @Override
+        public String getCustomNameOrDefault(String name, String def) {
+            String customName = this.customTypeMap.get(name);
+            return customName == null ? def : customName;
+        }
+
+        /**
+         * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
+         * null value.  Instead, singleton instance of this class is placed where null values
+         * are needed.
+         */
+        static final class NullClass implements JsonWriter.JsonClassWriter {
+        }
+
+        /**
+         * Fetch the customer writer for the passed in Class.  If it is cached (already associated to the
+         * passed in Class), return the same instance, otherwise, make a call to get the custom writer
+         * and store that result.
+         *
+         * @param c Class of object for which fetch a custom writer
+         * @return JsonClassWriter for the custom class (if one exists), null otherwise.
+         */
+        @Override
+        public JsonWriter.JsonClassWriter getCustomWriter(Class<?> c) {
+            JsonWriter.JsonClassWriter writer = writerCache.get(c);
+            if (writer == null) {
+                writer = forceGetCustomWriter(c);
+                writerCache.put(c, writer);
+            }
+
+            if (writer != nullWriter) {
+                return writer;
+            }
+
+            writer = MetaUtils.getClassIfEnum(c).isPresent() ? this.enumWriter : nullWriter;
+            writerCache.put(c, writer);
+
+            return writer == nullWriter ? null : writer;
+        }
+
+        @Override
+        public void clearWriterCache() {
+            this.writerCache.clear();
+        }
+
+        /**
+         * Fetch the customer writer for the passed in Class.  This method always fetches the custom writer, doing
+         * the complicated inheritance distance checking.  This method is only called when a cache miss has happened.
+         * A sentinel 'nullWriter' is returned when no custom writer is found.  This prevents future cache misses
+         * from re-attempting to find custom writers for classes that do not have a custom writer.
+         *
+         * @param c Class of object for which fetch a custom writer
+         * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
+         */
+        private JsonWriter.JsonClassWriter forceGetCustomWriter(Class<?> c) {
+            JsonWriter.JsonClassWriter closestWriter = nullWriter;
+            int minDistance = Integer.MAX_VALUE;
+
+            for (Map.Entry<Class<?>, JsonWriter.JsonClassWriter> entry : this.customWriters.entrySet()) {
+                Class<?> clz = entry.getKey();
+                if (clz == c) {
+                    return entry.getValue();
+                }
+                int distance = MetaUtils.computeInheritanceDistance(c, clz);
+                if (distance != -1 && distance < minDistance) {
+                    minDistance = distance;
+                    closestWriter = entry.getValue();
+                }
+            }
+            return closestWriter;
+        }
+
+        public boolean isNonCustomClass(Class<?> c) {
+            return this.nonCustomClasses.contains(c);
         }
 
         @Override
@@ -537,15 +620,98 @@ public class WriteOptionsBuilder {
         public boolean isLogicalPrimitive(Class<?> c) {
             return Primitives.isLogicalPrimitive(c, logicalPrimitives);
         }
-        
+
+        public Collection<Accessor> getIncludedAccessors(final Class<?> c) {
+            return this.getAccessorsUsingSpecifiers(c, this.includedFields);
+        }
+
+        public Collection<Accessor> getExcludedAccessors(final Class<?> c) {
+            return this.getAccessorsUsingSpecifiers(c, this.excludedFields);
+        }
+
+        // This is replacing the reverse walking system that compared all cases for distance
+        // since we're caching all classes and their sub-objects correctly we should be ok removing
+        // the distance check since we walk up the chain of the class being written.
+        public Collection<Accessor> getAccessorsUsingSpecifiers(final Class<?> c, Map<Class<?>, Collection<Accessor>> limiter) {
+            Class<?> curr = c;
+            List<Collection<Accessor>> accessorLists = new ArrayList<>();
+
+            while (curr != null) {
+                Collection<Accessor> accessorList = limiter.get(curr);
+
+                if (accessorList != null) {
+                    accessorLists.add(accessorList);
+                }
+
+                curr = curr.getSuperclass();
+            }
+
+            if (accessorLists.isEmpty()) {
+                return null;
+            }
+
+            Collection<Accessor> accessors = new ArrayList<>();
+            accessorLists.forEach(accessors::addAll);
+            return accessors;
+        }
         /**
          * We're cheating here because the booleans are needed to be mutable by the builder.
          *
          * @return
          */
         public WriteOptions ensurePrettyPrint() {
-            this.printStyle = PrintStyle.PRETTY_PRINT;
-            return this;
+            return new WriteOptionsImplementation(this,
+                    this.typeWriter,
+                    PrintStyle.PRETTY_PRINT,
+                    this.usingShortMetaKeys,
+                    this.writingLongsAsStrings,
+                    this.skippingNullFields,
+                    this.forcingMapFormatWithKeyArrays,
+                    this.enumPublicOnly,
+                    this.enumWriter,
+                    this.classLoader);
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public Map toMap() {
+            Map args = new HashMap();
+
+            if (this.isWritingLongsAsStrings()) {
+                args.put(WRITE_LONGS_AS_STRINGS, Boolean.TRUE);
+            }
+
+            if (this.isSkippingNullFields()) {
+                args.put(SKIP_NULL_FIELDS, Boolean.TRUE);
+            }
+
+            if (this.isForcingMapFormatWithKeyArrays()) {
+                args.put(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS, Boolean.TRUE);
+            }
+
+            if (this.isEnumPublicOnly()) {
+                args.put(ENUM_PUBLIC_ONLY, Boolean.TRUE);
+            }
+
+            if (this.isNeverShowingType()) {
+                args.put(TYPE, Boolean.FALSE);
+            } else if (this.isAlwaysShowingType()) {
+                args.put(TYPE, Boolean.TRUE);
+            }
+
+            if (this.isPrettyPrint()) {
+                args.put(PRETTY_PRINT, Boolean.TRUE);
+            }
+
+            if (this.isUsingShortMetaKeys()) {
+                args.put(SHORT_META_KEYS, Boolean.TRUE);
+            }
+
+            args.put(NOT_CUSTOM_WRITER_MAP, new HashSet<>(this.nonCustomClasses));
+
+            args.put(CUSTOM_WRITER_MAP, new HashMap<>(this.customWriters));
+
+            args.put(CLASSLOADER, this.getClassLoader());
+            return args;
         }
     }
 

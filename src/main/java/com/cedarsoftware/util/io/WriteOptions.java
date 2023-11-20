@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-
 import java.util.Collection;
 import java.util.Map;
 
+import com.cedarsoftware.util.reflect.Accessor;
+
 public interface WriteOptions {
 
-    Map<String, String> getCustomTypeMap();
+    String getCustomNameOrDefault(String name, String def);
 
     boolean isUsingShortMetaKeys();
 
@@ -25,6 +25,8 @@ public interface WriteOptions {
 
     boolean isEnumPublicOnly();
 
+    void clearWriterCache();
+
     /**
      * @param c Class to test
      * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
@@ -38,17 +40,18 @@ public interface WriteOptions {
 
     JsonWriter.JsonClassWriter getEnumWriter();
 
-    String getDateFormat();
-
-    Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWriters();
+    JsonWriter.JsonClassWriter getCustomWriter(Class<?> c);
 
     ClassLoader getClassLoader();
 
-    Collection<Class<?>> getNonCustomClasses();
-    
-    Map<Class<?>, Collection<Accessor>> getIncludedFields();
-
-    Map<Class<?>, Collection<Accessor>> getExcludedFields();
+    boolean isNonCustomClass(Class<?> c);
 
     WriteOptions ensurePrettyPrint();
+
+    Collection<Accessor> getIncludedAccessors(final Class<?> c);
+
+    Collection<Accessor> getExcludedAccessors(final Class<?> c);
+
+    @Deprecated
+    Map toMap();
 }
