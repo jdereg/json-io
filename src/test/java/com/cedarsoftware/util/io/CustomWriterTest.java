@@ -397,7 +397,7 @@ public class CustomWriterTest
 
     public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             Person p = (Person) o;
             output.write("\"f\":\"");
@@ -424,16 +424,14 @@ public class CustomWriterTest
             }
 
             output.write("]");
-
-            assert getWriter(args) instanceof JsonWriter;
         }
     }
 
     public static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
-            JsonWriter writer = getWriter(args);
+            JsonWriter writer = WriterContext.instance().getWriter();
             output.write("\"_version\":12,");
             writer.writeObject(o, false, true);
         }

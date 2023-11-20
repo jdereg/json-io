@@ -369,9 +369,6 @@ public class JsonWriter implements Closeable, Flushable
      * @param writeOptions WriteOptions containing many feature options to control the JSON output.  Can be null,
      *                     in which case the default WriteOptions will be used.
      * @see WriteOptions Javadoc.
-     * <br/><br/>
-     * This method  is deprecated, but the constructor that takes OutputStream and a WriteOptions
-     * instance instead.
      */
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         if (writeOptions == null)
@@ -820,7 +817,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             try
             {
-                // make sure blacklisted classes don't get added to the stack.  If a field is proxied, such as
+                // make sure excluded fieldss don't get added to the stack.  If a field is proxied, such as
                 // by Hibernate then accessing the item in any way can throw an exception.
                 if (excludedFields == null || !excludedFields.contains(accessor))
                 {

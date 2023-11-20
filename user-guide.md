@@ -230,7 +230,7 @@ classes for which you do not have the source code.
     
     public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             Person p = (Person) o
             output.write('"first":"')
