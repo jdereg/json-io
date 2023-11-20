@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -98,7 +98,7 @@ public class CustomReaderMapTest
 
     private static class CustomPointReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object obj, Deque<JsonObject> stack, Map<String, Object> args)
+        public Object read(Object obj, Deque<JsonObject> stack)
         {
             JsonObject jObj = (JsonObject) obj;
 

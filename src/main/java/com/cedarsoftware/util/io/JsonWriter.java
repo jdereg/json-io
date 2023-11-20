@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
-import lombok.Setter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -34,7 +31,11 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -76,7 +77,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class JsonWriter implements Closeable, Flushable
+public class JsonWriter implements WriterContext, Closeable, Flushable
 {
     /** Starting Arguments holds onto JsonWriter for custom writers using this argument **/
     public static final String JSON_WRITER = "JSON_WRITER";
@@ -131,7 +132,9 @@ public class JsonWriter implements Closeable, Flushable
     private static final Long ZERO = 0L;
     public static final NullClass nullWriter = new NullClass();
 
-    private WriteOptions optionsCache = null;
+    @Getter
+    private final WriteOptions writeOptions;
+
     /**
      * @return Map containing all objects that were visited within input object graph
      */
@@ -186,12 +189,28 @@ public class JsonWriter implements Closeable, Flushable
         /**
          * When write() is called, it is expected that subclasses will write the appropriate JSON
          * to the passed in Writer.
+         *
+         * @param o        Object to be written in JSON format.
+         * @param showType boolean indicating whether to show @type.
+         * @param output   Writer destination to where the actual JSON is written.
+         * @param context  WriterContext to get writeOptions and other write access
+         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
+         */
+        default void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
+            this.write(o, showType, output);
+        }
+
+        /**
+         * When write() is called, it is expected that subclasses will write the appropriate JSON
+         * to the passed in Writer.
          * @param o Object to be written in JSON format.
          * @param showType boolean indicating whether to show @type.
          * @param output Writer destination to where the actual JSON is written.
          * @param args Map of 'settings' arguments initially passed into the JsonWriter.
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
+         * @deprecated use write(Object o, boolean showType, Writer output, WriterContext context)
          */
+        @Deprecated
         default void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException {
             this.write(o, showType, output);
         }
@@ -214,7 +233,6 @@ public class JsonWriter implements Closeable, Flushable
         @Deprecated
         default boolean hasPrimitiveForm(Map args) { return hasPrimitiveForm(); }
 
-
         /**
          * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
          * most custom writers will not have a primitive form.
@@ -226,9 +244,24 @@ public class JsonWriter implements Closeable, Flushable
          * to override this method unless you need access to the args.
          * @param o Object to be written
          * @param output Writer destination to where the actual JSON is written.
-         * @param args Map of 'settings' arguments initially passed into the JsonWriter.
+         * @param context  WriterContext to get access to writeOptions and writing tools
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
+        default void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            this.writePrimitiveForm(o, output);
+        }
+
+        /**
+         * This default implementation will call the more basic writePrimitiveForm that does not take arguments.  No need
+         * to override this method unless you need access to the args.
+         *
+         * @param o      Object to be written
+         * @param output Writer destination to where the actual JSON is written.
+         * @param args   Map of 'settings' arguments initially passed into the JsonWriter.
+         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
+         * @deprecated use writePrimitiveForm(Object o, Writer output, WriterContext context)
+         */
+        @Deprecated
         default void writePrimitiveForm(Object o, Writer output, Map args) throws IOException {
             this.writePrimitiveForm(o, output);
         }
@@ -252,7 +285,7 @@ public class JsonWriter implements Closeable, Flushable
          */
         @Deprecated
         default JsonWriter getWriter(Map<String, Object> args) {
-            return WriterContext.instance().getWriter();
+            return TheadLocalWriterContext.instance().getWriter();
         }
     }
 
@@ -277,7 +310,7 @@ public class JsonWriter implements Closeable, Flushable
             public static JsonWriter getWriter(Map<String, Object> args)
             {
                 // proper way to get ahold of the JsonWriter now.
-                return WriterContext.instance().getWriter();
+                return TheadLocalWriterContext.instance().getWriter();
             }
         }
     }
@@ -446,8 +479,9 @@ public class JsonWriter implements Closeable, Flushable
         this.args.put(JSON_WRITER, this);
 
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        WriteOptions writeOptions = WriteOptionsBuilder.fromMap(args).build();
-        WriterContext.instance().initialize(writeOptions, this);
+        this.writeOptions = WriteOptionsBuilder.fromMap(args).build();
+
+        TheadLocalWriterContext.instance().initialize(this.writeOptions, this);
     }
 
     @SuppressWarnings("unchecked")
@@ -459,19 +493,8 @@ public class JsonWriter implements Closeable, Flushable
         this.args.putAll(WriteOptionsBuilder.toMap(writeOptions));
         this.args.put(JSON_WRITER, this);
 
-        WriterContext.instance().initialize(writeOptions, this);
-    }
-
-    /**
-     * Get a copy of the writeOptions that are in effect for this instance of the JsonWriter.
-     */
-    public WriteOptions getWriteOptions()
-    {
-        if (optionsCache == null)
-        {
-            optionsCache = WriterContext.instance().getWriteOptions();
-        }
-        return optionsCache;
+        this.writeOptions = writeOptions;
+        TheadLocalWriterContext.instance().initialize(writeOptions, this);
     }
 
     /**
@@ -615,9 +638,8 @@ public class JsonWriter implements Closeable, Flushable
 
         if (closestWriter.hasPrimitiveForm())
         {
-            if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter)
-            {
-                closestWriter.writePrimitiveForm(o, output, new HashMap<>());
+            if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
+                closestWriter.writePrimitiveForm(o, output, this);
                 return true;
             }
         }
@@ -645,7 +667,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        closestWriter.write(o, showType || referenced, output, this.args);
+        closestWriter.write(o, showType || referenced, output, this);
 
         tabOut();
         output.write('}');
@@ -1163,7 +1185,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         if (obj instanceof Character)
         {
-            writeJsonUtf8String(String.valueOf(obj), out);
+            JsonUtilities.writeJsonUtf8String(out, String.valueOf(obj));
         }
         else
         {
@@ -1267,7 +1289,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (char[].class == arrayType)
         {
-            writeJsonUtf8String(new String((char[]) array), output);
+            JsonUtilities.writeJsonUtf8String(output, new String((char[]) array));
         }
         else if (short[].class == arrayType)
         {
@@ -1632,7 +1654,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (Character.class == componentClass || char.class == componentClass)
             {
-                writeJsonUtf8String((String) value, output);
+                JsonUtilities.writeJsonUtf8String(output, (String) value);
             }
             else if (value instanceof Boolean || value instanceof Long || value instanceof Double)
             {
@@ -1643,7 +1665,7 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (value instanceof String)
             {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
-                writeJsonUtf8String((String) value, output);
+                JsonUtilities.writeJsonUtf8String(output, (String) value);
             }
             else if (writeArrayElementIfMatching(componentClass, value, false, output)) { }
             else
@@ -1916,11 +1938,11 @@ public class JsonWriter implements Closeable, Flushable
             }
             else if (value instanceof String)
             {
-                writeJsonUtf8String((String) value, output);
+                JsonUtilities.writeJsonUtf8String(output, (String) value);
             }
             else if (value instanceof Character)
             {
-                writeJsonUtf8String(String.valueOf(value), output);
+                JsonUtilities.writeJsonUtf8String(output, String.valueOf(value));
             }
             else
             {
@@ -2056,7 +2078,7 @@ public class JsonWriter implements Closeable, Flushable
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();
-            writeJsonUtf8String((String)att2value.getKey(), output);
+            JsonUtilities.writeJsonUtf8String(output, (String) att2value.getKey());
             output.write(":");
 
             writeCollectionElement(att2value.getValue());
@@ -2114,7 +2136,7 @@ public class JsonWriter implements Closeable, Flushable
         }
         else if (o instanceof String)
         {   // Never do a @ref to a String (they are treated as logical primitives and interned on read)
-            writeJsonUtf8String((String) o, out);
+            JsonUtilities.writeJsonUtf8String(out, (String) o);
         } else if (getWriteOptions().isNeverShowingType() && Primitives.isPrimitive(o.getClass()))
         {   // If neverShowType, then force primitives (and primitive wrappers)
             // to be output with toString() - prevents {"value":6} for example
@@ -2139,7 +2161,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        writeJsonUtf8String("@enum", out);
+        JsonUtilities.writeJsonUtf8String(out, "@enum");
         out.write(':');
 
         Enum<? extends Enum<?>> ee = null;
@@ -2170,7 +2192,7 @@ public class JsonWriter implements Closeable, Flushable
         {
             elementType = ee.getClass();
         }
-        writeJsonUtf8String(elementType.getName(), out);
+        JsonUtilities.writeJsonUtf8String(out, elementType.getName());
 
         if (!enumSet.isEmpty())
         {
@@ -2180,7 +2202,7 @@ public class JsonWriter implements Closeable, Flushable
             out.write(",");
             newLine();
 
-            writeJsonUtf8String("@items", out);
+            JsonUtilities.writeJsonUtf8String(out, "@items");
             out.write(":[");
             if (enumFieldsCount > 2)
             {
@@ -2202,7 +2224,7 @@ public class JsonWriter implements Closeable, Flushable
 
                 if (enumFieldsCount <= 2)
                 {
-                    writeJsonUtf8String(e.name(), out);
+                    JsonUtilities.writeJsonUtf8String(out, e.name());
                 }
                 else
                 {
@@ -2368,7 +2390,7 @@ public class JsonWriter implements Closeable, Flushable
             newLine();
         }
 
-        writeJsonUtf8String(fieldName, out);
+        JsonUtilities.writeJsonUtf8String(out, fieldName);
         out.write(':');
         
         if (o == null)
@@ -2403,61 +2425,6 @@ public class JsonWriter implements Closeable, Flushable
         }
 
         return this.getCustomWriter(declaredType) == null;
-    }
-
-    /**
-     * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
-     * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
-     * characters in the range of ASCII space to a '~' as ASCII, and anything higher in UTF-8.
-     *
-     * @param s String to be written in UTF-8 format on the output stream.
-     * @param output Writer to which the UTF-8 string will be written to
-     * @throws IOException if an error occurs writing to the output stream.
-     */
-    public static void writeJsonUtf8String(String s, final Writer output) throws IOException
-    {
-        output.write('\"');
-        final int len = s.length();
-
-        for (int i = 0; i < len; i++)
-        {
-            char c = s.charAt(i);
-
-            if (c < ' ')
-            {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-                switch (c)
-                {
-                    case '\b':
-                        output.write("\\b");
-                        break;
-                    case '\f':
-                        output.write("\\f");
-                        break;
-                    case '\n':
-                        output.write("\\n");
-                        break;
-                    case '\r':
-                        output.write("\\r");
-                        break;
-                    case '\t':
-                        output.write("\\t");
-                        break;
-                    default:
-                        output.write(String.format("\\u%04X", (int)c));
-                        break;
-                }
-            }
-            else if (c == '\\' || c == '"')
-            {
-                output.write('\\');
-                output.write(c);
-            }
-            else
-            {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-                output.write(c);
-            }
-        }
-        output.write('\"');
     }
 
     public void flush()

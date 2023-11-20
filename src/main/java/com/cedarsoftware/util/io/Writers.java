@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
+import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -23,9 +23,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -61,7 +62,7 @@ public class Writers
         protected String getKey() { return "value"; }
 
         @Override
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             if (showType)
             {
@@ -69,7 +70,7 @@ public class Writers
                 output.write(':');
             }
 
-            writePrimitiveForm(obj, output, args);
+            writePrimitiveForm(obj, output, context);
         }
 
         @Override
@@ -85,10 +86,11 @@ public class Writers
     {
         public String extractString(Object o) { return o.toString(); }
 
-        @Override
+
         /**
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
+        @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
             output.write(extractString(o));
         }
@@ -104,7 +106,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            writeJsonUtf8String(extractString(o), output);
+            JsonUtilities.writeJsonUtf8String(output, extractString(o));
         }
     }
     
@@ -154,22 +156,21 @@ public class Writers
 
     public static class DateWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             if (showType)
             {
                 output.write("\"value\":");
             }
 
-            writePrimitiveForm(obj, output, args);
+            writePrimitiveForm(obj, output, context);
         }
 
         public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
-            final WriteOptions writeOptions = WriterContext.instance().getWriteOptions();
-            String format = writeOptions.getDateFormat();
+            String format = context.getWriteOptions().getDateFormat();
             Date date = (Date) o;
 
             if (format != null)
@@ -184,7 +185,7 @@ public class Writers
     }
 
     public static class LocalDateAsTimestamp extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output) throws IOException {
             LocalDate localDate = (LocalDate) o;
             output.write(Long.toString(localDate.toEpochDay()));
         }
@@ -306,12 +307,11 @@ public class Writers
         // putting here to allow this to be the full enum object writer.
         // write now we're just calling back to the JsonWriter
         @Override
-        public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             output.write("\"name\":");
-            writeJsonUtf8String(((Enum)obj).name(), output);
-            JsonWriter writer = getWriter(args);
-            writer.writeObject(obj, true, true, new HashSet<>());
+            writeBasicString(output, ((Enum) obj).name());
+            context.writeObject(obj, true, true, new HashSet<>());
         }
     }
 
@@ -376,15 +376,5 @@ public class Writers
             UUID buffer = (UUID) o;
             writeBasicString(output, buffer.toString());
         }
-    }
-
-    // ========== Maintain knowledge about relationships below this line ==========
-    protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
-    {
-        JsonWriter.writeJsonUtf8String(s, output);
-    }
-
-    protected static void writeBasicString(Writer output, String string) throws IOException {
-        JsonWriter.writeJsonUtf8String(string, output);
     }
 }
