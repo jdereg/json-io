@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -43,7 +43,7 @@ public class CustomReaderObjectTest
 
 	public class CustomReader implements JsonReader.JsonClassReader
 	{
-        public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
+		public Object read(Object jOb, Deque<JsonObject> stack)
 		{
             Resolver resolver = ReaderContext.instance().getReader().getResolver();
             resolver.traverseFields(stack, (JsonObject) jOb);

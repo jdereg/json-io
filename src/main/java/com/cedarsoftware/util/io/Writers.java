@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -59,7 +61,7 @@ public class Writers
         protected String getKey() { return "value"; }
 
         @Override
-        public void write(Object obj, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             if (showType)
             {
@@ -67,7 +69,7 @@ public class Writers
                 output.write(':');
             }
 
-            writePrimitiveForm(obj, output, writeOptions);
+            writePrimitiveForm(obj, output, context);
         }
 
         @Override
@@ -83,10 +85,11 @@ public class Writers
     {
         public String extractString(Object o) { return o.toString(); }
 
-        @Override
+
         /**
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
+        @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
             output.write(extractString(o));
         }
@@ -102,7 +105,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            writeJsonUtf8String(extractString(o), output);
+            JsonUtilities.writeJsonUtf8String(output, extractString(o));
         }
     }
     
@@ -138,6 +141,7 @@ public class Writers
 
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
+        @Override
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
             Calendar cal = (Calendar) obj;
@@ -150,35 +154,31 @@ public class Writers
         }
     }
 
-    public static class DateWriter implements JsonWriter.JsonClassWriter
-    {
-        public void write(Object obj, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
-        {
-            if (showType)
-            {
-                output.write("\"value\":");
-            }
+    public static class DateAsLongWriter extends PrimitiveValueWriter {
+        @Override
+        public String extractString(Object o) {
+            return Long.toString(((Date) o).getTime());
+        }
+    }
 
-            writePrimitiveForm(obj, output, writeOptions);
+    public static class DateWriter extends PrimitiveUtf8StringWriter {
+        // could change to DateFormatter.ofPattern to keep from creating new objects
+        private final String dateFormat;
+
+        public DateWriter(String format) {
+            this.dateFormat = format;
         }
 
-        public boolean hasPrimitiveForm() { return true; }
-
-        public void writePrimitiveForm(Object o, Writer output, WriteOptions writeOptions) throws IOException
-        {
-            String format = writeOptions.getDateTimeFormat();
+        @Override
+        public String extractString(Object o) {
             Date date = (Date) o;
-
-            if (writeOptions.getDateTimeFormat().equals(format)) {
-                output.write(Long.toString(((Date) o).getTime()));
-            } else {
-                writeBasicString(output, new SimpleDateFormat(format).format(date));
-            }
+            return new SimpleDateFormat(dateFormat).format(date);
         }
     }
 
     public static class LocalDateAsLong extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, WriteOptions writeOptions) throws IOException {
+        @Override
+        public void writePrimitiveForm(Object o, Writer output) throws IOException {
             LocalDate localDate = (LocalDate) o;
             output.write(Long.toString(localDate.toEpochDay()));
         }
@@ -255,6 +255,7 @@ public class Writers
     }
 
     public static class YearWriter extends PrimitiveValueWriter {
+        @Override
         public String extractString(Object o) {
             return Integer.toString(((Year) o).getValue());
         }
@@ -356,15 +357,5 @@ public class Writers
             UUID buffer = (UUID) o;
             writeBasicString(output, buffer.toString());
         }
-    }
-
-    // ========== Maintain knowledge about relationships below this line ==========
-    protected static void writeJsonUtf8String(String s, final Writer output) throws IOException
-    {
-        JsonWriter.writeJsonUtf8String(s, output);
-    }
-
-    protected static void writeBasicString(Writer output, String string) throws IOException {
-        JsonWriter.writeJsonUtf8String(string, output);
     }
 }

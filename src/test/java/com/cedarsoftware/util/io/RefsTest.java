@@ -1,6 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -9,10 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -179,7 +179,7 @@ class RefsTest
     private static class TestObjectReader implements JsonReader.JsonClassReader {
 
         @Override
-        public Object read(Object jOb, java.util.Deque<JsonObject> stack, Map<String, Object> args) {
+        public Object read(Object jOb, java.util.Deque<JsonObject> stack) {
             JsonObject jObj = (JsonObject) jOb;
             TestObject x = new TestObject((String) jObj.get("name"));
             JsonObject b1 = (JsonObject) jObj.get("_other");

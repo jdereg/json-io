@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -12,7 +11,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -397,7 +398,8 @@ public class CustomWriterTest
 
     public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
+        @Override
+        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
         {
             Person p = (Person) o;
             output.write("\"f\":\"");
@@ -429,17 +431,17 @@ public class CustomWriterTest
 
     public static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
+        @Override
+        public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
         {
-            JsonWriter writer = WriterContext.instance().getWriter();
             output.write("\"_version\":12,");
-            writer.writeObject(o, false, true);
+            context.writeObject(o, false, true);
         }
     }
 
     public static class CustomPersonReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args)
+        public Object read(Object jOb, Deque<JsonObject> stack)
         {
             JsonReader reader = ReaderContext.instance().getReader();
             assert reader != null;
@@ -467,7 +469,7 @@ public class CustomWriterTest
 
     public static class BadCustomPWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
+        public void write(Object o, boolean showType, Writer output) throws IOException
         {
             throw new RuntimeException("Bad custom writer");
         }
