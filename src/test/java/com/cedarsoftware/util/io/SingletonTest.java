@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.junit.jupiter.api.Test;
 
 public class SingletonTest
 {
@@ -16,7 +16,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.objectToJson(strings);
+        String json = JsonWriter.toJson(strings, new WriteOptions().build());
         Object o = JsonReader.toObjects(json, null);
     }
 
@@ -27,7 +27,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.objectToJson(strings);
+        String json = JsonWriter.toJson(strings, new WriteOptions().build());
         Object o = JsonReader.toObjects(json, null);
     }
 
@@ -38,7 +38,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.objectToJson(strings);
+        String json = JsonWriter.toJson(strings, new WriteOptions().build());
         Object o = JsonReader.toObjects(json, null);
     }
 }

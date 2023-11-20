@@ -1,10 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
+import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -60,7 +66,40 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
     }
 
     @Override
-    protected OffsetTime fromJsonObject(JsonObject job) {
+    protected OffsetTime fromJsonObject(JsonObject job, ReaderContext context) {
+
+        LocalTime time = parseLocalTime(job.get("time"), context);
+        ZoneOffset zoneOffset = parseOffset(job.get("offset"), context);
+
+        if (time == null || zoneOffset == null) {
+            throw new JsonIoException("Invalid json for OffsetDateTime");
+        }
+
+        return OffsetTime.of(time, zoneOffset);
+    }
+
+
+    private LocalTime parseLocalTime(Object o, ReaderContext context) {
+        if (o instanceof String) {
+            return LocalTime.parse((String) o, dateTimeFormatter);
+        }
+
+        if (o instanceof JsonObject) {
+            return context.reentrantConvertParsedMapsToJava((JsonObject) o, LocalTime.class);
+        }
+
+        return null;
+    }
+
+    private ZoneOffset parseOffset(Object o, ReaderContext context) {
+        if (o instanceof String) {
+            return ZoneOffset.of((String) o);
+        }
+
+        if (o instanceof JsonObject) {
+            return context.reentrantConvertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
+        }
+
         return null;
     }
 }

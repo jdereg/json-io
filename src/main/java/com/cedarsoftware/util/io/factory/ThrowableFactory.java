@@ -34,12 +34,11 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     private static final String CAUSE = "cause";
     private static final String STACK_TRACE = "stackTrace";
 
-    public Object newInstance(Class<?> c, JsonObject jObj)
+    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
     {
-        JsonReader reader = ReaderContext.instance().getReader();
         List<Object> arguments = new ArrayList<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
-        Throwable cause = reader.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
+        Throwable cause = context.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
 
         if (message != null) {
             arguments.add(message);
@@ -49,7 +48,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             arguments.add(cause);
         }
 
-        gatherRemainingValues(jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        gatherRemainingValues(context, jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
         Throwable t = (Throwable) MetaUtils.newInstance(c, arguments);
@@ -64,7 +63,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
-                elements[i] = stackTraceMap == null ? null : reader.reentrantConvertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
+                elements[i] = stackTraceMap == null ? null : context.reentrantConvertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }

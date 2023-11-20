@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -65,7 +66,7 @@ public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime>
     }
 
     @Override
-    protected LocalDateTime fromJsonObject(JsonObject job) {
+    protected LocalDateTime fromJsonObject(JsonObject job, ReaderContext context) {
         String date = (String) job.get("date");
         String time = (String) job.get("time");
 

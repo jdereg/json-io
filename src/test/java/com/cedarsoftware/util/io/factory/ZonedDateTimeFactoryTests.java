@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedZonedDateTime;
 import org.junit.jupiter.api.Test;
@@ -31,8 +33,11 @@ class ZonedDateTimeFactoryTests {
 
         JsonObject jsonObject = buildJsonObject(dateTime, zone, totalSeconds);
 
+        JsonReader reader = new JsonReader(new ReadOptionsBuilder().build());
+
+
         ZonedDateTimeFactory factory = new ZonedDateTimeFactory();
-        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
+        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject, reader);
 
         assertZonedDateTime(zonedDateTime, year, month, dayOfMonth, hour, minute, second, nano, zone, totalSeconds);
     }
@@ -46,11 +51,11 @@ class ZonedDateTimeFactoryTests {
 
     @ParameterizedTest
     @MethodSource("primitiveVariants")
-    void neweInstance_primitiveVariants(String dateTime, String zone, int year, int month, int day, int hour, int min, int sec, int nano, int offset) {
+    void newInstance_primitiveVariants(String dateTime, String zone, int year, int month, int day, int hour, int min, int sec, int nano, int offset) {
         JsonObject jsonObject = buildJsonObject(dateTime);
 
         ZonedDateTimeFactory factory = new ZonedDateTimeFactory();
-        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject);
+        ZonedDateTime zonedDateTime = factory.newInstance(ZonedDateTime.class, jsonObject, null);
 
         assertZonedDateTime(zonedDateTime, year, month, day, hour, min, sec, nano, zone, offset);
     }

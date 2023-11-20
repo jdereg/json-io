@@ -181,7 +181,7 @@ public class ConstructorTest
     public void testJsonReaderConstructor()
     {
         String json = "{\"@type\":\"sun.util.calendar.ZoneInfo\",\"zone\":\"EST\"}";
-        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.getBytes()));
+        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.getBytes()), new ReadOptionsBuilder().build());
         TimeZone tz = jr.readObject(TimeZone.class);
         assertNotNull(tz);
         assertEquals("EST", tz.getID());

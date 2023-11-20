@@ -30,7 +30,7 @@ class LocalDateTimeFactoryTests {
         LocalDateTimeFactory factory = new LocalDateTimeFactory();
         JsonObject jsonObject = buildJsonObject(year, month, day, hour, minute, second, nano);
 
-        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject);
+        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject, null);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)
@@ -47,7 +47,7 @@ class LocalDateTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "2011-12-03T10:15:30");
 
-        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject);
+        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject, null);
 
         assertThat(time)
                 .hasYear(2011)

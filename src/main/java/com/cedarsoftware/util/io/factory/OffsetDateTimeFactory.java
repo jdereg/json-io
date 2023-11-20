@@ -39,7 +39,7 @@ import java.util.Date;
  */
 public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTime> {
 
-    private ZoneId zoneId;
+    private final ZoneId zoneId;
 
     public OffsetDateTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
         super(dateFormatter);
@@ -47,7 +47,7 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
     }
 
     public OffsetDateTimeFactory() {
-        this(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneOffset.systemDefault());
+        this(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.systemDefault());
     }
 
     @Override
@@ -69,10 +69,10 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
     }
 
     @Override
-    protected OffsetDateTime fromJsonObject(JsonObject job) {
+    protected OffsetDateTime fromJsonObject(JsonObject job, ReaderContext context) {
 
-        LocalDateTime dateTime = parseLocalDateTime(job.get("dateTime"));
-        ZoneOffset zoneOffset = parseOffset(job.get("offset"));
+        LocalDateTime dateTime = parseLocalDateTime(job.get("dateTime"), context);
+        ZoneOffset zoneOffset = parseOffset(job.get("offset"), context);
 
         if (dateTime == null || zoneOffset == null) {
             throw new JsonIoException("Invalid json for OffsetDateTime");
@@ -81,27 +81,25 @@ public class OffsetDateTimeFactory extends AbstractTemporalFactory<OffsetDateTim
         return OffsetDateTime.of(dateTime, zoneOffset);
     }
 
-    private LocalDateTime parseLocalDateTime(Object o) {
+    private LocalDateTime parseLocalDateTime(Object o, ReaderContext context) {
         if (o instanceof String) {
             return LocalDateTime.parse((String) o, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
 
         if (o instanceof JsonObject) {
-            JsonReader reader = ReaderContext.instance().getReader();
-            return reader.reentrantConvertParsedMapsToJava((JsonObject) o, LocalDateTime.class);
+            return context.reentrantConvertParsedMapsToJava((JsonObject) o, LocalDateTime.class);
         }
 
         return null;
     }
 
-    private ZoneOffset parseOffset(Object o) {
+    private ZoneOffset parseOffset(Object o, ReaderContext context) {
         if (o instanceof String) {
             return ZoneOffset.of((String) o);
         }
 
         if (o instanceof JsonObject) {
-            JsonReader reader = ReaderContext.instance().getReader();
-            return reader.reentrantConvertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
+            return context.reentrantConvertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
         }
 
         return null;

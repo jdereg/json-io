@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.OffsetDateTime;
 import java.time.Year;
@@ -45,7 +46,7 @@ public class YearFactory extends AbstractTemporalFactory<Year> {
     }
 
     @Override
-    protected Year fromJsonObject(JsonObject job) {
+    protected Year fromJsonObject(JsonObject job, ReaderContext context) {
         Number year = (Number) job.get("year");
         return fromNumber(year);
     }

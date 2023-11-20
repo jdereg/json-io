@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.lang.reflect.Constructor;
 
@@ -37,16 +38,16 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
     public static final String MODULE_NAME = "moduleName";
     public static final String MODULE_VERSION = "moduleVersion";
 
-    private static Constructor<?> constructor1;
+    private static final Constructor<?> constructor1;
 
-    private static Constructor<?> constructor2;
+    private static final Constructor<?> constructor2;
 
     static {
         constructor1 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, int.class), null);
         constructor2 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, String.class, String.class, String.class, int.class), null);
     }
 
-    public Object newInstance(Class<?> c, JsonObject jObj) {
+    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         String declaringClass = (String) jObj.get(DECLARING_CLASS);
         String methodName = (String) jObj.get(METHOD_NAME);
         String fileName = (String) jObj.get(FILE_NAME);

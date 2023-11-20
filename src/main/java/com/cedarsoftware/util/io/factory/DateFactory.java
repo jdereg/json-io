@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -58,7 +59,7 @@ public class DateFactory implements JsonReader.ClassFactory {
     }
 
     @Override
-    public Object newInstance(Class<?> c, JsonObject jObj) {
+    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value = jObj.getValue();
 
         if (value instanceof String) {

@@ -18,6 +18,16 @@ import com.cedarsoftware.util.reflect.KnownFilteredFields;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -66,16 +76,19 @@ class ExceptionSerializeTest
 
     public class MyExceptionFactory extends ThrowableFactory
     {
-        public Object newInstance(Class<?> c, JsonObject jObj)
+        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
         {
             String msg = (String) jObj.get("detailMessage");
             JsonObject jObjCause = (JsonObject) jObj.get("cause");
-            Throwable cause = null;
-            if (jObjCause != null)
-            {
-                JsonReader jr = new JsonReader();
-                cause = (Throwable) jr.jsonObjectsToJava(jObjCause);
+            List<Object> arguments = new ArrayList<>();
+
+            Throwable cause = context.reentrantConvertParsedMapsToJava(jObjCause, Throwable.class);
+
+            if (cause != null) {
+                arguments.add(cause);
             }
+
+            gatherRemainingValues(context, jObj, arguments, MetaUtils.setOf("detailMessage", "cause"));
 
             MyException myEx = (MyException) createException(msg, cause);
             Long rn = (Long) jObj.get("recordNumber");

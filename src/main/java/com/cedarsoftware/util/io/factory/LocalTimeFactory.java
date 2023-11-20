@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.Instant;
 import java.time.LocalTime;
@@ -61,7 +62,7 @@ public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
     }
 
     @Override
-    protected LocalTime fromJsonObject(JsonObject job) {
+    protected LocalTime fromJsonObject(JsonObject job, ReaderContext context) {
         Number hour = (Number) job.get("hour");
         Number minute = (Number) job.get("minute");
         Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);

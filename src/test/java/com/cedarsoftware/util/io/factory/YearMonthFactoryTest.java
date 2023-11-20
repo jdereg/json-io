@@ -25,7 +25,7 @@ class YearMonthFactoryTest {
         YearMonthFactory factory = new YearMonthFactory();
         JsonObject jsonObject = buildJsonObject(year, month);
 
-        YearMonth time = factory.newInstance(YearMonth.class, jsonObject);
+        YearMonth time = factory.newInstance(YearMonth.class, jsonObject, null);
 
         assertThat(time.getYear()).isEqualTo(year);
         assertThat(time.getMonthValue()).isEqualTo(month.intValue());
@@ -37,7 +37,7 @@ class YearMonthFactoryTest {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "2023-09");
 
-        YearMonth time = factory.newInstance(YearMonth.class, jsonObject);
+        YearMonth time = factory.newInstance(YearMonth.class, jsonObject, null);
 
         assertThat(time.getYear()).isEqualTo(2023);
         assertThat(time.getMonthValue()).isEqualTo(9L);

@@ -1,8 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-import lombok.AccessLevel;
-import lombok.Getter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -17,10 +16,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
+import lombok.AccessLevel;
+import lombok.Getter;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -48,7 +48,7 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
  *         limitations under the License.*
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public abstract class Resolver
+public abstract class Resolver implements ReaderContext
 {
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
@@ -57,11 +57,13 @@ public abstract class Resolver
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
 
-    @Getter(AccessLevel.PROTECTED)
+    @Getter(AccessLevel.PUBLIC)
     private final ReadOptions readOptions;
 
-    @Getter(AccessLevel.PROTECTED)
+    @Getter(AccessLevel.PUBLIC)
     private final ReferenceTracker references;
+
+
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -115,15 +117,46 @@ public abstract class Resolver
      */
     private static final class NullClass implements JsonReader.JsonClassReader { }
 
-    @Deprecated
-    protected JsonReader getReader()
-    {
-        return ReaderContext.instance().getReader();
-    }
-
     protected Resolver(ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions;
         this.references = references;
+    }
+
+    /**
+     * This method converts a rootObj Map, (which contains nested Maps
+     * and so forth representing a Java Object graph), to a Java
+     * object instance.  The rootObj map came from using the JsonReader
+     * to parse a JSON graph (using the API that puts the graph
+     * into Maps, not the typed representation).
+     * @param rootObj JsonObject instance that was the rootObj object from the
+     * @param root When you know the type you will be returning.  Can be null (effectively Map.class)
+     * JSON input that was parsed in an earlier call to JsonReader.
+     * @return a typed Java instance that was serialized into JSON.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T reentrantConvertParsedMapsToJava(JsonObject rootObj, Class<T> root)
+    {
+        if (rootObj == null) {
+            return null;
+        }
+
+        if (rootObj.isReference()) {
+            rootObj = this.getReferences().get(rootObj);
+        }
+
+        T graph;
+        if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
+            graph = (T) rootObj.target;
+        } else {
+            Object instance = createInstance(root, rootObj);
+            if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
+                graph = (T) instance;
+            } else {
+                graph = convertMapsToObjects(rootObj);
+            }
+        }
+        return graph;
     }
 
     /**
@@ -178,11 +211,6 @@ public abstract class Resolver
     }
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
-
-    public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
-
-    public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields);
-
 
     protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 
@@ -495,7 +523,7 @@ public abstract class Resolver
             return null;
         }
 
-        Object target = classFactory.newInstance(c, jsonObj);
+        Object target = classFactory.newInstance(c, jsonObj, this);
 
         // don't pass in classFactory.isObjectFinal, only set it to true if classFactory says its so.
         // it allows the factory iteself to set final on the jsonObj internally where it depends

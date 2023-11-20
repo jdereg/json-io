@@ -18,7 +18,7 @@ class OffsetDateTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue("2011-12-03T10:15:30+01:00");
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject);
+        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
 
         assertOffsetDateTime(dt);
     }
@@ -29,7 +29,7 @@ class OffsetDateTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue(1699334240156L);
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject);
+        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
 
         assertThat(dt.getYear()).isEqualTo(2023);
         assertThat(dt.getMonthValue()).isEqualTo(11);
@@ -60,7 +60,7 @@ class OffsetDateTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "2011-12-03T10:15:30");
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject);
+        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
 
         assertThat(dt.getYear()).isEqualTo(2011);
         assertThat(dt.getMonthValue()).isEqualTo(12);
