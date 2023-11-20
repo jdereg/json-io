@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -92,6 +92,6 @@ class AtomicBooleanTest
         assert list.size() == 2;
         atomicBoolean = list.get(0);
         assert atomicBoolean.get() == new AtomicBoolean(true).get();
-        assertSame(list.get(0), list.get(1));
+        assertNotSame(list.get(0), list.get(1));    // Made Atomic* logical primitives, so they are no longer written as id/refs.
     }
 }

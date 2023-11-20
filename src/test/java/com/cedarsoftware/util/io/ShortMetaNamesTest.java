@@ -38,7 +38,7 @@ public class ShortMetaNamesTest
         List list = MetaUtils.listOf(map);
 
         Map<String, String> shortNames = MetaUtils.mapOf("java.util.ArrayList", "al", "java.util.LinkedHashMap", "lmap", TestObject.class.getName(), "to");
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().withShortMetaKeys().withCustomTypeNames(shortNames).build());
+        String json = TestUtil.toJson(list, new WriteOptions().shortMetaKeys(true).aliasTypeNames(shortNames));
         List clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomTypeNames(shortNames).build(), null);
         assert DeepEquals.deepEquals(list, clone);
     }

@@ -219,7 +219,7 @@ public class CollectionTests {
     public void testAlwaysShowType() {
         ManyCollections tc = new ManyCollections();
         tc.init();
-        WriteOptions writeOptions = new WriteOptionsBuilder().alwaysShowTypeInfo().build();
+        WriteOptions writeOptions = new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS);
         String json0 = TestUtil.toJson(tc, writeOptions);
         String json1 = TestUtil.toJson(tc);
         TestUtil.printLine("json0 = " + json0);
@@ -336,7 +336,7 @@ public class CollectionTests {
     @Test
     public void testEnumsInsideOfACollection_whenWritingAsObject_withPrivateMembersIncluded() {
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions writeOptions = new WriteOptions().writeEnumAsJsonObject(true);
 
         List arrayList = new ArrayList<>();
         arrayList.add(TestEnum4.B);
@@ -349,7 +349,7 @@ public class CollectionTests {
     @Test
     public void testEnumsInsideOfACollection_whenWritingAsObject_withPublicFieldsOnly() {
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
+        WriteOptions writeOptions = new WriteOptions().onlyPublicFieldsOnEnums(true);
 
         List list = MetaUtils.listOf(TestEnum4.B);
         String json = TestUtil.toJson(list, writeOptions);

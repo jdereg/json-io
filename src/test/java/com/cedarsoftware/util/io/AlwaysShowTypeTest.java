@@ -29,7 +29,7 @@ class AlwaysShowTypeTest
     {
         TestObject btc = new TestObject("Bitcoin");
         btc._other = new TestObject("Satoshi");
-        String json0 = TestUtil.toJson(btc, new WriteOptionsBuilder().alwaysShowTypeInfo().build());
+        String json0 = TestUtil.toJson(btc, new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS));
         TestObject thatBtc = TestUtil.toObjects(json0, null);
         assertTrue(DeepEquals.deepEquals(btc, thatBtc));
         String json1 = TestUtil.toJson(btc);

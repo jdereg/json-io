@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * <br>
@@ -96,9 +98,9 @@ public class NoTypeTest
         j.getNamesToAge().put("Zeus", cal.getTime());
 
         String json = TestUtil.toJson(j);
-        String json2 = TestUtil.toJson(j, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json2 = TestUtil.toJson(j, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         assert !json.equals(json2);
-        assert json2.equals("{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"]}");
+        assertEquals("{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"]}", json2);
     }
 
     @Test
@@ -134,7 +136,7 @@ public class NoTypeTest
         cols.setFoos(MetaUtils.listOf(1, 2, "4", 8));
         cols.setBars(new Object[]{1, 3, "5", 7});
 
-        String json = TestUtil.toJson(cols, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(cols, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
@@ -150,10 +152,10 @@ public class NoTypeTest
         assert listBars[2].equals("5");
         assert listBars[3].equals(7L);
 
-        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptionsBuilder().neverShowTypeInfo().build());
+        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         assert "[1,2,3,4]".equals(json);
 
-        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         assert "[1,2,3,4]".equals(json);
     }
 

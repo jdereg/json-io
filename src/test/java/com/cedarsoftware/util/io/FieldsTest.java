@@ -187,7 +187,7 @@ public class FieldsTest
     {
         ManyFields tf = new ManyFields();
         tf.init();
-        String json0 = TestUtil.toJson(tf, new WriteOptionsBuilder().alwaysShowTypeInfo().build());
+        String json0 = TestUtil.toJson(tf, new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS));
         String json1 = TestUtil.toJson(tf);
         assertTrue(json0.length() > json1.length());
     }
@@ -225,15 +225,11 @@ public class FieldsTest
     @Test
     public void testExternalFieldSpecifier()
     {
-        Map<Class<?>, Collection<String>> fieldSpecifiers = new HashMap<>();
-        List<String> fields = new ArrayList<>();
-        fields.add("name");
-        fieldSpecifiers.put(PainfulToSerialize.class, fields);
-
         PainfulToSerialize painful = new PainfulToSerialize();
         painful.setName("Android rocks");
 
-        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().includedFields(fieldSpecifiers).build());
+        String json = TestUtil.toJson(painful, new WriteOptions()
+                .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name")));
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
@@ -249,7 +245,7 @@ public class FieldsTest
         painful.setAge(50);
 
         ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
-        WriteOptions writeOptions = new WriteOptionsBuilder().includedFields(fieldSpecifiers).build();
+        WriteOptions writeOptions = new WriteOptions().addIncludedFields(fieldSpecifiers);
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(1, check.size());
@@ -259,7 +255,7 @@ public class FieldsTest
         fields2.add("age");
         fields2.add("name");
         fieldSpecifiers.put(MorePainfulToSerialize.class, fields2);
-        writeOptions = new WriteOptionsBuilder().includedFields(fieldSpecifiers).build();
+        writeOptions = new WriteOptions().addIncludedFields(fieldSpecifiers);
         json = TestUtil.toJson(painful, writeOptions);
         check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(2, check.size());
@@ -283,13 +279,11 @@ public class FieldsTest
     @Test
     public void testFieldBlackList()
     {
-        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
-
         PainfulToSerialize painful = new PainfulToSerialize();
         painful.setName("Android rocks");
 
-        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().excludedFields(blackLists).build());
+        String json = TestUtil.toJson(painful, new WriteOptions()
+                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
@@ -298,14 +292,12 @@ public class FieldsTest
     @Test
     public void testFieldBlackListInheritance()
     {
-        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
-
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().excludedFields(blackLists).build());
+        String json = TestUtil.toJson(painful, new WriteOptions()
+                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
@@ -315,15 +307,12 @@ public class FieldsTest
     @Test
     public void testFieldBlackListPriorityToSpecifier()
     {
-        Map<Class<?>, Collection<String>> fieldSpecifiers = new LinkedHashMap<>();
-        fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"));
-        Map<Class<?>, Collection<String>> blackLists = new LinkedHashMap<>();
-        blackLists.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
-
         PainfulToSerialize painful = new PainfulToSerialize();
         painful.setName("Android rocks");
 
-        String json = TestUtil.toJson(painful, new WriteOptionsBuilder().includedFields(fieldSpecifiers).excludedFields(blackLists).build());
+        String json = TestUtil.toJson(painful, new WriteOptions()
+                .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"))
+                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));

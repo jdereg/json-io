@@ -20,10 +20,8 @@ class SerializationErrorTests {
 
     @Test
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
-        WriteOptions writeOptions = new WriteOptionsBuilder()
-                .withDefaultOptimizations()
-                .excludedFields(SecurityGroup.class, MetaUtils.listOf("id"))
-                .build();
+        WriteOptions writeOptions = new WriteOptions()
+                .addExcludedFields(SecurityGroup.class, MetaUtils.listOf("id"));
 
         SecurityGroup group = new SecurityGroup();
         group.setId(45L);

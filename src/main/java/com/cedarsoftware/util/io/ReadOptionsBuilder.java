@@ -217,7 +217,7 @@ public class ReadOptionsBuilder {
      * many classes to be associated to the custom reader, you can indicate
      * that json-io should not use a custom reader for a particular class,
      * by calling the addNotCustomReader() method.  This method will add
-     * the customer reader such that it will be there permanently, for the
+     * the custom reader such that it will be there permanently, for the
      * life of the JVM (static).
      *
      * @param c      Class to assign a custom JSON reader to

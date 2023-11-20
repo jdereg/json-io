@@ -58,7 +58,7 @@ public class TestUtil
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
-        String json = toJson(initial, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = toJson(initial, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         return toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
     }
 
@@ -142,7 +142,7 @@ public class TestUtil
 
     public static String toJson(Object obj)
     {
-        return toJson(obj, new WriteOptionsBuilder().build());
+        return toJson(obj, new WriteOptions());
     }
 
     /**

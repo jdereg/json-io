@@ -38,8 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class EnumTests {
 
-    private static final WriteOptions basicWriteOptions = new WriteOptionsBuilder().writeEnumsAsObject().build();
-    private static final WriteOptions enumAsPrimitiveOptions = new WriteOptionsBuilder().writeEnumsAsPrimitives().build();
+    private static final WriteOptions basicWriteOptions = new WriteOptions().writeEnumAsJsonObject(true);
+    private static final WriteOptions enumAsPrimitiveOptions = new WriteOptions().writeEnumAsJsonObject(false);
 
     private static Stream<Arguments> testDifferentWriteOptions() {
         return Stream.of(
@@ -167,10 +167,7 @@ class EnumTests {
     void testEnumWithPrivateMembersAsField_withPrivatesOn() {
         TestEnum4 x = TestEnum4.B;
 
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeEnumsAsObject()
-                .build();
-
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(x, options);
 
         String expected = loadJson("default-enum-standalone-with-privates.json");
@@ -182,10 +179,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        WriteOptions options = new WriteOptionsBuilder()
-                .neverShowTypeInfo()
-                .build();
-
+        WriteOptions options = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
         JsonWriter writer = new JsonWriter(ba, options);
         writer.write(x);
         String json = new String(ba.toByteArray());
@@ -199,9 +193,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        WriteOptions options = new WriteOptionsBuilder()
-                .doNotWritePrivateEnumFields()
-                .build();
+        WriteOptions options = new WriteOptions().onlyPublicFieldsOnEnums(true);
 
         JsonWriter writer = new JsonWriter(ba, options);
         writer.write(x);
@@ -215,10 +207,9 @@ class EnumTests {
     void testEnumNoOrdinal_enumsAsPrimitive() {
         List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
-        WriteOptions options = new WriteOptionsBuilder()
-                .neverShowTypeInfo()
-                .doNotWritePrivateEnumFields()
-                .build();
+        WriteOptions options = new WriteOptions()
+                .showTypeInfo(WriteOptions.ShowType.NEVER)
+                .onlyPublicFieldsOnEnums(true);
 
         String json = TestUtil.toJson(list, options);
 
@@ -240,7 +231,7 @@ class EnumTests {
     void testEnum_whenHasNameMethodOverride_parsesCorrectly_and_nameGetsSet() {
         PrivateEnumWithNameOverride mc = PrivateEnumWithNameOverride.Z;
 
-        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(mc, options);
         PrivateEnumWithNameOverride actual = TestUtil.toObjects(json, null);
 
@@ -253,7 +244,7 @@ class EnumTests {
         PublicEnumWithNestedName mc = PublicEnumWithNestedName.Z;
         mc.name = "blech";
 
-        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(mc, options);
 
         mc.name = "foo";
@@ -273,7 +264,7 @@ class EnumTests {
         EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
         mc.setSimpleEnum(SimpleEnum.TWO);
 
-        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(mc, options);
         EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
 
@@ -286,7 +277,7 @@ class EnumTests {
         EnumNestedWithinEnum mc = EnumNestedWithinEnum.THREE;
         mc.setSimpleEnum(SimpleEnum.TWO);
 
-        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(mc, options);
         EnumNestedWithinEnum actual = TestUtil.toObjects(json, null);
 
@@ -298,7 +289,7 @@ class EnumTests {
     @ParameterizedTest
     @EnumSource(EnumWithValueField.class)
     void testEnum_thatHasValueField_parsedAsObject(EnumWithValueField field) {
-        WriteOptions options = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(field, options);
         EnumWithValueField actual = TestUtil.toObjects(json, null);
 
@@ -311,8 +302,7 @@ class EnumTests {
     void testEnum_thatHasValueField_parsedAsPrimitive() {
         EnumWithValueField mc = EnumWithValueField.FOO;
 
-        WriteOptions options = new WriteOptionsBuilder().build();
-        String json = TestUtil.toJson(mc, options);
+        String json = TestUtil.toJson(mc, new WriteOptions());
         EnumWithValueField actual = TestUtil.toObjects(json, null);
 
         assertThat(actual).isEqualTo(EnumWithValueField.FOO);

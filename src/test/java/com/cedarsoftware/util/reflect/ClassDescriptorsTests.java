@@ -3,7 +3,6 @@ package com.cedarsoftware.util.reflect;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.WriteOptions;
-import com.cedarsoftware.util.io.WriteOptionsBuilder;
 import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
 import com.cedarsoftware.util.reflect.accessors.MethodAccessor;
 import com.cedarsoftware.util.reflect.filters.models.Car;
@@ -52,10 +51,8 @@ class ClassDescriptorsTests {
 
     @Test
     void testCloningObject_withFieldBlacklistedAtSubclassOfEntity_fieldsAreAvailableOnOtherSubsOfEntity() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withDefaultOptimizations()
-                .excludedFields(Car.class, MetaUtils.listOf("id", "updated", "created"))
-                .build();
+        WriteOptions options = new WriteOptions()
+                .addExcludedFields(Car.class, MetaUtils.listOf("id", "updated", "created"));
 
         Car initial = createCar();
 
@@ -81,10 +78,8 @@ class ClassDescriptorsTests {
 
     @Test
     void testCloningObject_fieldBlacklistedAtSuperClassEntity_isNotAvailableOnAnySubClass() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .withDefaultOptimizations()
-                .excludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created"))
-                .build();
+        WriteOptions options = new WriteOptions()
+                .addExcludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created"));
 
         Car initial = createCar();
 

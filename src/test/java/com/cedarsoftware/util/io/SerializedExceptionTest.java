@@ -74,7 +74,7 @@ public class SerializedExceptionTest
     {
         JsonReader.assignInstantiator(MyException.class, new MyExceptionCreator());
         MyException exp = new MyException("foo", "bar");
-        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriter(MyException.class, new MyExceptionWriter()).build();
+        WriteOptions writeOptions = new WriteOptions().addCustomWrittenClass(MyException.class, new MyExceptionWriter());
         String json = TestUtil.toJson(exp, writeOptions);
         MyException exp2 = TestUtil.toObjects(json, null);
         assert "foo".equals(exp2.name);

@@ -53,15 +53,16 @@ do not exist in the JVM that is parsing the JSON, to completely read / write the
 be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
 can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 ---
-#### The optional values below are public methods on the `WriteOptionsBuilder.`
+#### The optional values below are public methods on the `WriteOptions.`
 
-To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptionsBuilder` like below.  The 
-`WriteOptionsBuilder` is used to create a `WriteOptions` instance, which contains all the settings.  The `WriteOptions`
-instance is what is fed into `JsonWriter.toJson(root, writeOptions).`  Below, we show the `WriteOptionsBuilder`
-APIs that help construct the `WriteOptions` instance, and the second set of APIs show the `WriteOptions` methods to check
-the settings. These are stateless options that can be kept at 'application scope' and re-used.
+To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptions` like below.  The 
+`WriteOptions` contains all the "feature" sttings for json-io output JSON.  Below, we show many of the
+`WriteOptions` APIs.  See the Javadoc on WriteOptions for detailed information. The `WriteOptions` can be made
+stateless options by calling the .seal() method. Once sealed, the options cannot be modified.  If you have multiple
+`WriteOptions` features, you can set up distinct instances for each main usage.  A `WriteOptions` can be created from
+another `WriteOptions` instance.
 
-    WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().writeLongsAsStrings().build();
+    WriteOptions writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
     JsonWriter.toJson(root, writeOptions);
 
 Set to String Class name, JsonWriter.JsonClassWriter to override the default
@@ -94,12 +95,12 @@ when the reader is unable to determine what type of class to instantiate.  This 
 that is of type Object and the instance side is specific.  Same with Object[]'s and or List<Object>, etc.
 
     .alwaysShowTypeInfo()
-    .neverShowTypeInfo()
+    .showTypeInfo(WriteOptions.ShowType.NEVER)
     .showMinimalTypeInfo()
 
     writeOptions.isAlwaysShowingType()  // To test setting
     writeOptions.isNeverShowingType()
-    writeOptions..showMinimalTypeInfo()
+    writeOptions.isShowingMinimalType()
  
 Force nicely formatted JSON output.  (See http://jsoneditoronline.org for example format)
 
@@ -209,11 +210,11 @@ your code creates the instance, **json-io** will reflectively stuff the values f
 instance you created.
  
 #### Customization technique 3: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
-Use a `new WriteOptionsBuilder()` and set `withShortMetaKeys()` to see the single-letter meta keys used in the outputted JSON.  
+Use a `new WriteOptions()` and set `withShortMetaKeys()` to see the single-letter meta keys used in the outputted JSON.  
 In addition to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
 `alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
 
-      WriteOptions writeOptions = new WriteOptionsBuilder().
+      WriteOptions writeOptions = new WriteOptions().
         withShortMetaKeys().
         withCustomTypeName('java.util.ArrayList', 'alist').
         withCustomTypeName('java.util.LinkedHashMap', 'lmap').
@@ -253,8 +254,7 @@ This will get you going right away.
   
 To write 'generic' JSON (without `@type` or `@items`, etc.) entries, use:
 
-    WriteOptions writeOptions = new WriteOptionsBuilder().
-        neverShowtypeInfo().build();
+    WriteOptions writeOptions = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
     String json = JsonWriter.toJson(objToWrite, writeOptions);
     
 Objects will not include the `@type` flags or `@items`.  This JSON passes nicely to non-Java receivers, like Javascript. 

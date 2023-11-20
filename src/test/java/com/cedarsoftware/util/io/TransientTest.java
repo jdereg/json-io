@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -62,17 +61,15 @@ class TransientTest
         assert json.contains("lname");
         assert !json.contains("fullname");
 
-        final WriteOptionsBuilder options = new WriteOptionsBuilder().includedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
-        json = TestUtil.toJson(person, options.build());
+        final WriteOptions options = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        json = TestUtil.toJson(person, options);
         assert json.contains("fname");
         assert json.contains("lname");
         assert json.contains("fullname");
 
         // Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue
-        Map<Class<?>, Collection<String>> specifiers = new HashMap<>();
-        specifiers.put(Transient1.class, MetaUtils.listOf("fname", "lname", "map"));
-        final WriteOptionsBuilder options2 = new WriteOptionsBuilder().includedFields(specifiers);
-        assertDoesNotThrow(()-> {TestUtil.toJson(person, options2.build()); });
+        final WriteOptions options2 = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "map"));
+        assertDoesNotThrow(()-> {TestUtil.toJson(person, options2); });
     }
 
     @Test
@@ -97,8 +94,8 @@ class TransientTest
         person.lname = "DeRegnaucourt";
         person.buildFull();
 
-        WriteOptionsBuilder options = new WriteOptionsBuilder().includedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
-        String json = TestUtil.toJson(person, options.build());
+        WriteOptions options = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        String json = TestUtil.toJson(person, options);
         assert json.contains("fullname");
 
         person = TestUtil.toObjects(json, null);

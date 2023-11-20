@@ -76,7 +76,7 @@ class JsonObjectTest
         jsonObj2.put("name", "Robin");
         jsonObj2.put("partners", new Object[]{jsonObj1});
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         TestUtil.printLine("json = " + json);
         Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         json = TestUtil.toJson(o);
@@ -104,7 +104,7 @@ class JsonObjectTest
         jsonObj2.put("name", "Robin");
         jsonObj2.put("partners", robFriends);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         TestUtil.printLine("json = " + json);
         Object o = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         json = TestUtil.toJson(o);

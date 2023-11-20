@@ -1090,7 +1090,7 @@ public class MetaUtils
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
     {
-        String arg = JsonWriter.toJson(obj, new WriteOptionsBuilder().withShortMetaKeys().neverShowTypeInfo().build());
+        String arg = JsonWriter.toJson(obj, new WriteOptions().shortMetaKeys(true).showTypeInfo(WriteOptions.ShowType.NEVER));
         if (arg.length() > argCharLen)
         {
             arg = arg.substring(0, argCharLen) + "...";
@@ -1107,6 +1107,8 @@ public class MetaUtils
             return copy;
         }
 
+        ClassDescriptors classDescriptors = ClassDescriptors.instance();
+
         for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
             final Class<?> c = entry.getKey();
             final Collection<String> fields = entry.getValue();
@@ -1114,14 +1116,14 @@ public class MetaUtils
             Class<?> current = c;
 
             while (current != null) {
-                final ClassDescriptor descriptor = ClassDescriptors.instance().getClassDescriptor(current);
+                final ClassDescriptor descriptor = classDescriptors.getClassDescriptor(current);
                 final Map<String, Accessor> accessorMap = descriptor.getAccessors();
 
                 for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
 
                     if (fields.contains(acessorEntry.getKey())) {
-                        final Collection<Accessor> list = copy.computeIfAbsent(c, l -> new LinkedHashSet<>());
-                        list.add(acessorEntry.getValue());
+                        final Collection<Accessor> set = copy.computeIfAbsent(c, l -> new LinkedHashSet<>());
+                        set.add(acessorEntry.getValue());
                     }
                 }
                 current = current.getSuperclass();

@@ -72,9 +72,7 @@ public class LongTest
     public void testLongAsString()
     {
         long x = 19;
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeLongsAsStrings()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
 
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"19\"");
@@ -88,9 +86,7 @@ public class LongTest
     public void testLongArrayAsString()
     {
         Long[] x = new Long[]{1L, 2L, 3L};
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeLongsAsStrings()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
 
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
@@ -109,9 +105,7 @@ public class LongTest
     public void testObjectArrayOfLongsAsString()
     {
         Object[] x = new Object[]{1L, 2L, 3L};
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeLongsAsStrings()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
@@ -132,9 +126,7 @@ public class LongTest
         x.add(1L);
         x.add(2L);
         x.add(3L);
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeLongsAsStrings()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
         String json = TestUtil.toJson(x, options);
 
         assert json.contains("\"1\"");
@@ -157,9 +149,7 @@ public class LongTest
         x.setAge(49L);
         x.setWeight(205L);
 
-        WriteOptions options = new WriteOptionsBuilder()
-                .writeLongsAsStrings()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
         String json = TestUtil.toJson(x, options);
 
         assert json.contains("\"49\"");
