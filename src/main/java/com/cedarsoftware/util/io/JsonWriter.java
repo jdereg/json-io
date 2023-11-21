@@ -571,7 +571,7 @@ public class JsonWriter implements Closeable, Flushable
         if (writer == null)
         {
             writer = forceGetCustomWriter(c);
-            writerCache.put(c, writer);
+            writerCache.put(c, writer);        // TODO: redundant, this is done again later.
         }
 
         if (writer != nullWriter) {

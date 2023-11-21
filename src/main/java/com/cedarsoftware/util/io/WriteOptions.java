@@ -81,14 +81,14 @@ public class WriteOptions {
     private boolean writeEnumAsJsonObject = false;
     private String dateTimeFormat = LONG_FORMAT;
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
-    private final Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
-    private final Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
-    private final Map<Class<?>, Set<String>> excludedFields = new ConcurrentHashMap<>();
-    private final Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
-    private final Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
-    private final Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private final Set<Class<?>> logicalPrimitiveClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private final Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
+    private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
+    private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
+    private Map<Class<?>, Set<String>> excludedFields = new ConcurrentHashMap<>();
+    private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
+    private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
+    private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Set<Class<?>> logicalPrimitiveClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private boolean sealed = false;
 
@@ -429,7 +429,9 @@ public class WriteOptions {
      * @return boolean value of the 'onlyPublicFieldsOnEnums' setting.  true indicates that only public fields will
      * be output on an Enum.  Enums don't often have fields added to them but if so, then only the public fields
      * will be written.  The Enum will be written out in JSON object { } format.  If there are not added fields to
-     * an Enum, it will be written out as a single line value.  The default value is true.
+     * an Enum, it will be written out as a single line value.  The default value is true.  If you set this to false,
+     * it will change the 'enumFieldsAsObject' to true - because you will be showing potentially more than one value,
+     * it will require the enum to be written as an object.
      */
     public boolean isEnumPublicFieldsOnly() {
         return enumPublicFieldsOnly;
@@ -439,12 +441,16 @@ public class WriteOptions {
      * @param enumOnlyPublicFields boolean setting for 'onlyPublicFieldsOnEnums.'  Set to true to eliminate any
      *                             private fields from being output on an Enum (and causing the Enum to show as a
      *                             JSON object).  Set false to ensure all fields on an Enum are output, public
-     *                             or private.
+     *                             or private.  Note, this will change the enumAsJsonObject property to true, meaning
+     *                             the enum will be written as a JSON object { } not a single value (e.g. key: value)
      * @return WriteOptions for chained access.
      */
     public WriteOptions onlyPublicFieldsOnEnums(boolean enumOnlyPublicFields) {
         checkSealed();
         this.enumPublicFieldsOnly = enumOnlyPublicFields;
+        if (!enumOnlyPublicFields) {
+            writeEnumAsJsonObject = true;
+        }
         return this;
     }
 
@@ -558,7 +564,11 @@ public class WriteOptions {
      * Set if no fields.  This is the list of fields to be included in the written JSON for the given class.
      */
     public Set<String> getIncludedFields(Class<?> clazz) {
-        return new LinkedHashSet<>(includedFields.get(clazz));
+        if (isSealed()) {
+            return includedFields.get(clazz);
+        } else {
+            return new LinkedHashSet<>(includedFields.get(clazz));
+        }
     }
 
     /**
@@ -568,29 +578,25 @@ public class WriteOptions {
      * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
      */
     public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
-        return new LinkedHashSet<>(includedAccessors.get(clazz));
+        if (isSealed()) {
+            return includedAccessors.get(clazz);
+        } else {
+            return new LinkedHashSet<>(includedAccessors.get(clazz));
+        }
     }
 
     /**
      * @return Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
      */
     public Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses() {
-        Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<String>> entry : includedFields.entrySet()) {
-            copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
-        return copy;
+        return getClassSetMapFields(includedFields);
     }
 
     /**
      * @return Map of all Classes and their associated Sets of accessors to be included when serialized to JSON.
      */
     public Map<Class<?>, Set<Accessor>> getIncludedAccessorsPerAllClasses() {
-        Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : includedAccessors.entrySet()) {
-            copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
-        return copy;
+        return getClassSetMapAccessor(includedAccessors);
     }
 
     /**
@@ -650,7 +656,11 @@ public class WriteOptions {
      * Set if no fields are included.
      */
     public Set<String> getExcludedFields(Class<?> clazz) {
-        return new LinkedHashSet<>(excludedFields.get(clazz));
+        if (isSealed()) {
+            return excludedFields.get(clazz);
+        } else {
+            return new LinkedHashSet<>(excludedFields.get(clazz));
+        }
     }
 
     /**
@@ -660,29 +670,49 @@ public class WriteOptions {
      * This is the list of accessors to be excluded in the written JSON for the given class.
      */
     public Set<Accessor> getExcludedAccessors(Class<?> clazz) {
-        return new LinkedHashSet<>(excludedAccessors.get(clazz));
+        if (isSealed()) {
+            return excludedAccessors.get(clazz);
+        } else {
+            return new LinkedHashSet<>(excludedAccessors.get(clazz));
+        }
     }
 
     /**
      * @return Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
      */
     public Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses() {
-        Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<String>> entry : excludedFields.entrySet()) {
-            copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+        return getClassSetMapFields(excludedFields);
+    }
+
+    private Map<Class<?>, Set<String>> getClassSetMapFields(Map<Class<?>, Set<String>> fieldSet) {
+        if (isSealed()) {
+            return fieldSet;
+        } else {
+            Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
+            for (Map.Entry<Class<?>, Set<String>> entry : fieldSet.entrySet()) {
+                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+            }
+            return copy;
         }
-        return copy;
     }
 
     /**
      * @return Map of all Classes and their associated Sets of accessors to be excluded when serialized to JSON.
      */
     public Map<Class<?>, Set<Accessor>> getExcludedAccessorsPerAllClasses() {
-        Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : excludedAccessors.entrySet()) {
-            copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+        return getClassSetMapAccessor(excludedAccessors);
+    }
+
+    private Map<Class<?>, Set<Accessor>> getClassSetMapAccessor(Map<Class<?>, Set<Accessor>> accessorSet) {
+        if (isSealed()) {
+            return accessorSet;
+        } else {
+            Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
+            for (Map.Entry<Class<?>, Set<Accessor>> entry : accessorSet.entrySet()) {
+                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+            }
+            return copy;
         }
-        return copy;
     }
 
     /**
@@ -837,8 +867,37 @@ public class WriteOptions {
      * Seal the instance of this class so that no more changes can be made to it.
      * @return WriteOptions for chained access.
      */
-    public WriteOptions seal() {
+    public WriteOptions build() {
         this.sealed = true;
+
+        Map<Class<?>, Set<String>> includedFieldsSealed = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, Set<String>> entry : includedFields.entrySet()) {
+            Set<String> fields = new LinkedHashSet<>(entry.getValue());
+            includedFieldsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(fields));
+        }
+        includedFields = Collections.unmodifiableMap(includedFieldsSealed);
+
+        Map<Class<?>, Set<Accessor>> includedAccessorsSealed = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, Set<Accessor>> entry : includedAccessors.entrySet()) {
+            Set<Accessor> accessors = new LinkedHashSet<>(entry.getValue());
+            includedAccessorsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(accessors));
+        }
+        includedAccessors = Collections.unmodifiableMap(includedAccessorsSealed);
+
+        Map<Class<?>, Set<String>> excludedFieldsSealed = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, Set<String>> entry : excludedFields.entrySet()) {
+            Set<String> fields = new LinkedHashSet<>(entry.getValue());
+            excludedFieldsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(fields));
+        }
+        excludedFields = Collections.unmodifiableMap(includedFieldsSealed);
+
+        Map<Class<?>, Set<Accessor>> excludedAccessorsSealed = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, Set<Accessor>> entry : excludedAccessors.entrySet()) {
+            Set<Accessor> accessors = new LinkedHashSet<>(entry.getValue());
+            excludedAccessorsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(accessors));
+        }
+        excludedAccessors = Collections.unmodifiableMap(includedAccessorsSealed);
+
         return this;
     }
 

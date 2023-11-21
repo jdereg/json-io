@@ -32,7 +32,7 @@ class WriteOptionsTest {
         WriteOptions writeOptions2 = WriteOptions.copyIfNeeded(writeOptions1);
         assertSame(writeOptions1, writeOptions2);
 
-        writeOptions1.seal();
+        writeOptions1.build();
         writeOptions2 = WriteOptions.copyIfNeeded(writeOptions1);
         assertNotSame(writeOptions1, writeOptions2);
     }
@@ -92,14 +92,14 @@ class WriteOptionsTest {
     @Test
     void testSeal() {
         assertFalse(options.isSealed());
-        options.seal();
+        options.build();
         assertTrue(options.isSealed());
     }
 
     // Test for mutating methods after sealing
     @Test
     void testModificationAfterSealing() {
-        options.seal();
+        options.build();
         assertThrows(JsonIoException.class, () -> options.skipNullFields(true));
         // Repeat for other setters
     }
