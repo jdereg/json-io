@@ -567,6 +567,7 @@ public class JsonWriter implements Closeable, Flushable
      */
     private JsonClassWriter getCustomWriter(Class<?> c)
     {
+        WriteOptions writeOptions = getWriteOptions();
         JsonClassWriter writer = writerCache.get(c);
         if (writer == null)
         {

@@ -73,6 +73,7 @@ public class WriteOptions {
     // Properties
     private boolean shortMetaKeys;
     private ShowType showTypeInfo = ShowType.MINIMAL;
+    private EnumFormat enumFormat = EnumFormat.PRIMITIVE;
     private boolean prettyPrint = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
@@ -132,11 +133,20 @@ public class WriteOptions {
         BASE_WRITERS.putAll(temp);
     }
 
+    // Enum for the 3-state property
+    public enum ShowType {
+        ALWAYS, NEVER, MINIMAL
+    }
+
+    public enum EnumFormat {
+        PRIMITIVE, OBJECT_PUBLIC_ONLY, OBJECT_ALL_FIELDS
+    }
+
     public static WriteOptions copyIfNeeded(WriteOptions writeOptions) {
         if (writeOptions == null) {
             return new WriteOptions();
         }
-        return writeOptions.isSealed() ? new WriteOptions(writeOptions) : writeOptions;
+        return writeOptions.sealed ? new WriteOptions(writeOptions) : writeOptions;
     }
     
     /**
@@ -154,11 +164,6 @@ public class WriteOptions {
         checkSealed();
         this.classLoader = classLoader;
         return this;
-    }
-
-    // Enum for the 3-state property
-    public enum ShowType {
-        ALWAYS, NEVER, MINIMAL
     }
 
     /**
@@ -205,6 +210,7 @@ public class WriteOptions {
     public WriteOptions(WriteOptions other) {
         shortMetaKeys = other.shortMetaKeys;
         showTypeInfo = other.showTypeInfo;
+        enumFormat = other.enumFormat;
         prettyPrint = other.prettyPrint;
         writeLongsAsStrings = other.writeLongsAsStrings;
         skipNullFields = other.skipNullFields;
@@ -268,8 +274,7 @@ public class WriteOptions {
      */
     public String getTypeNameAlias(String typeName) {
         String alias = aliasTypeNames.get(typeName);
-        if (alias == null)
-        {
+        if (alias == null) {
             return typeName;
         }
         return alias;
@@ -279,7 +284,7 @@ public class WriteOptions {
      * @return Map<String, String> containing String class names to alias names.
      */
     public Map<String, String> aliasTypeNames() {
-        return new LinkedHashMap<>(aliasTypeNames);
+        return sealed ? aliasTypeNames : new LinkedHashMap<>(aliasTypeNames);
     }
 
     /**
@@ -302,6 +307,51 @@ public class WriteOptions {
     public WriteOptions aliasTypeName(String typeName, String alias) {
         checkSealed();
         aliasTypeNames.put(typeName, alias);
+        return this;
+    }
+
+    /**
+     * @return EnumFormat enum indicate the written format and whether to show pulic fields or both public and
+     * private fields.
+     */
+    public EnumFormat getEnumFormat()
+    {
+        return enumFormat;
+    }
+
+    /**
+     * @return boolean true if the enumFormat is set to output in only JSON primitive form (key:value or[value])
+     */
+    public boolean isEnumPrimitiveFormat()
+    {
+        return enumFormat == EnumFormat.PRIMITIVE;
+    }
+
+    /**
+     * @return boolean true if the enumFormat is set to output in only JSON object format { ... }
+     */
+    public boolean isEnumObjectFormat()
+    {
+        return enumFormat == EnumFormat.OBJECT_ALL_FIELDS || enumFormat == EnumFormat.OBJECT_PUBLIC_ONLY;
+    }
+
+    /**
+     * @return boolean true if the enumFormat is set to output only public fields (could be either format).
+     */
+    public boolean isEnumShowOnlyPublicFields()
+    {
+        return enumFormat == EnumFormat.PRIMITIVE || enumFormat == EnumFormat.OBJECT_PUBLIC_ONLY;
+    }
+
+    /**
+     * Set the enumFormat for the output JSON.
+     * @param enumFormat EnumFormat of one of the following: PRIMITIVE, OBJECT_PUBLIC_ONLY, OBJECT_ALL_FIELDS
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions enumFormat(EnumFormat enumFormat)
+    {
+        checkSealed();
+        this.enumFormat = enumFormat;
         return this;
     }
 
@@ -504,7 +554,7 @@ public class WriteOptions {
      * serialization to JSON.
      */
     public Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses() {
-        return new LinkedHashMap<>(customWrittenClasses);
+        return sealed ? customWrittenClasses : new LinkedHashMap<>(customWrittenClasses);
     }
 
     /**
@@ -530,7 +580,7 @@ public class WriteOptions {
      * @return Set of all Classes on the not-customized list.
      */
     public Set<Class<?>> getNotCustomWrittenClasses() {
-        return new LinkedHashSet<>(notCustomWrittenClasses);
+        return sealed ? notCustomWrittenClasses : new LinkedHashSet<>(notCustomWrittenClasses);
     }
 
     /**
@@ -564,7 +614,7 @@ public class WriteOptions {
      * Set if no fields.  This is the list of fields to be included in the written JSON for the given class.
      */
     public Set<String> getIncludedFields(Class<?> clazz) {
-        if (isSealed()) {
+        if (sealed) {
             return includedFields.get(clazz);
         } else {
             return new LinkedHashSet<>(includedFields.get(clazz));
@@ -578,7 +628,7 @@ public class WriteOptions {
      * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
      */
     public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
-        if (isSealed()) {
+        if (sealed) {
             return includedAccessors.get(clazz);
         } else {
             return new LinkedHashSet<>(includedAccessors.get(clazz));
@@ -656,7 +706,7 @@ public class WriteOptions {
      * Set if no fields are included.
      */
     public Set<String> getExcludedFields(Class<?> clazz) {
-        if (isSealed()) {
+        if (sealed) {
             return excludedFields.get(clazz);
         } else {
             return new LinkedHashSet<>(excludedFields.get(clazz));
@@ -670,7 +720,7 @@ public class WriteOptions {
      * This is the list of accessors to be excluded in the written JSON for the given class.
      */
     public Set<Accessor> getExcludedAccessors(Class<?> clazz) {
-        if (isSealed()) {
+        if (sealed) {
             return excludedAccessors.get(clazz);
         } else {
             return new LinkedHashSet<>(excludedAccessors.get(clazz));
@@ -685,7 +735,7 @@ public class WriteOptions {
     }
 
     private Map<Class<?>, Set<String>> getClassSetMapFields(Map<Class<?>, Set<String>> fieldSet) {
-        if (isSealed()) {
+        if (sealed) {
             return fieldSet;
         } else {
             Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
@@ -704,7 +754,7 @@ public class WriteOptions {
     }
 
     private Map<Class<?>, Set<Accessor>> getClassSetMapAccessor(Map<Class<?>, Set<Accessor>> accessorSet) {
-        if (isSealed()) {
+        if (sealed) {
             return accessorSet;
         } else {
             Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
@@ -757,8 +807,6 @@ public class WriteOptions {
      */
     public WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields) {
         checkSealed();
-
-        // Need your own Set instance here per Class, keep no reference to excludedFields parameter.
         for (Map.Entry<Class<?>, Collection<String>> entry : excludedFields.entrySet()) {
             addExcludedFields(entry.getKey(), entry.getValue());
         }
@@ -766,8 +814,6 @@ public class WriteOptions {
     }
 
     /**
-     *     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
-     *     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
      * @return String date/time format.  Should be one of the built-in formats, or a custom format set by
      * calling dateTimeFormat(String).  The built-in ones are:<br/>
      * <ul>
@@ -848,7 +894,7 @@ public class WriteOptions {
      */
     public Collection<Class<?>> getLogicalPrimitives()
     {
-        return new LinkedHashSet<>(logicalPrimitiveClasses);
+        return sealed ? logicalPrimitiveClasses : new LinkedHashSet<>(logicalPrimitiveClasses);
     }
 
     /**
@@ -898,6 +944,10 @@ public class WriteOptions {
         }
         excludedAccessors = Collections.unmodifiableMap(includedAccessorsSealed);
 
+        aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
+        notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
+        logicalPrimitiveClasses = Collections.unmodifiableSet(new LinkedHashSet<>(logicalPrimitiveClasses));
+        customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
         return this;
     }
 

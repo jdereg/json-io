@@ -167,7 +167,7 @@ class EnumTests {
     void testEnumWithPrivateMembersAsField_withPrivatesOn() {
         TestEnum4 x = TestEnum4.B;
 
-        WriteOptions options = new WriteOptions().onlyPublicFieldsOnEnums(false);
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
         String json = TestUtil.toJson(x, options);
 
         String expected = loadJson("default-enum-standalone-with-privates.json");
