@@ -1,14 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -17,7 +9,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -154,7 +155,7 @@ class EnumTests {
     }
 
     @Test
-    public void testEnum_readOldFormatwithChangedFields_withNoPrivateField() throws Exception {
+    void testEnum_readOldFormatwithChangedFields_withNoPrivateField() throws Exception {
         TestEnum4 actual = loadObject("default-enum-with-changed-fields-no-private.json");
 
         assertThat(actual.age).isEqualTo(21);
@@ -167,7 +168,7 @@ class EnumTests {
     void testEnumWithPrivateMembersAsField_withPrivatesOn() {
         TestEnum4 x = TestEnum4.B;
 
-        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(false);
         String json = TestUtil.toJson(x, options);
 
         String expected = loadJson("default-enum-standalone-with-privates.json");
@@ -193,7 +194,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        WriteOptions options = new WriteOptions().onlyPublicFieldsOnEnums(true);
+        WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
 
         JsonWriter writer = new JsonWriter(ba, options);
         writer.write(x);
@@ -204,16 +205,28 @@ class EnumTests {
     }
 
     @Test
-    void testEnumNoOrdinal_enumsAsPrimitive() {
+    void testEnumInCollection_whenEnumsAreObject_andNoType_justOutputsPublicFields() {
         List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
         WriteOptions options = new WriteOptions()
-                .showTypeInfo(WriteOptions.ShowType.NEVER)
-                .onlyPublicFieldsOnEnums(true);
+                .writeEnumAsJsonObject(true)
+                .showTypeInfo(WriteOptions.ShowType.NEVER);
 
         String json = TestUtil.toJson(list, options);
 
         assertThat(json).isEqualToIgnoringWhitespace("[{\"name\":\"FEDERATE_THIS\"},{\"name\":\"EXCLUDE\"}]");
+    }
+
+    @Test
+    void testEnumInCollection_whenEnumsArePrimitive_andNoType_outputsNameOnly() {
+        List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
+
+        WriteOptions options = new WriteOptions()
+                .showTypeInfo(WriteOptions.ShowType.NEVER);
+
+        String json = TestUtil.toJson(list, options);
+
+        assertThat(json).isEqualToIgnoringWhitespace("[\"FEDERATE_THIS\",\"EXCLUDE\"]");
     }
 
     @Test

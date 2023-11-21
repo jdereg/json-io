@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -21,10 +19,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -293,19 +292,6 @@ public class Writers
             output.write("\",\"nanos\":\"");
             output.write(Integer.toString(tstamp.getNanos()));
             output.write('"');
-        }
-    }
-
-
-    public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
-        // putting here to allow this to be the full enum object writer.
-        // right now we're just calling back to the JsonWriter
-        public void write(Object obj, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
-        {
-            output.write("\"name\":");
-            writeJsonUtf8String(((Enum)obj).name(), output);
-            JsonWriter writer = WriterContext.instance().getWriter();
-            writer.writeObject(obj, true, true, new HashSet<>());
         }
     }
 

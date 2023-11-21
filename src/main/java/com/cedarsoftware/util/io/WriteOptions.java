@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -16,12 +12,14 @@ import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
+import lombok.Getter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -73,13 +77,40 @@ public class WriteOptions {
     // Properties
     private boolean shortMetaKeys;
     private ShowType showTypeInfo = ShowType.MINIMAL;
-    private EnumFormat enumFormat = EnumFormat.PRIMITIVE;
+
+    /**
+     * Cache of writers to use during serialization.  Currently, this is cleared
+     * each time.  It might be worth holding on to this and just giving the user
+     * the option to clear at the end of serializations.  This item is also
+     * a good candidate for LRUCache
+     */
+    private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache;
+
+    /**
+     * -- GETTER --
+     * <p>
+     * ClassWriter the current ClassWriter used for enum types.
+     */
+    @Getter
+    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private boolean prettyPrint = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
     private boolean forceMapOutputAsTwoArrays = false;
-    private boolean enumPublicFieldsOnly = true;
-    private boolean writeEnumAsJsonObject = false;
+
+    /**
+     * -- GETTER --
+     * <p>
+     * boolean value of the 'onlyPublicFieldsOnEnums' setting.  true indicates that only public fields will
+     * be output on an Enum.  Enums don't often have fields added to them but if so, then only the public fields
+     * will be written.  The Enum will be written out in JSON object { } format.  If there are not added fields to
+     * an Enum, it will be written out as a single line value.  The default value is true.  If you set this to false,
+     * it will change the 'enumFieldsAsObject' to true - because you will be showing potentially more than one value,
+     * it will require the enum to be written as an object.
+     */
+    @Getter
+    private boolean enumPublicFieldsOnly = false;
+
     private String dateTimeFormat = LONG_FORMAT;
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
@@ -197,6 +228,8 @@ public class WriteOptions {
         logicalPrimitiveClasses.add(AtomicInteger.class);
         logicalPrimitiveClasses.add(AtomicLong.class);
 
+        writerCache = new ConcurrentHashMap<>(300);
+
         // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
 //        aliasTypeName("java.util.ArrayList", "ArrayList");
 //        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
@@ -210,20 +243,20 @@ public class WriteOptions {
     public WriteOptions(WriteOptions other) {
         shortMetaKeys = other.shortMetaKeys;
         showTypeInfo = other.showTypeInfo;
-        enumFormat = other.enumFormat;
+        enumWriter = other.enumWriter;
         prettyPrint = other.prettyPrint;
         writeLongsAsStrings = other.writeLongsAsStrings;
         skipNullFields = other.skipNullFields;
         forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
         enumPublicFieldsOnly = other.enumPublicFieldsOnly;
-        writeEnumAsJsonObject = other.writeEnumAsJsonObject;
         notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
         aliasTypeNames.putAll(other.aliasTypeNames);
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
         dateTimeFormat = other.dateTimeFormat;
         logicalPrimitiveClasses.addAll(other.logicalPrimitiveClasses);
-        
+        this.writerCache = other.writerCache;
+
         // Need your own Set instance here per Class, no references to the copied Set.
         for (Map.Entry<Class<?>, Set<String>> entry : other.includedFields.entrySet()) {
             includedFields.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
@@ -307,51 +340,6 @@ public class WriteOptions {
     public WriteOptions aliasTypeName(String typeName, String alias) {
         checkSealed();
         aliasTypeNames.put(typeName, alias);
-        return this;
-    }
-
-    /**
-     * @return EnumFormat enum indicate the written format and whether to show pulic fields or both public and
-     * private fields.
-     */
-    public EnumFormat getEnumFormat()
-    {
-        return enumFormat;
-    }
-
-    /**
-     * @return boolean true if the enumFormat is set to output in only JSON primitive form (key:value or[value])
-     */
-    public boolean isEnumPrimitiveFormat()
-    {
-        return enumFormat == EnumFormat.PRIMITIVE;
-    }
-
-    /**
-     * @return boolean true if the enumFormat is set to output in only JSON object format { ... }
-     */
-    public boolean isEnumObjectFormat()
-    {
-        return enumFormat == EnumFormat.OBJECT_ALL_FIELDS || enumFormat == EnumFormat.OBJECT_PUBLIC_ONLY;
-    }
-
-    /**
-     * @return boolean true if the enumFormat is set to output only public fields (could be either format).
-     */
-    public boolean isEnumShowOnlyPublicFields()
-    {
-        return enumFormat == EnumFormat.PRIMITIVE || enumFormat == EnumFormat.OBJECT_PUBLIC_ONLY;
-    }
-
-    /**
-     * Set the enumFormat for the output JSON.
-     * @param enumFormat EnumFormat of one of the following: PRIMITIVE, OBJECT_PUBLIC_ONLY, OBJECT_ALL_FIELDS
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions enumFormat(EnumFormat enumFormat)
-    {
-        checkSealed();
-        this.enumFormat = enumFormat;
         return this;
     }
 
@@ -476,51 +464,26 @@ public class WriteOptions {
     }
 
     /**
-     * @return boolean value of the 'onlyPublicFieldsOnEnums' setting.  true indicates that only public fields will
-     * be output on an Enum.  Enums don't often have fields added to them but if so, then only the public fields
-     * will be written.  The Enum will be written out in JSON object { } format.  If there are not added fields to
-     * an Enum, it will be written out as a single line value.  The default value is true.  If you set this to false,
-     * it will change the 'enumFieldsAsObject' to true - because you will be showing potentially more than one value,
-     * it will require the enum to be written as an object.
-     */
-    public boolean isEnumPublicFieldsOnly() {
-        return enumPublicFieldsOnly;
-    }
-
-    /**
-     * @param enumOnlyPublicFields boolean setting for 'onlyPublicFieldsOnEnums.'  Set to true to eliminate any
-     *                             private fields from being output on an Enum (and causing the Enum to show as a
-     *                             JSON object).  Set false to ensure all fields on an Enum are output, public
-     *                             or private.  Note, this will change the enumAsJsonObject property to true, meaning
-     *                             the enum will be written as a JSON object { } not a single value (e.g. key: value)
+     * Option to write out enums as a String, it will write out the enum.name() field.
+     * This is the default way enums will be written out.
      * @return WriteOptions for chained access.
      */
-    public WriteOptions onlyPublicFieldsOnEnums(boolean enumOnlyPublicFields) {
+    public WriteOptions writeEnumsAsString() {
         checkSealed();
-        this.enumPublicFieldsOnly = enumOnlyPublicFields;
-        if (!enumOnlyPublicFields) {
-            writeEnumAsJsonObject = true;
-        }
+        this.enumWriter = new Writers.EnumsAsStringWriter();
         return this;
     }
 
     /**
-     * @return boolean indicating whether enums will always be output as JSON objects (true), or whether they will be
-     * written in-line [e.g. state:"OH"] (false) which will create smaller JSON output.  false is the default.
-     */
-    public boolean isWriteEnumAsJsonObject() {
-        return writeEnumAsJsonObject;
-    }
-
-    /**
-     * @param asJsonObject boolean, set to true to have Enums written out as a JSON object { }.  Set to false and
-     *                     Enums will be written as a single value (when possible - when no fields are defined on
-     *                     the Enum).  The default is false, which keeps the JSON smaller.
+     * Option to write out all the member fields of an enum.  You can also filter the
+     * field to write out only the public fields on the enum.
+     * @param writePublicFieldsOnly boolean, only write out the public fields when writing enums as objects
      * @return WriteOptions for chained access.
      */
-    public WriteOptions writeEnumAsJsonObject(boolean asJsonObject) {
+    public WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly) {
         checkSealed();
-        writeEnumAsJsonObject = asJsonObject;
+        this.enumWriter = nullWriter;
+        this.enumPublicFieldsOnly = writePublicFieldsOnly;
         return this;
     }
 
@@ -622,34 +585,6 @@ public class WriteOptions {
     }
 
     /**
-     * Get the list of Accessors associated to the passed in class that are to be included in the written JSON.
-     * @param clazz Class for which the Accessors to be included in JSON output will be returned.
-     * @return Set of Strings Accessor names associated to the passed in class or an empty
-     * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
-     */
-    public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
-        if (sealed) {
-            return includedAccessors.get(clazz);
-        } else {
-            return new LinkedHashSet<>(includedAccessors.get(clazz));
-        }
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
-     */
-    public Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses() {
-        return getClassSetMapFields(includedFields);
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of accessors to be included when serialized to JSON.
-     */
-    public Map<Class<?>, Set<Accessor>> getIncludedAccessorsPerAllClasses() {
-        return getClassSetMapAccessor(includedAccessors);
-    }
-
-    /**
      * @param clazz Class to add a single field to be included in the written JSON.
      * @param includedField String name of field to include in written JSON.
      * @return WriteOptions for chained access.
@@ -699,41 +634,6 @@ public class WriteOptions {
         return this;
     }
 
-    /**
-     * Excluded field names per class
-     * @param clazz Class for which the fields to be excluded in JSON output will be returned.
-     * @return Set of Strings which are excluded fields associated to the passed in class or an empty
-     * Set if no fields are included.
-     */
-    public Set<String> getExcludedFields(Class<?> clazz) {
-        if (sealed) {
-            return excludedFields.get(clazz);
-        } else {
-            return new LinkedHashSet<>(excludedFields.get(clazz));
-        }
-    }
-
-    /**
-     * Get the list of Accessors associated to the passed in class that are to be excluded in the written JSON.
-     * @param clazz Class for which the Accessors to be excluded in JSON output will be returned.
-     * @return Set of Strings Accessor names associated to the passed in class or an empty Set if no Accessors.
-     * This is the list of accessors to be excluded in the written JSON for the given class.
-     */
-    public Set<Accessor> getExcludedAccessors(Class<?> clazz) {
-        if (sealed) {
-            return excludedAccessors.get(clazz);
-        } else {
-            return new LinkedHashSet<>(excludedAccessors.get(clazz));
-        }
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
-     */
-    public Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses() {
-        return getClassSetMapFields(excludedFields);
-    }
-
     private Map<Class<?>, Set<String>> getClassSetMapFields(Map<Class<?>, Set<String>> fieldSet) {
         if (sealed) {
             return fieldSet;
@@ -744,13 +644,6 @@ public class WriteOptions {
             }
             return copy;
         }
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of accessors to be excluded when serialized to JSON.
-     */
-    public Map<Class<?>, Set<Accessor>> getExcludedAccessorsPerAllClasses() {
-        return getClassSetMapAccessor(excludedAccessors);
     }
 
     private Map<Class<?>, Set<Accessor>> getClassSetMapAccessor(Map<Class<?>, Set<Accessor>> accessorSet) {
@@ -812,6 +705,41 @@ public class WriteOptions {
         }
         return this;
     }
+
+    public Collection<Accessor> getIncludedAccessorsForClass(final Class<?> c) {
+        return getFilteredAccessors(c, includedAccessors);
+    }
+
+    public Collection<Accessor> getExcludedAccessorsForClass(final Class<?> c) {
+        return getFilteredAccessors(c, excludedAccessors);
+    }
+
+    // This is replacing the reverse walking system that compared all cases for distance
+    // since we're caching all classes and their sub-objects correctly we should be ok removing
+    // the distance check since we walk up the chain of the class being written.
+    private static Collection<Accessor> getFilteredAccessors(final Class<?> c, final Map<Class<?>, ? extends Collection<Accessor>> specifiers) {
+        Class<?> curr = c;
+        List<Collection<Accessor>> accessorLists = new ArrayList<>();
+
+        while (curr != null) {
+            Collection<Accessor> accessorList = specifiers.get(curr);
+
+            if (accessorList != null) {
+                accessorLists.add(accessorList);
+            }
+
+            curr = curr.getSuperclass();
+        }
+
+        if (accessorLists.isEmpty()) {
+            return null;
+        }
+
+        Collection<Accessor> accessors = new ArrayList<>();
+        accessorLists.forEach(accessors::addAll);
+        return accessors;
+    }
+
 
     /**
      * @return String date/time format.  Should be one of the built-in formats, or a custom format set by
@@ -957,5 +885,74 @@ public class WriteOptions {
      */
     public boolean isSealed() {
         return sealed;
+    }
+
+    /**
+     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
+     * null value.  Instead, singleton instance of this class is placed where null values
+     * are needed.
+     */
+    private static final class NullClass implements JsonWriter.JsonClassWriter {
+    }
+
+    private static final NullClass nullWriter = new NullClass();
+
+    /**
+     * Fetch the custom writer for the passed in Class.  If it is cached (already associated to the
+     * passed in Class), return the same instance, otherwise, make a call to get the custom writer
+     * and store that result.
+     *
+     * @param c Class of object for which fetch a custom writer
+     * @return JsonClassWriter for the custom class (if one exists), null otherwise.
+     */
+    public JsonWriter.JsonClassWriter getCustomWriter(Class<?> c) {
+        JsonWriter.JsonClassWriter writer = writerCache.get(c);
+        if (writer == null) {
+            writer = forceGetCustomWriter(c);
+            writerCache.put(c, writer);
+        }
+
+        if (writer != nullWriter) {
+            return writer;
+        }
+
+        writer = MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : nullWriter;
+        writerCache.put(c, writer);
+
+        return writer == nullWriter ? null : writer;
+    }
+
+    /**
+     * Clears the custom writer cache used for speedier lookup of custom writers.
+     */
+    public void clearCustomWriterCache() {
+        writerCache.clear();
+    }
+
+    /**
+     * Fetch the custom writer for the passed in Class.  This method always fetches the custom writer, doing
+     * the complicated inheritance distance checking.  This method is only called when a cache miss has happened.
+     * A sentinel 'nullWriter' is returned when no custom writer is found.  This prevents future cache misses
+     * from re-attempting to find custom writers for classes that do not have a custom writer.
+     *
+     * @param c Class of object for which fetch a custom writer
+     * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
+     */
+    private JsonWriter.JsonClassWriter forceGetCustomWriter(Class<?> c) {
+        JsonWriter.JsonClassWriter closestWriter = nullWriter;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (Map.Entry<Class<?>, JsonWriter.JsonClassWriter> entry : customWrittenClasses.entrySet()) {
+            Class<?> clz = entry.getKey();
+            if (clz == c) {
+                return entry.getValue();
+            }
+            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            if (distance != -1 && distance < minDistance) {
+                minDistance = distance;
+                closestWriter = entry.getValue();
+            }
+        }
+        return closestWriter;
     }
 }
