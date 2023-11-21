@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
-import lombok.Setter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -20,7 +17,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
@@ -28,13 +24,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -78,12 +77,10 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  */
 public class JsonWriter implements Closeable, Flushable
 {
-    private final Map<Class<?>, JsonClassWriter> writerCache = new HashMap<>();
     public static final Set<String> EMPTY_SET = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    public static final NullClass nullWriter = new NullClass();
 
     private WriteOptions optionsCache = null;
     /**
@@ -494,11 +491,13 @@ public class JsonWriter implements Closeable, Flushable
      */
     protected boolean writeCustom(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
     {
-        if (getWriteOptions().isNeverShowingType())
+        final WriteOptions writeOptions = getWriteOptions();
+
+        if (writeOptions.isNeverShowingType())
         {
             showType = false;
         }
-        JsonClassWriter closestWriter = getCustomWriter(arrayComponentClass);
+        JsonClassWriter closestWriter = writeOptions.getCustomWriter(arrayComponentClass);
 
         if (closestWriter == null)
         {
@@ -549,77 +548,6 @@ public class JsonWriter implements Closeable, Flushable
         tabOut();
         output.write('}');
         return true;
-    }
-
-    /**
-     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
-     * null value.  Instead, singleton instance of this class is placed where null values
-     * are needed.
-     */
-    static final class NullClass implements JsonWriter.JsonClassWriter {}
-
-    /**
-     * Fetch the custom writer for the passed in Class.  If it is cached (already associated to the
-     * passed in Class), return the same instance, otherwise, make a call to get the custom writer
-     * and store that result.
-     * @param c Class of object for which fetch a custom writer
-     * @return JsonClassWriter for the custom class (if one exists), null otherwise.
-     */
-    private JsonClassWriter getCustomWriter(Class<?> c)
-    {
-        WriteOptions writeOptions = getWriteOptions();
-        JsonClassWriter writer = writerCache.get(c);
-        if (writer == null)
-        {
-            writer = forceGetCustomWriter(c);
-            writerCache.put(c, writer);        // TODO: redundant, this is done again later.
-        }
-
-        if (writer != nullWriter) {
-            return writer;
-        }
-
-        JsonClassWriter enumWriter;
-        if (getWriteOptions().isWriteEnumAsJsonObject()) {
-            enumWriter = new Writers.EnumAsObjectWriter();
-        } else {
-            enumWriter = new Writers.EnumsAsStringWriter();
-        }
-
-        writer = MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : nullWriter;
-        writerCache.put(c, writer);
-
-        return writer == nullWriter ? null : writer;
-    }
-
-    /**
-     * Fetch the custom writer for the passed in Class.  This method always fetches the custom writer, doing
-     * the complicated inheritance distance checking.  This method is only called when a cache miss has happened.
-     * A sentinel 'nullWriter' is returned when no custom writer is found.  This prevents future cache misses
-     * from re-attempting to find custom writers for classes that do not have a custom writer.
-     * @param c Class of object for which fetch a custom writer
-     * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
-     */
-    private JsonClassWriter forceGetCustomWriter(Class<?> c)
-    {
-        JsonClassWriter closestWriter = nullWriter;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (Map.Entry<Class<?>, JsonClassWriter> entry : getWriteOptions().getCustomWrittenClasses().entrySet())
-        {
-            Class<?> clz = entry.getKey();
-            if (clz == c)
-            {
-                return entry.getValue();
-            }
-            int distance = MetaUtils.computeInheritanceDistance(c, clz);
-            if (distance != -1 && distance < minDistance)
-            {
-                minDistance = distance;
-                closestWriter = entry.getValue();
-            }
-        }
-        return closestWriter;
     }
 
     /**
@@ -755,8 +683,7 @@ public class JsonWriter implements Closeable, Flushable
             {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                 if (!writeOptions.isLogicalPrimitive(obj.getClass()))
                 {
-                    final Map<Class<?>, Set<Accessor>> fieldSpecifiers = writeOptions.getIncludedAccessorsPerAllClasses();
-                    traceFields(stack, obj, fieldSpecifiers);
+                    traceFields(stack, obj);
                 }
             }
         }
@@ -772,11 +699,12 @@ public class JsonWriter implements Closeable, Flushable
      * @param specifiers Map of optional field specifiers, which are used to override the field list returned by
      * the JDK reflection operations.  This allows a subset of the actual fields on an object to be serialized.
      */
-    protected void traceFields(final Deque<Object> stack, final Object obj, final Map<Class<?>, ? extends Collection<Accessor>> specifiers)
+    protected void traceFields(final Deque<Object> stack, final Object obj)
     {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
-        Collection<Accessor> fields = getAccessorsUsingSpecifiers(obj.getClass(), specifiers);
+        final WriteOptions writeOptions = getWriteOptions();
+        Collection<Accessor> fields = writeOptions.getIncludedAccessorsForClass(obj.getClass());
         Collection<Accessor> fieldsBySpec = fields;
 
         if (fields == null)
@@ -784,7 +712,7 @@ public class JsonWriter implements Closeable, Flushable
             fields = ClassDescriptors.instance().getDeepAccessorsForClass(obj.getClass());
         }
 
-        final Collection<Accessor> excludedFields = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getExcludedAccessorsPerAllClasses());
+        final Collection<Accessor> excludedFields = writeOptions.getExcludedAccessorsForClass(obj.getClass());
 
         for (final Accessor accessor : fields)
         {
@@ -811,33 +739,6 @@ public class JsonWriter implements Closeable, Flushable
             }
             catch (Exception ignored) { }
         }
-    }
-
-    // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their sub-objects correctly we should be ok removing
-    // the distance check since we walk up the chain of the class being written.
-    private static Collection<Accessor> getAccessorsUsingSpecifiers(final Class<?> classBeingWritten, final Map<Class<?>, ? extends Collection<Accessor>> specifiers)
-    {
-        Class<?> curr = classBeingWritten;
-        List<Collection<Accessor>> accessorLists = new ArrayList<>();
-        
-        while (curr != null) {
-            Collection<Accessor> accessorList = specifiers.get(curr);
-
-            if (accessorList != null) {
-                accessorLists.add(accessorList);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        if (accessorLists.isEmpty()) {
-            return null;
-        }
-
-        Collection<Accessor> accessors = new ArrayList<>();
-        accessorLists.forEach(accessors::addAll);
-        return accessors;
     }
 
     private boolean writeOptionalReference(Object obj) throws IOException
@@ -2181,9 +2082,9 @@ public class JsonWriter implements Closeable, Flushable
             first = false;
         }
 
-        final Map<Class<?>, Set<Accessor>> includedFields = getWriteOptions().getIncludedAccessorsPerAllClasses();
-        final Collection<Accessor> excludedFields = getAccessorsUsingSpecifiers(obj.getClass(), getWriteOptions().getExcludedAccessorsPerAllClasses());
-        final Collection<Accessor> externallySpecifiedFields = getAccessorsUsingSpecifiers(obj.getClass(), includedFields);
+        final WriteOptions writeOptions = getWriteOptions();
+        final Collection<Accessor> excludedFields = writeOptions.getExcludedAccessorsForClass(obj.getClass());
+        final Collection<Accessor> externallySpecifiedFields = writeOptions.getIncludedAccessorsForClass(obj.getClass());
         if (externallySpecifiedFields != null)
         {
             for (Accessor accessor : externallySpecifiedFields)
@@ -2305,7 +2206,7 @@ public class JsonWriter implements Closeable, Flushable
             return declaredType != optionalClass.orElse(null);
         }
 
-        return this.getCustomWriter(declaredType) == null;
+        return this.getWriteOptions().getCustomWriter(declaredType) == null;
     }
 
     /**
@@ -2382,7 +2283,14 @@ public class JsonWriter implements Closeable, Flushable
             out.close();
         }
         catch (Exception ignore) { }
-        writerCache.clear();
+
+        //  This clears up our cache of CustomWriters for eacn class which forces the system
+        //  to rebuild the cache every time they run serilialize even if the've already built
+        //  up the cache.  I propose we remove this, leave it as an option on WriteCache and
+        //  allow the user to call it themselves manually if they don't want to hold onto it.
+        //  I've also changed it to a LRUCache to help with memory management.  We could make
+        //  that an option later (the number of items).
+        getWriteOptions().clearCustomWriterCache();
     }
 
     private String getId(Object o)
