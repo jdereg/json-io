@@ -91,9 +91,9 @@ class WriteOptionsTest {
     // Test for sealing the options
     @Test
     void testSeal() {
-        assertFalse(options.isSealed());
+        assertFalse(options.isBuilt());
         options.build();
-        assertTrue(options.isSealed());
+        assertTrue(options.isBuilt());
     }
 
     // Test for mutating methods after sealing

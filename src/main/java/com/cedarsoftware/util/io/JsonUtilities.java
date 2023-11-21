@@ -3,7 +3,7 @@ package com.cedarsoftware.util.io;
 public class JsonUtilities {
 
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        if (writeOptions.isSealed())
+        if (writeOptions.isBuilt())
         {
             writeOptions = new WriteOptions(writeOptions).prettyPrint(true);
         }

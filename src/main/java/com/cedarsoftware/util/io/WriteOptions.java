@@ -1,5 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import lombok.Getter;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -12,14 +17,12 @@ import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -29,12 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
-import lombok.Getter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -122,7 +119,7 @@ public class WriteOptions {
     private Set<Class<?>> logicalPrimitiveClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private boolean sealed = false;
+    private boolean built = false;
 
     static {
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new LinkedHashMap<>();
@@ -153,6 +150,27 @@ public class WriteOptions {
         temp.put(ZoneOffset.class, stringWriter);
 
         JsonWriter.JsonClassWriter primitiveValueWriter = new Writers.PrimitiveValueWriter();
+//        temp.put(byte.class, primitiveValueWriter);
+//        temp.put(Byte.class, primitiveValueWriter);
+//        temp.put(short.class, primitiveValueWriter);
+//        temp.put(Short.class, primitiveValueWriter);
+//        temp.put(int.class, primitiveValueWriter);
+//        temp.put(Integer.class, primitiveValueWriter);
+//        temp.put(long.class, primitiveValueWriter);
+//        temp.put(Long.class, primitiveValueWriter);
+//        temp.put(float.class, primitiveValueWriter);
+//        temp.put(Float.class, primitiveValueWriter);
+//        temp.put(double.class, primitiveValueWriter);
+//        temp.put(Double.class, primitiveValueWriter);
+//        temp.put(boolean.class, primitiveValueWriter);
+//        temp.put(Boolean.class, primitiveValueWriter);
+//        temp.put(char.class, primitiveValueWriter);
+//        temp.put(Character.class, primitiveValueWriter);
+
+        temp.put(AtomicBoolean.class, primitiveValueWriter);
+        temp.put(AtomicBoolean.class, primitiveValueWriter);
+        temp.put(AtomicBoolean.class, primitiveValueWriter);
+        temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicInteger.class, primitiveValueWriter);
         temp.put(AtomicLong.class, primitiveValueWriter);
@@ -169,15 +187,11 @@ public class WriteOptions {
         ALWAYS, NEVER, MINIMAL
     }
 
-    public enum EnumFormat {
-        PRIMITIVE, OBJECT_PUBLIC_ONLY, OBJECT_ALL_FIELDS
-    }
-
     public static WriteOptions copyIfNeeded(WriteOptions writeOptions) {
         if (writeOptions == null) {
             return new WriteOptions();
         }
-        return writeOptions.sealed ? new WriteOptions(writeOptions) : writeOptions;
+        return writeOptions.built ? new WriteOptions(writeOptions) : writeOptions;
     }
     
     /**
@@ -192,7 +206,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions classLoader(ClassLoader classLoader) {
-        checkSealed();
+        throwIfBuilt();
         this.classLoader = classLoader;
         return this;
     }
@@ -276,8 +290,8 @@ public class WriteOptions {
     }
 
     // Private method to check if the object is sealed
-    private void checkSealed() {
-        if (sealed) {
+    private void throwIfBuilt() {
+        if (built) {
             throw new JsonIoException("These WriteOptions are sealed and cannot be modified.");
         }
     }
@@ -295,7 +309,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions shortMetaKeys(boolean shortMetaKeys) {
-        checkSealed();
+        throwIfBuilt();
         this.shortMetaKeys = shortMetaKeys;
         return this;
     }
@@ -317,7 +331,7 @@ public class WriteOptions {
      * @return Map<String, String> containing String class names to alias names.
      */
     public Map<String, String> aliasTypeNames() {
-        return sealed ? aliasTypeNames : new LinkedHashMap<>(aliasTypeNames);
+        return built ? aliasTypeNames : new LinkedHashMap<>(aliasTypeNames);
     }
 
     /**
@@ -326,7 +340,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
-        checkSealed();
+        throwIfBuilt();
         this.aliasTypeNames.clear();
         this.aliasTypeNames.putAll(aliasTypeNames);
         return this;
@@ -338,7 +352,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions aliasTypeName(String typeName, String alias) {
-        checkSealed();
+        throwIfBuilt();
         aliasTypeNames.put(typeName, alias);
         return this;
     }
@@ -376,7 +390,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions showTypeInfo(ShowType showType) {
-        checkSealed();
+        throwIfBuilt();
         this.showTypeInfo = showType;
         return this;
     }
@@ -394,7 +408,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions prettyPrint(boolean prettyPrint) {
-        checkSealed();
+        throwIfBuilt();
         this.prettyPrint = prettyPrint;
         return this;
     }
@@ -416,7 +430,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings) {
-        checkSealed();
+        throwIfBuilt();
         this.writeLongsAsStrings = writeLongsAsStrings;
         return this;
     }
@@ -435,7 +449,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions skipNullFields(boolean skipNullFields) {
-        checkSealed();
+        throwIfBuilt();
         this.skipNullFields = skipNullFields;
         return this;
     }
@@ -458,7 +472,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
-        checkSealed();
+        throwIfBuilt();
         this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
         return this;
     }
@@ -469,7 +483,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions writeEnumsAsString() {
-        checkSealed();
+        throwIfBuilt();
         this.enumWriter = new Writers.EnumsAsStringWriter();
         return this;
     }
@@ -481,7 +495,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly) {
-        checkSealed();
+        throwIfBuilt();
         this.enumWriter = nullWriter;
         this.enumPublicFieldsOnly = writePublicFieldsOnly;
         return this;
@@ -495,7 +509,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
-        checkSealed();
+        throwIfBuilt();
         this.customWrittenClasses.clear();
         this.customWrittenClasses.putAll(customWrittenClasses);
         return this;
@@ -507,7 +521,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter) {
-        checkSealed();
+        throwIfBuilt();
         customWrittenClasses.put(clazz, customWriter);
         return this;
     }
@@ -517,7 +531,7 @@ public class WriteOptions {
      * serialization to JSON.
      */
     public Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses() {
-        return sealed ? customWrittenClasses : new LinkedHashMap<>(customWrittenClasses);
+        return built ? customWrittenClasses : new LinkedHashMap<>(customWrittenClasses);
     }
 
     /**
@@ -543,7 +557,7 @@ public class WriteOptions {
      * @return Set of all Classes on the not-customized list.
      */
     public Set<Class<?>> getNotCustomWrittenClasses() {
-        return sealed ? notCustomWrittenClasses : new LinkedHashSet<>(notCustomWrittenClasses);
+        return built ? notCustomWrittenClasses : new LinkedHashSet<>(notCustomWrittenClasses);
     }
 
     /**
@@ -553,7 +567,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass) {
-        checkSealed();
+        throwIfBuilt();
         notCustomWrittenClasses.add(notCustomClass);
         return this;
     }
@@ -564,7 +578,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses) {
-        checkSealed();
+        throwIfBuilt();
         notCustomWrittenClasses.clear();
         notCustomWrittenClasses.addAll(notCustomClasses);
         return this;
@@ -577,11 +591,39 @@ public class WriteOptions {
      * Set if no fields.  This is the list of fields to be included in the written JSON for the given class.
      */
     public Set<String> getIncludedFields(Class<?> clazz) {
-        if (sealed) {
+        if (built) {
             return includedFields.get(clazz);
         } else {
             return new LinkedHashSet<>(includedFields.get(clazz));
         }
+    }
+
+    /**
+     * Get the list of Accessors associated to the passed in class that are to be included in the written JSON.
+     * @param clazz Class for which the Accessors to be included in JSON output will be returned.
+     * @return Set of Strings Accessor names associated to the passed in class or an empty
+     * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
+     */
+    public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
+        if (built) {
+            return includedAccessors.get(clazz);
+        } else {
+            return new LinkedHashSet<>(includedAccessors.get(clazz));
+        }
+    }
+
+    /**
+     * @return Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
+     */
+    public Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses() {
+        return getClassSetMapFields(includedFields);
+    }
+
+    /**
+     * @return Map of all Classes and their associated Sets of accessors to be included when serialized to JSON.
+     */
+    public Map<Class<?>, Set<Accessor>> getIncludedAccessorsPerAllClasses() {
+        return getClassSetMapAccessor(includedAccessors);
     }
 
     /**
@@ -600,7 +642,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields) {
-        checkSealed();
+        throwIfBuilt();
         this.includedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFields);
         ClassDescriptors classDescriptors = ClassDescriptors.instance();
         Class<?> current = clazz;
@@ -625,7 +667,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields) {
-        checkSealed();
+        throwIfBuilt();
 
         // Need your own Set instance here per Class, keep no reference to excludedFields parameter.
         for (Map.Entry<Class<?>, Collection<String>> entry : includedFields.entrySet()) {
@@ -635,7 +677,7 @@ public class WriteOptions {
     }
 
     private Map<Class<?>, Set<String>> getClassSetMapFields(Map<Class<?>, Set<String>> fieldSet) {
-        if (sealed) {
+        if (built) {
             return fieldSet;
         } else {
             Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
@@ -647,7 +689,7 @@ public class WriteOptions {
     }
 
     private Map<Class<?>, Set<Accessor>> getClassSetMapAccessor(Map<Class<?>, Set<Accessor>> accessorSet) {
-        if (sealed) {
+        if (built) {
             return accessorSet;
         } else {
             Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
@@ -674,7 +716,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
-        checkSealed();
+        throwIfBuilt();
         this.excludedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
         ClassDescriptors classDescriptors = ClassDescriptors.instance();
         Class<?> current = clazz;
@@ -699,7 +741,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields) {
-        checkSealed();
+        throwIfBuilt();
         for (Map.Entry<Class<?>, Collection<String>> entry : excludedFields.entrySet()) {
             addExcludedFields(entry.getKey(), entry.getValue());
         }
@@ -717,29 +759,26 @@ public class WriteOptions {
     // This is replacing the reverse walking system that compared all cases for distance
     // since we're caching all classes and their sub-objects correctly we should be ok removing
     // the distance check since we walk up the chain of the class being written.
-    private static Collection<Accessor> getFilteredAccessors(final Class<?> c, final Map<Class<?>, ? extends Collection<Accessor>> specifiers) {
+    private static Collection<Accessor> getFilteredAccessors(final Class<?> c, final Map<Class<?>, ? extends Collection<Accessor>> accessors) {
         Class<?> curr = c;
-        List<Collection<Accessor>> accessorLists = new ArrayList<>();
+        Set<Accessor> accessorSets = new LinkedHashSet<>();
 
         while (curr != null) {
-            Collection<Accessor> accessorList = specifiers.get(curr);
+            Collection<Accessor> accessorSet = accessors.get(curr);
 
-            if (accessorList != null) {
-                accessorLists.add(accessorList);
+            if (accessorSet != null) {
+                accessorSets.addAll(accessorSet);
             }
 
             curr = curr.getSuperclass();
         }
 
-        if (accessorLists.isEmpty()) {
+        if (accessorSets.isEmpty()) {
             return null;
         }
 
-        Collection<Accessor> accessors = new ArrayList<>();
-        accessorLists.forEach(accessors::addAll);
-        return accessors;
+        return accessorSets;
     }
-
 
     /**
      * @return String date/time format.  Should be one of the built-in formats, or a custom format set by
@@ -759,7 +798,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateFormat() {
-        checkSealed();
+        throwIfBuilt();
         dateTimeFormat = ISO_DATE_FORMAT;
         return this;
     }
@@ -769,7 +808,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateTimeFormat() {
-        checkSealed();
+        throwIfBuilt();
         dateTimeFormat = ISO_DATE_TIME_FORMAT;
         return this;
     }
@@ -780,7 +819,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions longDateFormat() {
-        checkSealed();
+        throwIfBuilt();
         dateTimeFormat = LONG_FORMAT;
         return this;
     }
@@ -792,7 +831,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions dateTimeFormat(String format) {
-        checkSealed();
+        throwIfBuilt();
         dateTimeFormat = format;
         return this;
     }
@@ -822,7 +861,7 @@ public class WriteOptions {
      */
     public Collection<Class<?>> getLogicalPrimitives()
     {
-        return sealed ? logicalPrimitiveClasses : new LinkedHashSet<>(logicalPrimitiveClasses);
+        return built ? logicalPrimitiveClasses : new LinkedHashSet<>(logicalPrimitiveClasses);
     }
 
     /**
@@ -832,7 +871,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addLogicalPrimitive(Class<?> clazz) {
-        checkSealed();
+        throwIfBuilt();
         logicalPrimitiveClasses.add(clazz);
         return this;
     }
@@ -842,7 +881,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions build() {
-        this.sealed = true;
+        this.built = true;
 
         Map<Class<?>, Set<String>> includedFieldsSealed = new LinkedHashMap<>();
         for (Map.Entry<Class<?>, Set<String>> entry : includedFields.entrySet()) {
@@ -883,8 +922,8 @@ public class WriteOptions {
      * @return boolean true if the instance of this class is sealed, meaning no more changes can be made to it,
      * otherwise false is returned, indicating that changes can still be made to this WriteOptions instance.
      */
-    public boolean isSealed() {
-        return sealed;
+    public boolean isBuilt() {
+        return built;
     }
 
     /**
@@ -905,6 +944,7 @@ public class WriteOptions {
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */
+    // TODO: This needs to move to Writes.java
     public JsonWriter.JsonClassWriter getCustomWriter(Class<?> c) {
         JsonWriter.JsonClassWriter writer = writerCache.get(c);
         if (writer == null) {
@@ -938,6 +978,7 @@ public class WriteOptions {
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
      */
+    // TODO, this needs to move to Writers.java
     private JsonWriter.JsonClassWriter forceGetCustomWriter(Class<?> c) {
         JsonWriter.JsonClassWriter closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;
