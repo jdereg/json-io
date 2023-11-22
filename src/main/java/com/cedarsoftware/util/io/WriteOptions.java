@@ -915,14 +915,14 @@ public class WriteOptions {
             Set<String> fields = new LinkedHashSet<>(entry.getValue());
             excludedFieldsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(fields));
         }
-        excludedFields = Collections.unmodifiableMap(includedFieldsSealed);
+        excludedFields = Collections.unmodifiableMap(excludedFieldsSealed);
 
         Map<Class<?>, Set<Accessor>> excludedAccessorsSealed = new LinkedHashMap<>();
         for (Map.Entry<Class<?>, Set<Accessor>> entry : excludedAccessors.entrySet()) {
             Set<Accessor> accessors = new LinkedHashSet<>(entry.getValue());
             excludedAccessorsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(accessors));
         }
-        excludedAccessors = Collections.unmodifiableMap(includedAccessorsSealed);
+        excludedAccessors = Collections.unmodifiableMap(excludedAccessorsSealed);
 
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));

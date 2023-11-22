@@ -248,7 +248,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public static String toJson(Object item, WriteOptions writeOptions) {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            JsonWriter writer = new JsonWriter(stream, WriteOptions.copyIfNeeded(writeOptions));
+            JsonWriter writer = new JsonWriter(stream, writeOptions);
             writer.write(item);
             writer.close();
             return new String(stream.toByteArray(), StandardCharsets.UTF_8);
@@ -305,7 +305,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        this.writeOptions = writeOptions == null ? new WriteOptions() : writeOptions;
+        this.writeOptions = writeOptions == null ? new WriteOptions().build() : writeOptions.build();
     }
 
     /**

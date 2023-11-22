@@ -1,16 +1,23 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
-import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
-import static com.cedarsoftware.util.io.JsonReader.MISSING_FIELD_HANDLER;
-import static com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP_REVERSE;
-import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import com.cedarsoftware.util.ReconstructionType;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
+import com.cedarsoftware.util.io.factory.DateFactory;
+import com.cedarsoftware.util.io.factory.EnumClassFactory;
+import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
+import com.cedarsoftware.util.io.factory.SqlDateFactory;
+import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
+import com.cedarsoftware.util.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.io.factory.TimeZoneFactory;
+import com.cedarsoftware.util.io.factory.YearFactory;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
+import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
+import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -52,25 +59,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import com.cedarsoftware.util.ReconstructionType;
-import com.cedarsoftware.util.io.factory.CalendarFactory;
-import com.cedarsoftware.util.io.factory.DateFactory;
-import com.cedarsoftware.util.io.factory.EnumClassFactory;
-import com.cedarsoftware.util.io.factory.LocalDateFactory;
-import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
-import com.cedarsoftware.util.io.factory.LocalTimeFactory;
-import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
-import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
-import com.cedarsoftware.util.io.factory.SqlDateFactory;
-import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
-import com.cedarsoftware.util.io.factory.ThrowableFactory;
-import com.cedarsoftware.util.io.factory.TimeZoneFactory;
-import com.cedarsoftware.util.io.factory.YearFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
-import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
-
-import lombok.Getter;
+import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
+import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
+import static com.cedarsoftware.util.io.JsonReader.MISSING_FIELD_HANDLER;
+import static com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP_REVERSE;
+import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
+import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -446,6 +445,7 @@ public class ReadOptionsBuilder {
         return new ReadOptionsImplementation(this.readOptions);
     }
 
+    
     private static class ReadOptionsImplementation implements ReadOptions {
 
         private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
