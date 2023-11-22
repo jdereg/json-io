@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -32,6 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
+import lombok.Getter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -70,7 +71,7 @@ public class WriteOptions {
     // Constants
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    public static final String LONG_FORMAT = "LONG_FORMAT";
+
     // Properties
     private boolean shortMetaKeys;
     private ShowType showTypeInfo = ShowType.MINIMAL;
@@ -108,7 +109,6 @@ public class WriteOptions {
     @Getter
     private boolean enumPublicFieldsOnly = false;
 
-    private String dateTimeFormat = LONG_FORMAT;
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
@@ -122,12 +122,14 @@ public class WriteOptions {
     private boolean built = false;
 
     static {
+        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
+
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new LinkedHashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
-        temp.put(Date.class, new Writers.DateWriter());
+        temp.put(Date.class, defaultDateWriter);
         temp.put(BigInteger.class, new Writers.BigIntegerWriter());
         temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
-        temp.put(java.sql.Date.class, new Writers.DateWriter());
+        temp.put(java.sql.Date.class, defaultDateWriter);
         temp.put(Timestamp.class, new Writers.TimestampWriter());
         temp.put(Calendar.class, new Writers.CalendarWriter());
         temp.put(TimeZone.class, new Writers.TimeZoneWriter());
@@ -267,7 +269,6 @@ public class WriteOptions {
         aliasTypeNames.putAll(other.aliasTypeNames);
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
-        dateTimeFormat = other.dateTimeFormat;
         logicalPrimitiveClasses.addAll(other.logicalPrimitiveClasses);
         this.writerCache = other.writerCache;
 
@@ -319,12 +320,9 @@ public class WriteOptions {
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.
      */
-    public String getTypeNameAlias(String typeName) {
+    public String getTypeNameAlias(String typeName, String def) {
         String alias = aliasTypeNames.get(typeName);
-        if (alias == null) {
-            return typeName;
-        }
-        return alias;
+        return alias == null ? def : alias;
     }
 
     /**
@@ -781,26 +779,11 @@ public class WriteOptions {
     }
 
     /**
-     * @return String date/time format.  Should be one of the built-in formats, or a custom format set by
-     * calling dateTimeFormat(String).  The built-in ones are:<br/>
-     * <ul>
-     * <li>WriteOptions.ISO_DATE_FORMAT (yyyy-MM-dd)</li>
-     * <li>WriteOptions.IS_DATE_TIME_FORMAT (yyyy-MM-dd'T'HH:mm:ss)</li>
-     * <li>WriteOptions.LONG_FORMAT (1700497543953)  This is the number of milliseconds since Jan 1, 1970 at midnight</li>
-     * </ul>
-     */
-    public String getDateTimeFormat() {
-        return dateTimeFormat;
-    }
-
-    /**
      * Change the date-time format to the ISO date format: "yyyy-MM-dd"
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateFormat() {
-        throwIfBuilt();
-        dateTimeFormat = ISO_DATE_FORMAT;
-        return this;
+        return dateTimeFormat(ISO_DATE_FORMAT);
     }
 
     /**
@@ -808,9 +791,7 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateTimeFormat() {
-        throwIfBuilt();
-        dateTimeFormat = ISO_DATE_TIME_FORMAT;
-        return this;
+        return dateTimeFormat(ISO_DATE_TIME_FORMAT);
     }
 
     /**
@@ -820,7 +801,7 @@ public class WriteOptions {
      */
     public WriteOptions longDateFormat() {
         throwIfBuilt();
-        dateTimeFormat = LONG_FORMAT;
+        addCustomWrittenClass(Date.class, new Writers.DateAsLongWriter());
         return this;
     }
 
@@ -832,7 +813,7 @@ public class WriteOptions {
      */
     public WriteOptions dateTimeFormat(String format) {
         throwIfBuilt();
-        dateTimeFormat = format;
+        addCustomWrittenClass(Date.class, new Writers.DateWriter(format));
         return this;
     }
 
