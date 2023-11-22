@@ -1,28 +1,22 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ReconstructionType;
-import com.cedarsoftware.util.io.factory.CalendarFactory;
-import com.cedarsoftware.util.io.factory.DateFactory;
-import com.cedarsoftware.util.io.factory.EnumClassFactory;
-import com.cedarsoftware.util.io.factory.LocalDateFactory;
-import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
-import com.cedarsoftware.util.io.factory.LocalTimeFactory;
-import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
-import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
-import com.cedarsoftware.util.io.factory.SqlDateFactory;
-import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
-import com.cedarsoftware.util.io.factory.ThrowableFactory;
-import com.cedarsoftware.util.io.factory.TimeZoneFactory;
-import com.cedarsoftware.util.io.factory.YearFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
-import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
-import lombok.Getter;
+import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
+import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
+import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
+import static com.cedarsoftware.util.io.JsonReader.MISSING_FIELD_HANDLER;
+import static com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
+import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP_REVERSE;
+import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
+import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -59,17 +53,26 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.cedarsoftware.util.io.JsonReader.CLASSLOADER;
-import static com.cedarsoftware.util.io.JsonReader.CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.FACTORIES;
-import static com.cedarsoftware.util.io.JsonReader.FAIL_ON_UNKNOWN_TYPE;
-import static com.cedarsoftware.util.io.JsonReader.MISSING_FIELD_HANDLER;
-import static com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-import static com.cedarsoftware.util.io.JsonReader.NOT_CUSTOM_READER_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP;
-import static com.cedarsoftware.util.io.JsonReader.TYPE_NAME_MAP_REVERSE;
-import static com.cedarsoftware.util.io.JsonReader.UNKNOWN_OBJECT;
-import static com.cedarsoftware.util.io.JsonReader.USE_MAPS;
+import com.cedarsoftware.util.ReconstructionType;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
+import com.cedarsoftware.util.io.factory.DateFactory;
+import com.cedarsoftware.util.io.factory.EnumClassFactory;
+import com.cedarsoftware.util.io.factory.InstantFactory;
+import com.cedarsoftware.util.io.factory.LocalDateFactory;
+import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
+import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
+import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
+import com.cedarsoftware.util.io.factory.SqlDateFactory;
+import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
+import com.cedarsoftware.util.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.io.factory.TimeZoneFactory;
+import com.cedarsoftware.util.io.factory.YearFactory;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
+import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
+import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+
+import lombok.Getter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -122,6 +125,7 @@ public class ReadOptionsBuilder {
         assignInstantiator(YearMonth.class, new YearMonthFactory());
         assignInstantiator(Year.class, new YearFactory());
         assignInstantiator(ZoneOffset.class, new ZoneOffsetFactory());
+        assignInstantiator(Instant.class, new InstantFactory());
 
         CalendarFactory calendarFactory = new CalendarFactory();
         assignInstantiator(GregorianCalendar.class, calendarFactory);
@@ -157,6 +161,7 @@ public class ReadOptionsBuilder {
         addReaderPermanent(StringBuffer.class, new Readers.StringBufferReader());
         addReaderPermanent(UUID.class, new Readers.UUIDReader());
         addReaderPermanent(URL.class, new Readers.URLReader());
+
 
         //  JVM Readers > 1.8
 

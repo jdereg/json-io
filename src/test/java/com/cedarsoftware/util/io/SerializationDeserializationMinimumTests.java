@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.assertj.core.util.Arrays;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.assertj.core.util.Arrays;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
 
 public abstract class SerializationDeserializationMinimumTests<T> {
 
@@ -215,7 +216,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testT1_serializedWithoutType_parsedAsMaps() {
         // arrange
-        T expected = provideT1();
+        T expected = provideT4();
 
         // act
         Object actual = TestUtil.serializeDeserializeAsMaps(expected);

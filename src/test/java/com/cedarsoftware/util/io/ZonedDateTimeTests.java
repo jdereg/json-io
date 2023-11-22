@@ -1,17 +1,24 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.models.NestedZonedDateTime;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.io.models.NestedZonedDateTime;
 
 class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedDateTime> {
     private static final ZoneId Z1 = ZoneId.of("America/Chicago");
@@ -19,6 +26,8 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     private static final ZoneId Z2 = ZoneId.of("America/Anchorage");
 
     private static final ZoneId Z3 = ZoneId.of("America/Los_Angeles");
+
+    private static final ZoneId Z4 = ZoneId.of("Asia/Saigon");
 
     @Test
     void testSimpleCase() {
@@ -95,7 +104,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     @Override
     protected ZonedDateTime provideT4() {
         LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
-        return ZonedDateTime.of(localDateTime, Z1);
+        return ZonedDateTime.of(localDateTime, Z4);
     }
 
     @Override
@@ -136,6 +145,33 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(ZonedDateTime expected, Object actual) {
         String value = (String) actual;
-        assertThat(value).isEqualTo("2019-12-15T09:07:16.000002-06:00[America/Chicago]");
+        assertThat(value).isEqualTo("2027-12-23T06:07:16.000002+07:00[Asia/Saigon]");
+    }
+
+    private static Stream<Arguments> roundTripInstants() {
+        return Stream.of(
+                Arguments.of(ZonedDateTime.parse("9999-12-23T06:07:16.999999999+07:00[Asia/Saigon]"), DateTimeFormatter.ISO_ZONED_DATE_TIME),
+                Arguments.of(ZonedDateTime.parse("2011-12-23T06:07:16.0-05:00[America/New_York]"), DateTimeFormatter.ISO_ZONED_DATE_TIME),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.parse("2023-11-22T15:56:12.135Z"), ZoneId.of("America/New_York"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.parse("2023-11-22T15:56:12Z"), ZoneId.of("Europe/Paris"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.parse("2023-11-22T15:56:12.1Z"), ZoneId.of("Asia/Saigon"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.parse("9999-12-31T23:59:59.999999999Z"), ZoneId.of("Etc/GMT"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochMilli(1700668272163L), ZoneId.of("America/Los_Angeles"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L), ZoneId.of("UTC"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(((146097L * 5L) - (30L * 365L + 7L)) * 86400L, 999999999L), ZoneId.of("UTC"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L, 99999999999999L), ZoneId.of("GMT"))),
+                Arguments.of(ZonedDateTime.of(LocalDateTime.of(2011, 12, 11, 9, 5, 7, 999999999), ZoneId.of("Z"))),
+                Arguments.of(ZonedDateTime.of(LocalDate.of(2011, 12, 11), LocalTime.of(9, 5, 7, 999999999), ZoneId.of("America/New_York")))
+        );
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("roundTripInstants")
+    void roundTripTests(ZonedDateTime expected) {
+        String json = JsonWriter.toJson(expected, new WriteOptions());
+
+        ZonedDateTime actual = JsonReader.toObjects(json, new ReadOptionsBuilder().build(), ZonedDateTime.class);
+        assertThat(expected).isEqualTo(actual);
     }
 }

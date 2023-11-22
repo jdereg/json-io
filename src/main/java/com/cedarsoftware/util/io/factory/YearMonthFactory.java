@@ -1,18 +1,17 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.YEAR;
 
-import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
-import java.util.Date;
 
-import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
-import static java.time.temporal.ChronoField.YEAR;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 public class YearMonthFactory extends AbstractTemporalFactory<YearMonth> {
 
@@ -23,12 +22,12 @@ public class YearMonthFactory extends AbstractTemporalFactory<YearMonth> {
             .toFormatter();
 
 
-    public YearMonthFactory(DateTimeFormatter dateFormatter) {
-        super(dateFormatter);
+    public YearMonthFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
+        super(dateFormatter, zoneId);
     }
 
     public YearMonthFactory() {
-        super(FORMATTER);
+        super(FORMATTER, ZoneId.systemDefault());
     }
 
     @Override
@@ -36,10 +35,7 @@ public class YearMonthFactory extends AbstractTemporalFactory<YearMonth> {
         try {
             return YearMonth.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            Date date = DateFactory.parseDate(s);
-            OffsetDateTime dt = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toOffsetDateTime();
+            ZonedDateTime dt = convertToZonedDateTime(s);
             return YearMonth.of(dt.getYear(), dt.getMonthValue());
         }
     }

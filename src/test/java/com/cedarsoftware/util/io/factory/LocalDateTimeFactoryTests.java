@@ -17,7 +17,7 @@ import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.TestUtil;
 
-class LocalDateTimeFactoryTests extends HandWrittenDateTests<LocalDateTime> {
+class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTime> {
     private static Stream<Arguments> nonValueVariants() {
         return Stream.of(
                 Arguments.of(2023, 12, 19, 17, 12, 59, null),

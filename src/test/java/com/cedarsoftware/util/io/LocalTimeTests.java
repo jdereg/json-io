@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalTime;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime> {
 
@@ -74,7 +74,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(LocalTime expected, Object actual) {
-
+        assertThat(actual).isEqualTo("23:59:59.999999999");
     }
 
     private static Stream<Arguments> checkDifferentFormatsByFile() {
