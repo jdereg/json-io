@@ -43,32 +43,32 @@ public class ReadOptionsBuilder {
     }
 
     public ReadOptionsBuilder withCustomTypeName(String type, String newTypeName) {
-        MetaUtils.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).put(type, newTypeName);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).put(type, newTypeName);
         return this;
     }
 
     public ReadOptionsBuilder withCustomTypeNameMap(Map<String, String> map) {
-        MetaUtils.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).putAll(map);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, TYPE_NAME_MAP).putAll(map);
         return this;
     }
 
     public ReadOptionsBuilder withCustomReader(Class<?> c, JsonReader.JsonClassReader reader) {
-        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, reader);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).put(c, reader);
         return this;
     }
 
     public ReadOptionsBuilder withCustomReaders(Map<? extends Class<?>, ? extends JsonReader.JsonClassReader> map) {
-        MetaUtils.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, CUSTOM_READER_MAP).putAll(map);
         return this;
     }
 
     public ReadOptionsBuilder withNonCustomizableClass(Class<?> c) {
-        MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).add(c);
+        MetaUtilsMap.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).add(c);
         return this;
     }
 
     public ReadOptionsBuilder withNonCustomizableClasses(Collection<Class<?>> collection) {
-        MetaUtils.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).addAll(collection);
+        MetaUtilsMap.computeSetIfAbsent(readOptions, NOT_CUSTOM_READER_MAP).addAll(collection);
         return this;
     }
 
@@ -77,12 +77,12 @@ public class ReadOptionsBuilder {
     }
 
     public ReadOptionsBuilder withClassFactories(Map<String, ? extends JsonReader.ClassFactory> factories) {
-        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).putAll(factories);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, FACTORIES).putAll(factories);
         return this;
     }
 
     public ReadOptionsBuilder withClassFactory(String type, JsonReader.ClassFactory factory) {
-        MetaUtils.computeMapIfAbsent(readOptions, FACTORIES).put(type, factory);
+        MetaUtilsMap.computeMapIfAbsent(readOptions, FACTORIES).put(type, factory);
         return this;
     }
 

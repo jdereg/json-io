@@ -2,7 +2,7 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.MetaUtilsMap;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -32,8 +32,8 @@ public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
     protected LocalTime fromJsonObject(JsonObject job) {
         Number hour = (Number) job.get("hour");
         Number minute = (Number) job.get("minute");
-        Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);
-        Number nano = MetaUtils.getValueWithDefaultForNull(job, "nano", 0);
+        Number second = MetaUtilsMap.getValueWithDefaultForNull(job, "second", 0);
+        Number nano = MetaUtilsMap.getValueWithDefaultForNull(job, "nano", 0);
 
         if (hour == null || minute == null) {
             throw new JsonIoException("hour and minute cannot be null if value is null for LocalTimeFactory");

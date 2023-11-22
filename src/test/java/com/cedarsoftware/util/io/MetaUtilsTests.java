@@ -59,7 +59,7 @@ public class MetaUtilsTests {
     @MethodSource("ensureFillArgsInstanceOf")
     void testFillArgs_ensureInstanceOf(final Class<?> input, final List<Class<?>> expected) {
 
-        final Object[] actual = MetaUtils.fillArgs(new Class[]{input}, false);
+        final Object[] actual = MetaUtilsMap.fillArgs(new Class[]{input}, false);
         assertThat(actual).hasSize(1);
 
         expected.forEach(e -> assertThat(actual[0]).isInstanceOf(e));
@@ -113,10 +113,10 @@ public class MetaUtilsTests {
 
         String methodName = "blame";
         Object[] args = new Object[]{17, 34.5, map};
-        String msg = MetaUtils.getLogMessage(methodName, args);
+        String msg = MetaUtilsMap.getLogMessage(methodName, args);
         assert msg.equals("blame({\"value\":17}  {\"value\":34.5}  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.1415926535...)");
 
-        msg = MetaUtils.getLogMessage(methodName, args, 500);
+        msg = MetaUtilsMap.getLogMessage(methodName, args, 500);
         assert msg.equals("blame({\"value\":17}  {\"value\":34.5}  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.141592653589793})");
     }
 
@@ -124,7 +124,7 @@ public class MetaUtilsTests {
     void getWithDefault_whenObjectIsFound_returnsObject() {
         var map = Map.of("foo", "bar");
 
-        String actual = MetaUtils.getValueWithDefaultForMissing(map, "foo", "qux");
+        String actual = MetaUtilsMap.getValueWithDefaultForMissing(map, "foo", "qux");
         assertThat(actual).isEqualTo("bar");
     }
 
@@ -132,7 +132,7 @@ public class MetaUtilsTests {
     void getWithDefault_whenObjectIsNotFound_returnsDefaultObject() {
         var map = Map.of("foo", "bar");
 
-        String actual = MetaUtils.getValueWithDefaultForMissing(map, "blah", "qux");
+        String actual = MetaUtilsMap.getValueWithDefaultForMissing(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
@@ -140,7 +140,7 @@ public class MetaUtilsTests {
     void getWithDefaultForNull_whenObjectIsNotFound_returnsDefaultObject() {
         var map = Map.of("foo", "bar");
 
-        String actual = MetaUtils.getValueWithDefaultForNull(map, "blah", "qux");
+        String actual = MetaUtilsMap.getValueWithDefaultForNull(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
@@ -149,7 +149,7 @@ public class MetaUtilsTests {
         var map = new HashMap<>();
         map.put("foo", null);
 
-        String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");
+        String actual = MetaUtilsMap.getValueWithDefaultForNull(map, "foo", "bar");
         assertThat(actual).isEqualTo("bar");
     }
 }
