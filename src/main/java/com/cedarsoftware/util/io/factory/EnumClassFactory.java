@@ -4,6 +4,7 @@ import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.util.Optional;
 
@@ -30,7 +31,7 @@ import java.util.Optional;
  */
 public class EnumClassFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class<?> c, JsonObject jObj) {
+    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
 
         String name = getEnumName(jObj);
         Optional<Class> cls = MetaUtils.getClassIfEnum(c);

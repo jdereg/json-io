@@ -179,13 +179,13 @@ class RefsTest
     private static class TestObjectReader implements JsonReader.JsonClassReader {
 
         @Override
-        public Object read(Object jOb, java.util.Deque<JsonObject> stack) {
+        public Object read(Object jOb, java.util.Deque<JsonObject> stack, ReaderContext context) {
             JsonObject jObj = (JsonObject) jOb;
             TestObject x = new TestObject((String) jObj.get("name"));
             JsonObject b1 = (JsonObject) jObj.get("_other");
             JsonObject aRef = (JsonObject) b1.get("_other");
             assert aRef.isReference();
-            JsonObject aTarget = ReaderContext.instance().getReferenceTracker().get(aRef);
+            JsonObject aTarget = context.getReferences().get(aRef);
             assert aRef != aTarget;
             assert "a".equals(aTarget.get("_name"));
             return x;

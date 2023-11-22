@@ -25,7 +25,7 @@ class StackTraceElementFactoryTest {
         StackTraceElementFactory factory = new StackTraceElementFactory();
         JsonObject jsonObject = buildJsonObject(classLoaderName, moduleName, moduleVersion, declaringClass, methodName, fileName, lineNumber);
 
-        StackTraceElement stackTrace = (StackTraceElement) factory.newInstance(StackTraceElement.class, jsonObject);
+        StackTraceElement stackTrace = (StackTraceElement) factory.newInstance(StackTraceElement.class, jsonObject, null);
 
         assertThat(stackTrace.getClassName()).isEqualTo(declaringClass);
         assertThat(stackTrace.getMethodName()).isEqualTo(methodName);

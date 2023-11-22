@@ -16,6 +16,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -122,16 +123,12 @@ public class WriteOptions {
     private boolean built = false;
 
     static {
-        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
-
         Map<Class<?>, JsonWriter.JsonClassWriter> temp = new LinkedHashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
-        temp.put(Date.class, defaultDateWriter);
         temp.put(BigInteger.class, new Writers.BigIntegerWriter());
         temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
-        temp.put(java.sql.Date.class, defaultDateWriter);
+
         temp.put(Timestamp.class, new Writers.TimestampWriter());
-        temp.put(Calendar.class, new Writers.CalendarWriter());
         temp.put(TimeZone.class, new Writers.TimeZoneWriter());
         temp.put(Locale.class, new Writers.LocaleWriter());
         temp.put(Class.class, new Writers.ClassWriter());
@@ -144,7 +141,15 @@ public class WriteOptions {
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
         temp.put(Year.class, new Writers.YearWriter());
         temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
-        
+
+        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
+        temp.put(java.sql.Date.class, defaultDateWriter);
+        temp.put(Date.class, defaultDateWriter);
+
+        JsonWriter.JsonClassWriter calendarWriter = new Writers.CalendarWriter();
+        temp.put(Calendar.class, calendarWriter);
+        temp.put(GregorianCalendar.class, calendarWriter);
+
         JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
         temp.put(StringBuilder.class, stringWriter);
         temp.put(StringBuffer.class, stringWriter);
@@ -169,10 +174,6 @@ public class WriteOptions {
 //        temp.put(char.class, primitiveValueWriter);
 //        temp.put(Character.class, primitiveValueWriter);
 
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicInteger.class, primitiveValueWriter);
         temp.put(AtomicLong.class, primitiveValueWriter);

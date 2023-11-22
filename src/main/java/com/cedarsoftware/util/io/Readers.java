@@ -47,7 +47,7 @@ public class Readers
 
     public static class URLReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             boolean isString = o instanceof String;
 
@@ -115,7 +115,7 @@ public class Readers
 
     public static class LocaleReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             JsonObject jObj = (JsonObject) o;
             Object language = jObj.get("language");
@@ -143,7 +143,7 @@ public class Readers
 
     public static class CalendarReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             String time = null;
             try
@@ -163,7 +163,7 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = MetaUtils.classForName((String) type, options.getClassLoader());
+                    c = MetaUtils.classForName((String) type, context.getReadOptions().getClassLoader());
                     if (c == null)
                     {
                         throw new JsonIoException("Unable to load class: " + type + ", a Calendar type.");
@@ -193,7 +193,7 @@ public class Readers
 
     public static class StringReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             if (o instanceof String)
             {
@@ -217,12 +217,12 @@ public class Readers
 
     public static class ClassReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             if (o instanceof String)
             {
                 String cname = (String) o;
-                Class c = MetaUtils.classForName(cname, options.getClassLoader());
+                Class c = MetaUtils.classForName(cname, context.getReadOptions().getClassLoader());
                 if (c != null)
                 {   // The user is attempting to load a java.lang.Class
                     return c;
@@ -234,7 +234,7 @@ public class Readers
             if (jObj.containsKey("value"))
             {
                 String value = (String) jObj.getValue();
-                jObj.target = MetaUtils.classForName(value, options.getClassLoader());
+                jObj.target = MetaUtils.classForName(value, context.getReadOptions().getClassLoader());
                 if (jObj.target == null)
                 {
                     throw new JsonIoException("Unable to load Class: " + value + ", class not found in JVM.");
@@ -247,7 +247,7 @@ public class Readers
 
     public static class AtomicBooleanReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicBoolean");
@@ -275,7 +275,8 @@ public class Readers
 
     public static class AtomicIntegerReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        @Override
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicInteger");
@@ -299,7 +300,7 @@ public class Readers
 
     public static class AtomicLongReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             Object value = o;
             value = getValueFromJsonObject(o, value, "AtomicLong");
@@ -340,7 +341,8 @@ public class Readers
 
     public static class BigIntegerReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        @Override
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -363,11 +365,11 @@ public class Readers
                 if ("java.math.BigDecimal".equals(valueObj.type))
                 {
                     BigDecimalReader reader = new BigDecimalReader();
-                    value = reader.read(value, stack, options);
+                    value = reader.read(value, stack, context);
                 }
                 else if ("java.math.BigInteger".equals(valueObj.type))
                 {
-                    value = read(value, stack, options);
+                    value = read(value, stack, context);
                 }
                 else
                 {
@@ -434,7 +436,7 @@ public class Readers
         }
         else if (value instanceof Double || value instanceof Float)
         {
-            return new BigDecimal(((Number)value).doubleValue()).toBigInteger();
+            return BigDecimal.valueOf(((Number) value).doubleValue()).toBigInteger();
         }
         else if (value instanceof Long || value instanceof Integer ||
                 value instanceof Short || value instanceof Byte)
@@ -446,7 +448,7 @@ public class Readers
 
     public static class BigDecimalReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             JsonObject jObj = null;
             Object value = o;
@@ -469,11 +471,11 @@ public class Readers
                 if ("java.math.BigInteger".equals(valueObj.type))
                 {
                     BigIntegerReader reader = new BigIntegerReader();
-                    value = reader.read(value, stack, options);
+                    value = reader.read(value, stack, context);
                 }
                 else if ("java.math.BigDecimal".equals(valueObj.type))
                 {
-                    value = read(value, stack, options);
+                    value = read(value, stack, context);
                 }
                 else
                 {
@@ -545,7 +547,7 @@ public class Readers
 
     public static class StringBuilderReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             if (o instanceof String)
             {
@@ -564,7 +566,7 @@ public class Readers
 
     public static class StringBufferReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             if (o instanceof String)
             {
@@ -583,7 +585,8 @@ public class Readers
 
     public static class UUIDReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        @Override
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             // to use the String representation
             if (o instanceof String)
@@ -602,8 +605,7 @@ public class Readers
             return jObj.getTarget();
         }
 
-        private static JsonObject getJsonObject(JsonObject o) {
-            JsonObject jObj = o;
+        private static JsonObject getJsonObject(JsonObject jObj) {
             Long mostSigBits = (Long) jObj.get("mostSigBits");
             if (mostSigBits == null)
             {
@@ -625,7 +627,7 @@ public class Readers
     public static class RecordReader implements JsonReader.JsonClassReader
     {
         @Override
-        public Object read(Object o, Deque<JsonObject> stack, ReadOptions options)
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             try
             {

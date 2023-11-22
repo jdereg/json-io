@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import com.cedarsoftware.util.reflect.Injector;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
@@ -16,10 +16,9 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.Injector;
 
 /**
  * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
@@ -87,18 +86,6 @@ public class ObjectResolver extends Resolver
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
-    {
-        this.traverseFields(stack, jsonObj, JsonWriter.EMPTY_SET);
-    }
-
-    /**
-     * Walk the Java object fields and copy them from the JSON object to the Java object, performing
-     * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
-     * arrays, Collections, or Maps.
-     * @param stack   Stack (Deque) used for graph traversal.
-     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
-     */
-    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj, Set<String> excludeFields)
     {
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
@@ -807,9 +794,7 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        //  We've got to change this....need to remove arguments and the reader itself and then we can remove
-        //  the reference to the reader from the Resolver.
-        Object read = closestReader.read(o, stack, getReadOptions());
+        Object read = closestReader.read(o, stack, this);
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.
         return jsonObj.setFinishedTarget(read, true);

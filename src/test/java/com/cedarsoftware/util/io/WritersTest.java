@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.StringWriter;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -24,11 +24,8 @@ import java.io.StringWriter;
 public class WritersTest
 {
     @Test
-    public void testUnusedAPIs() throws Exception
+    void testUnusedAPIs() throws Exception
     {
-        Writers.CalendarWriter cw = new Writers.CalendarWriter();
-        cw.writePrimitiveForm("", new StringWriter());
-
         Writers.TimestampWriter tsw = new Writers.TimestampWriter();
         tsw.writePrimitiveForm("", new StringWriter());
 

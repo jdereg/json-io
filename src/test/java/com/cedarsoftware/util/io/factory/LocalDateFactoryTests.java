@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,8 @@ class LocalDateFactoryTests {
         LocalDateFactory factory = new LocalDateFactory();
         JsonObject jsonObject = buildJsonObject(year, month, day);
 
-        LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject);
+        JsonReader reader = new JsonReader(new ReadOptionsBuilder().build());
+        LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject, reader);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)
@@ -40,7 +43,8 @@ class LocalDateFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "2023-09-05");
 
-        LocalDate time = factory.newInstance(LocalDate.class, jsonObject);
+        JsonReader reader = new JsonReader(new ReadOptionsBuilder().build());
+        LocalDate time = factory.newInstance(LocalDate.class, jsonObject, reader);
 
         assertThat(time)
                 .hasYear(2023)

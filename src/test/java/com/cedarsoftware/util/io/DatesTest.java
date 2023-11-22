@@ -484,7 +484,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(null);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -502,7 +502,7 @@ public class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(nowStr);
-        Date now2 = (Date) factory.newInstance(Date.class, object);
+        Date now2 = (Date) factory.newInstance(Date.class, object, null);
         assert nowStr.equals(now2.toString());
     }
 
@@ -514,7 +514,7 @@ public class DatesTest
         JsonObject object = new JsonObject();
         object.setValue(date);
 
-        Date then = (Date) factory.newInstance(Date.class, object);
+        Date then = (Date) factory.newInstance(Date.class, object, null);
 
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         cal.clear();
@@ -529,7 +529,7 @@ public class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(date);
-        Date date1 = (Date) factory.newInstance(Date.class, object);
+        Date date1 = (Date) factory.newInstance(Date.class, object, null);
 
         Calendar c = Calendar.getInstance();
         c.setTime(date1);
@@ -547,7 +547,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -566,7 +566,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -585,7 +585,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -604,7 +604,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -623,7 +623,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -642,7 +642,7 @@ public class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object);
+            factory.newInstance(Date.class, object, null);
            fail();
         }
         catch (JsonIoException e)
@@ -659,7 +659,7 @@ public class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(date);
-        Date date1 = (Date) factory.newInstance(Date.class, object);
+        Date date1 = (Date) factory.newInstance(Date.class, object, null);
         assertNotNull(date1);
     }
 

@@ -92,7 +92,9 @@ public class CustomClassHandlerTest
 
     public static class WeirdDateReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack)
+
+        @Override
+        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             if (o instanceof String)
             {

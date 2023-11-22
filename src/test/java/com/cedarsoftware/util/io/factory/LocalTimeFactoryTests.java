@@ -27,7 +27,7 @@ class LocalTimeFactoryTests {
         LocalTimeFactory factory = new LocalTimeFactory();
         JsonObject jsonObject = buildJsonObject(hour, minute, second, nano);
 
-        LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
+        LocalTime time = factory.newInstance(LocalTime.class, jsonObject, null);
 
         assertThat(time).hasHour(hour)
                 .hasMinute(minute)
@@ -41,7 +41,7 @@ class LocalTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39");
 
-        LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
+        LocalTime time = factory.newInstance(LocalTime.class, jsonObject, null);
 
         assertThat(time).hasHour(9)
                 .hasMinute(27)
@@ -55,7 +55,7 @@ class LocalTimeFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("value", "09:27:39+01:00");
 
-        LocalTime time = factory.newInstance(LocalTime.class, jsonObject);
+        LocalTime time = factory.newInstance(LocalTime.class, jsonObject, null);
 
         assertThat(time).hasHour(9)
                 .hasMinute(27)

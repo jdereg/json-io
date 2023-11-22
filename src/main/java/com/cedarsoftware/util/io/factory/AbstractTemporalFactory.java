@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -37,7 +38,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     @Override
-    public T newInstance(Class<?> c, JsonObject jObj) {
+    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value = jObj.getValue();
 
         if (value instanceof String) {
@@ -48,7 +49,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
             return fromNumber((Number) value);
         }
 
-        return fromJsonObject(jObj);
+        return fromJsonObject(jObj, context);
     }
 
     protected abstract T fromString(String s);
@@ -57,7 +58,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
         throw new IllegalArgumentException("Long Timestamps are not supported for this Temporal class");
     }
 
-    protected abstract T fromJsonObject(JsonObject job);
+    protected abstract T fromJsonObject(JsonObject job, ReaderContext context);
 
     @Override
     public boolean isObjectFinal() {

@@ -56,17 +56,17 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
     }
 
     @Override
-    protected ZonedDateTime fromJsonObject(JsonObject job) {
+    protected ZonedDateTime fromJsonObject(JsonObject job, ReaderContext context) {
         String dateTime = (String) job.get("dateTime");
         LocalDateTime localDateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
         JsonObject zone = (JsonObject) job.get("zone");
-        String id = checkReferences(zone, "id");
+        String id = checkReferences(context, zone, "id");
         ZoneId zoneId = ZoneId.of(id);
 
         // need to be able to process references for offset and zone.
         JsonObject offsetMap = (JsonObject) job.get("offset");
-        Number totalSeconds = checkReferences(offsetMap, "totalSeconds");
+        Number totalSeconds = checkReferences(context, offsetMap, "totalSeconds");
         if (totalSeconds == null) {
             return ZonedDateTime.of(localDateTime, zoneId);
         }
@@ -74,10 +74,11 @@ public class ZonedDateTimeFactory extends AbstractTemporalFactory<ZonedDateTime>
         return ZonedDateTime.ofStrict(localDateTime, ZoneOffset.ofTotalSeconds(totalSeconds.intValue()), zoneId);
     }
 
-    private <T> T checkReferences(JsonObject job, String key) {
+    @SuppressWarnings("unchecked")
+    private <T> T checkReferences(ReaderContext context, JsonObject job, String key) {
         if (job == null) {
             return null;
         }
-        return (T) ReaderContext.instance().getReferenceTracker().get(job).get(key);
+        return (T) context.getReferences().get(job).get(key);
     }
 }

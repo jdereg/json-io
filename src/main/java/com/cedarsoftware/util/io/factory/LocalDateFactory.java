@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -60,7 +61,7 @@ public class LocalDateFactory extends AbstractTemporalFactory<LocalDate> {
     }
 
     @Override
-    protected LocalDate fromJsonObject(JsonObject job) {
+    protected LocalDate fromJsonObject(JsonObject job, ReaderContext context) {
         Number month = (Number) job.get("month");
         Number day = (Number) job.get("day");
         Number year = (Number) job.get("year");

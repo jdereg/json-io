@@ -1,9 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Serializable;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -12,8 +13,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.io.factory.CalendarFactory;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -34,12 +42,16 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 public class CalendarTest
 {
+    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+
     @Test
-    public void testCalendarAsField()
+    void testCalendarAsField()
     {
         Calendar greg = new GregorianCalendar();
-        greg.setTimeZone(TimeZone.getTimeZone("PST"));
+        greg.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
         greg.set(1965, 11, 17, 14, 30, 16);
+        greg.set(Calendar.MILLISECOND, 227);
+
         TestCalendar tc = new TestCalendar();
         tc._greg = (GregorianCalendar) greg;
         Calendar now = Calendar.getInstance();
@@ -53,7 +65,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarTypedArray()
+    void testCalendarTypedArray()
     {
         GregorianCalendar[] gregs = new GregorianCalendar[]{new GregorianCalendar()};
         String json = TestUtil.toJson(gregs);
@@ -63,7 +75,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarUntypedArray()
+    void testCalendarUntypedArray()
     {
         Calendar estCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T09:30:16.623-0500\",\"zone\":\"EST\"}", null);
         Calendar utcCal = TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"1965-12-17T14:30:16.623-0000\"}", null);
@@ -76,7 +88,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarCollection()
+    void testCalendarCollection()
     {
         List<Calendar> gregs = new ArrayList<>();
         gregs.add(new GregorianCalendar());
@@ -88,7 +100,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarInMapValue()
+    void testCalendarInMapValue()
     {
         Calendar now = Calendar.getInstance();
         Map<String, Calendar> map = new LinkedHashMap<>();
@@ -101,7 +113,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarInMapKey()
+    void testCalendarInMapKey()
     {
         Calendar now = Calendar.getInstance();
         Map<Calendar, String> map = new LinkedHashMap<>();
@@ -115,7 +127,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendarInObjectArray()
+    void testCalendarInObjectArray()
     {
         Calendar now = Calendar.getInstance();
         String json = TestUtil.toJson(new Object[]{now});
@@ -128,7 +140,111 @@ public class CalendarTest
     }
 
     @Test
-    public void testBadCalendar()
+    void testOldFormatInMap() {
+        ReadOptions options = createOldOptionsFormat("America/New_York");
+        String json = loadJsonForTest("old-format-nested-in-map.json");
+
+        LinkedHashMap map = TestUtil.toObjects(json, options, LinkedHashMap.class);
+
+        Calendar calendar = (Calendar) map.get("c");
+        //assertCalendar(calendar, "America/New_York", 2023, 11, 19, 17, 20, 38, 79);
+    }
+
+    @Test
+    void testOldFormatNestedInObject() {
+        Calendar expected1 = new GregorianCalendar();
+        expected1.setTimeZone(TimeZone.getTimeZone("PST"));
+        expected1.set(1965, 11, 17, 14, 30, 16);
+        expected1.set(Calendar.MILLISECOND, 257);
+
+        ReadOptions options = createOldOptionsFormat("America/New_York");
+        String json = loadJsonForTest("old-format-nested-in-object.json");
+
+        TestCalendar object = TestUtil.toObjects(json, options, TestCalendar.class);
+
+        assertThat(object._greg).isEqualTo(expected1);
+
+
+        assertCalendar(object._cal, "America/New_York", 2023, 11, 19, 17, 31, 9, 257);
+        assertCalendar(object._greg, "PST", 1965, 12, 17, 14, 30, 16, 257);
+    }
+
+    @Test
+    void testOldFormatInArray() {
+        ReadOptions options = createOldOptionsFormat("America/New_York");
+        String json = loadJsonForTest("old-format-nested-in-array.json");
+
+        Object[] object = TestUtil.toObjects(json, options, null);
+
+        assertCalendar((Calendar) object[0], "America/New_York", 2023, 11, 19, 18, 19, 15, 476);
+    }
+
+    private static Stream<Arguments> varyingZones() {
+        return Stream.of(
+                Arguments.of(TimeZone.getTimeZone("America/New_York")),
+                Arguments.of(TimeZone.getTimeZone("America/Los_Angeles")),
+                Arguments.of(TimeZone.getTimeZone("EST")),
+                Arguments.of(TimeZone.getTimeZone("Asia/Tapei"))
+        );
+    }
+
+    @Test
+    void testOldFormatInUntypedArray() {
+        ReadOptions options = createOldOptionsFormat("America/Los_Angeles");
+        String json = loadJsonForTest("old-format-nested-in-untyped-array.json");
+
+        Object[] object = TestUtil.toObjects(json, options, null);
+
+        assertCalendar((Calendar) object[0], "EST", 1965, 12, 17, 9, 30, 16, 623);
+        assertCalendar((Calendar) object[1], "America/New_York", 1965, 12, 17, 9, 30, 16, 623);
+    }
+
+    @ParameterizedTest
+    @MethodSource("varyingZones")
+    void testOldFormat_withDifferentTimeZoneThanDefault_returnsSameValueBecauseTimeZoneIsIncluded(TimeZone zone) {
+        Calendar expected = new GregorianCalendar();
+        expected.setTimeZone(TimeZone.getTimeZone("PST"));
+        expected.set(1965, 11, 17, 14, 30, 16);
+        expected.set(Calendar.MILLISECOND, 228);
+
+        ReadOptions options = createOldOptionsFormat(zone.getID());
+        String json = loadJsonForTest("old-format-different-timezone-than-default.json");
+
+        GregorianCalendar actual = TestUtil.toObjects(json, options, null);
+        assertThat(actual.getTimeZone()).isEqualTo(expected.getTimeZone());
+        assertThat(actual).isEqualTo(expected);
+
+        assertCalendar(actual, "PST", 1965, 12, 17, 14, 30, 16, 228);
+    }
+
+    @ParameterizedTest
+    @MethodSource("varyingZones")
+    void testOldFormat_noTimeZoneSpecified(TimeZone zone) {
+        Calendar expected = new GregorianCalendar();
+        expected.setTimeZone(zone);
+        expected.set(1965, 11, 17, 14, 30, 16);
+        expected.set(Calendar.MILLISECOND, 228);
+
+        ReadOptions options = createOldOptionsFormat(zone.getID());
+        String json = loadJsonForTest("old-format-with-no-zone-specified-uses-default.json");
+
+        GregorianCalendar actual = TestUtil.toObjects(json, options, null);
+        assertCalendar(actual, "America/New_York", 1965, 12, 17, 17, 30, 16, 228);
+    }
+
+    private ReadOptions createOldOptionsFormat(String timeZone) {
+        TimeZone zone = TimeZone.getTimeZone(timeZone);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        CalendarFactory factory = new CalendarFactory();
+
+        return new ReadOptionsBuilder()
+                .withClassFactory(Calendar.class, factory)
+                .withClassFactory(GregorianCalendar.class, factory)
+                .build();
+    }
+
+    @Test
+    void testBadCalendar()
     {
         try
         {
@@ -140,7 +256,7 @@ public class CalendarTest
     }
 
     @Test
-    public void testCalendar()
+    void testCalendar()
     {
         Calendar greg = new GregorianCalendar();
         greg.setTimeZone(TimeZone.getTimeZone("PST"));
@@ -148,7 +264,7 @@ public class CalendarTest
         String json = TestUtil.toJson(greg);
         TestUtil.printLine("json = " + json);
 
-        Calendar cal = (Calendar) TestUtil.toObjects(json, null);
+        Calendar cal = TestUtil.toObjects(json, null);
         Assertions.assertEquals(cal, greg);
 
         greg = new GregorianCalendar();
@@ -185,9 +301,24 @@ public class CalendarTest
         Assertions.assertEquals((oa[1]), utcCal);
     }
 
-    public static class TestCalendar implements Serializable
+    static class TestCalendar implements Serializable
     {
         private Calendar _cal;
         private GregorianCalendar _greg;
+    }
+
+    private String loadJsonForTest(String fileName) {
+        return TestUtil.fetchResource("calendar/" + fileName);
+    }
+
+    private static void assertCalendar(Calendar calendar, String zoneId, int year, int month, int day, int hour, int minute, int second, int millis) {
+        assertThat(calendar.getTimeZone().getID()).isEqualTo(zoneId);
+        assertThat(calendar.get(Calendar.YEAR)).isEqualTo(year);
+        assertThat(calendar.get(Calendar.MONTH)).isEqualTo(month - 1);
+        assertThat(calendar.get(Calendar.DAY_OF_MONTH)).isEqualTo(day);
+        assertThat(calendar.get(Calendar.HOUR_OF_DAY)).isEqualTo(hour);
+        assertThat(calendar.get(Calendar.MINUTE)).isEqualTo(minute);
+        assertThat(calendar.get(Calendar.SECOND)).isEqualTo(second);
+        assertThat(calendar.get(Calendar.MILLISECOND)).isEqualTo(millis);
     }
 }

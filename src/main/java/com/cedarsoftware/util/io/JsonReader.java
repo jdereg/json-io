@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import lombok.Getter;
-import lombok.Setter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -22,7 +21,8 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -66,7 +66,7 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class JsonReader implements Closeable
+public class JsonReader implements Closeable, ReaderContext
 {
     /** Once we've fully moved to read options, these static finals can be deleted **/
     /** If set, this maps class ==> CustomReader */
@@ -140,6 +140,21 @@ public class JsonReader implements Closeable
          * in JsonObject to supply values to the construction of the object.
          * @param c Class of the object that needs to be created
          * @param jObj JsonObject (if primitive type do jObj.getPrimitiveValue();
+         * @param context ReaderContext for creating objects an getting read options
+         * @return a new instance of C.  If you completely fill the new instance using
+         * the value(s) from object, and no further work is needed for construction, then
+         * override the isObjectFinal() method below and return true.
+         */
+        default Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+            return this.newInstance(c, jObj);
+        }
+
+        /**
+         * Implement this method to return a new instance of the passed in Class.  Use the passed
+         * in JsonObject to supply values to the construction of the object.
+         *
+         * @param c       Class of the object that needs to be created
+         * @param jObj    JsonObject (if primitive type do jObj.getPrimitiveValue();
          * @return a new instance of C.  If you completely fill the new instance using
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
@@ -160,8 +175,7 @@ public class JsonReader implements Closeable
             return false;
         }
 
-        default void gatherRemainingValues(JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
-            JsonReader reader = ReaderContext.instance().getReader();
+        default void gatherRemainingValues(ReaderContext context, JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
             Convention.throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
@@ -170,7 +184,7 @@ public class JsonReader implements Closeable
 
                     if (o instanceof JsonObject) {
                         JsonObject sub = (JsonObject) o;
-                        Object value = reader.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), reader.getClassLoader()));
+                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
 
                         if (value != null) {
                             if (sub.getType() != null || sub.getTargetClass() != null) {
@@ -216,7 +230,10 @@ public class JsonReader implements Closeable
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the passed in jOb into.
          */
-        Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args);
+        @Deprecated
+        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args) {
+            return null;
+        }
     }
 
     /**
@@ -227,35 +244,12 @@ public class JsonReader implements Closeable
         /**
          * @param jOb         Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
          * @param stack       Deque of objects that have been read (Map of Maps view).
-         * @param readOptions Map of argument settings that were passed to JsonReader when instantiated.
+         * @param context  reader context to provide assistance reading the object
          * @return Java Object you wish to convert the passed in jOb into.
          */
-        default Object read(Object jOb, Deque<JsonObject> stack, ReadOptions readOptions) {
+        default Object read(Object jOb, Deque<JsonObject> stack, ReaderContext context) {
             // The toMap is expensive, but only if you do not override this default method....and the other
             // methods are soon to be deprecated.
-            return this.read(jOb, stack, readOptions.toMap(), ReaderContext.instance().getReader());
-        }
-
-
-        /**
-         * @param jOb   Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack Deque of objects that have been read (Map of Maps view).
-         * @param args  Map of argument settings that were passed to JsonReader when instantiated.
-         * @return Java Object you wish to convert the passed in jOb into.
-         */
-        @Deprecated
-        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args, JsonReader reader) {
-            return this.read(jOb, stack, args);
-        }
-
-        /**
-         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack Deque of objects that have been read (Map of Maps view).
-         * @param args Map of argument settings that were passed to JsonReader when instantiated.
-         * @return Java Object you wish to convert the passed in jOb into.
-         */
-        @Deprecated
-        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args) {
             return this.read(jOb, stack);
         }
 
@@ -269,35 +263,13 @@ public class JsonReader implements Closeable
         }
     }
 
-    /**
-     * Implement this interface to add a custom JSON reader.
-     */
-    @Deprecated
-    public interface JsonClassReaderEx extends JsonClassReader
-    {
-        /**
-         * Allow custom readers to have access to the JsonReader
-         */
-        @Deprecated
-        class Support
-        {
-            /**
-             * Call this method to get an instance of the JsonReader (if needed) inside your custom reader.
-             * @param args Map that was passed to your read(jOb, stack, args) method.
-             * @return JsonReader instance
-             */
-            @Deprecated
-            public static JsonReader getReader(Map<String, Object> args) {
-                return ReaderContext.instance().getReader();
-            }
-        }
-    }
 
     /**
      * Use to create new instances of collection interfaces (needed for empty collections)
      */
     public static class CollectionFactory implements ClassFactory {
-        public Object newInstance(Class<?> c, JsonObject jObj)
+        @Override
+        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
         {
             if (List.class.isAssignableFrom(c))
             {
@@ -326,10 +298,13 @@ public class JsonReader implements Closeable
     public static class MapFactory implements ClassFactory
     {
         /**
-         * @param c Map interface that was requested for instantiation.
+         * @param c       Map interface that was requested for instantiation.
+         * @param jObj JsonObject
+         * @param context ReaderContext
          * @return a concrete Map type.
          */
-        public Object newInstance(Class<?> c, JsonObject jObj)
+        @Override
+        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
@@ -722,8 +697,6 @@ public class JsonReader implements Closeable
         ReferenceTracker references = new DefaultReferenceTracker();
         this.resolver = readOptions.isUsingMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
         args.put(JsonReader.OBJECT_RESOLVER, this.resolver);
-
-        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -837,7 +810,6 @@ public class JsonReader implements Closeable
         this.parser = new JsonParser(input, this.readOptions, references);
 
         args.put(JsonReader.OBJECT_RESOLVER, this.resolver);
-        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -922,7 +894,6 @@ public class JsonReader implements Closeable
         this.input = getReader(input);
         this.resolver = useMaps() ? new MapResolver(readOptions, references) : new ObjectResolver(readOptions, references);
         this.parser = new JsonParser(this.input, this.readOptions, references);
-        ReaderContext.instance().initialize(this);
     }
 
     /**
@@ -939,7 +910,6 @@ public class JsonReader implements Closeable
 
     public <T> T readObject(Class<T> root)
     {
-        int maxDepth = this.readOptions.getMaxDepth();  // TODO: This should be read from the readOptions.
         JsonObject rootObj = new JsonObject();
         T o;
         try
@@ -1001,7 +971,6 @@ public class JsonReader implements Closeable
     {
         getArgs().put(USE_MAPS, false);
         this.readOptions.ensureUsingObjects();
-        ReaderContext.instance().initialize(this);
         return convertParsedMapsToJava(root, null);
     }
 
@@ -1018,6 +987,11 @@ public class JsonReader implements Closeable
         return this.readOptions.getClassLoader();
     }
 
+    @Override
+    public ReferenceTracker getReferences() {
+        return this.resolver.getReferences();
+    }
+
     /**
      * This method converts a rootObj Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java
@@ -1029,29 +1003,26 @@ public class JsonReader implements Closeable
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
+    @SuppressWarnings("unchecked")
+    @Override
     public <T> T reentrantConvertParsedMapsToJava(JsonObject rootObj, Class<T> root)
     {
-        if (rootObj == null) {
-            return null;
-        }
-
-        if (rootObj.isReference()) {
-            rootObj = this.resolver.getReferences().get(rootObj);
-        }
-
-        T graph;
-        if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
-            graph = (T) rootObj.target;
-        } else {
-            Object instance = resolver.createInstance(root, rootObj);
-            if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
-                graph = (T) instance;
-            } else {
-                graph = resolver.convertMapsToObjects(rootObj);
-            }
-        }
-        return graph;
+        return this.resolver.reentrantConvertParsedMapsToJava(rootObj, root);
     }
+
+    /**
+     * Walk the Java object fields and copy them from the JSON object to the Java object, performing
+     * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
+     * arrays, Collections, or Maps.
+     * @param stack   Stack (Deque) used for graph traversal.
+     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj) {
+        this.resolver.traverseFields(stack, jsonObj);
+    }
+
 
     /**
      * This method converts a rootObj Map, (which contains nested Maps
