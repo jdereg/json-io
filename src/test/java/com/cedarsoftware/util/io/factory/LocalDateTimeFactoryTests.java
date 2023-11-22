@@ -1,11 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.TestUtil;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,9 +8,16 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-class LocalDateTimeFactoryTests {
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.TestUtil;
+
+class LocalDateTimeFactoryTests extends HandWrittenDateTests<LocalDateTime> {
     private static Stream<Arguments> nonValueVariants() {
         return Stream.of(
                 Arguments.of(2023, 12, 19, 17, 12, 59, null),
@@ -80,5 +82,59 @@ class LocalDateTimeFactoryTests {
         assert dt.getHour() == 15;
         assert dt.getMinute() == 0;
         assert dt.getSecond() == 0;
+    }
+
+    @Override
+    protected JsonReader.ClassFactory createFactory() {
+        return new LocalDateTimeFactory();
+    }
+
+    @Override
+    protected Class<LocalDateTime> getClassForFactory() {
+        return LocalDateTime.class;
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withNoZone(LocalDateTime dt) {
+        assertThat(dt).hasYear(2011)
+                .hasMonthValue(12)
+                .hasDayOfMonth(3)
+                .hasHour(10)
+                .hasMinute(15)
+                .hasSecond(30)
+                .hasNano(0);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withNoTime(LocalDateTime dt) {
+        assertThat(dt).hasYear(2011)
+                .hasMonthValue(2)
+                .hasDayOfMonth(3)
+                .hasHour(0)
+                .hasMinute(0)
+                .hasSecond(0)
+                .hasNano(0);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withTime(LocalDateTime dt) {
+        assertThat(dt).hasYear(2011)
+                .hasMonthValue(2)
+                .hasDayOfMonth(3)
+                .hasHour(8)
+                .hasMinute(9)
+                .hasSecond(3)
+                .hasNano(0);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withMilliseconds(LocalDateTime dt) {
+        assertThat(dt).hasYear(2011)
+                .hasMonthValue(12)
+                .hasDayOfMonth(3)
+                .hasHour(10)
+                .hasMinute(15)
+                .hasSecond(30)
+                .hasNano(50000000);
     }
 }

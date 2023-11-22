@@ -1,16 +1,18 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
-class OffsetDateTimeFactoryTests {
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+
+class OffsetDateTimeFactoryTests extends HandWrittenDateTests<OffsetDateTime> {
 
     @Test
     void newInstance_testOffsetStringFormat() {
@@ -39,8 +41,6 @@ class OffsetDateTimeFactoryTests {
         assertThat(dt.getSecond()).isEqualTo(20);
         assertThat(dt.getNano()).isEqualTo(156000000);
         assertThat(dt.getOffset()).isEqualTo(ZoneOffset.of("Z"));
-
-
     }
 
     private static void assertOffsetDateTime(OffsetDateTime dt) {
@@ -50,7 +50,7 @@ class OffsetDateTimeFactoryTests {
         assertThat(dt.getHour()).isEqualTo(10);
         assertThat(dt.getMinute()).isEqualTo(15);
         assertThat(dt.getSecond()).isEqualTo(30);
-        assertThat(dt.getNano()).isEqualTo(0);
+        assertThat(dt.getNano()).isZero();
         assertThat(dt.getOffset()).isEqualTo(ZoneOffset.ofHours(1));
     }
 
@@ -65,10 +65,69 @@ class OffsetDateTimeFactoryTests {
         assertThat(dt.getYear()).isEqualTo(2011);
         assertThat(dt.getMonthValue()).isEqualTo(12);
         assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(10);
+        assertThat(dt.getHour()).isEqualTo(15);
         assertThat(dt.getMinute()).isEqualTo(15);
         assertThat(dt.getSecond()).isEqualTo(30);
-        assertThat(dt.getNano()).isEqualTo(0);
-        assertThat(dt.getOffset()).isEqualTo(ZoneOffset.ofHours(-5));
+        assertThat(dt.getNano()).isZero();
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+    }
+
+    @Override
+    protected JsonReader.ClassFactory createFactory() {
+        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.of("Z"));
+    }
+
+    @Override
+    protected Class<OffsetDateTime> getClassForFactory() {
+        return OffsetDateTime.class;
+    }
+
+
+    @Override
+    protected void assert_handWrittenDate_withNoTime(OffsetDateTime dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(2);
+        assertThat(dt.getDayOfMonth()).isEqualTo(3);
+        assertThat(dt.getHour()).isEqualTo(5);
+        assertThat(dt.getMinute()).isZero();
+        assertThat(dt.getSecond()).isZero();
+        assertThat(dt.getNano()).isZero();
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withTime(OffsetDateTime dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(2);
+        assertThat(dt.getDayOfMonth()).isEqualTo(3);
+        assertThat(dt.getHour()).isEqualTo(13);
+        assertThat(dt.getMinute()).isEqualTo(9);
+        assertThat(dt.getSecond()).isEqualTo(3);
+        assertThat(dt.getNano()).isZero();
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withMilliseconds(OffsetDateTime dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(12);
+        assertThat(dt.getDayOfMonth()).isEqualTo(3);
+        assertThat(dt.getHour()).isEqualTo(15);
+        assertThat(dt.getMinute()).isEqualTo(15);
+        assertThat(dt.getSecond()).isEqualTo(30);
+        assertThat(dt.getNano()).isEqualTo(50000000);
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withNoZone(OffsetDateTime dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(12);
+        assertThat(dt.getDayOfMonth()).isEqualTo(3);
+        assertThat(dt.getHour()).isEqualTo(15);
+        assertThat(dt.getMinute()).isEqualTo(15);
+        assertThat(dt.getSecond()).isEqualTo(30);
+        assertThat(dt.getNano()).isZero();
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
     }
 }
