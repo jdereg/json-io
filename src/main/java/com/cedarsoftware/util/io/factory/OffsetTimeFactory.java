@@ -1,20 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
-
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * Abstract class to help create temporal items.
@@ -67,12 +63,9 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
             return OffsetTime.parse(s, dateTimeFormatter);
         } catch (Exception e) {   // Increase date-time format flexibility - JSON not written by json-io.
             Date date = DateFactory.parseDate(s);
-
-            if (date == null) {
-                return null;
-            }
-
-            return OffsetTime.ofInstant(date.toInstant(), zoneId);
+            return date.toInstant()
+                    .atZone(zoneId)
+                    .toOffsetDateTime().toOffsetTime();
         }
     }
 

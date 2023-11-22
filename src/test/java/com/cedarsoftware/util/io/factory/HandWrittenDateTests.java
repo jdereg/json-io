@@ -22,7 +22,7 @@ public abstract class HandWrittenDateTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
 
         assert_handWrittenDate_withNoZone(dt);
     }
@@ -54,7 +54,7 @@ public abstract class HandWrittenDateTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
 
         assert_handWrittenDate_withNoTime(dt);
     }
@@ -81,7 +81,7 @@ public abstract class HandWrittenDateTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
 
         assert_handWrittenDate_withTime(dt);
     }
@@ -96,7 +96,7 @@ public abstract class HandWrittenDateTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
 
         assert_handWrittenDate_withMilliseconds(dt);
     }
