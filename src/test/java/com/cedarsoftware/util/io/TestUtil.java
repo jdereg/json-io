@@ -1,5 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.net.URL;
@@ -7,14 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-
-import lombok.Getter;
 
 /**
  * Useful utilities for use in unit testing.
@@ -60,7 +58,7 @@ public class TestUtil
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
-        String json = toJson(initial, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = toJson(initial, new WriteOptions().showTypeInfoNever());
         return toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
     }
 

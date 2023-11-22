@@ -1,6 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -28,11 +31,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
-import lombok.Getter;
-import lombok.Setter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -193,7 +192,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @return String substituted type name.
      */
     protected String getSubstituteTypeName(String typeName) {
-        return writeOptions.getTypeNameAlias(typeName, typeName);
+        return writeOptions.getTypeNameAlias(typeName);
     }
 
     /**
@@ -820,67 +819,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         out.write(id == null ? "0" : id);
     }
 
-    private void writeType(Object obj, Writer output) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeType(Object obj, Writer output) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             return;
         }
         output.write(writeOptions.isShortMetaKeys() ? "\"@t\":\"" : "\"@type\":\"");
-        final Class<?> c = obj.getClass();
-        String typeName = c.getName();
-        String shortName = writeOptions.getTypeNameAlias(typeName, null);
-
-
-        if (shortName != null)
-        {
-            output.write(shortName);
-            output.write('"');
-            return;
-        }
-
-        //  shouldn't these just be in the type name alias?
-        String s = c.getName();
-        switch (s)
-        {
-            case "java.lang.Boolean":
-                output.write("boolean");
-                break;
-            case "java.lang.Byte":
-                output.write("byte");
-                break;
-            case "java.lang.Character":
-                output.write("char");
-                break;
-            case "java.lang.Class":
-                output.write("class");
-                break;
-            case "java.lang.Double":
-                output.write("double");
-                break;
-            case "java.lang.Float":
-                output.write("float");
-                break;
-            case "java.lang.Integer":
-                output.write("int");
-                break;
-            case "java.lang.Long":
-                output.write("long");
-                break;
-            case "java.lang.Short":
-                output.write("short");
-                break;
-            case "java.lang.String":
-                output.write("string");
-                break;
-            case "java.util.Date":
-                output.write("date");
-                break;
-            default:
-                output.write(c.getName());
-                break;
-        }
-
+        Class<?> c = obj.getClass();
+        String alias = writeOptions.getTypeNameAlias(c.getName());
+        output.write(alias);
         output.write('"');
     }
 

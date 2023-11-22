@@ -1,5 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import lombok.Getter;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -28,12 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
-import lombok.Getter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -115,7 +114,7 @@ public class WriteOptions {
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<String>> excludedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
-    private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
+    Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Set<Class<?>> logicalPrimitiveClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
@@ -248,8 +247,23 @@ public class WriteOptions {
         writerCache = new ConcurrentHashMap<>(300);
 
         // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
+        // TODO: This feature is broken until the aliasTypeNames are shared between ReadOptions/WriteOptions
 //        aliasTypeName("java.util.ArrayList", "ArrayList");
 //        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
+
+        aliasTypeName("java.lang.Class", "class");
+        aliasTypeName("java.lang.String", "string");
+        aliasTypeName("java.util.Date", "date");
+
+        // Use true primitive types for the primitive wrappers.
+        aliasTypeName("java.lang.Byte", "byte");
+        aliasTypeName("java.lang.Short", "short");
+        aliasTypeName("java.lang.Integer", "int");
+        aliasTypeName("java.lang.Long", "long");
+        aliasTypeName("java.lang.Float", "float");
+        aliasTypeName("java.lang.Double", "double");
+        aliasTypeName("java.lang.Character", "char");
+        aliasTypeName("java.lang.Boolean", "boolean");
     }
 
     /**
@@ -318,12 +332,13 @@ public class WriteOptions {
 
     /**
      * Alias Type Names, e.g. "alist" instead of "java.util.ArrayList".
+     *
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.
      */
-    public String getTypeNameAlias(String typeName, String def) {
+    public String getTypeNameAlias(String typeName) {
         String alias = aliasTypeNames.get(typeName);
-        return alias == null ? def : alias;
+        return alias == null ? typeName : alias;
     }
 
     /**
@@ -357,13 +372,6 @@ public class WriteOptions {
     }
 
     /**
-     * @return DisplayType enum indicating 'showType' setting (ALWAYS, NEVER, MINIMAL).  The default is MINIMAL.
-     */
-    public ShowType getShowTypeInfo() {
-        return showTypeInfo;
-    }
-
-    /**
      * @return boolean true if set to always show type (@type)
      */
     public boolean isAlwaysShowingType() {
@@ -385,12 +393,35 @@ public class WriteOptions {
     }
 
     /**
-     * @param showType enum indicating 'showType' setting (ALWAYS, NEVER, MINIMAL)
+     * Set to always show type
      * @return WriteOptions for chained access.
      */
-    public WriteOptions showTypeInfo(ShowType showType) {
+    public WriteOptions showTypeInfoAlways() {
         throwIfBuilt();
-        this.showTypeInfo = showType;
+        this.showTypeInfo = ShowType.ALWAYS;
+        return this;
+    }
+
+    /**
+     * Set to never show type
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions showTypeInfoNever() {
+        throwIfBuilt();
+        this.showTypeInfo = ShowType.NEVER;
+        return this;
+    }
+
+    /**
+     * Set to show minimal type.  This means that when the type of an object can be inferred, a type field will not
+     * be output.  A Field that points to an instance of the same time, or a typed [] of objects don't need the type
+     * info.  However, an Object[], a Collection with no generics, the reader will need to know what type the JSON
+     * object is, in order to instantiate the write Java class to which the information will be copied.
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions showTypeInfoMinimal() {
+        throwIfBuilt();
+        this.showTypeInfo = ShowType.MINIMAL;
         return this;
     }
 
@@ -926,7 +957,6 @@ public class WriteOptions {
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */
-    // TODO: This needs to move to Writes.java
     public JsonWriter.JsonClassWriter getCustomWriter(Class<?> c) {
         JsonWriter.JsonClassWriter writer = writerCache.get(c);
         if (writer == null) {
@@ -960,7 +990,6 @@ public class WriteOptions {
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
      */
-    // TODO, this needs to move to Writers.java
     private JsonWriter.JsonClassWriter forceGetCustomWriter(Class<?> c) {
         JsonWriter.JsonClassWriter closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;

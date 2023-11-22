@@ -50,7 +50,7 @@ public class ObjectHolderTest
 
     private void testSerialization(ObjectHolder holder)
     {
-        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfoNever());
         ObjectHolder deserialized = TestUtil.toObjects(json, new ReadOptionsBuilder().setUnknownTypeClass(ObjectHolder.class).build(), null);
         assertEquals(holder, deserialized);
     }

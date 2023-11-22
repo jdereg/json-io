@@ -1,6 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -9,16 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -180,7 +179,7 @@ class EnumTests {
         TestEnum4 x = TestEnum4.B;
         ByteArrayOutputStream ba = new ByteArrayOutputStream();
 
-        WriteOptions options = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions options = new WriteOptions().showTypeInfoNever();
         JsonWriter writer = new JsonWriter(ba, options);
         writer.write(x);
         String json = new String(ba.toByteArray());
@@ -210,7 +209,7 @@ class EnumTests {
 
         WriteOptions options = new WriteOptions()
                 .writeEnumAsJsonObject(true)
-                .showTypeInfo(WriteOptions.ShowType.NEVER);
+                .showTypeInfoNever();
 
         String json = TestUtil.toJson(list, options);
 
@@ -221,8 +220,7 @@ class EnumTests {
     void testEnumInCollection_whenEnumsArePrimitive_andNoType_outputsNameOnly() {
         List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
-        WriteOptions options = new WriteOptions()
-                .showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions options = new WriteOptions().showTypeInfoNever();
 
         String json = TestUtil.toJson(list, options);
 

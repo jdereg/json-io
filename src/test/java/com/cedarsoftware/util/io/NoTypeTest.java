@@ -98,7 +98,7 @@ public class NoTypeTest
         j.getNamesToAge().put("Zeus", cal.getTime());
 
         String json = TestUtil.toJson(j);
-        String json2 = TestUtil.toJson(j, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json2 = TestUtil.toJson(j, new WriteOptions().showTypeInfoNever());
         assert !json.equals(json2);
         assertEquals("{\"name\":\"Zeus\",\"things\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"],\"namesToAge\":{\"Appollo\":2500,\"Hercules\":2489,\"Poseidon\":\"2502\",\"Aphrodite\":\"2499.0\",\"Zeus\":-84243801600000},\"stuff\":[1,2,\"3\",\"4\",-84243801600000,\"Hello\",\"com.cedarsoftware.util.io.NoTypeTest$Junk\"]}", json2);
     }
@@ -136,7 +136,7 @@ public class NoTypeTest
         cols.setFoos(MetaUtils.listOf(1, 2, "4", 8));
         cols.setBars(new Object[]{1, 3, "5", 7});
 
-        String json = TestUtil.toJson(cols, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = TestUtil.toJson(cols, new WriteOptions().showTypeInfoNever());
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
@@ -152,10 +152,10 @@ public class NoTypeTest
         assert listBars[2].equals("5");
         assert listBars[3].equals(7L);
 
-        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptions().showTypeInfoNever());
         assert "[1,2,3,4]".equals(json);
 
-        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptions().showTypeInfoNever());
         assert "[1,2,3,4]".equals(json);
     }
 

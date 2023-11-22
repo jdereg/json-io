@@ -94,9 +94,9 @@ minimum amount of type info. Shows up as "@type" or "@t" fields on a JSON object
 when the reader is unable to determine what type of class to instantiate.  This can happen with a field
 that is of type Object and the instance side is specific.  Same with Object[]'s and or List<Object>, etc.
 
-    .alwaysShowTypeInfo()
-    .showTypeInfo(WriteOptions.ShowType.NEVER)
-    .showMinimalTypeInfo()
+    .showTypeInfoAlways()
+    .showTypeInfoNever()
+    .showTypeInfoMinimal()
 
     writeOptions.isAlwaysShowingType()  // To test setting
     writeOptions.isNeverShowingType()

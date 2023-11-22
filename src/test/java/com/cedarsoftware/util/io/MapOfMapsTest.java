@@ -1,15 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
-import java.awt.Point;
+import java.awt.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Calendar;
@@ -19,9 +13,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.junit.jupiter.api.Test;
-
-import com.cedarsoftware.util.DeepEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -491,7 +490,7 @@ public class MapOfMapsTest
         pCopy.setIq(new BigInteger("140"));
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
 
-        String json = TestUtil.toJson(list, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = TestUtil.toJson(list, new WriteOptions().showTypeInfoNever());
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
 
         assert array[0] == array[1];    // same instance
@@ -517,7 +516,7 @@ public class MapOfMapsTest
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
         List<List<Person>> holder = MetaUtils.listOf(list, list);
 
-        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfoNever());
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         
         assert array[0] == array[1];                // Same instance of List

@@ -187,7 +187,7 @@ public class FieldsTest
     {
         ManyFields tf = new ManyFields();
         tf.init();
-        String json0 = TestUtil.toJson(tf, new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS));
+        String json0 = TestUtil.toJson(tf, new WriteOptions().showTypeInfoAlways());
         String json1 = TestUtil.toJson(tf);
         assertTrue(json0.length() > json1.length());
     }

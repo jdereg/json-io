@@ -694,7 +694,7 @@ public class ArrayTest
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
-        WriteOptions options = new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS);
+        WriteOptions options = new WriteOptions().showTypeInfoAlways();
 
         String json0 = TestUtil.toJson(ta, options);
         ManyArrays thatTa = TestUtil.toObjects(json0, null);
@@ -921,7 +921,7 @@ public class ArrayTest
         numbers.add(40);
 
         // Serialize the ArrayList to Json
-        String json = TestUtil.toJson(numbers, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
+        String json = TestUtil.toJson(numbers, new WriteOptions().showTypeInfoNever());
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"

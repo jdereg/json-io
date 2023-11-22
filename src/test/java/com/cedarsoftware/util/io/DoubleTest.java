@@ -68,7 +68,7 @@ public class DoubleTest
     @Test
     void testNanAsRoot()
     {
-        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions args = new WriteOptions().showTypeInfoNever();
         String json = TestUtil.toJson(Double.NaN, args);
         assert json.contains("null");
 
@@ -82,7 +82,7 @@ public class DoubleTest
     @Test
     void testNanMapKey()
     {
-        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions args = new WriteOptions().showTypeInfoNever();
         LinkedHashMap<String, Double> map = new LinkedHashMap<String, Double>(1);
         map.put("field", Double.NaN);
         String json = TestUtil.toJson(map, args);
@@ -105,7 +105,7 @@ public class DoubleTest
         DoubleHolder holder = new DoubleHolder();
         holder.number = Double.NaN;
 
-        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions args = new WriteOptions().showTypeInfoNever();
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -121,7 +121,7 @@ public class DoubleTest
     @Test
     public void testNanArrayElement()
     {
-        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
+        WriteOptions args = new WriteOptions().showTypeInfoNever();
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)), args);
         assert json.contains("null");
 
