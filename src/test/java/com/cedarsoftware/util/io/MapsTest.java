@@ -438,7 +438,7 @@ public class MapsTest
         map.put("BigInteger", new BigInteger("55"));
         map.put("BigDecimal", new BigDecimal("3.33333"));
 
-        final String str = TestUtil.toJson(map, new WriteOptionsBuilder().withIsoDateTimeFormat().build());
+        final String str = TestUtil.toJson(map, new WriteOptions().isoDateTimeFormat());
 
         TestUtil.printLine(str + "\n");
 

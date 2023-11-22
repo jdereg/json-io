@@ -490,7 +490,7 @@ public class MapOfMapsTest
         pCopy.setIq(new BigInteger("140"));
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
 
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(list, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
 
         assert array[0] == array[1];    // same instance
@@ -516,7 +516,7 @@ public class MapOfMapsTest
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
         List<List<Person>> holder = MetaUtils.listOf(list, list);
 
-        String json = TestUtil.toJson(holder, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
         
         assert array[0] == array[1];                // Same instance of List
@@ -544,7 +544,7 @@ public class MapOfMapsTest
         assert map.get("middle") == null;
         assert map.get("last").equals("Adams");
 
-        json = TestUtil.toJson(person, new WriteOptionsBuilder().skipNullFields().build());
+        json = TestUtil.toJson(person, new WriteOptions().skipNullFields(true));
 
         map = TestUtil.toObjects(json, null);
         assert map.size() == 2;
@@ -568,7 +568,7 @@ public class MapOfMapsTest
         assert p1.getIq() == null;
         assert p1.getBirthYear() == 1984;
 
-        json = TestUtil.toJson(p, new WriteOptionsBuilder().skipNullFields().build());
+        json = TestUtil.toJson(p, new WriteOptions().skipNullFields(true));
         assert !json.contains("age");
         assert !json.contains("iq");
         p1 = TestUtil.toObjects(json, null);

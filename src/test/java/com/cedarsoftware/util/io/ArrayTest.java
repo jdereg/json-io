@@ -694,7 +694,7 @@ public class ArrayTest
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
-        WriteOptions options = new WriteOptionsBuilder().alwaysShowTypeInfo().build();
+        WriteOptions options = new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS);
 
         String json0 = TestUtil.toJson(ta, options);
         ManyArrays thatTa = TestUtil.toObjects(json0, null);
@@ -921,7 +921,7 @@ public class ArrayTest
         numbers.add(40);
 
         // Serialize the ArrayList to Json
-        String json = TestUtil.toJson(numbers, new WriteOptionsBuilder().neverShowTypeInfo().build());
+        String json = TestUtil.toJson(numbers, new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER));
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
@@ -936,10 +936,10 @@ public class ArrayTest
     {
         String[] testArray = new String[1];
         testArray[0] = "Test";
-        String testOut = TestUtil.toJson(testArray, new WriteOptionsBuilder().withShortMetaKeys().build());
+        String testOut = TestUtil.toJson(testArray, new WriteOptions().shortMetaKeys(true));
         TestUtil.printLine(testOut);
 
-        // The line below blew-up when the @i was being written by JsonWriter instead of @e in short-hand.
+        // The line below blew-up when the @i was being written by JsonWriter instead of @e in shorthand.
         Object object = TestUtil.toObjects(testOut, null);
     }
 

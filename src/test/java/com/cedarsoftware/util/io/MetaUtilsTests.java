@@ -120,7 +120,7 @@ public class MetaUtilsTests {
 
     @Test
     public void testLoggingMessage() {
-        LinkedHashMap<String, Serializable> map = new LinkedHashMap<String, Serializable>(4);
+        LinkedHashMap<String, Serializable> map = new LinkedHashMap<>(4);
         map.put("a", "Alpha");
         map.put("b", "Bravo");
         map.put("car", "McLaren 675LT");

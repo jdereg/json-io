@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -21,11 +19,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -61,7 +59,7 @@ public class Writers
         protected String getKey() { return "value"; }
 
         @Override
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             if (showType)
             {
@@ -69,7 +67,7 @@ public class Writers
                 output.write(':');
             }
 
-            writePrimitiveForm(obj, output, args);
+            writePrimitiveForm(obj, output, writeOptions);
         }
 
         @Override
@@ -154,37 +152,33 @@ public class Writers
 
     public static class DateWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output, Map args) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             if (showType)
             {
                 output.write("\"value\":");
             }
 
-            writePrimitiveForm(obj, output, args);
+            writePrimitiveForm(obj, output, writeOptions);
         }
 
         public boolean hasPrimitiveForm() { return true; }
 
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException
+        public void writePrimitiveForm(Object o, Writer output, WriteOptions writeOptions) throws IOException
         {
-            final WriteOptions writeOptions = WriterContext.instance().getWriteOptions();
-            String format = writeOptions.getDateFormat();
+            String format = writeOptions.getDateTimeFormat();
             Date date = (Date) o;
 
-            if (format != null)
-            {
-                writeBasicString(output, new SimpleDateFormat(format).format(date));
-            }
-            else
-            {
+            if (writeOptions.getDateTimeFormat().equals(format)) {
                 output.write(Long.toString(((Date) o).getTime()));
+            } else {
+                writeBasicString(output, new SimpleDateFormat(format).format(date));
             }
         }
     }
 
-    public static class LocalDateAsTimestamp extends PrimitiveTypeWriter {
-        public void writePrimitiveForm(Object o, Writer output, Map args) throws IOException {
+    public static class LocalDateAsLong extends PrimitiveTypeWriter {
+        public void writePrimitiveForm(Object o, Writer output, WriteOptions writeOptions) throws IOException {
             LocalDate localDate = (LocalDate) o;
             output.write(Long.toString(localDate.toEpochDay()));
         }
@@ -298,20 +292,6 @@ public class Writers
             output.write("\",\"nanos\":\"");
             output.write(Integer.toString(tstamp.getNanos()));
             output.write('"');
-        }
-    }
-
-
-    public static class EnumAsObjectWriter implements JsonWriter.JsonClassWriter {
-        // putting here to allow this to be the full enum object writer.
-        // write now we're just calling back to the JsonWriter
-        @Override
-        public void write(Object obj, boolean showType, Writer output, Map<String, Object> args) throws IOException
-        {
-            output.write("\"name\":");
-            writeJsonUtf8String(((Enum)obj).name(), output);
-            JsonWriter writer = getWriter(args);
-            writer.writeObject(obj, true, true, new HashSet<>());
         }
     }
 

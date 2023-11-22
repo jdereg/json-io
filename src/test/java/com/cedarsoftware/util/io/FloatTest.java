@@ -97,7 +97,7 @@ public class FloatTest
     @Test
     public void testNanAsRoot()
     {
-        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
+        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
         String json = TestUtil.toJson(Float.NaN, args);
         assert json.contains("null");
 
@@ -111,7 +111,7 @@ public class FloatTest
     @Test
     public void testNanMapKey()
     {
-        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
+        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
         LinkedHashMap<String, Float> map = new LinkedHashMap<>(1);
         map.put("field", Float.NaN);
         String json = TestUtil.toJson(map, args);
@@ -134,7 +134,7 @@ public class FloatTest
         Simple holder = new Simple();
         holder.setX(Float.NaN);
 
-        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
+        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -150,7 +150,7 @@ public class FloatTest
     @Test
     public void testNanArrayElement()
     {
-        WriteOptions args = new WriteOptionsBuilder().neverShowTypeInfo().build();
+        WriteOptions args = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Float.NaN)), args);
         assert json.contains("null");
 

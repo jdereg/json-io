@@ -53,11 +53,16 @@ do not exist in the JVM that is parsing the JSON, to completely read / write the
 be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
 can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 ---
-#### The optional values below are public methods on the `WriteOptionsBuilder.`
+#### The optional values below are public methods on the `WriteOptions.`
 
-To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptionsBuilder` like this:
+To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptions` like below.  The 
+`WriteOptions` contains all the "feature" sttings for json-io output JSON.  Below, we show many of the
+`WriteOptions` APIs.  See the Javadoc on WriteOptions for detailed information. The `WriteOptions` can be made
+stateless options by calling the .seal() method. Once sealed, the options cannot be modified.  If you have multiple
+`WriteOptions` features, you can set up distinct instances for each main usage.  A `WriteOptions` can be created from
+another `WriteOptions` instance.
 
-    WriteOptions writeOptions = new WriteOptionsBuilder().withPrettyPrint().isPublicEnumOnly().build();
+    WriteOptions writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
     JsonWriter.toJson(root, writeOptions);
 
 Set to String Class name, JsonWriter.JsonClassWriter to override the default
@@ -66,10 +71,7 @@ JSON output for a given class, or set a bunch of them at once:
     .withCustomWriter(Class, JsonWriter.JsonClassWriter)
     .withCustomWriters(Map<Class, JsonClassWriter>)
 
-If you want to add a custom writer that is 'application-lifecycle' scoped, so that you do not need to add it
-to the `WriteOptions` each time, use:
-    
-    WriteOptionsBuilder.addBaseWriter(Class, JsonWriter.JsonClassWriter)
+    writeOptions.getCustomWriters()     // Get all custom writers
  
 Prevent customized writer for a particular class.  Since these are inherited, you may
 want to "turn off" write-customization that was unintentionally picked up.
@@ -77,11 +79,15 @@ want to "turn off" write-customization that was unintentionally picked up.
     .withNoCustomizationFor(Class)
     .withNoCustomizationsFor(Collection<Class>)
 
+    writeOptions.getNonCustomClasses()  // Get classes that will not have custom writers
+
 Set the date format for how dates are written.  Example: "yyyy/MM/dd HH:mm".  
                                                                             
     .withDateFormat(String)
     .withIsoDateFormat()
     .withIsoDateTimeFormat()
+
+    writeOptions.getDateFormat()        // Get date format
 
 Force class types to be written out for all JSON objects, or never show Type info, or show the
 minimum amount of type info. Shows up as "@type" or "@t" fields on a JSON object.  Only needed
@@ -89,29 +95,42 @@ when the reader is unable to determine what type of class to instantiate.  This 
 that is of type Object and the instance side is specific.  Same with Object[]'s and or List<Object>, etc.
 
     .alwaysShowTypeInfo()
-    .neverShowTypeInfo()
+    .showTypeInfo(WriteOptions.ShowType.NEVER)
     .showMinimalTypeInfo()
+
+    writeOptions.isAlwaysShowingType()  // To test setting
+    writeOptions.isNeverShowingType()
+    writeOptions.isShowingMinimalType()
  
 Force nicely formatted JSON output.  (See http://jsoneditoronline.org for example format)
 
     .withPrettyPrint()
+
+    writeOptions.isPrettyPrint()        // Test the setting
 
 Specify which fields to include in the output JSON for a particular class, or a many classes at once:
 
     .includedFields(Class, Collection<String>)
     .includedFields(Map<Class, Collection<String>>)
 
+    writeOptions.getIncludedFields()    // Get all the Classes and their included fields' lists.
+
 Specify which fields to exclude in the JSON output for a particular class, or many classes at once.
 
     .excludedFields(Class, Collection<String>)
     .excludedFields(Map<Class, Collection<String>>)
 
+    writeOptions.getExcludedFields()    // Get all the Classes and their excludeed fields' lists.
+
 Specify that only public variables of ENUMs are serialized:
 
-    .doNotWritePrivateEnumFields()                                                           
+    .doNotWritePrivateEnumFields()
+    .writePrivateEnumFields()
+
+    writeOptions.isEnumPublicOnly()     // To check setting.
 
 To have Longs written as strings in quotes, which is Javascript safe.  Obscure bugs happen in Javascript
-when a full 19 digit long is set as-is to Javascript (because Javascript stores them in a double internally).
+when a full 19 digit long is sent as-is to Javascript (because Javascript stores them in a double internally).
 
     .writeLongsAsStrings()
 
@@ -191,11 +210,11 @@ your code creates the instance, **json-io** will reflectively stuff the values f
 instance you created.
  
 #### Customization technique 3: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
-Use a `new WriteOptionsBuilder()` and set `withShortMetaKeys()` to see the single-letter meta keys used in the outputted JSON.  
+Use a `new WriteOptions()` and set `withShortMetaKeys()` to see the single-letter meta keys used in the outputted JSON.  
 In addition to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
 `alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
 
-      WriteOptions writeOptions = new WriteOptionsBuilder().
+      WriteOptions writeOptions = new WriteOptions().
         withShortMetaKeys().
         withCustomTypeName('java.util.ArrayList', 'alist').
         withCustomTypeName('java.util.LinkedHashMap', 'lmap').
@@ -211,7 +230,7 @@ classes for which you do not have the source code.
     
     public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             Person p = (Person) o
             output.write('"first":"')
@@ -235,8 +254,7 @@ This will get you going right away.
   
 To write 'generic' JSON (without `@type` or `@items`, etc.) entries, use:
 
-    WriteOptions writeOptions = new WriteOptionsBuilder().
-        neverShowtypeInfo().build();
+    WriteOptions writeOptions = new WriteOptions().showTypeInfo(WriteOptions.ShowType.NEVER);
     String json = JsonWriter.toJson(objToWrite, writeOptions);
     
 Objects will not include the `@type` flags or `@items`.  This JSON passes nicely to non-Java receivers, like Javascript. 

@@ -56,14 +56,11 @@ public class CustomWriterTest
     public void testCustomWriter()
     {
         Person p = createTestPerson();
-        
-        Map<Class<Person>, CustomPersonWriter> customWriters = new HashMap<>();
-        customWriters.put(Person.class, new CustomPersonWriter());
 
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        WriteOptions writeOptions0 = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
+        WriteOptions writeOptions0 = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
         ReadOptions readOptions0 = new ReadOptionsBuilder().returnAsMaps().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toObjects(jsonCustom, readOptions0, null);
@@ -95,12 +92,12 @@ public class CustomWriterTest
         assert "Chi hua hua".equals(petz.get(1).getType());
         assert 3 == petz.get(1).getAge();
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriter(Person.class, new CustomPersonWriter()).withNoCustomizationFor(Person.class).build();
+        WriteOptions writeOptions = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter()).addNotCustomWrittenClass(Person.class);
         String jsonOrig = TestUtil.toJson(p, writeOptions);
         assert !jsonCustom.equals(jsonOrig);
         assert jsonCustom.length() < jsonOrig.length();
 
-        writeOptions = new WriteOptionsBuilder().withCustomWriter(Person.class, new CustomPersonWriter()).build();
+        writeOptions = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
         String jsonCustom2 = TestUtil.toJson(p, writeOptions);
         String jsonOrig2 = TestUtil.toJson(p);
         assert jsonCustom.equals(jsonCustom2);
@@ -121,9 +118,7 @@ public class CustomWriterTest
         Person p = createTestPerson();
         try
         {
-            Map<Class<Person>, BadCustomPWriter> badCustomPWriterMap = new HashMap<>();
-            badCustomPWriterMap.put(Person.class, new BadCustomPWriter());
-            TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriters(badCustomPWriterMap).build());
+            TestUtil.toJson(p, new WriteOptions().addCustomWrittenClass(Person.class, new BadCustomPWriter()));
             fail();
         }
         catch (JsonIoException e)
@@ -136,9 +131,7 @@ public class CustomWriterTest
     public void testCustomWriterAddField()
     {
         Person p = createTestPerson();
-        Map<Class<Person>, CustomPersonWriterAddField> customPersonWriterAddFieldMap = new HashMap<>();
-        customPersonWriterAddFieldMap.put(Person.class, new CustomPersonWriterAddField());
-        String jsonCustom = TestUtil.toJson(p, new WriteOptionsBuilder().withCustomWriters(customPersonWriterAddFieldMap).build());
+        String jsonCustom = TestUtil.toJson(p, new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriterAddField()));
         assert jsonCustom.contains("_version\":12");
         assert jsonCustom.contains("Michael");
     }
@@ -148,13 +141,10 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<Person>, CustomPersonWriter> customWriters = new HashMap<>();
-        customWriters.put(Person.class, new CustomPersonWriter());
-
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().build();
+        WriteOptions writeOptions = new WriteOptions();
         ReadOptions readOptions = new ReadOptionsBuilder().build();
 
         // Object[] { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
@@ -167,14 +157,14 @@ public class CustomWriterTest
 
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
-        writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
+        writeOptions = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
-        writeOptions = new WriteOptionsBuilder().build();
+        writeOptions = new WriteOptions();
         readOptions = new ReadOptionsBuilder().build();
 
         // List of { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
@@ -189,7 +179,7 @@ public class CustomWriterTest
 
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
-        writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
+        writeOptions = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
         readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
@@ -202,13 +192,10 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<Person>, CustomPersonWriter> customWriters = new HashMap<>();
-        customWriters.put(Person.class, new CustomPersonWriter());
-
         Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().withCustomWriters(customWriters).build();
+        WriteOptions writeOptions = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
         ReadOptions readOptions = new ReadOptionsBuilder().withCustomReaders(customReaders).withNonCustomizableClasses(new ArrayList<>()).build();
         
         People people = new People(new Object[]{p, p});
@@ -410,7 +397,7 @@ public class CustomWriterTest
 
     public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             Person p = (Person) o;
             output.write("\"f\":\"");
@@ -437,16 +424,14 @@ public class CustomWriterTest
             }
 
             output.write("]");
-
-            assert getWriter(args) instanceof JsonWriter;
         }
     }
 
     public static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
-            JsonWriter writer = getWriter(args);
+            JsonWriter writer = WriterContext.instance().getWriter();
             output.write("\"_version\":12,");
             writer.writeObject(o, false, true);
         }
@@ -482,7 +467,7 @@ public class CustomWriterTest
 
     public static class BadCustomPWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output, Map<String, Object> args) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
         {
             throw new RuntimeException("Bad custom writer");
         }

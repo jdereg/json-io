@@ -1,9 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.awt.*;
+import java.awt.Point;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -24,10 +27,9 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -219,7 +221,7 @@ public class CollectionTests {
     public void testAlwaysShowType() {
         ManyCollections tc = new ManyCollections();
         tc.init();
-        WriteOptions writeOptions = new WriteOptionsBuilder().alwaysShowTypeInfo().build();
+        WriteOptions writeOptions = new WriteOptions().showTypeInfo(WriteOptions.ShowType.ALWAYS);
         String json0 = TestUtil.toJson(tc, writeOptions);
         String json1 = TestUtil.toJson(tc);
         TestUtil.printLine("json0 = " + json0);
@@ -336,7 +338,7 @@ public class CollectionTests {
     @Test
     public void testEnumsInsideOfACollection_whenWritingAsObject_withPrivateMembersIncluded() {
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().writeEnumsAsObject().build();
+        WriteOptions writeOptions = new WriteOptions().writeEnumAsJsonObject(false);
 
         List arrayList = new ArrayList<>();
         arrayList.add(TestEnum4.B);
@@ -347,18 +349,19 @@ public class CollectionTests {
     }
 
     @Test
-    public void testEnumsInsideOfACollection_whenWritingAsObject_withPublicFieldsOnly() {
+    void testEnumsInsideOfACollection_whenWritingAsObject_withPublicFieldsOnly() {
 
-        WriteOptions writeOptions = new WriteOptionsBuilder().doNotWritePrivateEnumFields().build();
+        WriteOptions writeOptions = new WriteOptions().writeEnumAsJsonObject(true);
 
         List list = MetaUtils.listOf(TestEnum4.B);
         String json = TestUtil.toJson(list, writeOptions);
         Object o = TestUtil.toObjects(json, null);
-        assert DeepEquals.deepEquals(list, o);
+
+        assertThat(DeepEquals.deepEquals(list, o)).isTrue();
     }
 
     @Test
-    public void testGenericInfoCollection() {
+    void testGenericInfoCollection() {
         String className = PointList.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
         PointList list = TestUtil.toObjects(json, null);

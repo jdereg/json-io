@@ -126,7 +126,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     public void testLocalDateAsTimeStamp()
     {
         LocalDate ld = LocalDate.of(2023, 12, 25);
-        String json = TestUtil.toJson(ld, new WriteOptionsBuilder().writeLocalDateAsTimeStamp().build());
+        String json = TestUtil.toJson(ld, new WriteOptions().addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()));
         LocalDate ld2 = TestUtil.toObjects(json, null);
         assert ld.equals(ld2);
     }

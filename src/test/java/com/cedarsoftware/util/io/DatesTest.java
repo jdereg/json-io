@@ -105,7 +105,7 @@ public class DatesTest
         TestDate test = new TestDate();
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json = " + json);
-        TestDate that = (TestDate) TestUtil.toObjects(json, null);
+        TestDate that = TestUtil.toObjects(json, null);
 
         assertEquals(that._arrayElement, new Date(-1));
         assertEquals(that._polyRefTarget, new Date(71));
@@ -163,7 +163,7 @@ public class DatesTest
         dt.setChristmas(new java.sql.Date(c.getTime().getTime()));
 
         // Custom writer that only outputs ISO date portion
-        String json = TestUtil.toJson(dt, new WriteOptionsBuilder().withIsoDateFormat().build());
+        String json = TestUtil.toJson(dt, new WriteOptions().isoDateFormat());
         TestUtil.printLine("json = " + json);
 
         // Read it back in
@@ -184,7 +184,7 @@ public class DatesTest
         compareDatePortion(exp, act);
 
         // Custom writer that outputs date and time portion in ISO format
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().withIsoDateTimeFormat().build());
+        json = TestUtil.toJson(dt, new WriteOptions().isoDateTimeFormat());
         TestUtil.printLine("json = " + json);
 
         // Read it back in
@@ -225,7 +225,7 @@ public class DatesTest
         compareTimePortion(exp, act);
 
         // Version with milliseconds
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().withDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").build());
+        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"));
         readDt = TestUtil.toObjects(json, null);
 
         exp.setTime(dt.getBirthDay());
@@ -243,7 +243,7 @@ public class DatesTest
         compareDatePortion(exp, act);
         compareTimePortion(exp, act);
 
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().withDateFormat("MM/dd/yyyy HH:mm:ss").build());
+        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("MM/dd/yyyy HH:mm:ss"));
         readDt = TestUtil.toObjects(json, null);
 
         exp.setTime(dt.getBirthDay());
@@ -262,7 +262,7 @@ public class DatesTest
         compareTimePortion(exp, act);
 
         // Nov 15, 2013 format
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().withDateFormat("MMM dd, yyyy HH:mm.ss").build());
+        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("MMM dd, yyyy HH:mm.ss"));
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 
@@ -282,7 +282,7 @@ public class DatesTest
         compareTimePortion(exp, act);
 
         // 15 Nov 2013 format
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().withDateFormat("dd MMM yyyy HH:mm.ss").build());
+        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("dd MMM yyyy HH:mm.ss"));
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 
