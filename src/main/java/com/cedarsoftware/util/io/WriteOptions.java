@@ -1,5 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.writers.InstantWriter;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -29,13 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.cedarsoftware.util.io.writers.InstantWriter;
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
-import lombok.Getter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -87,39 +85,20 @@ public class WriteOptions {
      */
     private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache;
 
-    /**
-     * -- GETTER --
-     * <p>
-     * ClassWriter the current ClassWriter used for enum types.
-     */
-    @Getter
     private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private boolean prettyPrint = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
     private boolean forceMapOutputAsTwoArrays = false;
-
-    /**
-     * -- GETTER --
-     * <p>
-     * boolean value of the 'onlyPublicFieldsOnEnums' setting.  true indicates that only public fields will
-     * be output on an Enum.  Enums don't often have fields added to them but if so, then only the public fields
-     * will be written.  The Enum will be written out in JSON object { } format.  If there are not added fields to
-     * an Enum, it will be written out as a single line value.  The default value is true.  If you set this to false,
-     * it will change the 'enumFieldsAsObject' to true - because you will be showing potentially more than one value,
-     * it will require the enum to be written as an object.
-     */
-    @Getter
     private boolean enumPublicFieldsOnly = false;
-
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<String>> excludedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
-    Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
+    private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private Set<Class<?>> logicalPrimitiveClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Set<Class<?>> nonReferenceableItems = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private boolean built = false;
@@ -222,31 +201,31 @@ public class WriteOptions {
      */
     public WriteOptions() {
         customWrittenClasses.putAll(BASE_WRITERS);
-        logicalPrimitiveClasses.add(byte.class);
-        logicalPrimitiveClasses.add(short.class);
-        logicalPrimitiveClasses.add(int.class);
-        logicalPrimitiveClasses.add(long.class);
-        logicalPrimitiveClasses.add(float.class);
-        logicalPrimitiveClasses.add(double.class);
-        logicalPrimitiveClasses.add(char.class);
-        logicalPrimitiveClasses.add(boolean.class);
+        nonReferenceableItems.add(byte.class);
+        nonReferenceableItems.add(short.class);
+        nonReferenceableItems.add(int.class);
+        nonReferenceableItems.add(long.class);
+        nonReferenceableItems.add(float.class);
+        nonReferenceableItems.add(double.class);
+        nonReferenceableItems.add(char.class);
+        nonReferenceableItems.add(boolean.class);
 
-        logicalPrimitiveClasses.add(Byte.class);
-        logicalPrimitiveClasses.add(Short.class);
-        logicalPrimitiveClasses.add(Integer.class);
-        logicalPrimitiveClasses.add(Long.class);
-        logicalPrimitiveClasses.add(Float.class);
-        logicalPrimitiveClasses.add(Double.class);
-        logicalPrimitiveClasses.add(Character.class);
-        logicalPrimitiveClasses.add(Boolean.class);
+        nonReferenceableItems.add(Byte.class);
+        nonReferenceableItems.add(Short.class);
+        nonReferenceableItems.add(Integer.class);
+        nonReferenceableItems.add(Long.class);
+        nonReferenceableItems.add(Float.class);
+        nonReferenceableItems.add(Double.class);
+        nonReferenceableItems.add(Character.class);
+        nonReferenceableItems.add(Boolean.class);
 
-        logicalPrimitiveClasses.add(String.class);
-        logicalPrimitiveClasses.add(Date.class);
-        logicalPrimitiveClasses.add(BigInteger.class);
-        logicalPrimitiveClasses.add(BigDecimal.class);
-        logicalPrimitiveClasses.add(AtomicBoolean.class);
-        logicalPrimitiveClasses.add(AtomicInteger.class);
-        logicalPrimitiveClasses.add(AtomicLong.class);
+        nonReferenceableItems.add(String.class);
+        nonReferenceableItems.add(Date.class);
+        nonReferenceableItems.add(BigInteger.class);
+        nonReferenceableItems.add(BigDecimal.class);
+        nonReferenceableItems.add(AtomicBoolean.class);
+        nonReferenceableItems.add(AtomicInteger.class);
+        nonReferenceableItems.add(AtomicLong.class);
 
         writerCache = new ConcurrentHashMap<>(300);
 
@@ -288,27 +267,24 @@ public class WriteOptions {
         aliasTypeNames.putAll(other.aliasTypeNames);
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
-        logicalPrimitiveClasses.addAll(other.logicalPrimitiveClasses);
+        nonReferenceableItems.addAll(other.nonReferenceableItems);
         this.writerCache = other.writerCache;
 
         // Need your own Set instance here per Class, no references to the copied Set.
-        for (Map.Entry<Class<?>, Set<String>> entry : other.includedFields.entrySet()) {
-            includedFields.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
-
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : other.includedAccessors.entrySet()) {
-            includedAccessors.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
-
-        for (Map.Entry<Class<?>, Set<String>> entry : other.excludedFields.entrySet()) {
-            excludedFields.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
-
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : other.excludedAccessors.entrySet()) {
-            excludedAccessors.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-        }
+        dupe((Map) other.includedFields, (Map)includedFields);
+        dupe((Map) other. includedAccessors, (Map) includedAccessors);
+        dupe((Map) other.excludedFields, (Map) excludedFields);
+        dupe((Map) other.excludedAccessors, (Map) excludedAccessors);
     }
 
+    private static void dupe(Map<Class<?>, Set<?>> source, Map<Class<?>, Set<?>> dest) {
+        for (Map.Entry<Class<?>, Set<?>> entry : source.entrySet()) {
+            Set items = new LinkedHashSet<>();
+            dest.computeIfAbsent(entry.getKey(), k -> items);
+            items.addAll(entry.getValue());
+        }
+    }
+    
     // Private method to check if the object is sealed
     private void throwIfBuilt() {
         if (built) {
@@ -512,6 +488,24 @@ public class WriteOptions {
     }
 
     /**
+     * @return boolean true if enums are to be written out as Strings (not a full JSON object) when possible.
+     */
+    public boolean isWriteEnumAsString() {
+        return enumWriter instanceof Writers.EnumsAsStringWriter;
+    }
+
+    /**
+     * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
+     * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
+     * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
+     * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
+     * showing potentially more than one value, it will require the enum to be written as an object.
+     */
+    public boolean isEnumPublicFieldsOnly() {
+        return enumPublicFieldsOnly;
+    }
+
+    /**
      * Option to write out enums as a String, it will write out the enum.name() field.
      * This is the default way enums will be written out.
      * @return WriteOptions for chained access.
@@ -624,12 +618,9 @@ public class WriteOptions {
      * @return Set of Strings field names associated to the passed in class or an empty
      * Set if no fields.  This is the list of fields to be included in the written JSON for the given class.
      */
+    @SuppressWarnings("unchecked")
     public Set<String> getIncludedFields(Class<?> clazz) {
-        if (built) {
-            return includedFields.get(clazz);
-        } else {
-            return new LinkedHashSet<>(includedFields.get(clazz));
-        }
+        return (Set<String>) getItemsForClass(clazz, includedFields);
     }
 
     /**
@@ -638,12 +629,9 @@ public class WriteOptions {
      * @return Set of Strings Accessor names associated to the passed in class or an empty
      * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
      */
+    @SuppressWarnings("unchecked")
     public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
-        if (built) {
-            return includedAccessors.get(clazz);
-        } else {
-            return new LinkedHashSet<>(includedAccessors.get(clazz));
-        }
+        return (Set<Accessor>) getItemsForClass(clazz, includedAccessors);
     }
 
     /**
@@ -657,7 +645,15 @@ public class WriteOptions {
      * @return Map of all Classes and their associated Sets of accessors to be included when serialized to JSON.
      */
     public Map<Class<?>, Set<Accessor>> getIncludedAccessorsPerAllClasses() {
-        return getClassSetMapAccessor(includedAccessors);
+        if (built) {
+            return includedAccessors;
+        } else {
+            Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
+            for (Map.Entry<Class<?>, Set<Accessor>> entry : includedAccessors.entrySet()) {
+                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+            }
+            return copy;
+        }
     }
 
     /**
@@ -678,22 +674,7 @@ public class WriteOptions {
     public WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields) {
         throwIfBuilt();
         this.includedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFields);
-        ClassDescriptors classDescriptors = ClassDescriptors.instance();
-        Class<?> current = clazz;
-
-        while (current != null) {
-            final ClassDescriptor descriptor = classDescriptors.getClassDescriptor(current);
-            final Map<String, Accessor> accessorMap = descriptor.getAccessors();
-
-            for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
-                if (includedFields.contains(acessorEntry.getKey())) {
-                    includedAccessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
-                }
-            }
-            current = current.getSuperclass();
-        }
-        
-        return this;
+        return copyFieldsToAccessors(clazz, includedFields, includedAccessors);
     }
 
     /**
@@ -722,18 +703,6 @@ public class WriteOptions {
         }
     }
 
-    private Map<Class<?>, Set<Accessor>> getClassSetMapAccessor(Map<Class<?>, Set<Accessor>> accessorSet) {
-        if (built) {
-            return accessorSet;
-        } else {
-            Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
-            for (Map.Entry<Class<?>, Set<Accessor>> entry : accessorSet.entrySet()) {
-                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-            }
-            return copy;
-        }
-    }
-
     /**
      * @param clazz Class to add a single field to be excluded.
      * @param excludedField String name of field to exclude from written JSON.
@@ -745,13 +714,17 @@ public class WriteOptions {
     }
 
     /**
-     * @param clazz Class to add a Collection of fields to be included in written JSON.
-     * @param excludedFields Collection of String name of fields to include in written JSON.
+     * @param clazz Class to add a Collection of fields to be excluded in written JSON.
+     * @param excludedFields Collection of String name of fields to exclude in written JSON.
      * @return WriteOptions for chained access.
      */
     public WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
         throwIfBuilt();
         this.excludedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
+        return copyFieldsToAccessors(clazz, excludedFields, excludedAccessors);
+    }
+
+    private WriteOptions copyFieldsToAccessors(Class<?> clazz, Collection<String> fields, Map<Class<?>, Set<Accessor>> accessors) {
         ClassDescriptors classDescriptors = ClassDescriptors.instance();
         Class<?> current = clazz;
 
@@ -760,8 +733,8 @@ public class WriteOptions {
             final Map<String, Accessor> accessorMap = descriptor.getAccessors();
 
             for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
-                if (excludedFields.contains(acessorEntry.getKey())) {
-                    excludedAccessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
+                if (fields.contains(acessorEntry.getKey())) {
+                    accessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
                 }
             }
             current = current.getSuperclass();
@@ -780,6 +753,47 @@ public class WriteOptions {
             addExcludedFields(entry.getKey(), entry.getValue());
         }
         return this;
+    }
+
+    /**
+     * Get the list of fields associated to the passed in class that are to be excluded in the written JSON.
+     * @param clazz Class for which the fields to be excluded in JSON output will be returned.
+     * @return Set of Strings field names associated to the passed in class or an empty
+     * Set if no fields.  This is the list of fields to be excluded in the written JSON for the given class.
+     */
+    @SuppressWarnings("unchecked")
+    public Set<String> getExcludedFields(Class<?> clazz) {
+        return (Set<String>) getItemsForClass(clazz, excludedFields);
+    }
+
+    /**
+     * @return Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
+     */
+    public Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses() {
+        return getClassSetMapFields(excludedFields);
+    }
+
+    /**
+     * Get the list of Accessors associated to the passed in class that are to be excluded in the written JSON.
+     * @param clazz Class for which the Accessors to be excluded in JSON output will be returned.
+     * @return Set of Strings Accessor names associated to the passed in class or an empty
+     * Set if no Accessors.  This is the list of accessors to be excluded in the written JSON for the given class.
+     */
+    @SuppressWarnings("unchecked")
+    public Set<Accessor> getExcludedAccessors(Class<?> clazz) {
+        return (Set<Accessor>) getItemsForClass(clazz, excludedAccessors);
+    }
+
+    private Set<?> getItemsForClass(Class<?> clazz, Map<?, ? extends Set<?>> classesToSets)
+    {
+        Set<?> items = classesToSets.get(clazz);
+        if (built) {
+            // Give back real - protected from modifications
+            return items == null ? Collections.unmodifiableSet(new LinkedHashSet<>()) : items;
+        } else {
+            // Copy - protects original because it's a copy (they can play with it).
+            return new LinkedHashSet<>(items == null ? Collections.emptySet() : items);
+        }
     }
 
     public Collection<Accessor> getIncludedAccessorsForClass(final Class<?> c) {
@@ -815,7 +829,8 @@ public class WriteOptions {
     }
 
     /**
-     * Change the date-time format to the ISO date format: "yyyy-MM-dd"
+     * Change the date-time format to the ISO date format: "yyyy-MM-dd".  This is for java.util.Data and
+     * java.sql.Date.
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateFormat() {
@@ -823,7 +838,8 @@ public class WriteOptions {
     }
 
     /**
-     * Change the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default)
+     * Change the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default).  This is
+     * for java.util.Date and java.sql.Date.
      * @return WriteOptions for chained access.
      */
     public WriteOptions isoDateTimeFormat() {
@@ -832,7 +848,8 @@ public class WriteOptions {
 
     /**
      * Change the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970
-     * at midnight. If you do not need to see the JSON, and want to keep the format smaller,
+     * at midnight. Useful if you do not need to see the JSON, and want to keep the format smaller.  This is for
+     * java.util.Date and java.sql.Date.
      * @return WriteOptions for chained access.
      */
     public WriteOptions longDateFormat() {
@@ -842,9 +859,20 @@ public class WriteOptions {
     }
 
     /**
+     * @return boolean true if java.util.Date and java.sql.Date's are being written in long (numeric) format.
+     */
+    public boolean isLongDateFormat() {
+        Object a = customWrittenClasses.get(Date.class);
+        if (a == null) {
+            return false;
+        }
+        boolean answer = Writers.DateAsLongWriter.class.equals(a.getClass());
+        return answer;
+    }
+    /**
      * Change the date-time format to the passed in format.  The format pattens can be found in the Java Doc
      * for the java.time.format.DateTimeFormatter class.  There are many constants you can use, as well as
-     * the definition of how to construct your own patterns.
+     * the definition of how to construct your own patterns.  This is for java.util.Date and java.sql.Date.
      * @return WriteOptions for chained access.
      */
     public WriteOptions dateTimeFormat(String format) {
@@ -854,18 +882,16 @@ public class WriteOptions {
     }
 
     /**
-     * @param clazz Class to check to see if it is a Logical Primitive.  Logical Primitives for json-io are classes
-     *              that are never to be treated like the primitive's classes (e.g. int) when serialized in JSON.
-     *              That means no @id/@ref will be used on them and a new instance will always be created when read in.
-     *              This uses more memory when the JSON is read in, as there will be a separate instance in memory for
-     *              each occurrence. There are certain classes that json-io automatically treats as logical primitives,
-     *              like Strings, Enums, Class, and any Number instance (BigDecimal, AtomicLong, etc.)  You can add to
-     *              this list. Often, logical primitives are useful for classes that can be defined in one line as a
-     *              JSON, like a LocalDateTime, for example.
-     * @return boolean true if the passed in class is considered a Logical Primitive.
+     * @param clazz Class to check to see if it is non-referenceable.  Non-referenceable classes will always create
+     *              a new instance when read in and never use @id/@ref. This uses more memory when the JSON is read in,
+     *              as there will be a separate instance in memory for each occurrence. There are certain classes that
+     *              json-io automatically treats as non-referenceable, like Strings, Enums, Class, and any Number
+     *              instance (BigDecimal, AtomicLong, etc.)  You can add to this list. Often, non-referenceable classes
+     *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
+     * @return boolean true if the passed in class is considered a non-referenceable class.
      */
-    public boolean isLogicalPrimitive(Class<?> clazz) {
-        return logicalPrimitiveClasses.contains(clazz) ||
+    public boolean isNonReferenceableItem(Class<?> clazz) {
+        return nonReferenceableItems.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
                 clazz.isEnum() ||
@@ -876,9 +902,9 @@ public class WriteOptions {
      * @return Collection of classes specifically listed as Logical Primitives.  In addition to the return
      * classes, derivatives of Number and Date are also considered Logical Primitives by json-io.
      */
-    public Collection<Class<?>> getLogicalPrimitives()
+    public Collection<Class<?>> getNonReferenceableItems()
     {
-        return built ? logicalPrimitiveClasses : new LinkedHashSet<>(logicalPrimitiveClasses);
+        return built ? nonReferenceableItems : new LinkedHashSet<>(nonReferenceableItems);
     }
 
     /**
@@ -887,9 +913,9 @@ public class WriteOptions {
      *              each instance, even if the same as another, will use memory.
      * @return WriteOptions for chained access.
      */
-    public WriteOptions addLogicalPrimitive(Class<?> clazz) {
+    public WriteOptions addNonReferenceableClass(Class<?> clazz) {
         throwIfBuilt();
-        logicalPrimitiveClasses.add(clazz);
+        nonReferenceableItems.add(clazz);
         return this;
     }
 
@@ -897,42 +923,28 @@ public class WriteOptions {
      * Seal the instance of this class so that no more changes can be made to it.
      * @return WriteOptions for chained access.
      */
+    @SuppressWarnings("unchecked")
     public WriteOptions build() {
-        this.built = true;
-
-        Map<Class<?>, Set<String>> includedFieldsSealed = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<String>> entry : includedFields.entrySet()) {
-            Set<String> fields = new LinkedHashSet<>(entry.getValue());
-            includedFieldsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(fields));
-        }
-        includedFields = Collections.unmodifiableMap(includedFieldsSealed);
-
-        Map<Class<?>, Set<Accessor>> includedAccessorsSealed = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : includedAccessors.entrySet()) {
-            Set<Accessor> accessors = new LinkedHashSet<>(entry.getValue());
-            includedAccessorsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(accessors));
-        }
-        includedAccessors = Collections.unmodifiableMap(includedAccessorsSealed);
-
-        Map<Class<?>, Set<String>> excludedFieldsSealed = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<String>> entry : excludedFields.entrySet()) {
-            Set<String> fields = new LinkedHashSet<>(entry.getValue());
-            excludedFieldsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(fields));
-        }
-        excludedFields = Collections.unmodifiableMap(excludedFieldsSealed);
-
-        Map<Class<?>, Set<Accessor>> excludedAccessorsSealed = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<Accessor>> entry : excludedAccessors.entrySet()) {
-            Set<Accessor> accessors = new LinkedHashSet<>(entry.getValue());
-            excludedAccessorsSealed.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(accessors));
-        }
-        excludedAccessors = Collections.unmodifiableMap(excludedAccessorsSealed);
-
+        includedFields = (Map<Class<?>, Set<String>>) createUnmodifiable(includedFields);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) createUnmodifiable(includedAccessors);
+        excludedFields = (Map<Class<?>, Set<String>>) createUnmodifiable(excludedFields);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) createUnmodifiable(excludedAccessors);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
-        logicalPrimitiveClasses = Collections.unmodifiableSet(new LinkedHashSet<>(logicalPrimitiveClasses));
+        nonReferenceableItems = Collections.unmodifiableSet(new LinkedHashSet<>(nonReferenceableItems));
         customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
+        this.built = true;
         return this;
+    }
+
+    private static Map<Class<?>,? extends Set<?>> createUnmodifiable(Map<Class<?>, ? extends Set<?>> other)
+    {
+        Map<Class<?>, Set<?>> newItemsAssocToClass = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>,?> entry : other.entrySet()) {
+            Set<?> itemsAssocToClass = new LinkedHashSet<>((Collection<?>)entry.getValue());
+            newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
+        }
+        return Collections.unmodifiableMap(newItemsAssocToClass);
     }
 
     /**
@@ -957,7 +969,6 @@ public class WriteOptions {
      * Fetch the custom writer for the passed in Class.  If it is cached (already associated to the
      * passed in Class), return the same instance, otherwise, make a call to get the custom writer
      * and store that result.
-     *
      * @param c Class of object for which fetch a custom writer
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */

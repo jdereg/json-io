@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
@@ -9,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -108,6 +111,16 @@ public class StringTest
     {
         // Ensure no exception is thrown
         TestUtil.toObjects(null, null);
+    }
+
+    @Test
+    @Disabled // Enable when json-io can re-write WriteOptions (injector using getting to set?)
+    public void testWriteOptions()
+    {
+        WriteOptions writeOptions = new WriteOptions();
+        String json = TestUtil.toJson(writeOptions);
+        WriteOptions backFromSleep = TestUtil.toObjects(json, null);
+        assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));
     }
 
     private static class ManyStrings implements Serializable

@@ -236,16 +236,16 @@ public class FieldsTest
     }
 
     @Test
-    public void testExternalFieldSpecifierInheritance()
+    public void testIncludedFieldsInheritance()
     {
-        Map<Class<?>, Collection<String>> fieldSpecifiers = new LinkedHashMap<>();
-        fieldSpecifiers.put(PainfulToSerialize.class, MetaUtils.listOf("name"));
+        Map<Class<?>, Collection<String>> includedFields = new LinkedHashMap<>();
+        includedFields.put(PainfulToSerialize.class, MetaUtils.listOf("name"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
 
         ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
-        WriteOptions writeOptions = new WriteOptions().addIncludedFields(fieldSpecifiers);
+        WriteOptions writeOptions = new WriteOptions().addIncludedFields(includedFields);
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(1, check.size());
@@ -254,13 +254,40 @@ public class FieldsTest
         List<String> fields2 = new ArrayList<>();
         fields2.add("age");
         fields2.add("name");
-        fieldSpecifiers.put(MorePainfulToSerialize.class, fields2);
-        writeOptions = new WriteOptions().addIncludedFields(fieldSpecifiers);
+        includedFields.put(MorePainfulToSerialize.class, fields2);
+        writeOptions = new WriteOptions().addIncludedFields(includedFields);
         json = TestUtil.toJson(painful, writeOptions);
         check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
         assertTrue(check.containsKey("age"));
+    }
+
+    @Test
+    public void testExcludedFieldsInheritance()
+    {
+        Map<Class<?>, Collection<String>> excludedFields = new LinkedHashMap<>();
+        excludedFields.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
+        MorePainfulToSerialize painful = new MorePainfulToSerialize();
+        painful.setName("Android rocks");
+        painful.setAge(50);
+
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        WriteOptions writeOptions = new WriteOptions().addExcludedFields(excludedFields);
+        String json = TestUtil.toJson(painful, writeOptions);
+        Map check = TestUtil.toObjects(json, readOptions, null);
+        assertEquals(2, check.size());
+        assertTrue(check.containsKey("age"));
+        assertTrue(check.containsKey("name"));
+
+        List<String> fields2 = new ArrayList<>();
+        fields2.add("age");
+        excludedFields.put(MorePainfulToSerialize.class, fields2);
+        writeOptions = new WriteOptions().addExcludedFields(excludedFields);
+        json = TestUtil.toJson(painful, writeOptions);
+        check = TestUtil.toObjects(json, readOptions, null);
+        assertEquals(1, check.size());
+        assertTrue(check.containsKey("name"));
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -25,7 +25,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
+import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -169,10 +169,14 @@ public class Writers
             this.dateFormat = format;
         }
 
-        @Override
         public String extractString(Object o) {
             Date date = (Date) o;
             return new SimpleDateFormat(dateFormat).format(date);
+        }
+        
+        String getDateFormat()
+        {
+            return dateFormat;
         }
     }
 
