@@ -82,9 +82,9 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 ---
 ### MetaKeys - @id, @ref, @type
 #### boolean isShortMetaKeys()
-* Returns true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
+* Returns`true`if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values),`false`for full size. 'false' is the default.
 #### WriteOptions shortMetaKeys(boolean shortMetaKeys)
-* Sets the boolean true to turn on short meta-keys, false for long. Returns`WriteOptions`for chained access.
+* Sets the boolean`true`to turn on short meta-keys,`false`for long. Returns`WriteOptions`for chained access.
 ---
 ### Aliasing - shorten class names in @type.
 #### String getTypeNameAlias(String typeName)
@@ -98,11 +98,11 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 ---
 ### @Type - used to provide hint to JsonReader to know what Classes to instantiate.
 #### boolean isAlwaysShowingType()
-* Returns true if set to always show type (@type).
+* Returns`true`if set to always show type (@type).
 #### boolean isNeverShowingType()
-* Returns true if set to never show type (no @type).
+* Returns`true`if set to never show type (no @type).
 #### boolean isMinimalShowingType()
-* Returns true if set to show minimal type (@type).  This is the default setting.
+* Returns`true`if set to show minimal type (@type).  This is the default setting.
 #### WriteOptions showTypeInfoAlways()
 * Sets to always show type. Returns`WriteOptions`for chained access.
 #### WriteOptions showTypeInfoNever()
@@ -112,54 +112,54 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 ---
 ### Pretty Print - Multiple line, indented JSON output, or one-line output
 #### boolean isPrettyPrint()
-* Returns the 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
+* Returns the 'prettyPrint' setting,`true`being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
 #### WriteOptions prettyPrint(boolean prettyPrint)
-* Sets the 'prettyPrint' setting, true to turn on, false will turn off. The default setting is false. Returns`WriteOptions`for chained access.
+* Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is false. Returns`WriteOptions`for chained access.
 ---
 #### boolean isWriteLongsAsStrings()
-* Returns true indicating longs will be written as Strings, false to write them out as native JSON longs.
+* Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON longs.
 #### WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings)
-* Sets the boolean true to turn on writing longs as Strings, false to write them as native JSON longs. The default setting 
-is false. This setting is important to get JSON with large (18 to 19 digit longs) sent to Javascript. Long/long values 
-cannot be represented in Javascript because it stores these numbers in a Double internally, which cannot represent a full
-long value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
-Strings when received in the Javascript.  This will let you display them correctly, for example.  Returns`WriteOptions`for chained access.
+* Set to boolean`true`to turn on writing longs as Strings,`false`to write them as native JSON longs. The default setting 
+is`false.`This feature is important to marshal JSON with large (18 to 19 digit longs) to Javascript. Long/long values 
+cannot be represented in Javascript because it stores them in a `Double` internally, which cannot represent a 
+full`long`value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
+Strings when received in the Javascript. This will let you display them correctly, for example. Returns`WriteOptions`for chained access.
 ---
 ### null field values
 #### boolean isSkipNullFields()
-* Returns true indicating fields with null values will not be written, false will still output the field with an associated null value. The default is false.
+* Returns`true`indicating fields with null values will not be written,`false`will still output the field with an associated null value. The default is false.
 #### WriteOptions skipNullFields(boolean skipNullFields)
-* Sets the boolean where true indicates fields with null values will not be written to the JSON, false will allow the field to still be written. Returns`WriteOptions`for chained access.
+* Sets the boolean where`true`indicates fields with null values will not be written to the JSON,`false`will allow the field to still be written. Returns`WriteOptions`for chained access.
 ---
 ### Map output
 #### boolean isForceMapOutputAsTwoArrays()
-* Returns true if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is false.
+* Returns`true`if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is`false.`
 #### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
 * Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns`WriteOptions`for chained access.
 ---
 ### Enum Options
 #### boolean isWriteEnumAsString()
-* Returns true if enums are to be written out as Strings (not a full JSON object) when possible.
+* Returns`true`if enums are to be written out as Strings (not a full JSON object) when possible.
 #### WriteOptions writeEnumsAsString()
 * Sets the option to write out enums as a String. Returns`WriteOptions`for chained access.
 #### boolean isEnumPublicFieldsOnly()
-* Returns true indicating that only public fields will be output on an Enum. The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
+* Returns`true`indicating that only public fields will be output on an Enum. The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
 #### WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly)
 * Sets the option to write out all the member fields of an enum. Returns`WriteOptions`for chained access.
 ---
 ### Customized JSON Writers
 #### WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses)
-* Establishes the passed in Map as the established Map of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
+* Establishes the passed in Map as the complete list of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
 #### WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter)
 * Adds a custom writer for a specific Class. Returns`WriteOptions`for chained access.
 #### Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses()
 * Returns a Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 #### boolean isCustomWrittenClass(Class<?> clazz)
-* Checks to see if there is a custom writer associated with a given class. Returns true if there is, false otherwise.
+* Checks to see if there is a custom writer associated with a given class. Returns`true`if there is,`false`otherwise.
 ---
 ### "Not" Customized Class Writers
 #### boolean isNotCustomWrittenClass(Class<?> clazz)
-* Checks if a class is on the not-customized list. Returns true if it is, false otherwise.
+* Checks if a class is on the not-customized list. Returns`true`if it is,`false`otherwise.
 #### Set<Class<?>> getNotCustomWrittenClasses()
 * Returns a Set of all Classes on the not-customized list.
 #### WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass)
@@ -199,13 +199,13 @@ Strings when received in the Javascript.  This will let you display them correct
 #### WriteOptions longDateFormat()
 * Changes the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is long. Returns`WriteOptions`for chained access.
 #### boolean isLongDateFormat()
-* Returns true if java.util.Date and java.sql.Date's are being written in long (numeric) format.
+* Returns`true`if java.util.Date and java.sql.Date's are being written in long (numeric) format.
 #### WriteOptions dateTimeFormat(String format)
 * Changes the date-time format to the passed in format. Returns`WriteOptions`for chained access.
 ---
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 #### boolean isNonReferenceableClass(Class<?> clazz)
-* Checks if a class is non-referenceable. Returns true if the passed in class is considered a non-referenceable class.
+* Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 #### Collection<Class<?>> getNonReferenceableClasses()
 * Returns a Collection of classes specifically listed as Logical Primitives.
 #### WriteOptions addNonReferenceableClass(Class<?> clazz)
