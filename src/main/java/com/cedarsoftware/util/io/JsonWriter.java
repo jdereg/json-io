@@ -284,8 +284,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         ReadOptions readOptions = ReadOptionsBuilder.fromMap(readingArgs)
                 .returnAsMaps()
                 .build();
-
-        return JsonUtilities.formatJson(json, readOptions, WriteOptions.copyIfNeeded(writeOptions).prettyPrint(true));
+        WriteOptions copy;
+        copy = writeOptions == null ? new WriteOptions() : new WriteOptions(writeOptions);
+        copy.prettyPrint(true).build();
+        return JsonUtilities.formatJson(json, readOptions, copy);
     }
 
     /**

@@ -171,13 +171,6 @@ public class WriteOptions {
     public enum ShowType {
         ALWAYS, NEVER, MINIMAL
     }
-
-    public static WriteOptions copyIfNeeded(WriteOptions writeOptions) {
-        if (writeOptions == null) {
-            return new WriteOptions();
-        }
-        return writeOptions.built ? new WriteOptions(writeOptions) : writeOptions;
-    }
     
     /**
      * @return ClassLoader to be used when writing JSON to resolve String named classes.

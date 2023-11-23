@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,20 +30,6 @@ class WriteOptionsTest {
     @BeforeEach
     void setUp() {
         options = new WriteOptions();
-    }
-
-    @Test
-    void testCopyIfNeeded() {
-        WriteOptions writeOptions1 = WriteOptions.copyIfNeeded(null);
-        assertNotNull(writeOptions1);
-
-        writeOptions1.shortMetaKeys(true);
-        WriteOptions writeOptions2 = WriteOptions.copyIfNeeded(writeOptions1);
-        assertSame(writeOptions1, writeOptions2);
-
-        writeOptions1.build();
-        writeOptions2 = WriteOptions.copyIfNeeded(writeOptions1);
-        assertNotSame(writeOptions1, writeOptions2);
     }
 
     @Test
