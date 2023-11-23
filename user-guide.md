@@ -68,10 +68,15 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 
 ---
 ### Constructors
-#### WriteOptions()
-* Start with default options and in malleable state.
-#### WriteOptions(WriteOptions other)
-* Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
+<details open>
+<summary>WriteOptions</summary>
+**Start with default options and in malleable state.**
+</details>
+<details open>
+<summary>WriteOptions(WriteOptions other)</summary>
+**Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.**
+</details>
+
 ---
 ### Class Loader
 #### ClassLoader getClassLoader()
@@ -168,7 +173,7 @@ Strings when received in the Javascript. This will let you display them correctl
 ---
 ### Included Fields
 #### Set<String> getIncludedFields(Class<?> clazz)
-* Returns a Set of Strings field names associated to the passed in class to be included in the written JSON.
+* Returns a`Set`of Strings field names associated to the passed in class to be included in the written JSON.
 #### Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses()
 * Returns a`Map`of all Classes and their associated Sets of fields to be included when serialized to JSON.
 #### WriteOptions addIncludedField(Class<?> clazz, String includedField)
