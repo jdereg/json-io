@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.writers.InstantWriter;
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
@@ -34,6 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.cedarsoftware.util.io.writers.InstantWriter;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -83,6 +83,10 @@ public class WriteOptions {
      * the option to clear at the end of serializations.  This item is also
      * a good candidate for LRUCache
      */
+    // TODO: 'writerCache' should be moved outside of WriteOptions.  WriteOptions sole purpose
+    // TODO: is to manage the state of its internal simple settings. It offers up the APIs
+    // TODO: to read this settings to the outside, and those outside classes like writers,
+    // TODO: should be looking at the WriteOptions and adjusting their behavior accordingly.
     private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache;
 
     private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
@@ -114,6 +118,15 @@ public class WriteOptions {
         temp.put(Locale.class, new Writers.LocaleWriter());
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
+
+        // TODO: Customization class should not be changing based on settings here.
+        // TODO: Customized Writer should be referencing WriteOptions to make it's
+        // TODO: subtle changes to output, Isolating the understanding of the customization
+        // TODO: to the Writer, and leaving WriteOptions only possessing flags / indicators.
+        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
+        temp.put(java.sql.Date.class, defaultDateWriter);
+        temp.put(Date.class, defaultDateWriter);
+        
         temp.put(LocalDate.class, new Writers.LocalDateWriter());
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
@@ -123,10 +136,6 @@ public class WriteOptions {
         temp.put(Year.class, new Writers.YearWriter());
         temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
         temp.put(Instant.class, new InstantWriter());
-
-        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
-        temp.put(java.sql.Date.class, defaultDateWriter);
-        temp.put(Date.class, defaultDateWriter);
 
         JsonWriter.JsonClassWriter calendarWriter = new Writers.CalendarWriter();
         temp.put(Calendar.class, calendarWriter);
