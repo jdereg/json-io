@@ -60,9 +60,11 @@ Create a new`WriteOptions`instance and turn various options on/off using the met
     WriteOptions writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
     JsonWriter.toJson(root, writeOptions);
 
-To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the feature settings below.  The`WriteOptions` contains all the "feature" sttings for json-io output JSON.  Below, we show many of the
+To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the feature settings below.
+The`WriteOptions`contains all the "feature" settings for json-io output JSON.  Below, we show many of the
 `WriteOptions`APIs.  You can view the Javadoc on`WriteOptions`for detailed information. The`WriteOptions`can be made
-stateless options by calling the`.build()`method. Once built, the options cannot be modified.  If you have multiple`WriteOptions`features, you can set up distinct instances for each main usage.  A`WriteOptions`isntance 
+stateless options by calling the`.build()`method. Once built, the options cannot be modified.  If you have
+multiple`WriteOptions`features, you can set up distinct instances for each main usage.  A`WriteOptions`instance 
 can be created from another`WriteOptions`instance (use "copy constructor" discussed below).
 ### Constructors
 #### WriteOptions()
@@ -73,7 +75,7 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 ### Class Loader
 #### ClassLoader getClassLoader()
 * Returns the ClassLoader to resolve String class names when writing JSON.
-#### WriteOptions classLoader(ClassLoader classLoader)
+#### WriteOptions classLoader(ClassLoader loader)
 * Sets the ClassLoader to resolve String class names when writing JSON. Returns WriteOptions for chained access.
 ---
 ### MetaKeys - @id, @ref, @type
@@ -104,9 +106,9 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### WriteOptions showTypeInfoNever()
 * Sets to never show type. Returns WriteOptions for chained access.
 #### WriteOptions showTypeInfoMinimal()
-* Sets to show minimal type. This means that when the type of an object can be inferred, a type field will not be output. Returns WriteOptions for chained access.
+* Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. Returns WriteOptions for chained access.
 ---
-### Pretty Print - Multiple line, indented JSON output, or oneline output
+### Pretty Print - Multiple line, indented JSON output, or one-line output
 #### boolean isPrettyPrint()
 * Returns the 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
 #### WriteOptions prettyPrint(boolean prettyPrint)
