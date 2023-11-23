@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 
-class OffsetDateTimeFactoryTests extends HandWrittenDateTests<OffsetDateTime> {
+class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 
     @Test
     void newInstance_testOffsetStringFormat() {

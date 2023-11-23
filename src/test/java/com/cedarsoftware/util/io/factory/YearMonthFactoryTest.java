@@ -1,17 +1,19 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.YearMonth;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.YearMonth;
-import java.util.stream.Stream;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-class YearMonthFactoryTest {
+class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     private static Stream<Arguments> nonValueVariants() {
         return Stream.of(
                 Arguments.of(2023, 12),
@@ -50,4 +52,36 @@ class YearMonthFactoryTest {
         return object;
     }
 
+    @Override
+    protected JsonReader.ClassFactory createFactory() {
+        return new YearMonthFactory();
+    }
+
+    @Override
+    protected Class<YearMonth> getClassForFactory() {
+        return YearMonth.class;
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withNoZone(YearMonth dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(12);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withNoTime(YearMonth dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(2);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withTime(YearMonth dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(2);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_withMilliseconds(YearMonth dt) {
+
+    }
 }

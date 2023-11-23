@@ -7,7 +7,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 
-public abstract class HandWrittenDateTests<T> {
+public abstract class HandWrittenDateFactoryTests<T> {
 
     protected abstract JsonReader.ClassFactory createFactory();
 

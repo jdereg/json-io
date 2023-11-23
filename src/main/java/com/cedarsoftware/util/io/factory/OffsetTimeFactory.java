@@ -6,7 +6,6 @@ import java.time.OffsetTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
@@ -41,11 +40,8 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
     /**
      * Specify zone if you don't want system default
      */
-    private final ZoneId zoneId;
-
     public OffsetTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
-        super(dateFormatter);
-        this.zoneId = zoneId;
+        super(dateFormatter, zoneId);
     }
 
     public OffsetTimeFactory() {
@@ -62,10 +58,7 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
         try {
             return OffsetTime.parse(s, dateTimeFormatter);
         } catch (Exception e) {   // Increase date-time format flexibility - JSON not written by json-io.
-            Date date = DateFactory.parseDate(s);
-            return date.toInstant()
-                    .atZone(zoneId)
-                    .toOffsetDateTime().toOffsetTime();
+            return convertToZonedDateTime(s).toOffsetDateTime().toOffsetTime();
         }
     }
 

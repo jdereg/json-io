@@ -1,11 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
+import java.util.Date;
+
+import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAccessor;
 
 /**
  * Abstract class to help create temporal items.
@@ -32,9 +36,11 @@ import java.time.temporal.TemporalAccessor;
  */
 public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implements JsonReader.ClassFactory {
     protected final DateTimeFormatter dateTimeFormatter;
+    protected final ZoneId zoneId;
 
-    protected AbstractTemporalFactory(DateTimeFormatter dateFormatter) {
+    protected AbstractTemporalFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
         this.dateTimeFormatter = dateFormatter;
+        this.zoneId = zoneId;
     }
 
     @Override
@@ -50,6 +56,16 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
         }
 
         return fromJsonObject(jObj, context);
+    }
+
+    protected ZonedDateTime convertToZonedDateTime(String s) {
+        Date date = DateFactory.parseDate(s);
+
+        if (date == null) {
+            throw new JsonIoException("Could not parse date: " + s);
+        }
+
+        return date.toInstant().atZone(zoneId);
     }
 
     protected abstract T fromString(String s);

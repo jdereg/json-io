@@ -1,17 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
+import static java.time.temporal.ChronoField.YEAR;
 
-import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
-import java.util.Date;
 
-import static java.time.temporal.ChronoField.YEAR;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 public class YearFactory extends AbstractTemporalFactory<Year> {
 
@@ -19,12 +17,12 @@ public class YearFactory extends AbstractTemporalFactory<Year> {
             .appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
             .toFormatter();
 
-    protected YearFactory(DateTimeFormatter dateFormatter) {
-        super(dateFormatter);
+    protected YearFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
+        super(dateFormatter, zoneId);
     }
 
     public YearFactory() {
-        this(PARSER);
+        this(PARSER, ZoneId.systemDefault());
     }
 
     @Override
@@ -32,11 +30,7 @@ public class YearFactory extends AbstractTemporalFactory<Year> {
         try {
             return Year.parse(s, dateTimeFormatter);
         } catch (Exception e) {
-            Date date = DateFactory.parseDate(s);
-            OffsetDateTime dt = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toOffsetDateTime();
-            return Year.of(dt.getYear());
+            return Year.of(convertToZonedDateTime(s).getYear());
         }
     }
 

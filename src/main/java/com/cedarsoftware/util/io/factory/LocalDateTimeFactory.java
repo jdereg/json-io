@@ -1,15 +1,14 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
+
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * Abstract class to help create temporal items.
@@ -36,27 +35,21 @@ import java.util.Date;
  */
 public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime> {
 
-    public LocalDateTimeFactory(DateTimeFormatter dateFormatter) {
-        super(dateFormatter);
+    public LocalDateTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
+        super(dateFormatter, zoneId);
     }
 
     public LocalDateTimeFactory() {
-        super(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        super(DateTimeFormatter.ISO_LOCAL_DATE_TIME, ZoneId.systemDefault());
     }
 
     @Override
     protected LocalDateTime fromString(String s)
     {
-        try
-        {
+        try {
             return LocalDateTime.parse(s, dateTimeFormatter);
-        }
-        catch (Exception e)
-        {   // Increase date-time format flexibility - JSON not written by json-io.
-            Date date = DateFactory.parseDate(s);
-            return date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
+        } catch (Exception e) {
+            return convertToZonedDateTime(s).toLocalDateTime();
         }
     }
 

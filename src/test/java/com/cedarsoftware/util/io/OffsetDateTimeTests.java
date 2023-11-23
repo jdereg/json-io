@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
 
 class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<OffsetDateTime> {
     private static final ZoneOffset Z1 = ZoneOffset.UTC;
@@ -17,6 +18,8 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     private static final ZoneOffset Z2 = ZoneOffset.of("+05:00");
 
     private static final ZoneOffset Z3 = ZoneOffset.of("Z");
+
+    private static final ZoneOffset Z4 = ZoneOffset.of("+07:00");
     
     @Test
     void testOldFormat_nested_withRef() {
@@ -78,8 +81,8 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
 
     @Override
     protected OffsetDateTime provideT4() {
-        LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
-        return OffsetDateTime.of(localDateTime, Z1);
+        LocalDateTime localDateTime = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 999999999);
+        return OffsetDateTime.of(localDateTime, Z4);
     }
 
     @Override
@@ -120,6 +123,6 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(OffsetDateTime expected, Object actual) {
         String value = (String) actual;
-        assertThat(value).isEqualTo("2019-12-15T09:07:16.000002Z");
+        assertThat(value).isEqualTo("2027-12-23T06:07:16.999999999+07:00");
     }
 }

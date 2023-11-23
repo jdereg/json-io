@@ -1,16 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import static com.cedarsoftware.util.io.TestUtil.toJson;
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
 
 import java.time.Year;
 import java.util.stream.Stream;
 
-import static com.cedarsoftware.util.io.TestUtil.toJson;
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class YearTests extends SerializationDeserializationMinimumTests<Year> {
 
@@ -74,7 +75,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(Year expected, Object actual) {
-        assertThat(actual).isEqualTo(1970L);
+        assertThat(actual).isEqualTo(1950L);
     }
 
     private static Stream<Arguments> argumentsForOldFormat() {

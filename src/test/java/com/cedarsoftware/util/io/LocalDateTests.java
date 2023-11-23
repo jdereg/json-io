@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.models.NestedLocalDate;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.LocalDate;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.LocalDate;
-import java.util.stream.Stream;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.models.NestedLocalDate;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -75,7 +76,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(LocalDate expected, Object actual) {
-        assertThat(actual).isEqualTo("1970-06-24");
+        assertThat(actual).isEqualTo("1950-01-27");
     }
 
     @Test

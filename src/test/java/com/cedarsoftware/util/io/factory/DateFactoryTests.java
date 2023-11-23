@@ -6,7 +6,7 @@ import java.util.Date;
 
 import com.cedarsoftware.util.io.JsonReader;
 
-public class DateFactoryTests extends HandWrittenDateTests<Date> {
+public class DateFactoryTests extends HandWrittenDateFactoryTests<Date> {
     @Override
     protected JsonReader.ClassFactory createFactory() {
         return new DateFactory();

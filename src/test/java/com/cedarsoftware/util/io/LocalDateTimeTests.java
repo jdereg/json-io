@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.Arguments;
 
 class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalDateTime> {
 
@@ -27,7 +27,7 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
 
     @Override
     protected LocalDateTime provideT4() {
-        return LocalDateTime.of(1950, 1, 27, 11, 11, 11, 0);
+        return LocalDateTime.of(1950, 1, 27, 11, 11, 11, 999999999);
     }
 
     @Override
@@ -72,7 +72,7 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(LocalDateTime expected, Object actual) {
-        assertThat(actual).isEqualTo("1970-06-24T00:19:15.000000999");
+        assertThat(actual).isEqualTo("1950-01-27T11:11:11.999999999");
     }
 
     private static Stream<Arguments> checkDifferentFormatsByFile() {

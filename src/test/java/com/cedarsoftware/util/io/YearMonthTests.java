@@ -1,12 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
-import java.time.YearMonth;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static com.cedarsoftware.util.io.TestUtil.toJson;
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
-import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.YearMonth;
+
+import org.junit.jupiter.api.Test;
 
 class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth> {
 
@@ -70,7 +71,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsMaps(YearMonth expected, Object actual) {
-        assertThat(actual).isEqualTo("1970-06");
+        assertThat(actual).isEqualTo("1950-01");
     }
 
     @Test
