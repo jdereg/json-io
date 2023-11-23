@@ -68,7 +68,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 
 ---
 ### Constructors
->#### WriteOptions
+>#### WriteOptions()
 >- [ ] Start with default options and in malleable state. 
 >#### WriteOptions(WriteOptions other)
 >- [ ] Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
@@ -119,7 +119,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >#### boolean isWriteLongsAsStrings()
 >Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON longs.
 >#### WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings)
->Set to boolean`true`to turn on writing longs as Strings,`false`to write them as native JSON longs. The default setting 
+>-[ ] Set to boolean`true`to turn on writing longs as Strings,`false`to write them as native JSON longs. The default setting 
 is`false.`This feature is important to marshal JSON with large (18 to 19 digit longs) to Javascript. Long/long values 
 cannot be represented in Javascript because it stores them in a `Double` internally, which cannot represent a 
 full`long`value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
