@@ -47,11 +47,12 @@ of Maps, Arrays (Object[]), and JSON values.  The Maps are actually a `JsonObjec
 `JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see 
 the type information, position within the JSON stream, and other information.  
 
-This 'Maps' representation can be re-written to a JSON String or Stream and _the output JSON will exactly match the
-original input JSON stream_.  This permits a JVM receiving JSON strings / streams that contain class references which 
+This 'Maps' representation can be re-written to a JSON String or Stream and the output JSON will exactly match the
+original input JSON stream.  This permits a JVM receiving JSON strings / streams that contain class references which 
 do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can 
-be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
-can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
+be modified before being written, and the entire graph can be re-written in one collective write.  Any object model 
+can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data.
+
 ---
 ### Controlling the output JSON using `WriteOptions`
 Create a new`WriteOptions`instance and turn various options on/off using the methods below. Example:
