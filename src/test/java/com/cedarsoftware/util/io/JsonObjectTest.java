@@ -257,6 +257,16 @@ class JsonObjectTest
         assertThat(batman.get("partner")).isSameAs(robin);
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    void testEmptyObjectArray() throws Exception {
+        JsonObject[] jsonObject = new JsonObject[]{};
+
+        String json = TestUtil.toJson(jsonObject);
+        assertThat(json).isEqualTo("{}");
+    }
+
+
     @Test
     public void testAsArray()
     {
@@ -271,5 +281,84 @@ class JsonObjectTest
         JsonObject jObj2 = new JsonObject();
         jObj2.put(JsonObject.ITEMS, new Object[] {"hello", "goodbye"});
         assert DeepEquals.deepEquals(jObj, jObj2);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @ParameterizedTest
+    @ValueSource(classes = {HashMap.class, LinkedHashMap.class, JsonObject.class})
+    void testRefsInArray_generatesIdAndRef(Class<? extends Map> c) throws Exception {
+        Map jsonObj1 = generateBatman_withCircularReference_usingObjectArray(c);
+
+        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+
+        assertThat(json)
+                .containsOnlyOnce("@id")
+                .containsOnlyOnce("@ref");
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @ParameterizedTest
+    @ValueSource(classes = {HashMap.class, LinkedHashMap.class, JsonObject.class})
+    void testRefsInArray_reconstitutesCorrectlyAsMaps(Class<? extends Map> c) throws Exception {
+        Map jsonObj1 = generateBatman_withCircularReference_usingObjectArray(c);
+
+        Map batman = (Map) TestUtil.serializeDeserializeAsMaps(jsonObj1);
+
+        assertThat(batman)
+                .containsEntry("name", "Batman")
+                .containsKey("partners");
+
+        Object[] batmansPartners = (Object[]) batman.get("partners");
+        Map robin = (Map) batmansPartners[0];
+
+        assertThat(robin)
+                .containsEntry("name", "Robin")
+                .containsKey("partners");
+
+        Object[] robinsPartners = (Object[]) robin.get("partners");
+        assertThat(robinsPartners[0]).isSameAs(batman);
+        assertThat(batmansPartners[0]).isSameAs(robin);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @ParameterizedTest
+    @ValueSource(classes = {LinkedHashMap.class, JsonObject.class})
+    void testRefsInArray_createsJsonWithoutTypes_inOrderOfInsertion(Class<? extends Map> c) throws Exception {
+        Map jsonObj1 = generateBatman_withCircularReference_usingObjectArray(c);
+
+        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+
+        assertThat(json)
+                .isEqualToIgnoringWhitespace("{\"@id\":1,\"name\":\"Batman\",\"partners\":[{\"name\":\"Robin\",\"partners\":[{\"@ref\":1}]}]}");
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Map generateBatman_withCircularReference_usingObjectArray(Class<? extends Map> c) throws Exception {
+        Map map1 = c.newInstance();
+        Map map2 = c.newInstance();
+
+        map1.put("name", "Batman");
+        map1.put("partners", new Object[]{map2});
+        map2.put("name", "Robin");
+        map2.put("partners", new Object[]{map1});
+        return map1;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Map generateBatman_withCircularReference_usingCollections(Class<? extends Map> mapClass, Class<? extends Collection> collectionClass) throws Exception {
+        Map jsonObj1 = mapClass.newInstance();
+        Map jsonObj2 = mapClass.newInstance();
+
+        Collection c1 = collectionClass.newInstance();
+        c1.add(jsonObj2);
+
+        Collection c2 = collectionClass.newInstance();
+        c2.add(jsonObj1);
+
+        jsonObj1.put("name", "Batman");
+        jsonObj1.put("partners", c1);
+        jsonObj2.put("name", "Robin");
+        jsonObj2.put("partners", c2);
+        return jsonObj1;
     }
 }
