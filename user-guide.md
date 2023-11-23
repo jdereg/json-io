@@ -81,7 +81,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 ---
 ### MetaKeys - @id, @ref, @type
 #### boolean isShortMetaKeys()
-* Returns`true`if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values),`false`for full size. 'false' is the default.
+* Returns`true`if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values),`false`for full size. `false` is the default.
 #### WriteOptions shortMetaKeys(boolean shortMetaKeys)
 * Sets the boolean`true`to turn on short meta-keys,`false`for long. Returns`WriteOptions`for chained access.
 ---
@@ -111,7 +111,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 ---
 ### Pretty Print - Multiple line, indented JSON output, or one-line output
 #### boolean isPrettyPrint()
-* Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is`false.`
+* Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is`false.`
 #### WriteOptions prettyPrint(boolean prettyPrint)
 * Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`WriteOptions`for chained access.
 ---
@@ -160,7 +160,7 @@ Strings when received in the Javascript. This will let you display them correctl
 #### boolean isNotCustomWrittenClass(Class<?> clazz)
 * Checks if a class is on the not-customized list. Returns`true`if it is,`false`otherwise.
 #### Set<Class<?>> getNotCustomWrittenClasses()
-* Returns a Set of all Classes on the not-customized list.
+* Returns a`Set`of all Classes on the not-customized list.
 #### WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass)
 * Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance. Returns`WriteOptions`for chained access.
 #### WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses)
@@ -174,19 +174,19 @@ Strings when received in the Javascript. This will let you display them correctl
 #### WriteOptions addIncludedField(Class<?> clazz, String includedField)
 * Adds a single field to be included in the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields)
-* Adds a Collection of fields to be included in written JSON for a specific class. Returns`WriteOptions`for chained access.
+* Adds a`Collection`of fields to be included in written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields)
 * Adds multiple Classes and their associated fields to be included in the written JSON. Returns`WriteOptions`for chained access.
 ---
 ### Excluded Fields
 #### Set<String> getExcludedFields(Class<?> clazz)
-* Returns a Set of Strings field names associated to the passed in class to be excluded in the written JSON.
+* Returns a`Set`of Strings field names associated to the passed in class to be excluded in the written JSON.
 #### Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses()
 * Returns a`Map`of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
 #### WriteOptions addExcludedField(Class<?> clazz, String excludedField)
 * Adds a single field to be excluded from the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields)
-* Adds a Collection of fields to be excluded in written JSON for a specific class. Returns`WriteOptions`for chained access.
+* Adds a`Collection`of fields to be excluded in written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields)
 * Adds multiple Classes and their associated fields to be excluded from the written JSON. Returns`WriteOptions`for chained access.
 ---
@@ -194,11 +194,12 @@ Strings when received in the Javascript. This will let you display them correctl
 #### WriteOptions isoDateFormat()
 * Changes the date-time format to the ISO date format: "yyyy-MM-dd". Returns`WriteOptions`for chained access.
 #### WriteOptions isoDateTimeFormat()
-* Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default). Returns`WriteOptions`for chained access.
+* Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss". Returns`WriteOptions`for chained access.
 #### WriteOptions longDateFormat()
-* Changes the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is long. Returns`WriteOptions`for chained access.
+* Changes the`java.uti.Date`and`java.sql.Date`format output to a`long,`the number of seconds since Jan 1, 1970 at midnight. 
+For speed, the default format is`long.`Returns`WriteOptions`for chained access.
 #### boolean isLongDateFormat()
-* Returns`true`if java.util.Date and java.sql.Date's are being written in long (numeric) format.
+* Returns`true`if`java.util.Date`and`java.sql.Date` are being written in`long`(numeric) format.
 #### WriteOptions dateTimeFormat(String format)
 * Changes the date-time format to the passed in format. Returns`WriteOptions`for chained access.
 ---
@@ -206,10 +207,10 @@ Strings when received in the Javascript. This will let you display them correctl
 #### boolean isNonReferenceableClass(Class<?> clazz)
 * Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 #### Collection<Class<?>> getNonReferenceableClasses()
-* Returns a Collection of all non-referenceable classes.
+* Returns a`Collection`of all non-referenceable classes.
 #### WriteOptions addNonReferenceableClass(Class<?> clazz)
 * Adds a class to be considered "non-referenceable." Examples are the built-in primitives.  Making a class non-referenceable means that it will never 
-have an @id tag, nor @ref tag. When loaded, these classes will always have an instance created for them. Typically used
+have an @id tag, nor @ref tag in the output JSON. When loaded, these classes will always have an instance created for them. Typically used
 for small classes like `Date, LocalDate, LocalDateTime,` where you are not pointing many fields to the same instance. Using 
 this option for a class will cause more memory to be consumed on the reading side, as each class of this type 
 output will always create a new instance.  If you have a class with many fields (large instance) and many other fields outside this
