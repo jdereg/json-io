@@ -540,7 +540,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             final Object obj = stack.removeFirst();
 
-            if (!writeOptions.isNonReferenceableItem(obj.getClass()))
+            if (!writeOptions.isNonReferenceableClass(obj.getClass()))
             {
                 Long id = visited.get(obj);
                 if (id != null)
@@ -564,7 +564,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
             if (clazz.isArray())
             {
-                if (!writeOptions.isNonReferenceableItem(clazz.getComponentType()))
+                if (!writeOptions.isNonReferenceableClass(clazz.getComponentType()))
                 {   // Speed up: do not traceReferences of primitives, they cannot reference anything
                     final int len = Array.getLength(obj);
 
@@ -588,11 +588,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                         final Entry entry = (Entry) item;
                         Object key = entry.getKey();
                         Object value = entry.getValue();
-                        if (value != null && !writeOptions.isNonReferenceableItem(value.getClass()))
+                        if (value != null && !writeOptions.isNonReferenceableClass(value.getClass()))
                         {
                             stack.addFirst(value);
                         }
-                        if (key != null && !writeOptions.isNonReferenceableItem(key.getClass()))
+                        if (key != null && !writeOptions.isNonReferenceableClass(key.getClass()))
                         {
                             stack.addFirst(key);
                         }
@@ -609,7 +609,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             {
                 for (final Object item : (Collection)obj)
                 {
-                    if (item != null && !writeOptions.isNonReferenceableItem(item.getClass()))
+                    if (item != null && !writeOptions.isNonReferenceableClass(item.getClass()))
                     {
                         stack.addFirst(item);
                     }
@@ -617,7 +617,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             }
             else
             {   // Speed up: do not traceReferences of primitives, they cannot reference anything
-                if (!writeOptions.isNonReferenceableItem(obj.getClass()))
+                if (!writeOptions.isNonReferenceableClass(obj.getClass()))
                 {
                     traceFields(stack, obj);
                 }
@@ -665,7 +665,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 if (excludedFields == null || !excludedFields.contains(accessor))
                 {
                     final Object o = accessor.retrieve(obj);
-                    if (o != null && !writeOptions.isNonReferenceableItem(o.getClass()))
+                    if (o != null && !writeOptions.isNonReferenceableClass(o.getClass()))
                     {   // Trace through objects that can reference other objects
                         stack.addFirst(o);
                     }
@@ -677,7 +677,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private boolean writeOptionalReference(Object obj) throws IOException
     {
-        if (obj == null || writeOptions.isNonReferenceableItem(obj.getClass()))
+        if (obj == null || writeOptions.isNonReferenceableClass(obj.getClass()))
         {
             return false;
         }

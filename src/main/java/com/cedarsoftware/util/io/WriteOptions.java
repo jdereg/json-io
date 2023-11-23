@@ -883,7 +883,7 @@ public class WriteOptions {
      *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
      * @return boolean true if the passed in class is considered a non-referenceable class.
      */
-    public boolean isNonReferenceableItem(Class<?> clazz) {
+    public boolean isNonReferenceableClass(Class<?> clazz) {
         return nonReferenceableItems.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
@@ -895,13 +895,13 @@ public class WriteOptions {
      * @return Collection of classes specifically listed as Logical Primitives.  In addition to the return
      * classes, derivatives of Number and Date are also considered Logical Primitives by json-io.
      */
-    public Collection<Class<?>> getNonReferenceableItems()
+    public Collection<Class<?>> getNonReferenceableClasses()
     {
         return built ? nonReferenceableItems : new LinkedHashSet<>(nonReferenceableItems);
     }
 
     /**
-     * @param clazz class to add to be considered a Logical Primitive.  Just like an "int" for example, any
+     * @param clazz class to add to be considered a non-referenceable object.  Just like an "int" for example, any
      *              class added here will never use an @id/@ref pair.  The downside, is that when read,
      *              each instance, even if the same as another, will use memory.
      * @return WriteOptions for chained access.

@@ -53,148 +53,162 @@ do not exist in the JVM that is parsing the JSON, to completely read / write the
 be modified before being written, and the entire graph can be re-written in one collective write.  _Any object model 
 can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data._
 ---
-#### The optional values below are public methods on the `WriteOptions.`
-
-To pass these to `JsonWriter.toJson(root, writeOptions)` set up a `WriteOptions` like below.  The 
-`WriteOptions` contains all the "feature" sttings for json-io output JSON.  Below, we show many of the
-`WriteOptions` APIs.  See the Javadoc on WriteOptions for detailed information. The `WriteOptions` can be made
-stateless options by calling the .seal() method. Once sealed, the options cannot be modified.  If you have multiple
-`WriteOptions` features, you can set up distinct instances for each main usage.  A `WriteOptions` can be created from
-another `WriteOptions` instance.
+### Controlling the output JSON using `WriteOptions`
+Create a new`WriteOptions`instance and turn various options on/off using the methods below. Example:
 
     WriteOptions writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
     JsonWriter.toJson(root, writeOptions);
 
-Set to String Class name, JsonWriter.JsonClassWriter to override the default
-JSON output for a given class, or set a bunch of them at once:
-
-    .withCustomWriter(Class, JsonWriter.JsonClassWriter)
-    .withCustomWriters(Map<Class, JsonClassWriter>)
-
-    writeOptions.getCustomWriters()     // Get all custom writers
- 
-Prevent customized writer for a particular class.  Since these are inherited, you may
-want to "turn off" write-customization that was unintentionally picked up.
-
-    .withNoCustomizationFor(Class)
-    .withNoCustomizationsFor(Collection<Class>)
-
-    writeOptions.getNonCustomClasses()  // Get classes that will not have custom writers
-
-Set the date format for how dates are written.  Example: "yyyy/MM/dd HH:mm".  
-                                                                            
-    .withDateFormat(String)
-    .withIsoDateFormat()
-    .withIsoDateTimeFormat()
-
-    writeOptions.getDateFormat()        // Get date format
-
-Force class types to be written out for all JSON objects, or never show Type info, or show the
-minimum amount of type info. Shows up as "@type" or "@t" fields on a JSON object.  Only needed
-when the reader is unable to determine what type of class to instantiate.  This can happen with a field
-that is of type Object and the instance side is specific.  Same with Object[]'s and or List<Object>, etc.
-
-    .showTypeInfoAlways()
-    .showTypeInfoNever()
-    .showTypeInfoMinimal()
-
-    writeOptions.isAlwaysShowingType()  // To test setting
-    writeOptions.isNeverShowingType()
-    writeOptions.isShowingMinimalType()
- 
-Force nicely formatted JSON output.  (See http://jsoneditoronline.org for example format)
-
-    .withPrettyPrint()
-
-    writeOptions.isPrettyPrint()        // Test the setting
-
-Specify which fields to include in the output JSON for a particular class, or a many classes at once:
-
-    .includedFields(Class, Collection<String>)
-    .includedFields(Map<Class, Collection<String>>)
-
-    writeOptions.getIncludedFields()    // Get all the Classes and their included fields' lists.
-
-Specify which fields to exclude in the JSON output for a particular class, or many classes at once.
-
-    .excludedFields(Class, Collection<String>)
-    .excludedFields(Map<Class, Collection<String>>)
-
-    writeOptions.getExcludedFields()    // Get all the Classes and their excludeed fields' lists.
-
-Specify that only public variables of ENUMs are serialized:
-
-    .doNotWritePrivateEnumFields()
-    .writePrivateEnumFields()
-
-    writeOptions.isEnumPublicOnly()     // To check setting.
-
-To have Longs written as strings in quotes, which is Javascript safe.  Obscure bugs happen in Javascript
-when a full 19 digit long is sent as-is to Javascript (because Javascript stores them in a double internally).
-
-    .writeLongsAsStrings()
-
-To use custom, shorthand abbreviations for type names (the value-side of the @type field), you can specify
-type name mappings:
-
-    .withCustomTypeName(Class, String)
-    .withCustomTypeName(String, String)
-    .withCustomTypeNames(Map<String, String>)
-
-To make the JSON more compact, you can reduce the size of "meta field" names. @type ==> @t, @ref ==> @r, @id ==> @i, @keys ==> @k, @items ==> @e
-
-    .withShortMetaKeys()
-
-If you do not want to write field values ot JSON when their values are null:
-
-    .skipNullFields()
-
-Set the `ClassLoader` to use when turning String class names into JVM classes:
-
-    .withClassLoader(ClassLoader)
-
-Force Map output to use @keys/@values even if a Map contains all String keys:
-
-    .forceMapOutputAsKeysAndValues()
-    .doNotForceMapOutputAsKeysAndValues()
+To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the feature settings below.  The`WriteOptions` contains all the "feature" sttings for json-io output JSON.  Below, we show many of the
+`WriteOptions`APIs.  You can view the Javadoc on`WriteOptions`for detailed information. The`WriteOptions`can be made
+stateless options by calling the`.build()`method. Once built, the options cannot be modified.  If you have multiple`WriteOptions`features, you can set up distinct instances for each main usage.  A`WriteOptions`isntance 
+can be created from another`WriteOptions`instance (use "copy constructor" discussed below).
+### Constructors
+#### WriteOptions()
+* Start with default options and in malleable state.
+#### WriteOptions(WriteOptions other)
+* Copy all the settings from the passed in 'other' WriteOptions.  The`WriteOptions`instance starts off in malleable state.
 ---
-#### The optional values below are public methods on the `ReadOptionsBuilder.`
-
-    CUSTOM_READER_MAP       // Set to Map<Class, JsonReader.JsonClassReader> to
-                            // override the default JSON reader for a given class. 
-    NOT_CUSTOM_READER_MAP   // Set to Collection<Class> to indicate classes that should
-                            // not be read by a custom reader.
-    USE_MAPS                // If set to boolean true, the read-in JSON will be 
-                            // turned into a Map of Maps (JsonObject) representation. Note
-                            // that calling the JsonWriter on this root Map will indeed
-                            // write the equivalent JSON stream as was read.
-    TYPE_NAME_MAP           // If set, this map will be used when writing @type values. 
-                            // Allows short-hand abbreviations of type names.
-    UNKNOWN_TYPE            // Set to null (or leave out), unknown objects are returned
-                            // as Maps.  Set to String class name, and unknown objects 
-                            // will be created as with this class name, and the fields 
-                            // will be set on it. Set to false, and an exception will be 
-                            // thrown when an unknown object type is encountered.  The 
-                            // location in the JSON will be given.
-    FAIL_ON_UNKNOWN_TYPE    // Set to Boolean.TRUE to have JSON reader throw JsonIoException
-                            // when a @type value references a class that is not loadable
-                            // from the class loader. Set to any other value (or leave out)
-                            // and JSON parsing will return a Map to represent the unknown
-                            // object defined by the invalid @type value.
-    CLASSLOADER             // ClassLoader instance to use when turning String names of     
-                            // classes into JVM Class instances.
-      
-### Customization
-
-#### Customization technique 1: Drop unwanted fields
-* **Included fields**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
-Use the `WriteOptionsBuilder().includedFields(...)` to associate a `List` of `String` field names to a particular `Class` C.  When the class
-is being written, only the fields you list will be written.
-
-* **Excluded fields**: Let's say a class that you want to serialize has a field on it that you do not want written out, like a `ClassLoader` reference.
-Use the `WriteOptionsBuilder.excludedFields(...)` to associate a `List` of `String` field names to a particular `Class` C.  When the class
-is being written, any field listed here will not be written.  Excluded fields take priority over included fields.
-
+### Class Loader
+#### ClassLoader getClassLoader()
+* Returns the ClassLoader to resolve String class names when writing JSON.
+#### WriteOptions classLoader(ClassLoader classLoader)
+* Sets the ClassLoader to resolve String class names when writing JSON. Returns WriteOptions for chained access.
+---
+### MetaKeys - @id, @ref, @type
+#### boolean isShortMetaKeys()
+* Returns true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
+#### WriteOptions shortMetaKeys(boolean shortMetaKeys)
+* Sets the boolean true to turn on short meta-keys, false for long. Returns WriteOptions for chained access.
+---
+### Aliasing - shorten class names in @type.
+#### String getTypeNameAlias(String typeName)
+* Alias Type Names, e.g. "alist" instead of "java.util.ArrayList".
+#### Map<String, String> aliasTypeNames()
+* Returns Map<String, String> containing String class names to alias names.
+#### WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames)
+* Sets the Map containing String class names to alias names. The passed in Map will be copied, and be the new baseline settings. Returns WriteOptions for chained access.
+#### WriteOptions aliasTypeName(String typeName, String alias)
+* Sets the alias for a given class name. Returns WriteOptions for chained access.
+---
+### @Type - used to provide hint to JsonReader to know what Classes to instantiate.
+#### boolean isAlwaysShowingType()
+* Returns true if set to always show type (@type).
+#### boolean isNeverShowingType()
+* Returns true if set to never show type (no @type).
+#### boolean isMinimalShowingType()
+* Returns true if set to show minimal type (@type).
+#### WriteOptions showTypeInfoAlways()
+* Sets to always show type. Returns WriteOptions for chained access.
+#### WriteOptions showTypeInfoNever()
+* Sets to never show type. Returns WriteOptions for chained access.
+#### WriteOptions showTypeInfoMinimal()
+* Sets to show minimal type. This means that when the type of an object can be inferred, a type field will not be output. Returns WriteOptions for chained access.
+---
+### Pretty Print - Multiple line, indented JSON output, or oneline output
+#### boolean isPrettyPrint()
+* Returns the 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
+#### WriteOptions prettyPrint(boolean prettyPrint)
+* Sets the 'prettyPrint' setting, true to turn on, false will turn off. Returns WriteOptions for chained access.
+---
+#### boolean isWriteLongsAsStrings()
+* Returns true indicating longs will be written as Strings, false to write them out as native JSON longs.
+#### WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings)
+* Sets the boolean true to turn on writing longs as Strings, false to write them as native JSON longs. Returns WriteOptions for chained access.
+---
+### null field values
+#### boolean isSkipNullFields()
+* Returns true indicating fields with null values will not be written, false will still output the field with an associated null value. The default is false.
+#### WriteOptions skipNullFields(boolean skipNullFields)
+* Sets the boolean where true indicates fields with null values will not be written to the JSON, false will allow the field to still be written. Returns WriteOptions for chained access.
+---
+### Map output
+#### boolean isForceMapOutputAsTwoArrays()
+* Returns true if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is false.
+#### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
+* Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns WriteOptions for chained access.
+---
+### Enum Options
+#### boolean isWriteEnumAsString()
+* Returns true if enums are to be written out as Strings (not a full JSON object) when possible.
+#### WriteOptions writeEnumsAsString()
+* Sets the option to write out enums as a String. Returns WriteOptions for chained access.
+#### boolean isEnumPublicFieldsOnly()
+* Returns true indicating that only public fields will be output on an Enum.
+#### WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly)
+* Sets the option to write out all the member fields of an enum. Returns WriteOptions for chained access.
+---
+### Customized JSON Writers
+#### WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses)
+* Establishes the passed in Map as the established Map of custom writers to be used when writing JSON. Returns WriteOptions for chained access.
+#### WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter)
+* Adds a custom writer for a specific Class. Returns WriteOptions for chained access.
+#### Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses()
+* Returns a Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
+#### boolean isCustomWrittenClass(Class<?> clazz)
+* Checks to see if there is a custom writer associated with a given class. Returns true if there is, false otherwise.
+---
+### "Not" Customized Class Writers
+#### boolean isNotCustomWrittenClass(Class<?> clazz)
+* Checks if a class is on the not-customized list. Returns true if it is, false otherwise.
+#### Set<Class<?>> getNotCustomWrittenClasses()
+* Returns a Set of all Classes on the not-customized list.
+#### WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass)
+* Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance. Returns WriteOptions for chained access.
+#### WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses)
+* Initializes the list of classes on the non-customized list. Returns WriteOptions for chained access.
+---
+### Included Fields
+#### Set<String> getIncludedFields(Class<?> clazz)
+* Returns a Set of Strings field names associated to the passed in class to be included in the written JSON.
+#### Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses()
+* Returns a Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
+#### WriteOptions addIncludedField(Class<?> clazz, String includedField)
+* Adds a single field to be included in the written JSON for a specific class. Returns WriteOptions for chained access.
+#### WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields)
+* Adds a Collection of fields to be included in written JSON for a specific class. Returns WriteOptions for chained access.
+#### WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields)
+* Adds multiple Classes and their associated fields to be included in the written JSON. Returns WriteOptions for chained access.
+---
+### Excluded Fields
+#### Set<String> getExcludedFields(Class<?> clazz)
+* Returns a Set of Strings field names associated to the passed in class to be excluded in the written JSON.
+#### Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses()
+* Returns a Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
+#### WriteOptions addExcludedField(Class<?> clazz, String excludedField)
+* Adds a single field to be excluded from the written JSON for a specific class. Returns WriteOptions for chained access.
+#### WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields)
+* Adds a Collection of fields to be excluded in written JSON for a specific class. Returns WriteOptions for chained access.
+#### WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields)
+* Adds multiple Classes and their associated fields to be excluded from the written JSON. Returns WriteOptions for chained access.
+---
+### java.util.Date and java.sql.Date format
+#### WriteOptions isoDateFormat()
+* Changes the date-time format to the ISO date format: "yyyy-MM-dd". Returns WriteOptions for chained access.
+#### WriteOptions isoDateTimeFormat()
+* Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default). Returns WriteOptions for chained access.
+#### WriteOptions longDateFormat()
+* Changes the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970 at midnight. Returns WriteOptions for chained access.
+#### boolean isLongDateFormat()
+* Returns true if java.util.Date and java.sql.Date's are being written in long (numeric) format.
+#### WriteOptions dateTimeFormat(String format)
+* Changes the date-time format to the passed in format. Returns WriteOptions for chained access.
+---
+### Non-Referenceable Classes (Opposite of Instance Folding)
+#### boolean isNonReferenceableClass(Class<?> clazz)
+* Checks if a class is non-referenceable. Returns true if the passed in class is considered a non-referenceable class.
+#### Collection<Class<?>> getNonReferenceableClasses()
+* Returns a Collection of classes specifically listed as Logical Primitives.
+#### WriteOptions addNonReferenceableClass(Class<?> clazz)
+* Adds a class to be considered "non-referenceable." Examples are the built-in primitives.  Making a class non-referenceable means that it will never 
+have an @id tag, nor @ref tag. When loaded, these classes will always have an instance created for them. Typically used
+for small classes like a date, LocalDate, LocalDateTime, where you are not pointing many fields to the same instance. Using 
+this option for a class will cause more memory to be consumed on the reading side, as each class of this type 
+output, will always create a new instance.  If you had a large instance to which many other fields pointed to, and that
+large instance is marked as "non-referenceable," then that large instance would be loaded into memory uniquely for each object
+that pointed to it.  So this does change the "shape" of your object graph.
+---
+### ReadOptions
 #### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactory)`
 There are times when **json-io** cannot instantiate a particular class even though it makes many attempts to instantiate 
 a class, including looping through all the constructors (public, private) and invoking them with default values, etc.  
@@ -209,38 +223,10 @@ processing will happen on your instance.  If you  decide to only use your ClassF
 your code creates the instance, **json-io** will reflectively stuff the values from the `jObj` (`JsonObject`) into the
 instance you created.
  
-#### Customization technique 3: Shorter meta-keys (@type -> @t, @id -> @i, @ref -> @r, @keys -> @k, @items -> @e)  
-Use a `new WriteOptions()` and set `withShortMetaKeys()` to see the single-letter meta keys used in the outputted JSON.  
-In addition to the shorter meta keys, you can and a list of substitutions of your own to use.  For example, you may want to see 
-`alist` instead of `java.util.ArrayList`.  This is only applicable if you are writing with @types in the JSON.
-
-      WriteOptions writeOptions = new WriteOptions().
-        withShortMetaKeys().
-        withCustomTypeName('java.util.ArrayList', 'alist').
-        withCustomTypeName('java.util.LinkedHashMap', 'lmap').
-      String json = JsonWriter.toJson(yourObject, writeOptions)
-           
 #### Customization technique 4: Custom serializer
 New APIs have been added to allow you to associate a custom reader / writer class to a particular class if you want it 
 to be read / written specially in the JSON output.  The **json-io** approach allows you to customize the JSON format for 
 classes for which you do not have the source code.
-
-    Example: Note the Person has a List of pets, and in this case, it re-uses 
-    JsonWriter to write that part of the class out (no need to customize it):
-    
-    public static class CustomPersonWriter implements JsonWriter.JsonClassWriter
-    {
-        public void write(Object o, boolean showType, Writer output, WriteOptions writeOptions) throws IOException
-        {
-            Person p = (Person) o
-            output.write('"first":"')
-            output.write(p.getFirstName())
-            output.write('","last":"')
-            output.write(p.getLastName())
-            JsonWriter writer = Support.getWriter(args)
-            writer.writeImpl(p.getPets(), true)
-        }
-    }
  
 #### Customization technique 5: Processing JSON from external sources.
 When reading JSON from external sources, you may want to start with:

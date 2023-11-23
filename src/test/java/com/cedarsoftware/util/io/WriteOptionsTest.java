@@ -64,14 +64,14 @@ class WriteOptionsTest {
     // Test for isLogicalPrimitive method
     @Test
     void testIsLogicalPrimitive() {
-        assertTrue(options.isNonReferenceableItem(Date.class)); // Assuming Date is a logical primitive
-        assertFalse(options.isNonReferenceableItem(Object.class)); // Assuming Object is not
+        assertTrue(options.isNonReferenceableClass(Date.class)); // Assuming Date is a logical primitive
+        assertFalse(options.isNonReferenceableClass(Object.class)); // Assuming Object is not
     }
 
     // Test for getLogicalPrimitives method
     @Test
     void testGetLogicalPrimitives() {
-        Collection<Class<?>> logicalPrimitives = options.getNonReferenceableItems();
+        Collection<Class<?>> logicalPrimitives = options.getNonReferenceableClasses();
         assertNotNull(logicalPrimitives);
         assertTrue(logicalPrimitives instanceof LinkedHashSet);
     }
@@ -80,7 +80,7 @@ class WriteOptionsTest {
     @Test
     void testAddLogicalPrimitive() {
         options.addNonReferenceableClass(String.class);
-        assertTrue(options.isNonReferenceableItem(String.class));
+        assertTrue(options.isNonReferenceableClass(String.class));
     }
 
     // Test for sealing the options
