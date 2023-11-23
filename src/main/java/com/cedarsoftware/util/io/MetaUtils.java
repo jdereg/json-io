@@ -1,9 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
@@ -54,9 +53,10 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
+import com.cedarsoftware.util.io.factory.DateFactory;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -546,7 +546,7 @@ public class MetaUtils
      * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
      * this is weird.  Note that: """this is "really" weird" will be: this is "really" weird.
      */
-    static String removeLeadingAndTrailingQuotes(String input)
+    public static String removeLeadingAndTrailingQuotes(String input)
     {
         Matcher m = extraQuotes.matcher(input);
         if (m.find())

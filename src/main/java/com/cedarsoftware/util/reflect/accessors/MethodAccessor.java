@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.reflect.accessors;
 
-import com.cedarsoftware.util.io.MetaUtils;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+
+import com.cedarsoftware.util.io.MetaUtils;
 
 public class MethodAccessor extends AbstractAccessor {
     private final Method method;
@@ -17,6 +17,7 @@ public class MethodAccessor extends AbstractAccessor {
         // class modifiers for static classes (like in our tests) may not be accessible if class is not public
         if (!Modifier.isPublic(method.getDeclaringClass().getModifiers())) {
             MetaUtils.trySetAccessible(method);
+
         }
 
         this.method = method;

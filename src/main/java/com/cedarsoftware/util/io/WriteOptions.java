@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.io.writers.InstantWriter;
+import com.cedarsoftware.util.io.writers.LongWriter;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
@@ -94,6 +95,7 @@ public class WriteOptions {
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
     private boolean forceMapOutputAsTwoArrays = false;
+    private boolean allowNanAndInfinity = false;
     private boolean enumPublicFieldsOnly = false;
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
@@ -126,7 +128,7 @@ public class WriteOptions {
         JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
         temp.put(java.sql.Date.class, defaultDateWriter);
         temp.put(Date.class, defaultDateWriter);
-        
+
         temp.put(LocalDate.class, new Writers.LocalDateWriter());
         temp.put(LocalTime.class, new Writers.LocalTimeWriter());
         temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
@@ -147,23 +149,31 @@ public class WriteOptions {
         temp.put(URL.class, stringWriter);
         temp.put(ZoneOffset.class, stringWriter);
 
+        JsonWriter.JsonClassWriter characterWriter = new Writers.CharacterWriter();
+        temp.put(Character.class, characterWriter);
+        temp.put(char.class, characterWriter);
+
         JsonWriter.JsonClassWriter primitiveValueWriter = new Writers.PrimitiveValueWriter();
-//        temp.put(byte.class, primitiveValueWriter);
-//        temp.put(Byte.class, primitiveValueWriter);
-//        temp.put(short.class, primitiveValueWriter);
-//        temp.put(Short.class, primitiveValueWriter);
-//        temp.put(int.class, primitiveValueWriter);
-//        temp.put(Integer.class, primitiveValueWriter);
-//        temp.put(long.class, primitiveValueWriter);
-//        temp.put(Long.class, primitiveValueWriter);
-//        temp.put(float.class, primitiveValueWriter);
-//        temp.put(Float.class, primitiveValueWriter);
-//        temp.put(double.class, primitiveValueWriter);
-//        temp.put(Double.class, primitiveValueWriter);
-//        temp.put(boolean.class, primitiveValueWriter);
-//        temp.put(Boolean.class, primitiveValueWriter);
-//        temp.put(char.class, primitiveValueWriter);
-//        temp.put(Character.class, primitiveValueWriter);
+        temp.put(byte.class, primitiveValueWriter);
+        temp.put(Byte.class, primitiveValueWriter);
+        temp.put(short.class, primitiveValueWriter);
+        temp.put(Short.class, primitiveValueWriter);
+        temp.put(int.class, primitiveValueWriter);
+        temp.put(Integer.class, primitiveValueWriter);
+
+        JsonWriter.JsonClassWriter longWriter = new LongWriter();
+        temp.put(long.class, longWriter);
+        temp.put(Long.class, longWriter);
+        temp.put(boolean.class, primitiveValueWriter);
+        temp.put(Boolean.class, primitiveValueWriter);
+
+        JsonWriter.JsonClassWriter floatWriter = new Writers.FloatWriter();
+        temp.put(float.class, floatWriter);
+        temp.put(Float.class, floatWriter);
+
+        JsonWriter.JsonClassWriter doubleWriter = new Writers.DoubleWriter();
+        temp.put(double.class, doubleWriter);
+        temp.put(Double.class, doubleWriter);
 
         temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicInteger.class, primitiveValueWriter);
@@ -263,6 +273,7 @@ public class WriteOptions {
         prettyPrint = other.prettyPrint;
         writeLongsAsStrings = other.writeLongsAsStrings;
         skipNullFields = other.skipNullFields;
+        this.allowNanAndInfinity = other.allowNanAndInfinity;
         forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
         enumPublicFieldsOnly = other.enumPublicFieldsOnly;
         notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
@@ -478,6 +489,26 @@ public class WriteOptions {
     public WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
         throwIfBuilt();
         this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
+        return this;
+    }
+
+    /**
+     * @return boolean will return true if NAN and Infinity are allowed to be written out for
+     * Doubles and Floats, else null will be written out..
+     */
+    public boolean isAllowNanAndInfinity() {
+        return allowNanAndInfinity;
+    }
+
+    /**
+     * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
+     *                            Double and Floats to be output as NAN and INFINITY, false
+     *                            and these values will come across as null.
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions allowNanAndInfinity(boolean allowNanAndInfinity) {
+        throwIfBuilt();
+        this.allowNanAndInfinity = allowNanAndInfinity;
         return this;
     }
 

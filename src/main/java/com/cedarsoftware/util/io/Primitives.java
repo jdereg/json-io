@@ -5,7 +5,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class Primitives {
+
     static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
+
+    static final Set<Class<?>> NATIVE_JSON_TYPES = new HashSet<>();
 
     static {
         PRIMITIVE_WRAPPERS.add(Byte.class);
@@ -16,6 +19,22 @@ public class Primitives {
         PRIMITIVE_WRAPPERS.add(Float.class);
         PRIMITIVE_WRAPPERS.add(Boolean.class);
         PRIMITIVE_WRAPPERS.add(Short.class);
+
+        NATIVE_JSON_TYPES.add(Long.class);
+        NATIVE_JSON_TYPES.add(long.class);
+        NATIVE_JSON_TYPES.add(Double.class);
+        NATIVE_JSON_TYPES.add(double.class);
+        NATIVE_JSON_TYPES.add(String.class);
+        NATIVE_JSON_TYPES.add(Boolean.class);
+        NATIVE_JSON_TYPES.add(boolean.class);
+        NATIVE_JSON_TYPES.add(Object[].class);
+        //NATIVE_JSON_TYPES.add(LinkedHashMap.class);
+    }
+
+    /**
+     * Statically accessed class, no need for Construction
+     */
+    private Primitives() {
     }
     
     /**
@@ -25,6 +44,15 @@ public class Primitives {
      */
     public static boolean isPrimitive(Class<?> c) {
         return c.isPrimitive() || PRIMITIVE_WRAPPERS.contains(c);
+    }
+
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
+     * Integer, Long, Boolean, etc. are considered primitives by this method.
+     */
+    public static boolean isJsonType(Class<?> c) {
+        return NATIVE_JSON_TYPES.contains(c);
     }
 
     /**

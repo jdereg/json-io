@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.Externalizable;
 import java.io.Serializable;
@@ -35,7 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -129,10 +129,10 @@ public class MetaUtilsTests {
         String methodName = "blame";
         Object[] args = new Object[]{17, 34.5, map};
         String msg = MetaUtils.getLogMessage(methodName, args);
-        assert msg.equals("blame({\"value\":17}  {\"value\":34.5}  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.1415926535...)");
+        assertThat(msg).isEqualTo("blame(17  34.5  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.1415926535...)");
 
         msg = MetaUtils.getLogMessage(methodName, args, 500);
-        assert msg.equals("blame({\"value\":17}  {\"value\":34.5}  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.141592653589793})");
+        assertThat(msg).isEqualTo("blame(17  34.5  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.141592653589793})");
     }
 
     @Test

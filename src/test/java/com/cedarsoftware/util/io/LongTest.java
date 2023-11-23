@@ -1,12 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -152,8 +154,9 @@ public class LongTest
         WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
         String json = TestUtil.toJson(x, options);
 
-        assert json.contains("\"49\"");
-        assert json.contains("\"205\"");
+        assertThat(json)
+                .contains("\"49\"")
+                .contains("\"205\"");
 
         Object y = TestUtil.toObjects(json, null);
         assert y instanceof PhysicalAttributes;
