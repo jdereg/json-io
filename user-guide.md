@@ -55,7 +55,7 @@ can be read, modified, and then re-written by a JVM that does not contain any of
 
 ---
 ### Controlling the output JSON using `WriteOptions`
-Create a new`WriteOptions`instance and turn various options on/off using the methods below. Example:
+Create a new`WriteOptions`instance and turn various features on/off using the methods below. Example:
 
     WriteOptions writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
     JsonWriter.toJson(root, writeOptions);
@@ -66,33 +66,35 @@ The`WriteOptions`contains all the "feature" settings for json-io output JSON.  B
 stateless options by calling the`.build()`method. Once built, the options cannot be modified.  If you have
 multiple`WriteOptions`features, you can set up distinct instances for each main usage.  A`WriteOptions`instance 
 can be created from another`WriteOptions`instance (use "copy constructor" discussed below).
+
+---
 ### Constructors
 #### WriteOptions()
 * Start with default options and in malleable state.
 #### WriteOptions(WriteOptions other)
-* Copy all the settings from the passed in 'other' WriteOptions.  The`WriteOptions`instance starts off in malleable state.
+* Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
 ---
 ### Class Loader
 #### ClassLoader getClassLoader()
 * Returns the ClassLoader to resolve String class names when writing JSON.
 #### WriteOptions classLoader(ClassLoader loader)
-* Sets the ClassLoader to resolve String class names when writing JSON. Returns WriteOptions for chained access.
+* Sets the ClassLoader to resolve String class names when writing JSON. Returns`WriteOptions`for chained access.
 ---
 ### MetaKeys - @id, @ref, @type
 #### boolean isShortMetaKeys()
 * Returns true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
 #### WriteOptions shortMetaKeys(boolean shortMetaKeys)
-* Sets the boolean true to turn on short meta-keys, false for long. Returns WriteOptions for chained access.
+* Sets the boolean true to turn on short meta-keys, false for long. Returns`WriteOptions`for chained access.
 ---
 ### Aliasing - shorten class names in @type.
 #### String getTypeNameAlias(String typeName)
-* Alias Type Names, e.g. "alist" instead of "java.util.ArrayList".
+* Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
 #### Map<String, String> aliasTypeNames()
-* Returns Map<String, String> containing String class names to alias names.
+* Returns Map<String, String> containing String class names to alias names. Use this API to see default aliases.
 #### WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames)
-* Sets the Map containing String class names to alias names. The passed in Map will be copied, and be the new baseline settings. Returns WriteOptions for chained access.
+* Sets the Map containing String class names to alias names. The passed in Map will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
 #### WriteOptions aliasTypeName(String typeName, String alias)
-* Sets the alias for a given class name. Returns WriteOptions for chained access.
+* Sets the alias for a given class name. Returns`WriteOptions`for chained access.
 ---
 ### @Type - used to provide hint to JsonReader to know what Classes to instantiate.
 #### boolean isAlwaysShowingType()
@@ -100,52 +102,56 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### boolean isNeverShowingType()
 * Returns true if set to never show type (no @type).
 #### boolean isMinimalShowingType()
-* Returns true if set to show minimal type (@type).
+* Returns true if set to show minimal type (@type).  This is the default setting.
 #### WriteOptions showTypeInfoAlways()
-* Sets to always show type. Returns WriteOptions for chained access.
+* Sets to always show type. Returns`WriteOptions`for chained access.
 #### WriteOptions showTypeInfoNever()
-* Sets to never show type. Returns WriteOptions for chained access.
+* Sets to never show type. Returns`WriteOptions`for chained access.  This is the default setting.
 #### WriteOptions showTypeInfoMinimal()
-* Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. Returns WriteOptions for chained access.
+* Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. Returns`WriteOptions`for chained access.
 ---
 ### Pretty Print - Multiple line, indented JSON output, or one-line output
 #### boolean isPrettyPrint()
 * Returns the 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
 #### WriteOptions prettyPrint(boolean prettyPrint)
-* Sets the 'prettyPrint' setting, true to turn on, false will turn off. Returns WriteOptions for chained access.
+* Sets the 'prettyPrint' setting, true to turn on, false will turn off. The default setting is false. Returns`WriteOptions`for chained access.
 ---
 #### boolean isWriteLongsAsStrings()
 * Returns true indicating longs will be written as Strings, false to write them out as native JSON longs.
 #### WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings)
-* Sets the boolean true to turn on writing longs as Strings, false to write them as native JSON longs. Returns WriteOptions for chained access.
+* Sets the boolean true to turn on writing longs as Strings, false to write them as native JSON longs. The default setting 
+is false. This setting is important to get JSON with large (18 to 19 digit longs) sent to Javascript. Long/long values 
+cannot be represented in Javascript because it stores these numbers in a Double internally, which cannot represent a full
+long value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
+Strings when received in the Javascript.  This will let you display them correctly, for example.  Returns`WriteOptions`for chained access.
 ---
 ### null field values
 #### boolean isSkipNullFields()
 * Returns true indicating fields with null values will not be written, false will still output the field with an associated null value. The default is false.
 #### WriteOptions skipNullFields(boolean skipNullFields)
-* Sets the boolean where true indicates fields with null values will not be written to the JSON, false will allow the field to still be written. Returns WriteOptions for chained access.
+* Sets the boolean where true indicates fields with null values will not be written to the JSON, false will allow the field to still be written. Returns`WriteOptions`for chained access.
 ---
 ### Map output
 #### boolean isForceMapOutputAsTwoArrays()
 * Returns true if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is false.
 #### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
-* Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns WriteOptions for chained access.
+* Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns`WriteOptions`for chained access.
 ---
 ### Enum Options
 #### boolean isWriteEnumAsString()
 * Returns true if enums are to be written out as Strings (not a full JSON object) when possible.
 #### WriteOptions writeEnumsAsString()
-* Sets the option to write out enums as a String. Returns WriteOptions for chained access.
+* Sets the option to write out enums as a String. Returns`WriteOptions`for chained access.
 #### boolean isEnumPublicFieldsOnly()
-* Returns true indicating that only public fields will be output on an Enum.
+* Returns true indicating that only public fields will be output on an Enum. The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
 #### WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly)
-* Sets the option to write out all the member fields of an enum. Returns WriteOptions for chained access.
+* Sets the option to write out all the member fields of an enum. Returns`WriteOptions`for chained access.
 ---
 ### Customized JSON Writers
 #### WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses)
-* Establishes the passed in Map as the established Map of custom writers to be used when writing JSON. Returns WriteOptions for chained access.
+* Establishes the passed in Map as the established Map of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
 #### WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter)
-* Adds a custom writer for a specific Class. Returns WriteOptions for chained access.
+* Adds a custom writer for a specific Class. Returns`WriteOptions`for chained access.
 #### Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses()
 * Returns a Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 #### boolean isCustomWrittenClass(Class<?> clazz)
@@ -157,9 +163,9 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### Set<Class<?>> getNotCustomWrittenClasses()
 * Returns a Set of all Classes on the not-customized list.
 #### WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass)
-* Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance. Returns WriteOptions for chained access.
+* Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance. Returns`WriteOptions`for chained access.
 #### WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses)
-* Initializes the list of classes on the non-customized list. Returns WriteOptions for chained access.
+* Initializes the list of classes on the non-customized list. Returns`WriteOptions`for chained access.
 ---
 ### Included Fields
 #### Set<String> getIncludedFields(Class<?> clazz)
@@ -167,11 +173,11 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses()
 * Returns a Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
 #### WriteOptions addIncludedField(Class<?> clazz, String includedField)
-* Adds a single field to be included in the written JSON for a specific class. Returns WriteOptions for chained access.
+* Adds a single field to be included in the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields)
-* Adds a Collection of fields to be included in written JSON for a specific class. Returns WriteOptions for chained access.
+* Adds a Collection of fields to be included in written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields)
-* Adds multiple Classes and their associated fields to be included in the written JSON. Returns WriteOptions for chained access.
+* Adds multiple Classes and their associated fields to be included in the written JSON. Returns`WriteOptions`for chained access.
 ---
 ### Excluded Fields
 #### Set<String> getExcludedFields(Class<?> clazz)
@@ -179,23 +185,23 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses()
 * Returns a Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
 #### WriteOptions addExcludedField(Class<?> clazz, String excludedField)
-* Adds a single field to be excluded from the written JSON for a specific class. Returns WriteOptions for chained access.
+* Adds a single field to be excluded from the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields)
-* Adds a Collection of fields to be excluded in written JSON for a specific class. Returns WriteOptions for chained access.
+* Adds a Collection of fields to be excluded in written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields)
-* Adds multiple Classes and their associated fields to be excluded from the written JSON. Returns WriteOptions for chained access.
+* Adds multiple Classes and their associated fields to be excluded from the written JSON. Returns`WriteOptions`for chained access.
 ---
 ### java.util.Date and java.sql.Date format
 #### WriteOptions isoDateFormat()
-* Changes the date-time format to the ISO date format: "yyyy-MM-dd". Returns WriteOptions for chained access.
+* Changes the date-time format to the ISO date format: "yyyy-MM-dd". Returns`WriteOptions`for chained access.
 #### WriteOptions isoDateTimeFormat()
-* Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default). Returns WriteOptions for chained access.
+* Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default). Returns`WriteOptions`for chained access.
 #### WriteOptions longDateFormat()
-* Changes the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970 at midnight. Returns WriteOptions for chained access.
+* Changes the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is long. Returns`WriteOptions`for chained access.
 #### boolean isLongDateFormat()
 * Returns true if java.util.Date and java.sql.Date's are being written in long (numeric) format.
 #### WriteOptions dateTimeFormat(String format)
-* Changes the date-time format to the passed in format. Returns WriteOptions for chained access.
+* Changes the date-time format to the passed in format. Returns`WriteOptions`for chained access.
 ---
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 #### boolean isNonReferenceableClass(Class<?> clazz)
