@@ -68,15 +68,15 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 
 ---
 ### Constructors
->#### WriteOptions
+>#### __WriteOptions__
 >Start with default options and in malleable state. 
->#### WriteOptions(WriteOptions other)
+>#### __WriteOptions(WriteOptions other)__
 >Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
 
 ### Class Loader
->#### ClassLoader getClassLoader()
+>#### __ClassLoader getClassLoader()__
 >Returns the ClassLoader to resolve String class names when writing JSON.
->#### WriteOptions classLoader(ClassLoader loader)
+>#### __WriteOptions classLoader(ClassLoader loader)__
 >Sets the ClassLoader to resolve String class names when writing JSON. Returns`WriteOptions`for chained access.
 
 ### MetaKeys - @id, @ref, @type
