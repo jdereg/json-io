@@ -61,11 +61,10 @@ Create a new`WriteOptions`instance and turn various features on/off using the me
     JsonWriter.toJson(root, writeOptions);
 
 To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the feature settings below.
-The`WriteOptions`contains all the "feature" settings for json-io output JSON.  Below, we show many of the
-`WriteOptions`APIs.  You can view the Javadoc on`WriteOptions`for detailed information. The`WriteOptions`can be made
-stateless options by calling the`.build()`method. Once built, the options cannot be modified.  If you have
-multiple`WriteOptions`features, you can set up distinct instances for each main usage.  A`WriteOptions`instance 
-can be created from another`WriteOptions`instance (use "copy constructor" discussed below).
+You can view the Javadoc on the`WriteOptions`class for detailed information. The`WriteOptions`can be made
+read-only by calling the`.build()`method. You can have multiple`WriteOptions`instances for different scenarios, and safely
+re-use them once built (read-only). A`WriteOptions`instance can be created from another`WriteOptions`instance
+(use "copy constructor" discussed below).
 
 ---
 ### Constructors
@@ -92,7 +91,7 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 #### Map<String, String> aliasTypeNames()
 * Returns Map<String, String> containing String class names to alias names. Use this API to see default aliases.
 #### WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames)
-* Sets the Map containing String class names to alias names. The passed in Map will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
+* Sets the`Map`containing String class names to alias names. The passed in`Map`will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
 #### WriteOptions aliasTypeName(String typeName, String alias)
 * Sets the alias for a given class name. Returns`WriteOptions`for chained access.
 ---
@@ -112,9 +111,9 @@ can be created from another`WriteOptions`instance (use "copy constructor" discus
 ---
 ### Pretty Print - Multiple line, indented JSON output, or one-line output
 #### boolean isPrettyPrint()
-* Returns the 'prettyPrint' setting,`true`being yes, pretty-print mode using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is false.
+* Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, 'false' will output JSON in one line. The default is`false.`
 #### WriteOptions prettyPrint(boolean prettyPrint)
-* Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is false. Returns`WriteOptions`for chained access.
+* Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`WriteOptions`for chained access.
 ---
 #### boolean isWriteLongsAsStrings()
 * Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON longs.
@@ -127,11 +126,11 @@ Strings when received in the Javascript. This will let you display them correctl
 ---
 ### null field values
 #### boolean isSkipNullFields()
-* Returns`true`indicating fields with null values will not be written,`false`will still output the field with an associated null value. The default is false.
+* Returns`true`indicating fields with null values will not be written,`false`will still output the field with an associated null value. The default is`false.`
 #### WriteOptions skipNullFields(boolean skipNullFields)
 * Sets the boolean where`true`indicates fields with null values will not be written to the JSON,`false`will allow the field to still be written. Returns`WriteOptions`for chained access.
 ---
-### Map output
+### `Map`output
 #### boolean isForceMapOutputAsTwoArrays()
 * Returns`true`if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is`false.`
 #### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
@@ -149,11 +148,11 @@ Strings when received in the Javascript. This will let you display them correctl
 ---
 ### Customized JSON Writers
 #### WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses)
-* Establishes the passed in Map as the complete list of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
+* Establishes the passed in`Map`as the complete list of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
 #### WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter)
 * Adds a custom writer for a specific Class. Returns`WriteOptions`for chained access.
 #### Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses()
-* Returns a Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
+* Returns a`Map`of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 #### boolean isCustomWrittenClass(Class<?> clazz)
 * Checks to see if there is a custom writer associated with a given class. Returns`true`if there is,`false`otherwise.
 ---
@@ -171,7 +170,7 @@ Strings when received in the Javascript. This will let you display them correctl
 #### Set<String> getIncludedFields(Class<?> clazz)
 * Returns a Set of Strings field names associated to the passed in class to be included in the written JSON.
 #### Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses()
-* Returns a Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
+* Returns a`Map`of all Classes and their associated Sets of fields to be included when serialized to JSON.
 #### WriteOptions addIncludedField(Class<?> clazz, String includedField)
 * Adds a single field to be included in the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields)
@@ -183,7 +182,7 @@ Strings when received in the Javascript. This will let you display them correctl
 #### Set<String> getExcludedFields(Class<?> clazz)
 * Returns a Set of Strings field names associated to the passed in class to be excluded in the written JSON.
 #### Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses()
-* Returns a Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
+* Returns a`Map`of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
 #### WriteOptions addExcludedField(Class<?> clazz, String excludedField)
 * Adds a single field to be excluded from the written JSON for a specific class. Returns`WriteOptions`for chained access.
 #### WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields)
@@ -207,15 +206,15 @@ Strings when received in the Javascript. This will let you display them correctl
 #### boolean isNonReferenceableClass(Class<?> clazz)
 * Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 #### Collection<Class<?>> getNonReferenceableClasses()
-* Returns a Collection of classes specifically listed as Logical Primitives.
+* Returns a Collection of all non-referenceable classes.
 #### WriteOptions addNonReferenceableClass(Class<?> clazz)
 * Adds a class to be considered "non-referenceable." Examples are the built-in primitives.  Making a class non-referenceable means that it will never 
 have an @id tag, nor @ref tag. When loaded, these classes will always have an instance created for them. Typically used
-for small classes like a date, LocalDate, LocalDateTime, where you are not pointing many fields to the same instance. Using 
+for small classes like `Date, LocalDate, LocalDateTime,` where you are not pointing many fields to the same instance. Using 
 this option for a class will cause more memory to be consumed on the reading side, as each class of this type 
-output, will always create a new instance.  If you had a large instance to which many other fields pointed to, and that
-large instance is marked as "non-referenceable," then that large instance would be loaded into memory uniquely for each object
-that pointed to it.  So this does change the "shape" of your object graph.
+output will always create a new instance.  If you have a class with many fields (large instance) and many other fields outside this
+class pointed to it, and that large instance is marked as "non-referenceable," then the large instance would be loaded 
+into memory uniquely for each object that pointed to it.  This could change the "shape" of your object graph for each non-referenceable instance. 
 ---
 ### ReadOptions
 #### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactory)`
