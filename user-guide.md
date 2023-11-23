@@ -72,19 +72,19 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >Start with default options and in malleable state. 
 >#### WriteOptions(WriteOptions other)
 >Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
----
+
 ### Class Loader
 >#### ClassLoader getClassLoader()
 >Returns the ClassLoader to resolve String class names when writing JSON.
 >#### WriteOptions classLoader(ClassLoader loader)
 >Sets the ClassLoader to resolve String class names when writing JSON. Returns`WriteOptions`for chained access.
----
+
 ### MetaKeys - @id, @ref, @type
 >#### boolean isShortMetaKeys()
 >Returns`true`if showing short meta-keys (@i instead of @id, @ instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values),`false`for full size. `false` is the default.
 >#### WriteOptions shortMetaKeys(boolean shortMetaKeys)
 >Sets the boolean`true`to turn on short meta-keys,`false`for long. Returns`WriteOptions`for chained access.
----
+
 ### Aliasing - shorten class names in @type.
 >#### String getTypeNameAlias(String typeName)
 >Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
@@ -94,7 +94,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >Sets the`Map`containing String class names to alias names. The passed in`Map`will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
 >#### WriteOptions aliasTypeName(String typeName, String alias)
 >Sets the alias for a given class name. Returns`WriteOptions`for chained access.
----
+
 ### @Type - used to provide hint to JsonReader to know what Classes to instantiate.
 >#### boolean isAlwaysShowingType()
 >Returns`true`if set to always show type (@type).
@@ -108,13 +108,13 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >Sets to never show type. Returns`WriteOptions`for chained access.  This is the default setting.
 >#### WriteOptions showTypeInfoMinimal()
 >Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. Returns`WriteOptions`for chained access.
----
+
 ### Pretty Print - Multiple line, indented JSON output, or one-line output
 >#### boolean isPrettyPrint()
 >Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is`false.`
 >#### WriteOptions prettyPrint(boolean prettyPrint)
 >Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`WriteOptions`for chained access.
----
+
 ### Long as String (Fix JavaScript issue with large long values)
 >#### boolean isWriteLongsAsStrings()
 >Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON longs.
@@ -124,19 +124,19 @@ is`false.`This feature is important to marshal JSON with large (18 to 19 digit l
 cannot be represented in Javascript because it stores them in a `Double` internally, which cannot represent a 
 full`long`value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
 Strings when received in the Javascript. This will let you display them correctly, for example. Returns`WriteOptions`for chained access.
----
+
 ### null field values
 >#### boolean isSkipNullFields()
 >Returns`true`indicating fields with null values will not be written,`false`will still output the field with an associated null value. The default is`false.`
 >#### WriteOptions skipNullFields(boolean skipNullFields)
 >Sets the boolean where`true`indicates fields with null values will not be written to the JSON,`false`will allow the field to still be written. Returns`WriteOptions`for chained access.
----
+
 ### `Map`output
 >#### boolean isForceMapOutputAsTwoArrays()
 >Returns`true`if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is`false.`
 >#### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
 >Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns`WriteOptions`for chained access.
----
+
 ### Enum Options
 >#### boolean isWriteEnumAsString()
 >Returns`true`if enums are to be written out as Strings (not a full JSON object) when possible.
@@ -146,7 +146,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Returns`true`indicating that only public fields will be output on an Enum. The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
 >#### WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly)
 >Sets the option to write out all the member fields of an enum. Returns`WriteOptions`for chained access.
----
+
 ### Customized JSON Writers
 >#### WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses)
 >Establishes the passed in`Map`as the complete list of custom writers to be used when writing JSON. Returns`WriteOptions`for chained access.
@@ -156,7 +156,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Returns a`Map`of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 >#### boolean isCustomWrittenClass(Class<?> clazz)
 >Checks to see if there is a custom writer associated with a given class. Returns`true`if there is,`false`otherwise.
----
+
 ### "Not" Customized Class Writers
 >#### boolean isNotCustomWrittenClass(Class<?> clazz)
 >Checks if a class is on the not-customized list. Returns`true`if it is,`false`otherwise.
@@ -166,7 +166,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance. Returns`WriteOptions`for chained access.
 >#### WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses)
 >Initializes the list of classes on the non-customized list. Returns`WriteOptions`for chained access.
----
+
 ### Included Fields
 >#### Set<String> getIncludedFields(Class<?> clazz)
 >Returns a`Set`of Strings field names associated to the passed in class to be included in the written JSON.
@@ -178,7 +178,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Adds a`Collection`of fields to be included in written JSON for a specific class. Returns`WriteOptions`for chained access.
 >#### WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields)
 >Adds multiple Classes and their associated fields to be included in the written JSON. Returns`WriteOptions`for chained access.
----
+
 ### Excluded Fields
 >#### Set<String> getExcludedFields(Class<?> clazz)
 >Returns a`Set`of Strings field names associated to the passed in class to be excluded in the written JSON.
@@ -190,7 +190,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Adds a`Collection`of fields to be excluded in written JSON for a specific class. Returns`WriteOptions`for chained access.
 >#### WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields)
 >Adds multiple Classes and their associated fields to be excluded from the written JSON. Returns`WriteOptions`for chained access.
----
+
 ### java.util.Date and java.sql.Date format
 >#### WriteOptions isoDateFormat()
 >Changes the date-time format to the ISO date format: "yyyy-MM-dd". Returns`WriteOptions`for chained access.
@@ -203,7 +203,7 @@ Strings when received in the Javascript. This will let you display them correctl
 >Returns`true`if`java.util.Date`and`java.sql.Date` are being written in`long`(numeric) format.
 >#### WriteOptions dateTimeFormat(String format)
 >Changes the date-time format to the passed in format. Returns`WriteOptions`for chained access.
----
+
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 >#### boolean isNonReferenceableClass(Class<?> clazz)
 >Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
