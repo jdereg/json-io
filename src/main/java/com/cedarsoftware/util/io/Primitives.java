@@ -17,11 +17,7 @@ public class Primitives {
         PRIMITIVE_WRAPPERS.add(Boolean.class);
         PRIMITIVE_WRAPPERS.add(Short.class);
     }
-
-    public static boolean contains(Class<?> c) {
-        return PRIMITIVE_WRAPPERS.contains(c);
-    }
-
+    
     /**
      * @param c Class to test
      * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
