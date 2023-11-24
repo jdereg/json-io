@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
 import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
@@ -19,7 +18,6 @@ import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
 import com.cedarsoftware.util.reflect.filters.EnumFilter;
 import com.cedarsoftware.util.reflect.filters.GroovyFilter;
 import com.cedarsoftware.util.reflect.filters.StaticFilter;
-import com.cedarsoftware.util.reflect.injectors.FieldInjector;
 import lombok.Getter;
 
 public class ClassDescriptors {
@@ -116,13 +114,26 @@ public class ClassDescriptors {
             }
 
             Optional<Accessor> accessor = this.accessorFactories.stream()
-                    .map(factory -> factory.createAccessor(field, possibleAccessors))
+                    .map(factory -> {
+                        try {
+                            return factory.createAccessor(field, possibleAccessors);
+                        } catch (Throwable t) {
+                            return null;
+                        }
+                    })
                     .filter(Objects::nonNull)
                     .findFirst();
 
             //  If no accessor was found, let's use the default tried and true field accessor.
-            descriptor.addAccessor(field.getName(), accessor.orElseGet(() -> new FieldAccessor(field)));
-
+            descriptor.addAccessor(field.getName(), accessor.orElseGet(() -> {
+                try {
+                    return new Accessor(field);
+                } catch (ThreadDeath td) {
+                    throw td;
+                } catch (Throwable t) {
+                    return null;
+                }
+            }));
 
             boolean isInjectionFiltered = KnownFilteredFields.instance().isInjectionFiltered(field);
 
@@ -131,11 +142,25 @@ public class ClassDescriptors {
             }
 
             Optional<Injector> injector = this.injectorFactories.stream()
-                    .map(factory -> factory.createInjector(field, possibleInjectors))
+                    .map(factory -> {
+                        try {
+                            return factory.createInjector(field, possibleInjectors);
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    })
                     .filter(Objects::nonNull)
                     .findFirst();
 
-            descriptor.addInjector(field.getName(), injector.orElseGet(() -> new FieldInjector(field)));
+            descriptor.addInjector(field.getName(), injector.orElseGet(() -> {
+                try {
+                    return new Injector(field);
+                } catch (ThreadDeath td) {
+                    throw td;
+                } catch (Throwable t) {
+                    return null;
+                }
+            }));
         }
 
         return descriptor;
@@ -164,10 +189,16 @@ public class ClassDescriptors {
         }
 
         public void addAccessor(String name, Accessor accessor) {
+            if (accessor == null) {
+                return;
+            }
             this.accessors.put(name, accessor);
         }
 
         public void addInjector(String name, Injector injector) {
+            if (injector == null) {
+                return;
+            }
             this.injectors.put(name, injector);
         }
     }

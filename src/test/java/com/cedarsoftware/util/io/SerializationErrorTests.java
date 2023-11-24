@@ -1,12 +1,18 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.models.Permission;
-import com.cedarsoftware.util.reflect.models.SecurityGroup;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.HashSet;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.MismatchedGetter;
+import com.cedarsoftware.util.reflect.models.Permission;
+import com.cedarsoftware.util.reflect.models.SecurityGroup;
 
 class SerializationErrorTests {
 
@@ -44,6 +50,19 @@ class SerializationErrorTests {
     }
 
     @Test
+    void testMismatchedMethodTypes() {
+        MismatchedGetter model = new MismatchedGetter();
+        model.generate("foo");
+
+        String json = TestUtil.toJson(model);
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+
+        assertThat(actual.getRawValue()).isEqualTo("foo");
+        assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
+        assertThat(actual.getTypes()).containsExactlyElementsOf(Arrays.asList(model.getTypes()));
+    }
+
+    @Test
     void testSerializeLongId_doesNotFillInWithZeroWhenMissing() {
         ReadOptions options = new ReadOptionsBuilder()
                 .failOnUnknownType()
@@ -61,6 +80,14 @@ class SerializationErrorTests {
         assertThat(actual.getPermissions()).containsExactlyInAnyOrder(
                 new Permission(89L, "ALLOW_VIEW", "Allow viewing"),
                 new Permission(90L, "ALLOW_MOVING_MONEY", "Allow moving money"));
+    }
+
+    @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
+    void testWriteOptions() {
+        WriteOptions writeOptions = new WriteOptions();
+        String json = TestUtil.toJson(writeOptions);
+        WriteOptions backFromSleep = TestUtil.toObjects(json, null);
+        assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));
     }
 
     private String loadJsonForTest(String fileName) {

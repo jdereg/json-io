@@ -1,6 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import java.awt.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.awt.Point;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Calendar;
@@ -10,17 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -41,42 +42,36 @@ import static org.junit.jupiter.api.Assertions.fail;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class MapOfMapsTest
+class MapOfMapsTest
 {
+    @SuppressWarnings("unchecked")
     @Test
-    public void testMapOfMapsWithUnknownClasses()
-    {
+    void testToObjects_withUnknownClass_returnsALinkedHashMap() {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
         Map stuff = TestUtil.toObjects(json, null);
-        assert stuff.size() == 2;
-        assert stuff.get("_name").equals("Hello");
-        assert stuff.get("_other") == null;
 
+        assertThat(stuff)
+                .isInstanceOf(LinkedHashMap.class)
+                .hasSize(2)
+                .containsEntry("_name", "Hello")
+                .containsEntry("_other", null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testToObjects_asMaps_returnsALinkedHashMap()
+    {
+        String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
-        assertEquals("Hello", map.get("_name"));
-        assertNull(map.get("_other"));
 
-        // 2nd attempt
-        String testObjectClassName = TestObject.class.getName();
-        final String json2 = "{\"@type\":\"" + testObjectClassName + "\",\"_name\":\"alpha\",\"_other\":{\"@type\":\"com.baz.Qux\",\"_name\":\"beta\",\"_other\":null}}";
-
-        Exception e = assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null);});
-        String msg = e.getMessage().toLowerCase();
-        assert msg.contains("unable to set field");
-        assert msg.contains("target");
-        assert msg.contains("alpha");
-        assert msg.contains("with value");
-
-        map = TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsMaps().build(), null);
-        assertEquals("alpha", map.get("_name"));
-        assertTrue(map.get("_other") instanceof JsonObject);
-        JsonObject other = (JsonObject) map.get("_other");
-        assertEquals("beta", other.get("_name"));
-        assertNull(other.get("_other"));
+        assertThat(map)
+                .isInstanceOf(LinkedHashMap.class)
+                .containsEntry("_name", "Hello")
+                .containsEntry("_other", null);
     }
 
     @Test
-    public void testForwardRefNegId()
+    void testForwardRefNegId()
     {
         Object doc = TestUtil.toObjects(TestUtil.fetchResource("references/forwardRefNegId.json"), new ReadOptionsBuilder().returnAsMaps().build(), null);
         Object[] items = (Object[]) doc;

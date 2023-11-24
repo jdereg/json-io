@@ -1,22 +1,21 @@
 package com.cedarsoftware.util.reflect;
 
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.TestUtil;
-import com.cedarsoftware.util.io.WriteOptions;
-import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
-import com.cedarsoftware.util.reflect.accessors.MethodAccessor;
-import com.cedarsoftware.util.reflect.filters.models.Car;
-import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
-import com.cedarsoftware.util.reflect.filters.models.Entity;
-import com.cedarsoftware.util.reflect.filters.models.Part;
-import com.cedarsoftware.util.reflect.filters.models.PrivateFinalObject;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.TestUtil;
+import com.cedarsoftware.util.io.WriteOptions;
+import com.cedarsoftware.util.reflect.filters.models.Car;
+import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
+import com.cedarsoftware.util.reflect.filters.models.Entity;
+import com.cedarsoftware.util.reflect.filters.models.Part;
+import com.cedarsoftware.util.reflect.filters.models.PrivateFinalObject;
 
 class ClassDescriptorsTests {
     @Test
@@ -26,10 +25,14 @@ class ClassDescriptorsTests {
         Map<String, Accessor> accessors = descriptor.getAccessors();
 
         assertThat(accessors).hasSize(4);
-        assertThat(accessors.get("x")).isInstanceOf(FieldAccessor.class);
-        assertThat(accessors.get("y")).isInstanceOf(FieldAccessor.class);
-        assertThat(accessors.get("key")).isInstanceOf(MethodAccessor.class);
-        assertThat(accessors.get("flatuated")).isInstanceOf(MethodAccessor.class);
+        assertThat(accessors.get("x").isPublic()).isFalse();
+        assertThat(accessors.get("x").getDisplayName()).isEqualTo("x");
+        assertThat(accessors.get("y").isPublic()).isFalse();
+        assertThat(accessors.get("y").getDisplayName()).isEqualTo("y");
+        assertThat(accessors.get("key").isPublic()).isTrue();
+        assertThat(accessors.get("key").getDisplayName()).isEqualTo("getKey");
+        assertThat(accessors.get("flatuated").isPublic()).isTrue();
+        assertThat(accessors.get("flatuated").getDisplayName()).isEqualTo("isFlatuated");
     }
 
     @Test
@@ -37,7 +40,7 @@ class ClassDescriptorsTests {
         ClassDescriptor descriptor = ClassDescriptors.instance().getClassDescriptor(ColorEnum.class);
         Map<String, Accessor> accessors = descriptor.getAccessors();
 
-        assertThat(accessors).hasSize(0);
+        assertThat(accessors).isEmpty();
     }
 
     @Test
@@ -46,7 +49,8 @@ class ClassDescriptorsTests {
         Map<String, Accessor> accessors = descriptor.getAccessors();
 
         assertThat(accessors).hasSize(1);
-        assertThat(accessors.get("name")).isInstanceOf(MethodAccessor.class);
+        assertThat(accessors.get("name").isPublic()).isTrue();
+        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
     }
 
     @Test

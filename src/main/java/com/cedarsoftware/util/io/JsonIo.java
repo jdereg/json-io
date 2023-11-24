@@ -43,39 +43,42 @@ public class JsonIo {
         writer.write('\"');
     }
 
-    public static void writeJsonUtf8Char(final Writer output, char c) throws IOException {
-        output.write('\"');
+    public static void writeJsonUtf8Char(final Writer writer, char c) throws IOException {
+        writer.write('\"');
+        writeChar(writer, c);
+        writer.write('\"');
+    }
 
+    private static void writeChar(Writer writer, char c) throws IOException {
         if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
             switch (c) {
                 case '\b':
-                    output.write("\\b");
+                    writer.write("\\b");
                     break;
                 case '\f':
-                    output.write("\\f");
+                    writer.write("\\f");
                     break;
                 case '\n':
-                    output.write("\\n");
+                    writer.write("\\n");
                     break;
                 case '\r':
-                    output.write("\\r");
+                    writer.write("\\r");
                     break;
                 case '\t':
-                    output.write("\\t");
+                    writer.write("\\t");
                     break;
                 default:
-                    output.write(String.format("\\u%04X", (int) c));
+                    writer.write(String.format("\\u%04X", (int) c));
                     break;
             }
         } else if (c == '\\' || c == '"') {
-            output.write('\\');
-            output.write(c);
+            writer.write('\\');
+            writer.write(c);
         } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-            output.write(c);
+            writer.write(c);
         }
-        output.write('\"');
     }
-    
+
     /**
      * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
      * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
@@ -90,35 +93,7 @@ public class JsonIo {
         final int len = s.length();
 
         for (int i = 0; i < len; i++) {
-            char c = s.charAt(i);
-
-            if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-                switch (c) {
-                    case '\b':
-                        output.write("\\b");
-                        break;
-                    case '\f':
-                        output.write("\\f");
-                        break;
-                    case '\n':
-                        output.write("\\n");
-                        break;
-                    case '\r':
-                        output.write("\\r");
-                        break;
-                    case '\t':
-                        output.write("\\t");
-                        break;
-                    default:
-                        output.write(String.format("\\u%04X", (int) c));
-                        break;
-                }
-            } else if (c == '\\' || c == '"') {
-                output.write('\\');
-                output.write(c);
-            } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-                output.write(c);
-            }
+            writeChar(output, s.charAt(i));
         }
         output.write('\"');
     }

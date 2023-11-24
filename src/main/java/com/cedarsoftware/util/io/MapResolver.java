@@ -125,7 +125,7 @@ public class MapResolver extends Resolver
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
-                final Class fieldType = injector.getType();
+                final Class<?> fieldType = injector.getType();
                 if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
                     jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));
