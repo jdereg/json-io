@@ -105,7 +105,7 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >#### WriteOptions showTypeInfoAlways()
 >- [ ] Sets to always show type. Returns`WriteOptions`for chained access.
 >#### WriteOptions showTypeInfoNever()
->- [ ] Sets to never show type. Returns`WriteOptions`for chained access.  This is the default setting.
+>- [ ] Sets to never show type. Returns`WriteOptions`for chained access. 
 >#### WriteOptions showTypeInfoMinimal()
 >- [ ] Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output. Returns`WriteOptions`for chained access.
 
@@ -120,10 +120,10 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 >- [ ] Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON longs.
 >#### WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings)
 >- [ ] Set to boolean`true`to turn on writing longs as Strings,`false`to write them as native JSON longs. The default setting 
-is`false.`This feature is important to marshal JSON with large (18 to 19 digit longs) to Javascript. Long/long values 
-cannot be represented in Javascript because it stores them in a `Double` internally, which cannot represent a 
-full`long`value. Using this feature allows longs to be sent to Javascript with all their precision, however, they will be 
-Strings when received in the Javascript. This will let you display them correctly, for example. Returns`WriteOptions`for chained access.
+is`false.`This feature is important to marshal JSON with large long values (18 to 19 digits) to Javascript. Long/long values 
+are represented in Javascript by storing them in a `Double` internally, which cannot represent a full`long`value. Using 
+this feature allows longs to be sent to Javascript with all their precision, however, they will be Strings when received
+in the Javascript. This will let you display them correctly, for example. Returns`WriteOptions`for chained access.
 
 ### null field values
 >#### boolean isSkipNullFields()
