@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -30,6 +25,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import lombok.Getter;
+import lombok.Setter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -234,7 +234,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     /**
      * Convert a Java Object to a JSON String.
-     *
      * @param item Object to convert to a JSON String.
      * @param writeOptions (optional can be null for defaults) Map of extra arguments indicating how dates are
      * formatted and what fields are written out (optional).  For Date parameters, use the public
@@ -254,6 +253,23 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return new String(stream.toByteArray(), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object to JSON", e);
+        }
+    }
+
+    /**
+     * Convert a Java Object to a JSON String.
+     * @param stream Outputstream that the generated JSON will be sent to.
+     * @param item Object root object from which to generate JSON .
+     * @param writeOptions (optional can be null for defaults) Map of extra arguments indicating how the JSON is
+     *                     formatted.  From date formats, to special treatment for longs, null fields, etc.
+     */
+    public static void toJson(OutputStream stream, Object item, WriteOptions writeOptions) {
+        try {
+            JsonWriter writer = new JsonWriter(stream, writeOptions);
+            writer.write(item);
+            writer.close();
+        } catch (Exception e) {
+            throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
         }
     }
 

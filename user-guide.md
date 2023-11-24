@@ -1,57 +1,66 @@
-### Usage
+## Usage
 **json-io** can be used directly on JSON Strings or with Java's Streams.
 
-_Example 1: String to Java object_
+### Typed Usage
 
-    String json = // some JSON content
-    Object obj = JsonReader.toObjects(json);     // optional 2nd 'options' argument (see below)
-
-This will convert the JSON String to a Java Object graph.
-
-_Example 2: Java object to JSON String_
+_Example 1: Java object to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonWriter.toJson(emp);     // optional 2nd 'options' argument (see below)
+    String json = JsonWriter.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
 
-This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`, 
+This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`,
 it would reconstitute a Java `Employee` instance.
 
-_Example 3: `InputStream` to Java object_
+_Example 2: String to Java object_
 
-    Employee emp = (Employee) JsonReader.toObjects(stream);  // optional 2nd 'options' argument (see below)
+    String json = // String JSON representing Employee instance
+    Employee employee = JsonReader.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
 
-In this example, an `InputStream` is supplying the JSON.
+This will convert the JSON String to a Java Object graph.
 
-_Example 4: Java Object to `OutputStream`_
+_Example 3: Java Object to `OutputStream`_
 
     Employee emp;
-    // emp obtained from database
-    JsonWriter jw = new JsonWriter(outputStream);       // optional 2nd 'options' argument (see below)
-    jw.write(emp);
-    jw.close();
+    // emp obtained from data store...
+    JsonWriter.toJson(outputStream, emp, writeOptions);       
 
-In this example, a Java object is written to an output stream in JSON format.
+In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
+you need to keep the `OutputStream` open (e.g. NDJSON), then use the `JsonWriter()` constructor that takes an `OutputStream`
+and a `WriteOptions` instance.  Example:
+     
+    JsonWriter writer = new JsonWriter(outputStream, writeOptions); 
+    jsonWriter.write(root);  
+    jsonWriter.close();
 
-### Non-typed Usage
-**json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript associative array.  When reading from a JSON String or `InputStream` of JSON, the `JsonReader` can be constructed like this:
+_Example 4: `InputStream` to Java object_
+
+    Employee emp = JsonReader.toObjects(stream, readOptions, Employee.class);
+
+In this example, an`InputStream`is supplying the JSON.
+
+### Untyped Usage
+**json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript 
+associative array.  When reading from a JSON String or`InputStream`of JSON, the`JsonReader`can be constructed like this:
 
     String json = // some JSON obtained from wherever
-    ReadOptions = new ReadOptionsBuilder().returnAsMaps().build();
-    Object obj = JsonReader.toJava(json, readOptions);    
+    ReadOptions readOptions = new ReadOptions().returnAsJson();
+    JsonValue value = JsonReader.toJava(json, readOptions);    
 
-There are plenty of other `read` options, as well as `write` options that can be passed in this way.  They are listed below.
-In this example, it will return an untyped object representation of the JSON String as a `Map` of Maps, where the fields are the
-`Map` keys (Strings), and the field values are the associated Map's values. In this representation the returned data consists
-of Maps, Arrays (Object[]), and JSON values.  The Maps are actually a `JsonObject` instance (from **json-io**).  This 
-`JsonObject` implements the `Map` interface permitting access to the entire object.  Cast to a `JsonObject`, you can see 
-the type information, position within the JSON stream, and other information.  
+See the `ReadOptions` below for al the feature control options.  In the example above, rather than return the objects
+converted into Java classes, you are being returned the raw`JsonValues`being parsed.  It is a graph that consists of 
+all`JsonValue`instances.  In addition to`JsonValue,`there is`JsonObject,`which represents `{...}`, `JsonArray`, which
+represents `[...]`, and `JsonPrimitive`, which represents `long, double, String, boolean (true/false),`and`null.` 
+JsonObject, JsonArray  and JsonPrimitive are all subclasses of JsonValue.
 
-This 'Maps' representation can be re-written to a JSON String or Stream and the output JSON will exactly match the
-original input JSON stream.  This permits a JVM receiving JSON strings / streams that contain class references which 
-do not exist in the JVM that is parsing the JSON, to completely read / write the stream.  Additionally, the Maps can 
-be modified before being written, and the entire graph can be re-written in one collective write.  Any object model 
-can be read, modified, and then re-written by a JVM that does not contain any of the classes in the JSON data.
+With this approach, you can read JSON content and it will contain`JsonObject's`,`JsonArrays`,`JsonPrimitives`, across the
+five (5) JSON primitive types (`String`, `long`, `double`, `boolean`, and `null`).  This content can be very easy to work with
+in data science applications.
+
+This JsonValue representation can be re-written to JSON String or Stream and the output JSON will exactly match the
+original input JSON stream.  This permits you to receive JSON strings / streams that contain class references which 
+do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
+and then rewrite the String/stream.
 
 ---
 ### Controlling the output JSON using `WriteOptions`
