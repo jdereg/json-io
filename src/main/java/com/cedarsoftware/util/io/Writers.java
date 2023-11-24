@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -24,6 +22,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 import static com.cedarsoftware.util.io.JsonUtilities.writeBasicString;
 
@@ -181,7 +181,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            JsonUtilities.writeJsonUtf8Char(output, (char) o);
+            JsonUtilities.writeJsonUtf8String(output, "" + (char) o);
         }
     }
 

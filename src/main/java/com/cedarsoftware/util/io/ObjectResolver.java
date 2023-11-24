@@ -112,8 +112,8 @@ public class ObjectResolver extends Resolver
     static boolean isBasicWrapperType(Class clazz)
     {
         return clazz == Boolean.class || clazz == Integer.class ||
-            clazz == Short.class || clazz == Character.class ||
             clazz == Byte.class || clazz == Long.class ||
+            clazz == Short.class || clazz == Character.class ||
             clazz == Double.class || clazz == Float.class;
     }
 

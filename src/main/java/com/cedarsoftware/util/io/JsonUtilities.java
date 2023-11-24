@@ -43,39 +43,6 @@ public class JsonUtilities {
         writer.write('\"');
     }
 
-    public static void writeJsonUtf8Char(final Writer output, char c) throws IOException {
-        output.write('\"');
-
-        if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-            switch (c) {
-                case '\b':
-                    output.write("\\b");
-                    break;
-                case '\f':
-                    output.write("\\f");
-                    break;
-                case '\n':
-                    output.write("\\n");
-                    break;
-                case '\r':
-                    output.write("\\r");
-                    break;
-                case '\t':
-                    output.write("\\t");
-                    break;
-                default:
-                    output.write(String.format("\\u%04X", (int) c));
-                    break;
-            }
-        } else if (c == '\\' || c == '"') {
-            output.write('\\');
-            output.write(c);
-        } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-            output.write(c);
-        }
-        output.write('\"');
-    }
-    
     /**
      * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
      * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,

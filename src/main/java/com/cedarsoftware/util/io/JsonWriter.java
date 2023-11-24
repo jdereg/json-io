@@ -1744,8 +1744,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             newLine();
         }
 
-        JsonUtilities.writeJsonUtf8String(out, "@enum");
-        out.write(':');
+        out.write("\"@enum\":");
 
         Enum<? extends Enum<?>> ee = null;
         if (!enumSet.isEmpty())
@@ -1775,7 +1774,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             elementType = ee.getClass();
         }
-        JsonUtilities.writeJsonUtf8String(out, elementType.getName());
+        JsonUtilities.writeBasicString(out, elementType.getName());
 
         if (!enumSet.isEmpty())
         {
@@ -1785,7 +1784,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             out.write(",");
             newLine();
 
-            JsonUtilities.writeJsonUtf8String(out, "@items");
+            JsonUtilities.writeBasicString(out, "@items");
             out.write(":[");
             if (enumFieldsCount > 2)
             {
@@ -1975,9 +1974,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             newLine();
         }
 
-        JsonUtilities.writeJsonUtf8String(out, fieldName);
-        out.write(':');
-        
+        out.write("\"");
+        out.write(fieldName);   // Not using slower UTF String writer for field names
+        out.write("\":");
+
         if (o == null)
         {    // don't quote null
             out.write("null");

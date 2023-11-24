@@ -1,6 +1,6 @@
 ### Revision History
 * 4.19.0
-  * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  Allo the prior options are still supported, plus new features have been added.
+  * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior options are still supported, plus new features have been added.
 * 4.18.0
   * Bug fix: When Enums were sent the "old way," (JSON object form) there was a bug in outputting additional fields defined on an Enum.
   * Enhancement: Improvements on Object construction for difficult to instantiate classes. 
