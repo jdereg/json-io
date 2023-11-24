@@ -3,7 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.IOException;
 import java.io.Writer;
 
-public class JsonUtilities {
+public class JsonIo {
 
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
         if (writeOptions.isBuilt())

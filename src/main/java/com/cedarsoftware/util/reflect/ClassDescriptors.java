@@ -1,16 +1,5 @@
 package com.cedarsoftware.util.reflect;
 
-import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
-import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
-import com.cedarsoftware.util.reflect.filters.EnumFilter;
-import com.cedarsoftware.util.reflect.filters.GroovyFilter;
-import com.cedarsoftware.util.reflect.filters.StaticFilter;
-import com.cedarsoftware.util.reflect.injectors.FieldInjector;
-import lombok.Getter;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -21,6 +10,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cedarsoftware.util.reflect.accessors.FieldAccessor;
+import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
+import com.cedarsoftware.util.reflect.filters.EnumFilter;
+import com.cedarsoftware.util.reflect.filters.GroovyFilter;
+import com.cedarsoftware.util.reflect.filters.StaticFilter;
+import com.cedarsoftware.util.reflect.injectors.FieldInjector;
+import lombok.Getter;
 
 public class ClassDescriptors {
 
@@ -90,15 +90,15 @@ public class ClassDescriptors {
     }
 
     public Collection<Accessor> getDeepAccessorsForClass(Class<?> c) {
-        return this.getDeepAccessorMap(c).values();
+        return getDeepAccessorMap(c).values();
     }
 
     public ClassDescriptor getClassDescriptor(Class<?> c) {
-        return this.descriptors.computeIfAbsent(c, this::buildDescriptor);
+        return descriptors.computeIfAbsent(c, this::buildDescriptor);
     }
 
     public void clearDescriptorCache() {
-        this.descriptors.clear();
+        descriptors.clear();
     }
 
     private ClassDescriptor buildDescriptor(Class<?> c) {

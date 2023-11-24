@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-
 import java.awt.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -12,6 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -348,7 +348,7 @@ public class MapOfMapsTest
         Map map = map1;
 
         //in formatJson, the json will be parsed into a map, which checks both jsonReader and writeJsonObjectMap
-        String jsonGenerated = JsonUtilities.formatJson(TestUtil.toJson(map));
+        String jsonGenerated = JsonIo.formatJson(TestUtil.toJson(map));
         jsonGenerated = jsonGenerated.replaceAll("[\\r]", "");
         assert json.equals(jsonGenerated);
 

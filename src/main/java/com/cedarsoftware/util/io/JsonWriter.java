@@ -282,7 +282,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     @Deprecated
     public static String formatJson(String json)
     {
-        return JsonUtilities.formatJson(json);
+        return JsonIo.formatJson(json);
     }
 
     /**
@@ -303,7 +303,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         WriteOptions copy;
         copy = writeOptions == null ? new WriteOptions() : new WriteOptions(writeOptions);
         copy.prettyPrint(true).build();
-        return JsonUtilities.formatJson(json, readOptions, copy);
+        return JsonIo.formatJson(json, readOptions, copy);
     }
 
     /**
@@ -632,7 +632,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 }
             }
             else
-            {   // Speed up: do not traceReferences of primitives, they cannot reference anything
+            {   // Speed up: do not traceReferences of non-referenceable classes
                 if (!writeOptions.isNonReferenceableClass(obj.getClass()))
                 {
                     traceFields(stack, obj);
@@ -939,7 +939,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
-            JsonUtilities.writeJsonUtf8String(output, new String((char[]) array));
+            JsonIo.writeJsonUtf8String(output, new String((char[]) array));
         }
         else if (short[].class == arrayType)
         {
@@ -1672,7 +1672,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();
-            JsonUtilities.writeJsonUtf8String(output, (String) att2value.getKey());
+            JsonIo.writeJsonUtf8String(output, (String) att2value.getKey());
             output.write(":");
 
             writeCollectionElement(att2value.getValue());
@@ -1774,7 +1774,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             elementType = ee.getClass();
         }
-        JsonUtilities.writeBasicString(out, elementType.getName());
+        JsonIo.writeBasicString(out, elementType.getName());
 
         if (!enumSet.isEmpty())
         {
@@ -1784,7 +1784,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             out.write(",");
             newLine();
 
-            JsonUtilities.writeBasicString(out, "@items");
+            JsonIo.writeBasicString(out, "@items");
             out.write(":[");
             if (enumFieldsCount > 2)
             {
@@ -1805,7 +1805,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 firstInSet = false;
 
                 if (enumFieldsCount <= 2) {
-                    JsonUtilities.writeJsonUtf8String(out, e.name());
+                    JsonIo.writeJsonUtf8String(out, e.name());
                 }
                 else
                 {

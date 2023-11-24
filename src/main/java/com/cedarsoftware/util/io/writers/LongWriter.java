@@ -7,12 +7,9 @@ import com.cedarsoftware.util.io.WriterContext;
 import com.cedarsoftware.util.io.Writers;
 
 public class LongWriter extends Writers.PrimitiveTypeWriter {
-    @Override
     public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
         if (context.getWriteOptions().isWriteLongsAsStrings()) {
-            output.write("\"");
-            output.write(o.toString());
-            output.write("\"");
+            output.write(String.format("\"%d\"", (long)o));
         } else {
             output.write(o.toString());
         }
