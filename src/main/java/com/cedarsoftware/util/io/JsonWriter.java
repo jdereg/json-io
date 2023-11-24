@@ -789,11 +789,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         else if (obj instanceof EnumSet)
         {
-            writeEnumSet((EnumSet)obj);
+            writeEnumSet((EnumSet<?>)obj);
         }
         else if (obj instanceof Collection)
         {
-            writeCollection((Collection) obj, showType);
+            writeCollection((Collection<?>) obj, showType);
         }
         else if (obj instanceof JsonObject)
         {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
@@ -1092,7 +1092,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         output.write((char[]) byteStrs[bytes[lenMinus1] + 128]);
     }
 
-    private void writeCollection(Collection col, boolean showType) throws IOException
+    private void writeCollection(Collection<?> col, boolean showType) throws IOException
     {
         if (writeOptions.isNeverShowingType())
         {
@@ -1129,7 +1129,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         beginCollection(showType, referenced);
-        Iterator i = col.iterator();
+        Iterator<?> i = col.iterator();
 
         writeElements(output, i);
 
@@ -1142,7 +1142,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private void writeElements(Writer output, Iterator i) throws IOException
+    private void writeElements(Writer output, Iterator<?> i) throws IOException
     {
         while (i.hasNext())
         {
@@ -1489,7 +1489,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 newLine();
             }
             writeType(jObj.type, output);
-            type = MetaUtils.safelyIgnoreException(() -> MetaUtils.classForName(jObj.type, getClassLoader()), null);
+            type = MetaUtils.classForName(jObj.type, getClassLoader());
         }
 
         if (jObj.isEmpty())
@@ -2009,7 +2009,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return declaredType != optionalClass.orElse(null);
         }
 
-        return this.writeOptions.getCustomWriter(declaredType) == null;
+        return writeOptions.getCustomWriter(declaredType) == null;
     }
 
     public void flush()
