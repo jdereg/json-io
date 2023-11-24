@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -19,6 +16,9 @@ import java.util.Map;
 
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import com.cedarsoftware.util.reflect.Injector;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
@@ -258,7 +258,7 @@ public class ObjectResolver extends Resolver
                         injector.inject(target, converted);
                     }
                 }
-                else if (rhs instanceof String && "".equals(((String) rhs).trim()) && fieldType != String.class)
+                else if (rhs instanceof String && ((String) rhs).trim().isEmpty() && fieldType != String.class)
                 {   // Allow "" to null out a non-String field
                     injector.inject(target, null);
                 }

@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-
-import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -140,9 +140,9 @@ public class StringTest
             byte[] symbol = new byte[] {(byte) 0xf0, (byte) 0x9d, (byte) 0x80, (byte) 0x80};
             _utf8HandBuilt = new String(symbol, StandardCharsets.UTF_8);
 
-            _strArray = new String[]{"1st", "2nd", _null, null, new String("3rd")};
-            _objArray = new Object[]{"1st", "2nd", _null, null, new String("3rd")};
-            _objStrArray = new String[]{"1st", "2nd", _null, null, new String("3rd")};
+            _strArray = new String[]{"1st", "2nd", _null, null, "3rd"};
+            _objArray = new Object[]{"1st", "2nd", _null, null, "3rd"};
+            _objStrArray = new String[]{"1st", "2nd", _null, null, "3rd"};
             _cache = new Object[]{"true", "true", "golf", "golf"};
             _poly = "Poly";
         }

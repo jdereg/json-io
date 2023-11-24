@@ -2028,14 +2028,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             out.close();
         }
         catch (Exception ignore) { }
-
-        //  This clears up our cache of CustomWriters for eacn class which forces the system
-        //  to rebuild the cache every time they run serilialize even if the've already built
-        //  up the cache.  I propose we remove this, leave it as an option on WriteCache and
-        //  allow the user to call it themselves manually if they don't want to hold onto it.
-        //  I've also changed it to a LRUCache to help with memory management.  We could make
-        //  that an option later (the number of items).
-        writeOptions.clearCustomWriterCache();
     }
 
     private String getId(Object o)

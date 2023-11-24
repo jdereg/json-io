@@ -88,7 +88,7 @@ public class WriteOptions {
     // TODO: is to manage the state of its internal simple settings. It offers up the APIs
     // TODO: to read this settings to the outside, and those outside classes like writers,
     // TODO: should be looking at the WriteOptions and adjusting their behavior accordingly.
-    private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache;
+    private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
 
     private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private boolean prettyPrint = false;
@@ -238,8 +238,6 @@ public class WriteOptions {
         nonReferenceableItems.add(AtomicBoolean.class);
         nonReferenceableItems.add(AtomicInteger.class);
         nonReferenceableItems.add(AtomicLong.class);
-
-        writerCache = new ConcurrentHashMap<>(300);
 
         // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
         // TODO: This feature is broken until the aliasTypeNames are shared between ReadOptions/WriteOptions
@@ -1020,13 +1018,6 @@ public class WriteOptions {
         writerCache.put(c, writer);
 
         return writer == nullWriter ? null : writer;
-    }
-
-    /**
-     * Clears the custom writer cache used for speedier lookup of custom writers.
-     */
-    public void clearCustomWriterCache() {
-        writerCache.clear();
     }
 
     /**
