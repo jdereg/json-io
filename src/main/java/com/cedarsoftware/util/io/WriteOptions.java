@@ -119,7 +119,7 @@ public class WriteOptions {
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
 
-        // TODO: Customization class should not be changing based on settings here.
+        // TODO: Write Customization class should not be changing based on settings here.
         // TODO: Customized Writer should be referencing WriteOptions to make it's
         // TODO: subtle changes to output, Isolating the understanding of the customization
         // TODO: to the Writer, and leaving WriteOptions only possessing flags / indicators.
@@ -273,20 +273,12 @@ public class WriteOptions {
         this.writerCache = other.writerCache;
 
         // Need your own Set instance here per Class, no references to the copied Set.
-        dupe((Map) other.includedFields, (Map)includedFields);
-        dupe((Map) other. includedAccessors, (Map) includedAccessors);
-        dupe((Map) other.excludedFields, (Map) excludedFields);
-        dupe((Map) other.excludedAccessors, (Map) excludedAccessors);
+        includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.includedAccessors, false);
+        excludedFields = (Map<Class<?>, Set<String>>) dupe(other.excludedFields, false);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
     }
 
-    private static void dupe(Map<Class<?>, Set<?>> source, Map<Class<?>, Set<?>> dest) {
-        for (Map.Entry<Class<?>, Set<?>> entry : source.entrySet()) {
-            Set items = new LinkedHashSet<>();
-            dest.computeIfAbsent(entry.getKey(), k -> items);
-            items.addAll(entry.getValue());
-        }
-    }
-    
     // Private method to check if the object is sealed
     private void throwIfBuilt() {
         if (built) {
@@ -927,10 +919,10 @@ public class WriteOptions {
      */
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
-        includedFields = (Map<Class<?>, Set<String>>) createUnmodifiable(includedFields);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) createUnmodifiable(includedAccessors);
-        excludedFields = (Map<Class<?>, Set<String>>) createUnmodifiable(excludedFields);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) createUnmodifiable(excludedAccessors);
+        includedFields = (Map<Class<?>, Set<String>>) dupe(includedFields, true);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(includedAccessors, true);
+        excludedFields = (Map<Class<?>, Set<String>>) dupe(excludedFields, true);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(excludedAccessors, true);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
         nonReferenceableItems = Collections.unmodifiableSet(new LinkedHashSet<>(nonReferenceableItems));
@@ -939,14 +931,22 @@ public class WriteOptions {
         return this;
     }
 
-    private static Map<Class<?>,? extends Set<?>> createUnmodifiable(Map<Class<?>, ? extends Set<?>> other)
+    private static Map<Class<?>,? extends Set<?>> dupe(Map<Class<?>, ? extends Set<?>> other, boolean unmodifiable)
     {
         Map<Class<?>, Set<?>> newItemsAssocToClass = new LinkedHashMap<>();
         for (Map.Entry<Class<?>,?> entry : other.entrySet()) {
             Set<?> itemsAssocToClass = new LinkedHashSet<>((Collection<?>)entry.getValue());
-            newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
+            if (unmodifiable) {
+                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
+            } else {
+                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> itemsAssocToClass);
+            }
         }
-        return Collections.unmodifiableMap(newItemsAssocToClass);
+        if (unmodifiable) {
+            return Collections.unmodifiableMap(newItemsAssocToClass);
+        } else {
+            return newItemsAssocToClass;
+        }
     }
 
     /**
