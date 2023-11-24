@@ -3,11 +3,13 @@
  */
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  *         <br>
@@ -99,8 +101,11 @@ public class SimpleValuesTest
         JsonWriter.setAllowNanAndInfinity(writeAllowNan);
     }
 
-    public void simpleCases()
-    {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testSimpleCases(boolean allowNanAndInfinity) {
+        JsonReader.setAllowNanAndInfinity(allowNanAndInfinity);
+
         testWriteRead(1234);
         testWriteRead(1f);
         testWriteRead(2.0);
@@ -109,20 +114,30 @@ public class SimpleValuesTest
         testWriteRead(-1234);
         testWriteRead(-1f);
         testWriteRead(-2.0);
+
     }
 
-    @Test
-    public void testSimpleCases() {
-        JsonReader.setAllowNanAndInfinity(false);
-        JsonWriter.setAllowNanAndInfinity(false);
-        simpleCases();
+    @ParameterizedTest
+    @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
+    void testNanAndInfinity_whenNanAndInfinityNotAllowed_serializesAsNull(Double d) {
         JsonReader.setAllowNanAndInfinity(true);
-        JsonWriter.setAllowNanAndInfinity(true);
-        simpleCases();
+        TestUtil.printLine("testObj = " + d);
+        final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(false).build());
 
-        testWriteRead(Double.POSITIVE_INFINITY);
-        testWriteRead(Double.NEGATIVE_INFINITY);
-        testWriteRead(Double.NaN);
+        assertThat(json).contains("null");
+
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
+    void testNanAndInfinity_whenAllowingNanAndInfinity_serializeRoundTrip(Double d) {
+        JsonReader.setAllowNanAndInfinity(true);
+        TestUtil.printLine("testObj = " + d);
+        final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(true).build());
+        final Double newObj = TestUtil.toObjects(json, Double.class);
+        TestUtil.printLine("newObj = " + newObj);
+
+        assertEquals(d, newObj);
     }
 
     private final void testWriteRead(Object testObj)

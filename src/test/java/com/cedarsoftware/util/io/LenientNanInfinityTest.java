@@ -1,10 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -25,25 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class LenientNanInfinityTest
 {
-    static boolean readAllowNan;
-    static boolean writeAllowNan;
-
-    @BeforeAll
-    public static void init()
-    {
-        readAllowNan = JsonReader.isAllowNanAndInfinity();
-        JsonReader.setAllowNanAndInfinity(true);
-        writeAllowNan = JsonWriter.isAllowNanAndInfinity();
-        JsonWriter.setAllowNanAndInfinity(true);
-    }
-
-    @AfterAll
-    public static void tearDown()
-    {
-        JsonReader.setAllowNanAndInfinity(readAllowNan);
-        JsonWriter.setAllowNanAndInfinity(writeAllowNan);
-    }
-    
     public class A
     {
         private final Double doubleField;
@@ -94,9 +73,11 @@ public class LenientNanInfinityTest
 
     private final void testFloatDouble(float float1, double double1)
     {
+        JsonReader.setAllowNanAndInfinity(true);
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
         A a = new A(double1, float1);
-        
-        String json = TestUtil.toJson(a);
+
+        String json = TestUtil.toJson(a, writeOptions);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
         A newA = (A) TestUtil.toObjects(json, null);

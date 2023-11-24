@@ -76,6 +76,22 @@ public class Writers
         public boolean hasPrimitiveForm() { return true; }
     }
 
+    /**
+     * Used for Native JSON primitives that never need to write their type.
+     */
+    public static class NativeJsonPrimitive implements JsonWriter.JsonClassWriter {
+        @Override
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
+            writePrimitiveForm(obj, output, context);
+        }
+
+        @Override
+        public boolean hasPrimitiveForm() {
+            return true;
+        }
+    }
+
+
 
     /**
      * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
@@ -96,6 +112,54 @@ public class Writers
     }
 
     /**
+     * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
+     * but we do not put in quotes.  Uses the default key of "value" unless overridden
+     */
+    public abstract static class FloatingPointWriter<T> extends PrimitiveTypeWriter {
+        /**
+         * Writes out Float point type.
+         */
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            if (!context.getWriteOptions().isAllowNanAndInfinity() && (isNanOrInfinity((T) o))) {
+                output.write("null");
+            } else {
+                output.write(o.toString());
+            }
+        }
+
+        abstract boolean isNanOrInfinity(T value);
+    }
+
+    /**
+     * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
+     * but we do not put in quotes.  Uses the default key of "value" unless overridden
+     */
+    public static class FloatWriter extends FloatingPointWriter<Float> {
+        /**
+         * Writes out Float point type.
+         */
+        @Override
+        boolean isNanOrInfinity(Float value) {
+            return value.isNaN() || value.isInfinite();
+        }
+    }
+
+    /**
+     * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
+     * but we do not put in quotes.  Uses the default key of "value" unless overridden
+     */
+    public static class DoubleWriter extends FloatingPointWriter<Double> {
+        /**
+         * Writes out Double types.
+         */
+        @Override
+        boolean isNanOrInfinity(Double value) {
+            return value.isNaN() || value.isInfinite();
+        }
+    }
+
+    /**
      * Used as a template to write out primitive String types.
      * Uses default key of "value" and encodes the string.
      */
@@ -108,7 +172,34 @@ public class Writers
             JsonUtilities.writeJsonUtf8String(output, extractString(o));
         }
     }
-    
+
+    /**
+     * Used as a template to write out primitive String types.
+     * Uses default key of "value" and encodes the string.
+     */
+    public static class CharacterWriter extends PrimitiveTypeWriter {
+
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
+            JsonUtilities.writeJsonUtf8Char(output, (char) o);
+        }
+    }
+
+    /**
+     * This can be used when you know your objects are going to be represented as strings,
+     * but won't need any UTF-8 escaping.  This saves a little time on the write.
+     */
+    public static class PrimitiveBasicStringWriter extends PrimitiveTypeWriter {
+        public String extractString(Object o) {
+            return o.toString();
+        }
+
+        @Override
+        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+            JsonUtilities.writeBasicString(output, extractString(o));
+        }
+    }
+
     public static class TimeZoneWriter extends PrimitiveUtf8StringWriter
     {
         @Override

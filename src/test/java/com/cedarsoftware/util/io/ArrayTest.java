@@ -1,7 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -17,15 +25,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -941,6 +948,137 @@ public class ArrayTest
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in shorthand.
         Object object = TestUtil.toObjects(testOut, null);
+    }
+
+    private static Stream<Arguments> allShowTypeInfos() {
+        return Stream.of(
+                Arguments.of(new WriteOptions().showTypeInfoNever().build()),
+                Arguments.of(new WriteOptions().showTypeInfoAlways().build()),
+                Arguments.of(new WriteOptions().build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_withLongs_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {10L, 20L, 30L};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[10,20,30]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_withDoubles_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {10.2d, 20.5d, 30.8d};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[10.2,20.5,30.8]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_withStrings_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {"foo", "bar", "qux"};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[\"foo\",\"bar\",\"qux\"]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_withBooleans_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {false, true, false};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[false,true,false]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_emptyArray_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("allShowTypeInfos")
+    void testObjectArray_withNestedObjectArray_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {new Object[0], new Object[0], new Object[0]};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[[],[],[]]");
+    }
+
+    @ParameterizedTest
+    @MethodSource("alwaysShowAndMinimalShow")
+    void testObjectArray_withInts_doesNotExportTypes(WriteOptions options) throws Throwable {
+        Object[] array = {10, 20, 30};
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[{\"@type\":\"int\",\"value\":10},{\"@type\":\"int\",\"value\":20},{\"@type\":\"int\",\"value\":30}]");
+    }
+
+    private static Stream<Arguments> integerVariants() {
+        return Stream.of(
+                Arguments.of(0x0A, 0x14, 0x1E),
+                Arguments.of((short) 10, (short) 20, (short) 30),
+                Arguments.of(10, 20, 30),
+                Arguments.of(10L, 20L, 30L),
+                Arguments.of(Integer.valueOf(10), Integer.valueOf(20), Integer.valueOf(30)),
+                Arguments.of(Byte.valueOf((byte) 10), Byte.valueOf((byte) 20), Byte.valueOf((byte) 30)),
+                Arguments.of(Long.valueOf(10), Long.valueOf(20), Long.valueOf(30)),
+                Arguments.of(Short.valueOf((short) 10), Short.valueOf((short) 20), Short.valueOf((short) 30))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("integerVariants")
+    void testObjectArray_withIntegerVariants_andNoTyping_outputsTheSame(Object one, Object two, Object three) {
+        WriteOptions options = new WriteOptions().showTypeInfoNever().build();
+        String json = TestUtil.toJson(new Object[]{one, two, three}, options);
+        assertThat(json).isEqualTo("[10,20,30]");
+    }
+
+    private static Stream<Arguments> alwaysShowAndMinimalShow() {
+        return Stream.of(
+                Arguments.of(new WriteOptions().showTypeInfoAlways().build()),
+                Arguments.of(new WriteOptions().build())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("alwaysShowAndMinimalShow")
+    void testObjectArray_withLongsWrittenAsStrings_andMinimalOrAlwaysShow_writesTypes(WriteOptions writeOptions) throws Throwable {
+        Object[] array = {10L, 20L, 30L};
+
+        String json = TestUtil.toJson(array, new WriteOptions(writeOptions).writeLongsAsStrings(true));
+        assertThat(json).isEqualTo("[{\"@type\":\"long\",\"value\":\"10\"},{\"@type\":\"long\",\"value\":\"20\"},{\"@type\":\"long\",\"value\":\"30\"}]");
+    }
+
+    private static Stream<Arguments> stringVariants() {
+        return Stream.of(
+                Arguments.of(10, 20, 30),
+                Arguments.of("10", "20", "30"),
+                Arguments.of(new StringBuilder("10"), new StringBuilder("20"), new StringBuilder("30")),
+                Arguments.of(new StringBuffer("10"), new StringBuffer("20"), new StringBuffer("30"))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("stringVariants")
+    void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants() throws Throwable {
+        Object[] array = {10L, 20L, 30L};
+
+        WriteOptions options = new WriteOptions()
+                .writeLongsAsStrings(true)
+                .showTypeInfoNever()
+                .build();
+
+        String json = TestUtil.toJson(array, options);
+        assertThat(json).isEqualTo("[\"10\",\"20\",\"30\"]");
     }
 
     private static final Date _testDate = new Date();
