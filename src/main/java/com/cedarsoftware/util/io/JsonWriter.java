@@ -1883,16 +1883,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             first = false;
         }
 
-        Class clazz = obj.getClass();
+        Class<?> clazz = obj.getClass();
         final Collection<Accessor> excludedAccessors = writeOptions.getExcludedAccessorsForClass(clazz);
         final Collection<Accessor> includedAccessors = writeOptions.getIncludedAccessorsForClass(clazz);
+        // TODO: Is 'allowTransient' being handle correctly below?
         if (!includedAccessors.isEmpty())
         {
             for (Accessor accessor : includedAccessors)
             {   //output field if not excluded
-                if (!excludedAccessors.contains(accessor) && !fieldsToExclude.contains(accessor.getName())) {
+                String fieldName = accessor.getName();
+                if (!excludedAccessors.contains(accessor) && !fieldsToExclude.contains(fieldName)) {
                     // Not currently supporting overwritten field names in hierarchy when using external field specifier
-                    first = writeField(obj, first, accessor.getName(), accessor, true);
+                    first = writeField(obj, first, fieldName, accessor, true);
                 }//else field is blacklisted.
             }
         }
@@ -1904,7 +1906,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 final String fieldName = entry.getKey();
                 final Accessor field = entry.getValue();
                 //output field if not excluded
-                if (!excludedAccessors.contains(field) && !fieldsToExclude.contains(field.getName()))
+                if (!excludedAccessors.contains(field) && !fieldsToExclude.contains(fieldName))
                 {
                     first = writeField(obj, first, fieldName, field, false);
                 }//else field is excluded.
