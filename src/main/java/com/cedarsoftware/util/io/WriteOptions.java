@@ -121,7 +121,7 @@ public class WriteOptions {
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
 
-        // TODO: Write Customization class should not be changing based on settings here.
+        // TODO: Write Customization Map should not be changing based on settings here.
         // TODO: Customized Writer should be referencing WriteOptions to make it's
         // TODO: subtle changes to output, Isolating the understanding of the customization
         // TODO: to the Writer, and leaving WriteOptions only possessing flags / indicators.
@@ -842,10 +842,6 @@ public class WriteOptions {
             }
 
             curr = curr.getSuperclass();
-        }
-
-        if (accessorSets.isEmpty()) {
-            return null;
         }
 
         return accessorSets;

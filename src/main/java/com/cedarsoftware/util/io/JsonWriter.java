@@ -657,7 +657,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Collection<Accessor> fields = writeOptions.getIncludedAccessorsForClass(obj.getClass());
         Collection<Accessor> fieldsBySpec = fields;
 
-        if (fields == null)
+        if (fields.isEmpty())
         {   // Trace fields using reflection, could filter this with excluded list here
             fields = ClassDescriptors.instance().getDeepAccessorsForClass(obj.getClass());
         }
@@ -668,7 +668,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             if (accessor.isTransient())
             {
-                if (fieldsBySpec == null || !fieldsBySpec.contains(accessor))
+                if (!fieldsBySpec.contains(accessor))
                 {   // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
                     // In that case, the field must be traced, even though it is transient.
                     continue;
@@ -678,7 +678,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             {
                 // make sure excluded fieldss don't get added to the stack.  If a field is proxied, such as
                 // by Hibernate then accessing the item in any way can throw an exception.
-                if (excludedFields == null || !excludedFields.contains(accessor))
+                if (!excludedFields.contains(accessor))
                 {
                     final Object o = accessor.retrieve(obj);
                     if (o != null && !writeOptions.isNonReferenceableClass(o.getClass()))
@@ -1883,13 +1883,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             first = false;
         }
 
-        final Collection<Accessor> excludedFields = writeOptions.getExcludedAccessorsForClass(obj.getClass());
-        final Collection<Accessor> externallySpecifiedFields = writeOptions.getIncludedAccessorsForClass(obj.getClass());
-        if (externallySpecifiedFields != null)
+        Class clazz = obj.getClass();
+        final Collection<Accessor> excludedAccessors = writeOptions.getExcludedAccessorsForClass(clazz);
+        final Collection<Accessor> includedAccessors = writeOptions.getIncludedAccessorsForClass(clazz);
+        if (!includedAccessors.isEmpty())
         {
-            for (Accessor accessor : externallySpecifiedFields)
+            for (Accessor accessor : includedAccessors)
             {   //output field if not excluded
-                if ((excludedFields == null || !excludedFields.contains(accessor)) && !fieldsToExclude.contains(accessor.getName())) {
+                if (!excludedAccessors.contains(accessor) && !fieldsToExclude.contains(accessor.getName())) {
                     // Not currently supporting overwritten field names in hierarchy when using external field specifier
                     first = writeField(obj, first, accessor.getName(), accessor, true);
                 }//else field is blacklisted.
@@ -1897,13 +1898,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         else
         {   // Reflectively use fields, skipping transient and static fields
-            final Map<String, Accessor> classFields = ClassDescriptors.instance().getDeepAccessorMap(obj.getClass());
+            final Map<String, Accessor> classFields = ClassDescriptors.instance().getDeepAccessorMap(clazz);
             for (Map.Entry<String, Accessor> entry : classFields.entrySet())
             {
                 final String fieldName = entry.getKey();
                 final Accessor field = entry.getValue();
                 //output field if not excluded
-                if ((excludedFields == null || !excludedFields.contains(field)) && !fieldsToExclude.contains(field.getName()))
+                if (!excludedAccessors.contains(field) && !fieldsToExclude.contains(field.getName()))
                 {
                     first = writeField(obj, first, fieldName, field, false);
                 }//else field is excluded.
