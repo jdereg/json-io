@@ -15,13 +15,13 @@ class ArgumentHelperTest
     @ParameterizedTest
     @MethodSource("argumentHelperTrueValues")
     void argumentHelper_truthyValues_returnTrue(Object input) {
-        assertThat(ArgumentHelper.isTrue(input)).isTrue();
+        assertThat(JsonWriter.isTrue(input)).isTrue();
     }
 
     @ParameterizedTest
     @MethodSource("argumentHelperFalseValues")
     void argumentHelper_nonTruthyValues_returnFalse(Object input) {
-        assertThat(ArgumentHelper.isTrue(input)).isFalse();
+        assertThat(JsonWriter.isTrue(input)).isFalse();
     }
 
     private static Stream<Arguments> argumentHelperTrueValues() {

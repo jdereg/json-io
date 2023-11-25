@@ -186,21 +186,24 @@ abstract class Resolver
             }
             else
             {
-                Object special;
-                if ((special = readIfMatching(jsonObj, null, stack)) != null)
-                {
-                    jsonObj.target = special;
-                }
-                else
-                {
-                    traverseFields(stack, jsonObj);
-                }
+//                Object special;
+//                if ((special = readIfMatching(jsonObj, null, stack)) != null)
+//                {
+//                    jsonObj.target = special;
+//                }
+//                else
+//                {
+//                    traverseFields(stack, jsonObj);
+//                }
+                setJsonObjTarget(stack,jsonObj);
             }
         }
         return root.target;
     }
 
-    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract void setJsonObjTarget(final Deque<JsonObject> stack, final JsonObject jsonObj);
+
+    //protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject> stack);
 
     public abstract void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 

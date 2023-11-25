@@ -336,31 +336,7 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject jObj = (JsonObject) rhs;
-                final Long ref = jObj.getReferenceId();
-
-                if (ref != null)
-                { // Correct field references
-                    final JsonObject refObject = getReferencedObj(ref);
-                    storeMissingField(target, missingField, refObject.target);
-                }
-                else
-                {   // Assign ObjectMap's to Object (or derived) fields
-                    // check that jObj as a type
-                    if (jObj.getType() != null)
-                    {
-                        Object createJavaObjectInstance = createJavaObjectInstance(null, jObj);
-                        if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
-                        {
-                            stack.addFirst((JsonObject) rhs);
-                        }
-                        storeMissingField(target, missingField, createJavaObjectInstance);
-                    } 
-                    else //no type found, just notify.
-                    {
-                        storeMissingField(target, missingField, null);
-                    }
-                }
+                handleMissingFieldForJsonObject(stack,rhs, missingField,target);
             }
             else
             {
@@ -377,6 +353,35 @@ public class ObjectResolver extends Resolver
                         + " (which created a LinkedHashMap instead of the desired class)";
             }
             throw new JsonIoException(message, e);
+        }
+    }
+
+    protected void handleMissingFieldForJsonObject(final Deque<JsonObject> stack,final Object rhs,
+                                                   final String missingField,final Object target) {
+        final JsonObject jObj = (JsonObject) rhs;
+        final Long ref = jObj.getReferenceId();
+
+        if (ref != null)
+        { // Correct field references
+            final JsonObject refObject = getReferencedObj(ref);
+            storeMissingField(target, missingField, refObject.target);
+        }
+        else
+        {   // Assign ObjectMap's to Object (or derived) fields
+            // check that jObj as a type
+            if (jObj.getType() != null)
+            {
+                Object createJavaObjectInstance = createJavaObjectInstance(null, jObj);
+                if (!MetaUtils.isLogicalPrimitive(jObj.getTargetClass()))
+                {
+                    stack.addFirst((JsonObject) rhs);
+                }
+                storeMissingField(target, missingField, createJavaObjectInstance);
+            }
+            else //no type found, just notify.
+            {
+                storeMissingField(target, missingField, null);
+            }
         }
     }
 
@@ -682,9 +687,10 @@ public class ObjectResolver extends Resolver
             }
             else
             {
-                if (element instanceof String && "".equals(((String) element).trim()) && compType != String.class && compType != Object.class)
+                if (isNonEmptyString(element) && !isCompTypeStringOrObject(compType))
                 {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
                     Array.set(array, i, null);
+                    //compType != String.class && compType != Object.class
                 }
                 else
                 {
@@ -693,6 +699,14 @@ public class ObjectResolver extends Resolver
             }
         }
         jsonObj.clearArray();
+    }
+
+    protected static boolean isNonEmptyString(Object element) {
+        return element instanceof String && "".equals(((String) element).trim());
+    }
+
+    protected static boolean isCompTypeStringOrObject(final Class compType) {
+        return compType == String.class || compType == Object.class;
     }
 
     /**
@@ -995,5 +1009,18 @@ public class ObjectResolver extends Resolver
             }
         }
         return null;
+    }
+
+    @Override
+    protected void setJsonObjTarget(final Deque<JsonObject> stack, final JsonObject jsonObj) {
+        Object special;
+        if ((special = readIfMatching(jsonObj, null, stack)) != null)
+        {
+            jsonObj.target = special;
+        }
+        else
+        {
+            traverseFields(stack, jsonObj);
+        }
     }
 }

@@ -47,7 +47,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.cedarsoftware.util.io.ArgumentHelper.isTrue;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
@@ -262,7 +261,31 @@ public class JsonWriter implements Closeable, Flushable
     public static void setAllowNanAndInfinity(boolean lenient) {
         JsonWriter.allowNanAndInfinity = lenient;
     }
-    
+
+    /**
+     * @param setting Object setting value from JsonWriter args map.
+     * @return boolean true if the value is (boolean) true, Boolean.TRUE, "true" (any case), or non-zero if a Number.
+     */
+    public static boolean isTrue(Object setting)
+    {
+        if (setting instanceof Boolean)
+        {
+            return Boolean.TRUE.equals(setting);
+        }
+
+        if (setting instanceof String)
+        {
+            return "true".equalsIgnoreCase((String) setting);
+        }
+
+        if (setting instanceof Number)
+        {
+            return ((Number)setting).intValue() != 0;
+        }
+
+        return false;
+    }
+
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.
      */

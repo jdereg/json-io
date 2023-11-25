@@ -791,7 +791,7 @@ public class MetaUtils
 
         throw new JsonIoException("Class '" + c.getName() + "' does not have primitive wrapper.");
     }
-
+    
     public static void setFieldValue(Field field, Object instance, Object value)
     {
         try
