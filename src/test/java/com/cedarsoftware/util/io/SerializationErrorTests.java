@@ -50,11 +50,24 @@ class SerializationErrorTests {
     }
 
     @Test
-    void testMismatchedMethodTypes() {
+    void testMismatchedMethodTypes_withMinimalTying() {
         MismatchedGetter model = new MismatchedGetter();
         model.generate("foo");
 
         String json = TestUtil.toJson(model);
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+
+        assertThat(actual.getRawValue()).isEqualTo("foo");
+        assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
+        assertThat(actual.getTypes()).containsExactlyElementsOf(Arrays.asList(model.getTypes()));
+    }
+
+    @Test
+    void testMismatchedMethodTypes_withFullTyping() {
+        MismatchedGetter model = new MismatchedGetter();
+        model.generate("foo");
+
+        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways().build());
         MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
