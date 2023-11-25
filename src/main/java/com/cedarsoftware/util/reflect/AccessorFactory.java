@@ -12,5 +12,5 @@ public interface AccessorFactory {
      * @param possibleMethods a map of possible methods from the class itself
      * @return The accessor if one fits for this field, otherwise null.
      */
-    Accessor createAccessor(Field field, Map<String, Method> possibleMethods);
+    Accessor createAccessor(Field field, Map<String, Method> possibleMethods) throws Throwable;
 }

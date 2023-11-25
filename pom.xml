@@ -317,6 +317,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.novell.ldap/jldap -->
+        <dependency>
+            <groupId>com.novell.ldap</groupId>
+            <artifactId>jldap</artifactId>
+            <version>2009-10-07</version>
+        </dependency>
+
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>

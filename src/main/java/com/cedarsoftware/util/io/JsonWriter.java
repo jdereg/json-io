@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -28,10 +30,9 @@ import java.util.Set;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
+
 import lombok.Getter;
 import lombok.Setter;
-
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -680,9 +681,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 // by Hibernate then accessing the item in any way can throw an exception.
                 if (!excludedFields.contains(accessor))
                 {
-                    final Object o = accessor.retrieve(obj);
-                    if (o != null && !writeOptions.isNonReferenceableClass(o.getClass()))
-                    {   // Trace through objects that can reference other objects
+                    final Object o = getValueByReflect(obj, accessor);
+                    if (o != null && !writeOptions.isNonReferenceableClass(o.getClass())) {   // Trace through objects that can reference other objects
                         stack.addFirst(o);
                     }
                 }
@@ -1813,7 +1813,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     out.write('{');
                     for (Accessor f : mapOfFields.values())
                     {
-                        firstInEntry = writeField(e, firstInEntry, f.getName(), f, false);
+                        firstInEntry = writeField(e, firstInEntry, f.getFieldName(), f, false);
                     }
                     out.write('}');
                 }
@@ -1890,7 +1890,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             for (Accessor accessor : includedAccessors)
             {   //output field if not excluded
-                String fieldName = accessor.getName();
+                String fieldName = accessor.getFieldName();
                 if (!excludedAccessors.contains(accessor) && !fieldsToExclude.contains(fieldName)) {
                     // Not currently supporting overwritten field names in hierarchy when using external field specifier
                     first = writeField(obj, first, fieldName, accessor, true);
@@ -1930,7 +1930,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     private Object getValueByReflect(Object obj, Accessor accessor) {
         try {
             return accessor.retrieve(obj);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
             return null;
         }
     }
@@ -1984,7 +1984,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return false;
         }
 
-        Class<?> type = accessor.getType();
+        Class<?> type = accessor.getFieldType();
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         // When no type is written we can check the Object itself not the declaration

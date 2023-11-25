@@ -256,7 +256,7 @@ class JsonObjectTest
         assertThat(robin.get("partner")).isSameAs(batman);
         assertThat(batman.get("partner")).isSameAs(robin);
     }
-
+    
     @Test
     public void testAsArray()
     {

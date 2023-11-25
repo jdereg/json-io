@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import com.cedarsoftware.util.reflect.Injector;
-import com.cedarsoftware.util.reflect.InjectorFactory;
-import com.cedarsoftware.util.reflect.injectors.MethodInjector;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.Optional;
+
+import com.cedarsoftware.util.reflect.Injector;
+import com.cedarsoftware.util.reflect.InjectorFactory;
 
 public class MappedMethodInjectorFactory implements InjectorFactory {
     private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
@@ -26,7 +25,19 @@ public class MappedMethodInjectorFactory implements InjectorFactory {
             return null;
         }
 
-        return new MethodInjector(field, method);
+        Class<?> type = method.getParameters()[0].getType();
+
+        if (!type.isAssignableFrom(field.getType())) {
+            return null;
+        }
+
+        try {
+            return new Injector(field, method);
+        } catch (ThreadDeath td) {
+            throw td;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /**

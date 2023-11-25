@@ -1,9 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import java.awt.*;
+import java.awt.Point;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -24,12 +29,10 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -59,6 +62,44 @@ public class MapsTest
         ManyMaps root = TestUtil.toObjects(jsonOut, null);
         assertMap(root);
         assert DeepEquals.deepEquals(obj, root);
+    }
+
+    @Test
+    void testObject_holdingMap_withStringOfStrings_andAlwaysShowingType() {
+        HashMap<String, String> map = new HashMap<>();
+        map.put("cn", "name");
+        map.put("on", "unger");
+        map.put("en", "us");
+
+        ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
+        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways().build());
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+
+        Map<String, String> deserialized = actual.getMap();
+        assertThat(deserialized)
+                .hasSize(3)
+                .containsEntry("cn", "name")
+                .containsEntry("on", "unger")
+                .containsEntry("en", "us");
+    }
+
+    @Test
+    void testObject_holdingMap_withStringOfStrings_andMinimalType() {
+        HashMap<String, String> map = new HashMap<>();
+        map.put("cn", "name");
+        map.put("on", "unger");
+        map.put("en", "us");
+
+        ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
+        String json = TestUtil.toJson(model, new WriteOptions().build());
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+
+        Map<String, String> deserialized = actual.getMap();
+        assertThat(deserialized)
+                .hasSize(3)
+                .containsEntry("cn", "name")
+                .containsEntry("on", "unger")
+                .containsEntry("en", "us");
     }
 
     private static void assertMap(ManyMaps root)

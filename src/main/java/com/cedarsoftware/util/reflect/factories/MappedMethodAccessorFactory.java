@@ -1,20 +1,19 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.AccessorFactory;
-import com.cedarsoftware.util.reflect.accessors.MethodAccessor;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.Optional;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.AccessorFactory;
+
 public class MappedMethodAccessorFactory implements AccessorFactory {
     private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
 
     @Override
-    public Accessor createAccessor(Field field, Map<String, Method> possibleAccessors) {
+    public Accessor createAccessor(Field field, Map<String, Method> possibleAccessors) throws Throwable {
         String fieldName = field.getName();
 
         Optional<String> possibleMethod = NonStandardAccessorNames.instance()
@@ -26,7 +25,17 @@ public class MappedMethodAccessorFactory implements AccessorFactory {
             return null;
         }
 
-        return new MethodAccessor(field, method);
+        if (!method.getReturnType().isAssignableFrom(field.getType())) {
+            return null;
+        }
+
+        try {
+            return new Accessor(field, method);
+        } catch (ThreadDeath td) {
+            throw td;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /**
