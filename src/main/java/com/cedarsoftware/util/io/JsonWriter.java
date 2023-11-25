@@ -32,7 +32,6 @@ import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -109,17 +108,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             byteStrings[i + 128] = chars;
         }
     }
-
-    /**
-     * -- GETTER --
-     *
-     * @return boolean the allowsNanAndInfinity flag
-     * @deprecated use WriteOptions.allowNanAndInfinity()
-     */
-    @Setter
-    @Getter
-    @Deprecated
-    private static volatile boolean allowNanAndInfinity = false;
 
     /**
      * Common ancestor for JsonClassWriter and JsonClassWriter.

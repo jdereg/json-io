@@ -91,14 +91,12 @@ public class SimpleValuesTest
     @BeforeAll
     public static void init() {
         readAllowNan = JsonReader.isAllowNanAndInfinity();
-        writeAllowNan = JsonWriter.isAllowNanAndInfinity();
     }
 
     @AfterAll
     public static void tearDown()
     {
         JsonReader.setAllowNanAndInfinity(readAllowNan);
-        JsonWriter.setAllowNanAndInfinity(writeAllowNan);
     }
 
     @ParameterizedTest

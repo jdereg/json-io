@@ -12,6 +12,7 @@ public class NonStandardInjectorNames extends NonStandardMethodNames {
     }
 
     private void addFieldToMethodMappings() {
+
         addMapping(Throwable.class, "cause", "initCause");
     }
 }

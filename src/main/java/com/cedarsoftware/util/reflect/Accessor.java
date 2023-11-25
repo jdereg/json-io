@@ -5,6 +5,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.util.Objects;
 
 import com.cedarsoftware.util.io.MetaUtils;
@@ -29,28 +30,32 @@ import lombok.Getter;
  */
 public class Accessor extends FieldCharacteristics {
 
+    private final Field field;
     @Getter
     private final String displayName;
-    private final MethodHandle accessor;
+    private MethodHandle accessor;
 
     @Getter
     private final boolean isPublic;
 
     public Accessor(Field field) throws Throwable {
-        super(field);
+        this.field = field;
 
         this.displayName = field.getName();
         this.isPublic = Modifier.isPublic(field.getModifiers());
 
-        if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
-            MetaUtils.trySetAccessible(field);
+        try {
+            this.accessor = MethodHandles.lookup().unreflectGetter(field);
+        } catch (Exception e) {
+            if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
+                MetaUtils.trySetAccessible(field);
+            }
+            this.accessor = null;
         }
-
-        this.accessor = MethodHandles.lookup().unreflectGetter(field);
     }
 
     public Accessor(Field field, Method method) throws Throwable {
-        super(field);
+        this.field = field;
 
         this.displayName = method.getName();
         this.isPublic = Modifier.isPublic(method.getModifiers());
@@ -80,6 +85,30 @@ public class Accessor extends FieldCharacteristics {
 
 
     public Object retrieve(Object o) throws Throwable {
-        return accessor.invoke(o);
+        if (accessor == null) {
+            return field.get(o);
+        } else {
+            return accessor.invoke(o);
+        }
+    }
+
+    public Class<?> getFieldType() {
+        return this.field.getType();
+    }
+
+    public Class<?> getDeclaringClass() {
+        return this.field.getDeclaringClass();
+    }
+
+    public Type getGenericType() {
+        return this.field.getGenericType();
+    }
+
+    public String getFieldName() {
+        return this.field.getName();
+    }
+
+    public boolean isTransient() {
+        return Modifier.isTransient(this.field.getModifiers());
     }
 }
