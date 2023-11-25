@@ -18,6 +18,7 @@ import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
 import com.cedarsoftware.util.reflect.filters.EnumFilter;
 import com.cedarsoftware.util.reflect.filters.GroovyFilter;
 import com.cedarsoftware.util.reflect.filters.StaticFilter;
+
 import lombok.Getter;
 
 public class ClassDescriptors {
@@ -28,7 +29,8 @@ public class ClassDescriptors {
 
     private final List<InjectorFactory> injectorFactories;
 
-    private final Map<Class<?>, ClassDescriptor> descriptors;
+    private final Map<Class<?>, Map<String, Accessor>> deepAccessors;
+    private final Map<Class<?>, Map<String, Injector>> deepInjectors;
 
     private static final ClassDescriptors instance = new ClassDescriptors();
 
@@ -46,7 +48,8 @@ public class ClassDescriptors {
         this.injectorFactories = new ArrayList<>();
         this.injectorFactories.add(new MappedMethodInjectorFactory());
 
-        this.descriptors = new ConcurrentHashMap<>();
+        this.deepAccessors = new ConcurrentHashMap<>();
+        this.deepInjectors = new ConcurrentHashMap<>();
     }
 
     public static ClassDescriptors instance() {
@@ -54,55 +57,48 @@ public class ClassDescriptors {
     }
 
     public Map<String, Accessor> getDeepAccessorMap(Class<?> classToTraverse) {
+        return this.deepAccessors.computeIfAbsent(classToTraverse, this::buildDeepAccessors);
+    }
 
-        Map<String, Accessor> accessors = new LinkedHashMap<>();
-        Class<?> c = classToTraverse;
-
-        while (c != null) {
-            for (Map.Entry<String, Accessor> entry : this.getClassDescriptor(c).getAccessors().entrySet()) {
-                String key = accessors.containsKey(entry.getKey()) ? c.getSimpleName() + '.' + entry.getKey() : entry.getKey();
-                accessors.put(key, entry.getValue());
-            }
-
-            c = c.getSuperclass();
-        }
-
-        return accessors;
+    public Collection<Accessor> getDeepAccessors(Class<?> c) {
+        return this.getDeepAccessorMap(c).values();
     }
 
     public Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse) {
+        return this.deepInjectors.computeIfAbsent(classToTraverse, this::buildDeepInjectors);
+    }
 
-        Map<String, Injector> injectors = new LinkedHashMap<>();
+    private Map<String, Accessor> buildDeepAccessors(Class<?> classToTraverse) {
+        Map<String, Accessor> accessorMap = new LinkedHashMap<>();
         Class<?> c = classToTraverse;
 
         while (c != null) {
-            for (Map.Entry<String, Injector> entry : this.getClassDescriptor(c).getInjectors().entrySet()) {
-                String key = injectors.containsKey(entry.getKey()) ? c.getSimpleName() + '.' + entry.getKey() : entry.getKey();
-                injectors.put(key, entry.getValue());
-            }
-
+            this.buildAccessors(c, accessorMap);
             c = c.getSuperclass();
         }
 
-        return injectors;
+        return accessorMap;
     }
 
-    public Collection<Accessor> getDeepAccessorsForClass(Class<?> c) {
-        return getDeepAccessorMap(c).values();
-    }
+    private Map<String, Injector> buildDeepInjectors(Class<?> classToTraverse) {
+        Map<String, Injector> injectorMap = new LinkedHashMap<>();
+        Class<?> c = classToTraverse;
 
-    public ClassDescriptor getClassDescriptor(Class<?> c) {
-        return descriptors.computeIfAbsent(c, this::buildDescriptor);
+        while (c != null) {
+            this.buildInjectors(c, injectorMap);
+            c = c.getSuperclass();
+        }
+
+        return injectorMap;
     }
 
     public void clearDescriptorCache() {
-        descriptors.clear();
+        deepInjectors.clear();
+        deepAccessors.clear();
     }
 
-    private ClassDescriptor buildDescriptor(Class<?> c) {
-        final Map<String, Method> possibleAccessors = ReflectionUtils.buildAccessorMap(c);
-        final Map<String, Method> possibleInjectors = ReflectionUtils.buildInjectorMap(c);
-        final ClassDescriptorImpl descriptor = new ClassDescriptorImpl();
+    private void buildAccessors(Class<?> c, Map<String, Accessor> accessorMap) {
+        final Map<String, Method> possibleMethods = ReflectionUtils.buildAccessorMap(c);
         final Field[] declaredFields = c.getDeclaredFields();
 
         for (Field field : declaredFields) {
@@ -116,7 +112,7 @@ public class ClassDescriptors {
             Optional<Accessor> accessor = this.accessorFactories.stream()
                     .map(factory -> {
                         try {
-                            return factory.createAccessor(field, possibleAccessors);
+                            return factory.createAccessor(field, possibleMethods);
                         } catch (Throwable t) {
                             return null;
                         }
@@ -124,8 +120,12 @@ public class ClassDescriptors {
                     .filter(Objects::nonNull)
                     .findFirst();
 
+
+            String fieldName = field.getName();
+            String key = accessorMap.containsKey(fieldName) ? c.getSimpleName() + '.' + fieldName : fieldName;
+
             //  If no accessor was found, let's use the default tried and true field accessor.
-            descriptor.addAccessor(field.getName(), accessor.orElseGet(() -> {
+            accessorMap.put(key, accessor.orElseGet(() -> {
                 try {
                     return new Accessor(field);
                 } catch (ThreadDeath td) {
@@ -134,10 +134,20 @@ public class ClassDescriptors {
                     return null;
                 }
             }));
+        }
+    }
 
+    private void buildInjectors(Class<?> c, Map<String, Injector> injectorMap) {
+        final Map<String, Method> possibleInjectors = ReflectionUtils.buildInjectorMap(c);
+
+        final Field[] declaredFields = c.getDeclaredFields();
+
+        for (Field field : declaredFields) {
+
+            boolean isKnownFilter = KnownFilteredFields.instance().isFieldFiltered(field);
             boolean isInjectionFiltered = KnownFilteredFields.instance().isInjectionFiltered(field);
 
-            if (isInjectionFiltered) {
+            if (isKnownFilter || isInjectionFiltered || fieldFilters.stream().anyMatch(f -> f.filter(field))) {
                 continue;
             }
 
@@ -152,7 +162,10 @@ public class ClassDescriptors {
                     .filter(Objects::nonNull)
                     .findFirst();
 
-            descriptor.addInjector(field.getName(), injector.orElseGet(() -> {
+            final String fieldName = field.getName();
+            String key = injectorMap.containsKey(fieldName) ? c.getSimpleName() + '.' + fieldName : fieldName;
+
+            injectorMap.put(key, injector.orElseGet(() -> {
                 try {
                     return new Injector(field);
                 } catch (ThreadDeath td) {
@@ -162,8 +175,6 @@ public class ClassDescriptors {
                 }
             }));
         }
-
-        return descriptor;
     }
 
     public boolean addFilter(FieldFilter filter) {

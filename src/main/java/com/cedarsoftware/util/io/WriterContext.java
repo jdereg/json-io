@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import java.io.IOException;
-import java.util.Set;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -33,9 +32,4 @@ public interface WriterContext {
      * Allows you to use the current JsonWriter to write an object out.
      */
     void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException;
-
-    /**
-     * Allows you to use the current JsonWriter to write an object out, excluding certain fields
-     */
-    void writeObject(final Object obj, boolean showType, boolean bodyOnly, Set<String> fieldsToExclude) throws IOException;
 }

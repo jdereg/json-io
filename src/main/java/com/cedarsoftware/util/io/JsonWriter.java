@@ -660,7 +660,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (fields.isEmpty())
         {   // Trace fields using reflection, could filter this with excluded list here
-            fields = ClassDescriptors.instance().getDeepAccessorsForClass(obj.getClass());
+            fields = ClassDescriptors.instance().getDeepAccessors(obj.getClass());
         }
 
         final Collection<Accessor> excludedFields = writeOptions.getExcludedAccessorsForClass(obj.getClass());
@@ -1836,20 +1836,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException
     {
-        this.writeObject(obj, showType, bodyOnly, EMPTY_SET);
-    }
-
-    /**
-     * @param obj      Object to be written in JSON format
-     * @param showType boolean true means show the "@type" field, false
-     *                 eliminates it.  Many times the type can be dropped because it can be
-     *                 inferred from the field or array type.
-     * @param bodyOnly write only the body of the object
-     * @param fieldsToExclude field that should be excluded when writing out object (per class bases for custom writers)
-     * @throws IOException if an error occurs writing to the output stream.
-     */
-    public void writeObject(final Object obj, boolean showType, boolean bodyOnly, Set<String> fieldsToExclude) throws IOException
-    {
         if (writeOptions.isNeverShowingType())
         {
             showType = false;
@@ -1891,7 +1877,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             for (Accessor accessor : includedAccessors)
             {   //output field if not excluded
                 String fieldName = accessor.getFieldName();
-                if (!excludedAccessors.contains(accessor) && !fieldsToExclude.contains(fieldName)) {
+                if (!excludedAccessors.contains(accessor)) {
                     // Not currently supporting overwritten field names in hierarchy when using external field specifier
                     first = writeField(obj, first, fieldName, accessor, true);
                 }//else field is blacklisted.
@@ -1905,7 +1891,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 final String fieldName = entry.getKey();
                 final Accessor field = entry.getValue();
                 //output field if not excluded
-                if (!excludedAccessors.contains(field) && !fieldsToExclude.contains(fieldName))
+                if (!excludedAccessors.contains(field))
                 {
                     first = writeField(obj, first, fieldName, field, false);
                 }//else field is excluded.

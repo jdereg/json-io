@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -59,7 +60,7 @@ class AtomicBooleanTest
         assert atom2.values[3].get();
 
         json = TestUtil.toJson(atom2);
-        assert json.equals("{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":null,\"objValue\":false,\"values\":[false,null,true,true]}");
+        assertThat(json).isEqualTo("{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":null,\"objValue\":false,\"values\":[false,null,true,true]}");
 
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":16.5}";
         try
