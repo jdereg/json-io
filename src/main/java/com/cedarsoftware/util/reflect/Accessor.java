@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.util.Objects;
 
 import com.cedarsoftware.util.io.MetaUtils;
+
 import lombok.Getter;
 
 /**
@@ -28,7 +29,7 @@ import lombok.Getter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class Accessor extends FieldCharacteristics {
+public class Accessor {
 
     private final Field field;
     @Getter
