@@ -146,6 +146,12 @@ in the Javascript. This will let you display them correctly, for example. Return
 >#### WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays)
 >- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays. Returns`WriteOptions`for chained access.
 
+### Floating Point Options
+
+> #### boolean isAllowNanAndInfinity
+>- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for doubles and floats.
+>#### WriteOptions allowNanAndInfinity(boolean allow)
+>- [ ] true will allow Double and Floats to be output as NaN and INFINITY, false and these values will come across as null.
 ### Enum Options
 >#### boolean isWriteEnumAsString()
 >- [ ] Returns`true`if enums are to be written out as Strings (not a full JSON object) when possible.
