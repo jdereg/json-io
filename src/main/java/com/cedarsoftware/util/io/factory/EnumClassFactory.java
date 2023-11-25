@@ -1,18 +1,14 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.Optional;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
-import java.util.Optional;
-
 /**
- * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
- * 'detailMessage' field on a Throwable is via its constructor.
- * <p>
- *
  * @author Ken Partlow (kpartlow@gmail.com)
  * <br>
  * Copyright (c) Cedar Software LLC
