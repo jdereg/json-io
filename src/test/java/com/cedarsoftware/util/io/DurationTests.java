@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Duration;
 import java.util.stream.Stream;
 
@@ -10,24 +8,23 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 class DurationTests {
 
     @Test
     void testDuration_ofNanos() {
         Duration duration = Duration.ofNanos(500);
-
         String json = TestUtil.toJson(duration);
-        System.out.println(json);
         Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        
         assertThat(actual).hasNanos(500);
     }
 
     @Test
     void testDuration_ofMillis() {
         Duration duration = Duration.ofMillis(9000);
-
         String json = TestUtil.toJson(duration);
-        System.out.println(json);
         Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assertThat(actual)
@@ -38,10 +35,9 @@ class DurationTests {
     @Test
     void testDuration_ofSecondsAndNanos() {
         Duration duration = Duration.ofSeconds(9000, 9000);
-
         String json = TestUtil.toJson(duration);
-        System.out.println(json);
         Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        
         assertThat(actual)
                 .hasSeconds(9000)
                 .hasNanos(9000000009000L);
@@ -51,9 +47,9 @@ class DurationTests {
     @Test
     void testDuration_ofDays() {
         Duration duration = Duration.ofDays(9);
-
         String json = TestUtil.toJson(duration);
         Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+
         assertThat(actual).hasDays(9);
     }
 

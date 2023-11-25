@@ -28,7 +28,7 @@ import lombok.Getter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class Accessor extends FieldCharacteristics {
+public class Accessor {
 
     private final Field field;
     @Getter

@@ -8,13 +8,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Useful utilities for use in unit testing.
@@ -56,7 +54,6 @@ public class TestUtil
     public static <T> T serializeDeserialize(T initial)
     {
         String json = toJson(initial);
-        System.out.println(json);
         return toObjects(json, null);
     }
 
