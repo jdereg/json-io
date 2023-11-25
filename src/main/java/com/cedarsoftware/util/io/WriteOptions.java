@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.cedarsoftware.util.io.writers.InstantWriter;
 import com.cedarsoftware.util.io.writers.LongWriter;
 import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 /**
@@ -749,18 +748,12 @@ public class WriteOptions {
 
     private WriteOptions copyFieldsToAccessors(Class<?> clazz, Collection<String> fields, Map<Class<?>, Set<Accessor>> accessors) {
         ClassDescriptors classDescriptors = ClassDescriptors.instance();
-        Class<?> current = clazz;
+        Map<String, Accessor> accessorMap = classDescriptors.getDeepAccessorMap(clazz);
 
-        while (current != null) {
-            final ClassDescriptor descriptor = classDescriptors.getClassDescriptor(current);
-            final Map<String, Accessor> accessorMap = descriptor.getAccessors();
-
-            for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
-                if (fields.contains(acessorEntry.getKey())) {
-                    accessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
-                }
+        for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
+            if (fields.contains(acessorEntry.getKey())) {
+                accessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
             }
-            current = current.getSuperclass();
         }
 
         return this;

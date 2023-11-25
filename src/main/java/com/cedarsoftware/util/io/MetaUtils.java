@@ -54,9 +54,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.io.factory.DateFactory;
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -1096,41 +1093,6 @@ public class MetaUtils
             arg = arg.substring(0, argCharLen) + "...";
         }
         return arg;
-    }
-
-    // Currently, still returning DEEP declared fields.
-    public static Map<Class<?>, Collection<Accessor>> convertStringFieldNamesToAccessors(Map<Class<?>, Collection<String>> map) {
-
-        final Map<Class<?>, Collection<Accessor>> copy = new HashMap<>();
-
-        if (map == null) {
-            return copy;
-        }
-
-        ClassDescriptors classDescriptors = ClassDescriptors.instance();
-
-        for (Map.Entry<Class<?>, Collection<String>> entry : map.entrySet()) {
-            final Class<?> c = entry.getKey();
-            final Collection<String> fields = entry.getValue();
-
-            Class<?> current = c;
-
-            while (current != null) {
-                final ClassDescriptor descriptor = classDescriptors.getClassDescriptor(current);
-                final Map<String, Accessor> accessorMap = descriptor.getAccessors();
-
-                for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
-
-                    if (fields.contains(acessorEntry.getKey())) {
-                        final Collection<Accessor> set = copy.computeIfAbsent(c, l -> new LinkedHashSet<>());
-                        set.add(acessorEntry.getValue());
-                    }
-                }
-                current = current.getSuperclass();
-            }
-        }
-
-        return copy;
     }
 
     public static <K, V> V getValue(Map map, K key) {
