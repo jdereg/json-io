@@ -42,4 +42,8 @@ public class ArgumentHelper {
         return false;
     }
 
+    public static Number getNumberWithDefault(Object o, Number def) {
+        return o == null ? def : (Number) o;
+    }
+
 }

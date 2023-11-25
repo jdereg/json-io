@@ -46,7 +46,7 @@ public class Injector {
     @Getter
     private final String displayName;
 
-    private final MethodHandle injector;
+    private MethodHandle injector;
 
     public Injector(Field field) throws Throwable {
         this.name = field.getName();
@@ -59,7 +59,11 @@ public class Injector {
             MetaUtils.trySetAccessible(field);
         }
 
-        this.injector = MethodHandles.lookup().unreflectSetter(field);
+        try {
+            this.injector = MethodHandles.lookup().unreflectSetter(field);
+        } catch (Exception e) {
+            this.injector = null;
+        }
     }
 
     public Injector(Field field, Method method) throws Throwable {

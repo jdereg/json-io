@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -30,8 +32,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.io.writers.DurationWriter;
 import com.cedarsoftware.util.io.writers.InstantWriter;
 import com.cedarsoftware.util.io.writers.LongWriter;
+import com.cedarsoftware.util.io.writers.PeriodWriter;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
@@ -137,6 +141,8 @@ public class WriteOptions {
         temp.put(Year.class, new Writers.YearWriter());
         temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
         temp.put(Instant.class, new InstantWriter());
+        temp.put(Duration.class, new DurationWriter());
+        temp.put(Period.class, new PeriodWriter());
 
         JsonWriter.JsonClassWriter calendarWriter = new Writers.CalendarWriter();
         temp.put(Calendar.class, calendarWriter);
