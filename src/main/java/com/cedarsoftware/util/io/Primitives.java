@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Primitives {
@@ -31,6 +32,7 @@ public class Primitives {
         NATIVE_JSON_TYPES.add(Boolean.class);
         NATIVE_JSON_TYPES.add(boolean.class);
         NATIVE_JSON_TYPES.add(AtomicBoolean.class);
+        NATIVE_JSON_TYPES.add(AtomicInteger.class);
         NATIVE_JSON_TYPES.add(AtomicLong.class);
         NATIVE_JSON_TYPES.add(BigInteger.class);
         NATIVE_JSON_TYPES.add(BigDecimal.class);

@@ -534,7 +534,7 @@ public class ReadOptions {
 
     /**
      * @param missingFieldHandler JsonReader.MissingFieldHandler implementation to call.  This method will be
-     * called when a field in the JSON is read in, yet there is no corresponding field on the dstination object to
+     * called when a field in the JSON is read in, yet there is no corresponding field on the destination object to
      *                            receive the value.
      * @return ReadOptions for chained access.
      */
@@ -586,7 +586,7 @@ public class ReadOptions {
     }
 
     /**
-     * @return Map of Class to custom JsonClassReader's use to read JSON when the class is encountered during
+     * @return Map of Class to custom JsonClassReader's used to read JSON when the class is encountered during
      * serialization to JSON.
      */
     public Map<Class<?>, JsonReader.JsonClassReader> getCustomReaderClasses() {
