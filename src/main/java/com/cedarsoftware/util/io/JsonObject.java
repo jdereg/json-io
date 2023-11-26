@@ -159,9 +159,9 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             case "BigDec":
             case "java.math.BigDecimal":
                 return true;
-//            case "class":
-//            case "java.lang.Class":
-//                return true;
+            case "class":
+            case "java.lang.Class":
+                return true;
             default:
                 return false;
         }
@@ -219,9 +219,10 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             case "BigDec":
             case "java.math.BigDecimal":
                 return Readers.bigDecimalFrom(value);
-//            case "class":
-//            case "java.lang.Class":
-//                return value;
+            case "class":
+            case "java.lang.Class":
+                Class<?> clz = MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());
+                return clz;
         }
 
         throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
