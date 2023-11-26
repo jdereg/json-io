@@ -219,19 +219,19 @@ public class WriteOptions {
 //        aliasTypeName("java.util.ArrayList", "ArrayList");
 //        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
 
-        aliasTypeName("java.lang.Class", "class");
-        aliasTypeName("java.lang.String", "string");
-        aliasTypeName("java.util.Date", "date");
+        aliasTypeName(Class.class, "class");
+        aliasTypeName(String.class, "string");
+        aliasTypeName(Date.class, "date");
 
         // Use true primitive types for the primitive wrappers.
-        aliasTypeName("java.lang.Byte", "byte");
-        aliasTypeName("java.lang.Short", "short");
-        aliasTypeName("java.lang.Integer", "int");
-        aliasTypeName("java.lang.Long", "long");
-        aliasTypeName("java.lang.Float", "float");
-        aliasTypeName("java.lang.Double", "double");
-        aliasTypeName("java.lang.Character", "char");
-        aliasTypeName("java.lang.Boolean", "boolean");
+        aliasTypeName(Byte.class, "byte");
+        aliasTypeName(Short.class, "short");
+        aliasTypeName(Integer.class, "int");
+        aliasTypeName(Long.class, "long");
+        aliasTypeName(Float.class, "float");
+        aliasTypeName(Double.class, "double");
+        aliasTypeName(Character.class, "char");
+        aliasTypeName(Boolean.class, "boolean");
     }
 
     /**
@@ -330,6 +330,17 @@ public class WriteOptions {
         throwIfBuilt();
         this.aliasTypeNames.clear();
         this.aliasTypeNames.putAll(aliasTypeNames);
+        return this;
+    }
+
+    /**
+     * @param type  Class to alias
+     * @param alias String shorter name to use, typically.
+     * @return ReadOptions for chained access.
+     */
+    public WriteOptions aliasTypeName(Class<?> type, String alias) {
+        throwIfBuilt();
+        aliasTypeNames.put(type.getName(), alias);
         return this;
     }
 

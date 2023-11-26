@@ -213,19 +213,19 @@ public class ReadOptions {
 //        aliasTypeName("java.util.ArrayList", "ArrayList");
 //        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
 
-//        aliasTypeName(Class.class, "class");
-//        aliasTypeName(String.class, "string");
-//        aliasTypeName(Date.class, "date");
+        aliasTypeName(Class.class, "class");
+        aliasTypeName(String.class, "string");
+        aliasTypeName(Date.class, "date");
 
         // Use true primitive types for the primitive wrappers.
-//        aliasTypeName(Byte.class, "byte");
-//        aliasTypeName(Short.class, "short");
-//        aliasTypeName(Integer.class, "int");
-//        aliasTypeName(Long.class, "long");
-//        aliasTypeName(Float.class, "float");
-//        aliasTypeName(Double.class, "double");
-//        aliasTypeName(Character.class, "char");
-//        aliasTypeName(Boolean.class, "boolean");
+        aliasTypeName(Byte.class, "byte");
+        aliasTypeName(Short.class, "short");
+        aliasTypeName(Integer.class, "int");
+        aliasTypeName(Long.class, "long");
+        aliasTypeName(Float.class, "float");
+        aliasTypeName(Double.class, "double");
+        aliasTypeName(Character.class, "char");
+        aliasTypeName(Boolean.class, "boolean");
 
         coercedTypes.putAll(BASE_COERCED_TYPES);
         customReaderClasses.putAll(BASE_READERS);
@@ -451,11 +451,6 @@ public class ReadOptions {
         return built ? aliasTypeNames : new LinkedHashMap<>(aliasTypeNames);
     }
 
-    /**
-     * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
-     *                       be copied, and be the new baseline settings.
-     * @return ReadOptions for chained access.
-     */
     /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.

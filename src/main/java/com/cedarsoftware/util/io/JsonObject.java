@@ -131,7 +131,7 @@ public class JsonObject extends LinkedHashMap<Object, Object>
 
     public boolean isLogicalPrimitive()
     {
-        return primitiveWrappers.contains(type) || primitives.contains(type) || "date".equals(type) ||
+        return primitiveWrappers.contains(type) || primitives.contains(type) || "date".equals(type) || "java.util.Date".equals(type) ||
                 "java.math.BigInteger".equals(type) || "java.math.BigDecimal".equals(type);
     }
 
