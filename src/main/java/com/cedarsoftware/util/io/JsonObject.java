@@ -131,8 +131,40 @@ public class JsonObject extends LinkedHashMap<Object, Object>
 
     public boolean isLogicalPrimitive()
     {
-        return primitiveWrappers.contains(type) || primitives.contains(type) || "date".equals(type) || "java.util.Date".equals(type) ||
-                "java.math.BigInteger".equals(type) || "java.math.BigDecimal".equals(type);
+        if (type == null) {
+            return false;
+        }
+        switch (type)
+        {
+            case "boolean":
+            case "java.lang.Boolean":
+            case "double":
+            case "java.lang.Double":
+            case "long":
+            case "java.lang.Long":
+            case "byte":
+            case "java.lang.Byte":
+            case "char":
+            case "java.lang.Character":
+            case "float":
+            case "java.lang.Float":
+            case "int":
+            case "java.lang.Integer":
+            case "short":
+            case "java.lang.Short":
+            case "date":
+            case "java.util.Date":
+            case "BigInt":
+            case "java.math.BigInteger":
+            case "BigDec":
+            case "java.math.BigDecimal":
+                return true;
+//            case "class":
+//            case "java.lang.Class":
+//                return true;
+            default:
+                return false;
+        }
     }
 
     public Object getPrimitiveValue()
@@ -187,6 +219,9 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             case "BigDec":
             case "java.math.BigDecimal":
                 return Readers.bigDecimalFrom(value);
+//            case "class":
+//            case "java.lang.Class":
+//                return value;
         }
 
         throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);

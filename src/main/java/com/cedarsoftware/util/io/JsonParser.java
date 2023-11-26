@@ -233,11 +233,13 @@ class JsonParser
 
         final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
-        if (useMaps && object.isLogicalPrimitive())
+        if (object.isLogicalPrimitive())
         {
-            return object.getPrimitiveValue();
+            if (useMaps) {
+                object.isFinished = true;
+                return object.getPrimitiveValue();
+            }
         }
-
         return object;
     }
 
