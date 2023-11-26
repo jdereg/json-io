@@ -483,7 +483,7 @@ public class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        final Map<String, Object> map2 = (Map) JsonReader.toMaps(str);
+        final Map<String, Object> map2 = JsonReader.toMaps(str);
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())

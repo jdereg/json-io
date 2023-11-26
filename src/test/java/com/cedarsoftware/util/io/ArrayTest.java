@@ -1022,7 +1022,7 @@ public class ArrayTest
 
     private static Stream<Arguments> integerVariants() {
         return Stream.of(
-                Arguments.of(0x0A, 0x14, 0x1E),
+                Arguments.of((byte)0x0A, (byte)0x14, (byte)0x1E),
                 Arguments.of((short) 10, (short) 20, (short) 30),
                 Arguments.of(10, 20, 30),
                 Arguments.of(10L, 20L, 30L),

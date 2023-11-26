@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
-
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -54,6 +50,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.io.factory.DateFactory;
+
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -141,7 +141,7 @@ public class MetaUtils
         FROM_NULL.put(byte.class, (byte) 0);
         FROM_NULL.put(Byte.class, (byte) 0);
         FROM_NULL.put(short.class, (short) 0);
-        FROM_NULL.put(Short.class, short.class);
+        FROM_NULL.put(Short.class, (short) 0);
         FROM_NULL.put(int.class, 0);
         FROM_NULL.put(Integer.class, 0);
         FROM_NULL.put(long.class, 0L);

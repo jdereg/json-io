@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Date;
@@ -11,6 +7,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.cedarsoftware.util.io.factory.DateFactory;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -138,62 +138,58 @@ public class JsonObject extends LinkedHashMap<Object, Object>
     public Object getPrimitiveValue()
     {
         final Object value = getValue();
-        if ("boolean".equals(type) || "double".equals(type) || "long".equals(type))
+        switch(type)
         {
-            return value;
+            case "boolean":
+            case "java.lang.Boolean":
+            case "double":
+            case "java.lang.Double":
+            case "long":
+            case "java.lang.Long":
+                return value;
+            case "byte":
+            case "java.lang.Byte":
+                Number b = (Number) value;
+                return b.byteValue();
+            case "char":
+            case "java.lang.Character":
+                String c = (String) value;
+                return c.charAt(0);
+            case "float":
+            case "java.lang.Float":
+                Number f = (Number) value;
+                return f.floatValue();
+            case "int":
+            case "java.lang.Integer":
+                Number integer = (Number) value;
+                return integer.intValue();
+            case "short":
+            case "java.lang.Short":
+                Number s = (Number) value;
+                return s.shortValue();
+            case "date":
+            case "java.util.Date":
+                if (value instanceof Long)
+                {
+                    return new Date((Long)value);
+                }
+                else if (value instanceof String)
+                {
+                    return DateFactory.parseDate((String) value);
+                }
+                else
+                {
+                    throw new JsonIoException("Unknown date type: " + type);
+                }
+            case "BigInt":
+            case "java.math.BigInteger":
+                return Readers.bigIntegerFrom(value);
+            case "BigDec":
+            case "java.math.BigDecimal":
+                return Readers.bigDecimalFrom(value);
         }
-        else if ("byte".equals(type))
-        {
-            Number b = (Number) value;
-            return b.byteValue();
-        }
-        else if ("char".equals(type))
-        {
-            String c = (String) value;
-            return c.charAt(0);
-        }
-        else if ("float".equals(type))
-        {
-            Number f = (Number) value;
-            return f.floatValue();
-        }
-        else if ("int".equals(type))
-        {
-            Number integer = (Number) value;
-            return integer.intValue();
-        }
-        else if ("short".equals(type))
-        {
-            Number s = (Number) value;
-            return s.shortValue();
-        }
-        else if ("date".equals(type))
-        {
-            if (value instanceof Long)
-            {
-                return new Date((Long)value);
-            }
-            else if (value instanceof String)
-            {
-                return DateFactory.parseDate((String) value);
-            }
-            else
-            {
-                throw new JsonIoException("Unknown date type: " + type);
-            }
-        }
-        else if ("java.math.BigInteger".equals(type))
-        {
-            return Readers.bigIntegerFrom(value);
-        }
-        else if ("java.math.BigDecimal".equals(type))
-        {
-            return Readers.bigDecimalFrom(value);
-        }
-        else
-        {
-            throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
-        }
+
+        throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
     }
 
     /**

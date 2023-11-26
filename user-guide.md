@@ -123,6 +123,8 @@ add additional aliases for classes in your program.
 >- [ ] Sets the`Map`containing String class names to alias names. The passed in`Map`will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
 >#### `WriteOptions`aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. Returns`WriteOptions`for chained access.
+>#### `ReadOptions`**aliasTypeName(**`Class, String alias`)
+>- [ ] Sets the alias for a given class. Returns`ReadOptions`for chained access.
 
 ### @Type
 Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
@@ -383,6 +385,8 @@ add additional aliases for classes in your program.
    baseline settings. Returns`ReadOptions`for chained access.
 >#### `ReadOptions`aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. Returns`ReadOptions`for chained access.
+>#### `ReadOptions`aliasTypeName(`Class, String alias`)
+>- [ ] Sets the alias for a given class. Returns`ReadOptions`for chained access.
 
 ### Class Coercion
 Use this feature to turn classes like`java.util.Collections$UnmodifiableRandomAccessList`into an`ArrayList`when parsed and loaded 
