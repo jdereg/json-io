@@ -28,6 +28,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -43,6 +44,7 @@ import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.factory.CalendarFactory;
 import com.cedarsoftware.util.io.factory.DateFactory;
 import com.cedarsoftware.util.io.factory.DurationFactory;
+import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.InstantFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
@@ -111,6 +113,10 @@ public class ReadOptions {
     // Runtime cache (not feature options)
     private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
 
+    private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
+
+    private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
+
     static {
         // ClassFactories
         JsonReader.ClassFactory mapFactory = new JsonReader.MapFactory();
@@ -153,10 +159,6 @@ public class ReadOptions {
             assignInstantiator(c, timeZoneFactory);
         }
 
-        JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
-        assignInstantiator(Throwable.class, throwableFactory);
-        assignInstantiator(Exception.class, throwableFactory);
-        assignInstantiator(RuntimeException.class, throwableFactory);
         assignInstantiator(StackTraceElement.class, new StackTraceElementFactory());
 
         //  Readers
@@ -211,19 +213,19 @@ public class ReadOptions {
 //        aliasTypeName("java.util.ArrayList", "ArrayList");
 //        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
 
-        aliasTypeName("java.lang.Class", "class");
-        aliasTypeName("java.lang.String", "string");
-        aliasTypeName("java.util.Date", "date");
+//        aliasTypeName(Class.class, "class");
+//        aliasTypeName(String.class, "string");
+//        aliasTypeName(Date.class, "date");
 
         // Use true primitive types for the primitive wrappers.
-        aliasTypeName("java.lang.Byte", "byte");
-        aliasTypeName("java.lang.Short", "short");
-        aliasTypeName("java.lang.Integer", "int");
-        aliasTypeName("java.lang.Long", "long");
-        aliasTypeName("java.lang.Float", "float");
-        aliasTypeName("java.lang.Double", "double");
-        aliasTypeName("java.lang.Character", "char");
-        aliasTypeName("java.lang.Boolean", "boolean");
+//        aliasTypeName(Byte.class, "byte");
+//        aliasTypeName(Short.class, "short");
+//        aliasTypeName(Integer.class, "int");
+//        aliasTypeName(Long.class, "long");
+//        aliasTypeName(Float.class, "float");
+//        aliasTypeName(Double.class, "double");
+//        aliasTypeName(Character.class, "char");
+//        aliasTypeName(Boolean.class, "boolean");
 
         coercedTypes.putAll(BASE_COERCED_TYPES);
         customReaderClasses.putAll(BASE_READERS);
@@ -454,10 +456,26 @@ public class ReadOptions {
      *                       be copied, and be the new baseline settings.
      * @return ReadOptions for chained access.
      */
+    /**
+     * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
+     *                       be copied, and be the new baseline settings.
+     * @return ReadOptions for chained access.
+     */
     public ReadOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
         throwIfBuilt();
         this.aliasTypeNames.clear();
-        this.aliasTypeNames.putAll(aliasTypeNames);
+        aliasTypeNames.forEach((key, value) -> this.aliasTypeNames.put(value, key));
+        return this;
+    }
+
+    /**
+     * @param type  String class name
+     * @param alias String shorter name to use, typically.
+     * @return ReadOptions for chained access.
+     */
+    public ReadOptions aliasTypeName(Class<?> type, String alias) {
+        throwIfBuilt();
+        aliasTypeNames.put(alias, type.getName());
         return this;
     }
 
@@ -468,7 +486,7 @@ public class ReadOptions {
      */
     public ReadOptions aliasTypeName(String typeName, String alias) {
         throwIfBuilt();
-        aliasTypeNames.put(typeName, alias);
+        aliasTypeNames.put(alias, typeName);
         return this;
     }
 
@@ -482,12 +500,12 @@ public class ReadOptions {
 
     /**
      * Fetch the coerced class for the passed in fully qualified class name.
-     * @param className String name of the source class.
+     * @param c Class to coerce
      * @return Class destination (coerced) class.
      */
-    public Class<?> getCoercedClass(String className)
+    public Class<?> getCoercedClass(Class<?> c)
     {
-        return coercedTypes.get(className);
+        return coercedTypes.get(c);
     }
 
     /**
@@ -624,7 +642,27 @@ public class ReadOptions {
      * @return JsonReader.ClassFactory instance associated to the passed in class.
      */
     public JsonReader.ClassFactory getClassFactory(Class<?> c) {
-        return classFactoryMap.get(c);
+        if (c == null) {
+            return null;
+        }
+
+        JsonReader.ClassFactory factory = this.classFactoryMap.get(c);
+
+        if (factory != null) {
+            return factory;
+        }
+
+        if (Throwable.class.isAssignableFrom(c)) {
+            return throwableFactory;
+        }
+
+        Optional optional = MetaUtils.getClassIfEnum(c);
+
+        if (optional.isPresent()) {
+            return enumFactory;
+        }
+
+        return null;
     }
 
     /**

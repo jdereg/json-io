@@ -3,13 +3,11 @@
  */
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  *         <br>
@@ -29,8 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class SimpleValuesTest
 {
-    private static ReadOptions readOptions = new ReadOptions();
-    
     public class A {
         private final Double doubleField;
         private final Float floatField;
@@ -86,65 +82,45 @@ public class SimpleValuesTest
         }
     }
 
-    static boolean readAllowNan;
-    static boolean writeAllowNan;
-
-    @BeforeAll
-    public static void init() {
-        readAllowNan = readOptions.isAllowNanAndInfinity();
-    }
-
-    @AfterAll
-    public static void tearDown()
-    {
-        readOptions.allowNanAndInfinity(readAllowNan);
-    }
-
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void testSimpleCases(boolean allowNanAndInfinity) {
-        readOptions.allowNanAndInfinity(allowNanAndInfinity);
+        testWriteRead(1234, allowNanAndInfinity);
+        testWriteRead(1f, allowNanAndInfinity);
+        testWriteRead(2.0, allowNanAndInfinity);
 
-        testWriteRead(1234);
-        testWriteRead(1f);
-        testWriteRead(2.0);
-
-
-        testWriteRead(-1234);
-        testWriteRead(-1f);
-        testWriteRead(-2.0);
+        testWriteRead(-1234, allowNanAndInfinity);
+        testWriteRead(-1f, allowNanAndInfinity);
+        testWriteRead(-2.0, allowNanAndInfinity);
 
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenNanAndInfinityNotAllowed_serializesAsNull(Double d) {
-        readOptions.allowNanAndInfinity(true);
-        TestUtil.printLine("testObj = " + d);
         final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(false).build());
-
         assertThat(json).contains("null");
-
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenAllowingNanAndInfinity_serializeRoundTrip(Double d) {
-        readOptions.allowNanAndInfinity(true);
-        TestUtil.printLine("testObj = " + d);
-        final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(true).build());
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
+        final String json = TestUtil.toJson(d, writeOptions);
+        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(true).build();
         final Double newObj = TestUtil.toObjects(json, readOptions, Double.class);
-        TestUtil.printLine("newObj = " + newObj);
 
         assertEquals(d, newObj);
     }
 
-    private final void testWriteRead(Object testObj)
+    private final void testWriteRead(Object testObj, boolean allowNanAndInfinity)
     {
 
-        final String json = TestUtil.toJson(testObj);
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(allowNanAndInfinity).build();
+        final String json = TestUtil.toJson(testObj, writeOptions);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
+        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(allowNanAndInfinity).build();
         final Object newObj = TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newObj = " + newObj);
 

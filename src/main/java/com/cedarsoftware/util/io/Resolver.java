@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -16,11 +19,9 @@ import java.util.Optional;
 
 import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
 import lombok.AccessLevel;
 import lombok.Getter;
-
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -429,8 +430,7 @@ public abstract class Resolver implements ReaderContext
             {
                 mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
-            }
-            else if ((mate = coerceCertainTypes(c.getName())) != null)
+            } else if ((mate = coerceCertainTypes(c)) != null)
             {   // if coerceCertainTypes() returns non-null, it did the work
             }
             else
@@ -468,8 +468,7 @@ public abstract class Resolver implements ReaderContext
         {
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-        }
-        else if ((mate = coerceCertainTypes(clazz.getName())) != null)
+        } else if ((mate = coerceCertainTypes(clazz)) != null)
         {   // if coerceCertainTypes() returns non-null, it did the work
         }
         else if (clazz == Object.class && !useMaps)
@@ -536,7 +535,7 @@ public abstract class Resolver implements ReaderContext
         return target;
     }
 
-    protected Object coerceCertainTypes(String type)
+    protected Object coerceCertainTypes(Class<?> type)
     {
         Class clazz = readOptions.getCoercedClass(type);
         if (clazz == null)
