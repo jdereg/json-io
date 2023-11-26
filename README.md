@@ -26,34 +26,9 @@ implementation 'com.cedarsoftware:json-io:4.18.0'
     </dependency>
 ```
 ___
-**json-io** consists of two main classes, a reader (`JsonReader`) and a writer (`JsonWriter`).  **json-io** eliminates
-the need for using `ObjectInputStream / ObjectOutputStream` to serialize Java and instead uses the JSON format.
-
-**json-io** does not require that Java classes implement `Serializable` or `Externalizable` to be serialized,
-unlike the JDK's `ObjectInputStream` / `ObjectOutputStream`.  It will serialize any Java object graph into JSON and retain
-complete graph semantics / shape and object types.  This includes supporting private fields, private inner classes
-(static or non-static), of any depth.  It also includes handling cyclic references.  Objects do not need to have
-public constructors to be serialized.  The output JSON will not include `transient` fields, identical to the
-ObjectOutputStream behavior.
-
-**json-io** does not depend on any 3rd party libraries, has extensive support for Java Generics, and allows extensive customization.
-
-### Format
-**json-io** uses proper JSON format.  As little type information is included in the JSON format to keep it compact as
-possible.  When an object's class can be inferred from a field type or array type, the object's type information is
-left out of the stream.  For example, a `String[]` looks like `["abc", "xyz"]`.
-
-When an object's type must be emitted, it is emitted as a meta-object field `"@type":"package.class"` in the object.  
-When read, this tells the JsonReader what class to instantiate.  (`@type` output can be turned off - see [User Guide](/user-guide.md)).
-
-If an object is referenced more than once, or references an object that has not yet been defined, (say A points to B,
-and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the object's integer identity (with a
-corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON
-output, reducing the JSON String length.
 
 ### [User Guide](/user-guide.md)
 
-### Noteworthy
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
 
 Featured on [json.org](http://json.org).
