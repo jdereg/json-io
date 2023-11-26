@@ -1,11 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.JsonObject.REF;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +75,7 @@ class BigDecimalTest
         assertEquals(new BigDecimal(1), tbd.values[7]);
         assertEquals(new BigDecimal("72.72"), tbd.values[8]);
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         json = TestUtil.toJson(map);
         tbd = TestUtil.toObjects(json, null);
         assertEquals(new BigDecimal("3.14159"), tbd.fromString);

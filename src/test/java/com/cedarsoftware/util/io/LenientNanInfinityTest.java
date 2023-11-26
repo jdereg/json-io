@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
  */
 public class LenientNanInfinityTest
 {
+    static ReadOptions readOptions = new ReadOptions();
     public class A
     {
         private final Double doubleField;
@@ -68,19 +69,18 @@ public class LenientNanInfinityTest
         testFloatDouble(Float.NaN, Double.POSITIVE_INFINITY);
         testFloatDouble(Float.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         testFloatDouble(Float.NEGATIVE_INFINITY, Double.NaN);
-        
     }
 
     private final void testFloatDouble(float float1, double double1)
     {
-        JsonReader.setAllowNanAndInfinity(true);
-        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
+        readOptions.allowNanAndInfinity(true);
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true);
         A a = new A(double1, float1);
 
         String json = TestUtil.toJson(a, writeOptions);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
-        A newA = (A) TestUtil.toObjects(json, null);
+        A newA = (A) TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();
@@ -88,9 +88,7 @@ public class LenientNanInfinityTest
         
         Double doubleField = a.getDoubleField();
         Float floatField = a.getFloatField();
-        assertTrue(newDoubleField.equals(doubleField));
-        assertTrue(newFloatField.equals(floatField));
+        assertEquals(newDoubleField, doubleField);
+        assertEquals(newFloatField, floatField);
     }
-    
-    
 }

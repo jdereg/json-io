@@ -232,8 +232,7 @@ public class ObjectResolver extends Resolver
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createInstance(fieldType, jsRhs);
                     injector.inject(target, fieldObject);
-                    //NOTE:  Should we use JsonObject.isFinished here?
-                    if (!getReadOptions().isLogicalPrimitive(jsRhs.getTargetClass()))
+                    if (!Primitives.needsNoTracing(jsRhs.getTargetClass()))
                     {
                         // GOTCHA : if the field is an immutable collection,
                         // "work instance", where one can accumulate items in (ArrayList)
@@ -333,7 +332,8 @@ public class ObjectResolver extends Resolver
                     if (jObj.getType() != null)
                     {
                         Object createJavaObjectInstance = createInstance(null, jObj);
-                        if (!getReadOptions().isLogicalPrimitive(jObj.getTargetClass()))
+                        // TODO: Check is finished here?
+                        if (!Primitives.needsNoTracing(jObj.getTargetClass()))
                         {
                             stack.addFirst((JsonObject) rhs);
                         }
@@ -487,8 +487,8 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     createInstance(Object.class, jObj);
-
-                    if (!getReadOptions().isLogicalPrimitive(jObj.getTargetClass()))
+                    // TODO: Add isFinishedCheck?
+                    if (!Primitives.needsNoTracing(jObj.getTargetClass()))
                     {
                         convertMapsToObjects(jObj);
                     }
@@ -656,8 +656,9 @@ public class ObjectResolver extends Resolver
                 {    // Convert JSON HashMap to Java Object instance and assign values
                     Object arrayElement = createInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
-                    if (!getReadOptions().isLogicalPrimitive(arrayElement.getClass()))
-                    {    // Skip walking primitives, primitive wrapper classes, Strings, and Classes
+                    // TODO: Check isFinished?
+                    if (!Primitives.needsNoTracing(arrayElement.getClass())) {
+                        // Skip walking primitives and completed objects.
                         stack.addFirst(jsonObject);
                     }
                 }
@@ -693,7 +694,7 @@ public class ObjectResolver extends Resolver
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (inferredType != null && getReadOptions().isNonCustomizable(inferredType))
+        if (inferredType != null && getReadOptions().isNotCustomReaderClass(inferredType))
         {
             return null;
         }
@@ -763,7 +764,8 @@ public class ObjectResolver extends Resolver
             jsonObj.setValue(o);
         }
 
-        if (null == c) {   // Class not found using multiple techniques.  There is no custom factory or reader;
+        if (null == c) {
+            // Class not found using multiple techniques.  There is no custom factory or reader;
             return null;
         }
 
@@ -771,7 +773,8 @@ public class ObjectResolver extends Resolver
             jsonObj.setType(c.getName());
         }
 
-        if (getReadOptions().isNonCustomizable(c)) {// Explicitly instructed not to use a custom reader for this class.
+        if (getReadOptions().isNotCustomReaderClass(c)) {
+            // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
@@ -789,7 +792,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Use custom reader if one exists
-        JsonReader.JsonClassReader closestReader = getCustomReader(c);
+        JsonReader.JsonClassReader closestReader = getReadOptions().getCustomReader(c);
         if (closestReader == null) {
             return null;
         }

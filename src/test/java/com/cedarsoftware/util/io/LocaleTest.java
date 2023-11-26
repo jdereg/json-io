@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -115,7 +116,7 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals("en", map.get("language"));
         assertEquals("US", map.get("country"));
     }

@@ -36,7 +36,7 @@ public class MissingFieldHandlerTest
             madeItHere[0] = true;
         };
         assert !madeItHere[0];
-        CustomPoint clonePoint = TestUtil.toObjects(OLD_CUSTOM_POINT, new ReadOptionsBuilder().setMissingFieldHandler(missingHandler).build(), null);
+        CustomPoint clonePoint = TestUtil.toObjects(OLD_CUSTOM_POINT, new ReadOptions().missingFieldHandler(missingHandler), null);
         assert madeItHere[0];
 
         assertEquals(pt.x, clonePoint.x);
@@ -145,7 +145,7 @@ public class MissingFieldHandlerTest
                     break;
             }
         };
-        CustomPointWithRef clonePoint = TestUtil.toObjects(OLD_CUSTOM_POINT2, new ReadOptionsBuilder().setMissingFieldHandler(missingHandler).build(), null);
+        CustomPointWithRef clonePoint = TestUtil.toObjects(OLD_CUSTOM_POINT2, new ReadOptions().missingFieldHandler(missingHandler), null);
         assertEquals(clonePoint.inner1, clonePoint.inner2Missing.inner12);
         assertTrue(clonePoint.getbMissing());
         assertTrue(clonePoint.getBbMissing());

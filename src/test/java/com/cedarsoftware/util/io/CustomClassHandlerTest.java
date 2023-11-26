@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
@@ -10,6 +8,8 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -42,8 +42,7 @@ public class CustomClassHandlerTest
 
         Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
         map3.put(WeirdDate.class, new WeirdDateReader());
-        WeirdDate date = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .withCustomReaders(map3).build(), null);
+        WeirdDate date = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(map3), null);
         assertEquals(now, date);
 
         json = TestUtil.toJson(now, new WriteOptions()

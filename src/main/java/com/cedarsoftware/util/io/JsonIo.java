@@ -3,6 +3,8 @@ package com.cedarsoftware.util.io;
 import java.io.IOException;
 import java.io.Writer;
 
+import com.cedarsoftware.util.ReturnType;
+
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -26,25 +28,37 @@ public class JsonIo {
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
         if (writeOptions.isBuilt())
         {
-            writeOptions = new WriteOptions(writeOptions).prettyPrint(true);
+            writeOptions = new WriteOptions(writeOptions);
         }
-        Object object = JsonReader.toObjects(json, readOptions.ensureUsingMaps(), null);
-        return JsonWriter.toJson(object, writeOptions.prettyPrint(true));
+        writeOptions.prettyPrint(true);
+
+        if (readOptions.isBuilt())
+        {
+            readOptions = new ReadOptions(readOptions);
+        }
+        readOptions.returnType(ReturnType.JSON_VALUES);
+        
+        Object object = JsonReader.toObjects(json, readOptions, null);
+        return JsonWriter.toJson(object, writeOptions);
     }
 
     public static String formatJson(String json) {
         return formatJson(json,
-                new ReadOptionsBuilder().returnAsMaps().build(),
+                new ReadOptions().returnType(ReturnType.JSON_VALUES),
                 new WriteOptions().prettyPrint(true));
     }
 
     public static <T> T deepCopy(Object o) {
-        return deepCopy(o, new ReadOptionsBuilder().build(), new WriteOptions());
+        return deepCopy(o, new ReadOptions(), new WriteOptions());
     }
 
     public static <T> T deepCopy(Object o, ReadOptions readOptions, WriteOptions writeOptions) {
+        if (o == null) {
+            // They asked to copy null.  The copy of null is null.
+            return null;
+        }
         String json = JsonWriter.toJson(o, writeOptions);
-        return JsonReader.toObjects(json, readOptions, null);
+        return JsonReader.toObjects(json, readOptions, o.getClass());
     }
 
     /**

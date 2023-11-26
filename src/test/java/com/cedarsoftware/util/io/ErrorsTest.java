@@ -1,9 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -175,37 +176,37 @@ class ErrorsTest
     void testMalformedJson()
     {
         final String json = "{\"field\"0}";  // colon expected between fields
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json1 = "{field:0}";  // not quoted field name
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json3 = "{\"field\":true";  // object not terminated correctly (ending in token)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json3, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json4 = "{\"field\":\"test\"";  // object not terminated correctly (ending in string)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json4, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json4, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json5 = "{\"field\":{}";  // object not terminated correctly (ending in another object)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json5, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json5, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json6 = "{\"field\":[]";  // object not terminated correctly (ending in an array)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json6, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json6, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json7 = "{\"field\":3.14";  // object not terminated correctly (ending in double precision number)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json7, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json7, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json8 = "[1,2,3";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json8, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json8, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json9 = "[false,true,false";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json9, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json9, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
 
         final String json10 = "[\"unclosed string]";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json10, new ReadOptionsBuilder().returnAsMaps().build(), null); });
+        assertThrows(Exception.class, () -> { TestUtil.toObjects(json10, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
     }
 
     @Test

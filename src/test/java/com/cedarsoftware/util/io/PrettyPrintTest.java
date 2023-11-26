@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,7 +62,7 @@ class PrettyPrintTest
                 .isNotEqualTo(json1)
                 .isEqualToIgnoringWhitespace(json1);
 
-        String json2 = JsonWriter.formatJson(json1);
+        String json2 = JsonIo.formatJson(json1);
         assertThat(json2).isEqualToIgnoringNewLines(json);
     }
 }

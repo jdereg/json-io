@@ -230,7 +230,8 @@ for small classes like `Date, LocalDate, LocalDateTime,` where you are not point
 this option for a class will cause more memory to be consumed on the reading side, as each class of this type 
 output will always create a new instance.  If you have a class with many fields (large instance) and many other fields outside this
 class pointed to it, and that large instance is marked as "non-referenceable," then the large instance would be loaded 
-into memory uniquely for each object that pointed to it.  This could change the "shape" of your object graph for each non-referenceable instance. 
+into memory uniquely for each object that pointed to it.  This could change the "shape" of your object graph for each non-referenceable instance.
+
 ---
 ### Controlling the input JSON using `ReadOptions`
 #### Customization technique 2: Custom instantiator  `JsonReader.assignInstantiator(Class c, ClassFactory)`
@@ -255,8 +256,7 @@ classes for which you do not have the source code.
 #### Customization technique 5: Processing JSON from external sources.
 When reading JSON from external sources, you may want to start with:
 
-    ReadOptions readOptions = new ReadOptionsBuilder().
-        returnAsMaps().build();
+    ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_VALUES);
     Object data = JsonReader.toObjects(json, readOptions);
 
 This will get the JSON read into memory, in a Map-of-Maps format, similar to how JSON is read into memory in Javascript. 

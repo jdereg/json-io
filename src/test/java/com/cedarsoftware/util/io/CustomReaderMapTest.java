@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
@@ -9,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -42,7 +42,7 @@ public class CustomReaderMapTest
         customReaders.put(CustomPoint.class, new CustomPointReader());
         
         String json = TestUtil.toJson(data);
-        Map<String, CustomPoint> clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
+        Map<String, CustomPoint> clone = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReaders), null);
 
         CustomPoint clonePoint = clone.get("pt");
         assertEquals(pt.x, clonePoint.x);
@@ -62,7 +62,7 @@ public class CustomReaderMapTest
         Map<Class<CustomPoint>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(CustomPoint.class, new CustomPointReader());
         String json = TestUtil.toJson(list);
-        List<CustomPoint> clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
+        List<CustomPoint> clone = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReaders), null);
 
         CustomPoint clonePoint = clone.get(0);
         assertEquals(pt.x, clonePoint.x);
@@ -83,7 +83,7 @@ public class CustomReaderMapTest
         customReaders.put(CustomPoint.class, new CustomPointReader());
 
         String json = TestUtil.toJson(list);
-        Object[] clone = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
+        Object[] clone = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReaders), null);
 
         CustomPoint clonePoint = (CustomPoint) clone[0];
         assertEquals(pt.x, clonePoint.x);

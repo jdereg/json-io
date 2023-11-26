@@ -1,6 +1,6 @@
 package com.cedarsoftware.util;
 
-public enum ReconstructionType {
-    MAPS,
+public enum ReturnType {
+    JSON_VALUES,
     JAVA_OBJECTS
 }

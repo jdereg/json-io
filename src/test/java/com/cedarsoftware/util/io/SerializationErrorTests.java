@@ -1,18 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Arrays;
 import java.util.HashSet;
-
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.MismatchedGetter;
 import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SerializationErrorTests {
 
@@ -37,9 +36,7 @@ class SerializationErrorTests {
 
         String json = TestUtil.toJson(group, writeOptions);
 
-        ReadOptions readOptions = new ReadOptionsBuilder()
-                .failOnUnknownType()
-                .build();
+        ReadOptions readOptions = new ReadOptions().failOnUnknownType(true);
 
         SecurityGroup actual = TestUtil.toObjects(json, readOptions, null);
 
@@ -55,7 +52,7 @@ class SerializationErrorTests {
         model.generate("foo");
 
         String json = TestUtil.toJson(model);
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptions(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -67,8 +64,8 @@ class SerializationErrorTests {
         MismatchedGetter model = new MismatchedGetter();
         model.generate("foo");
 
-        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways().build());
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
+        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways());
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptions(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -77,12 +74,11 @@ class SerializationErrorTests {
 
     @Test
     void testSerializeLongId_doesNotFillInWithZeroWhenMissing() {
-        ReadOptions options = new ReadOptionsBuilder()
-                .failOnUnknownType()
-                .withCustomTypeName(SecurityGroup.class, "sg")
-                .withCustomTypeName(Permission.class, "perm")
-                .withCustomTypeName(HashSet.class, "set")
-                .build();
+        ReadOptions options = new ReadOptions()
+                .failOnUnknownType(true)
+                .aliasTypeName("SecurityGroup.class", "sg")
+                .aliasTypeName("Permission.class", "perm")
+                .aliasTypeName("HashSet.class", "set");
 
         String json = loadJsonForTest("security-group.json");
         SecurityGroup actual = TestUtil.toObjects(json, options, null);

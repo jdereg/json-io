@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.OuterObject;
-import org.junit.jupiter.api.Test;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,6 +11,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.models.OuterObject;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -199,7 +200,7 @@ public class FieldsTest
         testFields.init();
         String json0 = TestUtil.toJson(testFields);
         TestUtil.printLine("json0=" + json0);
-        Map testFields2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map testFields2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
         String json1 = TestUtil.toJson(testFields2);
         TestUtil.printLine("json1=" + json1);
@@ -230,7 +231,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(painful, new WriteOptions()
                 .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name")));
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -244,7 +245,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_VALUES);
         WriteOptions writeOptions = new WriteOptions().addIncludedFields(includedFields);
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -272,7 +273,7 @@ public class FieldsTest
         painful.setName("Android rocks");
         painful.setAge(50);
 
-        ReadOptions readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_VALUES);
         WriteOptions writeOptions = new WriteOptions().addExcludedFields(excludedFields);
         String json = TestUtil.toJson(painful, writeOptions);
         Map check = TestUtil.toObjects(json, readOptions, null);
@@ -311,7 +312,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(painful, new WriteOptions()
                 .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }
@@ -325,7 +326,7 @@ public class FieldsTest
 
         String json = TestUtil.toJson(painful, new WriteOptions()
                 .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
         assertTrue(check.containsKey("age"));
@@ -340,7 +341,7 @@ public class FieldsTest
         String json = TestUtil.toJson(painful, new WriteOptions()
                 .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"))
                 .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")));
-        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map check = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }

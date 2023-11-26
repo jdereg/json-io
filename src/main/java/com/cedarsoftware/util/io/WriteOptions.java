@@ -42,17 +42,16 @@ import com.cedarsoftware.util.reflect.ClassDescriptors;
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
  * output JSON. An instance of this class is passed to the JsonWriter.toJson() APIs
- * to establish the desired capabilities.
+ * to set the desired capabilities.
  * <br/><br/>
- * You can "seal" this class from immutability and then store the class for re-use.
- * Call the "seal" method and then no longer can any methods that change state be
- * called - they will throw a JsonIoException if called after sealing.
+ * You can make this class immutable and then store the class for re-use.
+ * Call the ".build()" method and then no longer can any methods that change state be
+ * called - it will throw a JsonIoException.
  * <br/><br/>
  * This class can be created from another WriteOptions instance, using the "copy constructor"
  * that takes a WriteOptions. All properties of the other WriteOptions will be copied to the
- * new instance, except for the sealed property. That always starts off as false (not sealed)
- * so that you can make changes to options. You can create a few variations of the WriteOptions,
- * store them off, so that you do not have to re-create them frequently.
+ * new instance, except for the 'built' property. That always starts off as false (mutable)
+ * so that you can make changes to options.
  * <br/><br/>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -80,26 +79,13 @@ public class WriteOptions {
     // Properties
     private boolean shortMetaKeys;
     private ShowType showTypeInfo = ShowType.MINIMAL;
-
-    /**
-     * Cache of writers to use during serialization.  Currently, this is cleared
-     * each time.  It might be worth holding on to this and just giving the user
-     * the option to clear at the end of serializations.  This item is also
-     * a good candidate for LRUCache
-     */
-    // TODO: 'writerCache' should be moved outside of WriteOptions.  WriteOptions sole purpose
-    // TODO: is to manage the state of its internal simple settings. It offers up the APIs
-    // TODO: to read this settings to the outside, and those outside classes like writers,
-    // TODO: should be looking at the WriteOptions and adjusting their behavior accordingly.
-    private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
-
-    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private boolean prettyPrint = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
     private boolean forceMapOutputAsTwoArrays = false;
     private boolean allowNanAndInfinity = false;
     private boolean enumPublicFieldsOnly = false;
+    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
@@ -110,6 +96,9 @@ public class WriteOptions {
     private Set<Class<?>> nonReferenceableItems = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    // Runtime cache (not feature options)
+    private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+    
     private boolean built = false;
 
     static {
@@ -124,10 +113,6 @@ public class WriteOptions {
         temp.put(Class.class, new Writers.ClassWriter());
         temp.put(UUID.class, new Writers.UUIDWriter());
 
-        // TODO: Write Customization Map should not be changing based on settings here.
-        // TODO: Customized Writer should be referencing WriteOptions to make it's
-        // TODO: subtle changes to output, Isolating the understanding of the customization
-        // TODO: to the Writer, and leaving WriteOptions only possessing flags / indicators.
         JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
         temp.put(java.sql.Date.class, defaultDateWriter);
         temp.put(Date.class, defaultDateWriter);
@@ -195,29 +180,14 @@ public class WriteOptions {
     public enum ShowType {
         ALWAYS, NEVER, MINIMAL
     }
-    
-    /**
-     * @return ClassLoader to be used when writing JSON to resolve String named classes.
-     */
-    public ClassLoader getClassLoader() {
-        return classLoader;
-    }
-
-    /**
-     * @param classLoader ClassLoader to use when writing JSON to resolve String named classes.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions classLoader(ClassLoader classLoader) {
-        throwIfBuilt();
-        this.classLoader = classLoader;
-        return this;
-    }
 
     /**
      * Start with default options
      */
     public WriteOptions() {
         customWrittenClasses.putAll(BASE_WRITERS);
+        writerCache.putAll(BASE_WRITERS);
+        
         nonReferenceableItems.add(byte.class);
         nonReferenceableItems.add(short.class);
         nonReferenceableItems.add(int.class);
@@ -266,7 +236,6 @@ public class WriteOptions {
 
     /**
      * Copy all the settings from the passed in 'other' WriteOptions
-     *
      * @param other WriteOptions - source to copy from.
      */
     public WriteOptions(WriteOptions other) {
@@ -284,7 +253,7 @@ public class WriteOptions {
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
         nonReferenceableItems.addAll(other.nonReferenceableItems);
-        this.writerCache = other.writerCache;
+        this.writerCache.putAll(other.writerCache);
 
         // Need your own Set instance here per Class, no references to the copied Set.
         includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);
@@ -293,11 +262,28 @@ public class WriteOptions {
         excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
     }
 
-    // Private method to check if the object is sealed
+    // Private method to check if the object is built
     private void throwIfBuilt() {
         if (built) {
-            throw new JsonIoException("These WriteOptions are sealed and cannot be modified.");
+            throw new JsonIoException("This instance of WriteOptions is built and cannot be modified.  You can create another instance from this instance using the constructor for a mutable copy.");
         }
+    }
+
+    /**
+     * @return ClassLoader to be used when writing JSON to resolve String named classes.
+     */
+    public ClassLoader getClassLoader() {
+        return classLoader;
+    }
+
+    /**
+     * @param classLoader ClassLoader to use when writing JSON to resolve String named classes.
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions classLoader(ClassLoader classLoader) {
+        throwIfBuilt();
+        this.classLoader = classLoader;
+        return this;
     }
 
     /**
@@ -319,8 +305,7 @@ public class WriteOptions {
     }
 
     /**
-     * Alias Type Names, e.g. "alist" instead of "java.util.ArrayList".
-     *
+     * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.
      */
@@ -974,8 +959,8 @@ public class WriteOptions {
     }
 
     /**
-     * @return boolean true if the instance of this class is sealed, meaning no more changes can be made to it,
-     * otherwise false is returned, indicating that changes can still be made to this WriteOptions instance.
+     * @return boolean true if the instance of this class is built (read-only), otherwise false is returned,
+     * indicating that changes can still be made to this WriteOptions instance.
      */
     public boolean isBuilt() {
         return built;

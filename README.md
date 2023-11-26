@@ -51,23 +51,7 @@ and B points to C, and C points to A), it emits a `"@ref":n` where 'n' is the ob
 corresponding meta entry `"@id":n` defined on the referenced object).  Only referenced objects have IDs in the JSON
 output, reducing the JSON String length.
 
-### Performance
-**json-io** was written with performance in mind.  In most cases **json-io** is faster than the JDK's
-`ObjectInputStream / ObjectOutputStream`.  As the tests run, a log is written of the time it takes to
-serialize / deserialize and compares it to `ObjectInputStream / ObjectOutputStream` (if the static
-variable `_debug` is `true` in `TestUtil`).
-
 ### [User Guide](/user-guide.md)
-
-### Pretty-Printing JSON
-Use `JsonWriter.formatJson()` API to format a passed in JSON string to a nice, human readable format.  Also, when writing
-JSON data, use the `JsonWriter.objectToJson(o, args)` API, where args is a `Map` with a key of `JsonWriter.PRETTY_PRINT`
-and a value of 'true' (`boolean` or `String`).  When run this way, the JSON written by the `JsonWriter` will be formatted
-in a nice, human readable format.
-
-### RESTful support
-**json-io** can be used as the fundamental data transfer method between a Javascript / JQuery / Ajax client and a web server
-in a RESTful fashion.
 
 ### Noteworthy
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)

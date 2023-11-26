@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import com.cedarsoftware.util.ReturnType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import lombok.Getter;
@@ -59,7 +60,7 @@ public class TestUtil
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
         String json = toJson(initial, new WriteOptions().showTypeInfoNever());
-        return toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        return toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
     }
 
     private static class TestInfo
@@ -257,7 +258,7 @@ public class TestUtil
      */
     public static <T> T toObjects(String json, Class<?> root)
     {
-        return toObjects(json, new ReadOptionsBuilder().build(), root);
+        return toObjects(json, new ReadOptions(), root);
     }
 
     /**

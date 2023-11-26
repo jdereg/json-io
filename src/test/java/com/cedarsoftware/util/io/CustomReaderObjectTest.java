@@ -36,7 +36,7 @@ public class CustomReaderObjectTest
 		String json = TestUtil.toJson(p);
 		Map<Class<?>, CustomReader> customReaders = new HashMap<>();
 		customReaders.put(CustomWriterTest.Person.class, new CustomReader());
-		CustomWriterTest.Person pRead = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReaders).build(), null);
+		CustomWriterTest.Person pRead = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReaders), null);
 		assert p.equals(pRead);
 		assert madeItHere;
 	}

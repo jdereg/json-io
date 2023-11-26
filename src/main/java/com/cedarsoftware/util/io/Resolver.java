@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -17,10 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-
 import lombok.AccessLevel;
 import lombok.Getter;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from
@@ -373,21 +373,20 @@ public abstract class Resolver implements ReaderContext
     protected Object createInstanceUsingType(JsonObject jsonObj)
     {
         String type = jsonObj.type;
-        final boolean failOnUnknownType = getReadOptions().isFailOnUnknownType();
-
         Class c = MetaUtils.classForName(type, readOptions.getClassLoader());
+        
         if (c == null)
         {   // Unable to find class in the JVM.
-            if (failOnUnknownType)
+            if (readOptions.isFailOnUnknownType())
             {
-                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, you can turn off 'failOnUnknownType' and a LinkedHashMap or failOnUnknownClass() will be used instead.");
+                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, set 'failOnUnknownType' to false. An attempt to use LinkedHashMap will be made. Also, you can set ReadOptions unknownTypeClass(MyMap.class) to be used for unknown type.");
             }
 
             // Try "unknown" class the user may have set up.
-            c = getReadOptions().getUnknownTypeClass();
+            c = readOptions.getUnknownTypeClass();
             if (c == null)
             {   // They did not set up an unknown class, use a LinkedHashMap.  It will be used to catch the fields
-                // of the JSON object graph.  Works well with returnAsMaps() setting.
+                // of the JSON object graph.  Works well with returnType(ReturnType.JSON_VALUES) setting.
                 c = LinkedHashMap.class;
             }
         }
@@ -461,7 +460,7 @@ public abstract class Resolver implements ReaderContext
 
         Object[] items = jsonObj.getArray();
 
-        final boolean useMaps = getReadOptions().isUsingMaps();
+        final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
         // if @items is specified, it must be an [] type.
         // if clazz.isArray(), then it must be an [] type.
@@ -475,7 +474,7 @@ public abstract class Resolver implements ReaderContext
         }
         else if (clazz == Object.class && !useMaps)
         {
-            final Class<?> unknownClass = getReadOptions().getUnknownTypeClass();
+            final Class<?> unknownClass = readOptions.getUnknownTypeClass();
 
             if (unknownClass == null)
             {
@@ -517,7 +516,7 @@ public abstract class Resolver implements ReaderContext
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
-        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
+        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
 
         if (classFactory == null) {
             return null;
@@ -539,18 +538,13 @@ public abstract class Resolver implements ReaderContext
 
     protected Object coerceCertainTypes(String type)
     {
-        Class clazz = getReadOptions().getCoercedType(type);
+        Class clazz = readOptions.getCoercedClass(type);
         if (clazz == null)
         {
             return null;
         }
 
         return MetaUtils.newInstance(clazz, null);  // can add constructor arg values
-    }
-
-    protected JsonReader.JsonClassReader getCustomReader(Class c)
-    {
-        return this.readerCache.computeIfAbsent(c, key -> getReadOptions().getClosestReader(key)).orElse(null);
     }
 
     protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj)
@@ -677,7 +671,7 @@ public abstract class Resolver implements ReaderContext
      */
     protected void rehashMaps()
     {
-        final boolean useMapsLocal = getReadOptions().isUsingMaps();
+        final boolean useMapsLocal = readOptions.getReturnType() == ReturnType.JSON_VALUES;
         ;
         for (Object[] mapPieces : prettyMaps)
         {

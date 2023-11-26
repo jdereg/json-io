@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Period;
 import java.util.stream.Stream;
 
@@ -9,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class PeriodTests {
 
@@ -71,7 +71,7 @@ class PeriodTests {
     @MethodSource("oldFormats")
     void oldFormatTests(String fileName, int years, int months, int days) {
         String json = loadJsonForTest(fileName);
-        Period d = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Period d = TestUtil.toObjects(json, new ReadOptions(), null);
 
         assertThat(d)
                 .hasYears(years)
