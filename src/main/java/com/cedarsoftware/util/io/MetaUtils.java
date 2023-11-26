@@ -1152,5 +1152,30 @@ public class MetaUtils
             runnable.run();
         } catch (Throwable ignored) { }
     }
+    public static boolean isEmpty(final String s) {
+        return trimLength(s) == 0;
+    }
 
+    public static boolean hasContent(final String s) {
+        return !(trimLength(s) == 0);    // faster than returning !isEmpty()
+    }
+
+    /**
+     * Use this method when you don't want a length check to
+     * throw a NullPointerException when
+     *
+     * @param s string to return length of
+     * @return 0 if string is null, otherwise the length of string.
+     */
+    public static int length(final String s) {
+        return s == null ? 0 : s.length();
+    }
+
+    /**
+     * Returns the length of the trimmed string.  If the length is
+     * null then it returns 0.
+     */
+    public static int trimLength(final String s) {
+        return (s == null) ? 0 : s.trim().length();
+    }
 }
