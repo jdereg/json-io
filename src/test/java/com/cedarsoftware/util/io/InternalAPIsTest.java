@@ -31,8 +31,8 @@ public class InternalAPIsTest
     public void testDistanceToInterface()
     {
         // The values below can differ depending on the JDK versions, so be careful the classes chosen
-        assert MetaUtils.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
-        assert MetaUtils.computeInheritanceDistance(ObjectResolver.class, Resolver.class) > 0;
+        assert MetaUtilsHelper.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
+        assert MetaUtilsHelper.computeInheritanceDistance(ObjectResolver.class, Resolver.class) > 0;
     }
 
     @Test

@@ -1033,7 +1033,7 @@ public class WriteOptions {
             if (clz == c) {
                 return entry.getValue();
             }
-            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            int distance = MetaUtilsHelper.computeInheritanceDistance(c, clz);
             if (distance != -1 && distance < minDistance) {
                 minDistance = distance;
                 closestWriter = entry.getValue();

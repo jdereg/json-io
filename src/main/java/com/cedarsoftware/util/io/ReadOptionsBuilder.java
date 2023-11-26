@@ -624,7 +624,7 @@ public class ReadOptionsBuilder {
                     return Optional.of(entry.getValue());
                 }
 
-                int distance = MetaUtils.computeInheritanceDistance(c, key);
+                int distance = MetaUtilsHelper.computeInheritanceDistance(c, key);
 
                 if (distance != -1 && distance < minDistance) {
                     minDistance = distance;

@@ -178,7 +178,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     @Test
     protected void testT1_and_T2_and_T3_providedAsValuesToMap() {
-        Map expected = MetaUtils.mapOf("foo", provideT1(), "bar", provideT2(), "qux", provideT3());
+        Map expected = MetaUtilsHelper.mapOf("foo", provideT1(), "bar", provideT2(), "qux", provideT3());
 
         // act
         Map<String, T> actual = TestUtil.serializeDeserialize(expected);
@@ -194,7 +194,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testAsDuplicateValuesInMap() {
         Object instance = provideT4();
-        Map expected = MetaUtils.mapOf("foo", instance, "bar", provideT2(), "qux", instance);
+        Map expected = MetaUtilsHelper.mapOf("foo", instance, "bar", provideT2(), "qux", instance);
 
         // act
         String json = TestUtil.toJson(expected);

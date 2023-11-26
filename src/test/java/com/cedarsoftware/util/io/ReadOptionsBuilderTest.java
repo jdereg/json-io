@@ -103,7 +103,7 @@ class ReadOptionsBuilderTest {
 
     @Test
     void withCustomTypeName_withMixedCustomTypeNameInitialization_accumulates() {
-        Map<String, String> map = MetaUtils.mapOf(
+        Map<String, String> map = MetaUtilsHelper.mapOf(
                 String.class.getName(), "char1",
                 "foo", "bar");
 
@@ -217,7 +217,7 @@ class ReadOptionsBuilderTest {
     }
 
     private Map<String, JsonReader.ClassFactory> getClassFactoryMap() {
-        return MetaUtils.mapOf(
+        return MetaUtilsHelper.mapOf(
                 LocalDate.class.getName(), new LocalDateFactory(),
                 LocalTime.class.getName(), new LocalTimeFactory());
     }

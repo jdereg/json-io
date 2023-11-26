@@ -111,10 +111,10 @@ public class MetaUtilsTests {
 
     @Test
     public void testGetDistance() {
-        int x = MetaUtils.computeInheritanceDistance(Serializable.class, Externalizable.class);
+        int x = MetaUtilsHelper.computeInheritanceDistance(Serializable.class, Externalizable.class);
         assert x == -1;
 
-        x = MetaUtils.computeInheritanceDistance(Externalizable.class, Serializable.class);
+        x = MetaUtilsHelper.computeInheritanceDistance(Externalizable.class, Serializable.class);
         assert x == 1;
     }
 
@@ -128,31 +128,31 @@ public class MetaUtilsTests {
 
         String methodName = "blame";
         Object[] args = new Object[]{17, 34.5, map};
-        String msg = MetaUtils.getLogMessage(methodName, args);
+        String msg = MetaUtilsHelper.getLogMessage(methodName, args);
         assertThat(msg).isEqualTo("blame(17  34.5  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.1415926535...)");
 
-        msg = MetaUtils.getLogMessage(methodName, args, 500);
+        msg = MetaUtilsHelper.getLogMessage(methodName, args, 500);
         assertThat(msg).isEqualTo("blame(17  34.5  {\"a\":\"Alpha\",\"b\":\"Bravo\",\"car\":\"McLaren 675LT\",\"pi\":3.141592653589793})");
     }
 
     @Test
     void getWithDefault_whenObjectIsFound_returnsObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
-        String actual = MetaUtils.getValueWithDefaultForMissing(map, "foo", "qux");
+        Map map = MetaUtilsHelper.mapOf("foo", "bar");
+        String actual = MetaUtilsHelper.getValueWithDefaultForMissing(map, "foo", "qux");
         assertThat(actual).isEqualTo("bar");
     }
 
     @Test
     void getWithDefault_whenObjectIsNotFound_returnsDefaultObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
-        String actual = MetaUtils.getValueWithDefaultForMissing(map, "blah", "qux");
+        Map map = MetaUtilsHelper.mapOf("foo", "bar");
+        String actual = MetaUtilsHelper.getValueWithDefaultForMissing(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
     @Test
     void getWithDefaultForNull_whenObjectIsNotFound_returnsDefaultObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
-        String actual = MetaUtils.getValueWithDefaultForNull(map, "blah", "qux");
+        Map map = MetaUtilsHelper.mapOf("foo", "bar");
+        String actual = MetaUtilsHelper.getValueWithDefaultForNull(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
@@ -160,7 +160,7 @@ public class MetaUtilsTests {
     void getWithDefaultForNull_whenObjectIsEqualToNull_returnsDefaultObject() {
         Map map = new HashMap<>();
         map.put("foo", null);
-        String actual = MetaUtils.getValueWithDefaultForNull(map, "foo", "bar");
+        String actual = MetaUtilsHelper.getValueWithDefaultForNull(map, "foo", "bar");
         assertThat(actual).isEqualTo("bar");
     }
 
