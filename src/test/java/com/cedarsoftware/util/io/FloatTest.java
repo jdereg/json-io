@@ -1,5 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,12 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -87,7 +88,7 @@ public class FloatTest
 
         try
         {
-            TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+            TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
             fail();
         }
         catch (JsonIoException ignore)
@@ -215,7 +216,7 @@ public class FloatTest
     @Test
     public void testNanArrayElement2()
     {
-        WriteOptions options = new WriteOptions().allowNanAndInfinity(false).build();
+        WriteOptions options = new WriteOptions().allowNanAndInfinity(false);
         String json = TestUtil.toJson(MetaUtils.listOf(Float.NaN), options);
         assert json.contains("null");
 

@@ -1,16 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -27,12 +16,22 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.DeepEquals;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -460,7 +459,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -494,7 +493,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -599,7 +598,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -612,7 +611,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        empty = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        empty = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -625,7 +624,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        list = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertNotNull(list);
         assertEquals(2, list.length);
         Map e1 = (Map) list[0];
@@ -645,7 +644,7 @@ public class ArrayTest
         Object[] objs = new Object[]{strs, "a", strs};
         String json0 = TestUtil.toJson(objs);
         TestUtil.printLine("json0=" + json0);
-        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -671,7 +670,7 @@ public class ArrayTest
         testArray.init();
         String json0 = TestUtil.toJson(testArray);
         TestUtil.printLine("json0=" + json0);
-        Map testArray2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map testArray2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
@@ -688,7 +687,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map m = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map m = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -952,9 +951,9 @@ public class ArrayTest
 
     private static Stream<Arguments> allShowTypeInfos() {
         return Stream.of(
-                Arguments.of(new WriteOptions().showTypeInfoNever().build()),
-                Arguments.of(new WriteOptions().showTypeInfoAlways().build()),
-                Arguments.of(new WriteOptions().build())
+                Arguments.of(new WriteOptions().showTypeInfoNever()),
+                Arguments.of(new WriteOptions().showTypeInfoAlways()),
+                Arguments.of(new WriteOptions())
         );
     }
 
@@ -1037,15 +1036,15 @@ public class ArrayTest
     @ParameterizedTest
     @MethodSource("integerVariants")
     void testObjectArray_withIntegerVariants_andNoTyping_outputsTheSame(Object one, Object two, Object three) {
-        WriteOptions options = new WriteOptions().showTypeInfoNever().build();
+        WriteOptions options = new WriteOptions().showTypeInfoNever();
         String json = TestUtil.toJson(new Object[]{one, two, three}, options);
         assertThat(json).isEqualTo("[10,20,30]");
     }
 
     private static Stream<Arguments> alwaysShowAndMinimalShow() {
         return Stream.of(
-                Arguments.of(new WriteOptions().showTypeInfoAlways().build()),
-                Arguments.of(new WriteOptions().build())
+                Arguments.of(new WriteOptions().showTypeInfoAlways()),
+                Arguments.of(new WriteOptions())
         );
     }
 
@@ -1069,13 +1068,10 @@ public class ArrayTest
 
     @ParameterizedTest
     @MethodSource("stringVariants")
-    void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants() throws Throwable {
+    void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants() {
         Object[] array = {10L, 20L, 30L};
 
-        WriteOptions options = new WriteOptions()
-                .writeLongsAsStrings(true)
-                .showTypeInfoNever()
-                .build();
+        WriteOptions options = new WriteOptions().writeLongsAsStrings(true).showTypeInfoNever();
 
         String json = TestUtil.toJson(array, options);
         assertThat(json).isEqualTo("[\"10\",\"20\",\"30\"]");

@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class LenientNanInfinityTest
+class LenientNanInfinityTest
 {
     public class A
     {
@@ -49,7 +49,7 @@ public class LenientNanInfinityTest
     }
 
     @Test
-    public void testFloatDoubleNormal()
+    void testFloatDoubleNormal()
     {
         float float1 = 1f;
         double double1 = 2.0;
@@ -57,7 +57,7 @@ public class LenientNanInfinityTest
     }
 
     @Test
-    public void testFloatDoubleNaNInf()
+    void testFloatDoubleNaNInf()
     {
         // Test NaN, +/-Infinity
         testFloatDouble(Float.NaN, Double.NaN);
@@ -68,19 +68,19 @@ public class LenientNanInfinityTest
         testFloatDouble(Float.NaN, Double.POSITIVE_INFINITY);
         testFloatDouble(Float.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         testFloatDouble(Float.NEGATIVE_INFINITY, Double.NaN);
-        
     }
 
-    private final void testFloatDouble(float float1, double double1)
+    private void testFloatDouble(float float1, double double1)
     {
-        JsonReader.setAllowNanAndInfinity(true);
-        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true);
         A a = new A(double1, float1);
 
         String json = TestUtil.toJson(a, writeOptions);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
-        A newA = (A) TestUtil.toObjects(json, null);
+
+        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(true).build();
+        A newA = (A) TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();
@@ -88,9 +88,7 @@ public class LenientNanInfinityTest
         
         Double doubleField = a.getDoubleField();
         Float floatField = a.getFloatField();
-        assertTrue(newDoubleField.equals(doubleField));
-        assertTrue(newFloatField.equals(floatField));
+        assertEquals(newDoubleField, doubleField);
+        assertEquals(newFloatField, floatField);
     }
-    
-    
 }

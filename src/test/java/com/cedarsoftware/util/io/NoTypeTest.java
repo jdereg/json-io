@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -12,6 +9,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -118,7 +119,7 @@ public class NoTypeTest
         Object[] dataList = (Object[]) search.get("datalist");
         assert dataList.length == 0;
 
-        map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         groups = (Object[]) (map.get("groups"));
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -137,7 +138,7 @@ public class NoTypeTest
         cols.setBars(new Object[]{1, 3, "5", 7});
 
         String json = TestUtil.toJson(cols, new WriteOptions().showTypeInfoNever());
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
         assert listFoos[0].equals(1L);
@@ -164,7 +165,7 @@ public class NoTypeTest
     {
         Object[] array = new Object[]{new Object[]{1L, 2L, 3L}, new Object[] {'a', 'b', 'c'}};
         String json = TestUtil.toJson(array);
-        Object[] list = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object[] list = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assert list.length == 2;
         Object[] list0 = (Object[]) list[0];
         assert list0.length == 3;

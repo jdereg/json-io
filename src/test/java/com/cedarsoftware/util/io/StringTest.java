@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
+import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +75,7 @@ public class StringTest
     public void testRootString()
     {
         String s = "\"root string\"";
-        Object o = TestUtil.toObjects(s, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object o = TestUtil.toObjects(s, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals("root string", o);
         o = TestUtil.toObjects(s, null);
         assertEquals("root string", o);

@@ -1,14 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.awt.Point;
+import java.awt.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -29,10 +21,18 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -72,8 +72,8 @@ public class MapsTest
         map.put("en", "us");
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
-        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways());
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptions(), null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -91,8 +91,8 @@ public class MapsTest
         map.put("en", "us");
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
-        String json = TestUtil.toJson(model, new WriteOptions().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        String json = TestUtil.toJson(model, new WriteOptions());
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptions(), null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -178,7 +178,7 @@ public class MapsTest
         testMap.init();
         String json0 = TestUtil.toJson(testMap);
         TestUtil.printLine("json0=" + json0);
-        Map testMap2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map testMap2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
         String json1 = TestUtil.toJson(testMap2);
         TestUtil.printLine("json1=" + json1);
@@ -292,9 +292,9 @@ public class MapsTest
     public void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
-        Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map root = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(root);
-        Map root2 = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map root2 = TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertTrue(DeepEquals.deepEquals(root, root2));
 
         // Will be different because @keys and @items get inserted during processing
@@ -362,7 +362,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(map);
         TestUtil.printLine("json0=" + json0);
 
-        map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -380,7 +380,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(root);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -401,7 +401,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(smt);
         TestUtil.printLine("json0=" + json0);
 
-        Map result = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map result = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(result);
         TestUtil.printLine("json1=" + json1);
 
@@ -413,13 +413,13 @@ public class MapsTest
     @Test
     public void testMapFromUnknown()
     {
-        Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentHashMap.class).build(), null);
+        Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptions().unknownTypeClass(ConcurrentHashMap.class), null);
         assert map instanceof ConcurrentHashMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
         assert map.get("b").equals("beta");
 
-        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().setUnknownTypeClass(ConcurrentSkipListMap.class).build(), null);
+        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptions().unknownTypeClass(ConcurrentSkipListMap.class), null);
         assert map instanceof ConcurrentSkipListMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
@@ -440,7 +440,7 @@ public class MapsTest
         quoteInKeyMap.put("\"one\"", 1L);
         quoteInKeyMap.put("\"two\"", 2L);
         String json = TestUtil.toJson(quoteInKeyMap);
-        Map ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        Map ret = TestUtil.toObjects(json, new ReadOptions(), null);
         assert ret.size() == 3;
 
         assert ret.get(0L).equals(0L);
@@ -452,7 +452,7 @@ public class MapsTest
         stringKeys.put("\"one\"", 1L);
         stringKeys.put("\"two\"", 2L);
         json = TestUtil.toJson(stringKeys);
-        ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        ret = TestUtil.toObjects(json, new ReadOptions(), null);
         assert ret.size() == 3;
 
         assert ret.get("\"zero\"").equals(0L);

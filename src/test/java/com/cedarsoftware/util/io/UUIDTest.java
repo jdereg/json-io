@@ -1,11 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -36,7 +37,7 @@ public class UUIDTest
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getInternals());
 
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         json = TestUtil.toJson(map);
         tu = TestUtil.toObjects(json, null);
         assertEquals(UUID.fromString("6508db3c-52c5-42ad-91f3-621d6e1d6557"), tu.getFromString());

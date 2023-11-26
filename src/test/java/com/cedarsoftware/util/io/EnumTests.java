@@ -1,14 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -17,7 +9,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -79,6 +80,13 @@ class EnumTests {
         assertThat(actual.getEnum1())
                 .isSameAs(expected.getEnum1())
                 .isSameAs(actual.getEnum2());
+    }
+
+    @Test
+    void testBasicEnum() {
+        TestEnum1 actual = TestUtil.serializeDeserialize(TestEnum1.B);
+
+        assertThat(actual).isSameAs(TestEnum1.B);
     }
 
     @ParameterizedTest

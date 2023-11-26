@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -12,7 +7,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -171,9 +172,9 @@ class RefsTest
         a._other = b;
         b._other = a;
         String json = TestUtil.toJson(a);
-        Map<Class<TestObject>, JsonReader.JsonClassReader> readers = new HashMap<>();
+        Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
         readers.put(TestObject.class, new TestObjectReader());
-        TestObject aa = TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(readers).build(), null);
+        TestObject aa = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readers), null);
     }
 
     private static class TestObjectReader implements JsonReader.JsonClassReader {
@@ -230,7 +231,7 @@ class RefsTest
     public void testRefChainAsJsonObjects()
     {
         String json = TestUtil.fetchResource("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;

@@ -1,15 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Instant;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.models.NestedInstant;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.models.NestedInstant;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     @Override
@@ -89,7 +88,7 @@ public class InstantTests extends SerializationDeserializationMinimumTests<Insta
     void roundTripTests(Instant expected) {
         String json = JsonWriter.toJson(expected, new WriteOptions());
 
-        Instant actual = JsonReader.toObjects(json, new ReadOptionsBuilder().build(), Instant.class);
+        Instant actual = JsonReader.toObjects(json, new ReadOptions(), Instant.class);
         assertThat(expected).isEqualTo(actual);
     }
 }

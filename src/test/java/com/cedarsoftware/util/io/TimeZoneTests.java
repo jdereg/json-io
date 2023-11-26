@@ -1,16 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -190,7 +191,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        ReadOptions options = new ReadOptionsBuilder().returnAsMaps().build();
+        ReadOptions options = new ReadOptions().returnType(ReturnType.JSON_VALUES);
         Object[] items = TestUtil.toObjects(json, options, null);
 
         // assert

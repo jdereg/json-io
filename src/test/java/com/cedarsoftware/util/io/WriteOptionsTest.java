@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
@@ -15,6 +11,10 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,24 +61,24 @@ class WriteOptionsTest {
         assertTrue(options.isForceMapOutputAsTwoArrays());
     }
 
-    // Test for isLogicalPrimitive method
+    // Test for isNonReferenceableClass method
     @Test
-    void testIsLogicalPrimitive() {
+    void testIsNonReferenceableType() {
         assertTrue(options.isNonReferenceableClass(Date.class)); // Assuming Date is a logical primitive
         assertFalse(options.isNonReferenceableClass(Object.class)); // Assuming Object is not
     }
 
-    // Test for getLogicalPrimitives method
+    // Test for getNonReferenceable method
     @Test
-    void testGetLogicalPrimitives() {
-        Collection<Class<?>> logicalPrimitives = options.getNonReferenceableClasses();
-        assertNotNull(logicalPrimitives);
-        assertTrue(logicalPrimitives instanceof LinkedHashSet);
+    void testGetNotReferenceableTypes() {
+        Collection<Class<?>> nonReferenceableClasses = options.getNonReferenceableClasses();
+        assertNotNull(nonReferenceableClasses);
+        assertTrue(nonReferenceableClasses instanceof LinkedHashSet);
     }
 
-    // Test for addLogicalPrimitive method
+    // Test for addNonReferenceable method
     @Test
-    void testAddLogicalPrimitive() {
+    void testAddNonReferenceableClass() {
         options.addNonReferenceableClass(String.class);
         assertTrue(options.isNonReferenceableClass(String.class));
     }

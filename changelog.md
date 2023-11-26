@@ -1,6 +1,6 @@
 ### Revision History
-* 4.19.0
-  * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior options are still supported, plus new features have been added.
+* 4.19.0-SNAPSHOT
+  * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior features are still supported, plus new features have been added.  Use the methods on Write/ReadOptions to set them.  The names may have changed slightly to more accurate names.
 * 4.18.0
   * Bug fix: When Enums were sent the "old way," (JSON object form) there was a bug in outputting additional fields defined on an Enum.
   * Enhancement: Improvements on Object construction for difficult to instantiate classes. 
@@ -20,7 +20,7 @@
 * 4.15.0
   * Supports `JDK1.8, JDK11, 17, 21.` Tested with these versions, and compiled in class file version 52 (`JDK1.8 `) format.
   * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values.
-  * Fixed an issue with classes that used custom reader/writes being loaded when inside an array or collection. If there was circular references, they were not resolved correctly.
+  * Fixed an issue with classes that used custom reader/writes being loaded when inside an array or collection. If there were circular references, they were not resolved correctly.
   * This version writes `Enums` in a more compact way with the field name associated to a JSON String name of the enum.  However, the prior versions of `json-io` wrote `Enums` out as JSON objects.  The JSON reader will read `Enums` either way.  If you want the output to continue to write `Enums` as a JSON Object, use the `.writeEnumsAsObjects()` on the `WriteOptionsBuilder`, and it will output enums as it used to.
   * Minor change: `JsonObject` was `JsonObject<K, V>` and is now `JsonObject` (no generics).  If you used `JsonObject` in your code, make sure to remove the generics.
   * Minor change: `JsonReader.ClassFactory::newInstance(Class c, Object)` has been changed to `JsonReader.ClassFactory::newInstance(Class<?>, JsonObject)`.  If you have written a `CustomClassFactory,` update the method signature to `newInstance(Class<?>, JsonObject).` 

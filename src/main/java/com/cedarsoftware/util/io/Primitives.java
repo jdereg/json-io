@@ -1,13 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Primitives {
-
     static final Set<Class<?>> PRIMITIVE_WRAPPERS = new HashSet<>();
-
     static final Set<Class<?>> NATIVE_JSON_TYPES = new HashSet<>();
 
     static {
@@ -27,8 +30,11 @@ public class Primitives {
         NATIVE_JSON_TYPES.add(String.class);
         NATIVE_JSON_TYPES.add(Boolean.class);
         NATIVE_JSON_TYPES.add(boolean.class);
+        NATIVE_JSON_TYPES.add(AtomicBoolean.class);
+        NATIVE_JSON_TYPES.add(AtomicLong.class);
+        NATIVE_JSON_TYPES.add(BigInteger.class);
+        NATIVE_JSON_TYPES.add(BigDecimal.class);
         NATIVE_JSON_TYPES.add(Object[].class);
-        //NATIVE_JSON_TYPES.add(LinkedHashMap.class);
     }
 
     /**
@@ -52,27 +58,22 @@ public class Primitives {
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
     public static boolean isJsonType(Class<?> c) {
-        return NATIVE_JSON_TYPES.contains(c);
+        if (NATIVE_JSON_TYPES.contains(c)) {
+            return true;
+        }
+        return Map.class.isAssignableFrom(c);
     }
 
     /**
      * @param c Class to test
-     * @param logicalPrimitives - set of logical primitives
-     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
-     * as all Java primitives, the primitive wrapper classes, String, Number, and Date.  This covers BigDecimal,
-     * BigInteger, AtomicInteger, AtomicLong, as these are 'Number instances. The reason these are considered
-     * 'logical' primitives is that they are immutable and therefore can be written without references in JSON
-     * content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape) of the
-     * object graph being written.
+     * @return boolean true if the passed in class needs no further tracing.  
      */
-    public static boolean isLogicalPrimitive(Class<?> c, Set<Class<?>> logicalPrimitives) {
-        return c.isPrimitive() ||
-                logicalPrimitives.contains(c) ||
+    public static boolean needsNoTracing(Class<?> c) {
+        return isPrimitive(c) ||
                 String.class.isAssignableFrom(c) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
                 c.isEnum() ||
                 c.equals(Class.class);
     }
-
 }

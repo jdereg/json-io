@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,7 +47,7 @@ public class SunMiscTest
             }
         });
 
-        Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<Class<Dog.Shoe>, JsonReader.JsonClassReader>();
+        Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<>();
         customReader.put(Dog.Shoe.class, new JsonReader.JsonClassReader() {
             public Object read(Object jOb, Deque<JsonObject> stack)
             {
@@ -55,7 +55,7 @@ public class SunMiscTest
                 return jOb;
             }
         });
-        TestUtil.toObjects(workaroundString, new ReadOptionsBuilder().withCustomReaders(customReader).build(), null);
+        TestUtil.toObjects(workaroundString, new ReadOptions().setCustomReaderClasses(customReader), null);
         // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
@@ -65,7 +65,7 @@ public class SunMiscTest
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.toObjects(json, new ReadOptionsBuilder().withCustomReaders(customReader).build(), null);
+        TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReader), null);
     }
 
     @Test

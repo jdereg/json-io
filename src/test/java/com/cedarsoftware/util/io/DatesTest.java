@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -14,9 +7,16 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -60,14 +60,14 @@ class DatesTest
         TestDateField tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getFromString());
 
-        Map jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map jObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertNull(jObj.get("fromString"));
 
         json = "{\"@type\":\"" + thisClass + "\",\"fromString\":null,\"dates\":[\"\"]}";
         tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getDates()[0]);
 
-        jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        jObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         json = TestUtil.toJson(jObj);
         tdf = TestUtil.toObjects(json, null);
         assertNull(tdf.getDates()[0]);

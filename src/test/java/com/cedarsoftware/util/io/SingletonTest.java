@@ -16,7 +16,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.toJson(strings, new WriteOptions().build());
+        String json = JsonWriter.toJson(strings, new WriteOptions());
         Object o = JsonReader.toObjects(json, null);
     }
 
@@ -27,7 +27,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.toJson(strings, new WriteOptions().build());
+        String json = JsonWriter.toJson(strings, new WriteOptions());
         Object o = JsonReader.toObjects(json, null);
     }
 
@@ -38,7 +38,7 @@ public class SingletonTest
         // Simple object with a list field, behaves the same with a class
 
         // Serialize foo with a singletonList, then deserialization throws
-        String json = JsonWriter.toJson(strings, new WriteOptions().build());
+        String json = JsonWriter.toJson(strings, new WriteOptions());
         Object o = JsonReader.toObjects(json, null);
     }
 }

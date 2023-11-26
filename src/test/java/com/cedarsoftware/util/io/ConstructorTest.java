@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -15,6 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -77,7 +78,7 @@ public class ConstructorTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Map<String, Object> map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map<String, Object> map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals((byte) 1, map.get("_byte"));
         assertEquals((short) 2, map.get("_short"));
         assertEquals(3, map.get("_int"));
@@ -110,7 +111,7 @@ public class ConstructorTest
         String json = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json);
 
-        Map<String, Object> map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map<String, Object> map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         assertEquals((byte) 1, map.get("_byte"));
         assertEquals((short) 2, map.get("_short"));
         assertEquals(3, map.get("_int"));
@@ -143,7 +144,7 @@ public class ConstructorTest
         TestUtil.printLine("json1=" + json1);
         assertEquals(json, json1);
 
-        map = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        map = TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         json = TestUtil.toJson(map);
         TestUtil.printLine("json2=" + json);
         assertEquals(json, json1);
@@ -181,7 +182,7 @@ public class ConstructorTest
     public void testJsonReaderConstructor()
     {
         String json = "{\"@type\":\"sun.util.calendar.ZoneInfo\",\"zone\":\"EST\"}";
-        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.getBytes()), new ReadOptionsBuilder().build());
+        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.getBytes()), new ReadOptions());
         TimeZone tz = jr.readObject(TimeZone.class);
         assertNotNull(tz);
         assertEquals("EST", tz.getID());
@@ -216,10 +217,9 @@ public class ConstructorTest
     public void testMapConstructor()
     {
         String json = TestUtil.toJson(new Canine("Bella"));
-        Map root = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Map root = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
-        JsonReader reader = new JsonReader(new LinkedHashMap<>());
-        Canine bella = (Canine) reader.jsonObjectsToJava((JsonObject) root);
+        Canine bella = (Canine) JsonReader.jsonObjectsToJava((JsonObject) root, new ReadOptions());
         assert bella.getName().equals("Bella");
     }
 
@@ -229,11 +229,11 @@ public class ConstructorTest
         Canine dog = new Canine("Eddie");
         String json = TestUtil.toJson(dog);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes());
-        Canine eddie = JsonReader.jsonToJava(inputStream, null);
+        Canine eddie = JsonReader.toObjects(inputStream, new ReadOptions(), null);
         assert eddie.getName().equals("Eddie");
 
         inputStream = new ByteArrayInputStream(json.getBytes());
-        Map<String, Object> dogMap = JsonReader.toMaps(inputStream, new ReadOptionsBuilder().returnAsMaps().build());
+        Map<String, Object> dogMap = JsonReader.toMaps(inputStream, new ReadOptions().returnType(ReturnType.JSON_VALUES));
         assert dogMap.get("name").equals("Eddie");
     }
 

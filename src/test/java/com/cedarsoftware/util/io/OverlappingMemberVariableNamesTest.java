@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +62,7 @@ public class OverlappingMemberVariableNamesTest
         assertEquals(child.getParentName(), roundTrip.getParentName());
         assertEquals(child.getChildName(), roundTrip.getChildName());
 
-        JsonObject jObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        JsonObject jObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String json1 = TestUtil.toJson(jObj);
         assertEquals(json, json1);
     }

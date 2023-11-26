@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -15,13 +12,16 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.factory.CalendarFactory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -133,7 +133,7 @@ public class CalendarTest
         String json = TestUtil.toJson(new Object[]{now});
         TestUtil.printLine("json=" + json);
 
-        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsMaps().build(), null);
+        Object[] items = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         Map item = (Map) items[0];
         Assertions.assertTrue(item.containsKey("time"));
         Assertions.assertTrue(item.containsKey("zone"));
@@ -237,10 +237,9 @@ public class CalendarTest
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         CalendarFactory factory = new CalendarFactory();
 
-        return new ReadOptionsBuilder()
-                .withClassFactory(Calendar.class, factory)
-                .withClassFactory(GregorianCalendar.class, factory)
-                .build();
+        return new ReadOptions()
+                .addClassFactory(Calendar.class, factory)
+                .addClassFactory(GregorianCalendar.class, factory);
     }
 
     @Test

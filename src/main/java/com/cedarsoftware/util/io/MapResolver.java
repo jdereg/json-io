@@ -98,11 +98,7 @@ public class MapResolver extends Resolver
             else if (rhs instanceof JsonObject)
             {
                 JsonObject jObj = (JsonObject) rhs;
-
-                //TODO:  CAn't tell for sure, but the code below this looks like it could take
-                // advantage of the classFActory isFinished and maybe regular isPrimitiveCheck
-
-                if (injector != null && getReadOptions().isLogicalPrimitive(injector.getType()))
+                if (injector != null && Primitives.needsNoTracing(injector.getType()))
                 {
                     jObj.put("value", MetaUtils.convert(injector.getType(), jObj.getValue()));
                     continue;

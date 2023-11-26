@@ -119,9 +119,9 @@ public class Writers
         /**
          * Writes out Float point type.
          */
-        @Override
+        @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (!context.getWriteOptions().isAllowNanAndInfinity() && (isNanOrInfinity((T) o))) {
+            if (!context.getWriteOptions().isAllowNanAndInfinity() && isNanOrInfinity((T) o)) {
                 output.write("null");
             } else {
                 output.write(o.toString());
@@ -209,7 +209,7 @@ public class Writers
     public static class ClassWriter extends PrimitiveUtf8StringWriter
     {
         @Override
-        public String extractString(Object o) { return ((Class)o).getName(); }
+        public String extractString(Object o) { return ((Class<?>)o).getName(); }
     }
 
     public static class EnumsAsStringWriter extends PrimitiveUtf8StringWriter
@@ -219,7 +219,7 @@ public class Writers
             return "name";
         }
         @Override
-        public String extractString(Object o) { return ((Enum)o).name(); }
+        public String extractString(Object o) { return ((Enum<?>)o).name(); }
     }
 
     public static class ZoneOffsetWriter extends PrimitiveUtf8StringWriter {
@@ -286,7 +286,7 @@ public class Writers
             this.formatter = formatter;
         }
 
-        @Override
+        @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object obj, Writer output) throws IOException {
             this.writePrimitiveForm((T) obj, output);
         }

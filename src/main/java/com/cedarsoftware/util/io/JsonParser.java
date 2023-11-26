@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.ReturnType;
+
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -118,19 +120,7 @@ class JsonParser
         EMPTY_ARRAY.put(ITEMS, new Object[]{});
         EMPTY_ARRAY.isFinished = true;
     }
-
-    @Deprecated
-    JsonParser(FastReader reader, Map<String, Object> args, int maxDepth, ReferenceTracker references)
-    {
-        this(reader, ReadOptionsBuilder.fromMap(args).withMaxDepth(maxDepth).build(), references);
-    }
-
-    @Deprecated
-    JsonParser(FastReader reader, Map<String, Object> args, ReferenceTracker references)
-    {
-        this(reader, args, DEFAULT_MAX_PARSE_DEPTH, references);
-    }
-
+    
     JsonParser(FastReader reader, ReadOptions readOptions, ReferenceTracker references) {
         this.input = reader;
         this.readOptions = readOptions;
@@ -202,7 +192,7 @@ class JsonParser
                     Object value = readValue(object, false);
                     if (TYPE.equals(field))
                     {
-                        final String substitute = this.readOptions.getTypeName(value.toString());
+                        final String substitute = readOptions.getTypeNameAlias(value.toString());
                         if (substitute != null)
                         {
                             value = substitute;
@@ -241,7 +231,7 @@ class JsonParser
             }
         }
 
-        final boolean useMaps = this.readOptions.isUsingMaps();
+        final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
         if (useMaps && object.isLogicalPrimitive())
         {
@@ -253,7 +243,7 @@ class JsonParser
 
     Object readValue(JsonObject object, boolean top) throws IOException
     {
-        final int maxParseDepth = this.readOptions.getMaxDepth();
+        final int maxParseDepth = readOptions.getMaxDepth();
         if (curParseDepth > maxParseDepth) {
             return error("Maximum parsing depth exceeded");
         }
@@ -369,7 +359,7 @@ class JsonParser
         final FastReader in = input;
         boolean isFloat = false;
 
-        if (JsonReader.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
+        if (readOptions.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
             /*
              * In this branch, we must have either one of these scenarios: (a) -NaN or NaN (b) Inf or -Inf (c) -123 but
              * NOT 123 (replace 123 by any number)

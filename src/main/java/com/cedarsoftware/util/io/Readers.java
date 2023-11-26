@@ -658,21 +658,10 @@ public class Readers
                 }
 
                 Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
-
-                // JDK11+ constructor.trySetAccessible();
-                try
-                {
-                    constructor.setAccessible(true);
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException(e);
-                }
-
+                MetaUtils.trySetAccessible(constructor);
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
 
-            } catch (NoSuchMethodException e)
-            {
+            } catch (NoSuchMethodException e) {
                 throw new RuntimeException("Record de-serialization only works with java>=16.", e);
             } catch (Exception e)
             {

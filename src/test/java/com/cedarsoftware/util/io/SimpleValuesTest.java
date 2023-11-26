@@ -6,8 +6,6 @@ package com.cedarsoftware.util.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -29,7 +27,6 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 public class SimpleValuesTest
 {
-
     public class A {
         private final Double doubleField;
         private final Float floatField;
@@ -43,7 +40,7 @@ public class SimpleValuesTest
 
         @Override
         public boolean equals(Object obj) {
-            if (null == obj || !(obj instanceof A)) {
+            if (!(obj instanceof A)) {
                 return false;
             }
             final A a = (A) obj;
@@ -85,70 +82,48 @@ public class SimpleValuesTest
         }
     }
 
-    static boolean readAllowNan;
-    static boolean writeAllowNan;
-
-    @BeforeAll
-    public static void init() {
-        readAllowNan = JsonReader.isAllowNanAndInfinity();
-    }
-
-    @AfterAll
-    public static void tearDown()
-    {
-        JsonReader.setAllowNanAndInfinity(readAllowNan);
-    }
-
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void testSimpleCases(boolean allowNanAndInfinity) {
-        JsonReader.setAllowNanAndInfinity(allowNanAndInfinity);
+        testWriteRead(1234, allowNanAndInfinity);
+        testWriteRead(1f, allowNanAndInfinity);
+        testWriteRead(2.0, allowNanAndInfinity);
 
-        testWriteRead(1234);
-        testWriteRead(1f);
-        testWriteRead(2.0);
-
-
-        testWriteRead(-1234);
-        testWriteRead(-1f);
-        testWriteRead(-2.0);
+        testWriteRead(-1234, allowNanAndInfinity);
+        testWriteRead(-1f, allowNanAndInfinity);
+        testWriteRead(-2.0, allowNanAndInfinity);
 
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenNanAndInfinityNotAllowed_serializesAsNull(Double d) {
-        JsonReader.setAllowNanAndInfinity(true);
-        TestUtil.printLine("testObj = " + d);
         final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(false).build());
-
         assertThat(json).contains("null");
-
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenAllowingNanAndInfinity_serializeRoundTrip(Double d) {
-        JsonReader.setAllowNanAndInfinity(true);
-        TestUtil.printLine("testObj = " + d);
-        final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(true).build());
-        final Double newObj = TestUtil.toObjects(json, Double.class);
-        TestUtil.printLine("newObj = " + newObj);
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
+        final String json = TestUtil.toJson(d, writeOptions);
+        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(true).build();
+        final Double newObj = TestUtil.toObjects(json, readOptions, Double.class);
 
         assertEquals(d, newObj);
     }
 
-    private final void testWriteRead(Object testObj)
+    private final void testWriteRead(Object testObj, boolean allowNanAndInfinity)
     {
 
-        final String json = TestUtil.toJson(testObj);
+        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(allowNanAndInfinity).build();
+        final String json = TestUtil.toJson(testObj, writeOptions);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
-        final Object newObj = TestUtil.toObjects(json, null);
+        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(allowNanAndInfinity).build();
+        final Object newObj = TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newObj = " + newObj);
 
         assertEquals(testObj, newObj);
     }
-
-
 }

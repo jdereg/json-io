@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
@@ -30,8 +28,10 @@ import java.util.Set;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
-
 import lombok.Getter;
+import lombok.Setter;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -110,17 +110,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     /**
-     * Common ancestor for JsonClassWriter and JsonClassWriter.
+     * -- GETTER --
+     *
+     * @return boolean the allowsNanAndInfinity flag
+     * @deprecated use WriteOptions.allowNanAndInfinity()
      */
+    @Setter
+    @Getter
     @Deprecated
-    public interface JsonClassWriterBase
-    {
-    }
+    private static volatile boolean allowNanAndInfinity = false;
 
     /**
      * Implement this interface to customize the JSON output for a given class.
      */
-    public interface JsonClassWriter extends JsonClassWriterBase
+    public interface JsonClassWriter
     {
         /**
          * When write() is called, it is expected that subclasses will write the appropriate JSON
@@ -272,27 +275,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public static String formatJson(String json)
     {
         return JsonIo.formatJson(json);
-    }
-
-    /**
-     * Format the passed in JSON string in a nice, human-readable format.
-     *
-     * @param json String input JSON
-     * @param readingArgs (optional) Map of extra arguments for parsing json.  Can be null.
-     * @param writeOptions (optional) Map of extra arguments for writing out json.  Can be null.
-     * @return String containing equivalent JSON, formatted nicely for human readability.
-     * @deprecated use JsonUtilities.formatJson(json, readOption, writeOptions);
-     */
-    @Deprecated
-    public static String formatJson(String json, Map readingArgs, WriteOptions writeOptions)
-    {
-        ReadOptions readOptions = ReadOptionsBuilder.fromMap(readingArgs)
-                .returnAsMaps()
-                .build();
-        WriteOptions copy;
-        copy = writeOptions == null ? new WriteOptions() : new WriteOptions(writeOptions);
-        copy.prettyPrint(true).build();
-        return JsonIo.formatJson(json, readOptions, copy);
     }
 
     /**

@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -24,9 +24,10 @@ import org.junit.jupiter.api.Test;
  */
 public class NotLenientNanInfinityTest
 {
+    private static ReadOptions readOptions = new ReadOptions();
     @BeforeAll
     public static void init() {
-        JsonReader.setAllowNanAndInfinity(false);
+        readOptions.allowNanAndInfinity(false);
     }
     
     public class A
@@ -76,7 +77,7 @@ public class NotLenientNanInfinityTest
         String json = TestUtil.toJson(a);
         TestUtil.printLine("a = " + a);
         TestUtil.printLine("json = " + json);
-        A newA = (A) TestUtil.toObjects(json, null);
+        A newA = (A) TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newA = " + newA);
         
         Double newDoubleField = newA.getDoubleField();
