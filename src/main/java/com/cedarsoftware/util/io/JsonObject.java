@@ -201,16 +201,11 @@ public class JsonObject extends LinkedHashMap<Object, Object>
                 return s.shortValue();
             case "date":
             case "java.util.Date":
-                if (value instanceof Long)
-                {
+                if (value instanceof Long) {
                     return new Date((Long)value);
-                }
-                else if (value instanceof String)
-                {
+                } else if (value instanceof String) {
                     return DateFactory.parseDate((String) value);
-                }
-                else
-                {
+                } else {
                     throw new JsonIoException("Unknown date type: " + type);
                 }
             case "BigInt":
@@ -222,6 +217,10 @@ public class JsonObject extends LinkedHashMap<Object, Object>
             case "class":
             case "java.lang.Class":
                 Class<?> clz = MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());
+                if (clz == null)
+                {
+                    throw new JsonIoException("Invalid class: cannot be null");
+                }
                 return clz;
         }
 
