@@ -169,7 +169,7 @@ public class WriteOptions {
         temp.put(AtomicInteger.class, primitiveValueWriter);
         temp.put(AtomicLong.class, primitiveValueWriter);
 
-        Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
+        Class<?> zoneInfoClass = MetaUtilsHelper.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
         if (zoneInfoClass != null) {
             temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
         }
@@ -1018,7 +1018,7 @@ public class WriteOptions {
             if (clz == c) {
                 return entry.getValue();
             }
-            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            int distance = MetaUtilsHelper.computeInheritanceDistance(c, clz);
             if (distance != -1 && distance < minDistance) {
                 minDistance = distance;
                 closestWriter = entry.getValue();

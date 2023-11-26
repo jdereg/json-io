@@ -1179,7 +1179,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         else
         {
-            arrayClass = MetaUtils.classForName(type, getClassLoader());
+            arrayClass = MetaUtilsHelper.classForName(type, getClassLoader());
         }
 
         final Writer output = this.out;
@@ -1281,7 +1281,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             showType = false;
         }
         String type = jObj.type;
-        Class<?> colClass = MetaUtils.classForName(type, getClassLoader());
+        Class<?> colClass = MetaUtilsHelper.classForName(type, getClassLoader());
         boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
         int len = jObj.getLength();
@@ -1459,7 +1459,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 newLine();
             }
             writeType(jObj.type, output);
-            type = MetaUtils.classForName(jObj.type, getClassLoader());
+            type = MetaUtilsHelper.classForName(jObj.type, getClassLoader());
         }
 
         if (jObj.isEmpty())

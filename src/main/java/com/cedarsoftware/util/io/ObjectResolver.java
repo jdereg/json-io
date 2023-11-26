@@ -424,7 +424,7 @@ public class ObjectResolver extends Resolver
         String mayEnumClasName = (String)jsonObj.get("@enum");
         if (mayEnumClasName != null)
         {
-            mayEnumClass = MetaUtils.classForName(mayEnumClasName, classLoader);
+            mayEnumClass = MetaUtilsHelper.classForName(mayEnumClasName, classLoader);
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
@@ -728,7 +728,7 @@ public class ObjectResolver extends Resolver
                     if (type != null)
                     {
                         typeStr = type;
-                        c = MetaUtils.classForName(type, classLoader);
+                        c = MetaUtilsHelper.classForName(type, classLoader);
                     }
                     else
                     {

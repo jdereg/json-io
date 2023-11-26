@@ -5,10 +5,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
+import com.cedarsoftware.util.io.*;
 
 /**
  * Abstract class to help create temporal items.
@@ -61,8 +58,8 @@ public class LocalTimeFactory extends AbstractTemporalFactory<LocalTime> {
     protected LocalTime fromJsonObject(JsonObject job, ReaderContext context) {
         Number hour = (Number) job.get("hour");
         Number minute = (Number) job.get("minute");
-        Number second = MetaUtils.getValueWithDefaultForNull(job, "second", 0);
-        Number nano = MetaUtils.getValueWithDefaultForNull(job, "nano", 0);
+        Number second = MetaUtilsHelper.getValueWithDefaultForNull(job, "second", 0);
+        Number nano = MetaUtilsHelper.getValueWithDefaultForNull(job, "nano", 0);
 
         if (hour == null || minute == null) {
             throw new JsonIoException("hour and minute cannot be null if value is null for LocalTimeFactory");

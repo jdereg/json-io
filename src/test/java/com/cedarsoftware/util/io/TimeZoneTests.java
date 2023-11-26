@@ -151,7 +151,7 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asValue()
     {
-       Map expected = MetaUtils.mapOf("p", getPST());
+       Map expected = MetaUtilsHelper.mapOf("p", getPST());
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
@@ -166,7 +166,7 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asKey()
     {
-        Map expected = MetaUtils.mapOf(getPST(), "p");
+        Map expected = MetaUtilsHelper.mapOf(getPST(), "p");
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);

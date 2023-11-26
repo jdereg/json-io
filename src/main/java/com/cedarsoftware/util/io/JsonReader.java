@@ -136,7 +136,7 @@ public class JsonReader implements Closeable, ReaderContext
 
                     if (o instanceof JsonObject) {
                         JsonObject sub = (JsonObject) o;
-                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
+                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtilsHelper.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
 
                         if (value != null) {
                             if (sub.getType() != null || sub.getTargetClass() != null) {
@@ -262,7 +262,7 @@ public class JsonReader implements Closeable, ReaderContext
     @Deprecated
     public static void assignInstantiator(String className, ClassFactory factory)
     {
-        Class<?> clazz = MetaUtils.classForName(className, JsonReader.class.getClassLoader());
+        Class<?> clazz = MetaUtilsHelper.classForName(className, JsonReader.class.getClassLoader());
         ReadOptions.assignInstantiator(clazz, factory);
     }
 

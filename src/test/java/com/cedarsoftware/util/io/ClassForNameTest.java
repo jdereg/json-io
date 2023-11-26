@@ -24,7 +24,7 @@ public class ClassForNameTest
     @Test
     public void testClassForName()
     {
-        Class<?> testObjectClass = MetaUtils.classForName("com.cedarsoftware.util.io.TestObject", ClassForNameTest.class.getClassLoader());
+        Class<?> testObjectClass = MetaUtilsHelper.classForName("com.cedarsoftware.util.io.TestObject", ClassForNameTest.class.getClassLoader());
         assert testObjectClass instanceof Class<?>;
         assert "com.cedarsoftware.util.io.TestObject".equals(testObjectClass.getName());
     }
@@ -32,7 +32,7 @@ public class ClassForNameTest
     @Test
     public void testClassForNameWithClassloader()
     {
-        Class<?> testObjectClass = MetaUtils.classForName("ReallyLong", new AlternateNameClassLoader(new ClassForNameTest(), "ReallyLong", Long.class));
+        Class<?> testObjectClass = MetaUtilsHelper.classForName("ReallyLong", new AlternateNameClassLoader(new ClassForNameTest(), "ReallyLong", Long.class));
         assert testObjectClass instanceof Class<?>;
         assert "java.lang.Long".equals(testObjectClass.getName());
     }
@@ -40,20 +40,20 @@ public class ClassForNameTest
     @Test
     public void testClassForNameNullClassErrorHandling()
     {
-        assert null == MetaUtils.classForName(null, ClassForNameTest.class.getClassLoader());
-        assert null == MetaUtils.classForName("Smith&Wesson", ClassForNameTest.class.getClassLoader());
+        assert null == MetaUtilsHelper.classForName(null, ClassForNameTest.class.getClassLoader());
+        assert null == MetaUtilsHelper.classForName("Smith&Wesson", ClassForNameTest.class.getClassLoader());
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorTrue()
     {
-        assert null == MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
+        assert null == MetaUtilsHelper.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
     }
 
     @Test
     public void testClassForNameFailOnClassLoaderErrorFalse()
     {
-        Class<?> testObjectClass = MetaUtils.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
+        Class<?> testObjectClass = MetaUtilsHelper.classForName("foo.bar.baz.Qux", ClassForNameTest.class.getClassLoader());
         assert testObjectClass == null;
     }
 

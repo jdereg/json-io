@@ -4,7 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static com.cedarsoftware.util.io.MetaUtils.classForName;
+import static com.cedarsoftware.util.io.MetaUtilsHelper.classForName;
 import static com.cedarsoftware.util.io.MetaUtils.trySetAccessible;
 
 /**

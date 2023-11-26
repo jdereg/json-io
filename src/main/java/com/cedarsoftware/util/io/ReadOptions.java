@@ -154,7 +154,7 @@ public class ReadOptions {
 
         TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
         assignInstantiator(TimeZone.class, timeZoneFactory);
-        Class<?> c = MetaUtils.classForName("sun.util.calendar.ZoneInfo", ReadOptions.class.getClassLoader());
+        Class<?> c = MetaUtilsHelper.classForName("sun.util.calendar.ZoneInfo", ReadOptions.class.getClassLoader());
         if (c != null) {
             assignInstantiator(c, timeZoneFactory);
         }
@@ -262,7 +262,7 @@ public class ReadOptions {
      * @param c Class to coerce to.  For example, java.util.Collections$EmptyList to java.util.ArrayList.
      */
     public static void addPermanentCoercedType(String className, Class<?> c) {
-        Class<?> clazz = MetaUtils.classForName(className, ReadOptions.class.getClassLoader());
+        Class<?> clazz = MetaUtilsHelper.classForName(className, ReadOptions.class.getClassLoader());
         if (clazz != null) {
             BASE_COERCED_TYPES.put(clazz, c);
         }
@@ -294,7 +294,7 @@ public class ReadOptions {
      * @param reader The customized reader to associate to the fully qualified class name.
      */
     public static void addPossiblePermanentReader(String className, JsonReader.JsonClassReader reader) {
-        Class<?> clazz = MetaUtils.classForName(className, JsonReader.class.getClassLoader());
+        Class<?> clazz = MetaUtilsHelper.classForName(className, JsonReader.class.getClassLoader());
         if (clazz != null) {
             addPermanentReader(clazz, reader);
         }
@@ -517,7 +517,7 @@ public class ReadOptions {
      */
     public ReadOptions coerceClass(String sourceClassName, Class<?> destClass) {
         throwIfBuilt();
-        Class<?> clazz = MetaUtils.classForName(sourceClassName, classLoader);
+        Class<?> clazz = MetaUtilsHelper.classForName(sourceClassName, classLoader);
         if (clazz != null) {
             coercedTypes.put(clazz, destClass);
         }
@@ -726,7 +726,7 @@ public class ReadOptions {
             if (clz == c) {
                 return entry.getValue();
             }
-            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            int distance = MetaUtilsHelper.computeInheritanceDistance(c, clz);
             if (distance != -1 && distance < minDistance) {
                 minDistance = distance;
                 closestReader = entry.getValue();

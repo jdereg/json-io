@@ -201,7 +201,7 @@ public class JDK9ImmutableTest
         rec2.ilinks = MetaUtils.listOf();
         List<Rec> ol = MetaUtils.listOf(rec1, rec2, rec1);
 
-		rec1.smap = MetaUtils.mapOf();
+		rec1.smap = MetaUtilsHelper.mapOf();
 
         String json = TestUtil.toJson(ol);
         Object es = TestUtil.toObjects(json, null);

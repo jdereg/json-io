@@ -163,7 +163,7 @@ public class Readers
                 else
                 {
                     Object type = jObj.type;
-                    c = MetaUtils.classForName((String) type, context.getReadOptions().getClassLoader());
+                    c = MetaUtilsHelper.classForName((String) type, context.getReadOptions().getClassLoader());
                     if (c == null)
                     {
                         throw new JsonIoException("Unable to load class: " + type + ", a Calendar type.");
@@ -222,7 +222,7 @@ public class Readers
             if (o instanceof String)
             {
                 String cname = (String) o;
-                Class c = MetaUtils.classForName(cname, context.getReadOptions().getClassLoader());
+                Class c = MetaUtilsHelper.classForName(cname, context.getReadOptions().getClassLoader());
                 if (c != null)
                 {   // The user is attempting to load a java.lang.Class
                     return c;
@@ -234,7 +234,7 @@ public class Readers
             if (jObj.containsKey("value"))
             {
                 String value = (String) jObj.getValue();
-                jObj.target = MetaUtils.classForName(value, context.getReadOptions().getClassLoader());
+                jObj.target = MetaUtilsHelper.classForName(value, context.getReadOptions().getClassLoader());
                 if (jObj.target == null)
                 {
                     throw new JsonIoException("Unable to load Class: " + value + ", class not found in JVM.");
