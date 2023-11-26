@@ -78,6 +78,19 @@ public class ObjectResolver extends Resolver
         this.missingFieldHandler = readOptions.getMissingFieldHandler();
     }
 
+    @Override
+    protected void setJsonObjTarget(JsonObject jsonObj, Deque<JsonObject> stack) {
+        Object special;
+        if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
+        {
+            jsonObj.target = special;
+        }
+        else
+        {
+            traverseFields(stack, jsonObj);
+        }
+    }
+
     /**
      * Walk the Java object fields and copy them from the JSON object to the Java object, performing
      * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
