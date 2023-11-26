@@ -253,9 +253,12 @@ class JsonParser
         {
             return readString();
         }
-        else if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I')
+        else
         {
-            return readNumber(c);
+            boolean isNumber = (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I');
+            if (isNumber) {
+                return readNumber(c);
+            }
         }
         switch(c)
         {
@@ -523,7 +526,9 @@ class JsonParser
             }
             else
             {
-                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                boolean isHexaDecimal = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+
+                if (isHexaDecimal)
                 {
                     hex.append((char) c);
                     if (hex.length() == 4)
