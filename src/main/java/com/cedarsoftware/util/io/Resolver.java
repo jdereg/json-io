@@ -196,21 +196,24 @@ public abstract class Resolver implements ReaderContext
             }
             else
             {
-                Object special;
-                if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
-                {
-                    jsonObj.target = special;
-                }
-                else
-                {
-                    traverseFields(stack, jsonObj);
-                }
+//                Object special;
+//                if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
+//                {
+//                    jsonObj.target = special;
+//                }
+//                else
+//                {
+//                    traverseFields(stack, jsonObj);
+//                }
+                setJsonObjTarget(jsonObj,stack);
             }
         }
         return (T) root.target;
     }
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract void setJsonObjTarget(final JsonObject jsonObj, final Deque<JsonObject> stack);
+
+    //protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
 
     protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 

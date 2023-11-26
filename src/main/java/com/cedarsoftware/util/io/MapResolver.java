@@ -55,11 +55,11 @@ public class MapResolver extends Resolver
         super(readOptions, references);
     }
 
-    protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
-    {
-        // No custom reader support for maps
-        return null;
-    }
+//    protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
+//    {
+//        // No custom reader support for maps
+//        return null;
+//    }
 
     /**
      * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
@@ -204,5 +204,9 @@ public class MapResolver extends Resolver
     protected void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj)
     {
         traverseCollection(stack, jsonObj);
+    }
+
+    protected void setJsonObjTarget(final JsonObject jsonObj,final Deque<JsonObject> stack) {
+        traverseFields(stack, jsonObj);
     }
 }
