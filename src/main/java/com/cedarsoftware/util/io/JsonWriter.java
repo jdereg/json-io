@@ -909,7 +909,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             writeByteArray((byte[]) array, lenMinus1);
         } else if (char[].class == arrayType) {
-            JsonIo.writeJsonUtf8String(output, new String((char[]) array));
+            writeJsonUtf8String(output, new String((char[]) array));
         }
         else if (short[].class == arrayType)
         {
@@ -1642,7 +1642,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         while (i.hasNext())
         {
             Entry att2value = (Entry) i.next();
-            JsonIo.writeJsonUtf8String(output, (String) att2value.getKey());
+            writeJsonUtf8String(output, (String) att2value.getKey());
             output.write(":");
 
             writeCollectionElement(att2value.getValue());
@@ -1744,7 +1744,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             elementType = ee.getClass();
         }
-        JsonIo.writeBasicString(out, elementType.getName());
+        writeBasicString(out, elementType.getName());
 
         if (!enumSet.isEmpty())
         {
@@ -1754,7 +1754,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             out.write(",");
             newLine();
 
-            JsonIo.writeBasicString(out, "@items");
+            writeBasicString(out, "@items");
             out.write(":[");
             if (enumFieldsCount > 2)
             {
@@ -1775,7 +1775,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 firstInSet = false;
 
                 if (enumFieldsCount <= 2) {
-                    JsonIo.writeJsonUtf8String(out, e.name());
+                    writeJsonUtf8String(out, e.name());
                 }
                 else
                 {
@@ -2001,5 +2001,74 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         Long id = this.objsReferenced.get(o);
         return id == null ? null : Long.toString(id);
+    }
+
+    /**
+     * Writes out a string without special characters. Use for labels, etc. when you know you
+     * will not need extra formattting for UTF-8 or tabs, quotes and newlines in the string
+     *
+     * @param writer Writer to which the UTF-8 string will be written to
+     * @param s      String to be written in UTF-8 format on the output stream.
+     * @throws IOException if an error occurs writing to the output stream.
+     */
+    public static void writeBasicString(final Writer writer, String s) throws IOException {
+        writer.write('\"');
+        writer.write(s);
+        writer.write('\"');
+    }
+
+    public static void writeJsonUtf8Char(final Writer writer, char c) throws IOException {
+        writer.write('\"');
+        writeChar(writer, c);
+        writer.write('\"');
+    }
+
+    private static void writeChar(Writer writer, char c) throws IOException {
+        if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
+            switch (c) {
+                case '\b':
+                    writer.write("\\b");
+                    break;
+                case '\f':
+                    writer.write("\\f");
+                    break;
+                case '\n':
+                    writer.write("\\n");
+                    break;
+                case '\r':
+                    writer.write("\\r");
+                    break;
+                case '\t':
+                    writer.write("\\t");
+                    break;
+                default:
+                    writer.write(String.format("\\u%04X", (int) c));
+                    break;
+            }
+        } else if (c == '\\' || c == '"') {
+            writer.write('\\');
+            writer.write(c);
+        } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
+            writer.write(c);
+        }
+    }
+
+    /**
+     * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
+     * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
+     * characters in the range of ASCII space to a '~' as ASCII, and anything higher in UTF-8.
+     *
+     * @param output Writer to which the UTF-8 string will be written to
+     * @param s      String to be written in UTF-8 format on the output stream.
+     * @throws IOException if an error occurs writing to the output stream.
+     */
+    public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
+        output.write('\"');
+        final int len = s.length();
+
+        for (int i = 0; i < len; i++) {
+            writeChar(output, s.charAt(i));
+        }
+        output.write('\"');
     }
 }

@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -26,6 +24,8 @@ import java.util.UUID;
 
 import com.cedarsoftware.util.io.factory.MonthDayFactory;
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
+
+import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -169,7 +169,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            JsonIo.writeJsonUtf8String(output, extractString(o));
+            JsonWriter.writeJsonUtf8String(output, extractString(o));
         }
     }
 
@@ -181,7 +181,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            JsonIo.writeJsonUtf8String(output, "" + (char) o);
+            JsonWriter.writeJsonUtf8String(output, "" + (char) o);
         }
     }
 
@@ -196,7 +196,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            JsonIo.writeBasicString(output, extractString(o));
+            writeBasicString(output, extractString(o));
         }
     }
 

@@ -319,7 +319,7 @@ public class JsonReader implements Closeable, ReaderContext
      *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      */
     @SuppressWarnings("unchecked")
-    public static <T> T toObjects(InputStream input, ReadOptions options, Class<?> root) {
+    public static <T> T toObjects(InputStream input, ReadOptions options, Class<T> root) {
         try (JsonReader jr = new JsonReader(input, options)) {
             return (T) jr.readObject(root);
         }
@@ -335,7 +335,7 @@ public class JsonReader implements Closeable, ReaderContext
      *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      * @return Java object graph matching JSON input
      */
-    public static <T> T toObjects(String jsonString, ReadOptions options, Class<?> root) {
+    public static <T> T toObjects(String jsonString, ReadOptions options, Class<T> root) {
         if (jsonString == null) {
             return null;
         }
@@ -352,7 +352,7 @@ public class JsonReader implements Closeable, ReaderContext
      *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
      * @return Java object graph matching JSON input
      */
-    public static <T> T toObjects(String json, Class<?> root) {
+    public static <T> T toObjects(String json, Class<T> root) {
         return toObjects(json, new ReadOptions(), root);
     }
 
@@ -362,7 +362,7 @@ public class JsonReader implements Closeable, ReaderContext
      * @param json json string
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static <T> T toMaps(String json) {
+    public static JsonValue toMaps(String json) {
         return toMaps(json, new ReadOptions().returnType(ReturnType.JSON_VALUES));
     }
 
@@ -373,7 +373,7 @@ public class JsonReader implements Closeable, ReaderContext
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static <T> T toMaps(String json, ReadOptions readOptions) {
+    public static JsonValue toMaps(String json, ReadOptions readOptions) {
         if (json == null) {
             return null;
         }
@@ -387,32 +387,13 @@ public class JsonReader implements Closeable, ReaderContext
      * @param readOptions options to use when reading
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
-    public static <T> T toMaps(InputStream inputStream, ReadOptions readOptions) {
+    public static JsonValue toMaps(InputStream inputStream, ReadOptions readOptions) {
         Convention.throwIfNull(inputStream, "inputStream cannot be null");
         Convention.throwIfNull(readOptions, "readOptions cannot be null");
 
-        try (JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), null)) {
-            return (T) jr.readObject(Map.class);
+        try (JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new DefaultReferenceTracker())) {
+            return jr.readObject(JsonValue.class);
         }
-    }
-
-    @Deprecated
-    private static Map adjustOutputMap(Object ret)
-    {
-        if (ret instanceof Map)
-        {
-            return (Map) ret;
-        }
-
-        if (ret != null && ret.getClass().isArray())
-        {
-            JsonObject retMap = new JsonObject();
-            retMap.put(ITEMS, ret);
-            return retMap;
-        }
-        JsonObject retMap = new JsonObject();
-        retMap.put(ITEMS, new Object[]{ret});
-        return retMap;
     }
 
     /**
@@ -428,7 +409,7 @@ public class JsonReader implements Closeable, ReaderContext
      * @param inputStream input stream
      */
     public JsonReader(InputStream inputStream) {
-        this(inputStream, null);
+        this(inputStream, new ReadOptions());
     }
 
     protected FastReader getReader(InputStream inputStream)

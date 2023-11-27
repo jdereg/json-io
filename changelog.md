@@ -1,6 +1,19 @@
 ### Revision History
-* 4.19.0-SNAPSHOT
-  * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior features are still supported, plus new features have been added.  Use the methods on Write/ReadOptions to set them.  The names may have changed slightly to more accurate names.
+* 4.19.0
+  * Significant updates to User Guide, especially on how to specify feature "options" for reading/writing JSON.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior features are still supported, plus new features have been added.  Use the methods on Write/ReadOptions to set them.  The names may have changed slightly to more accurate names.
+    * Many of the deprecated APIs on JsonReader/JsonWriter have been removed.  All existing capabilities are still there.
+    > Example changes required due to this update:
+      <br><b>Before</b>
+    > ```
+    > // Using [key: value] to indicate a Map 
+    > A. String json = JsonWriter.objectToJson(srcObj, [JsonWriter.TYPE: false])
+    > B. Map billInfo = (Map) JsonReader.jsonToJava(json, [JsonReader.USE_MAPS:true]) 
+    > ```
+    > <b>After</b>
+    > ```
+    > A. String json = JsonIo.toJson(srcObj, new WriteOptions().showTypeInfoNever())
+    > B. Map billInfo = JsonIo.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), Map.class)
+    > ```
 * 4.18.0
   * Bug fix: When Enums were sent the "old way," (JSON object form) there was a bug in outputting additional fields defined on an Enum.
   * Enhancement: Improvements on Object construction for difficult to instantiate classes. 

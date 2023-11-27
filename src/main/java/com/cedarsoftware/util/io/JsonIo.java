@@ -1,11 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
-import java.io.Writer;
+import java.io.InputStream;
 
 import com.cedarsoftware.util.ReturnType;
 
 /**
+ * This is the API for json-io.  Use these methods to convert:<br/>
+ * 1. JSON to Java objects
+ * 2. JSON to JsonValues (simple non-typed, generic content)
+ * 3. Convert Java objects to JSON
+ * 4. JsonValues to JSON.
+ * <br/><br/>
  * @author Kenny Partlow (kpartlow@gmail.com)
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -25,6 +30,69 @@ import com.cedarsoftware.util.ReturnType;
  */
 public class JsonIo {
 
+    /**
+     * Convert the passed in Java source object to JSON.
+     * @param srcObject Java instance to convert to JSON format.
+     * @param writeOptions Feature options settings to control the JSON output.  Can be null,
+     *                     in which case, default settings will be used.
+     * @return String of JSON that represents the srcObject in JSON format.
+     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
+     */
+    public static String toJson(Object srcObject, WriteOptions writeOptions) {
+        return JsonWriter.toJson(srcObject, writeOptions);
+    }
+
+    /**
+     * Convert the passed in JSON to Java Objects.
+     * @param json String containing JSON content.
+     * @param readOptions Feature options settings to control the JSON processing.  Can be null,
+     *                     in which case, default settings will be used.
+     * @param rootType Class of the root type of object that will be returned. Can be null, in which
+     *                 case a best-guess will be made for the Class type of the return object.  If it
+     *                 has an @type meta-property that will be used, otherwise the JSON types { ... }
+     *                 will return a Map, [...] will return Object[] or Collection, and the primtive
+     *                 types will be returned (String, long, Double, boolean, or null).
+     * @return rootType Java instance that represents the Java equivalent of the passed in JSON string.
+     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
+     */
+    public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
+        return JsonReader.toObjects(json, readOptions, rootType);
+    }
+
+    /**
+     * Convert the passed in JSON to Java Objects.
+     * @param in InputStream bringing JSON content.
+     * @param readOptions Feature options settings to control the JSON processing.  Can be null,
+     *                     in which case, default settings will be used.
+     * @param rootType Class of the root type of object that will be returned. Can be null, in which
+     *                 case a best-guess will be made for the Class type of the return object.  If it
+     *                 has an @type meta-property that will be used, otherwise the JSON types { ... }
+     *                 will return a Map, [...] will return Object[] or Collection, and the primtive
+     *                 types will be returned (String, long, double, boolean, or null).
+     * @return rootType Java instance that represents the Java equivalent of the JSON input.
+     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
+     */
+    public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
+        return JsonReader.toObjects(in, readOptions, rootType);
+    }
+
+    /**
+     * Convert the passed in JSON to JsonValue types (JsonObject, JsonArray, JsonPrimitive).  JsonValue is
+     * the parent class for these classes.
+     * @param json String containing JSON content.
+     * @param readOptions Feature options settings to control the JSON processing.  Can be null,
+     *                     in which case, default settings will be used.
+     * @return JsonValue JsonValue derived class instances.  Output will be JsonObject, JsonArray, or JsonPrimitive
+     * depending on that the root of the JSON is ({...} will return JsonObject, [...] will return JsonArray, and
+     * JsonPrimitive will be returned if "string", long (12345), double (3.1415), boolean (true/false), or null.
+     * NOTE: Currently, in the 4.x versions, only JsonObject is being returned.  This will change in 5.x and work
+     * as documented.
+     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
+     */
+    public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
+        return JsonReader.toMaps(json, readOptions);
+    }
+    
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
         if (writeOptions.isBuilt())
         {
@@ -48,85 +116,16 @@ public class JsonIo {
                 new WriteOptions().prettyPrint(true));
     }
 
-    public static <T> T deepCopy(Object o) {
-        return deepCopy(o, new ReadOptions(), new WriteOptions());
+    public static <T> T deepCopy(Object o, Class<T> rootType) {
+        return deepCopy(o, new ReadOptions(), new WriteOptions(), rootType);
     }
 
-    public static <T> T deepCopy(Object o, ReadOptions readOptions, WriteOptions writeOptions) {
+    public static <T> T deepCopy(Object o, ReadOptions readOptions, WriteOptions writeOptions, Class<T> rootType) {
         if (o == null) {
             // They asked to copy null.  The copy of null is null.
             return null;
         }
         String json = JsonWriter.toJson(o, writeOptions);
-        return JsonReader.toObjects(json, readOptions, o.getClass());
-    }
-
-    /**
-     * Writes out a string without special characters. Use for labels, etc. when you know you
-     * will not need extra formattting for UTF-8 or tabs, quotes and newlines in the string
-     *
-     * @param writer Writer to which the UTF-8 string will be written to
-     * @param s      String to be written in UTF-8 format on the output stream.
-     * @throws IOException if an error occurs writing to the output stream.
-     */
-    public static void writeBasicString(final Writer writer, String s) throws IOException {
-        writer.write('\"');
-        writer.write(s);
-        writer.write('\"');
-    }
-
-    public static void writeJsonUtf8Char(final Writer writer, char c) throws IOException {
-        writer.write('\"');
-        writeChar(writer, c);
-        writer.write('\"');
-    }
-
-    private static void writeChar(Writer writer, char c) throws IOException {
-        if (c < ' ') {    // Anything less than ASCII space, write either in \\u00xx form, or the special \t, \n, etc. form
-            switch (c) {
-                case '\b':
-                    writer.write("\\b");
-                    break;
-                case '\f':
-                    writer.write("\\f");
-                    break;
-                case '\n':
-                    writer.write("\\n");
-                    break;
-                case '\r':
-                    writer.write("\\r");
-                    break;
-                case '\t':
-                    writer.write("\\t");
-                    break;
-                default:
-                    writer.write(String.format("\\u%04X", (int) c));
-                    break;
-            }
-        } else if (c == '\\' || c == '"') {
-            writer.write('\\');
-            writer.write(c);
-        } else {   // Anything else - write in UTF-8 form (multibyte encoded) (OutputStreamWriter is UTF-8)
-            writer.write(c);
-        }
-    }
-
-    /**
-     * Write out special characters "\b, \f, \t, \n, \r", as such, backslash as \\
-     * quote as \" and values less than an ASCII space (20hex) as "\\u00xx" format,
-     * characters in the range of ASCII space to a '~' as ASCII, and anything higher in UTF-8.
-     *
-     * @param output Writer to which the UTF-8 string will be written to
-     * @param s      String to be written in UTF-8 format on the output stream.
-     * @throws IOException if an error occurs writing to the output stream.
-     */
-    public static void writeJsonUtf8String(final Writer output, String s) throws IOException {
-        output.write('\"');
-        final int len = s.length();
-
-        for (int i = 0; i < len; i++) {
-            writeChar(output, s.charAt(i));
-        }
-        output.write('\"');
+        return JsonReader.toObjects(json, readOptions, rootType);
     }
 }

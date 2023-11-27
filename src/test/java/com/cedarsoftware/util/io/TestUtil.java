@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,26 +75,7 @@ public class TestUtil
         try
         {
             long start = System.nanoTime();
-            testInfo.json = JsonWriter.toJson(obj, writeOptions);
-            testInfo.nanos = System.nanoTime() - start;
-        }
-        catch (Exception e)
-        {
-            testInfo.t = e;
-        }
-        return testInfo;
-    }
-
-    private static TestInfo writeJDK(Object obj)
-    {
-        TestInfo testInfo = new TestInfo();
-        try
-        {
-            ObjectOutputStream out = new ObjectOutputStream(new ByteArrayOutputStream());
-            long start = System.nanoTime();
-            out.writeObject(obj);
-            out.flush();
-            out.close();
+            testInfo.json = JsonIo.toJson(obj, writeOptions);
             testInfo.nanos = System.nanoTime() - start;
         }
         catch (Exception e)
@@ -155,7 +134,6 @@ public class TestUtil
         totalWrites++;
         // json-io
         TestInfo jsonIoTestInfo = writeJsonIo(obj, writeOptions);
-        TestInfo jdkTestInfo = writeJDK(obj);
         TestInfo gsonTestInfo = writeGSON(obj);
         TestInfo jacksonTestInfo = writeJackson(obj);
 
@@ -164,7 +142,7 @@ public class TestUtil
             printLine(jsonIoTestInfo.json);
         }
 
-        if (jsonIoTestInfo.t == null && jdkTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
+        if (jsonIoTestInfo.t == null && gsonTestInfo.t == null && jacksonTestInfo.t == null)
         {   // Only add times when all parsers succeeded
             totalJsonWrite += jsonIoTestInfo.nanos;
             totalGsonWrite += gsonTestInfo.nanos;

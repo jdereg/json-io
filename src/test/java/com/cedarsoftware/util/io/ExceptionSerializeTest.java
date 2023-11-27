@@ -14,7 +14,7 @@ import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
+import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
