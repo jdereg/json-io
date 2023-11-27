@@ -392,6 +392,8 @@ public abstract class Resolver implements ReaderContext
             }
         }
 
+        c = coerceClassIfNeeded(c);
+
         // If a ClassFactory exists for a class, use it to instantiate the class.
         Object mate = createInstanceUsingClassFactory(c, jsonObj);
         if (mate != null)
@@ -533,6 +535,11 @@ public abstract class Resolver implements ReaderContext
 
         jsonObj.setTarget(target);
         return target;
+    }
+
+    protected Class<?> coerceClassIfNeeded(Class<?> type) {
+        Class clazz = readOptions.getCoercedClass(type);
+        return clazz == null ? type : clazz;
     }
 
     protected Object coerceCertainTypes(Class<?> type)
