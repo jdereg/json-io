@@ -2,15 +2,12 @@ package com.cedarsoftware.util.reflect.factories;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Map;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
 
 public class BooleanAccessorFactory implements AccessorFactory {
-
-    private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
 
     @Override
     public Accessor createAccessor(Field field, Map<String, Method> possibleMethods) throws Throwable {
@@ -23,11 +20,7 @@ public class BooleanAccessorFactory implements AccessorFactory {
         final String name = field.getName();
         final Method method = possibleMethods.get(createIsName(name));
 
-        if (method == null || ((method.getModifiers() & METHOD_MODIFIERS) != Modifier.PUBLIC)) {
-            return null;
-        }
-
-        if (!method.getReturnType().isAssignableFrom(field.getType())) {
+        if (method == null || !method.getReturnType().isAssignableFrom(field.getType())) {
             return null;
         }
 

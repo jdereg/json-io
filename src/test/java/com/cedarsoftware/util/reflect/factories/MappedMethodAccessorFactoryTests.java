@@ -31,7 +31,7 @@ public class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest 
     @ParameterizedTest
     @MethodSource("checkSuccessfulCreationSituations")
     void create_whenMethodIsPublicAndNotStatic_canCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(cls);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(cls);
 
         Accessor accessor = factory.createAccessor(cls.getDeclaredField(fieldName), methodMap);
 
@@ -51,7 +51,7 @@ public class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest 
     @ParameterizedTest
     @MethodSource("checkFailedToCreateSituations")
     void create_whenIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(cls);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(cls);
         Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), methodMap);
         assertThat(accessor).isNull();
     }

@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
@@ -85,16 +86,11 @@ public class ClassDescriptors {
         return this.deepInjectors.computeIfAbsent(classToTraverse, this::buildDeepInjectors);
     }
 
-    private Map<String, Accessor> buildDeepAccessors(Class<?> classToTraverse) {
-        Map<String, Accessor> accessorMap = new LinkedHashMap<>();
-        Class<?> c = classToTraverse;
+    private Map<String, Accessor> buildDeepAccessors(Class<?> c) {
+        final Map<String, Field> deepDeclaredFields = MetaUtils.getDeepDeclaredFields(c);
+        final Map<String, Method> possibleMethods = ReflectionUtils.buildDeepAccessorMethods(c);
 
-        while (c != null) {
-            this.buildAccessors(c, accessorMap);
-            c = c.getSuperclass();
-        }
-
-        return accessorMap;
+        return this.buildAccessors(deepDeclaredFields, possibleMethods);
     }
 
     private Map<String, Injector> buildDeepInjectors(Class<?> classToTraverse) {
@@ -114,12 +110,12 @@ public class ClassDescriptors {
         deepAccessors.clear();
     }
 
-    private void buildAccessors(Class<?> c, Map<String, Accessor> accessorMap) {
-        final Map<String, Method> possibleMethods = ReflectionUtils.buildAccessorMap(c);
-        final Field[] declaredFields = c.getDeclaredFields();
+    private Map<String, Accessor> buildAccessors(Map<String, Field> deepDeclaredFields, Map<String, Method> possibleMethods) {
+        Map<String, Accessor> accessorMap = new LinkedHashMap<>();
 
-        for (Field field : declaredFields) {
+        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
 
+            final Field field = entry.getValue();
             boolean isKnownFilter = KnownFilteredFields.instance().isFieldFiltered(field);
 
             if (isKnownFilter || fieldFilters.stream().anyMatch(f -> f.filter(field))) {
@@ -138,8 +134,8 @@ public class ClassDescriptors {
                     .findFirst();
 
 
-            String fieldName = field.getName();
-            String key = accessorMap.containsKey(fieldName) ? c.getSimpleName() + '.' + fieldName : fieldName;
+            String fieldName = entry.getKey();
+            String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
 
             //  If no accessor was found, let's use the default tried and true field accessor.
             accessorMap.put(key, accessor.orElseGet(() -> {
@@ -152,6 +148,8 @@ public class ClassDescriptors {
                 }
             }));
         }
+
+        return accessorMap;
     }
 
     private void buildInjectors(Class<?> c, Map<String, Injector> injectorMap) {

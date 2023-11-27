@@ -30,7 +30,7 @@ class BooleanAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkSuccessfulCreationSituations")
     void create_whenBooleanIsPublicAndNotStatic_canCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(cls);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(cls);
 
         Accessor accessor = factory.createAccessor(cls.getDeclaredField(fieldName), methodMap);
 
@@ -57,14 +57,14 @@ class BooleanAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkFailedToCreateSituations")
     void create_whenBooleanIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(cls);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(cls);
         Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), methodMap);
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenMethodDoesNotExist_cannotCreateAccessor() throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(ObjectWithBooleanObjects.class);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(ObjectWithBooleanObjects.class);
         Accessor accessor = this.factory.createAccessor(PrivateFinalObject.class.getDeclaredField("x"), methodMap);
         assertThat(accessor).isNull();
     }

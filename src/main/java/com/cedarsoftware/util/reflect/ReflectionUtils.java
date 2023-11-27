@@ -1,11 +1,14 @@
 package com.cedarsoftware.util.reflect;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.cedarsoftware.util.io.Convention;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -26,17 +29,35 @@ import java.util.stream.Collectors;
  */
 public class ReflectionUtils {
 
+    public static int ACCESSOR_MASK = Modifier.PUBLIC | Modifier.STATIC;
+
+    private ReflectionUtils() {
+    }
+
     /**
      * Builds a list of methods with zero parameter methods taking precedence over overrides
      * for a given single level class.
      *
-     * @param c - class to get the declared methods for
+     * @param classToTraverse - class to get the declared methods for
      * @return Map of name of the method to the actual emthod
      */
-    public static Map<String, Method> buildAccessorMap(Class<?> c) {
-        return Arrays.stream(c.getDeclaredMethods())
-                .filter(m -> m.getParameterCount() == 0)
-                .collect(Collectors.toMap(Method::getName, Function.identity(), ReflectionUtils::zeroParameterMethodPreference, LinkedHashMap::new));
+    public static Map<String, Method> buildDeepAccessorMethods(Class<?> classToTraverse) {
+        Convention.throwIfNull(classToTraverse, "The classToTraverse cannot be null");
+
+        Map<String, Method> map = new LinkedHashMap<>();
+        Class<?> currentClass = classToTraverse;
+        while (currentClass != Object.class) {
+            Arrays.stream(currentClass.getDeclaredMethods())
+                    .filter(m -> m.getParameterCount() == 0 &&
+                            // filter out anything static and not public
+                            (m.getModifiers() & ACCESSOR_MASK) == Modifier.PUBLIC &&
+                            // class has to be public, too, or we cannot access
+                            Modifier.isPublic(m.getDeclaringClass().getModifiers()))
+                    .forEach(m -> map.put(m.getName(), m));
+            currentClass = currentClass.getSuperclass();
+        }
+
+        return map;
     }
 
     /**

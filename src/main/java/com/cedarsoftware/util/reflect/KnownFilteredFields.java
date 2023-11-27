@@ -44,6 +44,7 @@ public class KnownFilteredFields {
     private void addKnownFilters() {
         addFieldFilters(Throwable.class, MetaUtils.listOf("backtrace", "depth", "suppressedExceptions", "stackTrace"));
         addFieldFilters(StackTraceElement.class, MetaUtils.listOf("declaringClassObject", "format"));
+        addFieldFilters("sun.util.calendar.ZoneInfo", MetaUtils.listOf("rawOffset", "rawOffsetDiff", "checksum", "dstSavings", "transitions", "offsets", "simpleTimeZoneParams", "willGMTOffsetChange", "dirty"));
 
         addInjectionFilters(Throwable.class, MetaUtils.listOf("detailMessage", "cause", "stackTrace"));
         addInjectionFilters(Enum.class, MetaUtils.listOf("name"));
@@ -51,6 +52,15 @@ public class KnownFilteredFields {
 
     public void addFieldFilter(Class c, String fieldName) {
         this.knownFieldFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).add(fieldName);
+        ClassDescriptors.instance().clearDescriptorCache();
+    }
+
+    public void addFieldFilters(String className, Collection<String> fieldName) {
+        Class<?> c = MetaUtils.classForName(className, KnownFilteredFields.class.getClassLoader());
+        if (c == null) {
+            return;
+        }
+        this.knownFieldFilters.computeIfAbsent(c, k -> new ConcurrentSkipListSet<>()).addAll(fieldName);
         ClassDescriptors.instance().clearDescriptorCache();
     }
 
