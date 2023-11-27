@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -210,10 +212,10 @@ public class JsonObject extends LinkedHashMap<Object, Object>
                 }
             case "BigInt":
             case "java.math.BigInteger":
-                return Readers.bigIntegerFrom(value);
+                return MetaUtils.convert(BigInteger.class, value);
             case "BigDec":
             case "java.math.BigDecimal":
-                return Readers.bigDecimalFrom(value);
+                return MetaUtils.convert(BigDecimal.class, value);
             case "class":
             case "java.lang.Class":
                 Class<?> clz = MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());

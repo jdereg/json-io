@@ -947,17 +947,17 @@ public class MetaUtils
      * was passed in.  This method is similar to the GitHub project java-util's
      * Converter.convert() API.
      */
-    static Object convert(Class<?> c, Object rhs)
+    static Object convert(Class<?> toType, Object rhs)
     {
         if (rhs == null) {
-            return FROM_NULL.get(c);
+            return FROM_NULL.get(toType);
         }
-        if (rhs == "" && FROM_EMPTY_QUOTES.contains(c)) {
+        if (rhs == "" && FROM_EMPTY_QUOTES.contains(toType)) {
             return null;
         }
 
         // Special handling of character.
-        if (c == char.class || c == Character.class) {
+        if (toType == char.class || toType == Character.class) {
             if (rhs instanceof String) {
                 if (rhs.equals("\"")) {
                     return '\"';
@@ -973,7 +973,7 @@ public class MetaUtils
             }
         }
 
-        return Converter.convert(rhs, c);
+        return Converter.convert(rhs, toType);
     }
 
     /**

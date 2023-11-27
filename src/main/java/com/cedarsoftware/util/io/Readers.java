@@ -373,11 +373,11 @@ public class Readers
                 }
                 else
                 {
-                    return bigIntegerFrom(valueObj.getValue());
+                    value = valueObj.getValue();
                 }
             }
 
-            BigInteger x = bigIntegerFrom(value);
+            BigInteger x = (BigInteger) MetaUtils.convert(BigInteger.class, value);
             if (jObj != null)
             {
                 jObj.target = x;
@@ -385,65 +385,6 @@ public class Readers
 
             return x;
         }
-    }
-
-    /**
-     * @param value to be converted to BigInteger.  Can be a null which will return null.  Can be
-     * BigInteger in which case it will be returned as-is.  Can also be String, BigDecimal,
-     * Boolean (which will be returned as BigInteger.ZERO or .ONE), byte, short, int, long, float,
-     * or double.  If an unknown type is passed in, an exception will be thrown.
-     * @return a BigInteger from the given input.  A best attempt will be made to support
-     * as many input types as possible.  For example, if the input is a Boolean, a BigInteger of
-     * 1 or 0 will be returned.  If the input is a String "", a null will be returned.  If the
-     * input is a Double, Float, or BigDecimal, a BigInteger will be returned that retains the
-     * integer portion (fractional part is dropped).  The input can be a Byte, Short, Integer,
-     * or Long.
-     */
-    public static BigInteger bigIntegerFrom(Object value)
-    {
-        if (value == null)
-        {
-            return null;
-        }
-        else if (value instanceof BigInteger)
-        {
-            return (BigInteger) value;
-        }
-        else if (value instanceof String)
-        {
-            String s = (String) value;
-            if ("".equals(s.trim()))
-            {   // Allows "" to be used to assign null to BigInteger field.
-                return null;
-            }
-            try
-            {
-                return new BigInteger(MetaUtils.removeLeadingAndTrailingQuotes(s));
-            }
-            catch (Exception e)
-            {
-                throw new JsonIoException("Could not parse '" + value + "' as BigInteger.", e);
-            }
-        }
-        else if (value instanceof BigDecimal)
-        {
-            BigDecimal bd = (BigDecimal) value;
-            return bd.toBigInteger();
-        }
-        else if (value instanceof Boolean)
-        {
-            return (Boolean) value ? BigInteger.ONE : BigInteger.ZERO;
-        }
-        else if (value instanceof Double || value instanceof Float)
-        {
-            return BigDecimal.valueOf(((Number) value).doubleValue()).toBigInteger();
-        }
-        else if (value instanceof Long || value instanceof Integer ||
-                value instanceof Short || value instanceof Byte)
-        {
-            return new BigInteger(value.toString());
-        }
-        throw new JsonIoException("Could not convert value: " + value.toString() + " to BigInteger.");
     }
 
     public static class BigDecimalReader implements JsonReader.JsonClassReader
@@ -479,11 +420,11 @@ public class Readers
                 }
                 else
                 {
-                    return bigDecimalFrom(valueObj.getValue());
+                    value = valueObj.getValue();
                 }
             }
 
-            BigDecimal x = bigDecimalFrom(value);
+            BigDecimal x = (BigDecimal) MetaUtils.convert(BigDecimal.class, value);
             if (jObj != null)
             {
                 jObj.target = x;
@@ -491,60 +432,7 @@ public class Readers
             return x;
         }
     }
-
-    /**
-     * @param value to be converted to BigDecimal.  Can be a null which will return null.  Can be
-     * BigDecimal in which case it will be returned as-is.  Can also be String, BigInteger,
-     * Boolean (which will be returned as BigDecimal.ZERO or .ONE), byte, short, int, long, float,
-     * or double.  If an unknown type is passed in, an exception will be thrown.
-     *
-     * @return a BigDecimal from the given input.  A best attempt will be made to support
-     * as many input types as possible.  For example, if the input is a Boolean, a BigDecimal of
-     * 1 or 0 will be returned.  If the input is a String "", a null will be returned. The input
-     * can be a Byte, Short, Integer, Long, or BigInteger.
-     */
-    public static BigDecimal bigDecimalFrom(Object value)
-    {
-        if (value == null)
-        {
-            return null;
-        }
-        else if (value instanceof BigDecimal)
-        {
-            return (BigDecimal) value;
-        }
-        else if (value instanceof String)
-        {
-            String s = (String) value;
-            if ("".equals(s.trim()))
-            {
-                return null;
-            }
-            try
-            {
-                return new BigDecimal(MetaUtils.removeLeadingAndTrailingQuotes(s));
-            }
-            catch (Exception e)
-            {
-                throw new JsonIoException("Could not parse '" + s + "' as BigDecimal.", e);
-            }
-        }
-        else if (value instanceof BigInteger)
-        {
-            return new BigDecimal((BigInteger) value);
-        }
-        else if (value instanceof Boolean)
-        {
-            return (Boolean) value ? BigDecimal.ONE : BigDecimal.ZERO;
-        }
-        else if (value instanceof Long || value instanceof Integer || value instanceof Double ||
-                value instanceof Short || value instanceof Byte || value instanceof Float)
-        {
-            return new BigDecimal(value.toString());
-        }
-        throw new JsonIoException("Could not convert value: " + value + " to BigInteger.");
-    }
-
+    
     public static class StringBuilderReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)

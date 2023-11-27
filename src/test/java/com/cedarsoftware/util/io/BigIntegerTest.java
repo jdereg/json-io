@@ -180,12 +180,12 @@ class BigIntegerTest
     @Test
     void testBigNumberParsers()
     {
-        assertNull(Readers.bigIntegerFrom(null));
-        assertNull(Readers.bigDecimalFrom(null));
-
+        assertNull(Converter.convertToBigInteger(null));
+        assertNull(Converter.convertToBigDecimal(null));
+        
         try
         {
-            Readers.bigIntegerFrom("Glock");
+            Converter.convertToBigInteger("Glock");
             fail();
         }
         catch(Exception ignore)
@@ -193,21 +193,16 @@ class BigIntegerTest
 
         try
         {
-            Readers.bigDecimalFrom("Glock");
+            Converter.convertToBigDecimal("Glock");
             fail();
         }
         catch (Exception ignore)
         { }
 
-        try
-        {
-            Readers.bigIntegerFrom(new Date());
-            fail();
-        }
-        catch (Exception ignore)
-        { }
+        BigInteger allowed = Converter.convertToBigInteger(new Date());
+        assert allowed.longValue() > 0;
 
-        BigInteger bi = Readers.bigIntegerFrom(3.14);
+        BigInteger bi = Converter.convertToBigInteger(3.14);
         assertEquals(3, bi.intValue());
     }
 }
