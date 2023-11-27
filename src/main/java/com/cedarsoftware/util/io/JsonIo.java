@@ -109,16 +109,26 @@ public class JsonIo {
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
         return JsonReader.toObjects(in, readOptions, rootType);
     }
-    
+
+    /**
+     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
+     * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
+     * @param writeOptions WriteOptions to control the feature options. Can be null to take the defaults.
+     * @param json String JSON content.
+     * @return String JSON formatted in human readable, standard multi-line, indented format.
+     */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        if (writeOptions.isBuilt())
-        {
+        if (writeOptions == null) {
+            writeOptions = new WriteOptions();
+        }
+        else if (writeOptions.isBuilt()) {
             writeOptions = new WriteOptions(writeOptions);
         }
         writeOptions.prettyPrint(true);
 
-        if (readOptions.isBuilt())
-        {
+        if (readOptions == null) {
+            readOptions = new ReadOptions();
+        } else if (readOptions.isBuilt()) {
             readOptions = new ReadOptions(readOptions);
         }
         readOptions.returnType(ReturnType.JSON_VALUES);
@@ -127,22 +137,30 @@ public class JsonIo {
         return JsonWriter.toJson(object, writeOptions);
     }
 
+    /**
+     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
+     * @param json String JSON content.
+     * @return String JSON formatted in human readable, standard multi-line, indented format.
+     */
     public static String formatJson(String json) {
         return formatJson(json,
                 new ReadOptions().returnType(ReturnType.JSON_VALUES),
                 new WriteOptions().prettyPrint(true));
     }
 
-    public static <T> T deepCopy(Object o, Class<T> rootType) {
-        return deepCopy(o, new ReadOptions(), new WriteOptions(), rootType);
-    }
-
-    public static <T> T deepCopy(Object o, ReadOptions readOptions, WriteOptions writeOptions, Class<T> rootType) {
-        if (o == null) {
+    /**
+     * Copy an object graph using JSON.
+     * @param source Object root object to copy
+     * @param readOptions ReadOptions feature settings. Can be null for default ReadOptions.
+     * @param writeOptions WriteOptions feature settings. Can be null for default WriteOptions.
+     * @return A new, duplicate instance of the original.
+     */
+    public static <T> T deepCopy(Object source, ReadOptions readOptions, WriteOptions writeOptions) {
+        if (source == null) {
             // They asked to copy null.  The copy of null is null.
             return null;
         }
-        String json = JsonWriter.toJson(o, writeOptions);
-        return JsonReader.toObjects(json, readOptions, rootType);
+        String json = JsonWriter.toJson(source, writeOptions);
+        return (T) JsonReader.toObjects(json, readOptions, source.getClass());
     }
 }
