@@ -1,19 +1,22 @@
 package com.cedarsoftware.util.io;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import com.cedarsoftware.util.ReturnType;
-import org.junit.jupiter.api.Test;
-
-import static com.cedarsoftware.util.io.JsonObject.REF;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+
+import static com.cedarsoftware.util.io.JsonObject.REF;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.ReturnType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -121,10 +124,8 @@ class BigDecimalTest
     {
         String s = "123456789012345678901234567890.123456789012345678901234567890";
         BigDecimal bigDec = new BigDecimal(s);
-        String json = TestUtil.toJson(bigDec);
-        TestUtil.printLine("json=" + json);
-        bigDec = TestUtil.toObjects(json, null);
-        assertEquals(bigDec, new BigDecimal(s));
+        BigDecimal actual = TestUtil.serializeDeserialize(bigDec);
+        assertThat(actual).isEqualTo(bigDec);
     }
 
     @Test

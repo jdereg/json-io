@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -23,9 +25,8 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import com.cedarsoftware.util.io.factory.MonthDayFactory;
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
-import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -106,7 +107,7 @@ public class Writers
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
         @Override
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             output.write(extractString(o));
         }
     }
@@ -218,6 +219,7 @@ public class Writers
         protected String getKey() {
             return "name";
         }
+
         @Override
         public String extractString(Object o) { return ((Enum<?>)o).name(); }
     }
@@ -233,9 +235,10 @@ public class Writers
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
         @Override
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             Calendar cal = (Calendar) obj;
+            // TODO:  shouldn't this be the one inside the WriterContext?  and shouldn't there be a back up of parseDate() here?
             MetaUtils.dateFormat.get().setTimeZone(cal.getTimeZone());
             output.write("\"time\":\"");
             output.write(MetaUtils.dateFormat.get().format(cal.getTime()));
@@ -286,6 +289,7 @@ public class Writers
             this.formatter = formatter;
         }
 
+        @Override
         @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object obj, Writer output) throws IOException {
             this.writePrimitiveForm((T) obj, output);
@@ -349,7 +353,19 @@ public class Writers
         }
     }
 
+    public static class MonthDayWriter extends TemporalWriter<YearMonth> {
+
+        public MonthDayWriter(DateTimeFormatter formatter) {
+            super(formatter);
+        }
+
+        public MonthDayWriter() {
+            this(MonthDayFactory.FORMATTER);
+        }
+    }
+
     public static class YearWriter extends PrimitiveValueWriter {
+
         @Override
         public String extractString(Object o) {
             return Integer.toString(((Year) o).getValue());
@@ -411,7 +427,8 @@ public class Writers
 
     public static class BigIntegerWriter extends PrimitiveValueWriter
     {
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
             BigInteger big = (BigInteger) o;
             writeBasicString(output, big.toString(10));
@@ -420,7 +437,8 @@ public class Writers
 
     public static class BigDecimalWriter extends PrimitiveValueWriter
     {
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
             BigDecimal big = (BigDecimal) o;
             writeBasicString(output, big.toPlainString());
@@ -432,7 +450,8 @@ public class Writers
         /**
          * To preserve backward compatibility with previous serialized format the internal fields must be stored as longs
          */
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             UUID uuid = (UUID) obj;
             output.write("\"mostSigBits\": ");
@@ -441,16 +460,18 @@ public class Writers
             output.write(Long.toString(uuid.getLeastSignificantBits()));
         }
 
+        @Override
         public boolean hasPrimitiveForm() { return true; }
 
         /**
          * We can use the String representation for easier handling, but this may break backwards compatibility
          * if an earlier library version is used
          */
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer writer) throws IOException
         {
             UUID buffer = (UUID) o;
-            writeBasicString(output, buffer.toString());
+            writeBasicString(writer, buffer.toString());
         }
     }
 }

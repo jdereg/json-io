@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.Year;
@@ -123,6 +124,7 @@ public class WriteOptions {
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
         temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
+        temp.put(MonthDay.class, new Writers.MonthDayWriter());
         temp.put(Year.class, new Writers.YearWriter());
         temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
         temp.put(Instant.class, new InstantWriter());
