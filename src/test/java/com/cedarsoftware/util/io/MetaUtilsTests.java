@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -36,6 +34,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -95,15 +96,16 @@ public class MetaUtilsTests {
     public void testNewPrimitiveWrapper() {
         try {
             MetaUtils.convert(TimeZone.class, "");
+            fail();
         } catch (JsonIoException e) {
-            assert e.getMessage().toLowerCase().contains("not have primitive wrapper");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported type", "TimeZone");
         }
-
-
+        
         try {
             MetaUtils.convert(Float.class, "float");
+            fail();
         } catch (JsonIoException e) {
-            assert e.getMessage().toLowerCase().contains("error creating primitive wrapper");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "(float)", "not be converted", "Float");
         }
 
         assertThat((Character) MetaUtils.convert(Character.class, '0')).isEqualTo(Character.valueOf('0'));

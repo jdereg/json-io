@@ -49,8 +49,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
-
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
 import static java.lang.reflect.Modifier.isStatic;
@@ -98,6 +96,7 @@ public class MetaUtils
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
 
     private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
+    private static final Set<Class<?>> FROM_EMPTY_QUOTES = new LinkedHashSet<>();
 
     static {
 
@@ -152,6 +151,10 @@ public class MetaUtils
         FROM_NULL.put(Float.class, 0.0f);
         FROM_NULL.put(char.class, '\u0000');
         FROM_NULL.put(Character.class, '\u0000');
+
+        // "" is to set to null (requested by customers)
+        FROM_EMPTY_QUOTES.add(BigInteger.class);
+        FROM_EMPTY_QUOTES.add(BigDecimal.class); 
     }
 
     /**
@@ -946,121 +949,31 @@ public class MetaUtils
      */
     static Object convert(Class<?> c, Object rhs)
     {
-        try {
-            if (rhs == null) {
-                return FROM_NULL.get(c);
-            }
+        if (rhs == null) {
+            return FROM_NULL.get(c);
+        }
+        if (rhs == "" && FROM_EMPTY_QUOTES.contains(c)) {
+            return null;
+        }
 
-            if (c == boolean.class || c == Boolean.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "false";
-                    }
-                    return Boolean.parseBoolean((String) rhs);
+        // Special handling of character.
+        if (c == char.class || c == Character.class) {
+            if (rhs instanceof String) {
+                if (rhs.equals("\"")) {
+                    return '\"';
                 }
+                rhs = removeLeadingAndTrailingQuotes((String) rhs);
+                if ("".equals(rhs)) {
+                    rhs = "\u0000";
+                }
+                return ((CharSequence) rhs).charAt(0);
+            }
+            if (rhs instanceof Character) {
                 return rhs;
             }
-            else if (c == byte.class || c == Byte.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0";
-                    }
-                    return Byte.parseByte((String) rhs);
-                }
-                return byteCache[((Number) rhs).byteValue() + 128];
-            }
-            else if (c == char.class || c == Character.class) {
-                if (rhs instanceof String) {
-                    if (rhs.equals("\"")) {
-                        return '\"';
-                    }
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "\u0000";
-                    }
-                    return ((CharSequence) rhs).charAt(0);
-                }
-                if (rhs instanceof Character) {
-                    return rhs;
-                }
-                // Let it throw exception
-            }
-            else if (c == double.class || c == Double.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0.0";
-                    }
-                    return Double.parseDouble((String) rhs);
-                }
-                return ((Number) rhs).doubleValue();
-            }
-            else if (c == float.class || c == Float.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0.0f";
-                    }
-                    return Float.parseFloat((String) rhs);
-                }
-                return ((Number) rhs).floatValue();
-            }
-            else if (c == int.class || c == Integer.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0";
-                    }
-                    return Integer.parseInt((String) rhs);
-                }
-                return ((Number) rhs).intValue();
-            }
-            else if (c == long.class || c == Long.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0";
-                    }
-                    return Long.parseLong((String) rhs);
-                }
-                return ((Number) rhs).longValue();
-            }
-            else if (c == short.class || c == Short.class) {
-                if (rhs instanceof String) {
-                    rhs = removeLeadingAndTrailingQuotes((String) rhs);
-                    if ("".equals(rhs)) {
-                        rhs = "0";
-                    }
-                    return Short.parseShort((String) rhs);
-                }
-                return ((Number) rhs).shortValue();
-            }
-            else if (c == Date.class) {
-                if (rhs instanceof String) {
-                    return DateFactory.parseDate((String) rhs);
-                }
-                else if (rhs instanceof Long) {
-                    return new Date((Long)(rhs));
-                }
-                else {
-                    return new Date();
-                }
-            }
-            else if (c == BigInteger.class) {
-                return Readers.bigIntegerFrom(rhs);
-            }
-            else if (c == BigDecimal.class) {
-                return Readers.bigDecimalFrom(rhs);
-            }
-        }
-        catch (Exception e) {
-            String className = c == null ? "null" : c.getName();
-            throw new JsonIoException("Error creating primitive wrapper instance for Class: " + className, e);
         }
 
-        throw new JsonIoException("Class '" + c.getName() + "' does not have primitive wrapper.");
+        return Converter.convert(rhs, c);
     }
 
     /**

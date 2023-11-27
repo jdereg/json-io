@@ -86,6 +86,10 @@ public class Injector {
         }
 
         try {
+            // TODO: value should be "cleaned up" using Converter.convert(value, Class of field) before injecting.
+            // TODO: This will make the value to best match the destination type.
+            // TODO: This is logical primitive types (all primitives, wrappers, Date, java.sql.Date, LocalDate, LocalTime, ZonedDateTime, Atomic*, Big*, Class, String, etc.)
+            // TODO: This should be performed with there is reflection, and accessor, Method Handle, etc.
             this.injector.invoke(object, value);
         } catch (ThreadDeath td) {
             throw td;
