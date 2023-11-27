@@ -227,13 +227,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     /**
      * Convert a Java Object to a JSON String.
      * @param item Object to convert to a JSON String.
-     * @param writeOptions (optional can be null for defaults) Map of extra arguments indicating how dates are
-     * formatted and what fields are written out (optional).  For Date parameters, use the public
-     * static DATE_TIME key, and then use the ISO_DATE or ISO_DATE_TIME indicators.  Or you can specify
-     * your own custom SimpleDateFormat String, or you can associate a SimpleDateFormat object,
-     * in which case it will be used.  This setting is for both java.util.Date and java.sql.Date.
-     * If the DATE_FORMAT key is not used, then dates will be formatted as longs.  This long can
-     * be turned back into a date by using 'new Date(longValue)'.
+     * @param writeOptions (optional can be null for defaults).  Set WriteOptions Javadoc or Readme.md file in
+     *                    the GitHub project for details on all the write feature options.
      * @return String containing JSON representation of passed in object root.
      */
     public static String toJson(Object item, WriteOptions writeOptions) {
@@ -264,19 +259,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
         }
     }
-
-    /**
-     * Format the passed in JSON string in a nice, human-readable format.
-     * @param json String input JSON
-     * @return String containing equivalent JSON, formatted nicely for human readability.
-     * @deprecated use JsonUtilities.formatJson(json);
-     */
-    @Deprecated
-    public static String formatJson(String json)
-    {
-        return JsonIo.formatJson(json);
-    }
-
+    
     /**
      * @param out OutputStream to which the JSON will be written.  Uses the default WriteOptions.
      * @see WriteOptions

@@ -1,18 +1,41 @@
 package com.cedarsoftware.util.io;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import com.cedarsoftware.util.ReturnType;
 
 /**
- * This is the API for json-io.  Use these methods to convert:<br/>
- * 1. JSON to Java objects
- * 2. JSON to JsonValues (simple non-typed, generic content)
- * 3. Convert Java objects to JSON
- * 4. JsonValues to JSON.
- * <br/><br/>
- * @author Kenny Partlow (kpartlow@gmail.com)
+ * This is the main API for json-io.  Use these methods to convert:<br/>
+ * <ul>
+ * <li><b>1. Input</b>: Java objects | JsonValue <b>Output</b>: JSON<pre>String json = JsonIo.toJson(JavaObject | JsonValue root, writeOptions)</pre></li>
+ * <li><b>2. Input</b>: Java objects | JsonValue, <b>Output</b>: JSON<pre>String json = JsonIo.toJson(OutputStream, JavaObject | JsonValue root, writeOptions)</pre></li>
+ * <li><b>3. Input</b>: JSON, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(String | InputStream, readOptions, BillingInfo.class)</pre></li>
+ * <li><b>4. Input</b>: JSON, <b>Output</b>: JsonValues (simple, generic content):<pre>JsonIo.toObjects(String json, readOptions)</pre></li></ul>
+ * Often, the goal is to get JSON to Java objects, and from Java objects to JSON.  That is #1 and #3 above.  However
+ * sometimes, you may just want the raw JSON data in memory, not tying it back to a set of "DTO" Java objects. <br/>
+ * <br/>
+ * For example, you may have an extreme amount of data, and you want to process it as fast as possible, and in a
+ * streaming mode.  JSON has great primitives to work with (In Java classes that would be boolean, null, long or
+ * BigInteger, and double or BigDecimal), and String.<br/>
+ * <br/>
+ * In this JSON-mode, your root return value is a JsonValue.  That can represent a JSON object {...}, a JSON
+ * array [...], or a JSON primitive (boolean, null, long, double, String).  JsonObject is a subclass of JsonValue
+ * and represents any JSON object {...}. JsonArray is a subclass of JsonValue and represents an array [...]. And
+ * JsonPrimitive also a subclass of JsonValue, represents one of the 5 JSON primitive value types. If you set the
+ * ".returnType(ReturnType,JSON_VALUES) on ReadOptions, you will receive a JsonValue graph as a return.
+ * You can write processing code against this data structure directly if you would like.  Or, you can set the root
+ * class and ".returnType(ReturnType.JAVA_VALUES)" and JsonIo will convert the parsed in JSON into Java objects, or
+ * if it was passed a Java instance, convert the "DTO" graph into JSON directly.<br/>
+ * <br/>
+ * <b>Note</b> the JsonIo.toObjects() API will output from JSON to Java objects or JsonValues depending on the returnType
+ * set into the ReadOptions.returnType(ReturnType.JAVA_VALUES | ReturnType.JSON_VALUES).<br/>
+ * <br/>
+ * <b>Note</b> the JsonIo.toJson() API will use the root object type (instance of JsonValue or not) to know which type of
+ * Object Graph it is serializing to JSON.<br/>
+ * <br/>
  * @author John DeRegnaucourt (jdereg@gmail.com)
+ * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
  *         <br><br>
@@ -29,7 +52,6 @@ import com.cedarsoftware.util.ReturnType;
  *         limitations under the License.*
  */
 public class JsonIo {
-
     /**
      * Convert the passed in Java source object to JSON.
      * @param srcObject Java instance to convert to JSON format.
@@ -40,6 +62,18 @@ public class JsonIo {
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
         return JsonWriter.toJson(srcObject, writeOptions);
+    }
+
+    /**
+     * Convert the passed in Java source object to JSON.
+     * @param out OutputStream destination for the JSON output.
+     * @param source Root Java object to begin creating the JSON.
+     * @param writeOptions Feature options settings to control the JSON output.  Can be null,
+     *                     in which case, default settings will be used.
+     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
+     */
+    public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
+         JsonWriter.toJson(out, source, writeOptions);
     }
 
     /**
@@ -74,23 +108,6 @@ public class JsonIo {
      */
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
         return JsonReader.toObjects(in, readOptions, rootType);
-    }
-
-    /**
-     * Convert the passed in JSON to JsonValue types (JsonObject, JsonArray, JsonPrimitive).  JsonValue is
-     * the parent class for these classes.
-     * @param json String containing JSON content.
-     * @param readOptions Feature options settings to control the JSON processing.  Can be null,
-     *                     in which case, default settings will be used.
-     * @return JsonValue JsonValue derived class instances.  Output will be JsonObject, JsonArray, or JsonPrimitive
-     * depending on that the root of the JSON is ({...} will return JsonObject, [...] will return JsonArray, and
-     * JsonPrimitive will be returned if "string", long (12345), double (3.1415), boolean (true/false), or null.
-     * NOTE: Currently, in the 4.x versions, only JsonObject is being returned.  This will change in 5.x and work
-     * as documented.
-     * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
-     */
-    public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
-        return JsonReader.toMaps(json, readOptions);
     }
     
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
