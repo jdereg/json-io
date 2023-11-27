@@ -947,7 +947,7 @@ public class MetaUtils
      * was passed in.  This method is similar to the GitHub project java-util's
      * Converter.convert() API.
      */
-    static Object convert(Class<?> toType, Object rhs)
+    public static <T> Object convert(Class<T> toType, Object rhs)
     {
         if (rhs == null) {
             return FROM_NULL.get(toType);
@@ -962,7 +962,6 @@ public class MetaUtils
                 if (rhs.equals("\"")) {
                     return '\"';
                 }
-                rhs = removeLeadingAndTrailingQuotes((String) rhs);
                 if ("".equals(rhs)) {
                     rhs = "\u0000";
                 }
@@ -971,6 +970,10 @@ public class MetaUtils
             if (rhs instanceof Character) {
                 return rhs;
             }
+        }
+
+        if (rhs instanceof String && ((String) rhs).startsWith("\"")) {
+            rhs = removeLeadingAndTrailingQuotes((String)rhs);
         }
 
         return Converter.convert(rhs, toType);

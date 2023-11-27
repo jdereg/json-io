@@ -1175,7 +1175,7 @@ public class TestConverter
         }
         catch (JsonIoException e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "value", "not", "convert", "local");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "2020-12-40", "not", "convert", "zonedDateTime");
         }
 
         assert convertToZonedDateTime(null) == null;

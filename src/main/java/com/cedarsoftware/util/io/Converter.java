@@ -690,7 +690,7 @@ public final class Converter {
             }
         }
         catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDateTime'", e);
+            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'ZonedDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
         return null;
