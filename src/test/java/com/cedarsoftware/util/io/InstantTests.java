@@ -1,14 +1,15 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.Instant;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.models.NestedInstant;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.models.NestedInstant;
 
 public class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     @Override
@@ -90,5 +91,24 @@ public class InstantTests extends SerializationDeserializationMinimumTests<Insta
 
         Instant actual = JsonReader.toObjects(json, new ReadOptions(), Instant.class);
         assertThat(expected).isEqualTo(actual);
+    }
+
+    private static Stream<Arguments> oldFormats() {
+        return Stream.of(
+                Arguments.of("old-format-basic.json", Instant.ofEpochSecond(1700668272, 163000000)),
+                Arguments.of("old-format-missing-fields.json", Instant.ofEpochSecond(0, 0)),
+                Arguments.of("old-format-missing-nanos.json", Instant.ofEpochSecond(1700668272, 0))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("oldFormats")
+    void testOldFormats(String fileName, Instant expected) {
+        Instant instant = JsonReader.toObjects(loadJson(fileName), Instant.class);
+        assertThat(instant).isEqualTo(expected);
+    }
+
+    private String loadJson(String fileName) {
+        return TestUtil.fetchResource("instant/" + fileName);
     }
 }

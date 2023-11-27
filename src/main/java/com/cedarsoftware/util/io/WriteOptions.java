@@ -9,10 +9,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
@@ -36,6 +38,8 @@ import com.cedarsoftware.util.io.writers.DurationWriter;
 import com.cedarsoftware.util.io.writers.InstantWriter;
 import com.cedarsoftware.util.io.writers.LongWriter;
 import com.cedarsoftware.util.io.writers.PeriodWriter;
+import com.cedarsoftware.util.io.writers.ZoneIdWriter;
+import com.cedarsoftware.util.io.writers.ZoneOffsetWriter;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
@@ -123,8 +127,8 @@ public class WriteOptions {
         temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
         temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
         temp.put(YearMonth.class, new Writers.YearMonthWriter());
+        temp.put(MonthDay.class, new Writers.MonthDayWriter());
         temp.put(Year.class, new Writers.YearWriter());
-        temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
         temp.put(Instant.class, new InstantWriter());
         temp.put(Duration.class, new DurationWriter());
         temp.put(Period.class, new PeriodWriter());
@@ -168,6 +172,9 @@ public class WriteOptions {
         temp.put(AtomicBoolean.class, primitiveValueWriter);
         temp.put(AtomicInteger.class, primitiveValueWriter);
         temp.put(AtomicLong.class, primitiveValueWriter);
+
+        temp.put(ZoneOffset.class, new ZoneOffsetWriter());
+        temp.put(ZoneId.class, new ZoneIdWriter());
 
         Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
         if (zoneInfoClass != null) {

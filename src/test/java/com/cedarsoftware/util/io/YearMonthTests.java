@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import static com.cedarsoftware.util.io.TestUtil.toJson;
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 
 import java.time.YearMonth;
@@ -43,11 +42,11 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         NestedYearMonth expectedDate = (NestedYearMonth) expected;
         NestedYearMonth actualDate = (NestedYearMonth) actual;
 
-        assertThat(actualDate.dateTime1)
-                .isEqualTo(expectedDate.dateTime1)
-                .isNotSameAs(actualDate.dateTime2);
+        assertThat(actualDate.one)
+                .isEqualTo(expectedDate.one)
+                .isNotSameAs(actualDate.two);
 
-        assertThat(actualDate.dateTime1).isEqualTo(expectedDate.dateTime1);
+        assertThat(actualDate.one).isEqualTo(expectedDate.one);
     }
 
     @Override
@@ -60,13 +59,11 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         NestedYearMonth expectedDate = (NestedYearMonth) expected;
         NestedYearMonth actualDate = (NestedYearMonth) actual;
 
-        String json = toJson(expected);
+        assertThat(actualDate.one)
+                .isEqualTo(expectedDate.one)
+                .isSameAs(actualDate.two);
 
-        assertThat(actualDate.dateTime1)
-                .isEqualTo(expectedDate.dateTime1)
-                .isSameAs(actualDate.dateTime2);
-
-        assertThat(actualDate.dateTime1).isEqualTo(expectedDate.dateTime1);
+        assertThat(actualDate.two).isEqualTo(expectedDate.two);
     }
 
     @Override
@@ -84,11 +81,11 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
 
     @Test
     void testOldFormat_nestedObject() {
-        String json = "{\"@type\":\"com.cedarsoftware.util.io.YearMonthTests$NestedYearMonth\",\"dateTime1\":{\"@id\":1,\"year\":1970,\"month\":6},\"dateTime2\":{\"@ref\":1}}";
+        String json = "{\"@type\":\"com.cedarsoftware.util.io.YearMonthTests$NestedYearMonth\",\"one\":{\"@id\":1,\"year\":1970,\"month\":6},\"two\":{\"@ref\":1}}";
         NestedYearMonth date = toObjects(json, null);
-        assertThat(date.dateTime1.getYear()).isEqualTo(1970);
-        assertThat(date.dateTime1.getMonthValue()).isEqualTo(6);
-        assertThat(date.dateTime1).isSameAs(date.dateTime2);
+        assertThat(date.one.getYear()).isEqualTo(1970);
+        assertThat(date.one.getMonthValue()).isEqualTo(6);
+        assertThat(date.one).isSameAs(date.two);
     }
 
     @Test
@@ -111,18 +108,13 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         assertThat(actual).isEqualTo(initial);
     }
 
-    private void assertYearMonth(YearMonth date, int year, int month) {
-        assertThat(date.getYear()).isEqualTo(year);
-        assertThat(date.getMonthValue()).isEqualTo(month);
-    }
-
     private static class NestedYearMonth {
-        public YearMonth dateTime1;
-        public YearMonth dateTime2;
+        public YearMonth one;
+        public YearMonth two;
 
-        public NestedYearMonth(YearMonth dateTime1, YearMonth dateTime2) {
-            this.dateTime1 = dateTime1;
-            this.dateTime2 = dateTime2;
+        public NestedYearMonth(YearMonth one, YearMonth two) {
+            this.one = one;
+            this.two = two;
         }
 
         public NestedYearMonth(YearMonth date) {

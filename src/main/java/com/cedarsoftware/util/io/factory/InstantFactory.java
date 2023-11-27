@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
+import static java.time.format.DateTimeFormatter.ISO_INSTANT;
+
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.ArgumentHelper;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -55,6 +56,9 @@ public class InstantFactory extends AbstractTemporalFactory<Instant> {
 
     @Override
     protected Instant fromJsonObject(JsonObject job, ReaderContext context) {
-        return null;
+        Number seconds = ArgumentHelper.getNumberWithDefault(job.get("seconds"), 0);
+        Number nanos = ArgumentHelper.getNumberWithDefault(job.get("nanos"), 0);
+
+        return Instant.ofEpochSecond(seconds.longValue(), nanos.longValue());
     }
 }

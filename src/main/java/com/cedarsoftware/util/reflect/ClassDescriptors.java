@@ -15,10 +15,10 @@ import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
+import com.cedarsoftware.util.reflect.factories.ZoneRegionAccessorFactory;
 import com.cedarsoftware.util.reflect.filters.EnumFilter;
 import com.cedarsoftware.util.reflect.filters.GroovyFilter;
 import com.cedarsoftware.util.reflect.filters.StaticFilter;
-import lombok.Getter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -57,6 +57,7 @@ public class ClassDescriptors {
         this.fieldFilters.add(new EnumFilter());
 
         this.accessorFactories = new ArrayList<>();
+        this.accessorFactories.add(new ZoneRegionAccessorFactory());
         this.accessorFactories.add(new MappedMethodAccessorFactory());
         this.accessorFactories.add(new BooleanAccessorFactory());
         this.accessorFactories.add(new EnumNameAccessorFactory());
@@ -201,32 +202,5 @@ public class ClassDescriptors {
     public boolean removeFilter(FieldFilter filter) {
         clearDescriptorCache();
         return this.fieldFilters.remove(filter);
-    }
-
-    public class ClassDescriptorImpl implements ClassDescriptor {
-
-        @Getter
-        private final Map<String, Accessor> accessors;
-        @Getter
-        private final Map<String, Injector> injectors;
-
-        public ClassDescriptorImpl() {
-            this.accessors = new LinkedHashMap<>();
-            this.injectors = new LinkedHashMap<>();
-        }
-
-        public void addAccessor(String name, Accessor accessor) {
-            if (accessor == null) {
-                return;
-            }
-            this.accessors.put(name, accessor);
-        }
-
-        public void addInjector(String name, Injector injector) {
-            if (injector == null) {
-                return;
-            }
-            this.injectors.put(name, injector);
-        }
     }
 }

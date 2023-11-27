@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.reflect.factories;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.MonthDay;
 import java.time.Year;
 import java.time.YearMonth;
 
@@ -22,5 +24,9 @@ public class NonStandardAccessorNames extends NonStandardMethodNames {
         addMapping(YearMonth.class, "month", "getMonthValue");
         addMapping(Year.class, "year", "getValue");
         addMapping(Duration.class, "nanos", "getNano");
+        addMapping(Instant.class, "seconds", "getEpochSecond");
+        addMapping(Instant.class, "nanos", "getNano");
+        addMapping(MonthDay.class, "month", "getMonthValue");
+        addMapping(MonthDay.class, "day", "getDayOfMonth");
     }
 }

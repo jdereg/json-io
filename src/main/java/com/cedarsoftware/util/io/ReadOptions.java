@@ -9,11 +9,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ import com.cedarsoftware.util.io.factory.InstantFactory;
 import com.cedarsoftware.util.io.factory.LocalDateFactory;
 import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
 import com.cedarsoftware.util.io.factory.LocalTimeFactory;
+import com.cedarsoftware.util.io.factory.MonthDayFactory;
 import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
 import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
 import com.cedarsoftware.util.io.factory.PeriodFactory;
@@ -58,6 +61,7 @@ import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.io.factory.TimeZoneFactory;
 import com.cedarsoftware.util.io.factory.YearFactory;
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
+import com.cedarsoftware.util.io.factory.ZoneIdFactory;
 import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 
@@ -137,8 +141,10 @@ public class ReadOptions {
         assignInstantiator(OffsetDateTime.class, new OffsetDateTimeFactory());
         assignInstantiator(OffsetTime.class, new OffsetTimeFactory());
         assignInstantiator(YearMonth.class, new YearMonthFactory());
+        assignInstantiator(MonthDay.class, new MonthDayFactory());
         assignInstantiator(Year.class, new YearFactory());
         assignInstantiator(ZoneOffset.class, new ZoneOffsetFactory());
+        assignInstantiator(ZoneId.class, new ZoneIdFactory());
         assignInstantiator(Instant.class, new InstantFactory());
         assignInstantiator(Period.class, new PeriodFactory());
         assignInstantiator(Duration.class, new DurationFactory());
@@ -180,6 +186,7 @@ public class ReadOptions {
         addPossiblePermanentReader("java.lang.Record", new Readers.RecordReader());
 
         // Coerced Types
+        addPermanentCoercedType("java.time.ZoneRegion", ZoneId.class);
         addPermanentCoercedType("java.util.Arrays$ArrayList", ArrayList.class);
         addPermanentCoercedType("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
         addPermanentCoercedType("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
