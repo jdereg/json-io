@@ -1,7 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import com.cedarsoftware.util.ReturnType;
 
@@ -61,7 +63,15 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
-        return JsonWriter.toJson(srcObject, writeOptions);
+        try {
+            FastByteArrayOutputStream stream = new FastByteArrayOutputStream();
+            JsonWriter writer = new JsonWriter(stream, writeOptions);
+            writer.write(srcObject);
+            writer.close();
+            return stream.toString();
+        } catch (Exception e) {
+            throw new JsonIoException("Unable to convert object to JSON", e);
+        }
     }
 
     /**
@@ -73,7 +83,13 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
-         JsonWriter.toJson(out, source, writeOptions);
+        try {
+            JsonWriter writer = new JsonWriter(out, writeOptions);
+            writer.write(source);
+            writer.close();
+        } catch (Exception e) {
+            throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
+        }
     }
 
     /**
@@ -90,7 +106,10 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
-        return JsonReader.toObjects(json, readOptions, rootType);
+        if (json == null) {
+            return null;
+        }
+        return toObjects(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions, rootType);
     }
 
     /**
@@ -107,7 +126,9 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
-        return JsonReader.toObjects(in, readOptions, rootType);
+        try (JsonReader jr = new JsonReader(in, readOptions)) {
+            return (T) jr.readObject(rootType);
+        }
     }
 
     /**
@@ -133,7 +154,7 @@ public class JsonIo {
         }
         readOptions.returnType(ReturnType.JSON_VALUES);
         
-        Object object = JsonReader.toObjects(json, readOptions, null);
+        Object object = toObjects(json, readOptions, null);
         return JsonWriter.toJson(object, writeOptions);
     }
 
@@ -161,6 +182,6 @@ public class JsonIo {
             return null;
         }
         String json = JsonWriter.toJson(source, writeOptions);
-        return (T) JsonReader.toObjects(json, readOptions, source.getClass());
+        return (T) toObjects(json, readOptions, source.getClass());
     }
 }

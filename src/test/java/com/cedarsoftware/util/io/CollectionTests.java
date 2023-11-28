@@ -1,10 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-
 import java.awt.*;
-import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +19,9 @@ import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,12 +55,13 @@ public class CollectionTests {
         String jsonOut = TestUtil.toJson(obj);
         TestUtil.printLine(jsonOut);
 
-        ManyCollections root = (ManyCollections) TestUtil.toObjects(jsonOut, null);
+        ManyCollections root = TestUtil.toObjects(jsonOut, null);
 
         assertCollection(root);
 
-        JsonWriter writer = new JsonWriter(new ByteArrayOutputStream());
+        JsonWriter writer = new JsonWriter(new FastByteArrayOutputStream());
         writer.write(obj);
+        writer.flush();
         // TODO: Uncomment to test identity counter strategies (currently incremental + only referenced)
 //        System.out.TestUtil.printLine("writer._identity = " + writer._identity)
     }
@@ -92,9 +92,9 @@ public class CollectionTests {
         set = root._cols[2];
         assertEquals(4, set.size());
         assertEquals(set.getClass(), TreeSet.class);
-        assertTrue(set.contains(Integer.valueOf(Integer.MIN_VALUE)));
-        assertTrue(set.contains(Integer.valueOf(1)));
-        assertTrue(set.contains(Integer.valueOf(Integer.MAX_VALUE)));
+        assertTrue(set.contains(Integer.MIN_VALUE));
+        assertTrue(set.contains(1));
+        assertTrue(set.contains(Integer.MAX_VALUE));
         assertTrue(set.contains(_CONST_INT));
 
         assertEquals(4, root._strings_a.size());
@@ -137,13 +137,13 @@ public class CollectionTests {
 
         assertEquals(17, root._poly_a.size());
         assertEquals(root._poly_a.get(0), Boolean.TRUE);
-        assertEquals(root._poly_a.get(1), Character.valueOf('a'));
-        assertEquals(root._poly_a.get(2), Byte.valueOf((byte) 16));
-        assertEquals(root._poly_a.get(3), Short.valueOf((byte) 69));
-        assertEquals(root._poly_a.get(4), Integer.valueOf(714));
-        assertEquals(root._poly_a.get(5), Long.valueOf(420));
-        assertEquals(root._poly_a.get(6), Float.valueOf(0.4f));
-        assertEquals(root._poly_a.get(7), Double.valueOf(3.14));
+        assertEquals(root._poly_a.get(1), 'a');
+        assertEquals(root._poly_a.get(2), (byte) 16);
+        assertEquals(root._poly_a.get(3), (short) (byte) 69);
+        assertEquals(root._poly_a.get(4), 714);
+        assertEquals(root._poly_a.get(5), 420L);
+        assertEquals(root._poly_a.get(6), 0.4f);
+        assertEquals(root._poly_a.get(7), 3.14);
         assertEquals("Jones'in\tfor\u0019a\ncoke", root._poly_a.get(8));
         assertNull(root._poly_a.get(9));
         assertEquals("eddie", root._poly_a.get(10).toString());

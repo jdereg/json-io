@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,12 +10,14 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.models.NestedZonedDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.models.NestedZonedDateTime;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedDateTime> {
     private static final ZoneId Z1 = ZoneId.of("America/Chicago");
@@ -169,9 +168,9 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     @ParameterizedTest
     @MethodSource("roundTripInstants")
     void roundTripTests(ZonedDateTime expected) {
-        String json = JsonWriter.toJson(expected, new WriteOptions());
+        String json = TestUtil.toJson(expected, new WriteOptions());
 
-        ZonedDateTime actual = JsonReader.toObjects(json, new ReadOptions(), ZonedDateTime.class);
+        ZonedDateTime actual = TestUtil.toObjects(json, new ReadOptions(), ZonedDateTime.class);
         assertThat(expected).isEqualTo(actual);
     }
 }

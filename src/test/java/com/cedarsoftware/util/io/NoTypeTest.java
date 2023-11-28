@@ -47,7 +47,7 @@ public class NoTypeTest
     void personTestToPerson()
     {
         String json = TestUtil.fetchResource("noTypes/person.json");
-        Person person = JsonReader.toObjects(json, Person.class);
+        Person person = TestUtil.toObjects(json, Person.class);
         assert person.name.equals("Joe");
         assert person.age == 50;
         assert person.salary == 225000.0d;
@@ -58,7 +58,7 @@ public class NoTypeTest
     void personTestToMap()
     {
         String json = TestUtil.fetchResource("noTypes/person.json");
-        Map<String, Object> person = JsonReader.toObjects(json, Map.class);
+        Map<String, Object> person = TestUtil.toObjects(json, Map.class);
         assert person.get("name").equals("Joe");
         assert (long)person.get("age") == 50L;  // Comes in as Long because all JSON integer values are long
         assert (double)person.get("salary") == 225000.0d;
@@ -70,7 +70,7 @@ public class NoTypeTest
     void personsTestToPersons()
     {
         String json = TestUtil.fetchResource("noTypes/persons.json");
-        Person[] persons = JsonReader.toObjects(json, Person[].class);
+        Person[] persons = TestUtil.toObjects(json, Person[].class);
         assert persons[0].name.equals("Joe");
         assert persons[0].age == 50;
         assert persons[0].salary == 225000.0d;

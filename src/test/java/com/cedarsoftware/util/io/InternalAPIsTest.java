@@ -1,10 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -53,8 +52,8 @@ public class InternalAPIsTest
     @Test
     public void testProtectedAPIs()
     {
-        ByteArrayOutputStream bao = new ByteArrayOutputStream();
-        DerivedWriter writer = new DerivedWriter(bao);
+        FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
+        DerivedWriter writer = new DerivedWriter(fbao);
         Map ref = writer.getObjsReferenced();
         Map vis = writer.getObjVisited();
         assertNotNull(ref);

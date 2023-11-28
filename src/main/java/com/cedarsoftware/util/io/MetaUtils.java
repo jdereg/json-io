@@ -1003,7 +1003,7 @@ public class MetaUtils
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
     {
-        String arg = JsonWriter.toJson(obj, new WriteOptions().shortMetaKeys(true).showTypeInfoNever());
+        String arg = JsonIo.toJson(obj, new WriteOptions().shortMetaKeys(true).showTypeInfoNever());
         if (arg.length() > argCharLen)
         {
             arg = arg.substring(0, argCharLen) + "...";

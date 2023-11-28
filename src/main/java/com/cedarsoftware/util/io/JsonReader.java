@@ -69,7 +69,6 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 public class JsonReader implements Closeable, ReaderContext
 {
     private final FastReader input;
-    // Note:  this is not thread local.
 
     @Getter
     private final Resolver resolver;
@@ -254,109 +253,6 @@ public class JsonReader implements Closeable, ReaderContext
     }
 
     /**
-     * Deprecated - use new ReadOptions().assignInstantiator(String, ClassFactory)
-     *
-     * @param className Class name to assign an ClassFactory to
-     * @param factory ClassFactory that will create 'c' instances
-     */
-    @Deprecated
-    public static void assignInstantiator(String className, ClassFactory factory)
-    {
-        Class<?> clazz = MetaUtils.classForName(className, JsonReader.class.getClassLoader());
-        ReadOptions.assignInstantiator(clazz, factory);
-    }
-
-    /**
-     * Deprecated - use ReadOptions.assignInstantiator(Class, ClassFactory)
-     *
-     * @param c Class to assign on ClassFactory
-     * @param factory ClassFactory that wil create instance of that class.
-     */
-    @Deprecated
-    public static void assignInstantiator(Class<?> c, ClassFactory factory)
-    {
-        ReadOptions.assignInstantiator(c, factory);
-    }
-
-    /**
-     * Call this method to add a custom JSON reader to json-io.  It will
-     * associate the Class 'c' to the reader you pass in.  The readers are
-     * found with isAssignableFrom().  If this is too broad, causing too
-     * many classes to be associated to the custom reader, you can indicate
-     * that json-io should not use a custom reader for a particular class,
-     * by calling the addNotCustomReader() method.
-     * @param c Class to assign a custom JSON reader to
-     * @param reader The JsonClassReader which will read the custom JSON format of 'c'
-     * @deprecated use ReadOptions.addCustomReaderClass() to create any additional readers you'll need.
-     */
-    @Deprecated
-    public void addReader(Class<?> c, JsonClassReader reader)
-    {
-        readOptions.addCustomReaderClass(c, reader);
-    }
-
-    /**
-     * Force json-io to use it's internal generic approach to writing the
-     * passed in class, even if a Custom JSON reader is specified for its
-     * parent class.
-     * @param c Class to which to force no custom JSON reading to occur.
-     * @deprecated use ReadOptions.addNotCustomReaderClass()
-     */
-    @Deprecated
-    public void addNotCustomReader(Class<?> c)
-    {
-        readOptions.addNotCustomReaderClass(c);
-    }
-
-    /**
-     * Convert the passed in JSON string into a Java object graph.
-     *
-     * @param input   Input stream of UTF-8 json string data
-     * @param options Read options
-     * @return Java object graph matching JSON input
-     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
-     *             specify null, however, it will not have the Class's field information to make inferences about
-     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T toObjects(InputStream input, ReadOptions options, Class<T> root) {
-        try (JsonReader jr = new JsonReader(input, options)) {
-            return (T) jr.readObject(root);
-        }
-    }
-
-    /**
-     * Convert the passed in JSON string into a Java object graph.
-     *
-     * @param jsonString String JSON input
-     * @param options    Read options
-     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
-     *             specify null, however, it will not have the Class's field information to make inferences about
-     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
-     * @return Java object graph matching JSON input
-     */
-    public static <T> T toObjects(String jsonString, ReadOptions options, Class<T> root) {
-        if (jsonString == null) {
-            return null;
-        }
-        return toObjects(new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8)), options, root);
-    }
-
-    /**
-     * Convert the passed in JSON string into a Java object graph.
-     * Uses the default read options
-     *
-     * @param json String JSON input
-     * @param root Class that indicates what the root class of the JSON is that is being written out.  You can
-     *             specify null, however, it will not have the Class's field information to make inferences about
-     *             the root object, so you may have to parse into Maps, rather than specific DTO classes.
-     * @return Java object graph matching JSON input
-     */
-    public static <T> T toObjects(String json, Class<T> root) {
-        return toObjects(json, new ReadOptions(), root);
-    }
-
-    /**
      * Note that the return type will match one of these JSON types (array, Map, string, long, boolean, or null).
      *
      * @param json json string
@@ -412,6 +308,11 @@ public class JsonReader implements Closeable, ReaderContext
         this(inputStream, new ReadOptions());
     }
 
+    /**
+     * Allow others to try potentially faster Readers.
+     * @param inputStream InputStream that will be offering JSON.
+     * @return
+     */
     protected FastReader getReader(InputStream inputStream)
     {
         return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8192, 10);
@@ -566,8 +467,7 @@ public class JsonReader implements Closeable, ReaderContext
     public void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj) {
         this.resolver.traverseFields(stack, jsonObj);
     }
-
-
+    
     /**
      * This method converts a rootObj Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java

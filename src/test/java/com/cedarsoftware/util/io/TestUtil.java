@@ -184,7 +184,7 @@ public class TestUtil
         try
         {
             long start = System.nanoTime();
-            testInfo.obj = JsonReader.toObjects(json, options, root);
+            testInfo.obj = JsonIo.toObjects(json, options, root);
             testInfo.nanos = System.nanoTime() - start;
         }
         catch (Exception e)
@@ -234,7 +234,7 @@ public class TestUtil
      * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.  This version is the simple (no build options version).
      */
-    public static <T> T toObjects(String json, Class<?> root)
+    public static <T> T toObjects(String json, Class<T> root)
     {
         return toObjects(json, new ReadOptions(), root);
     }
@@ -243,7 +243,7 @@ public class TestUtil
      * Generally, use this API to read JSON.  It will do so using json-io and other serializers, so that
      * timing statistics can be measured.  This version is more capable, as it supports build options.
      */
-    public static <T> T toObjects(final String json, ReadOptions readOptions, Class<?> root)
+    public static <T> T toObjects(final String json, ReadOptions readOptions, Class<T> root)
     {
         if (null == json || json.trim().isEmpty())
         {
@@ -372,7 +372,7 @@ public class TestUtil
     private static final boolean debug = false;
 
     /**
-     * Ensure that the passed in source contains all of the Strings passed in the 'contains' parameter AND
+     * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
      * that they appear in the order they are passed in.  This is a better check than simply asserting
      * that a particular error message contains a set of tokens...it also ensures the order in which the
      * tokens appear.  If the strings passed in do not appear in the same order within the source string,
@@ -398,7 +398,7 @@ public class TestUtil
     }
 
     /**
-     * Ensure that the passed in source contains all of the Strings passed in the 'contains' parameter AND
+     * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
      * that they appear in the order they are passed in.  This is a better check than simply asserting
      * that a particular error message contains a set of tokens...it also ensures the order in which the
      * tokens appear.  If the strings passed in do not appear in the same order within the source string,

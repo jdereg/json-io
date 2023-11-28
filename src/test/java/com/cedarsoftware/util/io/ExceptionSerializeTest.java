@@ -106,7 +106,7 @@ class ExceptionSerializeTest
             writeBasicString(output, t.getMessage());
             output.write(",\"cause\":");
             Throwable cause = t.getCause();
-            String json = JsonWriter.toJson(cause, null);
+            String json = TestUtil.toJson(cause, null);
             output.write(json);
             output.write(",");
             output.write("\"recordNumber\":");

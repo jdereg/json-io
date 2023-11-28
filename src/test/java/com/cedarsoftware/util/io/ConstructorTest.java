@@ -1,11 +1,9 @@
 package com.cedarsoftware.util.io;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -195,11 +193,11 @@ public class ConstructorTest
         Object o = TestUtil.toObjects(json, null);
         assert TestUtil.toJson(o).equals(json);
 
-        ByteArrayOutputStream ba = new ByteArrayOutputStream();
-        JsonWriter writer = new JsonWriter(ba);
+        FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
+        JsonWriter writer = new JsonWriter(fbao);
         writer.write(o);
         writer.close();
-        String s = new String(ba.toByteArray(), StandardCharsets.UTF_8);
+        String s = fbao.toString();
         assert json.equals(s);
     }
 
@@ -229,7 +227,7 @@ public class ConstructorTest
         Canine dog = new Canine("Eddie");
         String json = TestUtil.toJson(dog);
         ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes());
-        Canine eddie = JsonReader.toObjects(inputStream, new ReadOptions(), null);
+        Canine eddie = JsonIo.toObjects(inputStream, new ReadOptions(), null);
         assert eddie.getName().equals("Eddie");
 
         inputStream = new ByteArrayInputStream(json.getBytes());

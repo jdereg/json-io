@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -29,7 +28,6 @@ import java.util.Set;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import lombok.Getter;
-import lombok.Setter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -110,17 +108,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     /**
-     * -- GETTER --
-     *
-     * @return boolean the allowsNanAndInfinity flag
-     * @deprecated use WriteOptions.allowNanAndInfinity()
-     */
-    @Setter
-    @Getter
-    @Deprecated
-    private static volatile boolean allowNanAndInfinity = false;
-
-    /**
      * Implement this interface to customize the JSON output for a given class.
      */
     public interface JsonClassWriter
@@ -188,43 +175,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     }
 
     /**
-     * @see JsonWriter#toJson(Object, WriteOptions)
-     * @param item Object (root) to serialized to JSON String.
-     * @return String of JSON format representing complete object graph rooted by item.
-     */
-    @Deprecated
-    public static String objectToJson(Object item)
-    {
-        return toJson(item, new WriteOptions());
-    }
-
-    /**
-     * Convert a Java Object to a JSON String.
-     *
-     * @param item Object to convert to a JSON String.
-     * @param writeOptions Feature arguments indicating how dates are formatted,
-     * what fields are written out (optional).
-     * @see WriteOptions
-     * @return String containing JSON representation of passed in object root.
-     */
-    @Deprecated
-    public static String objectToJson(Object item, WriteOptions writeOptions)
-    {
-        try
-        {
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            JsonWriter writer = new JsonWriter(stream, writeOptions);
-            writer.write(item);
-            writer.close();
-            return new String(stream.toByteArray(), StandardCharsets.UTF_8);
-        }
-        catch (Exception e)
-        {
-            throw new JsonIoException("Unable to convert object to JSON", e);
-        }
-    }
-
-    /**
      * Convert a Java Object to a JSON String.
      * @param item Object to convert to a JSON String.
      * @param writeOptions (optional can be null for defaults).  Set WriteOptions Javadoc or Readme.md file in
@@ -233,30 +183,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public static String toJson(Object item, WriteOptions writeOptions) {
         try {
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            FastByteArrayOutputStream stream = new FastByteArrayOutputStream();
             JsonWriter writer = new JsonWriter(stream, writeOptions);
             writer.write(item);
             writer.close();
-            return new String(stream.toByteArray(), StandardCharsets.UTF_8);
+            return stream.toString();
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object to JSON", e);
-        }
-    }
-
-    /**
-     * Convert a Java Object to a JSON String.
-     * @param stream Outputstream that the generated JSON will be sent to.
-     * @param item Object root object from which to generate JSON .
-     * @param writeOptions (optional can be null for defaults) Map of extra arguments indicating how the JSON is
-     *                     formatted.  From date formats, to special treatment for longs, null fields, etc.
-     */
-    public static void toJson(OutputStream stream, Object item, WriteOptions writeOptions) {
-        try {
-            JsonWriter writer = new JsonWriter(stream, writeOptions);
-            writer.write(item);
-            writer.close();
-        } catch (Exception e) {
-            throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
         }
     }
     
@@ -278,14 +211,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? new WriteOptions().build() : writeOptions.build();
-    }
-
-    /**
-     * @return ClassLoader to be used by Custom Writers
-     */
-    ClassLoader getClassLoader()
-    {
-        return writeOptions.getClassLoader();
     }
 
     /**
@@ -455,17 +380,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         tabOut();
         output.write('}');
         return true;
-    }
-
-    /**
-     * For no custom writing to occur for the passed in Class.
-     * @param c Class which should NOT have any custom writer associated to it.  Use this
-     * to prevent a custom writer from being used due to inheritance.
-     */
-    @Deprecated
-    public void addNotCustomWriter(Class<?> c)
-    {
-        writeOptions.addNotCustomWrittenClass(c);
     }
 
     /**
@@ -1162,7 +1076,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         else
         {
-            arrayClass = MetaUtils.classForName(type, getClassLoader());
+            arrayClass = MetaUtils.classForName(type, writeOptions.getClassLoader());
         }
 
         final Writer output = this.out;
@@ -1264,7 +1178,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             showType = false;
         }
         String type = jObj.type;
-        Class<?> colClass = MetaUtils.classForName(type, getClassLoader());
+        Class<?> colClass = MetaUtils.classForName(type, writeOptions.getClassLoader());
         boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
         int len = jObj.getLength();
@@ -1442,7 +1356,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 newLine();
             }
             writeType(jObj.type, output);
-            type = MetaUtils.classForName(jObj.type, getClassLoader());
+            type = MetaUtils.classForName(jObj.type, writeOptions.getClassLoader());
         }
 
         if (jObj.isEmpty())

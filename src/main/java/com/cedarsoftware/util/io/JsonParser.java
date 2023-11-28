@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -556,7 +557,7 @@ class JsonParser
      */
     private int skipWhitespaceRead() throws IOException
     {
-        FastReader in = input;
+        Reader in = input;
         int c;
         do
         {

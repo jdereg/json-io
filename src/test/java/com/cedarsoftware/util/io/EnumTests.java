@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,9 +16,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -185,12 +183,12 @@ class EnumTests {
     @Test
     void testEnumWithNoType_and_defaultWriter() {
         TestEnum4 x = TestEnum4.B;
-        ByteArrayOutputStream ba = new ByteArrayOutputStream();
+        FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
 
         WriteOptions options = new WriteOptions().showTypeInfoNever();
-        JsonWriter writer = new JsonWriter(ba, options);
+        JsonWriter writer = new JsonWriter(fbao, options);
         writer.write(x);
-        String json = new String(ba.toByteArray());
+        String json = fbao.toString();
         
         String expected = loadJson("default-enum-with-no-type.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
@@ -199,13 +197,13 @@ class EnumTests {
     @Test
     void testEnumWithPrivateMembersAsField_withPrivatesOff() {
         TestEnum4 x = TestEnum4.B;
-        ByteArrayOutputStream ba = new ByteArrayOutputStream();
+        FastByteArrayOutputStream fbao = new FastByteArrayOutputStream();
 
         WriteOptions options = new WriteOptions().writeEnumAsJsonObject(true);
 
-        JsonWriter writer = new JsonWriter(ba, options);
+        JsonWriter writer = new JsonWriter(fbao, options);
         writer.write(x);
-        String json = new String(ba.toByteArray());
+        String json = fbao.toString();
 
         String expected = loadJson("default-enum-standalone-without-privates.json");
         assertThat(json).isEqualToIgnoringWhitespace(expected);
