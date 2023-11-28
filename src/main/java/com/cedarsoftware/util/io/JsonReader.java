@@ -252,46 +252,6 @@ public class JsonReader implements Closeable, ReaderContext
     }
 
     /**
-     * Note that the return type will match one of these JSON types (array, Map, string, long, boolean, or null).
-     *
-     * @param json json string
-     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
-     */
-    public static JsonValue toMaps(String json) {
-        return toMaps(json, new ReadOptions().returnType(ReturnType.JSON_VALUES));
-    }
-
-    /**
-     * Note that the return type will match one of these JSON types (array, Map, string, long, boolean, or null).
-     *
-     * @param json        json string
-     * @param readOptions options to use when reading
-     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
-     */
-    public static JsonValue toMaps(String json, ReadOptions readOptions) {
-        if (json == null) {
-            return null;
-        }
-        return toMaps(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
-    }
-
-    /**
-     * Note that the return type will match one of these JSON types (array, Map, string, long, boolean, or null).
-     *
-     * @param inputStream bytes representing UTF-8 string
-     * @param readOptions options to use when reading
-     * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
-     */
-    public static JsonValue toMaps(InputStream inputStream, ReadOptions readOptions) {
-        Convention.throwIfNull(inputStream, "inputStream cannot be null");
-        Convention.throwIfNull(readOptions, "readOptions cannot be null");
-
-        try (JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new DefaultReferenceTracker())) {
-            return jr.readObject(JsonValue.class);
-        }
-    }
-
-    /**
      * Default ReadOptions.
      */
     public JsonReader()
@@ -338,15 +298,14 @@ public class JsonReader implements Closeable, ReaderContext
     }
 
     public JsonReader(InputStream input, ReadOptions readOptions, ReferenceTracker references) {
-        this.readOptions = readOptions == null ? new ReadOptions() : readOptions;
-        this.readOptions.build();
+        this.readOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
         this.input = getReader(input);
         if (this.readOptions.getReturnType() == ReturnType.JSON_VALUES) {
             this.resolver = new MapResolver(this.readOptions, references);
         } else {
             this.resolver = new ObjectResolver(this.readOptions, references);
         }
-        parser = new JsonParser(this.input, this.readOptions, references);
+        parser = new JsonParser(this.input, this.readOptions.build(), references);
     }
 
     /**
@@ -388,7 +347,7 @@ public class JsonReader implements Closeable, ReaderContext
         }
         else
         {
-            graph = o instanceof JsonObject ? convertParsedMapsToJava((JsonObject) o, root) : o;
+            graph = o instanceof JsonValue ? convertParsedMapsToJava((JsonObject) o, root) : o;
         }
 
         // Allow a complete 'Map' return (Javascript style)
@@ -525,7 +484,7 @@ public class JsonReader implements Closeable, ReaderContext
     /**
      * Implementation of ReferenceTracker
      */
-    private static class DefaultReferenceTracker implements ReferenceTracker {
+    static class DefaultReferenceTracker implements ReferenceTracker {
 
         final Map<Long, JsonObject> references = new HashMap<>();
 

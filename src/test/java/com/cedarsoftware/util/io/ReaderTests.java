@@ -68,7 +68,7 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testToMaps_returnsNullForEmptyOrNullString(String json) {
-        Object o = JsonReader.toMaps(json);
+        Object o = TestUtil.toJsonValues(json, null);
         assertNull(o);
     }
 }

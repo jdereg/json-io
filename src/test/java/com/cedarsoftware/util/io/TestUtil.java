@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -291,6 +292,14 @@ public class TestUtil
 
         //noinspection unchecked
         return (T) jsonIoTestInfo.obj;
+    }
+
+    public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
+        return JsonIo.toJsonValues(json, readOptions);
+    }
+
+    public static JsonValue toJsonValues(InputStream in, ReadOptions readOptions) {
+        return JsonIo.toJsonValues(in, readOptions);
     }
 
     public static void printLine(String s)

@@ -103,6 +103,10 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
         primitiveWrappers.add("java.lang.Short");
     }
 
+    public boolean isJsonObject() {
+        return true;
+    }
+
     public String toString()
     {
         return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
