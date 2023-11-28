@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -109,7 +108,7 @@ public class JsonIo {
         if (json == null) {
             return null;
         }
-        return toObjects(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions, rootType);
+        return toObjects(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions, rootType);
     }
 
     /**

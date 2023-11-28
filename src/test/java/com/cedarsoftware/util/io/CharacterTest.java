@@ -1,10 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -84,7 +83,7 @@ public class CharacterTest
     void testQuoteAsCharacterValue()
     {   // { "@type": "char", "value": "\\"" }
         String jsonString = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
-        JsonReader jsonReader = new JsonReader(new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8)));
+        JsonReader jsonReader = new JsonReader(new FastByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8)));
         Object object = jsonReader.readObject(char.class);
         assert (Character) object == '"';
     }

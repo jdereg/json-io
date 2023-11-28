@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -180,7 +179,7 @@ public class ConstructorTest
     public void testJsonReaderConstructor()
     {
         String json = "{\"@type\":\"sun.util.calendar.ZoneInfo\",\"zone\":\"EST\"}";
-        JsonReader jr = new JsonReader(new ByteArrayInputStream(json.getBytes()), new ReadOptions());
+        JsonReader jr = new JsonReader(new FastByteArrayInputStream(json.getBytes()), new ReadOptions());
         TimeZone tz = jr.readObject(TimeZone.class);
         assertNotNull(tz);
         assertEquals("EST", tz.getID());
@@ -226,11 +225,11 @@ public class ConstructorTest
     {
         Canine dog = new Canine("Eddie");
         String json = TestUtil.toJson(dog);
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(json.getBytes());
+        FastByteArrayInputStream inputStream = new FastByteArrayInputStream(json.getBytes());
         Canine eddie = JsonIo.toObjects(inputStream, new ReadOptions(), null);
         assert eddie.getName().equals("Eddie");
 
-        inputStream = new ByteArrayInputStream(json.getBytes());
+        inputStream = new FastByteArrayInputStream(json.getBytes());
         Map<String, Object> dogMap = (Map) JsonReader.toMaps(inputStream, new ReadOptions().returnType(ReturnType.JSON_VALUES));
         assert dogMap.get("name").equals("Eddie");
     }

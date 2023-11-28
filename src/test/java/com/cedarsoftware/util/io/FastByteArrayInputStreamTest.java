@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class FastByteArrayInputStreamTest {
 
     @Test
-    public void testReadSingleByte() {
+    void testReadSingleByte() {
         byte[] data = {1, 2, 3};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
 
@@ -23,7 +23,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testReadArray() {
+    void testReadArray() {
         byte[] data = {4, 5, 6, 7};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
         byte[] buffer = new byte[4];
@@ -34,7 +34,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testReadArrayWithOffset() {
+    void testReadArrayWithOffset() {
         byte[] data = {8, 9, 10, 11, 12};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
         byte[] buffer = new byte[5];
@@ -44,7 +44,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testSkip() {
+    void testSkip() {
         byte[] data = {1, 2, 3, 4, 5};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
 
@@ -54,7 +54,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testAvailable() {
+    void testAvailable() {
         byte[] data = {1, 2, 3};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
 
@@ -64,7 +64,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testMarkAndReset() {
+    void testMarkAndReset() {
         byte[] data = {1, 2, 3};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
 
@@ -77,7 +77,7 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testClose() throws IOException {
+    void testClose() throws IOException {
         byte[] data = {1, 2, 3};
         FastByteArrayInputStream stream = new FastByteArrayInputStream(data);
 
@@ -86,20 +86,20 @@ public class FastByteArrayInputStreamTest {
     }
 
     @Test
-    public void testReadFromEmptyStream() {
+    void testReadFromEmptyStream() {
         FastByteArrayInputStream stream = new FastByteArrayInputStream(new byte[0]);
         assertEquals(-1, stream.read());
     }
 
     @Test
-    public void testSkipPastEndOfStream() {
+    void testSkipPastEndOfStream() {
         FastByteArrayInputStream stream = new FastByteArrayInputStream(new byte[]{1, 2, 3});
         assertEquals(3, stream.skip(10));
         assertEquals(-1, stream.read());
     }
 
     @Test
-    public void testReadWithInvalidParameters() {
+    void testReadWithInvalidParameters() {
         FastByteArrayInputStream stream = new FastByteArrayInputStream(new byte[]{1, 2, 3});
         assertThrows(IndexOutOfBoundsException.class, () -> stream.read(new byte[2], -1, 4));
     }

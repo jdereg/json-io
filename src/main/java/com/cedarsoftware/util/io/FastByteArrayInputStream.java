@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Faster version of ByteArrayOutputStream that does not have synchronized methods and
- * also provides direct access to its internal buffer so that it does not need to be
- * duplicated when read.
+ * Faster version of ByteArrayInputStream that does not have synchronized methods.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -37,12 +35,10 @@ public class FastByteArrayInputStream extends InputStream {
         this.count = buf.length;
     }
 
-    @Override
     public int read() {
         return (pos < count) ? (buffer[pos++] & 0xff) : -1;
     }
 
-    @Override
     public int read(byte[] b, int off, int len) {
         if (b == null) {
             throw new NullPointerException();
@@ -64,7 +60,6 @@ public class FastByteArrayInputStream extends InputStream {
         return len;
     }
 
-    @Override
     public long skip(long n) {
         long k = count - pos;
         if (n < k) {
@@ -75,27 +70,22 @@ public class FastByteArrayInputStream extends InputStream {
         return k;
     }
 
-    @Override
     public int available() {
         return count - pos;
     }
 
-    @Override
     public void mark(int readLimit) {
         mark = pos;
     }
 
-    @Override
     public void reset() {
         pos = mark;
     }
 
-    @Override
     public boolean markSupported() {
         return true;
     }
 
-    @Override
     public void close() throws IOException {
         // Optionally implement if resources need to be released
     }

@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -273,7 +272,7 @@ public class JsonReader implements Closeable, ReaderContext
         if (json == null) {
             return null;
         }
-        return toMaps(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
+        return toMaps(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
     }
 
     /**
@@ -325,7 +324,7 @@ public class JsonReader implements Closeable, ReaderContext
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(String json, ReadOptions readOptions) {
-        this(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
+        this(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
     }
 
     /**
@@ -359,7 +358,7 @@ public class JsonReader implements Closeable, ReaderContext
      *                    etc. If null, readOptions will use all defaults.
      */
     public JsonReader(ReadOptions readOptions) {
-        this(new ByteArrayInputStream(new byte[]{}), readOptions);
+        this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
 
     public <T> T readObject(Class<T> root)
