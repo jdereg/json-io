@@ -1,14 +1,18 @@
 package com.cedarsoftware.util.reflect;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.cedarsoftware.util.io.Convention;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.MethodFilter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -29,36 +33,14 @@ import com.cedarsoftware.util.io.Convention;
  */
 public class ReflectionUtils {
 
-    public static int ACCESSOR_MASK = Modifier.PUBLIC | Modifier.STATIC;
+    private static final Map<Class<?>, Map<String, Field>> fieldMetaCache = new ConcurrentHashMap<>();
+
+    private static final Map<Class<?>, Map<String, Field>> accesorMethodMetaCache = new ConcurrentHashMap<>();
 
     private ReflectionUtils() {
     }
 
-    /**
-     * Builds a list of methods with zero parameter methods taking precedence over overrides
-     * for a given single level class.
-     *
-     * @param classToTraverse - class to get the declared methods for
-     * @return Map of name of the method to the actual emthod
-     */
-    public static Map<String, Method> buildDeepAccessorMethods(Class<?> classToTraverse) {
-        Convention.throwIfNull(classToTraverse, "The classToTraverse cannot be null");
 
-        Map<String, Method> map = new LinkedHashMap<>();
-        Class<?> currentClass = classToTraverse;
-        while (currentClass != Object.class) {
-            Arrays.stream(currentClass.getDeclaredMethods())
-                    .filter(m -> m.getParameterCount() == 0 &&
-                            // filter out anything static and not public
-                            (m.getModifiers() & ACCESSOR_MASK) == Modifier.PUBLIC &&
-                            // class has to be public, too, or we cannot access
-                            Modifier.isPublic(m.getDeclaringClass().getModifiers()))
-                    .forEach(m -> map.put(m.getName(), m));
-            currentClass = currentClass.getSuperclass();
-        }
-
-        return map;
-    }
 
     /**
      * Builds a list of methods with zero parameter methods taking precedence over overrides
@@ -81,18 +63,29 @@ public class ReflectionUtils {
      * @param method2 - 2nd method to compare
      * @return in the case over overloads choose the method with 0 parameters.
      */
-    public static Method zeroParameterMethodPreference(Method method1, Method method2) {
-        return method1.getParameterCount() == 0 ? method1 : method2;
+    public static Method oneParameterMethodPreference(Method method1, Method method2) {
+        return method1.getParameterCount() == 1 ? method1 : method2;
+    }
+
+    public static List<Method> buildFilteredMwthodList(Class<?> c, List<MethodFilter> filters, Set<String> exclusions) {
+        final Method[] methods = c.getDeclaredMethods();
+
+        return Arrays.stream(methods)
+                .filter(method -> !exclusions.contains(method.getName()))
+                .filter(method -> filters.stream().noneMatch(f -> f.filter(method)))
+                .collect(Collectors.toList());
     }
 
     /**
-     * Binary Operator that returns a method with zero parameters on conflict.
-     *
-     * @param method1 - 1st method to compare
-     * @param method2 - 2nd method to compare
-     * @return in the case over overloads choose the method with 0 parameters.
+     * @param c Class instance
+     * @return list of fields filtered by filters
      */
-    public static Method oneParameterMethodPreference(Method method1, Method method2) {
-        return method1.getParameterCount() == 1 ? method1 : method2;
+    public static List<Field> buildFilteredFields(Class<?> c, List<FieldFilter> filters, Set<String> excluded) {
+        final Field[] fields = c.getDeclaredFields();
+
+        return Arrays.stream(fields)
+                .filter(field -> !excluded.contains(field.getName()))
+                .filter(field -> filters.stream().noneMatch(f -> f.filter(field)))
+                .collect(Collectors.toList());
     }
 }

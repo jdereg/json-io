@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -14,8 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
-
-import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -79,7 +79,7 @@ public class ReadOptions {
         // ClassFactories
         BASE_CLASS_FACTORIES.putAll(loadClassFactory());
         BASE_READERS.putAll(loadReaders());
-        loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
+        BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("aliases.txt"));
         BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
         BASE_NON_REFS.addAll(WriteOptions.loadNonRefs());
     }
@@ -706,8 +706,7 @@ public class ReadOptions {
      * @return Map<Class<?>, JsonReader.ClassFactory> containing the resolved Class -> JsonClassFactory instance.
      */
     private static Map<Class<?>, JsonReader.ClassFactory> loadClassFactory() {
-        Map<String, String> map = new LinkedHashMap<>();
-        MetaUtils.loadMapDefinition(map, "classFactory.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("classFactory.txt");
         Map<Class<?>, JsonReader.ClassFactory> factories = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
@@ -740,8 +739,7 @@ public class ReadOptions {
      * @return Map<Class<?>, JsonReader.JsonClassReader> containing the resolved Class -> JsonClassReader instance.
      */
     private static Map<Class<?>, JsonReader.JsonClassReader> loadReaders() {
-        Map<String, String> map = new LinkedHashMap<>();
-        MetaUtils.loadMapDefinition(map, "customReaders.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("customReaders.txt");
         Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
@@ -771,8 +769,7 @@ public class ReadOptions {
      * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, Class<?>> loadCoercedTypes() {
-        Map<String, String> map = new LinkedHashMap<>();
-        MetaUtils.loadMapDefinition(map, "coercedTypes.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("coercedTypes.txt");
         Map<Class<?>, Class<?>> coerced = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 

@@ -1,17 +1,20 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Arrays;
 import java.util.HashSet;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.MismatchedGetter;
-import com.cedarsoftware.util.reflect.models.Permission;
-import com.cedarsoftware.util.reflect.models.SecurityGroup;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.FoodType;
+import com.cedarsoftware.util.io.models.MismatchedGetter;
+import com.cedarsoftware.util.io.models.ObjectSerializationIssue;
+import com.cedarsoftware.util.reflect.models.Permission;
+import com.cedarsoftware.util.reflect.models.SecurityGroup;
 
 class SerializationErrorTests {
 
@@ -89,6 +92,16 @@ class SerializationErrorTests {
         assertThat(actual.getPermissions()).containsExactlyInAnyOrder(
                 new Permission(89L, "ALLOW_VIEW", "Allow viewing"),
                 new Permission(90L, "ALLOW_MOVING_MONEY", "Allow moving money"));
+    }
+
+    @Test
+    void testSerialization_whereDisplay_hasGetterOfDifferentType() {
+        ObjectSerializationIssue o = new ObjectSerializationIssue();
+        o.setFoodType(FoodType.MILKS);
+
+        ObjectSerializationIssue actual = JsonIo.deepCopy(o);
+
+        assertThat(actual.getFoodType()).isEqualTo(FoodType.MILKS);
     }
 
     @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")

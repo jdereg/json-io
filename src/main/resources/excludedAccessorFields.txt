@@ -1,0 +1,3 @@
+java.lang.Throwable = backtrace,depth,suppressedExceptions,stackTrace
+java.lang.StackTraceElement = declaringClassObject,format
+sun.util.calendar.ZoneInfo = rawOffset,rawOffsetDiff,checksum,dstSavings,transitions,offsets,simpleTimeZoneParams,willGMTOffsetChange,dirty

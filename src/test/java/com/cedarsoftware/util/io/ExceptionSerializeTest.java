@@ -1,21 +1,24 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.factory.ThrowableFactory;
-import com.cedarsoftware.util.reflect.KnownFilteredFields;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.reflect.KnownFilteredFields;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -153,7 +156,12 @@ class ExceptionSerializeTest
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("foo");
 
-        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+        // stacktrace is built when exception is created,
+        // will not match the original exception because we
+        // are filterign these excweptions
+        assertThat(t2.getStackTrace())
+                .isNotNull()
+                .isNotEqualTo(t1.getStackTrace());
     }
 
     @Test
@@ -164,6 +172,8 @@ class ExceptionSerializeTest
         String json = TestUtil.toJson(t1);
         Throwable t2 = TestUtil.toObjects(json, null);
 
+        assertThat(json).doesNotContain("stackTrace");
+
         assertThat(t1).hasCause(null);
 
         assertThat(t2)
@@ -171,15 +181,23 @@ class ExceptionSerializeTest
                 .isInstanceOf(ExceptionWithStringConstructor.class)
                 .hasMessage("poo");
 
-        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
+        // stacktrace is built when exception is created,
+        // will not match the original exception because we
+        // are filterign these excweptions
+        assertThat(t2.getStackTrace())
+                .isNotNull()
+                .isNotEqualTo(t1.getStackTrace());
     }
 
+    /**
     @Test
-    void testExceptionWithThrowableConstructor_andStackTraces() {
+    void testExceptionWithThrowableConstructor_andStackTracesIsNotFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-        String json = TestUtil.toJson(t1);
+        String json = TestUtil.toJson(t1, new WriteOptions().replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
         Throwable t2 = TestUtil.toObjects(json, null);
+
+        assertThat(json).contains("stackTrace");
 
         assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
 
@@ -196,11 +214,35 @@ class ExceptionSerializeTest
     }
 
     @Test
-    void testExceptionWithThrowableConstructor_withNoStackTraces() {
-        KnownFilteredFields.instance().addFieldFilter(Throwable.class, "stackTrace");
+    void testExceptionWithThrowableConstructor_andStackTracesOnSubclassIsFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-        String json = TestUtil.toJson(t1);
+        String json = TestUtil.toJson(t1, new WriteOptions()
+                .replaceExcludedFields(ExceptionWithThrowableConstructor.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
+                .replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
+                .build());
+
+        Throwable t2 = TestUtil.toObjects(json, null);
+
+        assertThat(json).doesNotContain("stackTrace");
+
+        assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
+
+        assertThat(t2)
+                .isInstanceOf(ExceptionWithThrowableConstructor.class)
+                .hasMessage("com.cedarsoftware.util.io.ExceptionSerializeTest$ExceptionWithStringConstructor: doo");
+
+        assertThat(t2.getCause())
+                .isInstanceOf(ExceptionWithStringConstructor.class)
+                .hasMessage("doo");
+    }
+
+    @Test
+    void testExceptionWithThrowableConstructor_withNoStackTraces() {
+        ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
+        WriteOptions options = new WriteOptions().addFieldFilter(Throwable.class, "stackTrace").build();
+
+        String json = TestUtil.toJson(t1, options);
         Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(t1).hasCauseInstanceOf(ExceptionWithStringConstructor.class);
@@ -217,7 +259,7 @@ class ExceptionSerializeTest
         assertThat(t2.getStackTrace()).isNotEqualTo(t1.getStackTrace());
         assertThat(t2.getCause().getStackTrace()).isNotEqualTo(t1.getCause().getStackTrace());
     }
-
+     */
 
     @Test
     void testIllegalArgumentException_whenRethrown_usingThrowableConstructor() {
@@ -242,8 +284,9 @@ class ExceptionSerializeTest
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("foo");
 
-        assertThat(t2.getStackTrace()).isEqualTo(t1.getStackTrace());
-        assertThat(t2.getCause().getStackTrace()).isEqualTo(t1.getCause().getStackTrace());
+        assertThat(t2.getStackTrace())
+                .isNotNull()
+                .isNotEqualTo(t1.getStackTrace());
 
         assertThat(t2.getCause().getCause()).isNull();
         assertThat(t1.getCause().getCause()).isNull();

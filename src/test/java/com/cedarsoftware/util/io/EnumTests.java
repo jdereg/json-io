@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +15,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.models.FoodType;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -316,13 +319,20 @@ class EnumTests {
 
     @ParameterizedTest
     @EnumSource(EnumWithValueField.class)
-    void testEnum_thatHasValueField_parsedAsPrimitive() {
-        EnumWithValueField mc = EnumWithValueField.FOO;
-
-        String json = TestUtil.toJson(mc, new WriteOptions());
+    void testEnum_thatHasValueField_parsedAsPrimitive(Enum<EnumWithValueField> item) {
+        String json = TestUtil.toJson(item, new WriteOptions());
         EnumWithValueField actual = TestUtil.toObjects(json, null);
 
-        assertThat(actual).isEqualTo(EnumWithValueField.FOO);
+        assertThat(actual).isEqualTo(item);
+    }
+
+    @ParameterizedTest
+    @EnumSource(FoodType.class)
+    void testEnum_valueProblems(Enum<FoodType> item) {
+        String json = TestUtil.toJson(item, new WriteOptions().writeEnumAsJsonObject(true));
+        FoodType actual = TestUtil.toObjects(json, new ReadOptions(), FoodType.class);
+
+        assertThat(actual).isEqualTo(item);
     }
 
 

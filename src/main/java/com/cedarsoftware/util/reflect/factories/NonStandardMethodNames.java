@@ -6,9 +6,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class NonStandardMethodNames {
 
-    private final Map<Class<?>, Map<String, String>> classToMapping = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Map<String, String>> classToMapping;
 
-    protected NonStandardMethodNames() {
+    public NonStandardMethodNames(Map<Class<?>, Map<String, String>> classToMapping) {
+        this.classToMapping = classToMapping;
     }
 
     public void addMapping(Class<?> c, String fieldName, String methodName) {
@@ -18,5 +19,9 @@ public class NonStandardMethodNames {
     public Optional<String> getMapping(Class<?> c, String fieldName) {
         Map<String, String> mapping = this.classToMapping.get(c);
         return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
+    }
+
+    public NonStandardMethodNames createCopy(boolean immutable) {
+        return new NonStandardMethodNames(this.classToMapping);
     }
 }

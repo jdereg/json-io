@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import com.cedarsoftware.util.ReturnType;
 
@@ -180,8 +181,9 @@ public class JsonIo {
         }
     }
 
+
     /**
-     * Convert a root JsonObject that represents parsed JSON, into an actual Java object.  
+     * Convert a root JsonObject that represents parsed JSON, into an actual Java object.
      * @param rootType The class that represents, in Java, the root of the underlying JSON from which the JsonObject
      *                 was loaded.
      * @return a typed Java instance object graph.
@@ -237,11 +239,13 @@ public class JsonIo {
      * @param writeOptions WriteOptions feature settings. Can be null for default WriteOptions.
      * @return A new, duplicate instance of the original.
      */
+    @SuppressWarnings("unchecked")
     public static <T> T deepCopy(Object source, ReadOptions readOptions, WriteOptions writeOptions) {
         if (source == null) {
             // They asked to copy null.  The copy of null is null.
             return null;
         }
+
         String json = toJson(source, writeOptions);
         return (T) toObjects(json, readOptions, source.getClass());
     }

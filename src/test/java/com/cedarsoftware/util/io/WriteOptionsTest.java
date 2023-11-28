@@ -1,5 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
@@ -11,16 +19,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.cedarsoftware.util.reflect.Accessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.reflect.Accessor;
 
 class WriteOptionsTest {
 
@@ -219,42 +221,42 @@ class WriteOptionsTest {
     }
 
     @Test
-    void testExcludedFields()
+    void testExcludedFields_containsBaseExclusions() {
+        Collection<String> fieldNames = new WriteOptions().getExcludedFieldsPerClass(Throwable.class);
+
+        assertThat(fieldNames)
+                .hasSize(4);
+    }
+
+    @Test
+    void testExcludedFields_subclassPicksUpSuperclassExclusions() {
+        Collection<String> fieldNames = new WriteOptions().getExcludedFieldsPerClass(Exception.class);
+
+        assertThat(fieldNames)
+                .hasSize(4);
+    }
+
+    @Test
+    void testExcludeFields_containsUniqueFieldNames()
     {
-        Map<Class<?>, Set<String>> map = options.getExcludedFieldsPerAllClasses();
-        assert map.isEmpty();
         options.addExcludedField(String.class, "dog");
-        options.addExcludedFields(String.class, MetaUtils.setOf("cat", "bird"));
-        options.addExcludedField(Integer.class, "really?");
-        assert options.getExcludedFields(String.class).size() == 3;
-        map = options.getExcludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert map.containsKey(String.class);
-        assert map.containsKey(Integer.class);
+        options.addExcludedFields(String.class, MetaUtils.setOf("dog", "cat"));
 
-        Set<Accessor> accessors = options.getExcludedAccessors(String.class);
-        assert accessors.isEmpty();
+        assertThat(options.getExcludedFieldsPerClass(String.class))
+                .hasSize(2);
+    }
 
-        options.build();
+    @Test
+    void testExcludeFields_addsNewExclusionsToBase() {
+        options.addExcludedField(String.class, "dog");
+        options.addExcludedFields(String.class, MetaUtils.setOf("dog", "cat"));
+        options.addExcludedFields(Integer.class, MetaUtils.setOf("fly"));
 
-        accessors = options.getExcludedAccessors(String.class);
-        assert accessors.isEmpty();
+        Collection<String> set = options.getExcludedFieldsPerClass(String.class);
+        assertThat(set)
+                .hasSize(2)
+                .contains("dog", "cat");
 
-        assert options.getExcludedFields(String.class).containsAll(MetaUtils.setOf("dog", "cat", "bird"));
-        assert options.getExcludedFields(Integer.class).containsAll(MetaUtils.setOf("really?"));
-        assertThrows(JsonIoException.class, () -> options.addExcludedField(String.class, "dog"));
-        assertThrows(JsonIoException.class, () -> options.addExcludedFields(String.class, MetaUtils.setOf("cat", "bird")));
-        map = options.getExcludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert map.containsKey(String.class);
-        assert map.containsKey(Integer.class);
-
-        WriteOptions copy = new WriteOptions(options);
-        assert !copy.isBuilt();
-        map = copy.getExcludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert copy.getExcludedFields(String.class).containsAll(MetaUtils.setOf("dog", "cat", "bird"));
-        assert copy.getExcludedFields(Integer.class).containsAll(MetaUtils.setOf("really?"));
     }
 
     @Test

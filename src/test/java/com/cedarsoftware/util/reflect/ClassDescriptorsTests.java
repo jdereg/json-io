@@ -21,7 +21,7 @@ class ClassDescriptorsTests {
     @Test
     void testGetClassDescriptor_whereSomeFieldsHaveAccessorsAndOthersDoNot() {
 
-        Map<String, Accessor> accessors = ClassDescriptors.instance().getDeepAccessorMap(PrivateFinalObject.class);
+        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(PrivateFinalObject.class);
 
         assertThat(accessors).hasSize(4);
         assertThat(accessors.get("x").isPublic()).isFalse();
@@ -36,7 +36,7 @@ class ClassDescriptorsTests {
 
     @Test
     void testGetClassDescriptor_onEnumDefinitionClass_findsName() {
-        Map<String, Accessor> accessors = ClassDescriptors.instance().getDeepAccessorMap(ColorEnum.class);
+        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(ColorEnum.class);
         assertThat(accessors).hasSize(1);
         assertThat(accessors.get("name").isPublic()).isTrue();
         assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
@@ -44,7 +44,7 @@ class ClassDescriptorsTests {
 
     @Test
     void testGetClassDescriptor_onEnumClass() {
-        Map<String, Accessor> accessors = ClassDescriptors.instance().getDeepAccessorMap(Enum.class);
+        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(Enum.class);
 
         assertThat(accessors).hasSize(1);
         assertThat(accessors.get("name").isPublic()).isTrue();

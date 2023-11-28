@@ -1,0 +1,8 @@
+java.lang.Enum = name:name
+java.lang.Throwable = detailMessage:getMessage
+java.lang.StackTraceElement = declaringClass:getClassName
+java.time.YearMonth = month:getMonthValue
+java.time.Year = year:getValue
+java.time.Duration = nanos:getNano
+java.time.Instant = seconds:getEpochSecond,nanos:getNano
+java.time.MonthDay = month:getMonthValue,day:getDayOfMonth

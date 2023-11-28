@@ -1,17 +1,36 @@
 package com.cedarsoftware.util.io;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.AccessorFactory;
+import com.cedarsoftware.util.reflect.ReflectionUtils;
+import com.cedarsoftware.util.reflect.factories.MethodAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.NonStandardMethodNames;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.MethodFilter;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
+import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
+import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -64,16 +83,39 @@ public class WriteOptions {
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
-    private Map<Class<?>, Set<String>> excludedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
     private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+
+    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
+
+    private static final Map<Class<?>, Map<String, Method>> deepMethodCache = new ConcurrentHashMap<>();
+
+    private static final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
+
+    private List<FieldFilter> fieldFilters;
+    private List<MethodFilter> methodFilters;
+    private List<AccessorFactory> accessorFactories;
+
+    private Set<String> globallyFilteredMethodNames;
+
+
+    private Map<Class<?>, Set<String>> excludedFieldNames;
+
+    private Map<Class<?>, Collection<String>> deepExcludedFields = new ConcurrentHashMap<>();
+
+    private NonStandardMethodNames nonStandardMappings;
+    private final Map<Class<?>, Map<String, Accessor>> deepAccessorCache = new ConcurrentHashMap<>();
+
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
+
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
-    // Runtime cache (not feature options)
+
+    // Runtime cache (not feature options), since looking up writers can be expensive
+    // when one does not exist, we cache the write or a nullWriter if one does not exist.
     private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
     
     private boolean built = false;
@@ -112,6 +154,25 @@ public class WriteOptions {
      * Start with default options
      */
     public WriteOptions() {
+
+        this.globallyFilteredMethodNames = new ConcurrentSkipListSet<>(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
+        this.excludedFieldNames = new ConcurrentHashMap<>(MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt"));
+
+        this.nonStandardMappings = new NonStandardMethodNames(loadNonStandardMethodNames());
+
+
+        this.fieldFilters = new ArrayList<>();
+        this.fieldFilters.add(new StaticFieldFilter());
+        this.fieldFilters.add(new GroovyFieldFilter());
+        this.fieldFilters.add(new EnumFieldFilter());
+
+        this.methodFilters = new ArrayList<>();
+        this.methodFilters.add(new AccessorMethodFilter());
+        this.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
+
+        this.accessorFactories = new ArrayList<>();
+        this.accessorFactories.add(new MethodAccessorFactory());
+
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
         aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
@@ -125,6 +186,7 @@ public class WriteOptions {
      * @param other WriteOptions - source to copy from.
      */
     public WriteOptions(WriteOptions other) {
+
         shortMetaKeys = other.shortMetaKeys;
         showTypeInfo = other.showTypeInfo;
         enumWriter = other.enumWriter;
@@ -142,11 +204,20 @@ public class WriteOptions {
         nonRefClasses.addAll(other.nonRefClasses);
         writerCache.putAll(other.writerCache);
 
+
+        this.excludedFieldNames = new ConcurrentHashMap<>(other.excludedFieldNames);
+        this.globallyFilteredMethodNames = new ConcurrentSkipListSet<>(other.globallyFilteredMethodNames);
+        this.nonStandardMappings = (other.nonStandardMappings.createCopy(false));
+
+        this.fieldFilters = other.fieldFilters.stream().map(f -> f.createCopy(false)).collect(Collectors.toList());
+        this.methodFilters = other.methodFilters.stream().map(m -> m.createCopy(false)).collect(Collectors.toList());
+        this.accessorFactories = other.accessorFactories.stream().map(m -> m.createCopy(false)).collect(Collectors.toList());
+
+
         // Need your own Set instance here per Class, no references to the copied Set.
-        includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.includedAccessors, false);
-        excludedFields = (Map<Class<?>, Set<String>>) dupe(other.excludedFields, false);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
+        includedFields = (Map<Class<?>, Set<String>>) MetaUtils.dupe(other.includedFields, false);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(other.includedAccessors, false);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(other.excludedAccessors, false);
     }
 
     /**
@@ -692,7 +763,9 @@ public class WriteOptions {
      * @return WriteOptions for chained access.
      */
     public WriteOptions addExcludedField(Class<?> clazz, String excludedField) {
-        addExcludedFields(clazz, MetaUtils.setOf(excludedField));   // check sealed happens there.
+        throwIfBuilt();
+        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedField);
+        this.clearCaches();
         return this;
     }
 
@@ -703,13 +776,13 @@ public class WriteOptions {
      */
     public WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
         throwIfBuilt();
-        this.excludedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
-        return copyFieldsToAccessors(clazz, excludedFields, excludedAccessors);
+        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
+        this.clearCaches();
+        return this;
     }
 
     private WriteOptions copyFieldsToAccessors(Class<?> clazz, Collection<String> fields, Map<Class<?>, Set<Accessor>> accessors) {
-        ClassDescriptors classDescriptors = ClassDescriptors.instance();
-        Map<String, Accessor> accessorMap = classDescriptors.getDeepAccessorMap(clazz);
+        Map<String, Accessor> accessorMap = this.getDeepAccessorMap(clazz);
 
         for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
             if (fields.contains(acessorEntry.getKey())) {
@@ -721,44 +794,15 @@ public class WriteOptions {
     }
 
     /**
-     * @param excludedFields Map of Class's mapped to Collection of String field names to exclude from written JSON.
+     * @param excludedFieldNames Map of Class's mapped to Collection of String field names to exclude from written JSON.
      * @return WriteOptions for chained access.
      */
-    public WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFields) {
+    public WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFieldNames) {
         throwIfBuilt();
-        for (Map.Entry<Class<?>, Collection<String>> entry : excludedFields.entrySet()) {
+        for (Map.Entry<Class<?>, Collection<String>> entry : excludedFieldNames.entrySet()) {
             addExcludedFields(entry.getKey(), entry.getValue());
         }
         return this;
-    }
-
-    /**
-     * Get the list of fields associated to the passed in class that are to be excluded in the written JSON.
-     * @param clazz Class for which the fields to be excluded in JSON output will be returned.
-     * @return Set of Strings field names associated to the passed in class or an empty
-     * Set if no fields.  This is the list of fields to be excluded in the written JSON for the given class.
-     */
-    @SuppressWarnings("unchecked")
-    public Set<String> getExcludedFields(Class<?> clazz) {
-        return (Set<String>) getItemsForClass(clazz, excludedFields);
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of fields to be excluded when serialized to JSON.
-     */
-    public Map<Class<?>, Set<String>> getExcludedFieldsPerAllClasses() {
-        return getClassSetMapFields(excludedFields);
-    }
-
-    /**
-     * Get the list of Accessors associated to the passed in class that are to be excluded in the written JSON.
-     * @param clazz Class for which the Accessors to be excluded in JSON output will be returned.
-     * @return Set of Strings Accessor names associated to the passed in class or an empty
-     * Set if no Accessors.  This is the list of accessors to be excluded in the written JSON for the given class.
-     */
-    @SuppressWarnings("unchecked")
-    public Set<Accessor> getExcludedAccessors(Class<?> clazz) {
-        return (Set<Accessor>) getItemsForClass(clazz, excludedAccessors);
     }
 
     private Set<?> getItemsForClass(Class<?> clazz, Map<?, ? extends Set<?>> classesToSets)
@@ -777,9 +821,28 @@ public class WriteOptions {
         return getFilteredAccessors(c, includedAccessors);
     }
 
-    public Collection<Accessor> getExcludedAccessorsForClass(final Class<?> c) {
-        return getFilteredAccessors(c, excludedAccessors);
+    public Collection<String> getExcludedFieldsPerClass(final Class<?> c) {
+        return this.getDeepExcludedFields(c);
     }
+
+    public Collection<String> getDeepExcludedFields(final Class<?> c) {
+        return this.deepExcludedFields.computeIfAbsent(c, this::buildDeepExcludedFields);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Collection<String> buildDeepExcludedFields(final Class<?> c) {
+        final Set<String> exclusions = new LinkedHashSet<>();
+        Class<?> curr = c;
+
+        while (curr != Object.class) {
+            exclusions.addAll(this.excludedFieldNames.getOrDefault(curr, Collections.emptySet()));
+            curr = curr.getSuperclass();
+        }
+
+        return exclusions.isEmpty() ? Collections.emptySet() : exclusions;
+
+    }
+
 
     // This is replacing the reverse walking system that compared all cases for distance
     // since we're caching all classes and their sub-objects correctly we should be ok removing
@@ -790,6 +853,26 @@ public class WriteOptions {
 
         while (curr != null) {
             Collection<Accessor> accessorSet = accessors.get(curr);
+
+            if (accessorSet != null) {
+                accessorSets.addAll(accessorSet);
+            }
+
+            curr = curr.getSuperclass();
+        }
+
+        return accessorSets;
+    }
+
+    // This is replacing the reverse walking system that compared all cases for distance
+    // since we're caching all classes and their sub-objects correctly we should be ok removing
+    // the distance check since we walk up the chain of the class being written.
+    private static Collection<String> getFilteredFieldNames(final Class<?> c, final Map<Class<?>, ? extends Collection<String>> fields) {
+        Class<?> curr = c;
+        Set<String> accessorSets = new LinkedHashSet<>();
+
+        while (curr != null) {
+            Collection<String> accessorSet = fields.get(curr);
 
             if (accessorSet != null) {
                 accessorSets.addAll(accessorSet);
@@ -897,34 +980,20 @@ public class WriteOptions {
      */
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
-        includedFields = (Map<Class<?>, Set<String>>) dupe(includedFields, true);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(includedAccessors, true);
-        excludedFields = (Map<Class<?>, Set<String>>) dupe(excludedFields, true);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(excludedAccessors, true);
+        includedFields = (Map<Class<?>, Set<String>>) MetaUtils.dupe(includedFields, true);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(includedAccessors, true);
+        excludedFieldNames = (Map<Class<?>, Set<String>>) MetaUtils.dupe(excludedFieldNames, true);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(excludedAccessors, true);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
         nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
         customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
+        globallyFilteredMethodNames = Collections.unmodifiableSet(new LinkedHashSet<>(globallyFilteredMethodNames));
+        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
+                .map(field -> field.createCopy(true))
+                .collect(Collectors.toList()));
         this.built = true;
         return this;
-    }
-
-    private static Map<Class<?>,? extends Set<?>> dupe(Map<Class<?>, ? extends Set<?>> other, boolean unmodifiable)
-    {
-        Map<Class<?>, Set<?>> newItemsAssocToClass = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>,?> entry : other.entrySet()) {
-            Set<?> itemsAssocToClass = new LinkedHashSet<>((Collection<?>)entry.getValue());
-            if (unmodifiable) {
-                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
-            } else {
-                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> itemsAssocToClass);
-            }
-        }
-        if (unmodifiable) {
-            return Collections.unmodifiableMap(newItemsAssocToClass);
-        } else {
-            return newItemsAssocToClass;
-        }
     }
 
     /**
@@ -1002,8 +1071,7 @@ public class WriteOptions {
      * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
-        Map<String, String> map = new LinkedHashMap<>();
-        MetaUtils.loadMapDefinition(map, "customWriters.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("customWriters.txt");
         Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
         ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
@@ -1033,13 +1101,42 @@ public class WriteOptions {
     }
 
     /**
+     * Load custom writer classes based on contents of resources/customWriters.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     *
+     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    private static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames() {
+        Map<String, String> map = MetaUtils.loadMapDefinition("nonStandardAccessors.txt");
+        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String mappings = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " not defined in the JVM");
+                continue;
+            }
+
+            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
+            for (String split : mappings.split(",")) {
+                String[] parts = split.split(":");
+                mapping.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+        return nonStandardMapping;
+    }
+
+
+    /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      * @return Set<Class<?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
     static Set<Class<?>> loadNonRefs() {
-        Set<String> set = new LinkedHashSet<>();
         Set<Class<?>> nonRefs = new LinkedHashSet<>();
-        MetaUtils.loadSetDefinition(set, "nonRefs.txt");
+        Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
         set.forEach((className) -> {
             Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
             if (clazz == null) {
@@ -1049,4 +1146,125 @@ public class WriteOptions {
         });
         return nonRefs;
     }
+
+
+    ///// ACCESSOR PULL IN ???????
+
+    public Map<String, Accessor> getDeepAccessorMap(Class<?> classToTraverse) {
+        return this.deepAccessorCache.computeIfAbsent(classToTraverse, this::buildDeepAccessors);
+    }
+
+    public Collection<Accessor> getDeepAccessors(Class<?> c) {
+        return this.getDeepAccessorMap(c).values();
+    }
+
+    public void clearCaches() {
+        deepAccessorCache.clear();
+        deepMethodCache.clear();
+        deepFieldCache.clear();
+        methodCache.clear();
+    }
+
+    public void clearUnfilteredAccessorCache() {
+        methodCache.clear();
+    }
+
+    private Map<String, Accessor> buildDeepAccessors(Class<?> c) {
+        final Map<String, Field> deepDeclaredFields = deepFieldCache.computeIfAbsent(c, this::buildDeepFieldMap);
+        final Map<String, Method> possibleMethods = deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
+        final Map<String, Accessor> accessorMap = new LinkedHashMap<>();
+
+        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
+
+            final Field field = entry.getValue();
+
+            String fieldName = entry.getKey();
+            String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
+
+            Optional<Accessor> accessor = this.accessorFactories.stream()
+                    .map(factory -> {
+                        try {
+                            return factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
+                        } catch (Throwable t) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .findFirst();
+
+
+
+            //  If no accessor was found, let's use the default tried and true field accessor.
+            accessorMap.put(key, accessor.orElseGet(() -> {
+                try {
+                    return new Accessor(field, key);
+                } catch (ThreadDeath td) {
+                    throw td;
+                } catch (Throwable t) {
+                    return null;
+                }
+            }));
+        }
+
+        return accessorMap;
+    }
+
+    /**
+     * Builds a list of methods with zero parameter methods taking precedence over overrides
+     * for a given single level class.
+     *
+     * @param classToTraverse - class to get the declared methods for
+     * @return Map of name of the method to the actual emthod
+     */
+    public Map<String, Method> buildDeepMethods(Class<?> classToTraverse) {
+        Convention.throwIfNull(classToTraverse, "The classToTraverse cannot be null");
+
+        Map<String, Method> map = new LinkedHashMap<>();
+        Class<?> currentClass = classToTraverse;
+
+        while (currentClass != Object.class) {
+            final List<Method> methods = this.getFilteredMethods(currentClass);
+            methods.forEach(m -> map.put(m.getName(), m));
+            currentClass = currentClass.getSuperclass();
+        }
+
+        return map;
+    }
+
+    public List<Method> getFilteredMethods(Class<?> c) {
+        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMwthodList(key, methodFilters, globallyFilteredMethodNames));
+    }
+
+    public Map<String, Field> buildDeepFieldMap(Class<?> c) {
+        final Map<String, Field> map = new LinkedHashMap<>();
+        final Set<String> exclusions = new LinkedHashSet<>();
+        Class<?> curr = c;
+
+        while (curr != Object.class) {
+
+            exclusions.addAll(this.excludedFieldNames.getOrDefault(curr, Collections.emptySet()));
+
+            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr, this.fieldFilters, exclusions);
+
+            fields.forEach(f -> {
+                String name = f.getName();
+                String key = map.containsKey(name) ? f.getDeclaringClass().getSimpleName() + '.' + name : name;
+                map.put(key, f);
+            });
+
+            curr = curr.getSuperclass();
+        }
+        return map;
+    }
+
+    public boolean addFilter(FieldFilter filter) {
+        clearCaches();
+        return this.fieldFilters.add(filter);
+    }
+
+    public boolean removeFilter(FieldFilter filter) {
+        clearCaches();
+        return this.fieldFilters.remove(filter);
+    }
+
 }
