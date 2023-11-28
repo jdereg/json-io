@@ -173,25 +173,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          */
         default void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
-
-    /**
-     * Convert a Java Object to a JSON String.
-     * @param item Object to convert to a JSON String.
-     * @param writeOptions (optional can be null for defaults).  Set WriteOptions Javadoc or Readme.md file in
-     *                    the GitHub project for details on all the write feature options.
-     * @return String containing JSON representation of passed in object root.
-     */
-    public static String toJson(Object item, WriteOptions writeOptions) {
-        try {
-            FastByteArrayOutputStream stream = new FastByteArrayOutputStream();
-            JsonWriter writer = new JsonWriter(stream, writeOptions);
-            writer.write(item);
-            writer.close();
-            return stream.toString();
-        } catch (Exception e) {
-            throw new JsonIoException("Unable to convert object to JSON", e);
-        }
-    }
     
     /**
      * @param out OutputStream to which the JSON will be written.  Uses the default WriteOptions.
