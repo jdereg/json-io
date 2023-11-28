@@ -61,11 +61,6 @@ public class Accessor {
         this.displayName = method.getName();
         this.isPublic = Modifier.isPublic(method.getModifiers());
 
-        //  if the declaring class is not accessible we won't have access to it.
-        if (!Modifier.isPublic(field.getDeclaringClass().getModifiers())) {
-            MetaUtils.trySetAccessible(method);
-        }
-
         this.accessor = MethodHandles.lookup().unreflect(method);
     }
 

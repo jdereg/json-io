@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -27,9 +30,8 @@ import java.util.Set;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import lombok.Getter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -173,7 +175,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          */
         default void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
-    
+
     /**
      * @param out OutputStream to which the JSON will be written.  Uses the default WriteOptions.
      * @see WriteOptions
@@ -830,15 +832,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
                 {
                     writePrimitive(value, value.getClass() != componentClass);
-                } else if (writeOptions.isNeverShowingType() && Primitives.isPrimitive(value.getClass()))
-                {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
-                    writeImpl(value, false);
-                }
-                else
-                {   // Specific Class-type arrays - only force type when
-                    // the instance is derived from array base class.
-                    boolean forceType = isForceType(value.getClass(), componentClass);
-                    writeImpl(value, forceType || writeOptions.isAlwaysShowingType());
+                } else {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
+                    writeImpl(value, !(writeOptions.isNeverShowingType() && Primitives.isPrimitive(value.getClass())) &&
+                            (isForceType(value.getClass(), componentClass) || writeOptions.isAlwaysShowingType()));
                 }
 
                 if (i != lenMinus1)

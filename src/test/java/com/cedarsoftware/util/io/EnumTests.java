@@ -453,7 +453,7 @@ class EnumTests {
         private final String val;
     }
 
-    private enum TestEnum4 {
+    public enum TestEnum4 {
         A, B, C;
 
         private int internal = 6;

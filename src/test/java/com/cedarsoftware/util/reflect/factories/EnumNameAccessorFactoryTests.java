@@ -26,7 +26,7 @@ class EnumNameAccessorFactoryTests extends AbstractAccessFactoryTest {
 
     @Test
     void create_whenIsEnumClass_canCreateAccessor() throws Throwable {
-        Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(Enum.class);
+        Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(Enum.class);
         Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), methodMap);
         assertThat(accessor).isNotNull().describedAs("not an enum");
     }
@@ -42,7 +42,7 @@ class EnumNameAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkFailedToCreateSituations")
     void create_whenBooleanIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls) throws Throwable {
-        final Map<String, Method> methodMap = ReflectionUtils.buildAccessorMap(cls);
+        final Map<String, Method> methodMap = ReflectionUtils.buildDeepAccessorMethods(cls);
 
         List<Accessor> list = Arrays.stream(cls.getDeclaredFields())
                 .map(field -> {
