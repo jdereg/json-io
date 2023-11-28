@@ -40,7 +40,7 @@ public class ZoneOffsetFactory implements JsonReader.ClassFactory {
     }
 
     protected ZoneOffset fromJsonObject(JsonObject job) {
-        String value = (String) job.get("value");
+        String value = (String) job.getValue();
         return value == null ? null : fromString(value);
     }
 
