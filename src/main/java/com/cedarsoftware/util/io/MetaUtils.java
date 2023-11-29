@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
-
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -55,6 +51,10 @@ import java.util.regex.Pattern;
 
 import com.cedarsoftware.util.io.factory.DateFactory;
 
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
+
 /**
  * This utility class has the methods mostly related to reflection related code.
  *
@@ -92,11 +92,9 @@ public class MetaUtils
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
-
+    private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
-
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
-
     private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
 
     static {
@@ -152,6 +150,15 @@ public class MetaUtils
         FROM_NULL.put(Float.class, 0.0f);
         FROM_NULL.put(char.class, '\u0000');
         FROM_NULL.put(Character.class, '\u0000');
+
+        prims.add(Byte.class);
+        prims.add(Integer.class);
+        prims.add(Long.class);
+        prims.add(Double.class);
+        prims.add(Character.class);
+        prims.add(Float.class);
+        prims.add(Boolean.class);
+        prims.add(Short.class);
     }
 
     /**
@@ -1153,4 +1160,32 @@ public class MetaUtils
         } catch (Throwable ignored) { }
     }
 
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
+     * Integer, Long, Boolean, etc. are considered primitives by this method.
+     */
+    public static boolean isPrimitive(Class c)
+    {
+        return c.isPrimitive() || prims.contains(c);
+    }
+    
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
+     * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
+     * considered 'logical' primitives is that they are immutable and therefore can be written without references
+     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape)
+     * of the object graph being written.
+     */
+    public static boolean isLogicalPrimitive(Class<?> c)
+    {
+        return  c.isPrimitive() ||
+                prims.contains(c) ||
+                String.class.isAssignableFrom(c) ||
+                Number.class.isAssignableFrom(c) ||
+                Date.class.isAssignableFrom(c) ||
+                c.isEnum() ||
+                c.equals(Class.class);
+    }
 }
