@@ -157,6 +157,16 @@ public class WriteOptions {
     }
 
     /**
+     * Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
+     * when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
+     * useful for small, immutable classes.
+     * @param clazz Class that will no longer be treated as referenceable when being written to JSON.
+     */
+    public static void addPermanentAlias(Class<?> clazz) {
+        BASE_NON_REFS.add(clazz);
+    }
+
+    /**
      * Call this method to add a custom JSON writer to json-io.  It will
      * associate the Class 'c' to the writer you pass in.  The writers are
      * found with isAssignableFrom().  If this is too broad, causing too
