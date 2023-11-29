@@ -1,18 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Arrays;
 import java.util.HashSet;
-
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.MismatchedGetter;
 import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SerializationErrorTests {
 
@@ -101,6 +100,6 @@ class SerializationErrorTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("errors/" + fileName);
+        return MetaUtils.fetchResource("errors/" + fileName);
     }
 }

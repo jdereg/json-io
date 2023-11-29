@@ -1,16 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<OffsetDateTime> {
     private static final ZoneOffset Z1 = ZoneOffset.UTC;
@@ -58,7 +57,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("offsetdatetime/" + fileName);
+        return MetaUtils.fetchResource("offsetdatetime/" + fileName);
     }
 
     @Override

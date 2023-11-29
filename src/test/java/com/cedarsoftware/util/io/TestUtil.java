@@ -1,10 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 
 import com.cedarsoftware.util.ReturnType;
@@ -36,21 +32,7 @@ import org.slf4j.LoggerFactory;
 public class TestUtil
 {
     final static Logger logger = LoggerFactory.getLogger(TestUtil.class);
-
-    public static String fetchResource(String name)
-    {
-        try
-        {
-            URL url = TestUtil.class.getResource("/" + name);
-            Path resPath = Paths.get(url.toURI());
-            return new String(Files.readAllBytes(resPath));
-        }
-        catch (Exception e)
-        {
-            throw new JsonIoException(e);
-        }
-    }
-
+    
     public static <T> T serializeDeserialize(T initial)
     {
         String json = toJson(initial);

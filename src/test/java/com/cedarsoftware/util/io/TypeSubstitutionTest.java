@@ -51,7 +51,8 @@ public class TypeSubstitutionTest
 
         LinkedHashMap<String, String> map1 = new LinkedHashMap<>(2);
         map1.put("java.util.LinkedHashMap", "lmap");
-        map1.put("com.cedarsoftware.util.io.TestTypeSubstitution$Person", "person");
+        map1.put("com.cedarsoftware.util.io.TypeSubstitutionTest$Person", "person");
+
         Map<String, String> types = map1;
         String json = TestUtil.toJson(p, new WriteOptions().aliasTypeNames(types));
         Person clone = TestUtil.toObjects(json, new ReadOptions().aliasTypeNames(types), null);

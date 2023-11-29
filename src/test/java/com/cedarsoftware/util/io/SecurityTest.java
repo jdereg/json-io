@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReflectionUtils;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -11,6 +7,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReflectionUtils;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -123,12 +123,12 @@ public class SecurityTest
     @Test
     public void testSecureReads()
     {
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/processBuilder.json"));
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/process.json"));
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/classLoader.json"));
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/constructor.json"));
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/method.json"));
-        verifyReadInstantiationSecurity(TestUtil.fetchResource("security/field.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/processBuilder.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/process.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/classLoader.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/constructor.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/method.json"));
+        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/field.json"));
     }
 
     private void verifyReadInstantiationSecurity(String json)

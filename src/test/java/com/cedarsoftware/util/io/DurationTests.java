@@ -143,6 +143,6 @@ class DurationTests {
 
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("duration/" + fileName);
+        return MetaUtils.fetchResource("duration/" + fileName);
     }
 }

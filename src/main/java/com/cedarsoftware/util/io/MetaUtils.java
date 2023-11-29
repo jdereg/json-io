@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
-
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -14,6 +10,9 @@ import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -52,6 +51,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -1093,5 +1096,16 @@ public class MetaUtils
      */
     public static int trimLength(final String s) {
         return (s == null) ? 0 : s.trim().length();
+    }
+
+    public static String fetchResource(String name)
+    {
+        try {
+            URL url = MetaUtils.class.getResource("/" + name);
+            Path resPath = Paths.get(url.toURI());
+            return new String(Files.readAllBytes(resPath));
+        } catch (Exception e) {
+            throw new JsonIoException("failed to load from resources:" + name, e);
+        }
     }
 }

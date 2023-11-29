@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReadOptions;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedLocalDate;
@@ -89,7 +90,7 @@ class LocalDateFactoryTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("localdate/" + fileName);
+        return MetaUtils.fetchResource("localdate/" + fileName);
     }
 
 

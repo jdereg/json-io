@@ -80,7 +80,7 @@ class PeriodTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("period/" + fileName);
+        return MetaUtils.fetchResource("period/" + fileName);
     }
 
 }

@@ -33,7 +33,7 @@ class BigJsonTest
     {
         for (int i=0; i < 2; i++)
         {
-            String json = TestUtil.fetchResource("big/big5D.json");
+            String json = MetaUtils.fetchResource("big/big5D.json");
             Map map = TestUtil.toObjects(json, null);
             assertEquals("big5D", map.get("ncube"));
             assertEquals(0L, map.get("defaultCellValue"));
@@ -47,7 +47,7 @@ class BigJsonTest
     {
         for (int i=0; i < 2; i++)
         {
-            String json = TestUtil.fetchResource("big/big5D.json");
+            String json = MetaUtils.fetchResource("big/big5D.json");
             Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
             assertEquals("big5D", map.get("ncube"));
             assertEquals(0L, map.get("defaultCellValue"));

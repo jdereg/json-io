@@ -18,24 +18,22 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TimeZone;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -110,9 +108,10 @@ public class ReadOptions {
     private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
     private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
+    private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
+    private static final Map<String, String> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private boolean built = false;
     // Runtime cache (not feature options)
     private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -184,57 +183,50 @@ public class ReadOptions {
 
         //  JVM Readers > 1.8
         addPossiblePermanentReader("java.lang.Record", new Readers.RecordReader());
+        
+        loadDefinitions(BASE_ALIAS_MAPPINGS, "aliases.txt");
+        loadDefinitions(BASE_COERCED_TYPES, "coercedTypes.txt");
+    }
 
-        // Coerced Types
-        addPermanentCoercedType("java.time.ZoneRegion", ZoneId.class);
-        addPermanentCoercedType("java.util.Arrays$ArrayList", ArrayList.class);
-        addPermanentCoercedType("java.util.LinkedHashMap$LinkedKeySet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.LinkedHashMap$LinkedValues", ArrayList.class);
-        addPermanentCoercedType("java.util.HashMap$KeySet", HashSet.class);
-        addPermanentCoercedType("java.util.HashMap$Values", ArrayList.class);
-        addPermanentCoercedType("java.util.TreeMap$KeySet", TreeSet.class);
-        addPermanentCoercedType("java.util.TreeMap$Values", ArrayList.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$KeySet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$KeySetView", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$Values", ArrayList.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentHashMap$ValuesView", ArrayList.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentSkipListMap$KeySet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.concurrent.ConcurrentSkipListMap$Values", ArrayList.class);
-        addPermanentCoercedType("java.util.IdentityHashMap$KeySet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.IdentityHashMap$Values", ArrayList.class);
-        addPermanentCoercedType("java.util.Collections$EmptyList", Collections.EMPTY_LIST.getClass());
-        addPermanentCoercedType("java.util.Collections$SingletonSet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.Collections$SingletonList", ArrayList.class);
-        addPermanentCoercedType("java.util.Collections$SingletonMap", LinkedHashMap.class);
-        addPermanentCoercedType("java.util.Collections$UnmodifiableRandomAccessList", ArrayList.class);
-        addPermanentCoercedType("java.util.Collections$UnmodifiableSet", LinkedHashSet.class);
-        addPermanentCoercedType("java.util.Collections$UnmodifiableMap", LinkedHashMap.class);
+    private static void loadDefinitions(Map<String, String> map, String resName) {
+        try {
+            String contents = MetaUtils.fetchResource(resName);
+            Scanner scanner = new Scanner(contents);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (!line.trim().startsWith("#")) {
+                    String[] parts = line.split(",");
+                    map.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+            scanner.close();
+        }  catch (Exception e) {
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a source String name, a comma, and an destination String, e.g.: java.lang.Integer,int");
+        }
     }
 
     /**
      * Start with default options.
      */
     public ReadOptions() {
-        // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
-        // TODO: This feature is broken until the aliasTypeNames are shared between ReadOptions/WriteOptions
-//        aliasTypeName("java.util.ArrayList", "ArrayList");
-//        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
+        // Load aliases from resource/aliases.txt
+        for (Map.Entry<String, String> entry : BASE_ALIAS_MAPPINGS.entrySet()) {
+            addUniqueAlias(entry.getKey(), entry.getValue());
+        }
 
-        aliasTypeName(Class.class, "class");
-        aliasTypeName(String.class, "string");
-        aliasTypeName(Date.class, "date");
+        // Load coerced types from resource/coerced.txt
+        for (Map.Entry<String, String> entry : BASE_COERCED_TYPES.entrySet()) {
+            Class<?> srcClass = MetaUtils.classForName(entry.getKey(), ReadOptions.class.getClassLoader());
+            Class<?> destClass = MetaUtils.classForName(entry.getValue(), ReadOptions.class.getClassLoader());
+            if (srcClass == null) {
+                throw new JsonIoException("Source coerced class not found: " + entry.getKey());
+            }
+            if (destClass == null) {
+                throw new JsonIoException("Destination coerced class not found: " + entry.getValue());
+            }
+            coercedTypes.put(srcClass, destClass);
+        }
 
-        // Use true primitive types for the primitive wrappers.
-        aliasTypeName(Byte.class, "byte");
-        aliasTypeName(Short.class, "short");
-        aliasTypeName(Integer.class, "int");
-        aliasTypeName(Long.class, "long");
-        aliasTypeName(Float.class, "float");
-        aliasTypeName(Double.class, "double");
-        aliasTypeName(Character.class, "char");
-        aliasTypeName(Boolean.class, "boolean");
-
-        coercedTypes.putAll(BASE_COERCED_TYPES);
         customReaderClasses.putAll(BASE_READERS);
         readerCache.putAll(BASE_READERS);
         classFactoryMap.putAll(BASE_CLASS_FACTORIES);
@@ -265,14 +257,11 @@ public class ReadOptions {
      * class to another during instance creation.  Examples of classes
      * that might need this are proxied classes such as HibernateBags, etc.
      * That you want to create as regular jvm collections.
-     * @param className String class name (fully qualified name) that will be coerced to another type.
-     * @param c Class to coerce to.  For example, java.util.Collections$EmptyList to java.util.ArrayList.
+     * @param sourceClass String class name (fully qualified name) that will be coerced to another type.
+     * @param destinationClass Class to coerce to.  For example, java.util.Collections$EmptyList to java.util.ArrayList.
      */
-    public static void addPermanentCoercedType(String className, Class<?> c) {
-        Class<?> clazz = MetaUtils.classForName(className, ReadOptions.class.getClassLoader());
-        if (clazz != null) {
-            BASE_COERCED_TYPES.put(clazz, c);
-        }
+    public static void addPermanentCoercedType(Class<?> sourceClass, Class<?> destinationClass) {
+        BASE_COERCED_TYPES.put(sourceClass.getName(), destinationClass.getName());
     }
 
     /**
@@ -466,7 +455,7 @@ public class ReadOptions {
     public ReadOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
         throwIfBuilt();
         this.aliasTypeNames.clear();
-        aliasTypeNames.forEach((key, value) -> this.aliasTypeNames.put(value, key));
+        aliasTypeNames.forEach(this::addUniqueAlias);
         return this;
     }
 
@@ -477,7 +466,7 @@ public class ReadOptions {
      */
     public ReadOptions aliasTypeName(Class<?> type, String alias) {
         throwIfBuilt();
-        aliasTypeNames.put(alias, type.getName());
+        addUniqueAlias(type.getName(), alias);
         return this;
     }
 
@@ -488,8 +477,25 @@ public class ReadOptions {
      */
     public ReadOptions aliasTypeName(String typeName, String alias) {
         throwIfBuilt();
-        aliasTypeNames.put(alias, typeName);
+        addUniqueAlias(typeName, alias);
         return this;
+    }
+
+    /**
+     * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
+     * @param type String fully qualified class name.
+     * @param alias String shorter alias name.
+     */
+    private void addUniqueAlias(String type, String alias) {
+        Class<?> clazz = MetaUtils.classForName(type, getClassLoader());
+        if (clazz == null) {
+            throw new JsonIoException("Unknown class: " + type + " cannot be added to the alias list.");
+        }
+        String existType = aliasTypeNames.get(alias);
+        if (existType != null) {
+            throw new JsonIoException("Non-unique alias: " + alias + " attempted assign to " + type + ", but is already assigned to: " + existType);
+        }
+        aliasTypeNames.put(alias, type);
     }
 
     /**

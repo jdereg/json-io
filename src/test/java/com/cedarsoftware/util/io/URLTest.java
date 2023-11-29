@@ -1,15 +1,15 @@
 package com.cedarsoftware.util.io;
 
+import java.net.URL;
+import java.util.List;
+import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import java.net.URL;
-import java.util.List;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,7 +43,7 @@ class URLTest
     @MethodSource("argumentsForOldFormatValidation")
     void testUrl_readingJsonWithOldFormat_stillWorks(String fileName, String expectedUrl) throws Exception
     {
-        String json = TestUtil.fetchResource("url/" + fileName);
+        String json = MetaUtils.fetchResource("url/" + fileName);
         URL actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.toString()).isEqualTo(expectedUrl);

@@ -239,7 +239,7 @@ public class TimeZoneTests
     @MethodSource("argumentsForOldFormatValidation")
     void testTimezone_readingJsonWithOldFormat_stillWorks(String fileName, String expectedTimeZone) throws Exception
     {
-        String json = TestUtil.fetchResource("timezone/" + fileName);
+        String json = MetaUtils.fetchResource("timezone/" + fileName);
         TimeZone actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.getID()).isEqualTo(expectedTimeZone);

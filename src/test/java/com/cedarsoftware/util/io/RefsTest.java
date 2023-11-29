@@ -230,7 +230,7 @@ class RefsTest
     @Test
     public void testRefChainAsJsonObjects()
     {
-        String json = TestUtil.fetchResource("references/chainRef.json");
+        String json = MetaUtils.fetchResource("references/chainRef.json");
         JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
@@ -252,7 +252,7 @@ class RefsTest
     {
         DateWithChildren dc = new DateWithChildren();
 
-        String json = TestUtil.fetchResource("references/chainRef.json");
+        String json = MetaUtils.fetchResource("references/chainRef.json");
         DateWithChildren root = TestUtil.toObjects(json, null);
         DateWithChildren[] children =  root.children;
         assert children.length == 6;

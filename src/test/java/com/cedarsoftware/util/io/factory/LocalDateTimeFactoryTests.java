@@ -1,21 +1,21 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.TestUtil;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTime> {
     private static Stream<Arguments> nonValueVariants() {
@@ -74,7 +74,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
     @Test
     public void testToughFormatToParse()
     {
-        String json = TestUtil.fetchResource("localdatetime/wideFormatSupport.json");
+        String json = MetaUtils.fetchResource("localdatetime/wideFormatSupport.json");
         LocalDateTime dt = TestUtil.toObjects(json, null);
         assert dt.getYear() == 2023;
         assert dt.getMonthValue() == 12;

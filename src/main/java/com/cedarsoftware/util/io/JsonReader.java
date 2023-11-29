@@ -367,16 +367,7 @@ public class JsonReader implements Closeable, ReaderContext
      * @return a typed Java instance that was serialized into JSON.
      */
     public static Object jsonObjectsToJava(JsonObject root, ReadOptions readOptions) {
-        ReadOptions localReadOptions;
-
-        if (readOptions == null) {
-            localReadOptions = new ReadOptions();
-        } else if (readOptions.isBuilt()) {
-            localReadOptions = new ReadOptions(readOptions);
-        } else {
-            localReadOptions = readOptions;
-        }
-        
+        ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
         localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
         JsonReader reader = new JsonReader(localReadOptions);
         return reader.convertParsedMapsToJava(root, null);

@@ -42,9 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Readers
 {
     private Readers () {}
-
-
-
+    
     public static class URLReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)

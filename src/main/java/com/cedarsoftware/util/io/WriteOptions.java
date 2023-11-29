@@ -220,12 +220,7 @@ public class WriteOptions {
         nonReferenceableItems.add(AtomicBoolean.class);
         nonReferenceableItems.add(AtomicInteger.class);
         nonReferenceableItems.add(AtomicLong.class);
-
-        // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
-        // TODO: This feature is broken until the aliasTypeNames are shared between ReadOptions/WriteOptions
-//        aliasTypeName("java.util.ArrayList", "ArrayList");
-//        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
-
+        
         aliasTypeName(Class.class, "class");
         aliasTypeName(String.class, "string");
         aliasTypeName(Date.class, "date");

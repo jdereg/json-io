@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReadOptions;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedZonedDateTime;
@@ -101,7 +102,7 @@ class ZonedDateTimeFactoryTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return TestUtil.fetchResource("zoneddatetime/" + fileName);
+        return MetaUtils.fetchResource("zoneddatetime/" + fileName);
     }
 
     private JsonObject buildJsonObject(String localDateTime, String zoneId, Number totalSeconds) {
