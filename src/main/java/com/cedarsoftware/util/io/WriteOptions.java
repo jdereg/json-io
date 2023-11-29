@@ -80,7 +80,9 @@ public class WriteOptions {
     static {
         // These are hard-coded below so that the Writer does not get ahead of Readers out in the wild.
         // Uncomment in the future (year or more after the 4.19 release?)
-        //MetaUtils.loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
+        // About 5 tests need updated if the line below is uncommented (they have hard-coded JSON text
+        // used in assertions, e.g. java.util.ArrayList --> ArrayList in the test JSON.
+//        MetaUtils.loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
 
         // Temporary: see above.
         addPermanentAlias(Class.class, "class");

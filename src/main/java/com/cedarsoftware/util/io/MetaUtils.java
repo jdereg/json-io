@@ -1106,7 +1106,7 @@ public class MetaUtils
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 if (!line.trim().startsWith("#") && !line.isEmpty()) {
-                    String[] parts = line.split(",");
+                    String[] parts = line.split("=");
                     map.put(parts[0].trim(), parts[1].trim());
                 }
             }
