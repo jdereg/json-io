@@ -967,7 +967,7 @@ public class WriteOptions {
     }
 
     /**
-     * Load custom writer classes based on contents of customWriters.txt in the resources folder.
+     * Load custom writer classes based on contents of resources/customWriters.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
@@ -977,19 +977,23 @@ public class WriteOptions {
         Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
         ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
-        for (Map.Entry<String, String>  entry : map.entrySet()) {
+        map.forEach((className, writerClassName) -> {
             try {
-                Class<?> clazz = MetaUtils.classForName(entry.getKey(), classLoader);
-                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(entry.getValue(), classLoader);
+                Class<?> clazz = MetaUtils.classForName(className, classLoader);
+                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
                 JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter)MetaUtils.newInstance(customWriter, null);
                 writers.put(clazz, writer);
             } catch (Exception e) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + entry.getValue());
+                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt");
             }
-        }
+        });
         return writers;
     }
 
+    /**
+     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
+     * @return Set<Class<?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     */
     private static Set<Class<?>> loadNonRefs() {
         Set<String> set = new LinkedHashSet<>();
         Set<Class<?>> nonRefs = new LinkedHashSet<>();
@@ -997,7 +1001,7 @@ public class WriteOptions {
         set.forEach((className) -> {
             Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
             if (clazz == null) {
-                throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable in nonRefs.txt");
+                throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
             }
             nonRefs.add(clazz);
         });

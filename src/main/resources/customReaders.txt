@@ -1,0 +1,18 @@
+#
+# Map of class to JsonReader.JsonClassReader
+#
+java.lang.Class = com.cedarsoftware.util.io.Readers$ClassReader
+java.lang.String = com.cedarsoftware.util.io.Readers$StringReader
+java.lang.StringBuffer = com.cedarsoftware.util.io.Readers$StringBufferReader
+java.lang.StringBuilder = com.cedarsoftware.util.io.Readers$StringBuilderReader
+
+java.math.BigDecimal = com.cedarsoftware.util.io.Readers$BigDecimalReader
+java.math.BigInteger = com.cedarsoftware.util.io.Readers$BigIntegerReader
+
+java.net.URL = com.cedarsoftware.util.io.Readers$URLReader
+
+java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.util.io.Readers$AtomicBooleanReader
+java.util.concurrent.atomic.AtomicInteger = com.cedarsoftware.util.io.Readers$AtomicIntegerReader
+java.util.concurrent.atomic.AtomicLong = com.cedarsoftware.util.io.Readers$AtomicLongReader
+java.util.Locale = com.cedarsoftware.util.io.Readers$LocaleReader
+java.util.UUID = com.cedarsoftware.util.io.Readers$UUIDReader

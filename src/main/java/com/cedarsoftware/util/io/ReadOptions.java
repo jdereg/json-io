@@ -1,66 +1,18 @@
 package com.cedarsoftware.util.io;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.MonthDay;
-import java.time.OffsetDateTime;
-import java.time.OffsetTime;
-import java.time.Period;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TimeZone;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.CalendarFactory;
-import com.cedarsoftware.util.io.factory.DateFactory;
-import com.cedarsoftware.util.io.factory.DurationFactory;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
-import com.cedarsoftware.util.io.factory.InstantFactory;
-import com.cedarsoftware.util.io.factory.LocalDateFactory;
-import com.cedarsoftware.util.io.factory.LocalDateTimeFactory;
-import com.cedarsoftware.util.io.factory.LocalTimeFactory;
-import com.cedarsoftware.util.io.factory.MonthDayFactory;
-import com.cedarsoftware.util.io.factory.OffsetDateTimeFactory;
-import com.cedarsoftware.util.io.factory.OffsetTimeFactory;
-import com.cedarsoftware.util.io.factory.PeriodFactory;
-import com.cedarsoftware.util.io.factory.SqlDateFactory;
-import com.cedarsoftware.util.io.factory.StackTraceElementFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
-import com.cedarsoftware.util.io.factory.TimeZoneFactory;
-import com.cedarsoftware.util.io.factory.YearFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-import com.cedarsoftware.util.io.factory.ZoneIdFactory;
-import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
-import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 
 import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
 
@@ -112,106 +64,31 @@ public class ReadOptions {
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<String, String> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private boolean built = false;
     // Runtime cache (not feature options)
     private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
-
     private final JsonReader.ClassFactory throwableFactory = new ThrowableFactory();
-
     private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
     static {
         // ClassFactories
-        JsonReader.ClassFactory mapFactory = new JsonReader.MapFactory();
-        assignInstantiator(Map.class, mapFactory);
-        assignInstantiator(SortedMap.class, mapFactory);
-
-        JsonReader.ClassFactory colFactory = new JsonReader.CollectionFactory();
-
-        assignInstantiator(Collection.class, colFactory);
-        assignInstantiator(List.class, colFactory);
-        assignInstantiator(Set.class, colFactory);
-        assignInstantiator(SortedSet.class, colFactory);
-
-        assignInstantiator(LocalDate.class, new LocalDateFactory());
-        assignInstantiator(LocalTime.class, new LocalTimeFactory());
-        assignInstantiator(LocalDateTime.class, new LocalDateTimeFactory());
-        assignInstantiator(ZonedDateTime.class, new ZonedDateTimeFactory());
-        assignInstantiator(OffsetDateTime.class, new OffsetDateTimeFactory());
-        assignInstantiator(OffsetTime.class, new OffsetTimeFactory());
-        assignInstantiator(YearMonth.class, new YearMonthFactory());
-        assignInstantiator(MonthDay.class, new MonthDayFactory());
-        assignInstantiator(Year.class, new YearFactory());
-        assignInstantiator(ZoneOffset.class, new ZoneOffsetFactory());
-        assignInstantiator(ZoneId.class, new ZoneIdFactory());
-        assignInstantiator(Instant.class, new InstantFactory());
-        assignInstantiator(Period.class, new PeriodFactory());
-        assignInstantiator(Duration.class, new DurationFactory());
-
-        CalendarFactory calendarFactory = new CalendarFactory();
-        assignInstantiator(GregorianCalendar.class, calendarFactory);
-        assignInstantiator(Calendar.class, calendarFactory);
-
-        DateFactory dateFactory = new DateFactory();
-        assignInstantiator(Date.class, dateFactory);
-        assignInstantiator(Timestamp.class, dateFactory);
-        assignInstantiator(java.sql.Date.class, new SqlDateFactory());
-
-        TimeZoneFactory timeZoneFactory = new TimeZoneFactory();
-        assignInstantiator(TimeZone.class, timeZoneFactory);
-        Class<?> c = MetaUtils.classForName("sun.util.calendar.ZoneInfo", ReadOptions.class.getClassLoader());
-        if (c != null) {
-            assignInstantiator(c, timeZoneFactory);
-        }
-
-        assignInstantiator(StackTraceElement.class, new StackTraceElementFactory());
-
-        //  Readers
-        addPermanentReader(String.class, new Readers.StringReader());
-        addPermanentReader(AtomicBoolean.class, new Readers.AtomicBooleanReader());
-        addPermanentReader(AtomicInteger.class, new Readers.AtomicIntegerReader());
-        addPermanentReader(AtomicLong.class, new Readers.AtomicLongReader());
-        addPermanentReader(BigInteger.class, new Readers.BigIntegerReader());
-        addPermanentReader(BigDecimal.class, new Readers.BigDecimalReader());
-
-        addPermanentReader(Locale.class, new Readers.LocaleReader());
-        addPermanentReader(Class.class, new Readers.ClassReader());
-        addPermanentReader(StringBuilder.class, new Readers.StringBuilderReader());
-        addPermanentReader(StringBuffer.class, new Readers.StringBufferReader());
-        addPermanentReader(UUID.class, new Readers.UUIDReader());
-        addPermanentReader(URL.class, new Readers.URLReader());
-
-        //  JVM Readers > 1.8
-        addPossiblePermanentReader("java.lang.Record", new Readers.RecordReader());
-        
+        BASE_CLASS_FACTORIES.putAll(loadClassFactory());
+        BASE_READERS.putAll(loadReaders());
         loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
-        loadMapDefinition(BASE_COERCED_TYPES, "coercedTypes.txt");
+        BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
     }
     
     /**
      * Start with default options.
      */
     public ReadOptions() {
-        // Load aliases from resource/aliases.txt
-        for (Map.Entry<String, String> entry : BASE_ALIAS_MAPPINGS.entrySet()) {
-            addUniqueAlias(entry.getKey(), entry.getValue());
-        }
-
-        // Load coerced types from resource/coerced.txt
-        for (Map.Entry<String, String> entry : BASE_COERCED_TYPES.entrySet()) {
-            Class<?> srcClass = MetaUtils.classForName(entry.getKey(), ReadOptions.class.getClassLoader());
-            Class<?> destClass = MetaUtils.classForName(entry.getValue(), ReadOptions.class.getClassLoader());
-            if (srcClass == null) {
-                throw new JsonIoException("Source coerced class not found: " + entry.getKey());
-            }
-            if (destClass == null) {
-                throw new JsonIoException("Destination coerced class not found: " + entry.getValue());
-            }
-            addPermanentCoercedType(srcClass, destClass);
-            coercedTypes.put(srcClass, destClass);
-        }
-
+        // Direct copy (with swap) without classForName() lookups for speed.
+        // (That is done with the BASE_ALIAS_MAPPINGS are loaded)
+        BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> {
+            aliasTypeNames.put(alias, srcType);
+        });
+        coercedTypes.putAll(BASE_COERCED_TYPES);
         customReaderClasses.putAll(BASE_READERS);
         readerCache.putAll(BASE_READERS);
         classFactoryMap.putAll(BASE_CLASS_FACTORIES);
@@ -243,10 +120,23 @@ public class ReadOptions {
      * that might need this are proxied classes such as HibernateBags, etc.
      * That you want to create as regular jvm collections.
      * @param sourceClass String class name (fully qualified name) that will be coerced to another type.
+     * @param factory JsonReader.ClassFactory instance which can create the sourceClass and load it's contents,
+     *                using passed in JsonValues (JsonObject or JsonArray).
+     */
+    public static void addClassFactoryPermanent(Class<?> sourceClass, JsonReader.ClassFactory factory) {
+        BASE_CLASS_FACTORIES.put(sourceClass, factory);
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) coercion of one
+     * class to another during instance creation.  Examples of classes
+     * that might need this are proxied classes such as HibernateBags, etc.
+     * That you want to create as regular jvm collections.
+     * @param sourceClass String class name (fully qualified name) that will be coerced to another type.
      * @param destinationClass Class to coerce to.  For example, java.util.Collections$EmptyList to java.util.ArrayList.
      */
     public static void addPermanentCoercedType(Class<?> sourceClass, Class<?> destinationClass) {
-        BASE_COERCED_TYPES.put(sourceClass.getName(), destinationClass.getName());
+        BASE_COERCED_TYPES.put(sourceClass, destinationClass);
     }
 
     /**
@@ -757,5 +647,99 @@ public class ReadOptions {
         throwIfBuilt();
         this.returnType = reconstructionType;
         return this;
+    }
+
+    /**
+     * Load JsonReader.ClassFactory classes based on contents of resources/classFactory.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     * @return Map<Class<?>, JsonReader.ClassFactory> containing the resolved Class -> JsonClassFactory instance.
+     */
+    private static Map<Class<?>, JsonReader.ClassFactory> loadClassFactory() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadMapDefinition(map, "classFactory.txt");
+        Map<Class<?>, JsonReader.ClassFactory> factories = new HashMap<>();
+        ClassLoader classLoader = ReadOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String factoryClassName = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null)  {
+                System.out.println("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
+                continue;
+            }
+            Class<JsonReader.ClassFactory> factoryClass = (Class<JsonReader.ClassFactory>) MetaUtils.classForName(factoryClassName, classLoader);
+            if (factoryClass == null) {
+                System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
+                continue;
+            }
+            try {
+                factories.put(clazz, factoryClass.newInstance());
+            }
+            catch (Exception e) {
+                throw new JsonIoException("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
+            }
+        }
+        return factories;
+    }
+
+    /**
+     * Load custom reader classes based on contents of resources/customReaders.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     * @return Map<Class<?>, JsonReader.JsonClassReader> containing the resolved Class -> JsonClassReader instance.
+     */
+    private static Map<Class<?>, JsonReader.JsonClassReader> loadReaders() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadMapDefinition(map, "customReaders.txt");
+        Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
+        ClassLoader classLoader = ReadOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String readerClassName = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz != null) {
+                Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) MetaUtils.classForName(readerClassName, classLoader);
+                try {
+                    readers.put(clazz, customReaderClass.newInstance());
+                }
+                catch (Exception e) {
+                    System.out.println("Note: class not found (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
+                }
+            }
+            else {
+                System.out.println("Class: " + className + " not defined in JVM, but listed in resources/customReaders.txt");
+            }
+        }
+        return readers;
+    }
+
+    /**
+     * Load custom writer classes based on contents of customWriters.txt in the resources folder.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    private static Map<Class<?>, Class<?>> loadCoercedTypes() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadMapDefinition(map, "coercedTypes.txt");
+        Map<Class<?>, Class<?>> coerced = new HashMap<>();
+        ClassLoader classLoader = ReadOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String srcClassName = entry.getKey();
+            String destClassName = entry.getValue();
+            Class<?> srcType = MetaUtils.classForName(srcClassName, classLoader);
+            if (srcType == null) {
+                System.out.println("Skipping class coercion for source class: " + srcClassName + " (not found) to: " + destClassName + ", listed in resources/coercedTypes.txt");
+                continue;
+            }
+            Class<?> destType = MetaUtils.classForName(destClassName, classLoader);
+            if (destType == null) {
+                System.out.println("Skipping class coercion for source class: " + srcClassName + " cannot be mapped to: " + destClassName + " (not found), listed in resources/coercedTypes.txt");
+                continue;
+            }
+            coerced.put(srcType, destType);
+        }
+        return coerced;
     }
 }
