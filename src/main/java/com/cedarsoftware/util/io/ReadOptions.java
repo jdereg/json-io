@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -62,6 +61,8 @@ import com.cedarsoftware.util.io.factory.YearMonthFactory;
 import com.cedarsoftware.util.io.factory.ZoneIdFactory;
 import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
+
+import static com.cedarsoftware.util.io.MetaUtils.loadDefinitions;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -187,24 +188,7 @@ public class ReadOptions {
         loadDefinitions(BASE_ALIAS_MAPPINGS, "aliases.txt");
         loadDefinitions(BASE_COERCED_TYPES, "coercedTypes.txt");
     }
-
-    private static void loadDefinitions(Map<String, String> map, String resName) {
-        try {
-            String contents = MetaUtils.fetchResource(resName);
-            Scanner scanner = new Scanner(contents);
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                if (!line.trim().startsWith("#")) {
-                    String[] parts = line.split(",");
-                    map.put(parts[0].trim(), parts[1].trim());
-                }
-            }
-            scanner.close();
-        }  catch (Exception e) {
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a source String name, a comma, and an destination String, e.g.: java.lang.Integer,int");
-        }
-    }
-
+    
     /**
      * Start with default options.
      */
@@ -224,6 +208,7 @@ public class ReadOptions {
             if (destClass == null) {
                 throw new JsonIoException("Destination coerced class not found: " + entry.getValue());
             }
+            addPermanentCoercedType(srcClass, destClass);
             coercedTypes.put(srcClass, destClass);
         }
 
@@ -262,6 +247,15 @@ public class ReadOptions {
      */
     public static void addPermanentCoercedType(Class<?> sourceClass, Class<?> destinationClass) {
         BASE_COERCED_TYPES.put(sourceClass.getName(), destinationClass.getName());
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
+     * @param sourceClass String class name (fully qualified name) that will be aliased by a shorter name in the JSON.
+     * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
+     */
+    public static void addPermanentAlias(Class<?> sourceClass, String alias) {
+        BASE_ALIAS_MAPPINGS.put(sourceClass.getName(), alias);
     }
 
     /**

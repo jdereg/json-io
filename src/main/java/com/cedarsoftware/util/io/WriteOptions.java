@@ -2,44 +2,21 @@ package com.cedarsoftware.util.io;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.MonthDay;
-import java.time.OffsetDateTime;
-import java.time.Period;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
-import java.util.UUID;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.util.io.writers.DurationWriter;
-import com.cedarsoftware.util.io.writers.InstantWriter;
-import com.cedarsoftware.util.io.writers.LongWriter;
-import com.cedarsoftware.util.io.writers.PeriodWriter;
-import com.cedarsoftware.util.io.writers.ZoneIdWriter;
-import com.cedarsoftware.util.io.writers.ZoneOffsetWriter;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
@@ -99,88 +76,41 @@ public class WriteOptions {
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Set<Class<?>> nonReferenceableItems = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new TreeMap<>(new Comparator<Class<?>>() {
+        @Override
+        public int compare(Class<?> o1, Class<?> o2) {
+            return o1.getName().compareToIgnoreCase(o2.getName());
+        }
+    });
     // Runtime cache (not feature options)
     private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
     
     private boolean built = false;
 
     static {
-        Map<Class<?>, JsonWriter.JsonClassWriter> temp = new LinkedHashMap<>();
-        temp.put(String.class, new Writers.JsonStringWriter());
-        temp.put(BigInteger.class, new Writers.BigIntegerWriter());
-        temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
+        BASE_WRITERS.putAll(loadWriters());
+    }
 
-        temp.put(Timestamp.class, new Writers.TimestampWriter());
-        temp.put(TimeZone.class, new Writers.TimeZoneWriter());
-        temp.put(Locale.class, new Writers.LocaleWriter());
-        temp.put(Class.class, new Writers.ClassWriter());
-        temp.put(UUID.class, new Writers.UUIDWriter());
+    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadDefinitions(map, "customWriters.txt");
+        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
-        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
-        temp.put(java.sql.Date.class, defaultDateWriter);
-        temp.put(Date.class, defaultDateWriter);
-
-        temp.put(LocalDate.class, new Writers.LocalDateWriter());
-        temp.put(LocalTime.class, new Writers.LocalTimeWriter());
-        temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
-        temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
-        temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
-        temp.put(YearMonth.class, new Writers.YearMonthWriter());
-        temp.put(MonthDay.class, new Writers.MonthDayWriter());
-        temp.put(Year.class, new Writers.YearWriter());
-        temp.put(Instant.class, new InstantWriter());
-        temp.put(Duration.class, new DurationWriter());
-        temp.put(Period.class, new PeriodWriter());
-
-        JsonWriter.JsonClassWriter calendarWriter = new Writers.CalendarWriter();
-        temp.put(Calendar.class, calendarWriter);
-        temp.put(GregorianCalendar.class, calendarWriter);
-
-        JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
-        temp.put(StringBuilder.class, stringWriter);
-        temp.put(StringBuffer.class, stringWriter);
-        temp.put(URL.class, stringWriter);
-        temp.put(ZoneOffset.class, stringWriter);
-
-        JsonWriter.JsonClassWriter characterWriter = new Writers.CharacterWriter();
-        temp.put(Character.class, characterWriter);
-        temp.put(char.class, characterWriter);
-
-        JsonWriter.JsonClassWriter primitiveValueWriter = new Writers.PrimitiveValueWriter();
-        temp.put(byte.class, primitiveValueWriter);
-        temp.put(Byte.class, primitiveValueWriter);
-        temp.put(short.class, primitiveValueWriter);
-        temp.put(Short.class, primitiveValueWriter);
-        temp.put(int.class, primitiveValueWriter);
-        temp.put(Integer.class, primitiveValueWriter);
-
-        JsonWriter.JsonClassWriter longWriter = new LongWriter();
-        temp.put(long.class, longWriter);
-        temp.put(Long.class, longWriter);
-        temp.put(boolean.class, primitiveValueWriter);
-        temp.put(Boolean.class, primitiveValueWriter);
-
-        JsonWriter.JsonClassWriter floatWriter = new Writers.FloatWriter();
-        temp.put(float.class, floatWriter);
-        temp.put(Float.class, floatWriter);
-
-        JsonWriter.JsonClassWriter doubleWriter = new Writers.DoubleWriter();
-        temp.put(double.class, doubleWriter);
-        temp.put(Double.class, doubleWriter);
-
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
-        temp.put(AtomicInteger.class, primitiveValueWriter);
-        temp.put(AtomicLong.class, primitiveValueWriter);
-
-        temp.put(ZoneOffset.class, new ZoneOffsetWriter());
-        temp.put(ZoneId.class, new ZoneIdWriter());
-
-        Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
-        if (zoneInfoClass != null) {
-            temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
+        for (Map.Entry<String, String>  entry : map.entrySet()) {
+            try {
+                Class<?> clazz = MetaUtils.classForName(entry.getKey(), classLoader);
+                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(entry.getValue(), classLoader);
+                JsonWriter.JsonClassWriter writer = writers.get(customWriter);
+                if (writer == null) {
+                    writer = (JsonWriter.JsonClassWriter)MetaUtils.newInstance(customWriter, null);
+                    writers.put(clazz, writer);
+                }
+            } catch (Exception e) {
+                System.out.println("Note: class not found (custom JsonClassWriter class): " + entry.getValue());
+            }
         }
-        BASE_WRITERS.putAll(temp);
+        return writers;
     }
 
     // Enum for the 3-state property
@@ -220,7 +150,8 @@ public class WriteOptions {
         nonReferenceableItems.add(AtomicBoolean.class);
         nonReferenceableItems.add(AtomicInteger.class);
         nonReferenceableItems.add(AtomicLong.class);
-        
+
+        // Using small hard-coded list until the new version has been out for a while.
         aliasTypeName(Class.class, "class");
         aliasTypeName(String.class, "string");
         aliasTypeName(Date.class, "date");
@@ -247,7 +178,7 @@ public class WriteOptions {
         prettyPrint = other.prettyPrint;
         writeLongsAsStrings = other.writeLongsAsStrings;
         skipNullFields = other.skipNullFields;
-        this.allowNanAndInfinity = other.allowNanAndInfinity;
+        allowNanAndInfinity = other.allowNanAndInfinity;
         forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
         enumPublicFieldsOnly = other.enumPublicFieldsOnly;
         notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
@@ -255,7 +186,7 @@ public class WriteOptions {
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
         nonReferenceableItems.addAll(other.nonReferenceableItems);
-        this.writerCache.putAll(other.writerCache);
+        writerCache.putAll(other.writerCache);
 
         // Need your own Set instance here per Class, no references to the copied Set.
         includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);

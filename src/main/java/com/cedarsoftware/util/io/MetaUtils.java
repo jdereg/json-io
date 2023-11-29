@@ -36,6 +36,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -1096,6 +1097,23 @@ public class MetaUtils
      */
     public static int trimLength(final String s) {
         return (s == null) ? 0 : s.trim().length();
+    }
+
+    public static void loadDefinitions(Map<String, String> map, String resName) {
+        try {
+            String contents = MetaUtils.fetchResource(resName);
+            Scanner scanner = new Scanner(contents);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (!line.trim().startsWith("#")) {
+                    String[] parts = line.split(",");
+                    map.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+            scanner.close();
+        }  catch (Exception e) {
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a source String name, a comma, and an destination String, e.g.: java.lang.Integer,int");
+        }
     }
 
     public static String fetchResource(String name)

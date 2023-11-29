@@ -274,9 +274,9 @@ public class Writers
     }
 
     public static class TemporalWriter<T extends TemporalAccessor> extends PrimitiveTypeWriter {
-        protected final DateTimeFormatter formatter;
+        protected DateTimeFormatter formatter;
 
-        public TemporalWriter(DateTimeFormatter formatter) {
+        public void setFormatter(DateTimeFormatter formatter) {
             this.formatter = formatter;
         }
 
@@ -289,69 +289,41 @@ public class Writers
         protected void writePrimitiveForm(T temporal, Writer output) throws IOException {
             writeBasicString(output, this.formatter.format(temporal));
         }
-
     }
 
-    public static class LocalDateWriter extends TemporalWriter<LocalDate>
-    {
-        public LocalDateWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
+    public static class LocalDateWriter extends TemporalWriter<LocalDate> {
         public LocalDateWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE);
         }
     }
 
     public static class LocalTimeWriter extends TemporalWriter<LocalTime> {
-        public LocalTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public LocalTimeWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_TIME);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_TIME);
         }
     }
 
     public static class LocalDateTimeWriter extends TemporalWriter<LocalDateTime> {
-        public LocalDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public LocalDateTimeWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
     }
 
     public static class ZonedDateTimeWriter extends TemporalWriter<ZonedDateTime> {
-        public ZonedDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public ZonedDateTimeWriter() {
-            this(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         }
     }
 
     public static class YearMonthWriter extends TemporalWriter<YearMonth> {
-
-        public YearMonthWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public YearMonthWriter() {
-            this(YearMonthFactory.FORMATTER);
+            setFormatter(YearMonthFactory.FORMATTER);
         }
     }
 
     public static class MonthDayWriter extends TemporalWriter<YearMonth> {
-
-        public MonthDayWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public MonthDayWriter() {
-            this(MonthDayFactory.FORMATTER);
+            setFormatter(MonthDayFactory.FORMATTER);
         }
     }
 
@@ -364,24 +336,14 @@ public class Writers
     }
 
     public static class OffsetTimeWriter extends TemporalWriter<OffsetTime> {
-
-        public OffsetTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public OffsetTimeWriter() {
-            this(DateTimeFormatter.ISO_OFFSET_TIME);
+            setFormatter(DateTimeFormatter.ISO_OFFSET_TIME);
         }
     }
 
     public static class OffsetDateTimeWriter extends TemporalWriter<OffsetDateTime> {
-
-        public OffsetDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public OffsetDateTimeWriter() {
-            this(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         }
     }
 
