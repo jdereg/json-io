@@ -1,4 +1,9 @@
 ### Revision History
+* 4.19.1
+  * Added JsonWriter.writeJsonUtf8String() backward compatibility (and where it belongs)  
+  * Added JsonWriter.TYPE - deprecated, but useful as folks transition to WriteOptions API.
+  * Added MetaUtils.isPrimitive(c) - for backward compatibility 
+  * Added MetaUtils.isLogicalPrimitive(c) - for backward compatibility 
 * 4.19.0
   * User Guide documentation on how to specify "options" to `JsonReader/JsonWriter` the new, easier way.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior options are still supported, plus new features have been added.
 * 4.18.0
