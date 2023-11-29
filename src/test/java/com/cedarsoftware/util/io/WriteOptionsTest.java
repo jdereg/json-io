@@ -6,7 +6,6 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -101,35 +100,16 @@ class WriteOptionsTest {
 
     @Test
     void testAliases() {
-        options.aliasTypeName("foo", "foobar");
-        options.aliasTypeName("bar", "barback");
-        options.aliasTypeName("baz", "bazqux");
-        options.aliasTypeName("qux", "garply");
-        options.aliasTypeName("bar", "barbaz");
+        assertThrows(JsonIoException.class, () -> options.aliasTypeName("foo", "foobar"));
+        options.aliasTypeNames(new HashMap<>());
+        options.aliasTypeName("int", "properInt");
+        options.aliasTypeName("java.lang.Integer", "Int");
         options.build();
 
-        assertEquals("foobar", options.aliasTypeNames().get("foo"));
-        assertEquals("barbaz", options.aliasTypeNames().get("bar"));
-        assertEquals("bazqux", options.aliasTypeNames().get("baz"));
-        assertEquals("garply", options.aliasTypeNames().get("qux"));
+        assertEquals("properInt", options.aliasTypeNames().get("int"));
+        assertEquals("Int", options.aliasTypeNames().get("java.lang.Integer"));
 
-        assert options.aliasTypeNames().size() > 4;    // Asserting that we have at least one "pre-installed" alias.
-        assertThrows(JsonIoException.class, () -> options.aliasTypeName("x", "y"));
-    }
-
-    @Test
-    void testAlias2() {
-        int i = 0;
-        while (options.aliasTypeNames().size() < 4) {
-            options.aliasTypeName("" + i, "i=" + i);
-            i++;
-        }
-        Map<String, String> newAliases = new LinkedHashMap<>();
-        newAliases.put("foo", "foot");
-        newAliases.put("bar", "barkly");
-        newAliases.put("baz", "bazooka");
-        options.aliasTypeNames(newAliases);
-        assert options.aliasTypeNames().size() == 3;
+        assert options.aliasTypeNames().size() == 2;    // Asserting that we have at least one "pre-installed" alias.
     }
 
     @Test

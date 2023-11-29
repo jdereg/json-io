@@ -62,7 +62,7 @@ import com.cedarsoftware.util.io.factory.ZoneIdFactory;
 import com.cedarsoftware.util.io.factory.ZoneOffsetFactory;
 import com.cedarsoftware.util.io.factory.ZonedDateTimeFactory;
 
-import static com.cedarsoftware.util.io.MetaUtils.loadDefinitions;
+import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -185,8 +185,8 @@ public class ReadOptions {
         //  JVM Readers > 1.8
         addPossiblePermanentReader("java.lang.Record", new Readers.RecordReader());
         
-        loadDefinitions(BASE_ALIAS_MAPPINGS, "aliases.txt");
-        loadDefinitions(BASE_COERCED_TYPES, "coercedTypes.txt");
+        loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
+        loadMapDefinition(BASE_COERCED_TYPES, "coercedTypes.txt");
     }
     
     /**
@@ -483,11 +483,11 @@ public class ReadOptions {
     private void addUniqueAlias(String type, String alias) {
         Class<?> clazz = MetaUtils.classForName(type, getClassLoader());
         if (clazz == null) {
-            throw new JsonIoException("Unknown class: " + type + " cannot be added to the alias list.");
+            throw new JsonIoException("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
         }
         String existType = aliasTypeNames.get(alias);
         if (existType != null) {
-            throw new JsonIoException("Non-unique alias: " + alias + " attempted assign to " + type + ", but is already assigned to: " + existType);
+            throw new JsonIoException("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
         }
         aliasTypeNames.put(alias, type);
     }

@@ -1,21 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
@@ -74,43 +67,37 @@ public class WriteOptions {
     private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
     private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private Set<Class<?>> nonReferenceableItems = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new TreeMap<>(new Comparator<Class<?>>() {
-        @Override
-        public int compare(Class<?> o1, Class<?> o2) {
-            return o1.getName().compareToIgnoreCase(o2.getName());
-        }
-    });
+    private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
     // Runtime cache (not feature options)
-    private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+    private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
     
     private boolean built = false;
 
     static {
+        // These are hard-coded below so that the Writer does not get ahead of Readers out in the wild.
+        // Uncomment in the future (year or more after the 4.19 release?)
+        //MetaUtils.loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
+
+        // Temporary: see above.
+        addPermanentAlias(Class.class, "class");
+        addPermanentAlias(String.class, "string");
+        addPermanentAlias(Date.class, "date");
+
+        addPermanentAlias(Byte.class, "byte");
+        addPermanentAlias(Short.class, "short");
+        addPermanentAlias(Integer.class, "int");
+        addPermanentAlias(Long.class, "long");
+        addPermanentAlias(Float.class, "float");
+        addPermanentAlias(Double.class, "double");
+        addPermanentAlias(Character.class, "char");
+        addPermanentAlias(Boolean.class, "boolean");
+
         BASE_WRITERS.putAll(loadWriters());
-    }
-
-    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
-        Map<String, String> map = new LinkedHashMap<>();
-        MetaUtils.loadDefinitions(map, "customWriters.txt");
-        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String>  entry : map.entrySet()) {
-            try {
-                Class<?> clazz = MetaUtils.classForName(entry.getKey(), classLoader);
-                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(entry.getValue(), classLoader);
-                JsonWriter.JsonClassWriter writer = writers.get(customWriter);
-                if (writer == null) {
-                    writer = (JsonWriter.JsonClassWriter)MetaUtils.newInstance(customWriter, null);
-                    writers.put(clazz, writer);
-                }
-            } catch (Exception e) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + entry.getValue());
-            }
-        }
-        return writers;
+        BASE_NON_REFS.addAll(loadNonRefs());
     }
 
     // Enum for the 3-state property
@@ -122,49 +109,12 @@ public class WriteOptions {
      * Start with default options
      */
     public WriteOptions() {
+        // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
+        // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
+        aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         customWrittenClasses.putAll(BASE_WRITERS);
         writerCache.putAll(BASE_WRITERS);
-        
-        nonReferenceableItems.add(byte.class);
-        nonReferenceableItems.add(short.class);
-        nonReferenceableItems.add(int.class);
-        nonReferenceableItems.add(long.class);
-        nonReferenceableItems.add(float.class);
-        nonReferenceableItems.add(double.class);
-        nonReferenceableItems.add(char.class);
-        nonReferenceableItems.add(boolean.class);
-
-        nonReferenceableItems.add(Byte.class);
-        nonReferenceableItems.add(Short.class);
-        nonReferenceableItems.add(Integer.class);
-        nonReferenceableItems.add(Long.class);
-        nonReferenceableItems.add(Float.class);
-        nonReferenceableItems.add(Double.class);
-        nonReferenceableItems.add(Character.class);
-        nonReferenceableItems.add(Boolean.class);
-
-        nonReferenceableItems.add(String.class);
-        nonReferenceableItems.add(Date.class);
-        nonReferenceableItems.add(BigInteger.class);
-        nonReferenceableItems.add(BigDecimal.class);
-        nonReferenceableItems.add(AtomicBoolean.class);
-        nonReferenceableItems.add(AtomicInteger.class);
-        nonReferenceableItems.add(AtomicLong.class);
-
-        // Using small hard-coded list until the new version has been out for a while.
-        aliasTypeName(Class.class, "class");
-        aliasTypeName(String.class, "string");
-        aliasTypeName(Date.class, "date");
-
-        // Use true primitive types for the primitive wrappers.
-        aliasTypeName(Byte.class, "byte");
-        aliasTypeName(Short.class, "short");
-        aliasTypeName(Integer.class, "int");
-        aliasTypeName(Long.class, "long");
-        aliasTypeName(Float.class, "float");
-        aliasTypeName(Double.class, "double");
-        aliasTypeName(Character.class, "char");
-        aliasTypeName(Boolean.class, "boolean");
+        nonRefClasses.addAll(BASE_NON_REFS);
     }
 
     /**
@@ -185,7 +135,7 @@ public class WriteOptions {
         aliasTypeNames.putAll(other.aliasTypeNames);
         customWrittenClasses.putAll(other.customWrittenClasses);
         classLoader = other.classLoader;
-        nonReferenceableItems.addAll(other.nonReferenceableItems);
+        nonRefClasses.addAll(other.nonRefClasses);
         writerCache.putAll(other.writerCache);
 
         // Need your own Set instance here per Class, no references to the copied Set.
@@ -193,6 +143,32 @@ public class WriteOptions {
         includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.includedAccessors, false);
         excludedFields = (Map<Class<?>, Set<String>>) dupe(other.excludedFields, false);
         excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
+     * @param clazz Class that will be aliased by a shorter name in the JSON.
+     * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
+     */
+    public static void addPermanentAlias(Class<?> clazz, String alias) {
+        BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
+    }
+
+    /**
+     * Call this method to add a custom JSON writer to json-io.  It will
+     * associate the Class 'c' to the writer you pass in.  The writers are
+     * found with isAssignableFrom().  If this is too broad, causing too
+     * many classes to be associated to the custom writer, you can indicate
+     * that json-io should not use a custom write for a particular class,
+     * by calling the addNotCustomWrittenClass() method.  This method will add
+     * the custom writer such that it will be there permanently, for the
+     * life of the JVM (static).
+     *
+     * @param clazz      Class to assign a custom JSON writer to
+     * @param writer The JsonClassWriter which will write the custom JSON format of class.
+     */
+    public static void addPermanentWriter(Class<?> clazz, JsonWriter.JsonClassWriter writer) {
+        BASE_WRITERS.put(clazz, writer);
     }
 
     // Private method to check if the object is built
@@ -262,7 +238,7 @@ public class WriteOptions {
     public WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
         throwIfBuilt();
         this.aliasTypeNames.clear();
-        this.aliasTypeNames.putAll(aliasTypeNames);
+        aliasTypeNames.forEach(this::addUniqueAlias);
         return this;
     }
 
@@ -284,8 +260,25 @@ public class WriteOptions {
      */
     public WriteOptions aliasTypeName(String typeName, String alias) {
         throwIfBuilt();
-        aliasTypeNames.put(typeName, alias);
+        addUniqueAlias(typeName, alias);
         return this;
+    }
+
+    /**
+     * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
+     * @param typeName String fully qualified class name.
+     * @param alias String shorter alias name.
+     */
+    private void addUniqueAlias(String typeName, String alias) {
+        Class<?> clazz = MetaUtils.classForName(typeName, getClassLoader());
+        if (clazz == null) {
+            throw new JsonIoException("Unknown class: " + typeName + " cannot be added to the WriteOptions alias map.");
+        }
+        String existType = aliasTypeNames.get(clazz);
+        if (existType != null) {
+            throw new JsonIoException("Non-unique WriteOptions alias: " + alias + " attempted assign to: " + typeName + ", but is already assigned to: " + existType);
+        }
+        aliasTypeNames.put(clazz.getName(), alias);
     }
 
     /**
@@ -838,7 +831,7 @@ public class WriteOptions {
      * @return boolean true if the passed in class is considered a non-referenceable class.
      */
     public boolean isNonReferenceableClass(Class<?> clazz) {
-        return nonReferenceableItems.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
+        return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
                 clazz.isEnum() ||
@@ -851,7 +844,7 @@ public class WriteOptions {
      */
     public Collection<Class<?>> getNonReferenceableClasses()
     {
-        return built ? nonReferenceableItems : new LinkedHashSet<>(nonReferenceableItems);
+        return built ? nonRefClasses : new LinkedHashSet<>(nonRefClasses);
     }
 
     /**
@@ -862,7 +855,7 @@ public class WriteOptions {
      */
     public WriteOptions addNonReferenceableClass(Class<?> clazz) {
         throwIfBuilt();
-        nonReferenceableItems.add(clazz);
+        nonRefClasses.add(clazz);
         return this;
     }
 
@@ -878,7 +871,7 @@ public class WriteOptions {
         excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(excludedAccessors, true);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
-        nonReferenceableItems = Collections.unmodifiableSet(new LinkedHashSet<>(nonReferenceableItems));
+        nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
         customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
         this.built = true;
         return this;
@@ -969,5 +962,43 @@ public class WriteOptions {
             }
         }
         return closestWriter;
+    }
+
+    /**
+     * Load custom writer classes based on contents of customWriters.txt in the resources folder.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadMapDefinition(map, "customWriters.txt");
+        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String>  entry : map.entrySet()) {
+            try {
+                Class<?> clazz = MetaUtils.classForName(entry.getKey(), classLoader);
+                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(entry.getValue(), classLoader);
+                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter)MetaUtils.newInstance(customWriter, null);
+                writers.put(clazz, writer);
+            } catch (Exception e) {
+                System.out.println("Note: class not found (custom JsonClassWriter class): " + entry.getValue());
+            }
+        }
+        return writers;
+    }
+
+    private static Set<Class<?>> loadNonRefs() {
+        Set<String> set = new LinkedHashSet<>();
+        Set<Class<?>> nonRefs = new LinkedHashSet<>();
+        MetaUtils.loadSetDefinition(set, "nonRefs.txt");
+        set.forEach((className) -> {
+            Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
+            if (clazz == null) {
+                throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable in nonRefs.txt");
+            }
+            nonRefs.add(clazz);
+        });
+        return nonRefs;
     }
 }

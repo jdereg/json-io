@@ -1,0 +1,32 @@
+#
+# These classes will never output with an @id nor @ref another instance.  Use carefully for classes
+# that are generally small and immutable.  Nonreferenceable items potentially change the shape of the object graph.
+# Generally, no one cares about an Integer instance being re-used (same instance being referenced twice) because it
+# is immutable anyway.
+#
+byte
+short
+int
+long
+float
+double
+char
+boolean
+
+java.lang.Byte
+java.lang.Short
+java.lang.Integer
+java.lang.Long
+java.lang.Float
+java.lang.Double
+java.lang.Character
+java.lang.Boolean
+
+java.lang.String
+java.util.Date
+
+java.math.BigInteger
+java.math.BigDecimal
+java.util.concurrent.atomic.AtomicBoolean
+java.util.concurrent.atomic.AtomicInteger
+java.util.concurrent.atomic.AtomicLong
