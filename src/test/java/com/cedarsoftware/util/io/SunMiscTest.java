@@ -40,7 +40,7 @@ public class SunMiscTest
         array[0] = shoe;
         String workaroundString = TestUtil.toJson(array);
 
-        ReadOptions.assignInstantiator(Dog.Shoe.class, new JsonReader.ClassFactory() {
+        ReadOptions.addPermanentClassFactory(Dog.Shoe.class, new JsonReader.ClassFactory() {
             public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
             {
                 return Dog.Shoe.construct();

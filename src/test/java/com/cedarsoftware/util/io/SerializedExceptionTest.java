@@ -72,7 +72,7 @@ public class SerializedExceptionTest
      */
     void testAccessToPrivateField()
     {
-        ReadOptions.assignInstantiator(MyException.class, new MyExceptionCreator());
+        ReadOptions.addPermanentClassFactory(MyException.class, new MyExceptionCreator());
         MyException exp = new MyException("foo", "bar");
         WriteOptions writeOptions = new WriteOptions().addCustomWrittenClass(MyException.class, new MyExceptionWriter());
         String json = TestUtil.toJson(exp, writeOptions);

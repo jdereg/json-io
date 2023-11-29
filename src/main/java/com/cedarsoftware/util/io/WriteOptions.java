@@ -987,16 +987,28 @@ public class WriteOptions {
         Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
         ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
-        map.forEach((className, writerClassName) -> {
-            try {
-                Class<?> clazz = MetaUtils.classForName(className, classLoader);
-                Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
-                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter)MetaUtils.newInstance(customWriter, null);
-                writers.put(clazz, writer);
-            } catch (Exception e) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt");
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String writerClassName = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null)
+            {
+                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
+                continue;
             }
-        });
+            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
+            if (customWriter == null)
+            {
+                throw new JsonIoException("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+            try {
+                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter) MetaUtils.newInstance(customWriter, null);
+                writers.put(clazz, writer);
+            }
+            catch (Exception e) {
+                throw new JsonIoException("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+        }
         return writers;
     }
 

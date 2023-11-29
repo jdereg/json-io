@@ -84,7 +84,7 @@ public class ReadOptions {
      */
     public ReadOptions() {
         // Direct copy (with swap) without classForName() lookups for speed.
-        // (That is done with the BASE_ALIAS_MAPPINGS are loaded)
+        // (The classForName check is done with the BASE_ALIAS_MAPPINGS are loaded)
         BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> {
             aliasTypeNames.put(alias, srcType);
         });
@@ -123,7 +123,7 @@ public class ReadOptions {
      * @param factory JsonReader.ClassFactory instance which can create the sourceClass and load it's contents,
      *                using passed in JsonValues (JsonObject or JsonArray).
      */
-    public static void addClassFactoryPermanent(Class<?> sourceClass, JsonReader.ClassFactory factory) {
+    public static void addPermanentClassFactory(Class<?> sourceClass, JsonReader.ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(sourceClass, factory);
     }
 
@@ -163,21 +163,6 @@ public class ReadOptions {
      */
     public static void addPermanentReader(Class<?> c, JsonReader.JsonClassReader reader) {
         BASE_READERS.put(c, reader);
-    }
-
-    /**
-     * Add a possible Permanent Reader.  The reason it is possible, is that it is added by String
-     * fully qualified class name, which may/may not be in the JVM.  For example, if json-io
-     * is built with JDK 1.8, and you need a class from JDK 11, for example, use this method
-     * to add a permanent reader.
-     * @param className String class name for which to add a customized reader.
-     * @param reader The customized reader to associate to the fully qualified class name.
-     */
-    public static void addPossiblePermanentReader(String className, JsonReader.JsonClassReader reader) {
-        Class<?> clazz = MetaUtils.classForName(className, JsonReader.class.getClassLoader());
-        if (clazz != null) {
-            addPermanentReader(clazz, reader);
-        }
     }
 
     /**
@@ -704,7 +689,7 @@ public class ReadOptions {
                     readers.put(clazz, customReaderClass.newInstance());
                 }
                 catch (Exception e) {
-                    System.out.println("Note: class not found (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
+                    throw new JsonIoException("Note: class not found (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
                 }
             }
             else {
