@@ -1,9 +1,19 @@
 ### Revision History
 * 4.19.1
-  * If you have code that was passing a Map of arguments to control features on the output  
-  * >Using [key: value] below to represent a Java Map:
-  * >```
-  * >JsonWriter.objectToJson(axis, [(JsonWriter.TYPE): false]) 
+  * The old `Map` options method has been superceded by passing instead a `WriteOptions` or `ReadOptions` instance. All the prior features are still supported, plus new features have been added.  Use the methods on Write/ReadOptions to set them.  The names may have changed slightly to more accurate names.
+    * Many of the deprecated APIs on JsonReader/JsonWriter have been removed.  All existing capabilities are still there.
+    > Example changes required due to this update:
+    <br><b>Before</b>
+    > ```
+    > // Using [key: value] to indicate a Map 
+    > A. String json = JsonWriter.objectToJson(srcObj, [JsonWriter.TYPE: false])
+    > B. Map billInfo = (Map) JsonReader.jsonToJava(json, [JsonReader.USE_MAPS:true]) 
+    > ```
+    > <b>After</b>
+    > ```
+    > A. String json = JsonWriter.objectToJson(srcObj, new WriteOptions().showTypeInfoNever())
+    > B. Map billInfo = JsonIo.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), Map.class)
+    > ```
   * Added JsonWriter.writeJsonUtf8String() backward compatibility (and where it belongs)  
   * Added JsonWriter.TYPE - deprecated, but useful as folks transition to WriteOptions API.
   * Added MetaUtils.isPrimitive(c) - for backward compatibility 
