@@ -57,7 +57,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("offsetdatetime/" + fileName);
+        return MetaUtils.loadResourceAsString("offsetdatetime/" + fileName);
     }
 
     @Override

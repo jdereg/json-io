@@ -123,12 +123,12 @@ public class SecurityTest
     @Test
     public void testSecureReads()
     {
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/processBuilder.json"));
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/process.json"));
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/classLoader.json"));
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/constructor.json"));
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/method.json"));
-        verifyReadInstantiationSecurity(MetaUtils.fetchResource("security/field.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/processBuilder.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/process.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/classLoader.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/constructor.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/method.json"));
+        verifyReadInstantiationSecurity(MetaUtils.loadResourceAsString("security/field.json"));
     }
 
     private void verifyReadInstantiationSecurity(String json)

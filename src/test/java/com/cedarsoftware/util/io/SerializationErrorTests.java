@@ -100,6 +100,6 @@ class SerializationErrorTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("errors/" + fileName);
+        return MetaUtils.loadResourceAsString("errors/" + fileName);
     }
 }

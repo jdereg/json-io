@@ -51,7 +51,7 @@ class PrettyPrintTest
         nice.dictionary.put("price", 100.0d);
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
-        String target = MetaUtils.fetchResource("format/prettyPrint.json");
+        String target = MetaUtils.loadResourceAsString("format/prettyPrint.json");
         WriteOptions writeOptions = new WriteOptions().prettyPrint(true);
         String json = TestUtil.toJson(nice, writeOptions);
 

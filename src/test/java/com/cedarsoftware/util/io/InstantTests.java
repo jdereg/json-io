@@ -108,6 +108,6 @@ public class InstantTests extends SerializationDeserializationMinimumTests<Insta
     }
 
     private String loadJson(String fileName) {
-        return MetaUtils.fetchResource("instant/" + fileName);
+        return MetaUtils.loadResourceAsString("instant/" + fileName);
     }
 }

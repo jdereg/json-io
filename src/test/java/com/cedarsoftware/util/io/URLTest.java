@@ -43,7 +43,7 @@ class URLTest
     @MethodSource("argumentsForOldFormatValidation")
     void testUrl_readingJsonWithOldFormat_stillWorks(String fileName, String expectedUrl) throws Exception
     {
-        String json = MetaUtils.fetchResource("url/" + fileName);
+        String json = MetaUtils.loadResourceAsString("url/" + fileName);
         URL actual = TestUtil.toObjects(json, null);
 
         assertThat(actual.toString()).isEqualTo(expectedUrl);

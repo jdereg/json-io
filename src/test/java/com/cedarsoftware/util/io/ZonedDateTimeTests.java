@@ -79,7 +79,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("zoneddatetime/" + fileName);
+        return MetaUtils.loadResourceAsString("zoneddatetime/" + fileName);
     }
 
     @Override

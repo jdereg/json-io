@@ -546,7 +546,7 @@ class EnumTests {
     }
 
     private String loadJson(String fileName) {
-        return MetaUtils.fetchResource("enums/" + fileName).trim();
+        return MetaUtils.loadResourceAsString("enums/" + fileName).trim();
     }
 
     private <T> T loadObject(String fileName) {

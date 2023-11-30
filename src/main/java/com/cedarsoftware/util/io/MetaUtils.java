@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -10,9 +13,7 @@ import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -94,11 +95,9 @@ public class MetaUtils
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
-
+    private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
-
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
-
     private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
     private static final Set<Class<?>> FROM_EMPTY_QUOTES = new LinkedHashSet<>();
 
@@ -158,7 +157,16 @@ public class MetaUtils
 
         // "" is to set to null (requested by customers)
         FROM_EMPTY_QUOTES.add(BigInteger.class);
-        FROM_EMPTY_QUOTES.add(BigDecimal.class); 
+        FROM_EMPTY_QUOTES.add(BigDecimal.class);
+
+        prims.add(Byte.class);
+        prims.add(Integer.class);
+        prims.add(Long.class);
+        prims.add(Double.class);
+        prims.add(Character.class);
+        prims.add(Float.class);
+        prims.add(Boolean.class);
+        prims.add(Short.class);
     }
 
     /**
@@ -196,12 +204,6 @@ public class MetaUtils
         nameToClass.put("string", String.class);
         nameToClass.put("date", Date.class);
         nameToClass.put("class", Class.class);
-
-        // Save memory by re-using all byte instances (Bytes are immutable)
-        for (int i = 0; i < byteCache.length; i++)
-        {
-            byteCache[i] = (byte) (i - 128);
-        }
     }
 
     /**
@@ -627,7 +629,7 @@ public class MetaUtils
     /**
      * Pick the best value from the list that has the least 'distance' from the passed in Class 'param.'
      * Note: this method has a side effect - it will remove the value that was chosen from the list.
-     * Note: If none of the instances in the 'values' list are instances of the 'param class,
+     * Note: If none of the instances in the 'values' list are instances of the 'param' class,
      * then the values list is not modified.
      * @param param Class driving the choice.
      * @param values List of potential argument values to pick from, that would best match the param (class).
@@ -926,7 +928,7 @@ public class MetaUtils
         throw new JsonIoException("Unable to instantiate: " + c.getName());
     }
 
-    // Try instantiation via unsafe (if turned on.  It is off by default.  Use
+    // Try instantiation via unsafe (if turned on).  It is off by default.  Use
     // MetaUtils.setUseUnsafe(true) to enable it. This may result in heap-dumps
     // for e.g. ConcurrentHashMap or can cause problems when the class is not initialized,
     // that's why we try ordinary constructors first.
@@ -1099,9 +1101,44 @@ public class MetaUtils
         return (s == null) ? 0 : s.trim().length();
     }
 
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
+     * Integer, Long, Boolean, etc. are considered primitives by this method.
+     */
+    public static boolean isPrimitive(Class c)
+    {
+        return Primitives.isPrimitive(c);
+    }
+
+    /**
+     * @param c Class to test
+     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
+     * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
+     * considered 'logical' primitives is that they are immutable and therefore can be written without references
+     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape)
+     * of the object graph being written.
+     */
+    public static boolean isLogicalPrimitive(Class<?> c)
+    {
+        return  c.isPrimitive() ||
+                prims.contains(c) ||
+                String.class.isAssignableFrom(c) ||
+                Number.class.isAssignableFrom(c) ||
+                Date.class.isAssignableFrom(c) ||
+                c.isEnum() ||
+                c.equals(Class.class);
+    }
+
+    /**
+     * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
+     * Ignores lines beginning with a # and it also ignores blank lines.
+     * @param map Map destination of the file contents.
+     * @param resName String name of the resource file.
+     */
     public static void loadMapDefinition(Map<String, String> map, String resName) {
         try {
-            String contents = MetaUtils.fetchResource(resName);
+            String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -1116,9 +1153,15 @@ public class MetaUtils
         }
     }
 
+    /**
+     * Load in a Set-style simple file of values. Expects values to be one per line.  Ignores lines beginning with a #
+     * and it also ignores blank lines.
+     * @param set Set destination of the file contents.
+     * @param resName String name of the resource file.
+     */
     public static void loadSetDefinition(Set<String> set, String resName) {
         try {
-            String contents = MetaUtils.fetchResource(resName);
+            String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine().trim();
@@ -1132,14 +1175,47 @@ public class MetaUtils
         }
     }
 
-    public static String fetchResource(String name)
-    {
-        try {
-            URL url = MetaUtils.class.getResource("/" + name);
-            Path resPath = Paths.get(url.toURI());
-            return new String(Files.readAllBytes(resPath));
+    /**
+     * Loads resource content as a String.
+     * @param resourceName Name of the resource file.
+     * @return Content of the resource file as a String.
+     */
+    public static String loadResourceAsString(String resourceName) {
+        byte[] resourceBytes = loadResourceAsBytes(resourceName);
+        return new String(resourceBytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Loads resource content as a byte[].
+     * @param resourceName Name of the resource file.
+     * @return Content of the resource file as a byte[].
+     */
+    public static byte[] loadResourceAsBytes(String resourceName) {
+        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName)) {
+            if (inputStream == null) {
+                throw new JsonIoException("Resource not found: " + resourceName);
+            }
+            return readInputStreamFully(inputStream);
         } catch (Exception e) {
-            throw new JsonIoException("failed to load from resources:" + name, e);
+            throw new JsonIoException("Error reading resource: " + resourceName, e);
         }
+    }
+
+    /**
+     * Reads an InputStream fully and returns its content as a byte array.
+     *
+     * @param inputStream InputStream to read.
+     * @return Content of the InputStream as byte array.
+     * @throws IOException if an I/O error occurs.
+     */
+    private static byte[] readInputStreamFully(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int nRead;
+        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        buffer.flush();
+        return buffer.toByteArray();
     }
 }

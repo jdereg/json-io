@@ -110,7 +110,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("localtime/" + fileName);
+        return MetaUtils.loadResourceAsString("localtime/" + fileName);
     }
 
     private static class NestedLocalTime {

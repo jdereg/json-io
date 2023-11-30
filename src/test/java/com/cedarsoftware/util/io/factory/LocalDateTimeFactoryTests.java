@@ -74,7 +74,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
     @Test
     public void testToughFormatToParse()
     {
-        String json = MetaUtils.fetchResource("localdatetime/wideFormatSupport.json");
+        String json = MetaUtils.loadResourceAsString("localdatetime/wideFormatSupport.json");
         LocalDateTime dt = TestUtil.toObjects(json, null);
         assert dt.getYear() == 2023;
         assert dt.getMonthValue() == 12;

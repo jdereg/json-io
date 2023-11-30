@@ -132,6 +132,6 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
     
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("localdate/" + fileName);
+        return MetaUtils.loadResourceAsString("localdate/" + fileName);
     }
 }

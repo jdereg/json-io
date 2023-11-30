@@ -307,7 +307,7 @@ public class CalendarTest
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("calendar/" + fileName);
+        return MetaUtils.loadResourceAsString("calendar/" + fileName);
     }
 
     private static void assertCalendar(Calendar calendar, String zoneId, int year, int month, int day, int hour, int minute, int second, int millis) {

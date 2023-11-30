@@ -102,7 +102,7 @@ class ZonedDateTimeFactoryTests {
     }
 
     private String loadJsonForTest(String fileName) {
-        return MetaUtils.fetchResource("zoneddatetime/" + fileName);
+        return MetaUtils.loadResourceAsString("zoneddatetime/" + fileName);
     }
 
     private JsonObject buildJsonObject(String localDateTime, String zoneId, Number totalSeconds) {

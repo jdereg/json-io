@@ -73,7 +73,7 @@ class MapOfMapsTest
     @Test
     void testForwardRefNegId()
     {
-        Object doc = TestUtil.toObjects(MetaUtils.fetchResource("references/forwardRefNegId.json"), new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object doc = TestUtil.toObjects(MetaUtils.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
         Object[] items = (Object[]) doc;
         assertEquals(2, items.length);
         Map male = (Map) items[0];
