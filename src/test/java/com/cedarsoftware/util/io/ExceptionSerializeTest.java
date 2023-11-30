@@ -14,7 +14,6 @@ import lombok.Setter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -103,7 +102,7 @@ class ExceptionSerializeTest
         {
             MyException t = (MyException) obj;
             output.write("\"detailMessage\":");
-            writeBasicString(output, t.getMessage());
+            JsonWriter.writeBasicString(output, t.getMessage());
             output.write(",\"cause\":");
             Throwable cause = t.getCause();
             String json = JsonWriter.toJson(cause, null);

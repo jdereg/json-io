@@ -1,5 +1,9 @@
 ### Revision History
 * 4.19.1
+  * If you have code that was passing a Map of arguments to control features on the output  
+  * >Using [key: value] below to represent a Java Map:
+  * >```
+  * >JsonWriter.objectToJson(axis, [(JsonWriter.TYPE): false]) 
   * Added JsonWriter.writeJsonUtf8String() backward compatibility (and where it belongs)  
   * Added JsonWriter.TYPE - deprecated, but useful as folks transition to WriteOptions API.
   * Added MetaUtils.isPrimitive(c) - for backward compatibility 

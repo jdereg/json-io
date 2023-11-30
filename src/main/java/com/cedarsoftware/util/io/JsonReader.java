@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.InputStream;
@@ -23,6 +21,8 @@ import java.util.TreeSet;
 
 import lombok.Getter;
 import lombok.Setter;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
@@ -420,6 +420,15 @@ public class JsonReader implements Closeable, ReaderContext
         return toObjects(json, new ReadOptionsBuilder().build(), root);
     }
 
+    /**
+     * Convert the passed in JSON string into a Java object graph.
+     * Uses the default read options and null for Class root.
+     * @param json String JSON input
+     * @return Java object graph matching JSON input
+     */
+    public static <T> T toObjects(String json) {
+        return toObjects(json, new ReadOptionsBuilder().build(), null);
+    }
 
     /**
      * Convert the passed in JSON string into a Java object graph.

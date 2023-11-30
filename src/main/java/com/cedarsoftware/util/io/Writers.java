@@ -25,8 +25,6 @@ import java.util.UUID;
 
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
-import static com.cedarsoftware.util.io.JsonIo.writeBasicString;
-
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
  * user-defined classes.  However, special writers are built/supplied by json-io for many of the
@@ -65,7 +63,7 @@ public class Writers
         {
             if (showType)
             {
-                writeBasicString(output, getKey());
+                JsonWriter.writeBasicString(output, getKey());
                 output.write(':');
             }
 
@@ -169,7 +167,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            JsonIo.writeJsonUtf8String(output, extractString(o));
+            JsonWriter.writeJsonUtf8String(output, extractString(o));
         }
     }
 
@@ -181,7 +179,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            JsonIo.writeJsonUtf8String(output, "" + (char) o);
+            JsonWriter.writeJsonUtf8String(output, "" + (char) o);
         }
     }
 
@@ -196,7 +194,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            JsonIo.writeBasicString(output, extractString(o));
+            JsonWriter.writeBasicString(output, extractString(o));
         }
     }
 
@@ -292,7 +290,7 @@ public class Writers
         }
 
         protected void writePrimitiveForm(T temporal, Writer output) throws IOException {
-            writeBasicString(output, this.formatter.format(temporal));
+            JsonWriter.writeBasicString(output, this.formatter.format(temporal));
         }
 
     }
@@ -414,7 +412,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             BigInteger big = (BigInteger) o;
-            writeBasicString(output, big.toString(10));
+            JsonWriter.writeBasicString(output, big.toString(10));
         }
     }
 
@@ -423,7 +421,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             BigDecimal big = (BigDecimal) o;
-            writeBasicString(output, big.toPlainString());
+            JsonWriter.writeBasicString(output, big.toPlainString());
         }
     }
 
@@ -450,7 +448,7 @@ public class Writers
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
             UUID buffer = (UUID) o;
-            writeBasicString(output, buffer.toString());
+            JsonWriter.writeBasicString(output, buffer.toString());
         }
     }
 }
