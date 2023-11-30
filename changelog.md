@@ -1,21 +1,33 @@
 ### Revision History
 * 5.0.0-SNAPSHOT
-  * Significant updates to User Guide, especially on how to specify feature "options" for reading/writing JSON.  The old Map options method has been superceded by the `WriteOptions` and `ReadOptions` approach.  All the prior features are still supported, plus new features have been added.  Use the methods on Write/ReadOptions to set them.  The names may have changed slightly to more accurate names.
-    * Many of the deprecated APIs on JsonReader/JsonWriter have been removed.  All existing capabilities are still there.
+  * Moved more lists and maps from source code to resource files. 
+* 4.19.1
+  * The old `Map` options method has been superceded by passing instead a `WriteOptions` or `ReadOptions` instance.
+    All the prior features are still supported, plus new features have been added.  Use the methods on
+    `Write/ReadOptions` to set them.  The `ReadOptions` currently use a `ReadOptionsBuilder()` to construct the `ReadOptions.`
+    This will change in the 5.x branch to match the `WriteOptions`, where it is the builder/options.
     > Example changes required due to this update:
-      <br><b>Before</b>
+    <br><b>Before</b>
     > ```
     > // Using [key: value] to indicate a Map 
     > A. String json = JsonWriter.objectToJson(srcObj, [JsonWriter.TYPE: false])
-    > B. Map billInfo = (Map) JsonReader.jsonToJava(json, [JsonReader.USE_MAPS:true]) 
+    > B. JsonWriter.objectToJson(srcObj)
+    > C. String json = JsonWriter.toJson(srcObj, null)
+    > D. String json = JsonWriter.formatJson(json)
+    > E. Map axisConverted = (Map) JsonReader.jsonToJava(json, [JsonReader.USE_MAPS:true])
+    > F. JsonWriter.writeJsonUtf8String(value, writer)
     > ```
     > <b>After</b>
     > ```
-    > A. String json = JsonIo.toJson(srcObj, new WriteOptions().showTypeInfoNever())
-    > B. Map billInfo = JsonIo.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), Map.class)
+    > A. String json = JsonIo.toJson(srcObj, new WriteOptions().showTypeInfoNever());
+    > B. JsonIo.toJson(srcObj)
+    > C. JsonIo.toJson(srcObj, null) // 2nd arg is WriteOptions instance (can be null for defaults)
+    > D. return JsonIo.formatJson(json)
+    > E. ReadOptionsBuilder builder = new ReadOptionsBuilder().returnAsMaps() 
+    >    Map axisConverted = JsonIo.toObjects(json, builder.build(), null)  // 3rd param can be root class
+    > F. JsonWriter.writeJsonUtf8String(writer, value)
     > ```
-* 4.19.1
-  * Added JsonWriter.writeJsonUtf8String() backward compatibility (and where it belongs)
+  * Added JsonWriter.writeJsonUtf8String() backward compatibility
   * Added JsonWriter.TYPE - deprecated, but useful as folks transition to WriteOptions API.
   * Added MetaUtils.isPrimitive(c) - for backward compatibility
   * Added MetaUtils.isLogicalPrimitive(c) - for backward compatibility
