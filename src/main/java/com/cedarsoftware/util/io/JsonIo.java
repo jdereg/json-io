@@ -138,6 +138,43 @@ public class JsonIo {
             return (T) jr.readObject(rootType);
         }
     }
+
+    /**
+     * Note that the return type will match one of these JSON types: JsonObject, JsonArray, or JsonPrimitive, all
+     * of which implement JsonValue.
+     * @param json        json string
+     * @param readOptions options to use when reading. Can be null, in which case the defaults will be used.
+     * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
+     */
+    public static JsonObject toJsonValues(String json, ReadOptions readOptions) {
+        if (json == null) {
+            // TODO: return JsonPrimitive representing null
+            return null;
+        }
+        return toJsonValues(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
+    }
+
+    /**
+     * Note that the return type will match one of these JSON types: JsonObject, JsonArray, or JsonPrimitive, all
+     * of which implement JsonValue.
+     * @param inputStream bytes representing UTF-8 string
+     * @param readOptions options to use when reading.  Can be null, in which case the defaults will be used.
+     * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
+     */
+    public static JsonObject toJsonValues(InputStream inputStream, ReadOptions readOptions) {
+        Convention.throwIfNull(inputStream, "inputStream cannot be null");
+
+        if (readOptions == null) {
+            readOptions = new ReadOptionsBuilder().returnAsMaps().build();
+        } else {
+            readOptions.ensureUsingMaps();
+        }
+
+        try (JsonReader jr = new JsonReader(inputStream, readOptions)) {
+            return jr.readObject(JsonObject.class);
+        }
+    }
+
     /**
      * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
      * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
