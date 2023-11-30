@@ -32,28 +32,16 @@ public class ZoneOffsetFactory implements JsonReader.ClassFactory {
             return fromString((String) value);
         }
 
-        return fromJsonObject(jObj, context);
+        return fromJsonObject(jObj);
     }
 
     protected ZoneOffset fromString(String id) {
         return ZoneOffset.of(id);
     }
 
-    protected ZoneOffset fromJsonObject(JsonObject job, ReaderContext context) {
-
-        JsonObject o = context.getReferences().get(job);
-
-        if (o.getTarget() != null) {
-            return (ZoneOffset) o.getTarget();
-        }
-
-        String id = (String) job.get("id");
-
-        if (id != null) {
-            return fromString(id);
-        }
-
-        return null;
+    protected ZoneOffset fromJsonObject(JsonObject job) {
+        String value = (String) job.getValue();
+        return value == null ? null : fromString(value);
     }
 
     @Override

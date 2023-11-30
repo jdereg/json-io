@@ -1,0 +1,35 @@
+#
+# JsonReader.ClassFactory mappings
+#
+java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
+
+java.sql.Date = com.cedarsoftware.util.io.factory.SqlDateFactory
+java.sql.Timestamp = com.cedarsoftware.util.io.factory.DateFactory
+
+java.time.Duration = com.cedarsoftware.util.io.factory.DurationFactory
+java.time.Instant = com.cedarsoftware.util.io.factory.InstantFactory
+java.time.LocalDate = com.cedarsoftware.util.io.factory.LocalDateFactory
+java.time.LocalDateTime = com.cedarsoftware.util.io.factory.LocalDateTimeFactory
+java.time.LocalTime = com.cedarsoftware.util.io.factory.LocalTimeFactory
+java.time.MonthDay = com.cedarsoftware.util.io.factory.MonthDayFactory
+java.time.OffsetDateTime = com.cedarsoftware.util.io.factory.OffsetDateTimeFactory
+java.time.OffsetTime = com.cedarsoftware.util.io.factory.OffsetTimeFactory
+java.time.Period = com.cedarsoftware.util.io.factory.PeriodFactory
+java.time.Year = com.cedarsoftware.util.io.factory.YearFactory
+java.time.YearMonth = com.cedarsoftware.util.io.factory.YearMonthFactory
+java.time.ZonedDateTime = com.cedarsoftware.util.io.factory.ZonedDateTimeFactory
+java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
+java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
+
+java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
+java.util.Collection = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.Date = com.cedarsoftware.util.io.factory.DateFactory
+java.util.GregorianCalendar = com.cedarsoftware.util.io.factory.CalendarFactory
+java.util.List = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.Map = com.cedarsoftware.util.io.JsonReader$MapFactory
+java.util.Set = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.SortedMap = com.cedarsoftware.util.io.JsonReader$MapFactory
+java.util.SortedSet = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.TimeZone = com.cedarsoftware.util.io.factory.TimeZoneFactory
+
+sun.util.calendar.ZoneInfo = com.cedarsoftware.util.io.factory.TimeZoneFactory

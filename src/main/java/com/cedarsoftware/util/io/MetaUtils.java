@@ -10,6 +10,9 @@ import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -33,6 +36,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -1187,5 +1191,48 @@ public class MetaUtils
                 Date.class.isAssignableFrom(c) ||
                 c.isEnum() ||
                 c.equals(Class.class);
+    }
+    public static void loadMapDefinition(Map<String, String> map, String resName) {
+        try {
+            String contents = MetaUtils.fetchResource(resName);
+            Scanner scanner = new Scanner(contents);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (!line.trim().startsWith("#") && !line.isEmpty()) {
+                    String[] parts = line.split("=");
+                    map.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+            scanner.close();
+        }  catch (Exception e) {
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by a comma per line. You can use # or blank lines in the file, they will be skipped.");
+        }
+    }
+
+    public static void loadSetDefinition(Set<String> set, String resName) {
+        try {
+            String contents = MetaUtils.fetchResource(resName);
+            Scanner scanner = new Scanner(contents);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                if (!line.startsWith("#") && !line.isEmpty()) {
+                    set.add(line);
+                }
+            }
+            scanner.close();
+        }  catch (Exception e) {
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # or blank lines in the file, they will be skipped.");
+        }
+    }
+
+    public static String fetchResource(String name)
+    {
+        try {
+            URL url = MetaUtils.class.getResource("/" + name);
+            Path resPath = Paths.get(url.toURI());
+            return new String(Files.readAllBytes(resPath));
+        } catch (Exception e) {
+            throw new JsonIoException("failed to load from resources:" + name, e);
+        }
     }
 }

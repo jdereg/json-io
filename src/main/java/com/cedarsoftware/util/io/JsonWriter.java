@@ -18,13 +18,11 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
@@ -74,12 +72,9 @@ import static com.cedarsoftware.util.io.JsonObject.ITEMS;
  */
 public class JsonWriter implements WriterContext, Closeable, Flushable
 {
-    protected static final Set<String> EMPTY_SET = new HashSet<>();
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
     private static final Long ZERO = 0L;
-    @Deprecated
-    public static final String TYPE = "TYPE";
 
     @Getter
     private final WriteOptions writeOptions;

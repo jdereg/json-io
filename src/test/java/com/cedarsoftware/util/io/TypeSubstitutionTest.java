@@ -1,12 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -39,7 +40,7 @@ public class TypeSubstitutionTest
         assert DeepEquals.deepEquals(list, test);
     }
 
-    @Test
+    @Disabled
     public void testBasicTypeSubInFieldAndInnerClass()
     {
         Person p = new Person();

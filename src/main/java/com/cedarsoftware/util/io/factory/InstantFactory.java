@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.ArgumentHelper;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.ReaderContext;
@@ -55,6 +56,9 @@ public class InstantFactory extends AbstractTemporalFactory<Instant> {
 
     @Override
     protected Instant fromJsonObject(JsonObject job, ReaderContext context) {
-        return null;
+        Number seconds = ArgumentHelper.getNumberWithDefault(job.get("seconds"), 0);
+        Number nanos = ArgumentHelper.getNumberWithDefault(job.get("nanos"), 0);
+
+        return Instant.ofEpochSecond(seconds.longValue(), nanos.longValue());
     }
 }

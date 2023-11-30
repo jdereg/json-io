@@ -13,7 +13,6 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -23,7 +22,10 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import com.cedarsoftware.util.io.factory.MonthDayFactory;
 import com.cedarsoftware.util.io.factory.YearMonthFactory;
+
+import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -63,7 +65,7 @@ public class Writers
         {
             if (showType)
             {
-                JsonWriter.writeBasicString(output, getKey());
+                writeBasicString(output, getKey());
                 output.write(':');
             }
 
@@ -104,7 +106,7 @@ public class Writers
          * Writes out a basic value type, no quotes.  to write strings use PrimitiveUtf8StringWriter.
          */
         @Override
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
             output.write(extractString(o));
         }
     }
@@ -117,9 +119,9 @@ public class Writers
         /**
          * Writes out Float point type.
          */
-        @Override
+        @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            if (!context.getWriteOptions().isAllowNanAndInfinity() && (isNanOrInfinity((T) o))) {
+            if (!context.getWriteOptions().isAllowNanAndInfinity() && isNanOrInfinity((T) o)) {
                 output.write("null");
             } else {
                 output.write(o.toString());
@@ -194,7 +196,7 @@ public class Writers
 
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
-            JsonWriter.writeBasicString(output, extractString(o));
+            writeBasicString(output, extractString(o));
         }
     }
 
@@ -207,7 +209,7 @@ public class Writers
     public static class ClassWriter extends PrimitiveUtf8StringWriter
     {
         @Override
-        public String extractString(Object o) { return ((Class)o).getName(); }
+        public String extractString(Object o) { return ((Class<?>)o).getName(); }
     }
 
     public static class EnumsAsStringWriter extends PrimitiveUtf8StringWriter
@@ -216,24 +218,18 @@ public class Writers
         protected String getKey() {
             return "name";
         }
-        @Override
-        public String extractString(Object o) { return ((Enum)o).name(); }
-    }
-
-    public static class ZoneOffsetWriter extends PrimitiveUtf8StringWriter {
 
         @Override
-        public String extractString(Object o) {
-            return ((ZoneOffset) o).getId();
-        }
+        public String extractString(Object o) { return ((Enum<?>)o).name(); }
     }
 
     public static class CalendarWriter implements JsonWriter.JsonClassWriter
     {
         @Override
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             Calendar cal = (Calendar) obj;
+            // TODO:  shouldn't this be the one inside the WriterContext?  and shouldn't there be a back up of parseDate() here?
             MetaUtils.dateFormat.get().setTimeZone(cal.getTimeZone());
             output.write("\"time\":\"");
             output.write(MetaUtils.dateFormat.get().format(cal.getTime()));
@@ -262,7 +258,7 @@ public class Writers
             Date date = (Date) o;
             return new SimpleDateFormat(dateFormat).format(date);
         }
-        
+
         String getDateFormat()
         {
             return dateFormat;
@@ -278,76 +274,61 @@ public class Writers
     }
 
     public static class TemporalWriter<T extends TemporalAccessor> extends PrimitiveTypeWriter {
-        protected final DateTimeFormatter formatter;
+        protected DateTimeFormatter formatter;
 
-        public TemporalWriter(DateTimeFormatter formatter) {
+        public void setFormatter(DateTimeFormatter formatter) {
             this.formatter = formatter;
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void writePrimitiveForm(Object obj, Writer output) throws IOException {
             this.writePrimitiveForm((T) obj, output);
         }
 
         protected void writePrimitiveForm(T temporal, Writer output) throws IOException {
-            JsonWriter.writeBasicString(output, this.formatter.format(temporal));
+            writeBasicString(output, this.formatter.format(temporal));
         }
-
     }
 
-    public static class LocalDateWriter extends TemporalWriter<LocalDate>
-    {
-        public LocalDateWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
+    public static class LocalDateWriter extends TemporalWriter<LocalDate> {
         public LocalDateWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE);
         }
     }
 
     public static class LocalTimeWriter extends TemporalWriter<LocalTime> {
-        public LocalTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public LocalTimeWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_TIME);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_TIME);
         }
     }
 
     public static class LocalDateTimeWriter extends TemporalWriter<LocalDateTime> {
-        public LocalDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public LocalDateTimeWriter() {
-            this(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }
     }
 
     public static class ZonedDateTimeWriter extends TemporalWriter<ZonedDateTime> {
-        public ZonedDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public ZonedDateTimeWriter() {
-            this(DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_ZONED_DATE_TIME);
         }
     }
 
     public static class YearMonthWriter extends TemporalWriter<YearMonth> {
-
-        public YearMonthWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public YearMonthWriter() {
-            this(YearMonthFactory.FORMATTER);
+            setFormatter(YearMonthFactory.FORMATTER);
+        }
+    }
+
+    public static class MonthDayWriter extends TemporalWriter<YearMonth> {
+        public MonthDayWriter() {
+            setFormatter(MonthDayFactory.FORMATTER);
         }
     }
 
     public static class YearWriter extends PrimitiveValueWriter {
+
         @Override
         public String extractString(Object o) {
             return Integer.toString(((Year) o).getValue());
@@ -355,24 +336,14 @@ public class Writers
     }
 
     public static class OffsetTimeWriter extends TemporalWriter<OffsetTime> {
-
-        public OffsetTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public OffsetTimeWriter() {
-            this(DateTimeFormatter.ISO_OFFSET_TIME);
+            setFormatter(DateTimeFormatter.ISO_OFFSET_TIME);
         }
     }
 
     public static class OffsetDateTimeWriter extends TemporalWriter<OffsetDateTime> {
-
-        public OffsetDateTimeWriter(DateTimeFormatter formatter) {
-            super(formatter);
-        }
-
         public OffsetDateTimeWriter() {
-            this(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            setFormatter(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         }
     }
 
@@ -409,19 +380,21 @@ public class Writers
 
     public static class BigIntegerWriter extends PrimitiveValueWriter
     {
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
             BigInteger big = (BigInteger) o;
-            JsonWriter.writeBasicString(output, big.toString(10));
+            writeBasicString(output, big.toString(10));
         }
     }
 
     public static class BigDecimalWriter extends PrimitiveValueWriter
     {
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
             BigDecimal big = (BigDecimal) o;
-            JsonWriter.writeBasicString(output, big.toPlainString());
+            writeBasicString(output, big.toPlainString());
         }
     }
 
@@ -430,7 +403,8 @@ public class Writers
         /**
          * To preserve backward compatibility with previous serialized format the internal fields must be stored as longs
          */
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        @Override
+        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             UUID uuid = (UUID) obj;
             output.write("\"mostSigBits\": ");
@@ -439,16 +413,18 @@ public class Writers
             output.write(Long.toString(uuid.getLeastSignificantBits()));
         }
 
+        @Override
         public boolean hasPrimitiveForm() { return true; }
 
         /**
          * We can use the String representation for easier handling, but this may break backwards compatibility
          * if an earlier library version is used
          */
-        public void writePrimitiveForm(Object o, Writer output) throws IOException
+        @Override
+        public void writePrimitiveForm(Object o, Writer writer) throws IOException
         {
             UUID buffer = (UUID) o;
-            JsonWriter.writeBasicString(output, buffer.toString());
+            writeBasicString(writer, buffer.toString());
         }
     }
 }

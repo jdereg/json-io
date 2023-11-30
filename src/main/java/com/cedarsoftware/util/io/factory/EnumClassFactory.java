@@ -44,9 +44,9 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
 
         if (value instanceof String) {
             return jObj.setFinishedTarget(this.fromString(c, (String) value), true);
-        } else {
-            return fromJsonObject(c, jObj);
         }
+
+        throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -54,15 +54,6 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
         return Enum.valueOf((Class<Enum>) c, s);
     }
 
-    @SuppressWarnings("unchecked")
-    protected Object fromJsonObject(Class<?> c, JsonObject job) {
-        Optional<Class> cls = MetaUtils.getClassIfEnum(c);
-        if (cls.isPresent()) {
-            return Enum.valueOf(cls.get(), this.getEnumName(job));
-        } else {
-            throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
-        }
-    }
 
     protected String getEnumName(JsonObject job) {
         String name = (String) job.get("Enum.name");

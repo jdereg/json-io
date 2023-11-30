@@ -1,20 +1,19 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,24 +60,24 @@ class WriteOptionsTest {
         assertTrue(options.isForceMapOutputAsTwoArrays());
     }
 
-    // Test for isLogicalPrimitive method
+    // Test for isNonReferenceableClass method
     @Test
-    void testIsLogicalPrimitive() {
+    void testIsNonReferenceableType() {
         assertTrue(options.isNonReferenceableClass(Date.class)); // Assuming Date is a logical primitive
         assertFalse(options.isNonReferenceableClass(Object.class)); // Assuming Object is not
     }
 
-    // Test for getLogicalPrimitives method
+    // Test for getNonReferenceable method
     @Test
-    void testGetLogicalPrimitives() {
-        Collection<Class<?>> logicalPrimitives = options.getNonReferenceableClasses();
-        assertNotNull(logicalPrimitives);
-        assertTrue(logicalPrimitives instanceof LinkedHashSet);
+    void testGetNotReferenceableTypes() {
+        Collection<Class<?>> nonReferenceableClasses = options.getNonReferenceableClasses();
+        assertNotNull(nonReferenceableClasses);
+        assertTrue(nonReferenceableClasses instanceof LinkedHashSet);
     }
 
-    // Test for addLogicalPrimitive method
+    // Test for addNonReferenceable method
     @Test
-    void testAddLogicalPrimitive() {
+    void testAddNonReferenceableClass() {
         options.addNonReferenceableClass(String.class);
         assertTrue(options.isNonReferenceableClass(String.class));
     }
@@ -101,35 +100,16 @@ class WriteOptionsTest {
 
     @Test
     void testAliases() {
-        options.aliasTypeName("foo", "foobar");
-        options.aliasTypeName("bar", "barback");
-        options.aliasTypeName("baz", "bazqux");
-        options.aliasTypeName("qux", "garply");
-        options.aliasTypeName("bar", "barbaz");
+        assertThrows(JsonIoException.class, () -> options.aliasTypeName("foo", "foobar"));
+        options.aliasTypeNames(new HashMap<>());
+        options.aliasTypeName("int", "properInt");
+        options.aliasTypeName("java.lang.Integer", "Int");
         options.build();
 
-        assertEquals("foobar", options.aliasTypeNames().get("foo"));
-        assertEquals("barbaz", options.aliasTypeNames().get("bar"));
-        assertEquals("bazqux", options.aliasTypeNames().get("baz"));
-        assertEquals("garply", options.aliasTypeNames().get("qux"));
+        assertEquals("properInt", options.aliasTypeNames().get("int"));
+        assertEquals("Int", options.aliasTypeNames().get("java.lang.Integer"));
 
-        assert options.aliasTypeNames().size() > 4;    // Asserting that we have at least one "pre-installed" alias.
-        assertThrows(JsonIoException.class, () -> options.aliasTypeName("x", "y"));
-    }
-
-    @Test
-    void testAlias2() {
-        int i = 0;
-        while (options.aliasTypeNames().size() < 4) {
-            options.aliasTypeName("" + i, "i=" + i);
-            i++;
-        }
-        Map<String, String> newAliases = new LinkedHashMap<>();
-        newAliases.put("foo", "foot");
-        newAliases.put("bar", "barkly");
-        newAliases.put("baz", "bazooka");
-        options.aliasTypeNames(newAliases);
-        assert options.aliasTypeNames().size() == 3;
+        assert options.aliasTypeNames().size() == 2;    // Asserting that we have at least one "pre-installed" alias.
     }
 
     @Test
@@ -214,12 +194,12 @@ class WriteOptionsTest {
 
         Set<Accessor> accessors = options.getIncludedAccessors(String.class);
         assert accessors.isEmpty();
-        
+
         options.build();
 
         accessors = options.getIncludedAccessors(String.class);
         assert accessors.isEmpty();
-        
+
         assert options.getIncludedFields(String.class).containsAll(MetaUtils.setOf("dog", "cat", "bird"));
         assert options.getIncludedFields(Integer.class).containsAll(MetaUtils.setOf("really?"));
         assertThrows(JsonIoException.class, () -> options.addIncludedField(String.class, "dog"));

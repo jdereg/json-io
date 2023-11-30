@@ -23,12 +23,7 @@ import com.cedarsoftware.util.io.Writers;
  *         limitations under the License.*
  */
 public class InstantWriter extends Writers.TemporalWriter<Instant> {
-
-    public InstantWriter(DateTimeFormatter formatter) {
-        super(formatter);
-    }
-
     public InstantWriter() {
-        this(DateTimeFormatter.ISO_INSTANT);
+        setFormatter(DateTimeFormatter.ISO_INSTANT);
     }
 }

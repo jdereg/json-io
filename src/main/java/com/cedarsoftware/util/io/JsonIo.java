@@ -138,7 +138,13 @@ public class JsonIo {
             return (T) jr.readObject(rootType);
         }
     }
-
+    /**
+     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
+     * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
+     * @param writeOptions WriteOptions to control the feature options. Can be null to take the defaults.
+     * @param json String JSON content.
+     * @return String JSON formatted in human readable, standard multi-line, indented format.
+     */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
         if (writeOptions.isBuilt())
         {
@@ -148,12 +154,17 @@ public class JsonIo {
         return JsonWriter.toJson(object, writeOptions.prettyPrint(true));
     }
 
+    /**
+     * Format the passed in JSON into multi-line, indented format, commonly used in JSON online editors.
+     * @param json String JSON content.
+     * @return String JSON formatted in human readable, standard multi-line, indented format.
+     */
     public static String formatJson(String json) {
         return formatJson(json,
                 new ReadOptionsBuilder().returnAsMaps().build(),
                 new WriteOptions().prettyPrint(true));
     }
-    
+
      /**
      * Copy an object graph using JSON.
      * @param source Object root object to copy

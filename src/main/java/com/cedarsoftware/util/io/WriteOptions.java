@@ -1,58 +1,31 @@
 package com.cedarsoftware.util.io;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.Period;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.util.io.writers.DurationWriter;
-import com.cedarsoftware.util.io.writers.InstantWriter;
-import com.cedarsoftware.util.io.writers.LongWriter;
-import com.cedarsoftware.util.io.writers.PeriodWriter;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
  * output JSON. An instance of this class is passed to the JsonWriter.toJson() APIs
- * to establish the desired capabilities.
+ * to set the desired capabilities.
  * <br/><br/>
- * You can "seal" this class from immutability and then store the class for re-use.
- * Call the "seal" method and then no longer can any methods that change state be
- * called - they will throw a JsonIoException if called after sealing.
+ * You can make this class immutable and then store the class for re-use.
+ * Call the ".build()" method and then no longer can any methods that change state be
+ * called - it will throw a JsonIoException.
  * <br/><br/>
  * This class can be created from another WriteOptions instance, using the "copy constructor"
  * that takes a WriteOptions. All properties of the other WriteOptions will be copied to the
- * new instance, except for the sealed property. That always starts off as false (not sealed)
- * so that you can make changes to options. You can create a few variations of the WriteOptions,
- * store them off, so that you do not have to re-create them frequently.
+ * new instance, except for the 'built' property. That always starts off as false (mutable)
+ * so that you can make changes to options.
  * <br/><br/>
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -80,26 +53,13 @@ public class WriteOptions {
     // Properties
     private boolean shortMetaKeys;
     private ShowType showTypeInfo = ShowType.MINIMAL;
-
-    /**
-     * Cache of writers to use during serialization.  Currently, this is cleared
-     * each time.  It might be worth holding on to this and just giving the user
-     * the option to clear at the end of serializations.  This item is also
-     * a good candidate for LRUCache
-     */
-    // TODO: 'writerCache' should be moved outside of WriteOptions.  WriteOptions sole purpose
-    // TODO: is to manage the state of its internal simple settings. It offers up the APIs
-    // TODO: to read this settings to the outside, and those outside classes like writers,
-    // TODO: should be looking at the WriteOptions and adjusting their behavior accordingly.
-    private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
-
-    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private boolean prettyPrint = false;
     private boolean writeLongsAsStrings = false;
     private boolean skipNullFields = false;
     private boolean forceMapOutputAsTwoArrays = false;
     private boolean allowNanAndInfinity = false;
     private boolean enumPublicFieldsOnly = false;
+    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
     private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
@@ -107,95 +67,129 @@ public class WriteOptions {
     private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
     private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private Set<Class<?>> nonReferenceableItems = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
+    private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
+    // Runtime cache (not feature options)
+    private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+
     private boolean built = false;
 
     static {
-        Map<Class<?>, JsonWriter.JsonClassWriter> temp = new LinkedHashMap<>();
-        temp.put(String.class, new Writers.JsonStringWriter());
-        temp.put(BigInteger.class, new Writers.BigIntegerWriter());
-        temp.put(BigDecimal.class, new Writers.BigDecimalWriter());
+        // These are hard-coded below so that the Writer does not get ahead of Readers out in the wild.
+        // Uncomment in the future (year or more after the 4.19 release?)
+        // About 5 tests need updated if the line below is uncommented (they have hard-coded JSON text
+        // used in assertions, e.g. java.util.ArrayList --> ArrayList in the test JSON.
+//        MetaUtils.loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
 
-        temp.put(Timestamp.class, new Writers.TimestampWriter());
-        temp.put(TimeZone.class, new Writers.TimeZoneWriter());
-        temp.put(Locale.class, new Writers.LocaleWriter());
-        temp.put(Class.class, new Writers.ClassWriter());
-        temp.put(UUID.class, new Writers.UUIDWriter());
+        // Temporary: see above.
+        addPermanentAlias(Class.class, "class");
+        addPermanentAlias(String.class, "string");
+        addPermanentAlias(Date.class, "date");
 
-        // TODO: Write Customization Map should not be changing based on settings here.
-        // TODO: Customized Writer should be referencing WriteOptions to make it's
-        // TODO: subtle changes to output, Isolating the understanding of the customization
-        // TODO: to the Writer, and leaving WriteOptions only possessing flags / indicators.
-        JsonWriter.JsonClassWriter defaultDateWriter = new Writers.DateAsLongWriter();
-        temp.put(java.sql.Date.class, defaultDateWriter);
-        temp.put(Date.class, defaultDateWriter);
+        addPermanentAlias(Byte.class, "byte");
+        addPermanentAlias(Short.class, "short");
+        addPermanentAlias(Integer.class, "int");
+        addPermanentAlias(Long.class, "long");
+        addPermanentAlias(Float.class, "float");
+        addPermanentAlias(Double.class, "double");
+        addPermanentAlias(Character.class, "char");
+        addPermanentAlias(Boolean.class, "boolean");
 
-        temp.put(LocalDate.class, new Writers.LocalDateWriter());
-        temp.put(LocalTime.class, new Writers.LocalTimeWriter());
-        temp.put(LocalDateTime.class, new Writers.LocalDateTimeWriter());
-        temp.put(ZonedDateTime.class, new Writers.ZonedDateTimeWriter());
-        temp.put(OffsetDateTime.class, new Writers.OffsetDateTimeWriter());
-        temp.put(YearMonth.class, new Writers.YearMonthWriter());
-        temp.put(Year.class, new Writers.YearWriter());
-        temp.put(ZoneOffset.class, new Writers.ZoneOffsetWriter());
-        temp.put(Instant.class, new InstantWriter());
-        temp.put(Duration.class, new DurationWriter());
-        temp.put(Period.class, new PeriodWriter());
-
-        JsonWriter.JsonClassWriter calendarWriter = new Writers.CalendarWriter();
-        temp.put(Calendar.class, calendarWriter);
-        temp.put(GregorianCalendar.class, calendarWriter);
-
-        JsonWriter.JsonClassWriter stringWriter = new Writers.PrimitiveUtf8StringWriter();
-        temp.put(StringBuilder.class, stringWriter);
-        temp.put(StringBuffer.class, stringWriter);
-        temp.put(URL.class, stringWriter);
-        temp.put(ZoneOffset.class, stringWriter);
-
-        JsonWriter.JsonClassWriter characterWriter = new Writers.CharacterWriter();
-        temp.put(Character.class, characterWriter);
-        temp.put(char.class, characterWriter);
-
-        JsonWriter.JsonClassWriter primitiveValueWriter = new Writers.PrimitiveValueWriter();
-        temp.put(byte.class, primitiveValueWriter);
-        temp.put(Byte.class, primitiveValueWriter);
-        temp.put(short.class, primitiveValueWriter);
-        temp.put(Short.class, primitiveValueWriter);
-        temp.put(int.class, primitiveValueWriter);
-        temp.put(Integer.class, primitiveValueWriter);
-
-        JsonWriter.JsonClassWriter longWriter = new LongWriter();
-        temp.put(long.class, longWriter);
-        temp.put(Long.class, longWriter);
-        temp.put(boolean.class, primitiveValueWriter);
-        temp.put(Boolean.class, primitiveValueWriter);
-
-        JsonWriter.JsonClassWriter floatWriter = new Writers.FloatWriter();
-        temp.put(float.class, floatWriter);
-        temp.put(Float.class, floatWriter);
-
-        JsonWriter.JsonClassWriter doubleWriter = new Writers.DoubleWriter();
-        temp.put(double.class, doubleWriter);
-        temp.put(Double.class, doubleWriter);
-
-        temp.put(AtomicBoolean.class, primitiveValueWriter);
-        temp.put(AtomicInteger.class, primitiveValueWriter);
-        temp.put(AtomicLong.class, primitiveValueWriter);
-
-        Class<?> zoneInfoClass = MetaUtils.classForName("sun.util.calendar.ZoneInfo", WriteOptions.class.getClassLoader());
-        if (zoneInfoClass != null) {
-            temp.put(zoneInfoClass, new Writers.TimeZoneWriter());
-        }
-        BASE_WRITERS.putAll(temp);
+        BASE_WRITERS.putAll(loadWriters());
+        BASE_NON_REFS.addAll(loadNonRefs());
     }
 
     // Enum for the 3-state property
     public enum ShowType {
         ALWAYS, NEVER, MINIMAL
     }
-    
+
+    /**
+     * Start with default options
+     */
+    public WriteOptions() {
+        // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
+        // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
+        aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
+        customWrittenClasses.putAll(BASE_WRITERS);
+        writerCache.putAll(BASE_WRITERS);
+        nonRefClasses.addAll(BASE_NON_REFS);
+    }
+
+    /**
+     * Copy all the settings from the passed in 'other' WriteOptions
+     * @param other WriteOptions - source to copy from.
+     */
+    public WriteOptions(WriteOptions other) {
+        shortMetaKeys = other.shortMetaKeys;
+        showTypeInfo = other.showTypeInfo;
+        enumWriter = other.enumWriter;
+        prettyPrint = other.prettyPrint;
+        writeLongsAsStrings = other.writeLongsAsStrings;
+        skipNullFields = other.skipNullFields;
+        allowNanAndInfinity = other.allowNanAndInfinity;
+        forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
+        enumPublicFieldsOnly = other.enumPublicFieldsOnly;
+        notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
+        aliasTypeNames.putAll(other.aliasTypeNames);
+        customWrittenClasses.putAll(other.customWrittenClasses);
+        classLoader = other.classLoader;
+        nonRefClasses.addAll(other.nonRefClasses);
+        writerCache.putAll(other.writerCache);
+
+        // Need your own Set instance here per Class, no references to the copied Set.
+        includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);
+        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.includedAccessors, false);
+        excludedFields = (Map<Class<?>, Set<String>>) dupe(other.excludedFields, false);
+        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
+     * @param clazz Class that will be aliased by a shorter name in the JSON.
+     * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
+     */
+    public static void addPermanentAlias(Class<?> clazz, String alias) {
+        BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
+    }
+
+    /**
+     * Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
+     * when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
+     * useful for small, immutable classes.
+     * @param clazz Class that will no longer be treated as referenceable when being written to JSON.
+     */
+    public static void addPermanentAlias(Class<?> clazz) {
+        BASE_NON_REFS.add(clazz);
+    }
+
+    /**
+     * Call this method to add a custom JSON writer to json-io.  It will
+     * associate the Class 'c' to the writer you pass in.  The writers are
+     * found with isAssignableFrom().  If this is too broad, causing too
+     * many classes to be associated to the custom writer, you can indicate
+     * that json-io should not use a custom write for a particular class,
+     * by calling the addNotCustomWrittenClass() method.  This method will add
+     * the custom writer such that it will be there permanently, for the
+     * life of the JVM (static).
+     *
+     * @param clazz      Class to assign a custom JSON writer to
+     * @param writer The JsonClassWriter which will write the custom JSON format of class.
+     */
+    public static void addPermanentWriter(Class<?> clazz, JsonWriter.JsonClassWriter writer) {
+        BASE_WRITERS.put(clazz, writer);
+    }
+
+    // Private method to check if the object is built
+    private void throwIfBuilt() {
+        if (built) {
+            throw new JsonIoException("This instance of WriteOptions is built and cannot be modified.  You can create another instance from this instance using the constructor for a mutable copy.");
+        }
+    }
+
     /**
      * @return ClassLoader to be used when writing JSON to resolve String named classes.
      */
@@ -211,93 +205,6 @@ public class WriteOptions {
         throwIfBuilt();
         this.classLoader = classLoader;
         return this;
-    }
-
-    /**
-     * Start with default options
-     */
-    public WriteOptions() {
-        customWrittenClasses.putAll(BASE_WRITERS);
-        nonReferenceableItems.add(byte.class);
-        nonReferenceableItems.add(short.class);
-        nonReferenceableItems.add(int.class);
-        nonReferenceableItems.add(long.class);
-        nonReferenceableItems.add(float.class);
-        nonReferenceableItems.add(double.class);
-        nonReferenceableItems.add(char.class);
-        nonReferenceableItems.add(boolean.class);
-
-        nonReferenceableItems.add(Byte.class);
-        nonReferenceableItems.add(Short.class);
-        nonReferenceableItems.add(Integer.class);
-        nonReferenceableItems.add(Long.class);
-        nonReferenceableItems.add(Float.class);
-        nonReferenceableItems.add(Double.class);
-        nonReferenceableItems.add(Character.class);
-        nonReferenceableItems.add(Boolean.class);
-
-        nonReferenceableItems.add(String.class);
-        nonReferenceableItems.add(Date.class);
-        nonReferenceableItems.add(BigInteger.class);
-        nonReferenceableItems.add(BigDecimal.class);
-        nonReferenceableItems.add(AtomicBoolean.class);
-        nonReferenceableItems.add(AtomicInteger.class);
-        nonReferenceableItems.add(AtomicLong.class);
-
-        // TODO: Blow out alias list for common types, will greatly shrink the JSON content.
-        // TODO: This feature is broken until the aliasTypeNames are shared between ReadOptions/WriteOptions
-//        aliasTypeName("java.util.ArrayList", "ArrayList");
-//        aliasTypeName("java.util.concurrent.atomic.AtomicBoolean", "AtomicBoolean");
-
-        aliasTypeName("java.lang.Class", "class");
-        aliasTypeName("java.lang.String", "string");
-        aliasTypeName("java.util.Date", "date");
-
-        // Use true primitive types for the primitive wrappers.
-        aliasTypeName("java.lang.Byte", "byte");
-        aliasTypeName("java.lang.Short", "short");
-        aliasTypeName("java.lang.Integer", "int");
-        aliasTypeName("java.lang.Long", "long");
-        aliasTypeName("java.lang.Float", "float");
-        aliasTypeName("java.lang.Double", "double");
-        aliasTypeName("java.lang.Character", "char");
-        aliasTypeName("java.lang.Boolean", "boolean");
-    }
-
-    /**
-     * Copy all the settings from the passed in 'other' WriteOptions
-     *
-     * @param other WriteOptions - source to copy from.
-     */
-    public WriteOptions(WriteOptions other) {
-        shortMetaKeys = other.shortMetaKeys;
-        showTypeInfo = other.showTypeInfo;
-        enumWriter = other.enumWriter;
-        prettyPrint = other.prettyPrint;
-        writeLongsAsStrings = other.writeLongsAsStrings;
-        skipNullFields = other.skipNullFields;
-        this.allowNanAndInfinity = other.allowNanAndInfinity;
-        forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
-        enumPublicFieldsOnly = other.enumPublicFieldsOnly;
-        notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
-        aliasTypeNames.putAll(other.aliasTypeNames);
-        customWrittenClasses.putAll(other.customWrittenClasses);
-        classLoader = other.classLoader;
-        nonReferenceableItems.addAll(other.nonReferenceableItems);
-        this.writerCache = other.writerCache;
-
-        // Need your own Set instance here per Class, no references to the copied Set.
-        includedFields = (Map<Class<?>, Set<String>>) dupe(other.includedFields, false);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.includedAccessors, false);
-        excludedFields = (Map<Class<?>, Set<String>>) dupe(other.excludedFields, false);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(other.excludedAccessors, false);
-    }
-
-    // Private method to check if the object is sealed
-    private void throwIfBuilt() {
-        if (built) {
-            throw new JsonIoException("These WriteOptions are sealed and cannot be modified.");
-        }
     }
 
     /**
@@ -319,8 +226,7 @@ public class WriteOptions {
     }
 
     /**
-     * Alias Type Names, e.g. "alist" instead of "java.util.ArrayList".
-     *
+     * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
      * @param typeName String name of type to fetch alias for.  There are no default aliases.
      * @return String alias name or null if type name is not aliased.
      */
@@ -344,7 +250,18 @@ public class WriteOptions {
     public WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
         throwIfBuilt();
         this.aliasTypeNames.clear();
-        this.aliasTypeNames.putAll(aliasTypeNames);
+        aliasTypeNames.forEach(this::addUniqueAlias);
+        return this;
+    }
+
+    /**
+     * @param type  Class to alias
+     * @param alias String shorter name to use, typically.
+     * @return ReadOptions for chained access.
+     */
+    public WriteOptions aliasTypeName(Class<?> type, String alias) {
+        throwIfBuilt();
+        aliasTypeNames.put(type.getName(), alias);
         return this;
     }
 
@@ -355,8 +272,25 @@ public class WriteOptions {
      */
     public WriteOptions aliasTypeName(String typeName, String alias) {
         throwIfBuilt();
-        aliasTypeNames.put(typeName, alias);
+        addUniqueAlias(typeName, alias);
         return this;
+    }
+
+    /**
+     * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
+     * @param typeName String fully qualified class name.
+     * @param alias String shorter alias name.
+     */
+    private void addUniqueAlias(String typeName, String alias) {
+        Class<?> clazz = MetaUtils.classForName(typeName, getClassLoader());
+        if (clazz == null) {
+            throw new JsonIoException("Unknown class: " + typeName + " cannot be added to the WriteOptions alias map.");
+        }
+        String existType = aliasTypeNames.get(clazz);
+        if (existType != null) {
+            throw new JsonIoException("Non-unique WriteOptions alias: " + alias + " attempted assign to: " + typeName + ", but is already assigned to: " + existType);
+        }
+        aliasTypeNames.put(clazz.getName(), alias);
     }
 
     /**
@@ -909,7 +843,7 @@ public class WriteOptions {
      * @return boolean true if the passed in class is considered a non-referenceable class.
      */
     public boolean isNonReferenceableClass(Class<?> clazz) {
-        return nonReferenceableItems.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
+        return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
                 clazz.isEnum() ||
@@ -922,7 +856,7 @@ public class WriteOptions {
      */
     public Collection<Class<?>> getNonReferenceableClasses()
     {
-        return built ? nonReferenceableItems : new LinkedHashSet<>(nonReferenceableItems);
+        return built ? nonRefClasses : new LinkedHashSet<>(nonRefClasses);
     }
 
     /**
@@ -933,7 +867,7 @@ public class WriteOptions {
      */
     public WriteOptions addNonReferenceableClass(Class<?> clazz) {
         throwIfBuilt();
-        nonReferenceableItems.add(clazz);
+        nonRefClasses.add(clazz);
         return this;
     }
 
@@ -949,7 +883,7 @@ public class WriteOptions {
         excludedAccessors = (Map<Class<?>, Set<Accessor>>) dupe(excludedAccessors, true);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
-        nonReferenceableItems = Collections.unmodifiableSet(new LinkedHashSet<>(nonReferenceableItems));
+        nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
         customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
         this.built = true;
         return this;
@@ -974,8 +908,8 @@ public class WriteOptions {
     }
 
     /**
-     * @return boolean true if the instance of this class is sealed, meaning no more changes can be made to it,
-     * otherwise false is returned, indicating that changes can still be made to this WriteOptions instance.
+     * @return boolean true if the instance of this class is built (read-only), otherwise false is returned,
+     * indicating that changes can still be made to this WriteOptions instance.
      */
     public boolean isBuilt() {
         return built;
@@ -1040,5 +974,59 @@ public class WriteOptions {
             }
         }
         return closestWriter;
+    }
+
+    /**
+     * Load custom writer classes based on contents of resources/customWriters.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
+        Map<String, String> map = new LinkedHashMap<>();
+        MetaUtils.loadMapDefinition(map, "customWriters.txt");
+        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String writerClassName = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null)
+            {
+                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
+                continue;
+            }
+            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
+            if (customWriter == null)
+            {
+                throw new JsonIoException("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+            try {
+                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter) MetaUtils.newInstance(customWriter, null);
+                writers.put(clazz, writer);
+            }
+            catch (Exception e) {
+                throw new JsonIoException("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+        }
+        return writers;
+    }
+
+    /**
+     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
+     * @return Set<Class<?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     */
+    private static Set<Class<?>> loadNonRefs() {
+        Set<String> set = new LinkedHashSet<>();
+        Set<Class<?>> nonRefs = new LinkedHashSet<>();
+        MetaUtils.loadSetDefinition(set, "nonRefs.txt");
+        set.forEach((className) -> {
+            Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
+            if (clazz == null) {
+                throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
+            }
+            nonRefs.add(clazz);
+        });
+        return nonRefs;
     }
 }
