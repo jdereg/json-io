@@ -7,7 +7,7 @@ _Example 1: Java object to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonWriter.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
+    String json = JsonIo.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
 
 This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`,
 it would reconstitute a Java `Employee` instance.
@@ -15,7 +15,7 @@ it would reconstitute a Java `Employee` instance.
 _Example 2: String to Java object_
 
     String json = // String JSON representing Employee instance
-    Employee employee = JsonReader.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
+    Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
 
 This will convert the JSON String to a Java Object graph.
 
@@ -23,7 +23,7 @@ _Example 3: Java Object to `OutputStream`_
 
     Employee emp;
     // emp obtained from data store...
-    JsonWriter.toJson(outputStream, emp, writeOptions);       
+    JsonIo.toJson(outputStream, emp, writeOptions);       
 
 In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
 you need to keep the `OutputStream` open (e.g. NDJSON), then use the `JsonWriter()` constructor that takes an `OutputStream`
@@ -35,7 +35,7 @@ and a `WriteOptions` instance.  Example:
 
 _Example 4: `InputStream` to Java object_
 
-    Employee emp = JsonReader.toObjects(stream, readOptions, Employee.class);
+    Employee emp = JsonIo.toObjects(stream, readOptions, Employee.class);
 
 In this example, an`InputStream`is supplying the JSON.
 

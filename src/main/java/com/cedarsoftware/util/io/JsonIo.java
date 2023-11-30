@@ -9,21 +9,22 @@ import java.nio.charset.StandardCharsets;
 /**
  * This is the main API for json-io.  Use these methods to convert:<br/>
  * <ul>
- * <li><b>1. Input</b>: Java root | JsonValue root <b>Output</b>: JSON<pre>String json = JsonIo.toJson(JavaObject | JsonValue root, writeOptions)</pre></li>
- * <li><b>2. Input</b>: Java root | JsonValue root, <b>Output</b>: JSON -> outputStream <pre>JsonIo.toJson(OutputStream, JavaObject | JsonValue root, writeOptions)</pre></li>
+ * <li><b>1. Input</b>: Java root <b>Output</b>: JSON<pre>String json = JsonIo.toJson(root, writeOptions)</pre></li>
+ * <li><b>2. Input</b>: Java root <b>Output</b>: JSON -> outputStream <pre>JsonIo.toJson(OutputStream, root, writeOptions)</pre></li>
  * <li><b>3. Input</b>: JSON, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(String | InputStream, readOptions, BillingInfo.class)</pre></li>
- * <li><b>4. Input</b>: JSON, <b>Output</b>: JsonValues<pre>JsonValue JsonIo.toJsonValues(String | InputStream, readOptions)</pre></li></ul>
+ * <li><b>4. Input</b>: JSON, <b>Output</b>: JsonObject<pre>JsonObject JsonIo.toJsonValues(String | InputStream, readOptions)</pre></li></ul>
  * Often, the goal is to get JSON to Java objects and from Java objects to JSON.  That is #1 and #3 above. <br/>
  * <br/>
- * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonValue instance) to
+ * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonObject instance) to
  * know which type of Object Graph it is serializing to JSON.<br/>
  * <br/>
- * There are occaisons where you may just want the raw JSON data, without anchoring it to a set of "DTO" Java objects.
+ * There are occasions where you may just want the raw JSON data, without anchoring it to a set of "DTO" Java objects.
  * For example, you may have an extreme amount of data, and you want to process it as fast as possible, and in
  * streaming mode.  The JSON specification has great primitives which are universally useful in many languages. In
  * Java that is boolean, null, long [or BigInteger], and double [or BigDecimal], and String.<br/>
  * <br/>
- * When JsonValue is returned (option #4 above), your root value will represent one of:
+ * When JsonValue is returned (option #4 above), your root value will be a JsonObject instance (Map).  In the future,
+ * you may also recceive any of the following:
  * <ul>JSON object {...}<br/>
  * JSON array [...]<br/>
  * JSON primitive (boolean, null, long, double, String).</ul>
@@ -36,7 +37,6 @@ import java.nio.charset.StandardCharsets;
  * <br/>
  * <b>JsonPrimitive</b> implements JsonValue and represents one of the 5 JSON primitive value types.<br/>
  * <br/>
-
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>

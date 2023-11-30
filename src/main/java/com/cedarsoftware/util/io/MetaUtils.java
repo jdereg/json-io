@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -10,9 +13,7 @@ import java.lang.reflect.Parameter;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -1194,7 +1195,7 @@ public class MetaUtils
     }
     public static void loadMapDefinition(Map<String, String> map, String resName) {
         try {
-            String contents = MetaUtils.fetchResource(resName);
+            String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -1211,7 +1212,7 @@ public class MetaUtils
 
     public static void loadSetDefinition(Set<String> set, String resName) {
         try {
-            String contents = MetaUtils.fetchResource(resName);
+            String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine().trim();
@@ -1225,14 +1226,47 @@ public class MetaUtils
         }
     }
 
-    public static String fetchResource(String name)
-    {
-        try {
-            URL url = MetaUtils.class.getResource("/" + name);
-            Path resPath = Paths.get(url.toURI());
-            return new String(Files.readAllBytes(resPath));
+    /**
+     * Loads resource content as a String.
+     * @param resourceName Name of the resource file.
+     * @return Content of the resource file as a String.
+     */
+    public static String loadResourceAsString(String resourceName) {
+        byte[] resourceBytes = loadResourceAsBytes(resourceName);
+        return new String(resourceBytes, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Loads resource content as a byte[].
+     * @param resourceName Name of the resource file.
+     * @return Content of the resource file as a byte[].
+     */
+    public static byte[] loadResourceAsBytes(String resourceName) {
+        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourceName)) {
+            if (inputStream == null) {
+                throw new JsonIoException("Resource not found: " + resourceName);
+            }
+            return readInputStreamFully(inputStream);
         } catch (Exception e) {
-            throw new JsonIoException("failed to load from resources:" + name, e);
+            throw new JsonIoException("Error reading resource: " + resourceName, e);
         }
+    }
+
+    /**
+     * Reads an InputStream fully and returns its content as a byte array.
+     *
+     * @param inputStream InputStream to read.
+     * @return Content of the InputStream as byte array.
+     * @throws IOException if an I/O error occurs.
+     */
+    private static byte[] readInputStreamFully(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int nRead;
+        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        buffer.flush();
+        return buffer.toByteArray();
     }
 }
