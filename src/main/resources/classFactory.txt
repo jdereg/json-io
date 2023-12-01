@@ -22,14 +22,14 @@ java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
 java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
 
 java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
-java.util.Collection = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory
 java.util.Date = com.cedarsoftware.util.io.factory.DateFactory
 java.util.GregorianCalendar = com.cedarsoftware.util.io.factory.CalendarFactory
-java.util.List = com.cedarsoftware.util.io.JsonReader$CollectionFactory
-java.util.Map = com.cedarsoftware.util.io.JsonReader$MapFactory
-java.util.Set = com.cedarsoftware.util.io.JsonReader$CollectionFactory
-java.util.SortedMap = com.cedarsoftware.util.io.JsonReader$MapFactory
-java.util.SortedSet = com.cedarsoftware.util.io.JsonReader$CollectionFactory
+java.util.List = com.cedarsoftware.util.io.factory.CollectionFactory
+java.util.Map = com.cedarsoftware.util.io.factory.MapFactory
+java.util.Set = com.cedarsoftware.util.io.factory.CollectionFactory
+java.util.SortedMap = com.cedarsoftware.util.io.factory.MapFactory
+java.util.SortedSet = com.cedarsoftware.util.io.factory.CollectionFactory
 java.util.TimeZone = com.cedarsoftware.util.io.factory.TimeZoneFactory
 
 sun.util.calendar.ZoneInfo = com.cedarsoftware.util.io.factory.TimeZoneFactory

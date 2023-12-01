@@ -4,19 +4,11 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 import com.cedarsoftware.util.ReturnType;
 import lombok.Getter;
@@ -193,61 +185,6 @@ public class JsonReader implements Closeable, ReaderContext
          */
         default Object read(Object jOb, Deque<JsonObject> stack) {
             return null;
-        }
-    }
-
-
-    /**
-     * Use to create new instances of collection interfaces (needed for empty collections)
-     */
-    public static class CollectionFactory implements ClassFactory {
-        @Override
-        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
-        {
-            if (List.class.isAssignableFrom(c))
-            {
-                return new ArrayList<>();
-            }
-            else if (SortedSet.class.isAssignableFrom(c))
-            {
-                return new TreeSet<>();
-            }
-            else if (Set.class.isAssignableFrom(c))
-            {
-                return new LinkedHashSet<>();
-            }
-            else if (Collection.class.isAssignableFrom(c))
-            {
-                return new ArrayList<>();
-            }
-            throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
-        }
-    }
-
-    /**
-     * Use to create new instances of Map interfaces (needed for empty Maps).  Used
-     * internally to handle Map, SortedMap when they are within parameterized types.
-     */
-    public static class MapFactory implements ClassFactory
-    {
-        /**
-         * @param c       Map interface that was requested for instantiation.
-         * @param jObj JsonObject
-         * @param context ReaderContext
-         * @return a concrete Map type.
-         */
-        @Override
-        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
-        {
-            if (SortedMap.class.isAssignableFrom(c))
-            {
-                return new TreeMap<>();
-            }
-            else if (Map.class.isAssignableFrom(c))
-            {
-                return new LinkedHashMap<>();
-            }
-            throw new JsonIoException("MapFactory handed Class for which it was not expecting: " + c.getName());
         }
     }
 
