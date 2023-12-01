@@ -98,10 +98,14 @@ public class MapResolver extends Resolver
             else if (rhs instanceof JsonObject)
             {
                 JsonObject jObj = (JsonObject) rhs;
-                if (injector != null && Primitives.needsNoTracing(injector.getType()))
+                if (injector != null)
                 {
-                    jObj.put("value", MetaUtils.convert(injector.getType(), jObj.getValue()));
-                    continue;
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(injector.getType());
+                    if (isNonRefClass) {
+                        // This will be JsonPrimitive.setValue() in the future (clean)
+                        jObj.setValue(MetaUtils.convert(injector.getType(), jObj.getValue()));
+                        continue;
+                    }
                 }
                 Long refId = jObj.getReferenceId();
 

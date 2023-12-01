@@ -232,7 +232,8 @@ public class ObjectResolver extends Resolver
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createInstance(fieldType, jsRhs);
                     injector.inject(target, fieldObject);
-                    if (!Primitives.needsNoTracing(jsRhs.getTargetClass()))
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getTargetClass());
+                    if (!isNonRefClass)
                     {
                         // GOTCHA : if the field is an immutable collection,
                         // "work instance", where one can accumulate items in (ArrayList)
@@ -331,13 +332,14 @@ public class ObjectResolver extends Resolver
                     // check that jObj as a type
                     if (jObj.getType() != null)
                     {
-                        Object createJavaObjectInstance = createInstance(null, jObj);
+                        Object javaInstance = createInstance(null, jObj);
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
                         // TODO: Check is finished here?
-                        if (!Primitives.needsNoTracing(jObj.getTargetClass()))
+                        if (!isNonRefClass && !jObj.isFinished)
                         {
                             stack.addFirst((JsonObject) rhs);
                         }
-                        storeMissingField(target, missingField, createJavaObjectInstance);
+                        storeMissingField(target, missingField, javaInstance);
                     } 
                     else //no type found, just notify.
                     {
@@ -656,8 +658,8 @@ public class ObjectResolver extends Resolver
                 {    // Convert JSON HashMap to Java Object instance and assign values
                     Object arrayElement = createInstance(compType, jsonObject);
                     Array.set(array, i, arrayElement);
-                    // TODO: Check isFinished?
-                    if (!Primitives.needsNoTracing(arrayElement.getClass())) {
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(arrayElement.getClass());
+                    if (!isNonRefClass && !jsonObject.isFinished) {
                         // Skip walking primitives and completed objects.
                         stack.addFirst(jsonObject);
                     }

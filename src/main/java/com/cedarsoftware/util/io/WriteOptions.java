@@ -1016,7 +1016,7 @@ public class WriteOptions {
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      * @return Set<Class<?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
-    private static Set<Class<?>> loadNonRefs() {
+    static Set<Class<?>> loadNonRefs() {
         Set<String> set = new LinkedHashSet<>();
         Set<Class<?>> nonRefs = new LinkedHashSet<>();
         MetaUtils.loadSetDefinition(set, "nonRefs.txt");

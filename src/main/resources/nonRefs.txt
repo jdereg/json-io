@@ -22,6 +22,7 @@ java.lang.Double
 java.lang.Character
 java.lang.Boolean
 
+java.lang.Class
 java.lang.String
 java.util.Date
 

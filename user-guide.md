@@ -289,24 +289,18 @@ JDK formatting options are available for use here.  There are convenience method
 >- [ ] Changes the date-time format to the passed in format. Returns`WriteOptions`for chained access.
 
 ### Non-Referenceable Classes (Opposite of Instance Folding)
-Some classes are small and reference something that for all intents and purposes, you might think of as a primitive value.
-You may want the value to be output always, never as a referenceable (@id/@ref) object. This will make more
-human-readable JSON.  However, it should be noted that when the same instance is written out this way, the reader
-of the JSON will end up with multiple copies of the same instance in memory.  For example, a Date is small enough to write
-as a single line item in JSON.  If you had thousands of the same Date in JSON (say common start or end dates from a
-database table), then each of these when read in, would be its own instance.
+For small immutable classes, no need to use @id/@ref with them, as they are effectively primitives.  All primitives,
+primitive wrappers, BigInteger, BigDecimal, Atomic*, java.util.Date, String, Class, are automatically marked
+as non-referenceable. You can add more immutable classes of your own.  The side-effect of this is that it could change
+the "shape" of your graph, if you were counting on two different fields that point to the same String/BigDecimal/Integer
+to have the same == instance.  Rarely a concern, however, if you have a lot of the same value, say Integer(0) and expect
+all those to collapse to the same value, they won't Each one would be read in as its own instance.
 >#### `boolean`isNonReferenceableClass(`Class`)
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 >#### `Collection<Class>` getNonReferenceableClasses()
 >- [ ] Returns a`Collection`of all non-referenceable classes.
 >#### `WriteOptions`addNonReferenceableClass(`Class`)
->- [ ] Adds a class to be considered "non-referenceable." Examples are the built-in primitives.  Making a class non-referenceable means that it will never
-   have an @id tag, nor @ref tag in the output JSON. When loaded, these classes will always have an instance created for them. Typically used
-   for small classes like `Date, LocalDate, LocalDateTime,` where you are not pointing many fields to the same instance. Using
-   this option for a class will cause more memory to be consumed on the reading side, as each class of this type
-   output will always create a new instance.  If you have a class with many fields (large instance) and many other fields outside this
-   class pointed to it, and that large instance is marked as "non-referenceable," then the large instance would be loaded
-   into memory uniquely for each object that pointed to it.  This could change the "shape" of your object graph for each non-referenceable instance.
+>- [ ] Adds a class to be considered "non-referenceable." 
 ---
 ## Controlling the input JSON using `ReadOptions`
 Create a new`ReadOptions`instance and turn various features on/off using the methods below. Example:
@@ -462,6 +456,19 @@ a custom reader (that could happen through inheritance).
 >- [ ] Initialize the list of classes on the non-customized list.  All prior associations will be dropped and this 
 `Collection` will establish the new list.
 
+### Non-Referenceable Classes (Opposite of Instance Folding)
+For small immutable classes, no need to use @id/@ref with them, as they are effectively primitives.  All primitives,
+primitive wrappers, BigInteger, BigDecimal, Atomic*, java.util.Date, String, Class, are automatically marked
+as non-referenceable. You can add more immutable classes of your own.  The side-effect of this is that it could change
+the "shape" of your graph, if you were counting on two different fields that point to the same String/BigDecimal/Integer
+to have the same == instance.  Rarely a concern, however, if you have a lot of the same value, say Integer(0) and expect
+all those to collapse to the same value, they won't Each one would be read in as its own instance.
+>#### `boolean`isNonReferenceableClass(`Class`)
+>- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
+>#### `Collection<Class>` getNonReferenceableClasses()
+>- [ ] Returns a`Collection`of all non-referenceable classes.
+>#### `WriteOptions`addNonReferenceableClass(`Class`)
+>- [ ] Adds a class to be considered "non-referenceable." Examples are the built-in primitives. 
 ---
 ## Javascript
 Included is a small Javascript utility (`jsonUtil.js` in the root folder) that will take a JSON output

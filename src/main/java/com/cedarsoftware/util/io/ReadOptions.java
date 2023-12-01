@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -61,10 +62,12 @@ public class ReadOptions {
     private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
     private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
     private Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+    private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
     private boolean built = false;
     // Runtime cache (not feature options)
     private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -77,6 +80,7 @@ public class ReadOptions {
         BASE_READERS.putAll(loadReaders());
         loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
         BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
+        BASE_NON_REFS.addAll(WriteOptions.loadNonRefs());
     }
     
     /**
@@ -92,6 +96,7 @@ public class ReadOptions {
         customReaderClasses.putAll(BASE_READERS);
         readerCache.putAll(BASE_READERS);
         classFactoryMap.putAll(BASE_CLASS_FACTORIES);
+        nonRefClasses.addAll(BASE_NON_REFS);
     }
 
     /**
@@ -112,6 +117,7 @@ public class ReadOptions {
         customReaderClasses.putAll(other.customReaderClasses);
         readerCache.putAll(other.readerCache);
         classFactoryMap.putAll(other.classFactoryMap);
+        nonRefClasses.addAll(other.nonRefClasses);
     }
 
     /**
@@ -191,6 +197,7 @@ public class ReadOptions {
         notCustomReadClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomReadClasses));
         customReaderClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customReaderClasses));
         classFactoryMap = Collections.unmodifiableMap(new LinkedHashMap<>(classFactoryMap));
+        nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
         this.built = true;
         return this;
     }
@@ -418,6 +425,44 @@ public class ReadOptions {
     public ReadOptions missingFieldHandler(JsonReader.MissingFieldHandler missingFieldHandler) {
         throwIfBuilt();
         this.missingFieldHandler = missingFieldHandler;
+        return this;
+    }
+
+    /**
+     * @param clazz Class to check to see if it is non-referenceable.  Non-referenceable classes will always create
+     *              a new instance when read in and never use @id/@ref. This uses more memory when the JSON is read in,
+     *              as there will be a separate instance in memory for each occurrence. There are certain classes that
+     *              json-io automatically treats as non-referenceable, like Strings, Enums, Class, and any Number
+     *              instance (BigDecimal, AtomicLong, etc.)  You can add to this list. Often, non-referenceable classes
+     *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
+     * @return boolean true if the passed in class is considered a non-referenceable class.
+     */
+    public boolean isNonReferenceableClass(Class<?> clazz) {
+        return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
+                Number.class.isAssignableFrom(clazz) ||
+                Date.class.isAssignableFrom(clazz) ||
+                clazz.isEnum() ||
+                clazz.equals(Class.class);
+    }
+
+    /**
+     * @return Collection of classes specifically listed as Logical Primitives.  In addition to the return
+     * classes, derivatives of Number and Date are also considered Logical Primitives by json-io.
+     */
+    public Collection<Class<?>> getNonReferenceableClasses()
+    {
+        return built ? nonRefClasses : new LinkedHashSet<>(nonRefClasses);
+    }
+
+    /**
+     * @param clazz class to add to be considered a non-referenceable object.  Just like an "int" for example, any
+     *              class added here will never use an @id/@ref pair.  The downside, is that when read,
+     *              each instance, even if the same as another, will use memory.
+     * @return ReadOptions for chained access.
+     */
+    public ReadOptions addNonReferenceableClass(Class<?> clazz) {
+        throwIfBuilt();
+        nonRefClasses.add(clazz);
         return this;
     }
 
