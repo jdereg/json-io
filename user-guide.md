@@ -7,7 +7,7 @@ _Example 1: Java object to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonWriter.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
+    String json = JsonIo.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
 
 This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`,
 it would reconstitute a Java `Employee` instance.
@@ -15,7 +15,7 @@ it would reconstitute a Java `Employee` instance.
 _Example 2: String to Java object_
 
     String json = // String JSON representing Employee instance
-    Employee employee = JsonReader.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
+    Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
 
 This will convert the JSON String to a Java Object graph.
 
@@ -35,7 +35,7 @@ and a `WriteOptions` instance.  Example:
 
 _Example 4: `InputStream` to Java object_
 
-    Employee emp = JsonReader.toObjects(stream, readOptions, Employee.class);
+    Employee emp = JsonIo.toObjects(stream, readOptions, Employee.class);
 
 In this example, an`InputStream`is supplying the JSON.
 
@@ -44,8 +44,8 @@ In this example, an`InputStream`is supplying the JSON.
 associative array.  When reading from a JSON String or`InputStream`of JSON, the`JsonReader`can be constructed like this:
 
     String json = // some JSON obtained from wherever
-    ReadOptions readOptions = new ReadOptions().returnAsJson();
-    JsonValue value = JsonReader.toJava(json, readOptions);    
+    ReadOptions readOptions = new ReadOptions().returnon();
+    JsonValue value = JsonIo.toJsonValues(json, readOptions);    
 
 See the `ReadOptions` below for al the feature control options.  In the example above, rather than return the objects
 converted into Java classes, you are being returned the raw`JsonValues`being parsed.  It is a graph that consists of
