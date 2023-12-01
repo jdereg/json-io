@@ -1,6 +1,17 @@
 ### Revision History
 * 5.0.0-SNAPSHOT
-  * Moved more lists and maps from source code to resource files. 
+  * Moved more lists and maps from source code to resource files.
+    > Example changes required due to this update:
+    <br><b>Before</b>
+    > ```
+    > // Using [key: value] to indicate a Map 
+    > A. Employee e = (Employee) JsonReader.jsonObjectsToJava(JsonObject employee, readOptions)
+    > ```
+    > <b>After</b>
+    > ```
+    > A. Employee e = JsonIo.toObjects(JsonObject | JsonArray | JsonPrimitive, readOptions, Employee.class)
+    > ```
+
 * 4.19.1
   * The old `Map` options method has been superceded by passing instead a `WriteOptions` or `ReadOptions` instance.
     All the prior features are still supported, plus new features have been added.  Use the methods on

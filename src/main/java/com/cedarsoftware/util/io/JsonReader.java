@@ -297,20 +297,6 @@ public class JsonReader implements Closeable, ReaderContext
     }
 
     /**
-     * Convert a root JsonObject that represents parsed JSON, into
-     * an actual Java object.
-     * @param root JsonObject instance that was the root object from the
-     * JSON input that was parsed in an earlier call to JsonReader.
-     * @return a typed Java instance that was serialized into JSON.
-     */
-    public static Object jsonObjectsToJava(JsonObject root, ReadOptions readOptions) {
-        ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
-        localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
-        JsonReader reader = new JsonReader(localReadOptions);
-        return reader.convertParsedMapsToJava(root, null);
-    }
-    
-    /**
      * @return ClassLoader to be used by Custom Writers
      */
     public ClassLoader getClassLoader()

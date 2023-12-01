@@ -216,7 +216,7 @@ public class ConstructorTest
         String json = TestUtil.toJson(new Canine("Bella"));
         Map root = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
-        Canine bella = (Canine) JsonReader.jsonObjectsToJava((JsonObject) root, new ReadOptions());
+        Canine bella = JsonIo.toObjects((JsonObject) root, new ReadOptions(), Canine.class);
         assert bella.getName().equals("Bella");
     }
 

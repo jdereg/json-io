@@ -140,6 +140,21 @@ public class JsonIo {
     }
 
     /**
+     * Convert a root JsonObject that represents parsed JSON, into an actual Java object.  This is done in a 2nd
+     * pass through the JsonValues.
+     * @param rootType The class that represents, in Java, the root of the underlying JSON from which the JsonObject
+     *                 was loaded.
+     * @return a typed Java instance, which was originally referenced in the JsonValue graph, which came from raw
+     * JSON.
+     */
+    public static <T> T toObjects(JsonValue jsonValue, ReadOptions readOptions, Class<T> rootType) {
+        ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
+        localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
+        JsonReader reader = new JsonReader(localReadOptions);
+        return reader.convertParsedMapsToJava((JsonObject) jsonValue, rootType);
+    }
+
+    /**
      * Note that the return type will match one of these JSON types: JsonObject, JsonArray, or JsonPrimitive, all
      * of which implement JsonValue.
      * @param json        json string

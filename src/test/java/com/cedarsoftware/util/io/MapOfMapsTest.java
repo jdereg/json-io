@@ -377,7 +377,7 @@ class MapOfMapsTest
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json=" + json);
         JsonObject root = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
-        TestObject test2 = (TestObject) JsonReader.jsonObjectsToJava(root, new ReadOptions());
+        TestObject test2 = JsonIo.toObjects(root, new ReadOptions(), TestObject.class);
         assertEquals(test2, test);
         assertEquals(test2._other, child);
     }
