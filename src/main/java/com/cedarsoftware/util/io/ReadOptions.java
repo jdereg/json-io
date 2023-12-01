@@ -441,8 +441,8 @@ public class ReadOptions {
         return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
-                clazz.isEnum() ||
-                clazz.equals(Class.class);
+                clazz.isEnum();
+
     }
 
     /**

@@ -2,9 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,30 +50,5 @@ public class Primitives {
      */
     public static boolean isPrimitive(Class<?> c) {
         return c.isPrimitive() || PRIMITIVE_WRAPPERS.contains(c);
-    }
-
-    /**
-     * @param c Class to test
-     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
-     * Integer, Long, Boolean, etc. are considered primitives by this method.
-     */
-    public static boolean isJsonType(Class<?> c) {
-        if (NATIVE_JSON_TYPES.contains(c)) {
-            return true;
-        }
-        return Map.class.isAssignableFrom(c);
-    }
-
-    /**
-     * @param c Class to test
-     * @return boolean true if the passed in class needs no further tracing.  
-     */
-    public static boolean needsNoTracing(Class<?> c) {
-        return isPrimitive(c) ||
-                String.class.isAssignableFrom(c) ||
-                Number.class.isAssignableFrom(c) ||
-                Date.class.isAssignableFrom(c) ||
-                c.isEnum() ||
-                c.equals(Class.class);
     }
 }

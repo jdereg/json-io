@@ -1102,7 +1102,7 @@ public class MetaUtils
      * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
      * Integer, Long, Boolean, etc. are considered primitives by this method.
      */
-    public static boolean isPrimitive(Class c)
+    public static boolean isPrimitive(Class<?> c)
     {
         return Primitives.isPrimitive(c);
     }
@@ -1117,8 +1117,7 @@ public class MetaUtils
      */
     public static boolean isLogicalPrimitive(Class<?> c)
     {
-        return  c.isPrimitive() ||
-                prims.contains(c) ||
+        return  isPrimitive(c) ||
                 String.class.isAssignableFrom(c) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||

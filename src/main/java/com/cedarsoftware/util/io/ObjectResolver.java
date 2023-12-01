@@ -489,8 +489,8 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     createInstance(Object.class, jObj);
-                    // TODO: Add isFinishedCheck?
-                    if (!Primitives.needsNoTracing(jObj.getTargetClass()))
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
+                    if (!isNonRefClass)
                     {
                         convertMapsToObjects(jObj);
                     }
