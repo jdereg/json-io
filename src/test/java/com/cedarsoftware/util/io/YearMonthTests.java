@@ -1,12 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
-
 import java.time.YearMonth;
 
 import org.junit.jupiter.api.Test;
+
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth> {
 
@@ -60,8 +59,9 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         NestedYearMonth actualDate = (NestedYearMonth) actual;
 
         assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isSameAs(actualDate.two);
+                .isEqualTo(expectedDate.one);
+        // Uncomment if we move temporal classes out of nonRefs.txt
+//                .isSameAs(actualDate.two);
 
         assertThat(actualDate.two).isEqualTo(expectedDate.two);
     }

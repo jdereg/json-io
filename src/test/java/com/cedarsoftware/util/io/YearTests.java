@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import static com.cedarsoftware.util.io.TestUtil.toJson;
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
-
 import java.time.Year;
 import java.util.stream.Stream;
 
@@ -12,6 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import static com.cedarsoftware.util.io.TestUtil.toJson;
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class YearTests extends SerializationDeserializationMinimumTests<Year> {
 
@@ -67,8 +66,9 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
         String json = toJson(expected);
 
         assertThat(actualDate.dateTime1)
-                .isEqualTo(expectedDate.dateTime1)
-                .isSameAs(actualDate.dateTime2);
+                .isEqualTo(expectedDate.dateTime1);
+        // Uncomment if we move temporal classes out of nonRefs.txt
+//                .isSameAs(actualDate.dateTime2);
 
         assertThat(actualDate.dateTime1).isEqualTo(expectedDate.dateTime1);
     }

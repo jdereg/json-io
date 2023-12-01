@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
-
 import java.time.ZoneOffset;
 import java.util.stream.Stream;
 
@@ -11,6 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffset> {
 
@@ -64,8 +63,9 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
         NestedZoneOffset actualDate = (NestedZoneOffset) actual;
 
         assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isSameAs(actualDate.two);
+                .isEqualTo(expectedDate.one);
+        // Uncomment if we move temporal classes out of nonRefs.txt
+//                .isSameAs(actualDate.two);
 
         assertThat(actualDate.one).isEqualTo(expectedDate.one);
     }

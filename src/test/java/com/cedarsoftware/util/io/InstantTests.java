@@ -57,11 +57,11 @@ public class InstantTests extends SerializationDeserializationMinimumTests<Insta
     protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
         NestedInstant instant1 = (NestedInstant) expected;
         NestedInstant instant2 = (NestedInstant) actual;
-
-
+        
         assertThat(instant2.getInstant1())
-                .isEqualTo(instant1.getInstant1())
-                .isSameAs(instant2.getInstant2());
+                .isEqualTo(instant1.getInstant1());
+        // Uncomment if we remove from nonRefs.txt
+//                .isSameAs(instant2.getInstant2());
     }
 
     @Override

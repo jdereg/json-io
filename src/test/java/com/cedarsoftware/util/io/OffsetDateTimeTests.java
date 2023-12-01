@@ -116,7 +116,8 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
 
         assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
         assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
-        assertThat(nestedActual.date2).isSameAs(nestedActual.date1);
+        // Uncomment if we move temporal classes out of nonRefs.txt
+//        assertThat(nestedActual.date2).isSameAs(nestedActual.date1);
     }
 
     @Override

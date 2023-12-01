@@ -1,6 +1,6 @@
 #
 # These classes will never output with an @id nor reference (@ref) another instance.  Use for classes
-# that are small and immutable.  Non-referenceable items potentially change the shape of the object graph.
+# that immutable.  Non-referenceable items potentially change the shape of the object graph.
 # Instance sharing can save memory, however, maintaining the perfect shape of the graph to save memory
 # may be something you sacrifice to improve readability of the JSON.
 #
@@ -31,3 +31,18 @@ java.math.BigDecimal
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong
+
+java.time.Duration
+java.time.Instant
+java.time.LocalDate
+java.time.LocalDateTime
+java.time.LocalTime
+java.time.MonthDay
+java.time.OffsetDateTime
+java.time.OffsetTime
+java.time.Period
+java.time.Year
+java.time.YearMonth
+java.time.ZonedDateTime
+java.time.ZoneId
+java.time.ZoneOffset

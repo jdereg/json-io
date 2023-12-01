@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.List;
 import java.util.Map;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.DeepEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class SerializationDeserializationMinimumTests<T> {
 
@@ -65,9 +64,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // act
         String json = TestUtil.toJson(expected);
 
-        assertThat(json)
-                .contains("@i")
-                .contains("@ref");
+        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
+//        assertThat(json)
+//                .contains("@i")
+//                .contains("@ref");
 
         Object actual = TestUtil.toObjects(json, null);
 
@@ -107,9 +107,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // act
         String json = TestUtil.toJson(expected);
 
-        assertThat(json)
-                .contains("@i")
-                .contains("@ref");
+        // Uncomment if we remove java.time.LocalDate/Time classes from nonRefs.txt
+//        assertThat(json)
+//                .contains("@i")
+//                .contains("@ref");
 
         List<Object> actual = TestUtil.toObjects(json, null);
 
@@ -120,7 +121,8 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     protected void assertDuplicatesInObjectArray(List<Object> expected, List<Object> actual) {
         assertThat(actual).hasSameElementsAs(expected);
-        assertThat(actual.get(0)).isSameAs(actual.get(1));
+        // Uncomment if we remove java.time.LocalDate/Time from nonRefs.txt
+//        assertThat(actual.get(0)).isSameAs(actual.get(1));
     }
 
     @Test
@@ -161,9 +163,10 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // act
         String json = TestUtil.toJson(expected);
 
-        assertThat(json)
-                .contains("@i")
-                .contains("@ref");
+        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
+//        assertThat(json)
+//                .contains("@i")
+//                .contains("@ref");
 
         List<T> actual = TestUtil.toObjects(json, null);
 
@@ -173,7 +176,8 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     protected void assertDuplicatesInCollection(List<T> expected, List<T> actual) {
         assertThat(actual).isEqualTo(expected);
-        assertThat(actual.get(0)).isSameAs(actual.get(4));
+        // Uncomment if we want to remove java.time.LocalDate/Time from nonReferenceable classes.
+//        assertThat(actual.get(0)).isSameAs(actual.get(4));
     }
 
     @Test
@@ -200,8 +204,9 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         // act
         String json = TestUtil.toJson(expected);
 
-        assertThat(json).contains("@i")
-                .contains("@ref");
+        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
+//        assertThat(json).contains("@i")
+//                .contains("@ref");
 
         Map<String, T> actual = TestUtil.toObjects(json, null);
 

@@ -65,8 +65,9 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         NestedLocalDate actualDate = (NestedLocalDate) actual;
 
         assertThat(actualDate.getDate1())
-                .isEqualTo(expectedDate.getDate1())
-                .isSameAs(actualDate.getDate2());
+                .isEqualTo(expectedDate.getDate1());
+        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
+//                .isSameAs(actualDate.getDate2());
 
         assertThat(actualDate.getDate1()).isEqualTo(expectedDate.getDate1());
         assertThat(actualDate.getHoliday()).isEqualTo(expectedDate.getHoliday());
