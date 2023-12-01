@@ -141,8 +141,6 @@ public class ClassDescriptors {
             accessorMap.put(key, accessor.orElseGet(() -> {
                 try {
                     return new Accessor(field);
-                } catch (ThreadDeath td) {
-                    throw td;
                 } catch (Throwable t) {
                     return null;
                 }
@@ -183,8 +181,6 @@ public class ClassDescriptors {
             injectorMap.put(key, injector.orElseGet(() -> {
                 try {
                     return new Injector(field);
-                } catch (ThreadDeath td) {
-                    throw td;
                 } catch (Throwable t) {
                     return null;
                 }

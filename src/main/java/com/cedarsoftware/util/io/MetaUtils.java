@@ -95,7 +95,6 @@ public class MetaUtils
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
-    private static final Set<Class<?>> prims = new HashSet<>();
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
     private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
@@ -158,15 +157,6 @@ public class MetaUtils
         // "" is to set to null (requested by customers)
         FROM_EMPTY_QUOTES.add(BigInteger.class);
         FROM_EMPTY_QUOTES.add(BigDecimal.class);
-
-        prims.add(Byte.class);
-        prims.add(Integer.class);
-        prims.add(Long.class);
-        prims.add(Double.class);
-        prims.add(Character.class);
-        prims.add(Float.class);
-        prims.add(Boolean.class);
-        prims.add(Short.class);
     }
 
     /**
@@ -1098,9 +1088,7 @@ public class MetaUtils
     }
 
     /**
-     * @param c Class to test
-     * @return boolean true if the passed in class is a Java primitive, false otherwise.  The Wrapper classes
-     * Integer, Long, Boolean, etc. are considered primitives by this method.
+     * Legacy API that many applications consumed.
      */
     public static boolean isPrimitive(Class<?> c)
     {
@@ -1108,17 +1096,12 @@ public class MetaUtils
     }
 
     /**
-     * @param c Class to test
-     * @return boolean true if the passed in class is a 'logical' primitive.  A logical primitive is defined
-     * as all Java primitives, the primitive wrapper classes, String, Number, and Class.  The reason these are
-     * considered 'logical' primitives is that they are immutable and therefore can be written without references
-     * in JSON content (making the JSON more readable - less @id / @ref), without breaking the semantics (shape)
-     * of the object graph being written.
+     * Legacy API that many applications consumed.
      */
     public static boolean isLogicalPrimitive(Class<?> c)
     {
         return  isPrimitive(c) ||
-                String.class.isAssignableFrom(c) ||
+                c.equals(String.class) ||
                 Number.class.isAssignableFrom(c) ||
                 Date.class.isAssignableFrom(c) ||
                 c.isEnum() ||

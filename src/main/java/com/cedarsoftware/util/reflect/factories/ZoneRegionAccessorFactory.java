@@ -21,8 +21,6 @@ public class ZoneRegionAccessorFactory implements AccessorFactory {
 
         try {
             return new Accessor(field, ZoneId.class.getMethod("getId"));
-        } catch (ThreadDeath td) {
-            throw td;
         } catch (Throwable t) {
             return null;
         }

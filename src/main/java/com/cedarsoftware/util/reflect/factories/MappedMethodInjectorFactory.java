@@ -33,8 +33,6 @@ public class MappedMethodInjectorFactory implements InjectorFactory {
 
         try {
             return new Injector(field, method);
-        } catch (ThreadDeath td) {
-            throw td;
         } catch (Throwable t) {
             return null;
         }

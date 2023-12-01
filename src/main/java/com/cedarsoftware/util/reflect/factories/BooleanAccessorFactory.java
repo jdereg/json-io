@@ -26,8 +26,6 @@ public class BooleanAccessorFactory implements AccessorFactory {
 
         try {
             return new Accessor(field, method);
-        } catch (ThreadDeath td) {
-            throw td;
         } catch (Throwable t) {
             return null;
         }

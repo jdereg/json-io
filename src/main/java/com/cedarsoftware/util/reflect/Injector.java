@@ -91,8 +91,6 @@ public class Injector {
             // TODO: This is logical primitive types (all primitives, wrappers, Date, java.sql.Date, LocalDate, LocalTime, ZonedDateTime, Atomic*, Big*, Class, String, etc.)
             // TODO: This should be performed with there is reflection, and accessor, Method Handle, etc.
             this.injector.invoke(object, value);
-        } catch (ThreadDeath td) {
-            throw td;
         } catch (Throwable t) {
             throw new JsonIoException("Attempting to set field: " + this.getName() + " using " + this.getDisplayName(), t);
         }
