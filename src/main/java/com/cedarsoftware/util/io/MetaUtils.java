@@ -429,7 +429,7 @@ public class MetaUtils
         return -1; // No path found
     }
 
-    public static Optional<Class> getClassIfEnum(Class<?> c) {
+    public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
         if (c.isEnum()) {
             return Optional.of(c);
         }
@@ -564,9 +564,8 @@ public class MetaUtils
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
     {
-        if (securityConcern.isAssignableFrom(c))
-        {
-            throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
+        if (securityConcern.isAssignableFrom(c)) {
+            throw new JsonIoException("For security reasons, json-io does not allow instantiation of: " + securityConcern.getName());
         }
     }
 
@@ -616,8 +615,7 @@ public class MetaUtils
             if (value == null) {
                 if (useNull) {
                     value = paramType.isPrimitive() ? convert(paramType, null) : null;  // don't send null to a primitive parameter
-                }
-                else {
+                } else {
                     value = getArgForType(paramType);
                 }
             }
@@ -644,7 +642,7 @@ public class MetaUtils
             distances[i++] = value == null ? -1 : computeInheritanceDistance(value.getClass(), param);
         }
 
-        int index = indexOfBestValue(distances);
+        int index = indexOfSmallestValue(distances);
         if (index >= 0) {
             Object valueBestMatching = values.get(index);
             values.remove(index);
@@ -659,7 +657,7 @@ public class MetaUtils
      * @param array The array to search.
      * @return The index of the smallest value, or -1 if the array is empty.
      */
-    public static int indexOfBestValue(int[] array) {
+    public static int indexOfSmallestValue(int[] array) {
         if (array == null || array.length == 0) {
             return -1; // Return -1 for null or empty array.
         }
@@ -668,7 +666,7 @@ public class MetaUtils
         int minIndex = -1;
 
         for (int i = 0; i < array.length; i++) {
-            if (array[i] < minValue & array[i] > -1) {
+            if (array[i] < minValue && array[i] > -1) {
                 minValue = array[i];
                 minIndex = i;
             }
@@ -998,8 +996,7 @@ public class MetaUtils
         StringBuilder sb = new StringBuilder();
         sb.append(methodName);
         sb.append('(');
-        for (Object arg : args)
-        {
+        for (Object arg : args) {
             sb.append(getJsonStringToMaxLength(arg, argCharLen));
             sb.append("  ");
         }
@@ -1010,8 +1007,7 @@ public class MetaUtils
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
     {
         String arg = JsonIo.toJson(obj, new WriteOptions().shortMetaKeys(true).showTypeInfoNever());
-        if (arg.length() > argCharLen)
-        {
+        if (arg.length() > argCharLen) {
             arg = arg.substring(0, argCharLen) + "...";
         }
         return arg;
@@ -1149,7 +1145,7 @@ public class MetaUtils
             }
             scanner.close();
         }  catch (Exception e) {
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by a comma per line. You can use # or blank lines in the file, they will be skipped.");
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
         }
     }
 

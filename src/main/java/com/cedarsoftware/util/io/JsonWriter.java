@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -30,8 +27,9 @@ import java.util.Set;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
-
 import lombok.Getter;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -1835,7 +1833,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         if (declaredType.isEnum() && declaredType.isAssignableFrom(objectClass)) {
-            Optional<Class> optionalClass = MetaUtils.getClassIfEnum(objectClass);
+            Optional<Class<?>> optionalClass = MetaUtils.getClassIfEnum(objectClass);
             return declaredType != optionalClass.orElse(null);
         }
 

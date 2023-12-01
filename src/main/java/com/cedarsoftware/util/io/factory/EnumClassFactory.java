@@ -30,7 +30,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
 
         String name = getEnumName(jObj);
-        Optional<Class> cls = MetaUtils.getClassIfEnum(c);
+        Optional<Class<?>> cls = MetaUtils.getClassIfEnum(c);
 
         if (!cls.isPresent()) {
             throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
