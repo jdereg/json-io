@@ -183,53 +183,63 @@ class JsonParser
                     break;
 
                 case STATE_READ_VALUE:
-                    if (field == null)
-                    {	// field is null when you have an untyped Object[], so we place
+                    if (field == null) {
+                        // field is null when you have an untyped Object[], so we place
                         // the JsonArray on the @items field.
                         field = ITEMS;
                     }
 
                     Object value = readValue(object, false);
-                    if (TYPE.equals(field))
-                    {
+
+                    // @type handler
+                    if (TYPE.equals(field)) {
+                        if (!(value instanceof String)) {
+                            error("Expected a String for " + TYPE + ", instead got: " + value);
+                        }
                         final String substitute = readOptions.getTypeNameAlias(value.toString());
-                        if (substitute != null)
-                        {
+                        if (substitute != null) {
                             value = substitute;
                         }
+                        object.setType((String) value);
                     }
 
+                    // @ref handler
                     if (REF.equals(field)) {
+                        if (!(value instanceof Long)) {
+                            error("Expected a number for " + REF + ", instead got: " + value);
+                        }
                         object.setReferenceId((Long)value);
+                        object.setFinished();   // "Nothing further to load, your honor."
                     } else {
                         object.put(field, value);
                     }
 
                     // If object is referenced (has @id), then add it to the ReferenceTracker
-                    if (ID.equals(field))
-                    {
-                        this.references.put((Long) value, object);
+                    // @id handler
+                    if (ID.equals(field)) {
+                        if (!(value instanceof Long)) {
+                            error("Expected a number for " + ID + ", instead got: " + value);
+                        }
+                        Long id = (Long) value;
+                        references.put(id, object);
+                        object.setId(id);
                     }
                     state = STATE_READ_POST_VALUE;
                     break;
 
                 case STATE_READ_POST_VALUE:
                     c = skipWhitespaceRead();
-                    if (c == -1)
-                    {
+                    if (c == -1) {
                         error("EOF reached before closing '}'");
                     }
-                    if (c == '}')
-                    {
+                    if (c == '}') {
                         done = true;
                         --curParseDepth;
                     }
-                    else if (c == ',')
-                    {
+                    else if (c == ',') {
                         state = STATE_READ_FIELD;
                     }
-                    else
-                    {
+                    else {
                         error("Object not ended with '}'");
                     }
                     break;
