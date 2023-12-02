@@ -84,15 +84,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
         return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
     }
 
-    /**
-     * A JsonObject starts off with an id of -1.  Also, an id of 0 is not considered a valid id.
-     * It must be 1 or greater.  JsonWriter utilizes this fact.
-     */
-    public boolean hasId()
-    {
-        return id > 0L;
-    }
-
     public boolean isFinished() { return isFinished; }
 
     public Object setFinishedTarget(Object o, boolean isFinished)
