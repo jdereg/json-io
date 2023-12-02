@@ -39,17 +39,6 @@ import lombok.Setter;
  */
 public class JsonObject extends JsonValue implements Map<Object, Object>
 {
-    public static final String KEYS = "@keys";
-    public static final String ITEMS = "@items";
-    public static final String ID = "@id";
-    public static final String REF = "@ref";
-    public static final String TYPE = "@type";
-    public static final String SHORT_TYPE = "@t";
-    public static final String SHORT_ITEMS = "@e";
-    public static final String SHORT_KEYS = "@k";
-    public static final String SHORT_ID = "@i";
-    public static final String SHORT_REF = "@r";
-    public static final String VALUE = "value";
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
 
     static Set<String> primitives = new HashSet<>();
@@ -64,8 +53,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     @Getter
     @Setter
     String type;
-    @Getter
-    long id = -1L;
     /**
      * -- GETTER --
      *

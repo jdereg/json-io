@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import lombok.Getter;
+
 /**
  * This class is the parent class for all parsed JSON objects, arrays, or primitive values.
  *
@@ -20,15 +22,98 @@ package com.cedarsoftware.util.io;
  *         limitations under the License.*
  */
 public abstract class JsonValue {
-    public boolean isJsonArray() {
+    public static final String KEYS = "@keys";
+    public static final String ITEMS = "@items";
+    public static final String ID = "@id";
+    public static final String REF = "@ref";
+    public static final String TYPE = "@type";
+    public static final String SHORT_TYPE = "@t";
+    public static final String SHORT_ITEMS = "@e";
+    public static final String SHORT_KEYS = "@k";
+    public static final String SHORT_ID = "@i";
+    public static final String SHORT_REF = "@r";
+    public static final String VALUE = "value";
+//    Class<?> type;
+    Object target;
+    boolean isFinished = false;
+    long id = -1L;
+    Long refId = null;
+    @Getter
+    int line;
+    @Getter
+    int col;
+
+    public boolean isReference() {
+        return refId == null;
+    }
+
+    public Long getReferenceId() {
+        return refId;
+    }
+
+    public void setReferenceId(Long id) {
+        refId = id;
+    }
+
+    public boolean isFinished() {
+        return false;
+    }
+
+    public void setFinished() {
+        this.isFinished = true;
+    }
+
+    public void setTarget(Object target) {
+        this.target = target;
+    }
+
+    public Object setFinishedTarget(Object o, boolean isFinished) {
+        this.target = o;
+        this.isFinished = isFinished;
+        return this.target;
+    }
+
+    public Object getTarget() {
+        return target;
+    }
+
+    public boolean isArray() {
         return false;
     }
 
     public boolean isJsonObject() {
         return false;
     }
+    public boolean isJsonArray() {
+        return false;
+    }
 
     public boolean isJsonPrimitive() {
         return false;
+    }
+    
+//    public Class<?> getType() {
+//        return type;
+//    }
+//
+//    public void setType(Class<?> type) {
+//        this.type = type;
+//    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    /**
+     * A JsonObject starts off with an id of -1.  Also, an id of 0 is not considered a valid id.
+     * It must be 1 or greater.  JsonWriter utilizes this fact.
+     */
+    public boolean hasId()
+    {
+        return id > 0L;
     }
 }
