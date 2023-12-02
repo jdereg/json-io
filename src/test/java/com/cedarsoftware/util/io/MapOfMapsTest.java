@@ -65,7 +65,7 @@ class MapOfMapsTest
         Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
 
         assertThat(map)
-                .isInstanceOf(LinkedHashMap.class)
+                .isInstanceOf(Map.class)
                 .containsEntry("_name", "Hello")
                 .containsEntry("_other", null);
     }

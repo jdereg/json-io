@@ -37,7 +37,7 @@ import lombok.Setter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonObject extends LinkedHashMap<Object, Object> implements JsonValue
+public class JsonObject implements JsonValue, Map<Object, Object>
 {
     public static final String KEYS = "@keys";
     public static final String ITEMS = "@items";
@@ -50,7 +50,8 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-    
+    private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
+
     static Set<String> primitives = new HashSet<>();
     static Set<String> primitiveWrappers = new HashSet<>();
 
@@ -357,33 +358,6 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
         hash = null;
     }
 
-    public Object put(Object key, Object value)
-    {
-        hash = null;
-        if (key == null)
-        {
-            return super.put(null, value);
-        }
-
-        if (key.equals(TYPE))
-        {
-            String oldType = type;
-            type = (String) value;
-            return oldType;
-        }
-        else if (key.equals(ID))
-        {
-            Long oldId = id;
-            id = (Long) value;
-            return oldId;
-        }
-        else if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
-        {
-            isMap = true;
-        }
-        return super.put(key, value);
-    }
-
     public Object setValue(Object o)
     {
         return this.put(VALUE, o);
@@ -391,14 +365,6 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
 
     public Object getValue() {
         return this.get(VALUE);
-    }
-
-    public void clear()
-    {
-        super.clear();
-        type = null;
-        hash = null;
-        id = -1L;
     }
 
     void clearArray()
@@ -418,7 +384,7 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
             return 0;
         }
 
-        return super.size();
+        return jsonStore.size();
     }
 
     private int calculateArrayHash()
@@ -457,8 +423,74 @@ public class JsonObject extends LinkedHashMap<Object, Object> implements JsonVal
         return hash;
     }
 
-    public boolean equals(Object other)
+    public boolean isEmpty() {
+        return jsonStore.isEmpty();
+    }
+
+    public boolean containsKey(Object key) {
+        return jsonStore.containsKey(key);
+    }
+
+    public boolean containsValue(Object value) {
+        return jsonStore.containsValue(value);
+    }
+
+    public Object get(Object key) {
+        return jsonStore.get(key);
+    }
+
+    public Object remove(Object key) {
+        return jsonStore.remove(key);
+    }
+
+    public Object put(Object key, Object value)
     {
-        return this == other;
+        hash = null;
+        if (key == null)
+        {
+            return jsonStore.put(null, value);
+        }
+
+        if (key.equals(TYPE))
+        {
+            String oldType = type;
+            type = (String) value;
+            return oldType;
+        }
+        else if (key.equals(ID))
+        {
+            Long oldId = id;
+            id = (Long) value;
+            return oldId;
+        }
+        else if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
+        {
+            isMap = true;
+        }
+        return jsonStore.put(key, value);
+    }
+
+    public void putAll(Map<?, ?> map) {
+        jsonStore.putAll(map);
+    }
+
+    public void clear()
+    {
+        jsonStore.clear();
+        type = null;
+        hash = null;
+        id = -1L;
+    }
+
+    public Set<Object> keySet() {
+        return jsonStore.keySet();
+    }
+
+    public Collection<Object> values() {
+        return jsonStore.values();
+    }
+
+    public Set<Entry<Object, Object>> entrySet() {
+        return jsonStore.entrySet();
     }
 }
