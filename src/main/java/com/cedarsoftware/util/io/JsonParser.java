@@ -167,7 +167,7 @@ class JsonParser
                             error("Expected ':' between string field and value");
                         }
 
-                        if (field.startsWith("@"))
+                        if (field.startsWith("@") || field.startsWith("."))
                         {   // Expand shorthand meta keys
                             String temp = stringCache.get(field);
 

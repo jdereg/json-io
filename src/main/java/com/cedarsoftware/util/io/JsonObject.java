@@ -368,19 +368,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
             return jsonStore.put(null, value);
         }
 
-        if (key.equals(TYPE))
-        {
-            String oldType = type;
-            type = (String) value;
-            return oldType;
-        }
-        else if (key.equals(ID))
-        {
-            Long oldId = id;
-            id = (Long) value;
-            return oldId;
-        }
-        else if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
+        if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS)))
         {
             isMap = true;
         }

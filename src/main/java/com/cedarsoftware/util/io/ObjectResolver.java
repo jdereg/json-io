@@ -111,10 +111,7 @@ public class ObjectResolver extends Resolver
 
     static boolean isBasicWrapperType(Class clazz)
     {
-        return clazz == Boolean.class || clazz == Integer.class ||
-            clazz == Byte.class || clazz == Long.class ||
-            clazz == Short.class || clazz == Character.class ||
-            clazz == Double.class || clazz == Float.class;
+        return Primitives.PRIMITIVE_WRAPPERS.contains(clazz);
     }
 
     /**
@@ -960,6 +957,7 @@ public class ObjectResolver extends Resolver
             if ((jObj.type == null || jObj.type.isEmpty()) && jObj.target == null)
             {
                 jObj.type = clazz.getName();
+                jObj.setJavaType(clazz);
             }
         }
     }
