@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -40,37 +39,12 @@ import lombok.Setter;
 public class JsonObject extends JsonValue implements Map<Object, Object>
 {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
-
-    static Set<String> primitives = new HashSet<>();
-    static Set<String> primitiveWrappers = new HashSet<>();
-
     boolean isMap = false;
 
     @Getter
     @Setter
     String type;
     Integer hash = null;
-
-    static
-    {
-        primitives.add("boolean");
-        primitives.add("byte");
-        primitives.add("char");
-        primitives.add("double");
-        primitives.add("float");
-        primitives.add("int");
-        primitives.add("long");
-        primitives.add("short");
-
-        primitiveWrappers.add("java.lang.Boolean");
-        primitiveWrappers.add("java.lang.Byte");
-        primitiveWrappers.add("java.lang.Character");
-        primitiveWrappers.add("java.lang.Double");
-        primitiveWrappers.add("java.lang.Float");
-        primitiveWrappers.add("java.lang.Integer");
-        primitiveWrappers.add("java.lang.Long");
-        primitiveWrappers.add("java.lang.Short");
-    }
 
     public boolean isJsonObject() {
         return true;
