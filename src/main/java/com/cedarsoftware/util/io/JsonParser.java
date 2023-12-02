@@ -243,50 +243,6 @@ class JsonParser
         return object;
     }
 
-    // If object is referenced (has @id), then add it to the ReferenceTracker
-    // @id handler
-    private void loadId(Object value, JsonObject object) {
-        if (!(value instanceof Long)) {
-            error("Expected a number for " + ID + ", instead got: " + value);
-        }
-        Long id = (Long) value;
-        references.put(id, object);
-        object.setId(id);
-    }
-
-    private void loadRef(Object value, JsonValue object) {
-        if (!(value instanceof Long)) {
-            error("Expected a number for " + REF + ", instead got: " + value);
-        }
-        object.setReferenceId((Long) value);
-        object.setFinished();   // "Nothing further to load, your honor."
-    }
-
-    private void loadType(Object value, JsonObject object) {
-        if (!(value instanceof String)) {
-            error("Expected a String for " + TYPE + ", instead got: " + value);
-        }
-        String javaType = (String) value;
-        final String substitute = readOptions.getTypeNameAlias(javaType);
-        if (substitute != null) {
-            javaType = substitute;
-        }
-
-        // Resolve class during parsing
-        Class<?> clazz = MetaUtils.classForName(javaType, readOptions.getClassLoader());
-        if (clazz == null) {
-            if (readOptions.isFailOnUnknownType()) {
-                error("Class: " + javaType + " not defined.");
-            }
-            clazz = readOptions.getUnknownTypeClass();
-            if (clazz == null) {
-                clazz = LinkedHashMap.class;
-            }
-        }
-        object.setJavaType(clazz);
-        object.setType(clazz.getName());  // type field on JsonObject needs to go away (we have JavaType now)
-    }
-
     Object readValue(JsonObject object, boolean top) throws IOException
     {
         if (curParseDepth > maxParseDepth) {
@@ -608,6 +564,63 @@ class JsonParser
         return c;
     }
 
+    /**
+     * Load the @id field listed in the JSON
+     * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
+     * @param object JsonObject representing the current item in the JSON being loaded.
+     */
+    private void loadId(Object value, JsonObject object) {
+        if (!(value instanceof Long)) {
+            error("Expected a number for " + ID + ", instead got: " + value);
+        }
+        Long id = (Long) value;
+        references.put(id, object);
+        object.setId(id);
+    }
+
+    /**
+     * Load the @ref field listed in the JSON
+     * @param value Object should be a Long, if not exception is thrown. It is the value associated to the @ref field.
+     * @param object JsonValue that will be stuffed with the reference id and marked as finished.
+     */
+    private void loadRef(Object value, JsonValue object) {
+        if (!(value instanceof Long)) {
+            error("Expected a number for " + REF + ", instead got: " + value);
+        }
+        object.setReferenceId((Long) value);
+        object.setFinished();   // "Nothing further to load, your honor."
+    }
+
+    /**
+     * Load the @type field listed in the JSON
+     * @param value Object should be a String, if not an exception is thrown.  It is the value associated to the @type field.
+     * @param object JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
+     */
+    private void loadType(Object value, JsonObject object) {
+        if (!(value instanceof String)) {
+            error("Expected a String for " + TYPE + ", instead got: " + value);
+        }
+        String javaType = (String) value;
+        final String substitute = readOptions.getTypeNameAlias(javaType);
+        if (substitute != null) {
+            javaType = substitute;
+        }
+
+        // Resolve class during parsing
+        Class<?> clazz = MetaUtils.classForName(javaType, readOptions.getClassLoader());
+        if (clazz == null) {
+            if (readOptions.isFailOnUnknownType()) {
+                error("Class: " + javaType + " not defined.");
+            }
+            clazz = readOptions.getUnknownTypeClass();
+            if (clazz == null) {
+                clazz = LinkedHashMap.class;
+            }
+        }
+        object.setJavaType(clazz);
+        object.setType(clazz.getName());  // type field on JsonObject needs to go away (we have JavaType now)
+    }
+    
     Object error(String msg)
     {
         throw new JsonIoException(getMessage(msg));
