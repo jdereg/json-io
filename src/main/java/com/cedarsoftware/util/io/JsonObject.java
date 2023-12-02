@@ -191,19 +191,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
         throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
     }
 
-    /**
-     * @return boolean true if this object references another object, false otherwise.
-     */
-    public boolean isReference()
-    {
-        return containsKey(REF);
-    }
-
-    public Long getReferenceId()
-    {
-        return (Long) get(REF);
-    }
-
     // Map APIs
     public boolean isMap()
     {

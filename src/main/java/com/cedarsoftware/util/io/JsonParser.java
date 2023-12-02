@@ -198,7 +198,12 @@ class JsonParser
                             value = substitute;
                         }
                     }
-                    object.put(field, value);
+
+                    if (REF.equals(field)) {
+                        object.setReferenceId((Long)value);
+                    } else {
+                        object.put(field, value);
+                    }
 
                     // If object is referenced (has @id), then add it to the ReferenceTracker
                     if (ID.equals(field))
