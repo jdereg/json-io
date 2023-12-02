@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -50,10 +52,20 @@ public class NDJSONTest {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
         String json1 = bufferedReader.readLine();
         TestObject ta = JsonIo.toObjects(json1, readOptions, TestObject.class);
+        
         assertThat(ta.getName()).isEqualTo("one");
+        assertThat(ta._other.getName()).isEqualTo("two");
+        assertNotEquals(ta._other, ta);
+        assertSame(ta._other._other, ta);  // @id/@ref worked
+
         String json2 = bufferedReader.readLine();
         TestObject tb = JsonIo.toObjects(json2, readOptions, TestObject.class);
+
         assertThat(tb.getName()).isEqualTo("two");
+        assertThat(tb._other.getName()).isEqualTo("one");
+        assertNotEquals(tb._other, tb);
+        assertSame(tb._other._other, tb);   // @id/@ref worked
+
         bufferedReader.close();
     }
 }

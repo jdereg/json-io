@@ -243,7 +243,7 @@ class JsonParser
         return object;
     }
 
-    Object readValue(JsonObject object, boolean top) throws IOException
+    Object readValue(JsonValue object, boolean top) throws IOException
     {
         if (curParseDepth > maxParseDepth) {
             return error("Maximum parsing depth exceeded");
@@ -290,7 +290,7 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private Object[] readArray(JsonObject object) throws IOException
+    private Object[] readArray(JsonValue object) throws IOException
     {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
