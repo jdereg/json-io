@@ -236,7 +236,7 @@ public class ObjectResolver extends Resolver
                         // "work instance", where one can accumulate items in (ArrayList)
                         // and "final instance' (say MetaUtils.listOf() ) can _not_ be the same.
                         // So, the later the assignment, the better.
-                        Object javaObj = convertMapsToObjects(jsRhs);
+                        Object javaObj = convertJsonValuesToJava(jsRhs);
                         if (javaObj != fieldObject)
                         {
                             injector.inject(target, javaObj);
@@ -459,7 +459,7 @@ public class ObjectResolver extends Resolver
                 jObj.put(ITEMS, element);
                 createInstance(Object.class, jObj);
                 col.add(jObj.target);
-                convertMapsToObjects(jObj);
+                convertJsonValuesToJava(jObj);
             }
             else // if (element instanceof JsonObject)
             {
@@ -489,7 +489,7 @@ public class ObjectResolver extends Resolver
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
                     if (!isNonRefClass)
                     {
-                        convertMapsToObjects(jObj);
+                        convertJsonValuesToJava(jObj);
                     }
                     
                     if (!(col instanceof EnumSet))

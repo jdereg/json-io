@@ -82,7 +82,7 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
         }
 
         if (o instanceof JsonObject) {
-            return context.reentrantConvertParsedMapsToJava((JsonObject) o, LocalTime.class);
+            return context.reentrantConvertJsonValueToJava((JsonObject) o, LocalTime.class);
         }
 
         return null;
@@ -94,7 +94,7 @@ public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
         }
 
         if (o instanceof JsonObject) {
-            return context.reentrantConvertParsedMapsToJava((JsonObject) o, ZoneOffset.class);
+            return context.reentrantConvertJsonValueToJava((JsonObject) o, ZoneOffset.class);
         }
 
         return null;

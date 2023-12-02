@@ -134,7 +134,7 @@ public abstract class Resolver implements ReaderContext
      */
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T reentrantConvertParsedMapsToJava(JsonObject rootObj, Class<T> root)
+    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root)
     {
         if (rootObj == null) {
             return null;
@@ -152,7 +152,7 @@ public abstract class Resolver implements ReaderContext
             if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
                 graph = (T) instance;
             } else {
-                graph = convertMapsToObjects(rootObj);
+                graph = convertJsonValuesToJava(rootObj);
             }
         }
         return graph;
@@ -168,7 +168,7 @@ public abstract class Resolver implements ReaderContext
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    protected <T> T convertMapsToObjects(final JsonObject root)
+    protected <T> T convertJsonValuesToJava(final JsonObject root)
     {
         if (root.isFinished) {
             return (T) root.target;

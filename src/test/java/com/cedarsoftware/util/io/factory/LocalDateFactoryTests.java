@@ -31,7 +31,7 @@ class LocalDateFactoryTests {
         JsonObject jsonObject = buildJsonObject(year, month, day);
 
         JsonReader reader = new JsonReader(new ReadOptions());
-        LocalDate time = (LocalDate) factory.newInstance(LocalDate.class, jsonObject, reader);
+        LocalDate time = factory.newInstance(LocalDate.class, jsonObject, reader);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)

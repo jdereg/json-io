@@ -126,7 +126,7 @@ public class JsonReader implements Closeable, ReaderContext
 
                     if (o instanceof JsonObject) {
                         JsonObject sub = (JsonObject) o;
-                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
+                        Object value = context.reentrantConvertJsonValueToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
 
                         if (value != null) {
                             if (sub.getType() != null || sub.getTargetClass() != null) {
@@ -187,23 +187,7 @@ public class JsonReader implements Closeable, ReaderContext
             return null;
         }
     }
-
-    /**
-     * Default ReadOptions.
-     */
-    public JsonReader()
-    {
-        this(new ReadOptions());
-    }
-
-    /**
-     * ReadOptions will be set to all defaults.
-     * @param inputStream input stream
-     */
-    public JsonReader(InputStream inputStream) {
-        this(inputStream, new ReadOptions());
-    }
-
+    
     /**
      * Allow others to try potentially faster Readers.
      * @param inputStream InputStream that will be offering JSON.
@@ -212,16 +196,6 @@ public class JsonReader implements Closeable, ReaderContext
     protected FastReader getReader(InputStream inputStream)
     {
         return new FastReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8192, 10);
-    }
-
-    /**
-     * Creates a json reader using custom read options
-     * @param json        json String
-     * @param readOptions Read Options to turn on/off various feature options, or supply additional ClassFactory data,
-     *                    etc. If null, readOptions will use all defaults.
-     */
-    public JsonReader(String json, ReadOptions readOptions) {
-        this(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
     }
 
     /**
@@ -260,38 +234,32 @@ public class JsonReader implements Closeable, ReaderContext
     public <T> T readObject(Class<T> root)
     {
         JsonObject rootObj = new JsonObject();
-        T o;
-        try
-        {
-            o = (T) parser.readValue(rootObj, true);
+        T returnValue;
+        try {
+            returnValue = (T) parser.readValue(rootObj, true);
         }
-        catch (JsonIoException e)
-        {
+        catch (JsonIoException e) {
             throw e;
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             throw new JsonIoException("error parsing JSON value", e);
         }
 
         T graph;
-        if (o instanceof Object[])
-        {
+        if (returnValue instanceof Object[]) {
+            rootObj.setJavaType(Object[].class);
             rootObj.setType(Object[].class.getName());
-            rootObj.setTarget(o);
-            rootObj.put(ITEMS, o);
-            graph = convertParsedMapsToJava(rootObj, root);
-        }
-        else
-        {
-            graph = o instanceof JsonValue ? convertParsedMapsToJava((JsonObject) o, root) : o;
+            rootObj.setTarget(returnValue);
+            rootObj.put(ITEMS, returnValue);
+            graph = convertJsonValueToJava(rootObj, root);
+        } else {
+            graph = returnValue instanceof JsonValue ? convertJsonValueToJava((JsonObject) returnValue, root) : returnValue;
         }
 
         // Allow a complete 'Map' return (Javascript style)
 
-        if (getReadOptions().getReturnType() == ReturnType.JSON_VALUES)
-        {
-            return o;
+        if (getReadOptions().getReturnType() == ReturnType.JSON_VALUES) {
+            return returnValue;
         }
         return graph;
     }
@@ -322,9 +290,8 @@ public class JsonReader implements Closeable, ReaderContext
      */
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T reentrantConvertParsedMapsToJava(JsonObject rootObj, Class<T> root)
-    {
-        return this.resolver.reentrantConvertParsedMapsToJava(rootObj, root);
+    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
+        return this.resolver.reentrantConvertJsonValueToJava(rootObj, root);
     }
 
     /**
@@ -352,10 +319,10 @@ public class JsonReader implements Closeable, ReaderContext
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    protected <T> T convertParsedMapsToJava(JsonObject rootObj, Class<T> root) {
+    protected <T> T convertJsonValueToJava(JsonObject rootObj, Class<T> root) {
         try {
             root = root == null ? (Class<T>)Object.class : root;
-            return reentrantConvertParsedMapsToJava(rootObj, root);
+            return reentrantConvertJsonValueToJava(rootObj, root);
         } catch (Exception e) {
             MetaUtils.safelyIgnoreException(this::close);
             if (e instanceof JsonIoException) {
@@ -383,8 +350,7 @@ public class JsonReader implements Closeable, ReaderContext
 
     private String getErrorMessage(String msg)
     {
-        if (input != null)
-        {
+        if (input != null) {
             return msg + "\nLast read: " + input.getLastSnippet() + "\nline: " + input.getLine() + ", col: " + input.getCol();
         }
         return msg;

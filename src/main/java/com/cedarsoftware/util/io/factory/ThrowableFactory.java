@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -38,7 +38,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     {
         List<Object> arguments = new ArrayList<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
-        Throwable cause = context.reentrantConvertParsedMapsToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
+        Throwable cause = context.reentrantConvertJsonValueToJava((JsonObject) jObj.get(CAUSE), Throwable.class);
 
         if (message != null) {
             arguments.add(message);
@@ -63,7 +63,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
-                elements[i] = stackTraceMap == null ? null : context.reentrantConvertParsedMapsToJava(stackTraceMap, StackTraceElement.class);
+                elements[i] = stackTraceMap == null ? null : context.reentrantConvertJsonValueToJava(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }

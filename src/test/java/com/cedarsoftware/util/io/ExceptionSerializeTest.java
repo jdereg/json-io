@@ -70,7 +70,7 @@ class ExceptionSerializeTest
             JsonObject jObjCause = (JsonObject) jObj.get("cause");
             List<Object> arguments = new ArrayList<>();
 
-            Throwable cause = context.reentrantConvertParsedMapsToJava(jObjCause, Throwable.class);
+            Throwable cause = context.reentrantConvertJsonValueToJava(jObjCause, Throwable.class);
 
             if (cause != null) {
                 arguments.add(cause);

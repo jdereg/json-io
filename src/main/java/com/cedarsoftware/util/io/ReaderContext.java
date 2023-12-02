@@ -18,7 +18,7 @@ public interface ReaderContext {
      *             JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    <T> T reentrantConvertParsedMapsToJava(JsonObject root, Class<T> hint);
+    <T> T reentrantConvertJsonValueToJava(JsonObject root, Class<T> hint);
 
     /**
      * Walk the Java object fields and copy them from the JSON object to the Java object, performing

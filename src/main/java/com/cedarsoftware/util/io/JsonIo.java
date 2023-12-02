@@ -183,7 +183,7 @@ public class JsonIo {
         ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
         localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
         JsonReader reader = new JsonReader(localReadOptions);
-        return reader.convertParsedMapsToJava((JsonObject) jsonValue, rootType);
+        return reader.convertJsonValueToJava((JsonObject) jsonValue, rootType);
     }
 
     /**
