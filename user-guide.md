@@ -33,6 +33,7 @@ you need to keep the `OutputStream` open (e.g. NDJSON), then set `writeOptions.c
     JsonIo.toJson(outputStream, record2, writeOptions);
     ...
     JsonIo.toJson(outputStream, recordn, writeOptions);
+    outputStream.close();
 
 
 _Example 4: `InputStream` to Java object_
