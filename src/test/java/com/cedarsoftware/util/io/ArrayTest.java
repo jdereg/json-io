@@ -949,6 +949,42 @@ public class ArrayTest
         Object object = TestUtil.toObjects(testOut, null);
     }
 
+    @Test
+    void testEmptyArrayAsObjectArrayAndList()
+    {
+        String json = "[]";
+        Object[] empty = TestUtil.toObjects(json, new ReadOptions(), Object[].class);
+        assertNotNull(empty);
+        assertEquals(0, empty.length);
+
+        // TODO: This test should work
+//        List<?> emptyList = TestUtil.toObjects(json, new ReadOptions(), ArrayList.class);
+//        assertNotNull(emptyList);
+//        assertTrue(emptyList.isEmpty());
+    }
+
+    @Test
+    void testEmptySubArray()
+    {
+        String json = "[[], []]";
+        Object[] outer = TestUtil.toObjects(json, new ReadOptions(), Object[].class);
+        assertEquals(2, outer.length);
+
+        Object[] empty1 = (Object[])outer[0];
+        assertEquals(0, empty1.length);
+        Object[] empty2 = (Object[])outer[1];
+        assertEquals(0, empty2.length);
+
+        // TODO: This test should work
+//        List<List<?>> outerList = TestUtil.toObjects(json, new ReadOptions(), ArrayList.class);
+//        assertEquals(2, outerList.size());
+//
+//        List<?> emptyList1 = (List)outer[0];
+//        assertEquals(0, emptyList1.size());
+//        List<?> emptyList2 = (List)outer[1];
+//        assertEquals(0, emptyList2.size());
+    }
+
     private static Stream<Arguments> allShowTypeInfos() {
         return Stream.of(
                 Arguments.of(new WriteOptions().showTypeInfoNever()),

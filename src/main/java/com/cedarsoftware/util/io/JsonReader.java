@@ -324,7 +324,9 @@ public class JsonReader implements Closeable, ReaderContext
             root = root == null ? (Class<T>)Object.class : root;
             return reentrantConvertJsonValueToJava(rootObj, root);
         } catch (Exception e) {
-            MetaUtils.safelyIgnoreException(this::close);
+            if (readOptions.isCloseStream()) {
+                MetaUtils.safelyIgnoreException(this::close);
+            }
             if (e instanceof JsonIoException) {
                 throw (JsonIoException) e;
             }

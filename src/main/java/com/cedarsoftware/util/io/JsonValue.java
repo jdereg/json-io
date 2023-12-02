@@ -68,10 +68,12 @@ public abstract class JsonValue {
 
     public void setTarget(Object target) {
         this.target = target;
+        this.javaType = target.getClass();
     }
 
     public Object setFinishedTarget(Object o, boolean isFinished) {
         this.target = o;
+        this.target = o.getClass();
         this.isFinished = isFinished;
         return this.target;
     }
