@@ -164,14 +164,12 @@ public class TestUtil
     private static TestInfo readJsonIo(String json, ReadOptions options, Class<?> root)
     {
         TestInfo testInfo = new TestInfo();
-        try
-        {
+        try {
             long start = System.nanoTime();
             testInfo.obj = JsonIo.toObjects(json, options, root);
             testInfo.nanos = System.nanoTime() - start;
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             testInfo.t = e;
         }
         return testInfo;

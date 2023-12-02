@@ -119,14 +119,12 @@ public class CustomWriterTest
     public void testCustomWriterException()
     {
         Person p = createTestPerson();
-        try
-        {
+        try {
             TestUtil.toJson(p, new WriteOptions().addCustomWrittenClass(Person.class, new BadCustomPWriter()));
             fail();
         }
-        catch (JsonIoException e)
-        {
-            assert e.getMessage().toLowerCase().contains("unable to convert");
+        catch (JsonIoException e) {
+            assert e.getMessage().toLowerCase().contains("error writing object");
         }
     }
 

@@ -61,6 +61,9 @@ public class JsonIoException extends RuntimeException
     public JsonIoException(String message, Throwable cause)
     {
         super(message, cause);
+//        if (cause instanceof JsonIoException) {
+//            System.out.println("Need to check if JsonIoException is being thrown, don't wrap if so");
+//        }
     }
 
     /** 
@@ -78,5 +81,8 @@ public class JsonIoException extends RuntimeException
     public JsonIoException(Throwable cause)
     {
         super(cause);
+//        if (cause instanceof JsonIoException) {
+//            System.out.println("Need to check if JsonIoException is being thrown, don't wrap if so");
+//        }
     }
 }

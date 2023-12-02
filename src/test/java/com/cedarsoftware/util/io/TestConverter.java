@@ -739,7 +739,7 @@ public class TestConverter
         }
         catch (JsonIoException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
 
         // Invalid source date for java.sql.Date
@@ -750,7 +750,7 @@ public class TestConverter
         }
         catch (JsonIoException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
     }
 
@@ -935,14 +935,12 @@ public class TestConverter
         assertEquals(now.getTime(), bigDec.longValue());
 
         // Error handling
-        try
-        {
+        try {
             convertToLocalDate("2020-12-40");
             fail();
         }
-        catch (JsonIoException e)
-        {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "value", "not", "convert", "local");
+        catch (JsonIoException e) {
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convertToLocalDate(null) == null;
@@ -1056,7 +1054,7 @@ public class TestConverter
         }
         catch (JsonIoException e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "value", "not", "convert", "local");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convertToLocalDateTime(null) == null;
@@ -1168,14 +1166,12 @@ public class TestConverter
         assertEquals(now.getTime(), bigDec.longValue());
 
         // Error handling
-        try
-        {
+        try {
             convertToZonedDateTime("2020-12-40");
             fail();
         }
-        catch (JsonIoException e)
-        {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "2020-12-40", "not", "convert", "zonedDateTime");
+        catch (JsonIoException e) {
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convertToZonedDateTime(null) == null;
@@ -1250,7 +1246,7 @@ public class TestConverter
         }
         catch (JsonIoException e)
         {
-            assert e.getMessage().toLowerCase().contains("could not be converted");
+            assert e.getMessage().toLowerCase().contains("unable to parse: 123");
         }
     }
 

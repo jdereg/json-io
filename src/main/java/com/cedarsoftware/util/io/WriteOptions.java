@@ -59,6 +59,7 @@ public class WriteOptions {
     private boolean forceMapOutputAsTwoArrays = false;
     private boolean allowNanAndInfinity = false;
     private boolean enumPublicFieldsOnly = false;
+    private boolean closeStream = true;
     private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
     private ClassLoader classLoader = WriteOptions.class.getClassLoader();
     private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
@@ -133,6 +134,7 @@ public class WriteOptions {
         allowNanAndInfinity = other.allowNanAndInfinity;
         forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
         enumPublicFieldsOnly = other.enumPublicFieldsOnly;
+        closeStream = other.closeStream;
         notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
         aliasTypeNames.putAll(other.aliasTypeNames);
         customWrittenClasses.putAll(other.customWrittenClasses);
@@ -487,6 +489,26 @@ public class WriteOptions {
         throwIfBuilt();
         this.enumWriter = nullWriter;
         this.enumPublicFieldsOnly = writePublicFieldsOnly;
+        return this;
+    }
+
+    /**
+     * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
+     */
+    public boolean isCloseStream() {
+        return closeStream;
+    }
+
+    /**
+     * @param closeStream boolean set to 'true' to have JsonIo close the OutputStream when it is finished writinging
+     *                    to it.  The default is 'true'.  If false, the OutputStream will not be closed, allowing
+     *                    you to continue writing further.  Example, NDJSON that has new line eliminated JSON
+     *                    objects repeated.
+     * @return WriteOptions for chained access.
+     */
+    public WriteOptions closeStream(boolean closeStream) {
+        throwIfBuilt();
+        this.closeStream = closeStream;
         return this;
     }
 

@@ -370,18 +370,13 @@ public class JsonReader implements Closeable, ReaderContext
         }
     }
 
-    @Override
-    public void close()
-    {
-        try
-        {
-            if (input != null)
-            {
+    public void close() {
+        try {
+            if (input != null) {
                 input.close();
             }
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             throw new JsonIoException("Unable to close input", e);
         }
     }

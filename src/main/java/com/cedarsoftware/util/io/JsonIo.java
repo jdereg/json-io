@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -74,6 +75,9 @@ public class JsonIo {
             writer.close();
             return stream.toString();
         } catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("Unable to convert object to JSON", e);
         }
     }
@@ -87,7 +91,9 @@ public class JsonIo {
      * baos.flush();<br/>
      * String json = new String(baos.toByteArray(), StandardCharsets.UTF_8);<br/>
      * </code><br/>
-     * @param out OutputStream destination for the JSON output.
+     * @param out OutputStream destination for the JSON output.  The OutputStream will be closed by default.  If
+     *            you don't want this, set writeOptions.closeStream(false).  This is useful for creating NDJSON,
+     *            where multiple JSON objects are written to the stream, separated by a newline.
      * @param source Root Java object to begin creating the JSON.
      * @param writeOptions Feature options settings to control the JSON output.  Can be null,
      *                     in which case, default settings will be used.
@@ -97,9 +103,17 @@ public class JsonIo {
         try {
             JsonWriter writer = new JsonWriter(out, writeOptions);
             writer.write(source);
-            writer.close();
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
+        }
+        finally {
+            if (writeOptions.isCloseStream()) {
+                try {
+                    out.close();
+                }
+                catch (IOException ignored) {
+                }
+            }
         }
     }
 
@@ -125,7 +139,8 @@ public class JsonIo {
 
     /**
      * Convert the passed in JSON to Java Objects.
-     * @param in InputStream bringing JSON content.
+     * @param in InputStream bringing JSON content.  By default, it will be closed.  If you don't want
+     *           it closed after reading, set readOptions.closeStream(false).
      * @param readOptions Feature options settings to control the JSON processing.  Can be null,
      *                     in which case, default settings will be used.
      * @param rootType Class of the root type of object that will be returned. Can be null, in which
@@ -137,8 +152,25 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
-        try (JsonReader jr = new JsonReader(in, readOptions)) {
-            return (T) jr.readObject(rootType);
+        try  {
+            JsonReader jr = new JsonReader(in, readOptions);
+            T root = jr.readObject(rootType);
+            return root;
+        }
+        catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
+            throw new JsonIoException(e);
+        }
+        finally {
+            if (readOptions.isCloseStream()) {
+                try {
+                    in.close();
+                }
+                catch (IOException ignored) {
+                }
+            }
         }
     }
 
@@ -175,7 +207,8 @@ public class JsonIo {
     /**
      * Note that the return type will match one of these JSON types: JsonObject, JsonArray, or JsonPrimitive, all
      * of which implement JsonValue.
-     * @param inputStream bytes representing UTF-8 string
+     * @param inputStream bytes representing UTF-8 string.  The InputStream will be closed by default.  If you do
+     *                    not want the InputStream closed, then use writeOptions.closeStream(false).
      * @param readOptions options to use when reading.  Can be null, in which case the defaults will be used.
      * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
      */
@@ -188,8 +221,22 @@ public class JsonIo {
             readOptions = new ReadOptions(readOptions);
         }
         
-        try (JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new JsonReader.DefaultReferenceTracker())) {
-            return jr.readObject(JsonValue.class);
+        try {
+            JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new JsonReader.DefaultReferenceTracker());
+            JsonValue jsonValue = jr.readObject(JsonValue.class);
+            return jsonValue;
+        }
+        catch (Exception e) {
+            throw new JsonIoException(e);
+        }
+        finally {
+            if (readOptions.isCloseStream()) {
+                try {
+                    inputStream.close();
+                }
+                catch (IOException ignored) {
+                }
+            }
         }
     }
 

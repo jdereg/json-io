@@ -427,6 +427,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'java.sql.Date'", e);
         }
         nope(fromInstance, "java.sql.Date");
@@ -484,6 +487,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Timestamp'", e);
         }
         nope(fromInstance, "Timestamp");
@@ -537,6 +543,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Date'", e);
         }
         nope(fromInstance, "Date");
@@ -588,6 +597,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDate'", e);
         }
         nope(fromInstance, "LocalDate");
@@ -639,6 +651,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
@@ -690,6 +705,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'ZonedDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
@@ -748,6 +766,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Character'", e);
         }
         nope(fromInstance, "Character");
@@ -800,6 +821,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Byte'", e);
         }
         nope(fromInstance, "Byte");
@@ -833,7 +857,7 @@ public final class Converter {
                 catch (NumberFormatException e) {
                     long value = convertToBigDecimal(fromInstance).longValue();
                     if (value < -32768 || value > 32767) {
-                        throw new NumberFormatException("Value: " + fromInstance + " outside -32768 to 32767");
+                        throw new NumberFormatException("Short value: " + fromInstance + " outside -32768 to 32767");
                     }
                     return (short) value;
                 }
@@ -855,6 +879,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Short'", e);
         }
         nope(fromInstance, "Short");
@@ -894,7 +921,7 @@ public final class Converter {
                 catch (NumberFormatException e) {
                     long value = convertToBigDecimal(fromInstance).longValue();
                     if (value < -2147483648 || value > 2147483647) {
-                        throw new NumberFormatException("Value: " + fromInstance + " outside -2147483648 to 2147483647");
+                        throw new NumberFormatException("Integer value: " + fromInstance + " outside -2147483648 to 2147483647");
                     }
                     return (int) value;
                 }
@@ -910,6 +937,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'Integer'", e);
         }
         nope(fromInstance, "Integer");
@@ -980,6 +1010,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Long'", e);
         }
         nope(fromInstance, "Long");
@@ -1023,6 +1056,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Float'", e);
         }
         nope(fromInstance, "Float");
@@ -1066,6 +1102,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Double'", e);
         }
         nope(fromInstance, "Double");
@@ -1150,6 +1189,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicInteger'", e);
         }
         nope(fromInstance, "AtomicInteger");
@@ -1212,6 +1254,9 @@ public final class Converter {
             }
         }
         catch (Exception e) {
+            if (e instanceof JsonIoException) {
+                throw e;
+            }
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicLong'", e);
         }
         nope(fromInstance, "AtomicLong");

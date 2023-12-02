@@ -53,6 +53,7 @@ public class ReadOptions {
     private ClassLoader classLoader = ReadOptions.class.getClassLoader();
     private Class<?> unknownTypeClass = null;
     private boolean failOnUnknownType = false;
+    private boolean closeStream = true;
     private int maxDepth = 1000;
     private JsonReader.MissingFieldHandler missingFieldHandler = null;
     private ReturnType returnType = ReturnType.JAVA_OBJECTS;
@@ -107,6 +108,7 @@ public class ReadOptions {
         classLoader = other.classLoader;
         unknownTypeClass = other.unknownTypeClass;
         failOnUnknownType = other.failOnUnknownType;
+        closeStream = other.closeStream;
         maxDepth = other.maxDepth;
         missingFieldHandler = other.missingFieldHandler;
         returnType = other.returnType;
@@ -263,6 +265,26 @@ public class ReadOptions {
     public ReadOptions unknownTypeClass(Class<?> c) {
         throwIfBuilt();
         unknownTypeClass = c;
+        return this;
+    }
+
+    /**
+     * @return boolean 'true' if the InputStream should be closed when the reading is finished.  The default is 'true.'
+     */
+    public boolean isCloseStream() {
+        return closeStream;
+    }
+
+    /**
+     * @param closeStream boolean set to 'true' to have JsonIo close the InputStream when it is finished reading
+     *                    from it.  The default is 'true'.  If false, the InputStream will not be closed, allowing
+     *                    you to continue reading further.  Example, NDJSON that has new line eliminated JSON
+     *                    objects repeated.
+     * @return ReadOptions for chained access.
+     */
+    public ReadOptions closeStream(boolean closeStream) {
+        throwIfBuilt();
+        this.closeStream = closeStream;
         return this;
     }
 

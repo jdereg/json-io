@@ -747,6 +747,9 @@ public class ObjectResolver extends Resolver
                 }
                 catch (Exception e)
                 {
+                    if (e instanceof JsonIoException) {
+                        throw e;
+                    }
                     throw new JsonIoException("Class listed in @type [" + typeStr + "] is not found", e);
                 }
             }
