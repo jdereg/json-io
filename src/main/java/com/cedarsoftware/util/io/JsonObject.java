@@ -49,25 +49,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     Object target;
     boolean isMap = false;
 
-    boolean isFinished = false;
     @Getter
     @Setter
     String type;
-    /**
-     * -- GETTER --
-     *
-     * @return int line where this object '{' started in the JSON stream
-     */
-    @Getter
-    int line;
-    /**
-     * -- GETTER --
-     *
-     * @return int column where this object '{' started in the JSON stream
-     */
-    @Getter
-    int col;
-
     Integer hash = null;
 
     static
