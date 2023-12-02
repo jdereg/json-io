@@ -9,7 +9,6 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -338,15 +337,16 @@ public abstract class Resolver implements ReaderContext
 
         // We can't set values to an Object, so well try to use the contained type instead
         if ("java.lang.Object".equals(type))
-        {
+        {   // Primitive
             Object value = jsonObj.getValue();
             if (jsonObj.keySet().size() == 1 && value != null)
             {
                 type = value.getClass().getName();
+                jsonObj.type = type;
             }
         }
         if (type == null)
-        {
+        {   // Enum
             Object mayEnumSpecial = jsonObj.get("@enum");
             if (mayEnumSpecial instanceof String)
             {
@@ -373,24 +373,12 @@ public abstract class Resolver implements ReaderContext
     protected Object createInstanceUsingType(JsonObject jsonObj)
     {
         String type = jsonObj.type;
-        Class c = MetaUtils.classForName(type, readOptions.getClassLoader());
-        
-        if (c == null)
-        {   // Unable to find class in the JVM.
-            if (readOptions.isFailOnUnknownType())
-            {
-                throw new JsonIoException("Unable to create class: " + type +". If you don't want to see this error, set 'failOnUnknownType' to false. An attempt to use LinkedHashMap will be made. Also, you can set ReadOptions unknownTypeClass(MyMap.class) to be used for unknown type.");
-            }
-
-            // Try "unknown" class the user may have set up.
-            c = readOptions.getUnknownTypeClass();
-            if (c == null)
-            {   // They did not set up an unknown class, use a LinkedHashMap.  It will be used to catch the fields
-                // of the JSON object graph.  Works well with returnType(ReturnType.JSON_VALUES) setting.
-                c = LinkedHashMap.class;
-            }
+        Class<?> c;
+        if (jsonObj.getJavaType() == null) {
+            c = MetaUtils.classForName(type, readOptions.getClassLoader());
+        } else {
+            c = jsonObj.getJavaType();
         }
-
         c = coerceClassIfNeeded(c);
 
         // If a ClassFactory exists for a class, use it to instantiate the class.
