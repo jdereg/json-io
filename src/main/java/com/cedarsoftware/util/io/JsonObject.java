@@ -44,9 +44,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     static Set<String> primitives = new HashSet<>();
     static Set<String> primitiveWrappers = new HashSet<>();
 
-    @Getter
-    @Setter
-    Object target;
     boolean isMap = false;
 
     @Getter

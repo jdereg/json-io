@@ -43,6 +43,9 @@ public abstract class JsonValue {
     @Getter
     int col;
 
+    public JsonValue() {
+    }
+
     public boolean isReference() {
         return refId != null;
     }

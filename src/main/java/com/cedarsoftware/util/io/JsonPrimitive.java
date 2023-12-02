@@ -21,12 +21,6 @@ package com.cedarsoftware.util.io;
  *         limitations under the License.*
  */
 public class JsonPrimitive extends JsonValue {
-    private final Object target;
-
-    JsonPrimitive(Object target) {
-        this.target = target;
-    }
-
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

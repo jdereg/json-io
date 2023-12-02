@@ -28,11 +28,6 @@ import java.util.ListIterator;
  */
 public class JsonArray extends JsonValue implements List<JsonValue> {
     private final List<JsonValue> jsonStore = new ArrayList<>();
-    private final Object target;
-    
-    JsonArray(Object target) {
-        this.target = target;
-    }
 
     public boolean equals(Object obj) {
         if (this == obj) {
