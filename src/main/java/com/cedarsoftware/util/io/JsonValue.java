@@ -19,16 +19,16 @@ package com.cedarsoftware.util.io;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public interface JsonValue {
-    default boolean isJsonArray() {
+public abstract class JsonValue {
+    public boolean isJsonArray() {
         return false;
     }
 
-    default boolean isJsonObject() {
+    public boolean isJsonObject() {
         return false;
     }
 
-    default boolean isJsonPrimitive() {
+    public boolean isJsonPrimitive() {
         return false;
     }
 }

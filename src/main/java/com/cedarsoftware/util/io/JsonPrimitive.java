@@ -20,7 +20,7 @@ package com.cedarsoftware.util.io;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonPrimitive implements JsonValue {
+public class JsonPrimitive extends JsonValue {
     private final Object target;
 
     JsonPrimitive(Object target) {

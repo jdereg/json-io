@@ -26,7 +26,7 @@ import java.util.ListIterator;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonArray implements JsonValue, List<JsonValue> {
+public class JsonArray extends JsonValue implements List<JsonValue> {
     private final List<JsonValue> jsonStore = new ArrayList<>();
     private final Object target;
     

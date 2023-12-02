@@ -37,7 +37,7 @@ import lombok.Setter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonObject implements JsonValue, Map<Object, Object>
+public class JsonObject extends JsonValue implements Map<Object, Object>
 {
     public static final String KEYS = "@keys";
     public static final String ITEMS = "@items";
