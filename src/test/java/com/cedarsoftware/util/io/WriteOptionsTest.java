@@ -109,7 +109,8 @@ class WriteOptionsTest {
         assertEquals("properInt", options.aliasTypeNames().get("int"));
         assertEquals("Int", options.aliasTypeNames().get("java.lang.Integer"));
 
-        assert options.aliasTypeNames().size() == 2;    // Asserting that we have at least one "pre-installed" alias.
+        // Asserting that we had at least one alias already loaded (non-empty resources/aliases.txt)
+        assert options.aliasTypeNames().size() > 2;
     }
 
     @Test

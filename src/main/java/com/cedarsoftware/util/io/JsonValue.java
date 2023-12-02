@@ -33,7 +33,7 @@ public abstract class JsonValue {
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-//    Class<?> type;
+    Class<?> javaType;
     Object target;
     boolean isFinished = false;
     long id = -1L;
@@ -95,13 +95,13 @@ public abstract class JsonValue {
         return false;
     }
     
-//    public Class<?> getType() {
-//        return type;
-//    }
-//
-//    public void setType(Class<?> type) {
-//        this.type = type;
-//    }
+    public Class<?> getJavaType() {
+        return javaType;
+    }
+
+    public void setJavaType(Class<?> type) {
+        this.javaType = type;
+    }
 
     public long getId() {
         return id;

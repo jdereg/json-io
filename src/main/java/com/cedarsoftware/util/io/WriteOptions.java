@@ -249,7 +249,6 @@ public class WriteOptions {
      */
     public WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
         throwIfBuilt();
-        this.aliasTypeNames.clear();
         aliasTypeNames.forEach(this::addUniqueAlias);
         return this;
     }

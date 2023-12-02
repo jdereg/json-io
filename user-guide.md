@@ -41,13 +41,13 @@ In this example, an`InputStream`is supplying the JSON.
 
 ### Untyped Usage
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript
-associative array.  When reading from a JSON String or`InputStream`of JSON, the`JsonReader`can be constructed like this:
+associative array.  When reading from a JSON String or`InputStream`of JSON, use `JsonIo:`
 
     String json = // some JSON obtained from wherever
     ReadOptions readOptions = new ReadOptions().returnon();
     JsonValue value = JsonIo.toJsonValues(json, readOptions);    
 
-See the `ReadOptions` below for al the feature control options.  In the example above, rather than return the objects
+See the `ReadOptions` below for the feature control options.  In the example above, rather than return the objects
 converted into Java classes, you are being returned the raw`JsonValues`being parsed.  It is a graph that consists of
 all`JsonValue`instances.  In addition to`JsonValue,`there is`JsonObject,`which represents `{...}`, `JsonArray`, which
 represents `[...]`, and `JsonPrimitive`, which represents `long, double, String, boolean (true/false),`and`null.`
@@ -120,11 +120,12 @@ add additional aliases for classes in your program.
 >#### `Map<String, String>`aliasTypeNames()
 >- [ ] Returns Map<String, String> containing String class names to alias names. Use this API to see default aliases.
 >#### `WriteOptions`aliasTypeNames(`Map<String, String> aliasTypeNames`)
->- [ ] Sets the`Map`containing String class names to alias names. The passed in`Map`will be copied, and be the new baseline settings. Returns`WriteOptions`for chained access.
+>- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
+entries that match values in the passed in Map. New entries in the Map are added.  Returns`WriteOptions`for chained access.
 >#### `WriteOptions`aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. Returns`WriteOptions`for chained access.
->#### `ReadOptions`**aliasTypeName(**`Class, String alias`)
->- [ ] Sets the alias for a given class. Returns`ReadOptions`for chained access.
+>#### `WriteOptions`aliasTypeName(`Class, String alias`)
+>- [ ] Sets the alias for a given class. Returns`WriteOptions`for chained access.
 
 ### @Type
 Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
@@ -375,8 +376,8 @@ add additional aliases for classes in your program.
 >#### `Map<String, String>` aliasTypeNames()
 >- [ ] Returns `Map<String, String>` containing String class names to alias names. Use this API to see default aliases.
 >#### `ReadOptions`aliasTypeNames(`Map<String, String> aliasTypeNames`)
->- [ ] Sets the`Map`containing String class names to alias names. The passed in`Map`will be copied, and be the new
-   baseline settings. Returns`ReadOptions`for chained access.
+>- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
+entries that match values in the passed in Map. New entries in the Map are added.  Returns`ReadOptions`for chained access.
 >#### `ReadOptions`aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. Returns`ReadOptions`for chained access.
 >#### `ReadOptions`aliasTypeName(`Class, String alias`)

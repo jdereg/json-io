@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -192,38 +193,22 @@ class JsonParser
                     Object value = readValue(object, false);
 
                     // @type handler
-                    if (TYPE.equals(field)) {
-                        if (!(value instanceof String)) {
-                            error("Expected a String for " + TYPE + ", instead got: " + value);
-                        }
-                        final String substitute = readOptions.getTypeNameAlias(value.toString());
-                        if (substitute != null) {
-                            value = substitute;
-                        }
-                        object.setType((String) value);
+                    switch(field)
+                    {
+                        case TYPE:
+                            loadType(value, object);
+                            break;
+                        case REF:
+                            loadRef(value, object);
+                            break;
+                        case ID:
+                            loadId(value, object);
+                            break;
+                        default:
+                            object.put(field, value);
+                            break;
                     }
 
-                    // @ref handler
-                    if (REF.equals(field)) {
-                        if (!(value instanceof Long)) {
-                            error("Expected a number for " + REF + ", instead got: " + value);
-                        }
-                        object.setReferenceId((Long)value);
-                        object.setFinished();   // "Nothing further to load, your honor."
-                    } else {
-                        object.put(field, value);
-                    }
-
-                    // If object is referenced (has @id), then add it to the ReferenceTracker
-                    // @id handler
-                    if (ID.equals(field)) {
-                        if (!(value instanceof Long)) {
-                            error("Expected a number for " + ID + ", instead got: " + value);
-                        }
-                        Long id = (Long) value;
-                        references.put(id, object);
-                        object.setId(id);
-                    }
                     state = STATE_READ_POST_VALUE;
                     break;
 
@@ -256,6 +241,50 @@ class JsonParser
             }
         }
         return object;
+    }
+
+    // If object is referenced (has @id), then add it to the ReferenceTracker
+    // @id handler
+    private void loadId(Object value, JsonObject object) {
+        if (!(value instanceof Long)) {
+            error("Expected a number for " + ID + ", instead got: " + value);
+        }
+        Long id = (Long) value;
+        references.put(id, object);
+        object.setId(id);
+    }
+
+    private void loadRef(Object value, JsonValue object) {
+        if (!(value instanceof Long)) {
+            error("Expected a number for " + REF + ", instead got: " + value);
+        }
+        object.setReferenceId((Long) value);
+        object.setFinished();   // "Nothing further to load, your honor."
+    }
+
+    private void loadType(Object value, JsonObject object) {
+        if (!(value instanceof String)) {
+            error("Expected a String for " + TYPE + ", instead got: " + value);
+        }
+        String javaType = (String) value;
+        final String substitute = readOptions.getTypeNameAlias(javaType);
+        if (substitute != null) {
+            javaType = substitute;
+        }
+
+        // Resolve class during parsing
+        Class<?> clazz = MetaUtils.classForName(javaType, readOptions.getClassLoader());
+        if (clazz == null) {
+            if (readOptions.isFailOnUnknownType()) {
+                error("Class: " + javaType + " not defined.");
+            }
+            clazz = readOptions.getUnknownTypeClass();
+            if (clazz == null) {
+                clazz = LinkedHashMap.class;
+            }
+        }
+        object.setJavaType(clazz);
+        object.setType(clazz.getName());  // type field on JsonObject needs to go away (we have JavaType now)
     }
 
     Object readValue(JsonObject object, boolean top) throws IOException

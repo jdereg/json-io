@@ -79,8 +79,7 @@ public class UnknownObjectTypeTest
             TestUtil.toObjects(json, new ReadOptions().failOnUnknownType(true).unknownTypeClass(ConcurrentSkipListMap.class), null);
         });
         String loMsg = t.getMessage().toLowerCase();
-        assert loMsg.contains("unable to create");
+        assert loMsg.contains("not defined");
         assert loMsg.contains("foo.bar.baz.qux");
-        assert loMsg.contains("set 'failonunknowntype' to false");
     }
 }

@@ -40,11 +40,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
 {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     boolean isMap = false;
-
+    Integer hash = null;
     @Getter
     @Setter
     String type;
-    Integer hash = null;
 
     public boolean isJsonObject() {
         return true;
