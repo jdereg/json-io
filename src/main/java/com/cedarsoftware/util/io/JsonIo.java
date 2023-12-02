@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -100,18 +99,17 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
+        JsonWriter writer = null;
         try {
-            JsonWriter writer = new JsonWriter(out, writeOptions);
+            writer = new JsonWriter(out, writeOptions);
             writer.write(source);
         } catch (Exception e) {
             throw new JsonIoException("Unable to convert object and send in JSON format to OutputStream.", e);
         }
         finally {
             if (writeOptions.isCloseStream()) {
-                try {
-                    out.close();
-                }
-                catch (IOException ignored) {
+                if (writer != null) {
+                    writer.close();
                 }
             }
         }
@@ -152,8 +150,9 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
+        JsonReader jr = null;
         try  {
-            JsonReader jr = new JsonReader(in, readOptions);
+            jr = new JsonReader(in, readOptions);
             T root = jr.readObject(rootType);
             return root;
         }
@@ -165,10 +164,8 @@ public class JsonIo {
         }
         finally {
             if (readOptions.isCloseStream()) {
-                try {
-                    in.close();
-                }
-                catch (IOException ignored) {
+                if (jr != null) {
+                    jr.close();
                 }
             }
         }
@@ -220,9 +217,10 @@ public class JsonIo {
         } else {
             readOptions = new ReadOptions(readOptions);
         }
-        
+
+        JsonReader jr = null;
         try {
-            JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new JsonReader.DefaultReferenceTracker());
+            jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new JsonReader.DefaultReferenceTracker());
             JsonValue jsonValue = jr.readObject(JsonValue.class);
             return jsonValue;
         }
@@ -231,10 +229,8 @@ public class JsonIo {
         }
         finally {
             if (readOptions.isCloseStream()) {
-                try {
-                    inputStream.close();
-                }
-                catch (IOException ignored) {
+                if (jr != null) {
+                    jr.close();
                 }
             }
         }

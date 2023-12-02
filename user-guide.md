@@ -26,12 +26,14 @@ _Example 3: Java Object to `OutputStream`_
     JsonIo.toJson(outputStream, emp, writeOptions);       
 
 In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
-you need to keep the `OutputStream` open (e.g. NDJSON), then use the `JsonWriter()` constructor that takes an `OutputStream`
-and a `WriteOptions` instance.  Example:
+you need to keep the `OutputStream` open (e.g. NDJSON), then set `writeOptions.closeStream(false).` Example:
 
-    JsonWriter writer = new JsonWriter(outputStream, writeOptions); 
-    jsonWriter.write(root);  
-    jsonWriter.close();
+    WriteOptions writeOptions = new WriteOptions().closeStream(false);
+    JsonIo.toJson(outputStream, record1, writeOptions);    
+    JsonIo.toJson(outputStream, record2, writeOptions);
+    ...
+    JsonIo.toJson(outputStream, recordn, writeOptions);
+
 
 _Example 4: `InputStream` to Java object_
 
@@ -155,6 +157,15 @@ In order to have Multiple line, indented JSON output, or one-line output, turn o
 >- [ ] Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is`false.`
 >#### `WriteOptions`prettyPrint(`boolean prettyPrint`)
 >- [ ] Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`WriteOptions`for chained access.
+
+### Close Stream
+Sometimes you want to close the stream automatically after output, other times you may want to leave it open to write
+additional JSON to the stream.  For example, NDJSON is a format of {...}\n{...}\{...} To write this format, you can tell 
+`JsonIo` not to close the stream after each write.  See example at the beginning of the user guide.
+>#### `boolean`isCloseStream()
+>- [ ] Returns `true` if set to automatically close stream after write (the default), or `false`to leave stream open after writing to it.
+>#### `WriteOptions`closeStream(`boolean closeStream`)
+>- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`WriteOptions`for chained access.
 
 ### `Long`as String
 Output long values as a`String.`This is a fix for sending 17-19 digit long values to JavaScript.  Javascript stores
@@ -366,6 +377,15 @@ work for your application, keep in mind, NaN, +Inf, -Inf are not necessarily goi
 >#### `ReadOptions`allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
    as`null.` Returns`ReadOptions`for chained access.
+
+### Close Stream
+Sometimes you want to close the stream automatically after reading, other times you may want to leave it open to read
+additional JSON from the stream.  For example, NDJSON is a format of {...}\n{...}\{...} To read this format, you can tell
+`JsonIo` not to close the `InputStream` after each read.  See example at the beginning of the user guide.
+>#### `boolean`isCloseStream()
+>- [ ] Returns `true` if set to automatically close stream after read (the default), or `false`to leave stream open after reading from it.
+>#### `ReadOptions`closeStream(`boolean closeStream`)
+>- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`ReadOptions`for chained access.
 
 ### Aliasing - shorten class names in @type.
 Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList`
