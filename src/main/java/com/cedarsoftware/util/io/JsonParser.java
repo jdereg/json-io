@@ -60,15 +60,13 @@ class JsonParser
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<>();
-    private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
-
+    private final int maxParseDepth;
     private final ReadOptions readOptions;
-
     private final ReferenceTracker references;
 
     static
@@ -126,6 +124,7 @@ class JsonParser
         this.input = reader;
         this.readOptions = readOptions;
         this.references = references;
+        maxParseDepth = readOptions.getMaxDepth();
     }
 
     private Object readJsonObject() throws IOException
@@ -246,7 +245,6 @@ class JsonParser
 
     Object readValue(JsonObject object, boolean top) throws IOException
     {
-        final int maxParseDepth = readOptions.getMaxDepth();
         if (curParseDepth > maxParseDepth) {
             return error("Maximum parsing depth exceeded");
         }
