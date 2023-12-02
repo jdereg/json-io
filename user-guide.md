@@ -23,7 +23,7 @@ _Example 3: Java Object to `OutputStream`_
 
     Employee emp;
     // emp obtained from data store...
-    JsonWriter.toJson(outputStream, emp, writeOptions);       
+    JsonIo.toJson(outputStream, emp, writeOptions);       
 
 In this example, a Java object is written to an `OutputStream` in JSON format.  The stream is closed when finished.  If
 you need to keep the `OutputStream` open (e.g. NDJSON), then use the `JsonWriter()` constructor that takes an `OutputStream`
@@ -482,14 +482,10 @@ Even though **json-io** is great for Java / Javascript serialization, here are s
 Many projects use `JsonWriter` to write an object to JSON, then use the `JsonReader` to read it in, cloning the original object graph:
 
     Employee emp;
-    // emp obtained from database
-    Employee deepCopy = (Employee) cloneObject(emp);
-
-    public Object cloneObject(Object root)
-    {
-        return JsonReader.toObjects(JsonWriter.toJson(root));
-    }
+    // emp obtained from somewhere...
+    Employee deepCopy = (Employee) Json.Io.deepCopy(emp, null, null);   // ReadOptions, WriteOptions can be null
 
 #### Debugging
-Instead of doing `System.out.println()` debugging, call `JsonWriter.objectToJson(obj)` and dump that String out.  It
-will reveal the object in all it's detail.  Use the pretty-print feature to make the JSON more human-readable.
+Instead of `System.out.println()` debugging, call `JsonIo.toJson(obj, writeOptions)` and dump the JSON
+string out. That will give you the full referenceable graph dump in JSON.  Use the pretty-print feature of `WriteOptions`
+to make the JSON more human-readable.
