@@ -44,7 +44,7 @@ public abstract class JsonValue {
     int col;
 
     public boolean isReference() {
-        return refId == null;
+        return refId != null;
     }
 
     public Long getReferenceId() {
@@ -56,11 +56,11 @@ public abstract class JsonValue {
     }
 
     public boolean isFinished() {
-        return false;
+        return isFinished;
     }
 
     public void setFinished() {
-        this.isFinished = true;
+        isFinished = true;
     }
 
     public void setTarget(Object target) {

@@ -83,9 +83,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     {
         return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
     }
-
-    public boolean isFinished() { return isFinished; }
-
+    
     public Object setFinishedTarget(Object o, boolean isFinished)
     {
         this.target = o;
