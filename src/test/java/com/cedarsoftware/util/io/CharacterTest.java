@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io;
 
 import java.io.Serializable;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
@@ -82,10 +81,10 @@ public class CharacterTest
     @Test
     void testQuoteAsCharacterValue()
     {   // { "@type": "char", "value": "\\"" }
-        String jsonString = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
-        JsonReader jsonReader = new JsonReader(new FastByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8)));
-        Object object = jsonReader.readObject(char.class);
-        assert (Character) object == '"';
+        String json = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
+        Character ch = TestUtil.toObjects(json, new ReadOptions(), char.class);
+        assert ch == '"';
+
     }
 
     private static class ManyCharacters implements Serializable
