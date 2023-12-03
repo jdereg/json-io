@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.util.ReturnType;
+import sun.misc.FloatingDecimal;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -145,47 +146,40 @@ class JsonParser
         allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
     }
 
-    private Object readJsonObject() throws IOException
-    {
+    private Object readJsonObject(JsonValue parent) throws IOException {
         boolean done = false;
         String field = null;
         JsonObject object = new JsonObject();
         int state = STATE_READ_START_OBJECT;
         final FastReader in = input;
 
-        while (!done)
-        {
+        while (!done) {
             int c;
-            switch (state)
-            {
+            switch (state) {
                 case STATE_READ_START_OBJECT:
                     // c read and pushed back before STATE_READ_START_OBJECT, so 'c' always '{' here.
                     skipWhitespaceRead();
                     object.line = in.getLine();
                     object.col = in.getCol();
                     c = skipWhitespaceRead();
-                    if (c == '}')
-                    {    // empty object
+                    if (c == '}') {    // empty object
                         return new JsonObject();
                     }
-                    in.pushback((char)c);
+                    in.pushback((char) c);
                     state = STATE_READ_FIELD;
                     ++curParseDepth;
                     break;
 
                 case STATE_READ_FIELD:
                     c = skipWhitespaceRead();
-                    if (c == '"')
-                    {
+                    if (c == '"') {
                         field = readString();
                         c = skipWhitespaceRead();
-                        if (c != ':')
-                        {
+                        if (c != ':') {
                             error("Expected ':' between string field and value");
                         }
 
-                        if (field.startsWith("@") || field.startsWith("."))
-                        {   // Expand shorthand meta keys
+                        if (field.startsWith("@") || field.startsWith(".")) {   // Expand shorthand meta keys
                             String temp = stringCache.get(field);
 
                             if (temp != null) {
@@ -194,8 +188,7 @@ class JsonParser
                         }
                         state = STATE_READ_VALUE;
                     }
-                    else
-                    {
+                    else {
                         error("Expected quote");
                     }
                     break;
@@ -210,8 +203,7 @@ class JsonParser
                     Object value = readValue(object, false);
 
                     // @type handler
-                    switch(field)
-                    {
+                    switch (field) {
                         case TYPE:
                             loadType(value, object);
                             break;
@@ -250,8 +242,7 @@ class JsonParser
 
         final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
-        if (object.isLogicalPrimitive())
-        {
+        if (object.isLogicalPrimitive()) {
             if (useMaps) {
                 object.isFinished = true;
                 return object.getPrimitiveValue();
@@ -260,26 +251,35 @@ class JsonParser
         return object;
     }
 
-    Object readValue(JsonValue object, boolean top) throws IOException
-    {
+    Object readValue(JsonValue object, boolean top) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
 
         int c = skipWhitespaceRead();
-        if (c == '"')
-        {
-            return readString();
-        }
-        else if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I')
-        {
+        if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I') {
             return readNumber(c);
         }
-        switch(c)
-        {
+        switch (c) {
+            case '"':
+                String str = readString();
+                return str;
             case '{':
                 input.pushback('{');
-                return readJsonObject();
+                // Since we are at 
+                Object obj = readJsonObject(object);
+
+//                if (obj instanceof JsonObject ) {
+//                    JsonObject jObj = (JsonObject) obj;
+//                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
+//                    JsonObject localObject = new JsonObject();
+//                    localObject.type = clazz.getName();
+//                    localObject.setJavaType(clazz);
+//                    localObject.putAll(jObj);
+//                    Object foo = resolver.createInstance(clazz, localObject);
+//                }
+//
+                return obj;
             case '[':
                 Object[] array = readArray(object);
                 return array;
@@ -313,10 +313,10 @@ class JsonParser
         ++curParseDepth;
 
         while (true) {
-            final Object o = readValue(object, false);
-            if (o != EMPTY_ARRAY)
+            final Object value = readValue(object, false);
+            if (value != EMPTY_ARRAY)
             {
-                array.add(o);
+                array.add(value);
             }
             final int c = skipWhitespaceRead();
 
@@ -338,30 +338,25 @@ class JsonParser
      * (char) c is acceptable because the 'tokens' allowed in a
      * JSON input stream (true, false, null) are all ASCII.
      */
-    private void readToken(String token) throws IOException
-    {
+    private void readToken(String token) throws IOException {
         final int len = token.length();
 
-        for (int i = 1; i < len; i++)
-        {
+        for (int i = 1; i < len; i++) {
             int c = input.read();
-            if (c == -1)
-            {
+            if (c == -1) {
                 error("EOF reached while reading token: " + token);
             }
             c = Character.toLowerCase((char) c);
             int loTokenChar = token.charAt(i);
 
-            if (loTokenChar != c)
-            {
+            if (loTokenChar != c) {
                 error("Expected token: " + token);
             }
         }
     }
 
     /**
-     * Read a JSON number
-     *
+     * Read a JSON number.
      * @param c int a character representing the first digit of the number that
      *          was already read.
      * @return a Number (a Long or a Double) depending on whether the number is
@@ -392,7 +387,7 @@ class JsonParser
             if (c == 'I') {
                 readToken("infinity");
                 // [Out of RFC 4627] accept NaN/Infinity values
-                return (isNeg) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+                return isNeg ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
             }
             else if ('N' == c) {
                 // [Out of RFC 4627] accept NaN/Infinity values
@@ -408,16 +403,16 @@ class JsonParser
         }
 
         // We are sure we have a positive or negative number, so we read char by char.
-        final StringBuilder number = numBuf;
+        StringBuilder number = numBuf;
         number.setLength(0);
-        number.appendCodePoint(c);
+        number.append((char)c);
         while (true) {
             c = in.read();
             if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
-                number.appendCodePoint(c);
+                number.append((char)c);
             }
             else if (c == '.' || c == 'e' || c == 'E') {
-                number.appendCodePoint(c);
+                number.append((char)c);
                 isFloat = true;
             }
             else if (c == -1) {
@@ -430,15 +425,14 @@ class JsonParser
         }
 
         try {
-            if (isFloat) {   // Floating point number needed
-                final Double d = Double.parseDouble(number.toString());
-                final Number translate = numberCache.get(d);
-                return translate == null ? d : translate;
+            Number val;
+            if (isFloat) {
+                val = FloatingDecimal.parseDouble(number.toString());
             } else {
-                final Long l = Long.parseLong(number.toString(), 10);
-                final Number translate = numberCache.get(l);
-                return translate == null ? l : translate;
+                val = Long.parseLong(number.toString(), 10);
             }
+            Number translate = numberCache.get(val);
+            return translate == null ? val : translate;
         }
         catch (Exception e) {
             return (Number) error("Invalid number: " + number, e);
