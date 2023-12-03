@@ -61,14 +61,17 @@ class JsonParser
     private static final int STATE_READ_VALUE = 2;
     private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<>();
+    private static final Map<Number, Number> numberCache = new HashMap<>();
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
+    private boolean allowNanAndInfinity;
     private final int maxParseDepth;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
+    private final Resolver resolver;
 
     static
     {
@@ -114,6 +117,18 @@ class JsonParser
         stringCache.put("8", "8");
         stringCache.put("9", "9");
 
+        numberCache.put(-1L, -1L);
+        numberCache.put(0L, 0L);
+        numberCache.put(1L, 1L);
+        numberCache.put(-1.0d, -1.0d);
+        numberCache.put(0.0d, 0.0d);
+        numberCache.put(1.0d, 1.0d);
+        numberCache.put(Double.MIN_VALUE, Double.MIN_VALUE);
+        numberCache.put(Double.MAX_VALUE, Double.MAX_VALUE);
+        numberCache.put(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
+        numberCache.put(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
+        numberCache.put(Double.NaN, Double.NaN);
+
         EMPTY_OBJECT.type = JsonObject.class.getName();
         EMPTY_OBJECT.isFinished = true;
         EMPTY_ARRAY.type = Object[].class.getName();
@@ -121,11 +136,13 @@ class JsonParser
         EMPTY_ARRAY.isFinished = true;
     }
     
-    JsonParser(FastReader reader, ReadOptions readOptions, ReferenceTracker references) {
+    JsonParser(FastReader reader, Resolver resolver) {
         this.input = reader;
-        this.readOptions = readOptions;
-        this.references = references;
+        this.resolver = resolver;
+        this.readOptions = resolver.getReadOptions();
+        this.references = resolver.getReferences();
         maxParseDepth = readOptions.getMaxDepth();
+        allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
     }
 
     private Object readJsonObject() throws IOException
@@ -246,7 +263,7 @@ class JsonParser
     Object readValue(JsonValue object, boolean top) throws IOException
     {
         if (curParseDepth > maxParseDepth) {
-            return error("Maximum parsing depth exceeded");
+            error("Maximum parsing depth exceeded");
         }
 
         int c = skipWhitespaceRead();
@@ -281,7 +298,7 @@ class JsonParser
                 readToken("true");
                 return Boolean.TRUE;
             case -1:
-                return top ? null : error("EOF reached prematurely");
+                return top ? null : (JsonValue) error("EOF reached prematurely");
         }
 
         return error("Unknown JSON value type");
@@ -355,12 +372,11 @@ class JsonParser
      *         to be represented as well.
      * @throws IOException for stream errors or parsing errors.
      */
-    private Number readNumber(int c) throws IOException
-    {
+    private Number readNumber(int c) throws IOException {
         final FastReader in = input;
         boolean isFloat = false;
 
-        if (readOptions.isAllowNanAndInfinity() && (c == '-' || c == 'N' || c == 'I') ) {
+        if (allowNanAndInfinity && (c == '-' || c == 'N' || c == 'I')) {
             /*
              * In this branch, we must have either one of these scenarios: (a) -NaN or NaN (b) Inf or -Inf (c) -123 but
              * NOT 123 (replace 123 by any number)
@@ -380,14 +396,16 @@ class JsonParser
                 readToken("infinity");
                 // [Out of RFC 4627] accept NaN/Infinity values
                 return (isNeg) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
-            } else if ('N' == c) {
+            }
+            else if ('N' == c) {
                 // [Out of RFC 4627] accept NaN/Infinity values
                 readToken("nan");
                 return Double.NaN;
-            } else {
+            }
+            else {
                 // This is (c) case, meaning there was c = '-' at the beginning.
                 // This is a number like "-2", but not "-Infinity". We let the normal code process.
-                input.pushback((char)c);
+                input.pushback((char) c);
                 c = '-';
             }
         }
@@ -396,42 +414,36 @@ class JsonParser
         final StringBuilder number = numBuf;
         number.setLength(0);
         number.appendCodePoint(c);
-        while (true)
-        {
+        while (true) {
             c = in.read();
-            if ((c >= '0' && c <= '9') || c == '-' || c == '+')
-            {
+            if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
                 number.appendCodePoint(c);
             }
-            else if (c == '.' || c == 'e' || c == 'E')
-            {
+            else if (c == '.' || c == 'e' || c == 'E') {
                 number.appendCodePoint(c);
                 isFloat = true;
             }
-            else if (c == -1)
-            {
+            else if (c == -1) {
                 break;
             }
-            else
-            {
-                in.pushback((char)c);
+            else {
+                in.pushback((char) c);
                 break;
             }
         }
 
-        try
-        {
-            if (isFloat)
-            {   // Floating point number needed
-                return Double.parseDouble(number.toString());
-            }
-            else
-            {
-                return Long.parseLong(number.toString(), 10);
+        try {
+            if (isFloat) {   // Floating point number needed
+                final Double d = Double.parseDouble(number.toString());
+                final Number translate = numberCache.get(d);
+                return translate == null ? d : translate;
+            } else {
+                final Long l = Long.parseLong(number.toString(), 10);
+                final Number translate = numberCache.get(l);
+                return translate == null ? l : translate;
             }
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             return (Number) error("Invalid number: " + number, e);
         }
     }
@@ -447,41 +459,32 @@ class JsonParser
      * @return String read from JSON input stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private String readString() throws IOException
-    {
+    private String readString() throws IOException {
         final StringBuilder str = strBuf;
         final StringBuilder hex = hexBuf;
         str.setLength(0);
         int state = STRING_START;
         final FastReader in = input;
 
-        while (true)
-        {
+        while (true) {
             final int c = in.read();
-            if (c == -1)
-            {
+            if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
 
-            if (state == STRING_START)
-            {
-                if (c == '"')
-                {
+            if (state == STRING_START) {
+                if (c == '"') {
                     break;
                 }
-                else if (c == '\\')
-                {
+                else if (c == '\\') {
                     state = STRING_SLASH;
                 }
-                else
-                {
-                    str.append((char)c);
+                else {
+                    str.append((char) c);
                 }
             }
-            else if (state == STRING_SLASH)
-            {
-                switch(c)
-                {
+            else if (state == STRING_SLASH) {
+                switch (c) {
                     case '\\':
                         str.append('\\');
                         break;
@@ -517,32 +520,27 @@ class JsonParser
                         error("Invalid character escape sequence specified: " + c);
                 }
 
-                if (c != 'u')
-                {
+                if (c != 'u') {
                     state = STRING_START;
                 }
             }
-            else
-            {
-                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
-                {
+            else {
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
                     hex.append((char) c);
-                    if (hex.length() == 4)
-                    {
+                    if (hex.length() == 4) {
                         int value = Integer.parseInt(hex.toString(), 16);
-                        str.append((char)value);
+                        str.append((char) value);
                         state = STRING_START;
                     }
                 }
-                else
-                {
+                else {
                     error("Expected hexadecimal digits");
                 }
             }
         }
 
         final String s = str.toString();
-        final String translate =  stringCache.get(s);
+        final String translate = stringCache.get(s);
         return translate == null ? s : translate;
     }
 
@@ -557,8 +555,7 @@ class JsonParser
     {
         Reader in = input;
         int c;
-        do
-        {
+        do {
             c = in.read();
         } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
         return c;

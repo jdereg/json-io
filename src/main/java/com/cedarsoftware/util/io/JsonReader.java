@@ -208,15 +208,15 @@ public class JsonReader implements Closeable, ReaderContext
         this(input, readOptions, new DefaultReferenceTracker());
     }
 
-    public JsonReader(InputStream input, ReadOptions readOptions, ReferenceTracker references) {
+    public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
-        this.input = getReader(input);
+        this.input = getReader(inputStream);
         if (this.readOptions.getReturnType() == ReturnType.JSON_VALUES) {
             this.resolver = new MapResolver(this.readOptions, references);
         } else {
             this.resolver = new ObjectResolver(this.readOptions, references);
         }
-        parser = new JsonParser(this.input, this.readOptions.build(), references);
+        parser = new JsonParser(this.input, this.resolver);
     }
 
     /**
@@ -231,9 +231,16 @@ public class JsonReader implements Closeable, ReaderContext
         this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
 
-    public <T> T readObject(Class<T> root)
+    public <T> T readObject(Class<T> rootType)
     {
         JsonObject rootObj = new JsonObject();
+        if (rootType == null) {
+            rootObj.setJavaType(Object.class);
+            rootObj.setType(Object.class.getName());
+        } else {
+            rootObj.setJavaType(rootType);
+            rootObj.setType(rootType.getName());
+        }
         T returnValue;
         try {
             returnValue = (T) parser.readValue(rootObj, true);
@@ -251,9 +258,9 @@ public class JsonReader implements Closeable, ReaderContext
             rootObj.setType(Object[].class.getName());
             rootObj.setTarget(returnValue);
             rootObj.put(ITEMS, returnValue);
-            graph = convertJsonValueToJava(rootObj, root);
+            graph = convertJsonValueToJava(rootObj, rootType);
         } else {
-            graph = returnValue instanceof JsonValue ? convertJsonValueToJava((JsonObject) returnValue, root) : returnValue;
+            graph = returnValue instanceof JsonValue ? convertJsonValueToJava((JsonObject) returnValue, rootType) : returnValue;
         }
 
         // Allow a complete 'Map' return (Javascript style)

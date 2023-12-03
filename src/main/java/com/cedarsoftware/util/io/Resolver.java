@@ -62,8 +62,6 @@ public abstract class Resolver implements ReaderContext
     @Getter(AccessLevel.PUBLIC)
     private final ReferenceTracker references;
 
-
-
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
