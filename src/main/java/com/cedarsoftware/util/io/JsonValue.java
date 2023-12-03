@@ -76,7 +76,9 @@ public abstract class JsonValue {
 
     public void setTarget(Object target) {
         this.target = target;
-        this.javaType = target.getClass();
+        if (target != null) {
+            this.javaType = target.getClass();
+        }
     }
 
     public Object setFinishedTarget(Object o, boolean isFinished) {

@@ -281,7 +281,8 @@ class JsonParser
                 input.pushback('{');
                 return readJsonObject();
             case '[':
-                return readArray(object);
+                Object[] array = readArray(object);
+                return array;
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -307,13 +308,11 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private Object[] readArray(JsonValue object) throws IOException
-    {
+    private Object[] readArray(JsonValue object) throws IOException {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
-        while (true)
-        {
+        while (true) {
             final Object o = readValue(object, false);
             if (o != EMPTY_ARRAY)
             {
@@ -321,12 +320,10 @@ class JsonParser
             }
             final int c = skipWhitespaceRead();
 
-            if (c == ']')
-            {
+            if (c == ']') {
                 break;
             }
-            else if (c != ',')
-            {
+            else if (c != ',') {
                 error("Expected ',' or ']' inside array");
             }
         }

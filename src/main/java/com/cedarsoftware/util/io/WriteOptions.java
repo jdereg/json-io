@@ -471,7 +471,7 @@ public class WriteOptions {
     /**
      * Option to write out enums as a String, it will write out the enum.name() field.
      * This is the default way enums will be written out.
-     * @return WriteOptions for chained access.
+     * @return WriteOptions for chained access.per
      */
     public WriteOptions writeEnumsAsString() {
         throwIfBuilt();
