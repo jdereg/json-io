@@ -406,7 +406,7 @@ public class ReadOptions {
     /**
      * Fetch the coerced class for the passed in fully qualified class name.
      * @param c Class to coerce
-     * @return Class destination (coerced) class.
+     * @return Class destination (coerced) class or null if there is none.
      */
     public Class<?> getCoercedClass(Class<?> c)
     {
