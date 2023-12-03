@@ -21,6 +21,25 @@ package com.cedarsoftware.util.io;
  *         limitations under the License.*
  */
 public class JsonPrimitive extends JsonValue {
+    public JsonPrimitive(String value) {
+        super(value);
+    }
+
+    public JsonPrimitive(Number number) {
+        super(number);
+    }
+
+    public JsonPrimitive(Boolean bool) {
+        super(bool);
+    }
+
+    public String toString()
+    {
+        String jType = javaType == null ? "not set" : javaType.getSimpleName();
+        String targetInfo = target == null ? "null" : target.toString();
+        return "JsonPrimitive(id:" + id + ", type:" + jType + ", value:" + targetInfo +")";
+    }
+
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

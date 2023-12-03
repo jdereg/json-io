@@ -29,6 +29,16 @@ import java.util.ListIterator;
 public class JsonArray extends JsonValue implements List<JsonValue> {
     private final List<JsonValue> jsonStore = new ArrayList<>();
 
+    public JsonArray() {
+    }
+
+    public String toString()
+    {
+        String jType = javaType == null ? "javaTypeNotSet" : javaType.getName();
+        String targetInfo = target == null ? "not set (null)" : "set";
+        return "JsonArray(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
+    }
+
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

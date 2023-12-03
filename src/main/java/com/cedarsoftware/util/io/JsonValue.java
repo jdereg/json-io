@@ -44,6 +44,14 @@ public abstract class JsonValue {
     int col;
 
     public JsonValue() {
+        target = null;
+    }
+
+    public JsonValue(Object target) {
+        this.target = target;
+        if (target != null) {
+            javaType = target.getClass();
+        }
     }
 
     public boolean isReference() {
@@ -73,7 +81,7 @@ public abstract class JsonValue {
 
     public Object setFinishedTarget(Object o, boolean isFinished) {
         this.target = o;
-        this.target = o.getClass();
+        this.javaType = o.getClass();
         this.isFinished = isFinished;
         return this.target;
     }
@@ -89,6 +97,7 @@ public abstract class JsonValue {
     public boolean isJsonObject() {
         return false;
     }
+
     public boolean isJsonArray() {
         return false;
     }

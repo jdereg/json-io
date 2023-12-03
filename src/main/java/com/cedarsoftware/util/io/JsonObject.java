@@ -51,7 +51,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
 
     public String toString()
     {
-        return "mLen:" + getLenientSize() + " type:" + type + " line:" + line + ", col:" + col + " id:" + id;
+        String jType = javaType == null ? "not set" : javaType.getName();
+        String targetInfo = target == null ? "null" : jType;
+        return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
     }
     
     public Object setFinishedTarget(Object o, boolean isFinished)
