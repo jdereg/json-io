@@ -222,24 +222,11 @@ class JsonParser
                         case -1:
                             error("EOF reached before closing '}'");
                         case ',':
-                            // more field pairs
-                            state = STATE_READ_FIELD;
+                            state = STATE_READ_FIELD;       // more field pairs
                             break;
                         case '}':
-                            // no more fields pairs, object done
-                            done = true;
+                            done = true;                    // no more field pairs, object done
                             --curParseDepth;
-
-                            ///////////////////
-                            final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
-                            if (object.isLogicalPrimitive()) {
-                                if (useMaps) {
-                                    object.isFinished = true;
-                                    return object.getPrimitiveValue();
-                                }
-                            }
-                            ////////////////////
-
                             break;
                         default:
                             error("Object not ended with '}', instead found '" + (char)c + "'");
@@ -268,6 +255,20 @@ class JsonParser
                 // Since we are at 
                 Object obj = readJsonObject(object);
 
+                ////////////////////// Resolving code - will be moved /////////////////////////////
+                if (obj instanceof JsonObject ) {
+                    JsonObject jObj = (JsonObject) obj;
+                    final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+
+                    if (jObj.isLogicalPrimitive()) {
+                        if (useMaps) {
+                            jObj.isFinished = true;
+                            return jObj.getPrimitiveValue();
+                        }
+                    }
+                }
+
+
                 if (obj instanceof JsonObject ) {
 //                    JsonObject jObj = (JsonObject) obj;
 //                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
@@ -277,6 +278,7 @@ class JsonParser
 //                    localObject.putAll(jObj);
 //                    Object foo = resolver.createInstance(clazz, localObject);
                 }
+                //////////////////////////////////////////////////////////////////////////////////////
 
                 return obj;
             case '[':
