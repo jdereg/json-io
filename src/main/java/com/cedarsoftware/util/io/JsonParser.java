@@ -218,29 +218,33 @@ class JsonParser
                     }
 
                     c = skipWhitespaceRead();
-                    if (c == -1) {
-                        error("EOF reached before closing '}'");
-                    }
-                    else if (c == '}') {
-                        done = true;
-                        --curParseDepth;
-                    }
-                    else if (c == ',') {
-                        state = STATE_READ_FIELD;
-                    }
-                    else {
-                        error("Object not ended with '}', instead found '" + (char)c + "'");
+                    switch(c) {
+                        case -1:
+                            error("EOF reached before closing '}'");
+                        case ',':
+                            // more field pairs
+                            state = STATE_READ_FIELD;
+                            break;
+                        case '}':
+                            // no more fields pairs, object done
+                            done = true;
+                            --curParseDepth;
+
+                            ///////////////////
+                            final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+                            if (object.isLogicalPrimitive()) {
+                                if (useMaps) {
+                                    object.isFinished = true;
+                                    return object.getPrimitiveValue();
+                                }
+                            }
+                            ////////////////////
+
+                            break;
+                        default:
+                            error("Object not ended with '}', instead found '" + (char)c + "'");
                     }
                     break;
-            }
-        }
-
-        final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
-
-        if (object.isLogicalPrimitive()) {
-            if (useMaps) {
-                object.isFinished = true;
-                return object.getPrimitiveValue();
             }
         }
         return object;
