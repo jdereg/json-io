@@ -57,7 +57,7 @@ public class UnknownObjectTypeTest
     public void testUnknownClassTypeFailsWhenFailOptionTrue()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json, new ReadOptions().failOnUnknownType(true), null); });
+        assertThrows(JsonIoException.class, () -> TestUtil.toObjects(json, new ReadOptions().failOnUnknownType(true), null));
     }
 
     @Test

@@ -6,7 +6,7 @@ import java.util.Map;
 import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -31,36 +31,9 @@ class ErrorsTest
     @Test
     void testBadJson()
     {
-        assertThrows(Exception.class, () -> { TestUtil.toObjects("[\"bad JSON input\"", null); });
-    }
-
-    @Test
-    void testParseMissingQuote()
-    {
-            String json = "{\n" +
-                    "  \"array\": [\n" +
-                    "    1,\n" +
-                    "    2,\n" +
-                    "    3\n" +
-                    "  ],\n" +
-                    "  \"boolean\": true,\n" +
-                    "  \"null\": null,\n" +
-                    "  \"number\": 123,\n" +
-                    "  \"object\": {\n" +
-                    "    \"a\": \"b\",\n" +
-                    "    \"c\": \"d\",\n" +
-                    "    \"e\": \"f\"\n" +
-                    "  },\n" +
-                    "  \"string: \"Hello World\"\n" +
-                    "}";
-        try
-        {
-            TestUtil.toObjects(json, null);
-        }
-        catch (Exception e)
-        {
-            assert e.getMessage().contains("Expected ':' between string field and value");
-        }
+        assertThatThrownBy(() -> TestUtil.toObjects("[\"bad JSON input\"", null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected ',' or ']' inside array");
     }
 
     @Test
@@ -103,7 +76,9 @@ class ErrorsTest
                     "    \"e\": \"f\"\n" +
                     "  },\n" +
                     "  \"string\": \"Hello World\"\n";
-            assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+            assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                    .isInstanceOf(JsonIoException.class)
+                    .hasMessageContaining("EOF reached");
     }
 
     @Test
@@ -113,100 +88,140 @@ class ErrorsTest
         TestUtil.toObjects(json, null);
 
         String json2 = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json2, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected ',' or ']' inside array");
     }
 
     @Test
     void testParseBadValueInArray()
     {
         String json = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,\'a\']";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unknown JSON value type");
     }
 
     @Test
     void testParseObjectWithoutClosingBrace()
     {
         String json = "{\"key\": true{";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Object not ended with '}'");
     }
 
     @Test
     void testParseBadHex()
     {
         String json = "\"\\u5h1t\"";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected hexadecimal digits");
     }
 
     @Test
     void testParseBadEscapeChar()
     {
         String json = "\"What if I try to escape incorrectly \\L1CK\"";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Invalid character escape sequence");
     }
 
     @Test
     void testParseUnfinishedString()
     {
         String json = "\"This is an unfinished string...";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached while reading JSON string");
     }
 
     @Test
     void testParseEOFInToken()
     {
         String json = "falsz";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected token: false");
     }
 
     @Test
     void testParseEOFReadingToken()
     {
         String json = "tru";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached while reading token: true");
     }
 
     @Test
     void testParseEOFinArray()
     {
         String json = "[true, false,";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
     }
 
     @Test
     void testMalformedJson()
     {
         final String json = "{\"field\"0}";  // colon expected between fields
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected ':' between field and value");
 
         final String json1 = "{field:0}";  // not quoted field name
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected quote");
 
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json2, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json2, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json3 = "{\"field\":true";  // object not terminated correctly (ending in token)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json3, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json3, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json4 = "{\"field\":\"test\"";  // object not terminated correctly (ending in string)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json4, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json4, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json5 = "{\"field\":{}";  // object not terminated correctly (ending in another object)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json5, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json5, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json6 = "{\"field\":[]";  // object not terminated correctly (ending in an array)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json6, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json6, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json7 = "{\"field\":3.14";  // object not terminated correctly (ending in double precision number)
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json7, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json7, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached before closing '}'");
 
         final String json8 = "[1,2,3";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json8, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json8, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected ',' or ']' inside array");
 
         final String json9 = "[false,true,false";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json9, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json9, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected ',' or ']' inside array");
 
         final String json10 = "[\"unclosed string]";
-        assertThrows(Exception.class, () -> { TestUtil.toObjects(json10, new ReadOptions().returnType(ReturnType.JSON_VALUES), null); });
+        assertThatThrownBy(() -> TestUtil.toObjects(json10, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached while reading JSON string");
     }
 
     @Test
@@ -249,7 +264,7 @@ class ErrorsTest
     {
         errorContains("{\"age\":25)", "not ended with '}");
         errorContains("[25, 50)", "expected ',' or ']' inside array");
-        errorContains("{\"name\", 50}", "expected ':' between string field and value");
+        errorContains("{\"name\", 50}", "expected ':' between field and value");
         errorContains("{\"name\":, }", "unknown JSON value type");
         errorContains("[1, 3, 99d ]", "Expected ',' or ']' inside array");
         Object x = TestUtil.toObjects("\"\\/ should be one char\"", null);

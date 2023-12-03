@@ -60,7 +60,6 @@ class JsonParser
     private static final int STATE_READ_START_OBJECT = 0;
     private static final int STATE_READ_FIELD = 1;
     private static final int STATE_READ_VALUE = 2;
-    private static final int STATE_READ_POST_VALUE = 3;
     private static final Map<String, String> stringCache = new HashMap<>();
     private static final Map<Number, Number> numberCache = new HashMap<>();
     private final FastReader input;
@@ -176,7 +175,7 @@ class JsonParser
                         field = readString();
                         c = skipWhitespaceRead();
                         if (c != ':') {
-                            error("Expected ':' between string field and value");
+                            error("Expected ':' between field and value, instead found '" + (char)c + "'");
                         }
 
                         if (field.startsWith("@") || field.startsWith(".")) {   // Expand shorthand meta keys
@@ -189,7 +188,7 @@ class JsonParser
                         state = STATE_READ_VALUE;
                     }
                     else {
-                        error("Expected quote");
+                        error("Expected quote before field name");
                     }
                     break;
 
@@ -202,7 +201,7 @@ class JsonParser
 
                     Object value = readValue(object, false);
 
-                    // @type handler
+                    // process key-value pairing
                     switch (field) {
                         case TYPE:
                             loadType(value, object);
@@ -218,15 +217,11 @@ class JsonParser
                             break;
                     }
 
-                    state = STATE_READ_POST_VALUE;
-                    break;
-
-                case STATE_READ_POST_VALUE:
                     c = skipWhitespaceRead();
                     if (c == -1) {
                         error("EOF reached before closing '}'");
                     }
-                    if (c == '}') {
+                    else if (c == '}') {
                         done = true;
                         --curParseDepth;
                     }
@@ -234,7 +229,7 @@ class JsonParser
                         state = STATE_READ_FIELD;
                     }
                     else {
-                        error("Object not ended with '}'");
+                        error("Object not ended with '}', instead found '" + (char)c + "'");
                     }
                     break;
             }
@@ -269,7 +264,7 @@ class JsonParser
                 // Since we are at 
                 Object obj = readJsonObject(object);
 
-//                if (obj instanceof JsonObject ) {
+                if (obj instanceof JsonObject ) {
 //                    JsonObject jObj = (JsonObject) obj;
 //                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
 //                    JsonObject localObject = new JsonObject();
@@ -277,8 +272,8 @@ class JsonParser
 //                    localObject.setJavaType(clazz);
 //                    localObject.putAll(jObj);
 //                    Object foo = resolver.createInstance(clazz, localObject);
-//                }
-//
+                }
+
                 return obj;
             case '[':
                 Object[] array = readArray(object);
