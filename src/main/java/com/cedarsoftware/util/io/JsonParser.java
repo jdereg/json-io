@@ -145,7 +145,7 @@ class JsonParser
         allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
     }
 
-    private Object readJsonObject(JsonValue parent) throws IOException {
+    private JsonObject readJsonObject() throws IOException {
         boolean done = false;
         String field = null;
         JsonObject object = new JsonObject();
@@ -251,32 +251,28 @@ class JsonParser
                 String str = readString();
                 return str;
             case '{':
-                input.pushback('{');
-                // Since we are at 
-                Object obj = readJsonObject(object);
+                input.pushback('{');                 
+                JsonObject jObj = readJsonObject();
 
-                ////////////////////// Resolving code - will be moved /////////////////////////////
-                if (obj instanceof JsonObject ) {
-                    JsonObject jObj = (JsonObject) obj;
-                    final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+                /////////////////////////////////////////////////////
+                final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
-                    if (jObj.isLogicalPrimitive()) {
-                        if (useMaps) {
-                            jObj.isFinished = true;
-                            return jObj.getPrimitiveValue();
-                        }
+                if (jObj.isLogicalPrimitive()) {
+                    if (useMaps) {
+                        jObj.isFinished = true;
+                        return jObj.getPrimitiveValue();
                     }
-
-                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
-                    JsonObject localObject = new JsonObject();
-                    localObject.type = clazz.getName();
-                    localObject.setJavaType(clazz);
-                    localObject.putAll(jObj);
-                    Object foo = resolver.createInstance(clazz, localObject);
                 }
-                //////////////////////////////////////////////////////////////////////////////////////
 
-                return obj;
+                Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
+                JsonObject localObject = new JsonObject();
+                localObject.type = clazz.getName();
+                localObject.setJavaType(clazz);
+                localObject.putAll(jObj);
+                Object foo = resolver.createInstance(clazz, localObject);
+                /////////////////////////////////////////////////////
+
+                return jObj;
             case '[':
                 Object[] array = readArray(object);
                 return array;
