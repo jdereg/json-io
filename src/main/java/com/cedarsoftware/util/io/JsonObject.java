@@ -1,15 +1,11 @@
 package com.cedarsoftware.util.io;
 
 import java.lang.reflect.Array;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -109,61 +105,14 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     public Object getPrimitiveValue()
     {
         final Object value = getValue();
-        switch(type)
-        {
-            case "boolean":
-            case "java.lang.Boolean":
-            case "double":
-            case "java.lang.Double":
-            case "long":
-            case "java.lang.Long":
-                return value;
-            case "byte":
-            case "java.lang.Byte":
-                Number b = (Number) value;
-                return b.byteValue();
-            case "char":
-            case "java.lang.Character":
-                String c = (String) value;
-                return c.charAt(0);
-            case "float":
-            case "java.lang.Float":
-                Number f = (Number) value;
-                return f.floatValue();
-            case "int":
-            case "java.lang.Integer":
-                Number integer = (Number) value;
-                return integer.intValue();
-            case "short":
-            case "java.lang.Short":
-                Number s = (Number) value;
-                return s.shortValue();
-            case "date":
-            case "java.util.Date":
-                if (value instanceof Long) {
-                    return new Date((Long)value);
-                } else if (value instanceof String) {
-                    return DateFactory.parseDate((String) value);
-                } else {
-                    throw new JsonIoException("Unknown date type: " + type);
-                }
-            case "BigInt":
-            case "java.math.BigInteger":
-                return MetaUtils.convert(BigInteger.class, value);
-            case "BigDec":
-            case "java.math.BigDecimal":
-                return MetaUtils.convert(BigDecimal.class, value);
-            case "class":
-            case "java.lang.Class":
-                Class<?> clz = MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());
-                if (clz == null)
-                {
-                    throw new JsonIoException("Invalid class: cannot be null");
-                }
-                return clz;
+        if ("class".equals(type) || "java.lang.Class".equals(type)) {
+            return MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());
         }
-
-        throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
+        Class<?> clazz = MetaUtils.classForName(type, JsonObject.class.getClassLoader());
+        if (clazz == null) {
+            throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
+        }
+        return MetaUtils.convert(clazz, value);
     }
 
     // Map APIs
