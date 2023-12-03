@@ -266,17 +266,13 @@ class JsonParser
                             return jObj.getPrimitiveValue();
                         }
                     }
-                }
 
-
-                if (obj instanceof JsonObject ) {
-//                    JsonObject jObj = (JsonObject) obj;
-//                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
-//                    JsonObject localObject = new JsonObject();
-//                    localObject.type = clazz.getName();
-//                    localObject.setJavaType(clazz);
-//                    localObject.putAll(jObj);
-//                    Object foo = resolver.createInstance(clazz, localObject);
+                    Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
+                    JsonObject localObject = new JsonObject();
+                    localObject.type = clazz.getName();
+                    localObject.setJavaType(clazz);
+                    localObject.putAll(jObj);
+                    Object foo = resolver.createInstance(clazz, localObject);
                 }
                 //////////////////////////////////////////////////////////////////////////////////////
 

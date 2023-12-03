@@ -296,6 +296,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     {
         if (containsKey(ITEMS))
         {
+            if (getArray() == null) {
+                return 0;
+            }
             return getArray().length;
         }
         else if (containsKey(REF))
