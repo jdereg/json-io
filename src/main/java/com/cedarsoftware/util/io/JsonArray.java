@@ -35,7 +35,7 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
     public String toString()
     {
         String jType = javaType == null ? "javaTypeNotSet" : javaType.getName();
-        String targetInfo = target == null ? "not set (null)" : "set";
+        String targetInfo = getTarget() == null ? "not set (null)" : "set";
         return "JsonArray(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
     }
 
@@ -47,15 +47,15 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
             return false;
         }
         JsonArray other = (JsonArray) obj;
-        if (target == null) {
-            return other.target == null;
+        if (getTarget() == null) {
+            return other.getTarget() == null;
         } else {
-            return target.equals(other.target);
+            return getTarget().equals(other.getTarget());
         }
     }
 
     public int hashCode() {
-        return target != null ? target.hashCode() : 0;
+        return getTarget() != null ? getTarget().hashCode() : 0;
     }
 
     public boolean isJsonArray() {
@@ -63,7 +63,7 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
     }
 
     public boolean isCollection() {
-        return target instanceof Collection;
+        return getTarget() instanceof Collection;
     }
 
     //

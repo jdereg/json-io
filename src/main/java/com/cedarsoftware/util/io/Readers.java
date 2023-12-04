@@ -67,11 +67,11 @@ public class Readers
 
         URL createURLFromJsonObject(JsonObject jObj) throws MalformedURLException {
             if (jObj.containsKey("value")) {
-                jObj.target = createUrlNewWay(jObj);
+                jObj.setTarget(createUrlNewWay(jObj));
             } else {
-                jObj.target = createUrlOldWay(jObj);
+                jObj.setTarget(createUrlOldWay(jObj));
             }
-            return (URL)jObj.target;
+            return (URL)jObj.getTarget();
         }
 
         URL createUrlNewWay(JsonObject jObj) throws MalformedURLException
@@ -125,17 +125,17 @@ public class Readers
             Object variant = jObj.get("variant");
             if (country == null)
             {
-                jObj.target = new Locale((String) language);
-                return jObj.target;
+                jObj.setTarget(new Locale((String) language));
+                return jObj.getTarget();
             }
             if (variant == null)
             {
-                jObj.target = new Locale((String) language, (String) country);
-                return jObj.target;
+                jObj.setTarget(new Locale((String) language, (String) country));
+                return jObj.getTarget();
             }
 
-            jObj.target = new Locale((String) language, (String) country, (String) variant);
-            return jObj.target;
+            jObj.setTarget(new Locale((String) language, (String) country, (String) variant));
+            return jObj.getTarget();
         }
     }
 
@@ -153,20 +153,7 @@ public class Readers
                     throw new JsonIoException("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
-                Class<?> c;
-                if (jObj.getTarget() != null)
-                {
-                    c = jObj.getTarget().getClass();
-                }
-                else
-                {
-                    Object type = jObj.type;
-                    c = MetaUtils.classForName((String) type, context.getReadOptions().getClassLoader());
-                    if (c == null)
-                    {
-                        throw new JsonIoException("Unable to load class: " + type + ", a Calendar type.");
-                    }
-                }
+                Class<?> c = jObj.getJavaType();
 
                 // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
                 // the special Calendar class, don't try to do that via a custom reader.  That is why only
@@ -206,8 +193,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = jObj.getValue();
-                return jObj.target;
+                jObj.setTarget(jObj.getValue());
+                return jObj.getTarget();
             }
             throw new JsonIoException("String missing 'value' field");
         }
@@ -232,12 +219,12 @@ public class Readers
             if (jObj.containsKey("value"))
             {
                 String value = (String) jObj.getValue();
-                jObj.target = MetaUtils.classForName(value, context.getReadOptions().getClassLoader());
-                if (jObj.target == null)
+                jObj.setTarget(MetaUtils.classForName(value, context.getReadOptions().getClassLoader()));
+                if (jObj.getTarget() == null)
                 {
                     throw new JsonIoException("Unable to load Class: " + value + ", class not found in JVM.");
                 }
-                return jObj.target;
+                return jObj.getTarget();
             }
             throw new JsonIoException("Class missing 'value' field");
         }
@@ -360,12 +347,12 @@ public class Readers
             if (value instanceof JsonObject)
             {
                 JsonObject valueObj = (JsonObject)value;
-                if ("java.math.BigDecimal".equals(valueObj.type))
+                if (BigDecimal.class.equals(valueObj.getJavaType()))
                 {
                     BigDecimalReader reader = new BigDecimalReader();
                     value = reader.read(value, stack, context);
                 }
-                else if ("java.math.BigInteger".equals(valueObj.type))
+                else if (BigInteger.class.equals(valueObj.getJavaType()))
                 {
                     value = read(value, stack, context);
                 }
@@ -378,7 +365,7 @@ public class Readers
             BigInteger x = (BigInteger) MetaUtils.convert(BigInteger.class, value);
             if (jObj != null)
             {
-                jObj.target = x;
+                jObj.setTarget(x);
             }
 
             return x;
@@ -407,12 +394,12 @@ public class Readers
             if (value instanceof JsonObject)
             {
                 JsonObject valueObj = (JsonObject)value;
-                if ("java.math.BigInteger".equals(valueObj.type))
+                if (BigInteger.class.equals(valueObj.getJavaType()))
                 {
                     BigIntegerReader reader = new BigIntegerReader();
                     value = reader.read(value, stack, context);
                 }
-                else if ("java.math.BigDecimal".equals(valueObj.type))
+                else if (BigDecimal.class.equals(valueObj.getJavaType()))
                 {
                     value = read(value, stack, context);
                 }
@@ -425,7 +412,7 @@ public class Readers
             BigDecimal x = (BigDecimal) MetaUtils.convert(BigDecimal.class, value);
             if (jObj != null)
             {
-                jObj.target = x;
+                jObj.setTarget(x);
             }
             return x;
         }
@@ -443,8 +430,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = new StringBuilder((String) jObj.getValue());
-                return jObj.target;
+                jObj.setTarget(new StringBuilder((String) jObj.getValue()));
+                return jObj.getTarget();
             }
             throw new JsonIoException("StringBuilder missing 'value' field");
         }
@@ -462,8 +449,8 @@ public class Readers
             JsonObject jObj = (JsonObject) o;
             if (jObj.containsKey("value"))
             {
-                jObj.target = new StringBuffer((String) jObj.getValue());
-                return jObj.target;
+                jObj.setTarget(new StringBuffer((String) jObj.getValue()));
+                return jObj.getTarget();
             }
             throw new JsonIoException("StringBuffer missing 'value' field");
         }
@@ -522,7 +509,7 @@ public class Readers
                 ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
                 ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
 
-                Class<?> c = Class.forName(jsonObj.getType());
+                Class<?> c = jsonObj.getJavaType();
                 // the record components are per definition in the constructor parameter order
                 // we implement this with reflection due to code compatibility Java<16
                 Method getRecordComponents = Class.class.getMethod("getRecordComponents");
@@ -534,7 +521,8 @@ public class Readers
 
                     String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
                     JsonObject parameterValueJsonObj = new JsonObject();
-                    parameterValueJsonObj.setType(type.getName());
+
+                    parameterValueJsonObj.setJavaType(type);
                     parameterValueJsonObj.put("value", jsonObj.get(parameterName));
 
                     if(parameterValueJsonObj.isLogicalPrimitive())

@@ -1039,16 +1039,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             showType = false;
         }
         int len = jObj.getLength();
-        String type = jObj.type;
         Class<?> arrayClass;
-
-        if (type == null || Object[].class.getName().equals(type))
+        Class<?> jsonObjectType = jObj.getJavaType();
+        if (jsonObjectType == null || Object[].class.equals(jsonObjectType))
         {
             arrayClass = Object[].class;
         }
         else
         {
-            arrayClass = MetaUtils.classForName(type, writeOptions.getClassLoader());
+            arrayClass = jsonObjectType;
         }
 
         final Writer output = this.out;
@@ -1149,8 +1148,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             showType = false;
         }
-        String type = jObj.type;
-        Class<?> colClass = MetaUtils.classForName(type, writeOptions.getClassLoader());
+        Class<?> colClass = jObj.getJavaType();
         boolean referenced = adjustIfReferenced(jObj);
         final Writer output = this.out;
         int len = jObj.getLength();
@@ -1284,7 +1282,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            String type = jObj.getType();
+            String type = jObj.getJavaTypeName();
             if (type != null)
             {
                 writeType(type, output);
@@ -1310,7 +1308,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         boolean referenced = adjustIfReferenced(jObj);
 
-        showType = showType && jObj.type != null;
+        showType = showType && jObj.getJavaType() != null;
 
         output.write('{');
         tabIn();
@@ -1327,8 +1325,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 output.write(',');
                 newLine();
             }
-            writeType(jObj.type, output);
-            type = MetaUtils.classForName(jObj.type, writeOptions.getClassLoader());
+            writeType(jObj.getJavaTypeName(), output);
+            type = jObj.getJavaType();
         }
 
         if (jObj.isEmpty())

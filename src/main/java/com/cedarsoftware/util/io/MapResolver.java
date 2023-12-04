@@ -72,7 +72,7 @@ public class MapResolver extends Resolver
      */
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
-        final Object target = jsonObj.target;
+        final Object target = jsonObj.getTarget();
         final Map<String, Injector> injectorMap = (target == null) ? null : ClassDescriptors.instance().getDeepInjectorMap(target.getClass());
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet())
@@ -142,7 +142,7 @@ public class MapResolver extends Resolver
                 }
             }
         }
-        jsonObj.target = null;  // don't waste space (used for typed return, not for Map return)
+        jsonObj.setTarget(null);  // don't waste space (used for typed return, not for Map return)
     }
 
     /**
@@ -193,7 +193,7 @@ public class MapResolver extends Resolver
             }
             idx++;
         }
-        jsonObj.target = null;  // don't waste space (used for typed return, not generic Map return)
+        jsonObj.setTarget(null);  // don't waste space (used for typed return, not generic Map return)
 
         for (int i=0; i < items.length; i++)
         {

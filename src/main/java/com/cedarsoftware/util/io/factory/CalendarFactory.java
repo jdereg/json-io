@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
-
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
 
 public class CalendarFactory implements JsonReader.ClassFactory {
 
@@ -71,13 +71,8 @@ public class CalendarFactory implements JsonReader.ClassFactory {
         }
     }
 
-    private Class<?> extractClass(JsonObject object) {
-
-        if (object.getTarget() != null) {
-            return object.getTarget().getClass();
-        }
-
-        return MetaUtils.classForName(object.getType(), object.getClass().getClassLoader());
+    private Class<?> extractClass(JsonObject jObj) {
+        return jObj.getJavaType();
     }
 
     @Override

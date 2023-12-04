@@ -113,7 +113,8 @@ public class CustomClassHandlerTest
             {
                 try
                 {
-                    return jObj.target = new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) jObj.get("stuff")));
+                    jObj.setTarget(new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) jObj.get("stuff"))));
+                    return jObj.getTarget();
                 }
                 catch (ParseException e)
                 {

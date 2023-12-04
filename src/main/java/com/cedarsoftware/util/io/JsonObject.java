@@ -6,9 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * This class holds a JSON object in a LinkedHashMap.
  * LinkedHashMap used to keep fields in same order as they are
@@ -37,9 +34,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     boolean isMap = false;
     Integer hash = null;
-    @Getter
-    @Setter
-    String type;
 
     public boolean isJsonObject() {
         return true;
@@ -48,28 +42,31 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     public String toString()
     {
         String jType = javaType == null ? "not set" : javaType.getName();
-        String targetInfo = target == null ? "null" : jType;
+        String targetInfo = getTarget() == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
     }
     
     public Object setFinishedTarget(Object o, boolean isFinished)
     {
-        this.target = o;
+        this.setTarget(o);
         this.isFinished = isFinished;
-        return this.target;
+        return this.getTarget();
     }
 
     public Class<?> getTargetClass()
     {
-        return target.getClass();
+        if (getTarget() != null) {
+            return getTarget().getClass();
+        }
+        return null;
     }
 
     public boolean isLogicalPrimitive()
     {
-        if (type == null) {
+        if (getJavaType() == null) {
             return false;
         }
-        switch (type)
+        switch (getJavaTypeName())
         {
             case "boolean":
             case "java.lang.Boolean":
@@ -105,6 +102,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     public Object getPrimitiveValue()
     {
         final Object value = getValue();
+        String type = getJavaTypeName();
         if ("class".equals(type) || "java.lang.Class".equals(type)) {
             return MetaUtils.classForName((String)value, JsonObject.class.getClassLoader());
         }
@@ -118,19 +116,20 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     // Map APIs
     public boolean isMap()
     {
-        return isMap || target instanceof Map;
+        return isMap || getTarget() instanceof Map;
     }
 
     // Collection APIs
     public boolean isCollection()
     {
-        if (target instanceof Collection)
+        if (getTarget() instanceof Collection)
         {
             return true;
         }
         if (containsKey(ITEMS) && !containsKey(KEYS))
         {
-            return type != null && !type.contains("[");
+            String typeName = getJavaTypeName();
+            return typeName != null && !typeName.contains("[");
         }
         return false;
     }
@@ -138,15 +137,15 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     // Array APIs
     public boolean isArray()
     {
-        if (target == null)
+        if (getTarget() == null)
         {
-            if (type != null)
+            if (getJavaType() != null)
             {
-                return type.contains("[");
+                return getJavaTypeName().contains("[");
             }
             return containsKey(ITEMS) && !containsKey(KEYS);
         }
-        return target.getClass().isArray();
+        return getTarget().getClass().isArray();
     }
 
     // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
@@ -170,12 +169,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     private Integer getLenientSize() {
         if (isArray())
         {
-            if (target == null)
+            if (getTarget() == null)
             {
                 Object[] items = (Object[]) get(ITEMS);
                 return items == null ? 0 : items.length;
             }
-            return Array.getLength(target);
+            return Array.getLength(getTarget());
         }
         if (isCollection() || isMap())
         {
@@ -187,12 +186,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
 
     public Class<?> getComponentType()
     {
-        return target.getClass().getComponentType();
+        return getTarget().getClass().getComponentType();
     }
 
     void moveBytesToMate()
     {
-        final byte[] bytes = (byte[]) target;
+        final byte[] bytes = (byte[]) getTarget();
         final Object[] items = getArray();
         final int len = items.length;
 
@@ -208,16 +207,16 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
         Object[] items = getArray();
         if (items == null)
         {
-             target = null;
+             setTarget(null);
         }
         else if (items.length == 0)
         {
-            target = new char[0];
+            setTarget(new char[0]);
         }
         else if (items.length == 1)
         {
             String s = (String) items[0];
-            target = s.toCharArray();
+            setTarget(s.toCharArray());
         }
         else
         {
@@ -335,10 +334,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
 
     public void clear()
     {
+        super.clear();
         jsonStore.clear();
-        type = null;
         hash = null;
-        id = -1L;
     }
 
     public Set<Object> keySet() {

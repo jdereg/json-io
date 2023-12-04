@@ -36,7 +36,7 @@ public class JsonPrimitive extends JsonValue {
     public String toString()
     {
         String jType = javaType == null ? "not set" : javaType.getSimpleName();
-        String targetInfo = target == null ? "null" : target.toString();
+        String targetInfo = getTarget() == null ? "null" : getTarget().toString();
         return "JsonPrimitive(id:" + id + ", type:" + jType + ", value:" + targetInfo +")";
     }
 
@@ -48,15 +48,15 @@ public class JsonPrimitive extends JsonValue {
             return false;
         }
         JsonPrimitive other = (JsonPrimitive) obj;
-        if (target == null) {
-            return other.target == null;
+        if (getTarget() == null) {
+            return other.getTarget() == null;
         } else {
-            return target.equals(other.target);
+            return getTarget().equals(other.getTarget());
         }
     }
 
     public int hashCode() {
-        return target != null ? target.hashCode() : 0;
+        return getTarget() != null ? getTarget().hashCode() : 0;
     }
 
     public boolean isJsonPrimitive() {
@@ -65,6 +65,6 @@ public class JsonPrimitive extends JsonValue {
 
     // Share Java value for JSON value for primitives
     public Object getValue() {
-        return target;
+        return getTarget();
     }
 }

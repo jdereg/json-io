@@ -129,9 +129,9 @@ class JsonParser
         numberCache.put(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
         numberCache.put(Double.NaN, Double.NaN);
 
-        EMPTY_OBJECT.type = JsonObject.class.getName();
+        EMPTY_OBJECT.setJavaType(JsonObject.class);
         EMPTY_OBJECT.isFinished = true;
-        EMPTY_ARRAY.type = Object[].class.getName();
+        EMPTY_ARRAY.setJavaType(Object[].class);
         EMPTY_ARRAY.put(ITEMS, new Object[]{});
         EMPTY_ARRAY.isFinished = true;
     }
@@ -251,7 +251,8 @@ class JsonParser
                 String str = readString();
                 return str;
             case '{':
-                input.pushback('{');                 
+                input.pushback('{');
+
                 JsonObject jObj = readJsonObject();
 
                 /////////////////////////////////////////////////////
@@ -266,9 +267,9 @@ class JsonParser
 
                 Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
                 JsonObject localObject = new JsonObject();
-                localObject.type = clazz.getName();
                 localObject.setJavaType(clazz);
                 localObject.putAll(jObj);
+//                jObj.setJavaType(clazz);
                 Object foo = resolver.createInstance(clazz, localObject);
                 /////////////////////////////////////////////////////
 
@@ -599,7 +600,6 @@ class JsonParser
             }
         }
         object.setJavaType(clazz);
-        object.setType(clazz.getName());  // type field on JsonObject needs to go away (we have JavaType now)
     }
     
     Object error(String msg)

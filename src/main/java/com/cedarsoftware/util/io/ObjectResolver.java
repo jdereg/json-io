@@ -87,7 +87,7 @@ public class ObjectResolver extends Resolver
      */
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
-        final Object javaMate = jsonObj.target;
+        final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
         final Map<String, Injector> injectorMap = ClassDescriptors.instance().getDeepInjectorMap(cls);
@@ -126,7 +126,7 @@ public class ObjectResolver extends Resolver
     protected void assignField(final Deque<JsonObject> stack, final JsonObject jsonObj,
                                final Injector injector, final Object rhs)
     {
-        final Object target = jsonObj.target;
+        final Object target = jsonObj.getTarget();
         final Class targetClass = target.getClass();
         try
         {
@@ -137,7 +137,7 @@ public class ObjectResolver extends Resolver
                 {
                     if (isBasicWrapperType(targetClass))
                     {
-                        jsonObj.target = MetaUtils.convert(fieldType, "0");
+                        jsonObj.setTarget(MetaUtils.convert(fieldType, "0"));
                     }
                     else
                     {
@@ -164,10 +164,9 @@ public class ObjectResolver extends Resolver
 
                 // Ensure 'type' field set on JsonObject
                 final JsonObject job = (JsonObject) rhs;
-                final String type = job.type;
-                if (type == null || type.isEmpty())
+                if (job.getJavaType() == null)
                 {
-                    job.setType(fieldType.getName());
+                    job.setJavaType(fieldType);
                 }
             }
 
@@ -175,7 +174,7 @@ public class ObjectResolver extends Resolver
             if (rhs == JsonParser.EMPTY_OBJECT)
             {
                 final JsonObject jObj = new JsonObject();
-                jObj.type = fieldType.getName();
+                jObj.setJavaType(fieldType);
                 Object value = createInstance(fieldType, jObj);
                 injector.inject(target, value);
             }
@@ -203,7 +202,7 @@ public class ObjectResolver extends Resolver
                 {
                     jsonArray.put(ITEMS, elements);
                     createInstance(fieldType, jsonArray);
-                    injector.inject(target, jsonArray.target);
+                    injector.inject(target, jsonArray.getTarget());
                     stack.addFirst(jsonArray);
                 }
             }
@@ -216,9 +215,9 @@ public class ObjectResolver extends Resolver
                 {    // Correct field references
                     final JsonObject refObject = this.getReferences().get(ref);
 
-                    if (refObject.target != null)
+                    if (refObject.getTarget() != null)
                     {
-                        injector.inject(target, refObject.target);
+                        injector.inject(target, refObject.getTarget());
                     }
                     else
                     {
@@ -250,7 +249,7 @@ public class ObjectResolver extends Resolver
                 {
                     Object converted = MetaUtils.convert(fieldType, rhs);
                     if (isBasicWrapperType(targetClass)) {
-                        jsonObj.target = converted;
+                        jsonObj.setTarget(converted);
                     } else {
                         injector.inject(target, converted);
                     }
@@ -290,7 +289,7 @@ public class ObjectResolver extends Resolver
     protected void handleMissingField(final Deque<JsonObject> stack, final JsonObject jsonObj, final Object rhs,
                                       final String missingField)
     {
-        final Object target = jsonObj.target;
+        final Object target = jsonObj.getTarget();
         try
         {
             if (rhs == null)
@@ -322,12 +321,12 @@ public class ObjectResolver extends Resolver
                 if (ref != null)
                 { // Correct field references
                     final JsonObject refObject = this.getReferences().get(ref);
-                    storeMissingField(target, missingField, refObject.target);
+                    storeMissingField(target, missingField, refObject.getTarget());
                 }
                 else
                 {   // Assign ObjectMap's to Object (or derived) fields
                     // check that jObj as a type
-                    if (jObj.getType() != null)
+                    if (jObj.getJavaType() != null)
                     {
                         Object javaInstance = createInstance(null, jObj);
                         boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
@@ -401,7 +400,7 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
-        final String className = jsonObj.type;
+        final String className = jsonObj.getJavaTypeName();
         final Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {
@@ -409,11 +408,11 @@ public class ObjectResolver extends Resolver
             {
                 if (className.contains("Set"))
                 {
-                    jsonObj.target = MetaUtils.setOf();
+                    jsonObj.setTarget(MetaUtils.setOf());
                 }
                 else if (className.contains("List"))
                 {
-                    jsonObj.target = MetaUtils.listOf();
+                    jsonObj.setTarget(MetaUtils.listOf());
                 }
             }
             return;
@@ -427,7 +426,7 @@ public class ObjectResolver extends Resolver
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.target;
+        final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -458,7 +457,7 @@ public class ObjectResolver extends Resolver
                 final JsonObject jObj = new JsonObject();
                 jObj.put(ITEMS, element);
                 createInstance(Object.class, jObj);
-                col.add(jObj.target);
+                col.add(jObj.getTarget());
                 convertJsonValuesToJava(jObj);
             }
             else // if (element instanceof JsonObject)
@@ -470,9 +469,9 @@ public class ObjectResolver extends Resolver
                 {
                     JsonObject refObject = this.getReferences().get(ref);
 
-                    if (refObject.target != null)
+                    if (refObject.getTarget() != null)
                     {
-                        col.add(refObject.target);
+                        col.add(refObject.getTarget());
                     }
                     else
                     {
@@ -494,7 +493,7 @@ public class ObjectResolver extends Resolver
                     
                     if (!(col instanceof EnumSet))
                     {   // EnumSet has already had it's items added to it.
-                        col.add(jObj.target);
+                        col.add(jObj.getTarget());
                     }
                 }
             }
@@ -507,16 +506,16 @@ public class ObjectResolver extends Resolver
 
     public static void reconcileCollection(JsonObject jsonObj, Collection col)
     {
-        final String className = jsonObj.type;
+        final String className = jsonObj.getJavaTypeName();
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
         
         if (!isImmutable)
         {
             return;
         }
-        if (col == null && jsonObj.target instanceof Collection)
+        if (col == null && jsonObj.getTarget() instanceof Collection)
         {
-            col = (Collection) jsonObj.target;
+            col = (Collection) jsonObj.getTarget();
         }
         if (col == null)
         {
@@ -527,20 +526,20 @@ public class ObjectResolver extends Resolver
         {
             if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
             {
-                jsonObj.target = MetaUtils.listOf(col.toArray());
+                jsonObj.setTarget(MetaUtils.listOf(col.toArray()));
             }
             else
             {
-                jsonObj.target = col;
+                jsonObj.setTarget(col);
             }
         }
         else if (className.contains("Set"))
         {
-            jsonObj.target = MetaUtils.setOf(col.toArray());
+            jsonObj.setTarget(MetaUtils.setOf(col.toArray()));
         }
         else
         {
-            jsonObj.target = col;
+            jsonObj.setTarget(col);
         }
     }
 
@@ -576,7 +575,7 @@ public class ObjectResolver extends Resolver
         }
 
         final boolean isPrimitive = Primitives.isPrimitive(compType);
-        final Object array = jsonObj.target;
+        final Object array = jsonObj.getTarget();
         final Object[] items =  jsonObj.getArray();
 
         for (int i=0; i < len; i++)
@@ -642,9 +641,9 @@ public class ObjectResolver extends Resolver
                 if (ref != null)
                 {    // Connect reference
                     JsonObject refObject = this.getReferences().get(ref);
-                    if (refObject.target != null)
+                    if (refObject.getTarget() != null)
                     {   // Array element with reference to existing object
-                        Array.set(array, i, refObject.target);
+                        Array.set(array, i, refObject.getTarget());
                     }
                     else
                     {    // Array with a forward reference as an element
@@ -718,12 +717,12 @@ public class ObjectResolver extends Resolver
                 return null;
             }
 
-            if (jsonObj.target == null)
+            if (jsonObj.getTarget() == null)
             {   // '@type' parameter used (not target instance)
                 String typeStr = null;
                 try
                 {
-                    String type =  jsonObj.type;
+                    String type =  jsonObj.getJavaTypeName();
                     if (type != null)
                     {
                         typeStr = type;
@@ -755,7 +754,7 @@ public class ObjectResolver extends Resolver
             }
             else
             {   // Type inferred from target object
-                c = jsonObj.target.getClass();
+                c = jsonObj.getTargetClass();
             }
         }
         else
@@ -771,8 +770,8 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        if (jsonObj.type == null) {
-            jsonObj.setType(c.getName());
+        if (jsonObj.getJavaType() == null) {
+            jsonObj.setJavaType(c);
         }
 
         if (getReadOptions().isNotCustomReaderClass(c)) {
@@ -784,7 +783,7 @@ public class ObjectResolver extends Resolver
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
-        if (classFactory != null && jsonObj.target == null)
+        if (classFactory != null && jsonObj.getTarget() == null)
         {
             Object target = createInstanceUsingClassFactory(c, jsonObj);
 
@@ -860,7 +859,7 @@ public class ObjectResolver extends Resolver
                             else if (vals instanceof Object[])
                             {
                                 JsonObject coll = new JsonObject();
-                                coll.type = clazz.getName();
+                                coll.setJavaType(clazz);
                                 List items = Arrays.asList((Object[]) vals);
                                 coll.put(ITEMS, items.toArray());
                                 stack.addFirst(new Object[]{t, items});
@@ -957,9 +956,8 @@ public class ObjectResolver extends Resolver
         if (o instanceof JsonObject && clazz != null)
         {
             JsonObject jObj = (JsonObject) o;
-            if ((jObj.type == null || jObj.type.isEmpty()) && jObj.target == null)
+            if (jObj.getJavaType() == null && jObj.getTarget() == null)
             {
-                jObj.type = clazz.getName();
                 jObj.setJavaType(clazz);
             }
         }

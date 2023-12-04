@@ -34,7 +34,7 @@ public abstract class JsonValue {
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
     Class<?> javaType;
-    Object target;
+    private Object target;
     boolean isFinished = false;
     long id = -1L;
     Long refId = null;
@@ -116,6 +116,13 @@ public abstract class JsonValue {
         this.javaType = type;
     }
 
+    public String getJavaTypeName() {
+        if (javaType == null) {
+            return null;
+        }
+        return javaType.getName();
+    }
+
     public long getId() {
         return id;
     }
@@ -131,5 +138,12 @@ public abstract class JsonValue {
     public boolean hasId()
     {
         return id > 0L;
+    }
+
+    void clear()
+    {
+        id = -1;
+        javaType = null;
+        refId = null;
     }
 }

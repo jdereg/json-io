@@ -127,10 +127,10 @@ public class JsonReader implements Closeable, ReaderContext
 
                     if (o instanceof JsonObject) {
                         JsonObject sub = (JsonObject) o;
-                        Object value = context.reentrantConvertJsonValueToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
+                        Object value = context.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
 
                         if (value != null) {
-                            if (sub.getType() != null || sub.getTargetClass() != null) {
+                            if (sub.getJavaType() != null || sub.getTargetClass() != null) {
                                 arguments.add(value);
                             }
                         }
@@ -237,10 +237,8 @@ public class JsonReader implements Closeable, ReaderContext
         JsonObject rootObj = new JsonObject();
         if (rootType == null) {
             rootObj.setJavaType(LinkedHashMap.class);
-            rootObj.setType(LinkedHashMap.class.getName());
         } else {
             rootObj.setJavaType(rootType);
-            rootObj.setType(rootType.getName());
         }
         T returnValue;
         try {
@@ -256,7 +254,6 @@ public class JsonReader implements Closeable, ReaderContext
         T graph;
         if (returnValue instanceof Object[]) {
             rootObj.setJavaType(Object[].class);
-            rootObj.setType(Object[].class.getName());
             rootObj.setTarget(returnValue);
             rootObj.put(ITEMS, returnValue);
             graph = convertJsonValueToJava(rootObj, rootType);

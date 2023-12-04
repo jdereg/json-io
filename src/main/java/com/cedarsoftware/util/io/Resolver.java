@@ -144,7 +144,7 @@ public abstract class Resolver implements ReaderContext
 
         T graph;
         if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
-            graph = (T) rootObj.target;
+            graph = (T) rootObj.getTarget();
         } else {
             Object instance = createInstance(root, rootObj);
             if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
@@ -169,7 +169,7 @@ public abstract class Resolver implements ReaderContext
     protected <T> T convertJsonValuesToJava(final JsonObject root)
     {
         if (root.isFinished) {
-            return (T) root.target;
+            return (T) root.getTarget();
         }
 
         final Deque<JsonObject> stack = new ArrayDeque<>();
@@ -196,7 +196,7 @@ public abstract class Resolver implements ReaderContext
                 Object special;
                 if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
                 {
-                    jsonObj.target = special;
+                    jsonObj.setTarget(special);
                 }
                 else
                 {
@@ -204,7 +204,7 @@ public abstract class Resolver implements ReaderContext
                 }
             }
         }
-        return (T) root.target;
+        return (T) root.getTarget();
     }
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
@@ -281,7 +281,7 @@ public abstract class Resolver implements ReaderContext
     {
         final JsonObject collection = new JsonObject();
         collection.put(ITEMS, arrayContent);
-        collection.target = arrayContent;
+        collection.setTarget(arrayContent);
         stack.addFirst(collection);
     }
 
@@ -289,28 +289,28 @@ public abstract class Resolver implements ReaderContext
      * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
      * to have its keys placed into @keys, and its values placed into @items.
      *
-     * @param map Map to convert
+     * @param jObj Map to convert
      */
-    protected static void convertMapToKeysItems(final JsonObject map)
+    protected static void convertMapToKeysItems(final JsonObject jObj)
     {
-        if (!map.containsKey(KEYS) && !map.isReference())
+        if (!jObj.containsKey(KEYS) && !jObj.isReference())
         {
-            final Object[] keys = new Object[map.size()];
-            final Object[] values = new Object[map.size()];
+            final Object[] keys = new Object[jObj.size()];
+            final Object[] values = new Object[jObj.size()];
             int i = 0;
 
-            for (Object e : map.entrySet())
+            for (Object e : jObj.entrySet())
             {
                 final Map.Entry entry = (Map.Entry) e;
                 keys[i] = entry.getKey();
                 values[i] = entry.getValue();
                 i++;
             }
-            String saveType = map.getType();
-            map.clear();
-            map.setType(saveType);
-            map.put(KEYS, keys);
-            map.put(ITEMS, values);
+            String saveType = jObj.getJavaTypeName();
+            jObj.clear();
+            jObj.setJavaType(MetaUtils.classForName(saveType, Resolver.class.getClassLoader()));
+            jObj.put(KEYS, keys);
+            jObj.put(ITEMS, values);
         }
     }
 
@@ -329,37 +329,30 @@ public abstract class Resolver implements ReaderContext
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
-    protected Object createInstance(Class<?> clazz, JsonObject jsonObj)
-    {
-        String type = jsonObj.type;
+    protected Object createInstance(Class<?> clazz, JsonObject jsonObj) {
+        String type = jsonObj.getJavaTypeName();
 
         // We can't set values to an Object, so well try to use the contained type instead
-        if ("java.lang.Object".equals(type))
-        {   // Primitive
+        if ("java.lang.Object".equals(type)) {   // Primitive
             Object value = jsonObj.getValue();
-            if (jsonObj.keySet().size() == 1 && value != null)
-            {
+            if (jsonObj.keySet().size() == 1 && value != null) {
+                jsonObj.setJavaType(value.getClass());
                 type = value.getClass().getName();
-                jsonObj.type = type;
             }
         }
-        if (type == null)
-        {   // Enum
+        if (type == null) {   // Enum
             Object mayEnumSpecial = jsonObj.get("@enum");
-            if (mayEnumSpecial instanceof String)
-            {
+            if (mayEnumSpecial instanceof String) {
                 type = "java.util.EnumSet";
-                jsonObj.type = type;
+                jsonObj.setJavaType(MetaUtils.classForName(type, Resolver.class.getClassLoader()));
             }
         }
 
         // @type always takes precedence over inferred Java (clazz) type.
-        if (type != null)
-        {    // @type is explicitly set, use that as it always takes precedence
+        if (type != null) {    // @type is explicitly set, use that as it always takes precedence
             return createInstanceUsingType(jsonObj);
         }
-        else
-        {
+        else {
             return createInstanceUsingClass(clazz, jsonObj);
         }
     }
@@ -368,60 +361,51 @@ public abstract class Resolver implements ReaderContext
      * Create an instance of a Java class using the ".type" field on the jsonObj.  The clazz argument is not
      * used for determining type, just for clarity in an exception message.
      */
-    protected Object createInstanceUsingType(JsonObject jsonObj)
-    {
-        String type = jsonObj.type;
+    protected Object createInstanceUsingType(JsonObject jsonObj) {
+        String type = jsonObj.getJavaTypeName();
         Class<?> c;
         if (jsonObj.getJavaType() == null) {
             c = MetaUtils.classForName(type, readOptions.getClassLoader());
-        } else {
+        }
+        else {
             c = jsonObj.getJavaType();
         }
         c = coerceClassIfNeeded(c);
 
         // If a ClassFactory exists for a class, use it to instantiate the class.
         Object mate = createInstanceUsingClassFactory(c, jsonObj);
-        if (mate != null)
-        {
+        if (mate != null) {
             return mate;
         }
 
         // Use other methods to determine the type of class to be instantiated, including looking at the
         // component type of the array.  Also, need to look at primitives, Enums, Immutable collection types.
-        if (c.isArray())
-        {    // Handle []
+        if (c.isArray()) {    // Handle []
             Object[] items = jsonObj.getArray();
             int size = (items == null) ? 0 : items.length;
-            if (c == char[].class)
-            {
+            if (c == char[].class) {
                 jsonObj.moveCharsToMate();
-                mate = jsonObj.target;
+                mate = jsonObj.getTarget();
             }
-            else
-            {
+            else {
                 mate = Array.newInstance(c.getComponentType(), size);
             }
         }
-        else
-        {   // Handle regular field.object reference
-            if (Primitives.isPrimitive(c))
-            {
+        else {   // Handle regular field.object reference
+            if (Primitives.isPrimitive(c)) {
                 mate = MetaUtils.convert(c, jsonObj.getValue());
                 jsonObj.isFinished = true;
             }
-            else if (c == Class.class)
-            {
+            else if (c == Class.class) {
                 mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
             }
-            else if (EnumSet.class.isAssignableFrom(c))
-            {
+            else if (EnumSet.class.isAssignableFrom(c)) {
                 mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
-            } else if ((mate = coerceCertainTypes(c)) != null)
-            {   // if coerceCertainTypes() returns non-null, it did the work
             }
-            else
-            {
+            else if ((mate = coerceCertainTypes(c)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
+            }
+            else {
                 // ClassFactory already consulted above, likely regular business/data classes.
                 // If the newInstance(c) fails, it throws a JsonIoException.
                 mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
@@ -465,7 +449,7 @@ public abstract class Resolver implements ReaderContext
             if (unknownClass == null)
             {
                 JsonObject jsonObject = new JsonObject();
-                jsonObject.type = Map.class.getName();
+                jsonObject.setJavaType(Map.class);
                 mate = jsonObject;
             }
             else
@@ -495,8 +479,8 @@ public abstract class Resolver implements ReaderContext
     {
         //  If a target exists then the item has already gone through
         //  the create instance process. Don't recreate
-        if (jsonObj.target != null) {
-            return jsonObj.target;
+        if (jsonObj.getTarget() != null) {
+            return jsonObj.getTarget();
         }
 
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
@@ -591,7 +575,7 @@ public abstract class Resolver implements ReaderContext
         while (i.hasNext())
         {
             UnresolvedReference ref = (UnresolvedReference) i.next();
-            Object objToFix = ref.referencingObj.target;
+            Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.get(ref.refId);
 
             if (ref.index >= 0)
@@ -599,34 +583,34 @@ public abstract class Resolver implements ReaderContext
                 if (objToFix instanceof List)
                 {   // Patch up Indexable Collections
                     List list = (List) objToFix;
-                    list.set(ref.index, objReferenced.target);
-                    String containingTypeName = ref.referencingObj.type;
+                    list.set(ref.index, objReferenced.getTarget());
+                    String containingTypeName = ref.referencingObj.getJavaTypeName();
                     if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List"))
                     {
                         if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
                         {
                             list = MetaUtils.listOf(list.toArray());
-                            ref.referencingObj.target = list;
+                            ref.referencingObj.setTarget(list);
                         }
                     }
                 }
                 else if (objToFix instanceof Collection)
                 {
-                    String containingTypeName = ref.referencingObj.type;
+                    String containingTypeName = ref.referencingObj.getJavaTypeName();
                     Collection col = (Collection) objToFix;
                     if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
                     {
-                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.type + "', @ref = " + ref.refId);
+                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.getJavaTypeName() + "', @ref = " + ref.refId);
                     }
                     else
                     {
                         // Add element (since it was not indexable, add it to collection)
-                        col.add(objReferenced.target);
+                        col.add(objReferenced.getTarget());
                     }
                 }
                 else
                 {
-                    Array.set(objToFix, ref.index, objReferenced.target);        // patch array element here
+                    Array.set(objToFix, ref.index, objReferenced.getTarget());        // patch array element here
                 }
             }
             else
@@ -636,7 +620,7 @@ public abstract class Resolver implements ReaderContext
                 {
                     try
                     {
-                        MetaUtils.setFieldValue(field, objToFix, objReferenced.target);    // patch field here
+                        MetaUtils.setFieldValue(field, objToFix, objReferenced.getTarget());    // patch field here
                     }
                     catch (Exception e)
                     {
@@ -678,7 +662,7 @@ public abstract class Resolver implements ReaderContext
             }
             else
             {
-                map = (Map) jObj.target;
+                map = (Map) jObj.getTarget();
                 javaKeys = (Object[]) mapPieces[1];
                 javaValues = (Object[]) mapPieces[2];
                 jObj.clear();
