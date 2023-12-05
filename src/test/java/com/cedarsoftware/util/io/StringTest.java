@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -100,15 +101,18 @@ public class StringTest
     @Test
     public void testEmptyString()
     {
-        // Ensure no exception is thrown
-        TestUtil.toObjects("", null);
+        assertThatThrownBy(() -> TestUtil.toObjects("", null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
+
     }
 
     @Test
     public void testNullInput()
     {
-        // Ensure no exception is thrown
-        TestUtil.toObjects(null, null);
+        assertThatThrownBy(() -> TestUtil.toObjects(null, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
     }
     
     private static class ManyStrings implements Serializable

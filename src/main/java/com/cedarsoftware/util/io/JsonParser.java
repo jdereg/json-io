@@ -171,34 +171,23 @@ class JsonParser
 
                 case STATE_READ_FIELD:
                     c = skipWhitespaceRead();
-                    if (c == '"') {
-                        field = readString();
-                        c = skipWhitespaceRead();
-                        if (c != ':') {
-                            error("Expected ':' between field and value, instead found '" + (char)c + "'");
-                        }
-
-                        if (field.startsWith("@") || field.startsWith(".")) {   // Expand shorthand meta keys
-                            String temp = stringCache.get(field);
-
-                            if (temp != null) {
-                                field = temp;
-                            }
-                        }
-                        state = STATE_READ_VALUE;
-                    }
-                    else {
+                    if (c != '"') {
                         error("Expected quote before field name");
                     }
+                    field = readString();
+                    c = skipWhitespaceRead();
+                    if (c != ':') {
+                        error("Expected ':' between field and value, instead found '" + (char)c + "'");
+                    }
+
+                    String temp = stringCache.get(field);
+                    if (temp != null) {
+                        field = temp;
+                    }
+                    state = STATE_READ_VALUE;
                     break;
 
                 case STATE_READ_VALUE:
-                    if (field == null) {
-                        // field is null when you have an untyped Object[], so we place
-                        // the JsonArray on the @items field.
-                        field = ITEMS;
-                    }
-
                     Object value = readValue(object, false);
 
                     // process key-value pairing
@@ -219,8 +208,6 @@ class JsonParser
 
                     c = skipWhitespaceRead();
                     switch(c) {
-                        case -1:
-                            error("EOF reached before closing '}'");
                         case ',':
                             state = STATE_READ_FIELD;       // more field pairs
                             break;
@@ -292,8 +279,6 @@ class JsonParser
             case 'T':
                 readToken("true");
                 return Boolean.TRUE;
-            case -1:
-                return top ? null : (JsonValue) error("EOF reached prematurely");
         }
 
         return error("Unknown JSON value type");
@@ -543,6 +528,10 @@ class JsonParser
         do {
             c = in.read();
         } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
+        
+        if (c == -1) {
+            error("EOF reached prematurely");
+        }
         return c;
     }
 

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,6 +8,7 @@ import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -33,7 +35,7 @@ class ErrorsTest
     {
         assertThatThrownBy(() -> TestUtil.toObjects("[\"bad JSON input\"", null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected ',' or ']' inside array");
+                .hasMessageContaining("EOF reached prematurely");
     }
 
     @Test
@@ -90,7 +92,7 @@ class ErrorsTest
         String json2 = "[true, \"bunch of ints\", 1,2, 3 , 4, 5 , 6,7,8,9,10";
         assertThatThrownBy(() -> TestUtil.toObjects(json2, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected ',' or ']' inside array");
+                .hasMessageContaining("EOF reached prematurely");
     }
 
     @Test
@@ -166,6 +168,24 @@ class ErrorsTest
     }
 
     @Test
+    void testEmptyFieldName()
+    {
+        String json = "{\"\":17}";
+        Map<?, ?> doh = TestUtil.toObjects(json, LinkedHashMap.class);
+        assert doh.size() == 1;
+        assertEquals(doh.get(""), 17L);
+    }
+
+    @Test
+    void testNullFieldName()
+    {
+        String json = "{null:17}";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, LinkedHashMap.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Expected quote before field name");
+    }
+
+    @Test
     void testMalformedJson()
     {
         final String json = "{\"field\"0}";  // colon expected between fields
@@ -181,42 +201,42 @@ class ErrorsTest
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
         assertThatThrownBy(() -> TestUtil.toObjects(json2, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json3 = "{\"field\":true";  // object not terminated correctly (ending in token)
         assertThatThrownBy(() -> TestUtil.toObjects(json3, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json4 = "{\"field\":\"test\"";  // object not terminated correctly (ending in string)
         assertThatThrownBy(() -> TestUtil.toObjects(json4, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json5 = "{\"field\":{}";  // object not terminated correctly (ending in another object)
         assertThatThrownBy(() -> TestUtil.toObjects(json5, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json6 = "{\"field\":[]";  // object not terminated correctly (ending in an array)
         assertThatThrownBy(() -> TestUtil.toObjects(json6, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json7 = "{\"field\":3.14";  // object not terminated correctly (ending in double precision number)
         assertThatThrownBy(() -> TestUtil.toObjects(json7, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("EOF reached before closing '}'");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json8 = "[1,2,3";
         assertThatThrownBy(() -> TestUtil.toObjects(json8, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected ',' or ']' inside array");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json9 = "[false,true,false";
         assertThatThrownBy(() -> TestUtil.toObjects(json9, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Expected ',' or ']' inside array");
+                .hasMessageContaining("EOF reached prematurely");
 
         final String json10 = "[\"unclosed string]";
         assertThatThrownBy(() -> TestUtil.toObjects(json10, new ReadOptions().returnType(ReturnType.JSON_VALUES), null))

@@ -130,7 +130,7 @@ public class JsonIo {
      */
     public static <T> T toObjects(String json, ReadOptions readOptions, Class<T> rootType) {
         if (json == null) {
-            return null;
+            json = "";
         }
         return toObjects(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions, rootType);
     }
@@ -194,10 +194,6 @@ public class JsonIo {
      * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
      */
     public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
-        if (json == null) {
-            // TODO: return JsonPrimitive representing null
-            return null;
-        }
         return toJsonValues(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
     }
 

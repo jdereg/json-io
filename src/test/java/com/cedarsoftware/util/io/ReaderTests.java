@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -52,23 +52,26 @@ class ReaderTests {
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testJsonToJavaVariant_returnsNullForEmptyOrNullString(String json) {
-        Object o = TestUtil.toObjects(json, null);
-        assertNull(o);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
     }
 
     @ParameterizedTest
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testToObjects_returnsNullForEmptyOrNullString(String json) {
-        Object o = TestUtil.toObjects(json, null);
-        assertNull(o);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
     }
 
     @ParameterizedTest
     @MethodSource("stringsThatAreEmptyWhenTrimmed")
     @NullAndEmptySource
     void testToMaps_returnsNullForEmptyOrNullString(String json) {
-        Object o = TestUtil.toJsonValues(json, null);
-        assertNull(o);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF reached prematurely");
     }
 }

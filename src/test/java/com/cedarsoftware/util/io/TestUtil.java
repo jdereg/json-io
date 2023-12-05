@@ -226,10 +226,6 @@ public class TestUtil
      */
     public static <T> T toObjects(final String json, ReadOptions readOptions, Class<T> root)
     {
-        if (null == json || json.trim().isEmpty())
-        {
-            return null;
-        }
         totalReads++;
 
         TestInfo jsonIoTestInfo = readJsonIo(json, readOptions, root);
