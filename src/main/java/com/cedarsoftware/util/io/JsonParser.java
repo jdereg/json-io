@@ -57,10 +57,7 @@ class JsonParser
 {
     protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
-    private static final int STATE_READ_START_OBJECT = 0;
-    private static final int STATE_READ_FIELD = 1;
-    private static final int STATE_READ_VALUE = 2;
-    private static final Map<String, String> stringCache = new HashMap<>();
+    private static final Map<String, String> stringCache = new LRUCache<>(5000);
     private static final Map<Number, Number> numberCache = new HashMap<>();
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
@@ -141,82 +138,75 @@ class JsonParser
 
     private JsonObject readJsonObject() throws IOException {
         boolean done = false;
-        String field = null;
         JsonObject object = new JsonObject();
-        int state = STATE_READ_START_OBJECT;
         final FastReader in = input;
 
+        // Start reading the object, skip white space and find {
+        skipWhitespaceRead();
+        object.line = in.getLine();
+        object.col = in.getCol();
+        int c = skipWhitespaceRead();
+        if (c == '}') {    // empty object
+            // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
+            return new JsonObject();
+        }
+        in.pushback((char) c);
+        ++curParseDepth;
+
         while (!done) {
-            int c;
-            switch (state) {
-                case STATE_READ_START_OBJECT:
-                    // c read and pushed back before STATE_READ_START_OBJECT, so 'c' always '{' here.
-                    skipWhitespaceRead();
-                    object.line = in.getLine();
-                    object.col = in.getCol();
-                    c = skipWhitespaceRead();
-                    if (c == '}') {    // empty object
-                        // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
-                        return new JsonObject();
-                    }
-                    in.pushback((char) c);
-                    state = STATE_READ_FIELD;
-                    ++curParseDepth;
+            String field = readField();
+            Object value = readValue(object);
+
+            // process key-value pairing
+            switch (field) {
+                case TYPE:
+                    loadType(value, object);
                     break;
-
-                case STATE_READ_FIELD:
-                    c = skipWhitespaceRead();
-                    if (c != '"') {
-                        error("Expected quote before field name");
-                    }
-                    field = readString();
-                    c = skipWhitespaceRead();
-                    if (c != ':') {
-                        error("Expected ':' between field and value, instead found '" + (char)c + "'");
-                    }
-
-                    String temp = stringCache.get(field);
-                    if (temp != null) {
-                        field = temp;
-                    }
-                    state = STATE_READ_VALUE;
+                case REF:
+                    loadRef(value, object);
                     break;
-
-                case STATE_READ_VALUE:
-                    Object value = readValue(object);
-
-                    // process key-value pairing
-                    switch (field) {
-                        case TYPE:
-                            loadType(value, object);
-                            break;
-                        case REF:
-                            loadRef(value, object);
-                            break;
-                        case ID:
-                            loadId(value, object);
-                            break;
-                        default:
-                            object.put(field, value);
-                            break;
-                    }
-
-                    c = skipWhitespaceRead();
-                    switch(c) {
-                        case ',':
-                            state = STATE_READ_FIELD;       // more field pairs
-                            break;
-                        case '}':
-                            done = true;                    // no more field pairs, object done
-                            --curParseDepth;
-                            break;
-                        default:
-                            error("Object not ended with '}', instead found '" + (char)c + "'");
-                    }
+                case ID:
+                    loadId(value, object);
+                    break;
+                default:
+                    object.put(field, value);
                     break;
             }
+
+            c = skipWhitespaceRead();
+            if (c == '}') {
+                done = true;
+            } else if (c != ',') {
+                error("Object not ended with '}', instead found '" + (char)c + "'");
+            }
         }
+        
+        --curParseDepth;
         return object;
+    }
+
+    /**
+     * Read the field name of a JSON object.  LRU Cache the field name.
+     * @return String field name.  Instance folded (shared) when found in the LRU cache.
+     */
+    private String readField() throws IOException {
+        int c = skipWhitespaceRead();
+        if (c != '"') {
+            error("Expected quote before field name");
+        }
+        String field = readString();
+        c = skipWhitespaceRead();
+        if (c != ':') {
+            error("Expected ':' between field and value, instead found '" + (char)c + "'");
+        }
+
+        String temp = stringCache.get(field);
+        if (temp != null) {
+            field = temp;
+        } else {
+            stringCache.put(field, field);
+        }
+        return field;
     }
 
     Object readValue(JsonValue object) throws IOException {
