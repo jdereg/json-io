@@ -188,7 +188,7 @@ class JsonParser
                     break;
 
                 case STATE_READ_VALUE:
-                    Object value = readValue(object, false);
+                    Object value = readValue(object);
 
                     // process key-value pairing
                     switch (field) {
@@ -224,7 +224,7 @@ class JsonParser
         return object;
     }
 
-    Object readValue(JsonValue object, boolean top) throws IOException {
+    Object readValue(JsonValue object) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
@@ -292,9 +292,8 @@ class JsonParser
         ++curParseDepth;
 
         while (true) {
-            final Object value = readValue(object, false);
-            if (value != EMPTY_ARRAY)
-            {
+            final Object value = readValue(object);
+            if (value != EMPTY_ARRAY) {
                 array.add(value);
             }
             final int c = skipWhitespaceRead();

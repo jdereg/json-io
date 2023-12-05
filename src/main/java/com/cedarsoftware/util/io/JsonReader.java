@@ -242,7 +242,7 @@ public class JsonReader implements Closeable, ReaderContext
         }
         T returnValue;
         try {
-            returnValue = (T) parser.readValue(rootObj, true);
+            returnValue = (T) parser.readValue(rootObj);
         }
         catch (JsonIoException e) {
             throw e;
