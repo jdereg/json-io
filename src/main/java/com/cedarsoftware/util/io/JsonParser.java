@@ -128,12 +128,6 @@ class JsonParser
         numberCache.put(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY);
         numberCache.put(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
         numberCache.put(Double.NaN, Double.NaN);
-
-        EMPTY_OBJECT.setJavaType(JsonObject.class);
-        EMPTY_OBJECT.isFinished = true;
-        EMPTY_ARRAY.setJavaType(Object[].class);
-        EMPTY_ARRAY.put(ITEMS, new Object[]{});
-        EMPTY_ARRAY.isFinished = true;
     }
     
     JsonParser(FastReader reader, Resolver resolver) {
@@ -162,6 +156,7 @@ class JsonParser
                     object.col = in.getCol();
                     c = skipWhitespaceRead();
                     if (c == '}') {    // empty object
+                        // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
                         return new JsonObject();
                     }
                     in.pushback((char) c);
