@@ -220,8 +220,15 @@ class JsonParser
         }
         switch (c) {
             case '"':
-                String str = readString();
-                return str;
+                String strVal = readString();
+                String temp = stringCache.get(strVal);
+                if (temp != null) {
+                    strVal = temp;
+                } else {
+                    stringCache.put(strVal, strVal);
+                }
+                return strVal;
+                
             case '{':
                 input.pushback('{');
 

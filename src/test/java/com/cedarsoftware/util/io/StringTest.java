@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -52,9 +51,9 @@ public class StringTest
         assertEquals(bytes[2], (byte) 0x80);
         assertEquals(bytes[3], (byte) 0x80);
 
-        assertNotSame(that._strArray[0], that._objArray[0]);
+        assertSame(that._strArray[0], that._objArray[0]);
         assertEquals(that._strArray[0], that._objArray[0]);
-        assertNotSame(that._strArray[1], that._objArray[1]);
+        assertSame(that._strArray[1], that._objArray[1]);
         assertEquals(that._strArray[1], that._objArray[1]);
 
         assertEquals(5, that._strArray.length);
@@ -69,7 +68,7 @@ public class StringTest
         assertEquals("Poly", that._poly);
 
         assertSame(that._cache[0], that._cache[1]);// "true' is part of the reusable cache.
-        assertNotSame(that._cache[2], that._cache[3]);// "golf' is NOT part of the reusable cache.
+        assertSame(that._cache[2], that._cache[3]);// Strings are immutable and we are instance folding.
     }
 
     @Test

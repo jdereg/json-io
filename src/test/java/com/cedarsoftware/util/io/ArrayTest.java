@@ -862,7 +862,7 @@ public class ArrayTest
         Object[] o = TestUtil.toObjects(json, null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
-        assertNotSame(o[0], o[1]);
+        assertSame(o[0], o[1]); // Strings are LRU cached (instance folding).
     }
 
     @Test
@@ -874,7 +874,7 @@ public class ArrayTest
         String[] o = TestUtil.toObjects(json, null);
         assertEquals(2, o.length);
         assertEquals("dogs", o[0]);
-        assertNotSame(o[0], o[1]);
+        assertSame(o[0], o[1]); // Strings are LRU Cached (instance folding).
     }
 
     @Test
