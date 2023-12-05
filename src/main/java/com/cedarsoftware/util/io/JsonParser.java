@@ -199,13 +199,6 @@ class JsonParser
         if (c != ':') {
             error("Expected ':' between field and value, instead found '" + (char)c + "'");
         }
-
-        String temp = stringCache.get(field);
-        if (temp != null) {
-            field = temp;
-        } else {
-            stringCache.put(field, field);
-        }
         return field;
     }
 
@@ -220,15 +213,9 @@ class JsonParser
         }
         switch (c) {
             case '"':
-                String strVal = readString();
-                String temp = stringCache.get(strVal);
-                if (temp != null) {
-                    strVal = temp;
-                } else {
-                    stringCache.put(strVal, strVal);
-                }
-                return strVal;
-                
+                String str = readString();
+                return str;
+
             case '{':
                 input.pushback('{');
 
@@ -501,8 +488,13 @@ class JsonParser
         }
 
         final String s = str.toString();
-        final String translate = stringCache.get(s);
-        return translate == null ? s : translate;
+        final String cachedInstance = stringCache.get(s);
+        if (cachedInstance != null) {
+            return cachedInstance;
+        } else {
+            stringCache.put(s, s);  // caching all strings (LRU has upper limit)
+            return s;
+        }
     }
 
     /**
