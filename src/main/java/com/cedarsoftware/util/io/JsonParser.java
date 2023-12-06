@@ -33,7 +33,7 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
  * directly.
  *
  * When this parser completes, the @ref (references to objects identified with @id)
- * are stored as a JsonObject with an @ref as the key and the ID value of the object.
+ * are stored as a JsonObject with a @ref as the key and the ID value of the object.
  * No substitution has yet occurred (substituting the @ref pointers with a Java
  * reference to the actual Map (Map containing the @id)).
  *
@@ -136,15 +136,20 @@ class JsonParser
         allowNanAndInfinity = readOptions.isAllowNanAndInfinity();
     }
 
-    private JsonObject readJsonObject() throws IOException {
-        boolean done = false;
-        JsonObject object = new JsonObject();
+    /**
+     * Read a JSON object { ... }
+     * @return JsonObject that represents the { ... } being read in.  If the JSON object type can be inferred,
+     * from an @type field, containing field type, or containing array type, then the javaType will be set on the
+     * JsonObject.
+     */
+    private JsonObject readJsonObject(Class<?> suggestedClass) throws IOException {
+        JsonObject jObj = new JsonObject();
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
         skipWhitespaceRead();
-        object.line = in.getLine();
-        object.col = in.getCol();
+        jObj.line = in.getLine();
+        jObj.col = in.getCol();
         int c = skipWhitespaceRead();
         if (c == '}') {    // empty object
             // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
@@ -153,36 +158,36 @@ class JsonParser
         in.pushback((char) c);
         ++curParseDepth;
 
-        while (!done) {
+        while (true) {
             String field = readField();
-            Object value = readValue(object);
+            Object value = readValue(jObj.getTargetClass());
 
             // process key-value pairing
             switch (field) {
                 case TYPE:
-                    loadType(value, object);
+                    loadType(value, jObj);
                     break;
                 case REF:
-                    loadRef(value, object);
+                    loadRef(value, jObj);
                     break;
                 case ID:
-                    loadId(value, object);
+                    loadId(value, jObj);
                     break;
                 default:
-                    object.put(field, value);
+                    jObj.put(field, value);
                     break;
             }
 
             c = skipWhitespaceRead();
             if (c == '}') {
-                done = true;
+                break;
             } else if (c != ',') {
                 error("Object not ended with '}', instead found '" + (char)c + "'");
             }
         }
         
         --curParseDepth;
-        return object;
+        return jObj;
     }
 
     /**
@@ -202,7 +207,11 @@ class JsonParser
         return field;
     }
 
-    Object readValue(JsonValue object) throws IOException {
+    /**
+     * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, "true", "false", or "null".
+     * @param suggestedClass JsonValue Owning entity.
+     */
+    Object readValue(Class<?> suggestedClass) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
@@ -219,7 +228,7 @@ class JsonParser
             case '{':
                 input.pushback('{');
 
-                JsonObject jObj = readJsonObject();
+                JsonObject jObj = readJsonObject(suggestedClass);
 
                 /////////////////////////////////////////////////////
                 final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
@@ -241,7 +250,7 @@ class JsonParser
 
                 return jObj;
             case '[':
-                Object[] array = readArray(object);
+                Object[] array = readArray(suggestedClass);
                 return array;
             case ']':   // empty array
                 input.pushback(']');
@@ -266,12 +275,12 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private Object[] readArray(JsonValue object) throws IOException {
+    private Object[] readArray(Class<?> suggestedClass) throws IOException {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
-            final Object value = readValue(object);
+            final Object value = readValue(suggestedClass);
             if (value != EMPTY_ARRAY) {
                 array.add(value);
             }
@@ -409,8 +418,8 @@ class JsonParser
      */
     private String readString() throws IOException {
         final StringBuilder str = strBuf;
-        final StringBuilder hex = hexBuf;
         str.setLength(0);
+        final StringBuilder hex = hexBuf;
         int state = STRING_START;
         final FastReader in = input;
 
@@ -521,36 +530,36 @@ class JsonParser
     /**
      * Load the @id field listed in the JSON
      * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
-     * @param object JsonObject representing the current item in the JSON being loaded.
+     * @param jObj JsonObject representing the current item in the JSON being loaded.
      */
-    private void loadId(Object value, JsonObject object) {
+    private void loadId(Object value, JsonObject jObj) {
         if (!(value instanceof Long)) {
             error("Expected a number for " + ID + ", instead got: " + value);
         }
         Long id = (Long) value;
-        references.put(id, object);
-        object.setId(id);
+        references.put(id, jObj);
+        jObj.setId(id);
     }
 
     /**
      * Load the @ref field listed in the JSON
      * @param value Object should be a Long, if not exception is thrown. It is the value associated to the @ref field.
-     * @param object JsonValue that will be stuffed with the reference id and marked as finished.
+     * @param jObj JsonValue that will be stuffed with the reference id and marked as finished.
      */
-    private void loadRef(Object value, JsonValue object) {
+    private void loadRef(Object value, JsonValue jObj) {
         if (!(value instanceof Long)) {
             error("Expected a number for " + REF + ", instead got: " + value);
         }
-        object.setReferenceId((Long) value);
-        object.setFinished();   // "Nothing further to load, your honor."
+        jObj.setReferenceId((Long) value);
+        jObj.setFinished();   // "Nothing further to load, your honor."
     }
 
     /**
      * Load the @type field listed in the JSON
      * @param value Object should be a String, if not an exception is thrown.  It is the value associated to the @type field.
-     * @param object JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
+     * @param jObj JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
      */
-    private void loadType(Object value, JsonObject object) {
+    private void loadType(Object value, JsonValue jObj) {
         if (!(value instanceof String)) {
             error("Expected a String for " + TYPE + ", instead got: " + value);
         }
@@ -571,7 +580,7 @@ class JsonParser
                 clazz = LinkedHashMap.class;
             }
         }
-        object.setJavaType(clazz);
+        jObj.setJavaType(clazz);
     }
     
     Object error(String msg)

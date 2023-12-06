@@ -543,9 +543,8 @@ class MapOfMapsTest
         json = TestUtil.toJson(person, new WriteOptions().skipNullFields(true));
 
         map = TestUtil.toObjects(json, null);
-        assert map.size() == 3;
+        assert map.size() == 2;
         assert map.get("first").equals("Sam");
-        assert map.get("middle") == null;
         assert map.get("last").equals("Adams");
     }
 

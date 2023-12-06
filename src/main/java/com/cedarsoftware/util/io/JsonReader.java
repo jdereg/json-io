@@ -235,14 +235,9 @@ public class JsonReader implements Closeable, ReaderContext
     public <T> T readObject(Class<T> rootType)
     {
         JsonObject rootObj = new JsonObject();
-        if (rootType == null) {
-            rootObj.setJavaType(LinkedHashMap.class);
-        } else {
-            rootObj.setJavaType(rootType);
-        }
         T returnValue;
         try {
-            returnValue = (T) parser.readValue(rootObj);
+            returnValue = (T) parser.readValue(rootType == null ? LinkedHashMap.class : rootType);
         }
         catch (JsonIoException e) {
             throw e;
@@ -250,6 +245,19 @@ public class JsonReader implements Closeable, ReaderContext
         catch (Exception e) {
             throw new JsonIoException("error parsing JSON value", e);
         }
+
+//        if (returnValue instanceof JsonObject)
+//        {
+//            if (readOptions.getReturnType() == ReturnType.JSON_VALUES)
+//            {
+//                return returnValue;
+//            }
+//            JsonObject jObj = (JsonObject) returnValue;
+//            if (jObj.getJavaType() == null)
+//            {
+//                return returnValue;
+//            }
+//        }
 
         T graph;
         if (returnValue instanceof Object[]) {
