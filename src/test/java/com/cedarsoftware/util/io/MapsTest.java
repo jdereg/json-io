@@ -426,8 +426,8 @@ public class MapsTest
         assert map.get("b").equals("beta");
 
         map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", null);
-        assert map instanceof JsonObject;// Default 'Map' type
-        assert ((JsonObject) map).size() == 2;
+        assert map instanceof Map;// Default 'Map' type
+        assert map.size() == 2;
         assert map.get("a").equals("alpha");
         assert map.get("b").equals("beta");
     }

@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,6 +7,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -41,8 +41,8 @@ public class LongTest
         Assertions.assertEquals(710L, that._polyRefTarget);
         Assertions.assertEquals(710L, that._polyRef);
         Assertions.assertEquals(710L, that._polyNotRef);
-        Assertions.assertNotSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
-        Assertions.assertNotSame(that._polyNotRef, that._polyRef);
+        Assertions.assertSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
+        Assertions.assertSame(that._polyNotRef, that._polyRef);
 
         Assertions.assertEquals(6, that._typeArray.length);
         Assertions.assertSame(that._typeArray[0], that._arrayElement);

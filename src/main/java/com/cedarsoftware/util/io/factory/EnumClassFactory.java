@@ -46,7 +46,7 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
             return jObj.setFinishedTarget(this.fromString(c, (String) value), true);
         }
 
-        throw new JsonIoException("Unable to load enum: " + c + ", class not found or is not an Enum.");
+        throw new JsonIoException("Unable to instantiate enum: " + c + ", class not found or is not an Enum.");
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

@@ -231,9 +231,7 @@ public class JsonReader implements Closeable, ReaderContext
         this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
 
-    public <T> T readObject(Class<T> rootType)
-    {
-        JsonObject rootObj = new JsonObject();
+    public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
             returnValue = (T) parser.readValue(rootType);
@@ -258,6 +256,7 @@ public class JsonReader implements Closeable, ReaderContext
 //            }
 //        }
 
+        JsonObject rootObj = new JsonObject();
         T graph;
         if (returnValue instanceof Object[]) {
             rootObj.setJavaType(Object[].class);

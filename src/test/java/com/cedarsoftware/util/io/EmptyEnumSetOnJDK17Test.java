@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.EnumSet;
 import java.util.Objects;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -70,6 +70,8 @@ public class EmptyEnumSetOnJDK17Test
         EnumSet<?> source = EnumSet.of(TestEnum.V1, TestEnum.V3);
 
         String json = TestUtil.toJson(source);
+
+        Object obj = TestUtil.toObjects(json, null);
         EnumSet<?> target = TestUtil.toObjects(json, null);
 
         assert source.equals(target);

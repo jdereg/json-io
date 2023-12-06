@@ -40,7 +40,7 @@ public class ObjectHolderTest
         ObjectHolder stringHolder = new ObjectHolder("string", "true");
         ObjectHolder intHolder = new ObjectHolder("int", 123l); //convenience for test
 
-        // Arrays will be created as Object[] arrays, as Javascript allows non uniform arrays. In deserialization process this could be checked, too.
+        // Arrays will be created as Object[] arrays, as Javascript allows non-uniform arrays. In deserialization process this could be checked, too.
 
         testSerialization(boolHolder);
         testSerialization(stringHolder);

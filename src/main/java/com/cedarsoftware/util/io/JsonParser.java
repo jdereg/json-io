@@ -2,13 +2,11 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.util.ReturnType;
-import sun.misc.FloatingDecimal;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -57,7 +55,7 @@ class JsonParser
     protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private static final Map<String, String> stringCache = new LRUCache<>(5000);
-    private static final Map<Number, Number> numberCache = new HashMap<>();
+    private static final Map<Number, Number> numberCache = new LRUCache<>(1000);
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
@@ -227,10 +225,20 @@ class JsonParser
 
             case '{':
                 input.pushback('{');
-
+                // Should be able to do the below code, so that we have a reasonable default type for when
+                // the root class is not set.  This works perfectly EXCEPT for enums at the root.
+//                if (curParseDepth == 0 && suggestedClass == null) {
+//                    Class<?> unknownType = readOptions.getUnknownTypeClass();
+//                    suggestedClass = unknownType == null ? LinkedHashMap.class : unknownType;
+//                }
                 JsonObject jObj = readJsonObject(suggestedClass);
-
                 /////////////////////////////////////////////////////
+                // Should be able to do shallow field resolution here - (returned from readJsonObject, deep object resolution)
+                // Need a version with no stack
+                //////////////////////////////////////////////////////
+//                final Deque<JsonObject> stack = new ArrayDeque<>();
+//                resolver.traverseFields(stack, jObj);
+
                 final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
                 if (jObj.isLogicalPrimitive()) {
@@ -239,13 +247,6 @@ class JsonParser
                         return jObj.getPrimitiveValue();
                     }
                 }
-
-                Class<?> clazz = jObj.getJavaType() == null ? LinkedHashMap.class : jObj.getJavaType();
-                JsonObject localObject = new JsonObject();
-                localObject.setJavaType(clazz);
-                localObject.putAll(jObj);
-//                jObj.setJavaType(clazz);
-                Object foo = resolver.createInstance(clazz, localObject);
                 /////////////////////////////////////////////////////
 
                 return jObj;
@@ -393,12 +394,17 @@ class JsonParser
         try {
             Number val;
             if (isFloat) {
-                val = FloatingDecimal.parseDouble(number.toString());
+                val = Double.parseDouble(number.toString());
             } else {
                 val = Long.parseLong(number.toString(), 10);
             }
-            Number translate = numberCache.get(val);
-            return translate == null ? val : translate;
+            final Number cachedInstance = numberCache.get(val);
+            if (cachedInstance != null) {
+                return cachedInstance;
+            } else {
+                numberCache.put(val, val);  // caching all strings (LRU has upper limit)
+                return val;
+            }
         }
         catch (Exception e) {
             return (Number) error("Invalid number: " + number, e);

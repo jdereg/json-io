@@ -1503,19 +1503,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return writeMapBody(map.entrySet().iterator());
     }
 
-    private boolean writeMapBody(final Iterator i) throws IOException
-    {
+    private boolean writeMapBody(final Iterator i) throws IOException {
         final Writer output = out;
-        while (i.hasNext())
-        {
+        while (i.hasNext()) {
             Entry att2value = (Entry) i.next();
+            Object value = att2value.getValue();
+            
+            if (writeOptions.isSkipNullFields() && value == null) {
+                continue;
+            }
+            
             writeJsonUtf8String(output, (String) att2value.getKey());
             output.write(":");
+            writeCollectionElement(value);
 
-            writeCollectionElement(att2value.getValue());
-
-            if (i.hasNext())
-            {
+            if (i.hasNext()) {
                 output.write(',');
                 newLine();
             }

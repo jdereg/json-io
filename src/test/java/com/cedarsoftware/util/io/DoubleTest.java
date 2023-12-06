@@ -1,15 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -43,8 +43,8 @@ public class DoubleTest
         assertEquals(71.0d, that._polyRefTarget);
         assertEquals(71.0d, that._polyRef);
         assertEquals(71.0d, that._polyNotRef);
-        assertNotSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
-        assertNotSame(that._polyNotRef, that._polyRef);
+        assertSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
+        assertSame(that._polyNotRef, that._polyRef);
 
         assertEquals(6, that._typeArray.length);
         assertNotNull(that._typeArray[1]);

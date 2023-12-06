@@ -12,7 +12,6 @@ import java.util.TreeMap;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReturnType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -527,11 +526,10 @@ class MapOfMapsTest
     }
 
     @Test
-    @Disabled
     public void testSkipNullFieldsMapOfMaps()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
-        Map person = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map person = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), Map.class);
         json = TestUtil.toJson(person);
 
         Map map = TestUtil.toObjects(json, null);
