@@ -145,7 +145,7 @@ class JsonParser
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
-        skipWhitespaceRead();
+        skipWhitespaceRead();           // Burn '{'
         jObj.line = in.getLine();
         jObj.col = in.getCol();
         int c = skipWhitespaceRead();
@@ -189,8 +189,8 @@ class JsonParser
     }
 
     /**
-     * Read the field name of a JSON object.  LRU Cache the field name.
-     * @return String field name.  Instance folded (shared) when found in the LRU cache.
+     * Read the field name of a JSON object.
+     * @return String field name.
      */
     private String readField() throws IOException {
         int c = skipWhitespaceRead();
@@ -206,7 +206,7 @@ class JsonParser
     }
 
     /**
-     * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, "true", "false", or "null".
+     * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
      * @param suggestedClass JsonValue Owning entity.
      */
     Object readValue(Class<?> suggestedClass) throws IOException {
@@ -232,12 +232,10 @@ class JsonParser
 //                    suggestedClass = unknownType == null ? LinkedHashMap.class : unknownType;
 //                }
                 JsonObject jObj = readJsonObject(suggestedClass);
-                /////////////////////////////////////////////////////
-                // Should be able to do shallow field resolution here - (returned from readJsonObject, deep object resolution)
-                // Need a version with no stack
-                //////////////////////////////////////////////////////
-//                final Deque<JsonObject> stack = new ArrayDeque<>();
-//                resolver.traverseFields(stack, jObj);
+                /////////////////////////////////////////////////////////////////////////////////////////
+                // Walk fields on jObj and move their values to the associated Java object (or JsonValue)
+                /////////////////////////////////////////////////////////////////////////////////////////
+//                resolver.traverseFields(jObj);    // no stack
 
                 final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
 
@@ -259,7 +257,7 @@ class JsonParser
             case 'f':
             case 'F':
                 readToken("false");
-                return Boolean.FALSE;
+                return false;
             case 'n':
             case 'N':
                 readToken("null");
@@ -267,7 +265,7 @@ class JsonParser
             case 't':
             case 'T':
                 readToken("true");
-                return Boolean.TRUE;
+                return true;
         }
 
         return error("Unknown JSON value type");
@@ -402,7 +400,7 @@ class JsonParser
             if (cachedInstance != null) {
                 return cachedInstance;
             } else {
-                numberCache.put(val, val);  // caching all strings (LRU has upper limit)
+                numberCache.put(val, val);  // caching all numbers (LRU has upper limit)
                 return val;
             }
         }

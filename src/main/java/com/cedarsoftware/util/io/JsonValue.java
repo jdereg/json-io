@@ -33,15 +33,15 @@ public abstract class JsonValue {
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-    Class<?> javaType;
+    protected Class<?> javaType;
     private Object target;
-    boolean isFinished = false;
-    long id = -1L;
-    Long refId = null;
+    protected boolean isFinished = false;
+    protected long id = -1L;
+    protected Long refId = null;
     @Getter
-    int line;
+    protected int line;
     @Getter
-    int col;
+    protected int col;
 
     public JsonValue() {
         target = null;

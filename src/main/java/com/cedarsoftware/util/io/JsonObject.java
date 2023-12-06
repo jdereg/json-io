@@ -45,7 +45,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
         String targetInfo = getTarget() == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
     }
-    
+
+    // TODO: Remove this API and used setTarget() once finished flag is removed.
     public Object setFinishedTarget(Object o, boolean isFinished)
     {
         this.setTarget(o);
@@ -287,7 +288,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
             }
             else
             {
-                hash = keySet().hashCode() + values().hashCode();
+                hash = jsonStore.hashCode();
             }
         }
         return hash;
@@ -310,6 +311,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     }
 
     public Object remove(Object key) {
+        hash = null;
         return jsonStore.remove(key);
     }
 
@@ -329,6 +331,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object>
     }
 
     public void putAll(Map<?, ?> map) {
+        hash = null;
         jsonStore.putAll(map);
     }
 
