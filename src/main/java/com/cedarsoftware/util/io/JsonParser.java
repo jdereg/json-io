@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -144,6 +143,7 @@ class JsonParser
      */
     private JsonObject readJsonObject(Class<?> suggestedClass) throws IOException {
         JsonObject jObj = new JsonObject();
+        jObj.setJavaType(suggestedClass);
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
@@ -165,7 +165,7 @@ class JsonParser
             // process key-value pairing
             switch (field) {
                 case TYPE:
-                    loadType(value, jObj);
+                    loadType(value, jObj);    // @type will override suggestedClass.
                     break;
                 case REF:
                     loadRef(value, jObj);
@@ -250,8 +250,8 @@ class JsonParser
 
                 return jObj;
             case '[':
-                Object[] array = readArray(suggestedClass);
-                return array;
+                List<Object> array = readArray(suggestedClass);
+                return array.toArray();
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -275,8 +275,8 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private Object[] readArray(Class<?> suggestedClass) throws IOException {
-        final List<Object> array = new ArrayList<>();
+    private JsonArray<Object> readArray(Class<?> suggestedClass) throws IOException {
+        final JsonArray<Object> array = new JsonArray<>();
         ++curParseDepth;
 
         while (true) {
@@ -295,7 +295,7 @@ class JsonParser
         }
 
         --curParseDepth;
-        return array.toArray();
+        return array;
     }
 
     /**

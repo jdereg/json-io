@@ -6,7 +6,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -237,7 +236,7 @@ public class JsonReader implements Closeable, ReaderContext
         JsonObject rootObj = new JsonObject();
         T returnValue;
         try {
-            returnValue = (T) parser.readValue(rootType == null ? LinkedHashMap.class : rootType);
+            returnValue = (T) parser.readValue(rootType);
         }
         catch (JsonIoException e) {
             throw e;

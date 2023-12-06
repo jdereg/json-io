@@ -26,8 +26,8 @@ import java.util.ListIterator;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class JsonArray extends JsonValue implements List<JsonValue> {
-    private final List<JsonValue> jsonStore = new ArrayList<>();
+public class JsonArray<T> extends JsonValue implements List<T> {
+    private final List<T> jsonStore = new ArrayList<>();
 
     public JsonArray() {
     }
@@ -69,19 +69,19 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
     //
     // List implementation starts here.  Holds the raw JSON [...] data.
     //
-    public JsonValue get(int index) {
+    public T get(int index) {
         return jsonStore.get(index);
     }
 
-    public JsonValue set(int index, JsonValue element) {
+    public T set(int index, T element) {
         return jsonStore.set(index, element);
     }
 
-    public void add(int index, JsonValue element) {
+    public void add(int index, T element) {
         jsonStore.add(index, element);
     }
 
-    public JsonValue remove(int index) {
+    public T remove(int index) {
         return jsonStore.remove(index);
     }
 
@@ -93,15 +93,15 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
         return jsonStore.lastIndexOf(o);
     }
 
-    public ListIterator<JsonValue> listIterator() {
+    public ListIterator<T> listIterator() {
         return jsonStore.listIterator();
     }
 
-    public ListIterator<JsonValue> listIterator(int index) {
+    public ListIterator<T> listIterator(int index) {
         return listIterator(index);
     }
 
-    public List<JsonValue> subList(int fromIndex, int toIndex) {
+    public List<T> subList(int fromIndex, int toIndex) {
         return subList(fromIndex, toIndex);
     }
 
@@ -117,7 +117,7 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
         return jsonStore.contains(o);
     }
 
-    public Iterator<JsonValue> iterator() {
+    public Iterator<T> iterator() {
         return jsonStore.iterator();
     }
 
@@ -129,7 +129,7 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
         return jsonStore.toArray(a);
     }
 
-    public boolean add(JsonValue o) {
+    public boolean add(T o) {
         return jsonStore.add(o);
     }
 
@@ -141,11 +141,11 @@ public class JsonArray extends JsonValue implements List<JsonValue> {
         return jsonStore.containsAll(c);
     }
 
-    public boolean addAll(Collection<? extends JsonValue> c) {
+    public boolean addAll(Collection<? extends T> c) {
         return jsonStore.addAll(c);
     }
 
-    public boolean addAll(int index, Collection<? extends JsonValue> c) {
+    public boolean addAll(int index, Collection<? extends T> c) {
         return jsonStore.addAll(c);
     }
 
