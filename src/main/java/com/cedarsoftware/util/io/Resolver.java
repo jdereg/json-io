@@ -647,7 +647,7 @@ public abstract class Resolver implements ReaderContext
     protected void rehashMaps()
     {
         final boolean useMapsLocal = readOptions.getReturnType() == ReturnType.JSON_VALUES;
-        ;
+
         for (Object[] mapPieces : prettyMaps)
         {
             JsonObject jObj = (JsonObject) mapPieces[0];

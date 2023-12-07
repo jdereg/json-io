@@ -32,21 +32,17 @@ import java.util.Set;
 public class JsonObject extends JsonValue implements Map<Object, Object>
 {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
-    boolean isMap = false;
-    Integer hash = null;
-
-    public boolean isJsonObject() {
-        return true;
-    }
+    private boolean isMap = false;
+    private Integer hash = null;
 
     public String toString()
     {
         String jType = javaType == null ? "not set" : javaType.getName();
         String targetInfo = getTarget() == null ? "null" : jType;
-        return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line +", col:"+ col +", size:" + size() + ")";
+        return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo +", line:" + line + ", col:"+ col + ", size:" + size() + ")";
     }
 
-    // TODO: Remove this API and used setTarget() once finished flag is removed.
+    // TODO: Remove this API and use setTarget() once finished flag is removed.
     public Object setFinishedTarget(Object o, boolean isFinished)
     {
         this.setTarget(o);

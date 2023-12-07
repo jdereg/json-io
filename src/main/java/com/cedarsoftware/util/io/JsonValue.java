@@ -33,8 +33,8 @@ public abstract class JsonValue {
     public static final String SHORT_ID = "@i";
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
-    protected Class<?> javaType;
-    private Object target;
+    protected Class<?> javaType = null;
+    private Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
     protected Long refId = null;
@@ -42,17 +42,6 @@ public abstract class JsonValue {
     protected int line;
     @Getter
     protected int col;
-
-    public JsonValue() {
-        target = null;
-    }
-
-    public JsonValue(Object target) {
-        this.target = target;
-        if (target != null) {
-            javaType = target.getClass();
-        }
-    }
 
     public boolean isReference() {
         return refId != null;
@@ -92,21 +81,7 @@ public abstract class JsonValue {
         return target;
     }
 
-    public boolean isArray() {
-        return false;
-    }
-
-    public boolean isJsonObject() {
-        return false;
-    }
-
-    public boolean isJsonArray() {
-        return false;
-    }
-
-    public boolean isJsonPrimitive() {
-        return false;
-    }
+    abstract public boolean isArray();
     
     public Class<?> getJavaType() {
         return javaType;

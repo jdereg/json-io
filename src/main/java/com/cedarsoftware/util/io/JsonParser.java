@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -274,8 +275,8 @@ class JsonParser
     /**
      * Read a JSON array
      */
-    private JsonArray<Object> readArray(Class<?> suggestedClass) throws IOException {
-        final JsonArray<Object> array = new JsonArray<>();
+    private List<Object> readArray(Class<?> suggestedClass) throws IOException {
+        final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
