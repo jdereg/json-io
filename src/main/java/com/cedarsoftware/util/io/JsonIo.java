@@ -33,7 +33,7 @@ import com.cedarsoftware.util.ReturnType;
  * isObject(), false to isArray(), and false to isPrimitive().<br/>
  * <br/>
  * <b>[...] JsonObject</b> implements the List interface and represents any JSON array [...].  It will respond true to
- * isArray(), false to isObject(), and false to is isPrimitive.<br/>
+ * isArray(), false to isObject(), and false to is isPrimitive().<br/>
  * <br/>
  * <b>Primitive JsonObject</b> If the root of the JSON is a String, Number (Long or Double), Boolean, or null, not an
  * object { ... } nor an array { ... }, then the value can be obtained by calling .getValue() on the JsonObject. It will

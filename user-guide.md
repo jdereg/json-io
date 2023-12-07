@@ -44,23 +44,30 @@ In this example, an`InputStream`is supplying the JSON.
 
 ### Untyped Usage
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript
-associative array.  When reading from a JSON String or`InputStream`of JSON, use `JsonIo:`
+associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
     String json = // some JSON obtained from wherever
-    ReadOptions readOptions = new ReadOptions().returnon();
-    JsonValue value = JsonIo.toJsonValues(json, readOptions);    
+    JsonObject root = JsonIo.toJsonObjects(json, readOptions);    
 
 See the `ReadOptions` below for the feature control options.  In the example above, rather than return the objects
-converted into Java classes, you are being returned the raw`JsonValues`being parsed.  It is a graph that consists of
-all`JsonValue`instances.  In addition to`JsonValue,`there is`JsonObject,`which represents `{...}`, `JsonArray`, which
-represents `[...]`, and `JsonPrimitive`, which represents `long, double, String, boolean (true/false),`and`null.`
-JsonObject, JsonArray  and JsonPrimitive are all subclasses of JsonValue.
+converted into Java classes, you are being returned the raw JSON values being parsed.  It is a graph that consists of
+all `JsonObject` instances.  
 
-With this approach, you can read JSON content and it will contain`JsonObject's`,`JsonArrays`,`JsonPrimitives`, across the
-five (5) JSON primitive types (`String`, `long`, `double`, `boolean`, and `null`).  This content can be very easy to work with
-in data science applications.
+When `JsonObject` is returned, your root value will represent one of:
+* JSON object {...}
+* JSON array [...]
+* JSON primitive (boolean true/false, null, long, double, String).
+                                  
 
-This JsonValue representation can be re-written to JSON String or Stream and the output JSON will exactly match the
+* <b>{...} JsonObject</b> implements the `Map` interface and represents any JSON object {...}.  It will respond `true` to
+`isObject(),` `false` to `isArray()`, and `false` to `isPrimitive().`
+* <b>[...] JsonObject</b> implements the `List` interface and represents any JSON array [...].  It will respond `true` to
+`isArray(),` `false` to `isObject(),` and `false` to is `isPrimitive().`
+* <b>Primitive JsonObject</b> If the root of the JSON is a `String,` `Number` (`Long` or `Double`), `Boolean`, or `null,` 
+not an object { ... } nor an array { ... }, then the value can be obtained by calling `.getValue()` on the `JsonObject.`
+It will respond `false` to `isObject()`, `false` to `isArray()`, and `true` to `isPrimitive().`
+
+This `JsonObject` representation can be re-written to JSON String or Stream and the output JSON will exactly match the
 original input JSON stream.  This permits you to receive JSON strings / streams that contain class references which
 do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
 and then rewrite the String/stream.
