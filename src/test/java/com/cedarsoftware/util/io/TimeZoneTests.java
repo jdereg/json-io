@@ -191,7 +191,7 @@ public class TimeZoneTests
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
 
-        ReadOptions options = new ReadOptions().returnType(ReturnType.JSON_VALUES);
+        ReadOptions options = new ReadOptions().returnType(ReturnType.JSON_OBJECTS);
         Object[] items = TestUtil.toObjects(json, options, null);
 
         // assert

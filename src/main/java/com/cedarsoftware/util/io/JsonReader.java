@@ -211,7 +211,7 @@ public class JsonReader implements Closeable, ReaderContext
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
         this.input = getReader(inputStream);
-        if (this.readOptions.getReturnType() == ReturnType.JSON_VALUES) {
+        if (this.readOptions.getReturnType() == ReturnType.JSON_OBJECTS) {
             this.resolver = new MapResolver(this.readOptions, references);
         } else {
             this.resolver = new ObjectResolver(this.readOptions, references);
@@ -269,7 +269,7 @@ public class JsonReader implements Closeable, ReaderContext
 
         // Allow a complete 'Map' return (Javascript style)
 
-        if (getReadOptions().getReturnType() == ReturnType.JSON_VALUES) {
+        if (getReadOptions().getReturnType() == ReturnType.JSON_OBJECTS) {
             return returnValue;
         }
         return graph;

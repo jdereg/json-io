@@ -231,7 +231,7 @@ class RefsTest
     public void testRefChainAsJsonObjects()
     {
         String json = MetaUtils.loadResourceAsString("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;

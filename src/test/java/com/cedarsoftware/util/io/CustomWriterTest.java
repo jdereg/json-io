@@ -62,7 +62,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions0 = new WriteOptions().addCustomWrittenClass(Person.class, new CustomPersonWriter());
-        ReadOptions readOptions0 = new ReadOptions().returnType(ReturnType.JSON_VALUES).setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
+        ReadOptions readOptions0 = new ReadOptions().returnType(ReturnType.JSON_OBJECTS).setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toObjects(jsonCustom, readOptions0, null);
         assert "Michael".equals(obj.get("f"));

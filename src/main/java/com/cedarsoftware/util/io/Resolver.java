@@ -431,7 +431,7 @@ public abstract class Resolver implements ReaderContext
 
         Object[] items = jsonObj.getArray();
 
-        final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+        final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
 
         // if @items is specified, it must be an [] type.
         // if clazz.isArray(), then it must be an [] type.
@@ -646,7 +646,7 @@ public abstract class Resolver implements ReaderContext
      */
     protected void rehashMaps()
     {
-        final boolean useMapsLocal = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+        final boolean useMapsLocal = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
 
         for (Object[] mapPieces : prettyMaps)
         {

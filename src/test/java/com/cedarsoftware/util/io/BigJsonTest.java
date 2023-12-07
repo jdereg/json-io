@@ -48,7 +48,7 @@ class BigJsonTest
         for (int i=0; i < 2; i++)
         {
             String json = MetaUtils.loadResourceAsString("big/big5D.json");
-            Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+            Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
             assertEquals("big5D", map.get("ncube"));
             assertEquals(0L, map.get("defaultCellValue"));
             assertNotNull(map.get("axes"));

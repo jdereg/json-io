@@ -62,7 +62,7 @@ class MapOfMapsTest
     void testToObjects_asMaps_returnsALinkedHashMap()
     {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
 
         assertThat(map)
                 .isInstanceOf(Map.class)
@@ -73,7 +73,7 @@ class MapOfMapsTest
     @Test
     void testForwardRefNegId()
     {
-        Object doc = TestUtil.toObjects(MetaUtils.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object doc = TestUtil.toObjects(MetaUtils.loadResourceAsString("references/forwardRefNegId.json"), new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         Object[] items = (Object[]) doc;
         assertEquals(2, items.length);
         Map male = (Map) items[0];
@@ -84,7 +84,7 @@ class MapOfMapsTest
         assertSame(female.get("friend"), male);
 
         String json = TestUtil.toJson(doc);// Neat trick json-io does - rewrites proper json from Map of Maps input
-        Object doc2 = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);// Read in this map of maps to JSON string and make sure it's right
+        Object doc2 = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);// Read in this map of maps to JSON string and make sure it's right
 
         Object[] peeps1 = items;
         Object[] peeps2 = (Object[]) doc2;
@@ -117,7 +117,7 @@ class MapOfMapsTest
 
         // Comes in as a Map [[x:20, y:20]:[x:1, y:2]] when read as Map of maps.  This is due to a Point (non simple type)
         // being the key of the map.
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         Map points = (Map) map.get("points");
         assertEquals(1, map.size());
         Map ten20 = (Map) points.keySet().iterator().next();
@@ -187,7 +187,7 @@ class MapOfMapsTest
         p.setBirthYear(1981);
 
         String json = TestUtil.toJson(p);
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
 
         Object age = map.get("age");
         assert age instanceof BigDecimal;
@@ -206,7 +206,7 @@ class MapOfMapsTest
     public void testMapOfMapsSimpleArray()
     {
         String s = "[{\"@ref\":1},{\"name\":\"Jack\",\"age\":21,\"@id\":1}]";
-        Object[] list = TestUtil.toObjects(s, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] list = TestUtil.toObjects(s, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assertTrue(list[0].equals(list[1]));
     }
 
@@ -218,7 +218,7 @@ class MapOfMapsTest
                 ":18,\"@id\":2},{\"witnesses\":[{\"@ref\":1},{\"@ref\":2}]}]";
 
         TestUtil.printLine("json=" + s);
-        Object[] items = TestUtil.toObjects(s, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] items = TestUtil.toObjects(s, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assertEquals(8, items.length);
         Map husband = (Map) items[0];
         Map wife = (Map) items[6];
@@ -252,7 +252,7 @@ class MapOfMapsTest
         String json = TestUtil.toJson(stuff);
         TestUtil.printLine("json=" + json);
 
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         TestUtil.printLine("map=" + map);
         Object aa = map.get("a");
         Map bb = (Map) map.get("b");
@@ -290,7 +290,7 @@ class MapOfMapsTest
         Object o = null;
         try
         {
-            o = TestUtil.toObjects("[This is not quoted]", new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+            o = TestUtil.toObjects("[This is not quoted]", new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
             fail();
         }
         catch (Exception e)
@@ -304,7 +304,7 @@ class MapOfMapsTest
     @Test
     public void testToMaps()
     {
-        JsonObject map = TestUtil.toObjects("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}", new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        JsonObject map = TestUtil.toObjects("{\"num\":0,\"nullValue\":null,\"string\":\"yo\"}", new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assertNotNull(map);
         assertEquals(3, map.size());
         assertEquals(0L, map.get("num"));
@@ -319,7 +319,7 @@ class MapOfMapsTest
     public void testUntyped()
     {
         String json = "{\"age\":46,\"name\":\"jack\",\"married\":false,\"salary\":125000.07,\"notes\":null,\"address1\":{\"@ref\":77},\"address2\":{\"@id\":77,\"street\":\"1212 Pennsylvania ave\",\"city\":\"Washington\"}}";
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         TestUtil.printLine("map=" + map);
         assertEquals(46L, map.get("age"));
         assertEquals("jack", map.get("name"));
@@ -376,7 +376,7 @@ class MapOfMapsTest
         test._other = child;
         String json = TestUtil.toJson(test);
         TestUtil.printLine("json=" + json);
-        JsonObject root = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        JsonObject root = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         TestObject test2 = JsonIo.toObjects(root, new ReadOptions(), TestObject.class);
         assertEquals(test2, test);
         assertEquals(test2._other, child);
@@ -456,7 +456,7 @@ class MapOfMapsTest
         b._other = a;
 
         String json = TestUtil.toJson(a);
-        Map aa = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map aa = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assert aa.get("_name").equals("a");
         Map bb = (Map) aa.get("_other");
         assert bb.get("_name").equals("b");
@@ -485,7 +485,7 @@ class MapOfMapsTest
         List<Person> list = MetaUtils.listOf(p, p, pCopy);
 
         String json = TestUtil.toJson(list, new WriteOptions().showTypeInfoNever());
-        Object[] array = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] array = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
 
         assert array[0] == array[1];    // same instance
         assert array[0] != array[2];    // not same instance
@@ -511,7 +511,7 @@ class MapOfMapsTest
         List<List<Person>> holder = MetaUtils.listOf(list, list);
 
         String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfoNever());
-        Object[] array = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] array = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         
         assert array[0] == array[1];                // Same instance of List
         JsonObject objList1 = (JsonObject) array[0];
@@ -529,7 +529,7 @@ class MapOfMapsTest
     public void testSkipNullFieldsMapOfMaps()
     {
         String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
-        Map person = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), Map.class);
+        Map person = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), Map.class);
         json = TestUtil.toJson(person);
 
         Map map = TestUtil.toObjects(json, null);

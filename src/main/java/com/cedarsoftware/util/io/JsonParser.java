@@ -238,7 +238,7 @@ class JsonParser
                 /////////////////////////////////////////////////////////////////////////////////////////
 //                resolver.traverseFields(jObj);    // no stack
 
-                final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_VALUES;
+                final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
 
                 if (jObj.isLogicalPrimitive()) {
                     if (useMaps) {

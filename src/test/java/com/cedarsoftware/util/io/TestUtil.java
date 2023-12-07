@@ -41,7 +41,7 @@ public class TestUtil
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
         String json = toJson(initial, new WriteOptions().showTypeInfoNever());
-        return toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        return toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
     }
 
     private static class TestInfo
@@ -270,12 +270,12 @@ public class TestUtil
         return (T) jsonIoTestInfo.obj;
     }
 
-    public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
-        return JsonIo.toJsonValues(json, readOptions);
+    public static JsonObject toJsonObjects(String json, ReadOptions readOptions) {
+        return JsonIo.toJsonObjects(json, readOptions);
     }
 
-    public static JsonValue toJsonValues(InputStream in, ReadOptions readOptions) {
-        return JsonIo.toJsonValues(in, readOptions);
+    public static JsonObject toJsonObjects(InputStream in, ReadOptions readOptions) {
+        return JsonIo.toJsonObjects(in, readOptions);
     }
 
     public static void printLine(String s)

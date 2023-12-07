@@ -9,14 +9,14 @@ import com.cedarsoftware.util.ReturnType;
 /**
  * This is the main API for json-io.  Use these methods to convert:<br/>
  * <ul>
- * <li><b>1. Input</b>: Java root | JsonValue root <b>Output</b>: JSON<pre>String json = JsonIo.toJson(JavaObject | JsonValue root, writeOptions)</pre></li>
- * <li><b>2. Input</b>: Java root | JsonValue root, <b>Output</b>: JSON -> outputStream <pre>JsonIo.toJson(OutputStream, JavaObject | JsonValue root, writeOptions)</pre></li>
+ * <li><b>1. Input</b>: Java root | JsonObject root <b>Output</b>: JSON<pre>String json = JsonIo.toJson(JavaObject | JsonObject root, writeOptions)</pre></li>
+ * <li><b>2. Input</b>: Java root | JsonObject root, <b>Output</b>: JSON -> outputStream <pre>JsonIo.toJson(OutputStream, JavaObject | JsonObject root, writeOptions)</pre></li>
  * <li><b>3. Input</b>: JSON, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(String | InputStream, readOptions, BillingInfo.class)</pre></li>
- * <li><b>4. Input</b>: JsonValue root, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(JsonValue, readOptions, BillingInfo.class)</pre></li>
- * <li><b>5. Input</b>: JSON, <b>Output</b>: JsonValues<pre>JsonValue jv = JsonIo.toJsonValues(String | InputStream, readOptions)</pre></li></ul>
+ * <li><b>4. Input</b>: JsonObject root, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(JsonObject, readOptions, BillingInfo.class)</pre></li>
+ * <li><b>5. Input</b>: JSON, <b>Output</b>: JsonObject<pre>JsonObject jObj = JsonIo.toJsonObjects(String | InputStream, readOptions)</pre></li></ul>
  * Often, the goal is to get JSON to Java objects and from Java objects to JSON.  That is #1 and #3 above. <br/>
  * <br/>
- * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonValue instance) to
+ * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonObject instance) to
  * know which type of Object Graph it is serializing to JSON.<br/>
  * <br/>
  * There are occasions where you may just want the raw JSON data, without anchoring it to a set of "DTO" Java objects.
@@ -24,21 +24,23 @@ import com.cedarsoftware.util.ReturnType;
  * streaming mode.  The JSON specification has great primitives which are universally useful in many languages. In
  * Java that is boolean, null, long [or BigInteger], and double [or BigDecimal], and String.<br/>
  * <br/>
- * When JsonValue is returned (option #5 above), your root value will represent one of:
+ * When JsonObject is returned (option #5 above), your root value will represent one of:
  * <ul>JSON object {...}<br/>
  * JSON array [...]<br/>
- * JSON primitive (boolean, null, long, double, String).</ul>
+ * JSON primitive (boolean true/false, null, long, double, String).</ul>
  * <br/>
- * <b>JsonObject</b> implements the JsonValue interface and
- * represents any JSON object {...}. It also implements the <code> Map</code> interface to make it easy to put/get values to/from it.<br/>
+ * <b>{...} JsonObject</b> implements the Map interface and represents any JSON object {...}.  It will respond true to
+ * isObject(), false to isArray(), and false to isPrimitive().<br/>
  * <br/>
- * <b>JsonArray</b> implements JsonValue and represents an array [...] and also implements<code> List</code> interface, making it
- * easy to set/get values to/from it.<br/>
+ * <b>[...] JsonObject</b> implements the List interface and represents any JSON array [...].  It will respond true to
+ * isArray(), false to isObject(), and false to is isPrimitive.<br/>
  * <br/>
- * <b>JsonPrimitive</b> implements JsonValue and represents one of the 5 JSON primitive value types.<br/>
+ * <b>Primitive JsonObject</b> If the root of the JSON is a String, Number (Long or Double), Boolean, or null, not an
+ * object { ... } nor an array { ... }, then the value can be obtained by calling .getValue() on the JsonObject. It will
+ * respond false to isObject(), false to isArray(), and true to isPrimitive().<br/>
  * <br/>
- * If you have a return object graph of JsonValues, you can use #4 to turn these JsonValues into Java objects. To do
- * so, use Employee e = JsonIo.toObjects(jsonValue, readOptions, Employee.class).
+ * If you have a return object graph of JsonObject, you can use #4 to turn these JsonObjects into Java objects. To do
+ * so, use Employee e = JsonIo.toObjects(jsonObject, readOptions, Employee.class).
 
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -179,11 +181,11 @@ public class JsonIo {
      * @return a typed Java instance, which was originally referenced in the JsonValue graph, which came from raw
      * JSON.
      */
-    public static <T> T toObjects(JsonValue jsonValue, ReadOptions readOptions, Class<T> rootType) {
+    public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
         ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
         localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
         JsonReader reader = new JsonReader(localReadOptions);
-        return reader.convertJsonValueToJava((JsonObject) jsonValue, rootType);
+        return reader.convertJsonValueToJava(jsonObject, rootType);
     }
 
     /**
@@ -193,8 +195,8 @@ public class JsonIo {
      * @param readOptions options to use when reading. Can be null, in which case the defaults will be used.
      * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
      */
-    public static JsonValue toJsonValues(String json, ReadOptions readOptions) {
-        return toJsonValues(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
+    public static JsonObject toJsonObjects(String json, ReadOptions readOptions) {
+        return toJsonObjects(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), readOptions);
     }
 
     /**
@@ -205,7 +207,7 @@ public class JsonIo {
      * @param readOptions options to use when reading.  Can be null, in which case the defaults will be used.
      * @return JsonValue graph, containing JsonObjects, JsonArrays, and/or JsonPrimitives.
      */
-    public static JsonValue toJsonValues(InputStream inputStream, ReadOptions readOptions) {
+    public static JsonObject toJsonObjects(InputStream inputStream, ReadOptions readOptions) {
         Convention.throwIfNull(inputStream, "inputStream cannot be null");
 
         if (readOptions == null) {
@@ -216,9 +218,9 @@ public class JsonIo {
 
         JsonReader jr = null;
         try {
-            jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), new JsonReader.DefaultReferenceTracker());
-            JsonValue jsonValue = jr.readObject(JsonValue.class);
-            return jsonValue;
+            jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_OBJECTS), new JsonReader.DefaultReferenceTracker());
+            JsonObject jsonObject = jr.readObject(JsonObject.class);
+            return jsonObject;
         }
         catch (Exception e) {
             throw new JsonIoException(e);
@@ -252,7 +254,7 @@ public class JsonIo {
         } else {
             readOptions = new ReadOptions(readOptions);
         }
-        readOptions.returnType(ReturnType.JSON_VALUES);
+        readOptions.returnType(ReturnType.JSON_OBJECTS);
         
         Object object = toObjects(json, readOptions, null);
         return toJson(object, writeOptions);
@@ -265,7 +267,7 @@ public class JsonIo {
      */
     public static String formatJson(String json) {
         return formatJson(json,
-                new ReadOptions().returnType(ReturnType.JSON_VALUES),
+                new ReadOptions().returnType(ReturnType.JSON_OBJECTS),
                 new WriteOptions().prettyPrint(true));
     }
 

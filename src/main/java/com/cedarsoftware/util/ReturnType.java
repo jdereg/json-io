@@ -1,6 +1,6 @@
 package com.cedarsoftware.util;
 
 public enum ReturnType {
-    JSON_VALUES,
+    JSON_OBJECTS,
     JAVA_OBJECTS
 }

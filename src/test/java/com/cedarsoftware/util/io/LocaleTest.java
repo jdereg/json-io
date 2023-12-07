@@ -116,7 +116,7 @@ public class LocaleTest
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assertEquals("en", map.get("language"));
         assertEquals("US", map.get("country"));
     }

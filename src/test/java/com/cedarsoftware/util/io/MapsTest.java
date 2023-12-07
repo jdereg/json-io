@@ -178,7 +178,7 @@ public class MapsTest
         testMap.init();
         String json0 = TestUtil.toJson(testMap);
         TestUtil.printLine("json0=" + json0);
-        Map testMap2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map testMap2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
 
         String json1 = TestUtil.toJson(testMap2);
         TestUtil.printLine("json1=" + json1);
@@ -292,9 +292,9 @@ public class MapsTest
     public void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
-        Map root = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map root = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         String json1 = TestUtil.toJson(root);
-        Map root2 = TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map root2 = TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assertTrue(DeepEquals.deepEquals(root, root2));
 
         // Will be different because @keys and @items get inserted during processing
@@ -362,7 +362,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(map);
         TestUtil.printLine("json0=" + json0);
 
-        map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -380,7 +380,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(root);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -401,7 +401,7 @@ public class MapsTest
         String json0 = TestUtil.toJson(smt);
         TestUtil.printLine("json0=" + json0);
 
-        Map result = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map result = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         String json1 = TestUtil.toJson(result);
         TestUtil.printLine("json1=" + json1);
 
@@ -483,7 +483,7 @@ public class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        final Map<String, Object> map2 = (Map) TestUtil.toJsonValues(str, null);
+        final Map<String, Object> map2 = (Map) TestUtil.toJsonObjects(str, null);
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())

@@ -119,7 +119,7 @@ public class NoTypeTest
         Object[] dataList = (Object[]) search.get("datalist");
         assert dataList.length == 0;
 
-        map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         groups = (Object[]) (map.get("groups"));
         assert groups.length == 3;
         assert groups[0].equals("one");
@@ -138,7 +138,7 @@ public class NoTypeTest
         cols.setBars(new Object[]{1, 3, "5", 7});
 
         String json = TestUtil.toJson(cols, new WriteOptions().showTypeInfoNever());
-        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         Object[] listFoos = (Object[]) map.get("foos");
         assert listFoos.length == 4;
         assert listFoos[0].equals(1L);
@@ -165,7 +165,7 @@ public class NoTypeTest
     {
         Object[] array = new Object[]{new Object[]{1L, 2L, 3L}, new Object[] {'a', 'b', 'c'}};
         String json = TestUtil.toJson(array);
-        Object[] list = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_VALUES), null);
+        Object[] list = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
         assert list.length == 2;
         Object[] list0 = (Object[]) list[0];
         assert list0.length == 3;
