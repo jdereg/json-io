@@ -483,7 +483,8 @@ public class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        final Map<String, Object> map2 = (Map) TestUtil.toJsonObjects(str, null);
+        ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_OBJECTS);
+        final Map<String, Object> map2 = TestUtil.toObjects(str, readOptions, null);
 
         // for debugging
         for (Map.Entry<String, Object> entry : map2.entrySet())

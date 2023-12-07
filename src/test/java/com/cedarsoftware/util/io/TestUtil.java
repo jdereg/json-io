@@ -270,12 +270,8 @@ public class TestUtil
         return (T) jsonIoTestInfo.obj;
     }
 
-    public static JsonObject toJsonObjects(String json, ReadOptions readOptions) {
-        return JsonIo.toJsonObjects(json, readOptions);
-    }
-
-    public static JsonObject toJsonObjects(InputStream in, ReadOptions readOptions) {
-        return JsonIo.toJsonObjects(in, readOptions);
+    public static JsonObject toObjects(InputStream in, ReadOptions readOptions) {
+        return JsonIo.toObjects(in, readOptions, null);
     }
 
     public static void printLine(String s)
