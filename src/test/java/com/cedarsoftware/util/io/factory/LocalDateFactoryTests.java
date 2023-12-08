@@ -42,7 +42,7 @@ class LocalDateFactoryTests {
     void newInstance_formattedDateTest() {
         LocalDateFactory factory = new LocalDateFactory();
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "2023-09-05");
+        jsonObject.setValue("2023-09-05");
 
         JsonReader reader = new JsonReader(new ReadOptions());
         LocalDate time = factory.newInstance(LocalDate.class, jsonObject, reader);

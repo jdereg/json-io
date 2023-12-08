@@ -121,7 +121,7 @@ class ZonedDateTimeFactoryTests {
 
     private JsonObject buildJsonObject(String zonedDateTime) {
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", zonedDateTime);
+        jsonObject.setValue(zonedDateTime);
         return jsonObject;
     }
 }

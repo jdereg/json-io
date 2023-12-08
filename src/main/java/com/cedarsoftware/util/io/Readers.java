@@ -523,7 +523,7 @@ public class Readers
                     JsonObject parameterValueJsonObj = new JsonObject();
 
                     parameterValueJsonObj.setJavaType(type);
-                    parameterValueJsonObj.put("value", jsonObj.get(parameterName));
+                    parameterValueJsonObj.setValue(jsonObj.get(parameterName));
 
                     if(parameterValueJsonObj.isLogicalPrimitive())
                         lParameterValues.add(parameterValueJsonObj.getPrimitiveValue());

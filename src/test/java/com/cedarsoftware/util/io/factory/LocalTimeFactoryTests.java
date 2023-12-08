@@ -1,19 +1,18 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
     private static Stream<Arguments> nonValueVariants() {
@@ -42,7 +41,7 @@ class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
     void newInstance_formattedTimeTest() {
         LocalTimeFactory factory = new LocalTimeFactory();
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "09:27:39");
+        jsonObject.setValue("09:27:39");
 
         LocalTime time = factory.newInstance(LocalTime.class, jsonObject, null);
 
@@ -56,7 +55,7 @@ class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
     void newInstance_formatTimeUsingIsoOffsetFormat() {
         LocalTimeFactory factory = new LocalTimeFactory(DateTimeFormatter.ISO_OFFSET_TIME, ZoneId.of("Z"));
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "09:27:39+01:00");
+        jsonObject.setValue("09:27:39+01:00");
 
         LocalTime time = factory.newInstance(LocalTime.class, jsonObject, null);
 

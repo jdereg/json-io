@@ -47,7 +47,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
     void newInstance_formattedDateTest() {
         LocalDateTimeFactory factory = new LocalDateTimeFactory();
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "2011-12-03T10:15:30");
+        jsonObject.setValue("2011-12-03T10:15:30");
 
         LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject, null);
 

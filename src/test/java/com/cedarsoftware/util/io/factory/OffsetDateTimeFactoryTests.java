@@ -1,16 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 
@@ -58,7 +57,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
     void newInstance_formattedDateTest() {
         OffsetDateTimeFactory factory = new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.of("UTC"));
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "2011-12-03T10:15:30");
+        jsonObject.setValue("2011-12-03T10:15:30");
 
         OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
 

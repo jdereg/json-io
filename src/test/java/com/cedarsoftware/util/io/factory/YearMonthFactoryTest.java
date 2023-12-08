@@ -1,17 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.YearMonth;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     private static Stream<Arguments> nonValueVariants() {
@@ -37,7 +36,7 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     void newInstance_formattedDateTest() {
         YearMonthFactory factory = new YearMonthFactory();
         JsonObject jsonObject = new JsonObject();
-        jsonObject.put("value", "2023-09");
+        jsonObject.setValue("2023-09");
 
         YearMonth time = factory.newInstance(YearMonth.class, jsonObject, null);
 

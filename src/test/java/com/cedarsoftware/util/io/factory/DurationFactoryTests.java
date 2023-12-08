@@ -1,15 +1,14 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Duration;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.JsonObject;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class DurationFactoryTests {
 
@@ -30,7 +29,7 @@ class DurationFactoryTests {
     @MethodSource("patterns")
     void patternTests(String pattern, long days, long hours, long minutes, long seconds, long millis, long nanos) {
         JsonObject jObject = new JsonObject();
-        jObject.put("value", pattern);
+        jObject.setValue(pattern);
 
         DurationFactory factory = new DurationFactory();
         Duration d = (Duration) factory.newInstance(Duration.class, jObject, null);
