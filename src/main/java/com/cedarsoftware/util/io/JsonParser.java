@@ -23,36 +23,35 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
  * The entire JSON input stream will be read until it is emptied: an EOF (-1) is read.
- *
+ * <p>
  * While reading the content, Java Maps (JsonObjects) are used to hold the contents of
  * JSON objects { }.  Lists are used to hold the contents of JSON arrays.  Each object
  * that has an @id field will be copied into the supplied 'objectsMap' constructor
  * argument.  This allows the user of this class to locate any referenced object
  * directly.
- *
+ * <p>
  * When this parser completes, the @ref (references to objects identified with @id)
  * are stored as a JsonObject with a @ref as the key and the ID value of the object.
  * No substitution has yet occurred (substituting the @ref pointers with a Java
  * reference to the actual Map (Map containing the @id)).
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br>
- *         Copyright (c) Cedar Software LLC
- *         <br><br>
- *         Licensed under the Apache License, Version 2.0 (the "License");
- *         you may not use this file except in compliance with the License.
- *         You may obtain a copy of the License at
- *         <br><br>
- *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- *         <br><br>
- *         Unless required by applicable law or agreed to in writing, software
- *         distributed under the License is distributed on an "AS IS" BASIS,
- *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *         See the License for the specific language governing permissions and
- *         limitations under the License.
+ * <br>
+ * Copyright (c) Cedar Software LLC
+ * <br><br>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <br><br>
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ * <br><br>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-class JsonParser
-{
+class JsonParser {
     protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private static final Map<String, String> stringCache = new LRUCache<>(5000);
@@ -62,14 +61,13 @@ class JsonParser
     private final StringBuilder hexBuf = new StringBuilder();
     private final StringBuilder numBuf = new StringBuilder();
     private int curParseDepth = 0;
-    private boolean allowNanAndInfinity;
+    private final boolean allowNanAndInfinity;
     private final int maxParseDepth;
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
     private final Resolver resolver;
 
-    static
-    {
+    static {
         // Save heap memory by re-using common strings (String's immutable)
         stringCache.put("", "");
         stringCache.put("true", "true");
@@ -124,7 +122,7 @@ class JsonParser
         numberCache.put(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY);
         numberCache.put(Double.NaN, Double.NaN);
     }
-    
+
     JsonParser(FastReader reader, Resolver resolver) {
         this.input = reader;
         this.resolver = resolver;
@@ -136,6 +134,7 @@ class JsonParser
 
     /**
      * Read a JSON object { ... }
+     *
      * @return JsonObject that represents the { ... } being read in.  If the JSON object type can be inferred,
      * from an @type field, containing field type, or containing array type, then the javaType will be set on the
      * JsonObject.
@@ -182,16 +181,17 @@ class JsonParser
             if (c == '}') {
                 break;
             } else if (c != ',') {
-                error("Object not ended with '}', instead found '" + (char)c + "'");
+                error("Object not ended with '}', instead found '" + (char) c + "'");
             }
         }
-        
+
         --curParseDepth;
         return jObj;
     }
 
     /**
      * Read the field name of a JSON object.
+     *
      * @return String field name.
      */
     private String readField() throws IOException {
@@ -202,13 +202,14 @@ class JsonParser
         String field = readString();
         c = skipWhitespaceRead();
         if (c != ':') {
-            error("Expected ':' between field and value, instead found '" + (char)c + "'");
+            error("Expected ':' between field and value, instead found '" + (char) c + "'");
         }
         return field;
     }
 
     /**
      * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
+     *
      * @param suggestedClass JsonValue Owning entity.
      */
     Object readValue(Class<?> suggestedClass) throws IOException {
@@ -297,8 +298,7 @@ class JsonParser
 
             if (c == ']') {
                 break;
-            }
-            else if (c != ',') {
+            } else if (c != ',') {
                 error("Expected ',' or ']' inside array");
             }
         }
@@ -332,11 +332,12 @@ class JsonParser
 
     /**
      * Read a JSON number.
+     *
      * @param c int a character representing the first digit of the number that
      *          was already read.
      * @return a Number (a Long or a Double) depending on whether the number is
-     *         a decimal number or integer.  This choice allows all smaller types (Float, int, short, byte)
-     *         to be represented as well.
+     * a decimal number or integer.  This choice allows all smaller types (Float, int, short, byte)
+     * to be represented as well.
      * @throws IOException for stream errors or parsing errors.
      */
     private Number readNumber(int c) throws IOException {
@@ -363,13 +364,11 @@ class JsonParser
                 readToken("infinity");
                 // [Out of RFC 4627] accept NaN/Infinity values
                 return isNeg ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
-            }
-            else if ('N' == c) {
+            } else if ('N' == c) {
                 // [Out of RFC 4627] accept NaN/Infinity values
                 readToken("nan");
                 return Double.NaN;
-            }
-            else {
+            } else {
                 // This is (c) case, meaning there was c = '-' at the beginning.
                 // This is a number like "-2", but not "-Infinity". We let the normal code process.
                 input.pushback((char) c);
@@ -380,20 +379,17 @@ class JsonParser
         // We are sure we have a positive or negative number, so we read char by char.
         StringBuilder number = numBuf;
         number.setLength(0);
-        number.append((char)c);
+        number.append((char) c);
         while (true) {
             c = in.read();
             if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
-                number.append((char)c);
-            }
-            else if (c == '.' || c == 'e' || c == 'E') {
-                number.append((char)c);
+                number.append((char) c);
+            } else if (c == '.' || c == 'e' || c == 'E') {
+                number.append((char) c);
                 isFloat = true;
-            }
-            else if (c == -1) {
+            } else if (c == -1) {
                 break;
-            }
-            else {
+            } else {
                 in.pushback((char) c);
                 break;
             }
@@ -446,15 +442,12 @@ class JsonParser
             if (state == STRING_START) {
                 if (c == '"') {
                     break;
-                }
-                else if (c == '\\') {
+                } else if (c == '\\') {
                     state = STRING_SLASH;
-                }
-                else {
+                } else {
                     str.append((char) c);
                 }
-            }
-            else if (state == STRING_SLASH) {
+            } else if (state == STRING_SLASH) {
                 switch (c) {
                     case '\\':
                         str.append('\\');
@@ -494,8 +487,7 @@ class JsonParser
                 if (c != 'u') {
                     state = STRING_START;
                 }
-            }
-            else {
+            } else {
                 if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
                     hex.append((char) c);
                     if (hex.length() == 4) {
@@ -503,8 +495,7 @@ class JsonParser
                         str.append((char) value);
                         state = STRING_START;
                     }
-                }
-                else {
+                } else {
                     error("Expected hexadecimal digits");
                 }
             }
@@ -527,14 +518,13 @@ class JsonParser
      * @return int representing the next non-whitespace character in the stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private int skipWhitespaceRead() throws IOException
-    {
+    private int skipWhitespaceRead() throws IOException {
         Reader in = input;
         int c;
         do {
             c = in.read();
         } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
-        
+
         if (c == -1) {
             error("EOF reached prematurely");
         }
@@ -543,8 +533,9 @@ class JsonParser
 
     /**
      * Load the @id field listed in the JSON
+     *
      * @param value Object should be a Long, if not exception is thrown.  It is the value associated to the @id field.
-     * @param jObj JsonObject representing the current item in the JSON being loaded.
+     * @param jObj  JsonObject representing the current item in the JSON being loaded.
      */
     private void loadId(Object value, JsonObject jObj) {
         if (!(value instanceof Long)) {
@@ -557,8 +548,9 @@ class JsonParser
 
     /**
      * Load the @ref field listed in the JSON
+     *
      * @param value Object should be a Long, if not exception is thrown. It is the value associated to the @ref field.
-     * @param jObj JsonValue that will be stuffed with the reference id and marked as finished.
+     * @param jObj  JsonValue that will be stuffed with the reference id and marked as finished.
      */
     private void loadRef(Object value, JsonValue jObj) {
         if (!(value instanceof Long)) {
@@ -570,8 +562,9 @@ class JsonParser
 
     /**
      * Load the @type field listed in the JSON
+     *
      * @param value Object should be a String, if not an exception is thrown.  It is the value associated to the @type field.
-     * @param jObj JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
+     * @param jObj  JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
      */
     private void loadType(Object value, JsonValue jObj) {
         if (!(value instanceof String)) {
@@ -596,19 +589,16 @@ class JsonParser
         }
         jObj.setJavaType(clazz);
     }
-    
-    Object error(String msg)
-    {
+
+    Object error(String msg) {
         throw new JsonIoException(getMessage(msg));
     }
 
-    Object error(String msg, Exception e)
-    {
+    Object error(String msg, Exception e) {
         throw new JsonIoException(getMessage(msg), e);
     }
 
-    String getMessage(String msg)
-    {
-        return msg + "\nline: " + input.getLine()+ ", col: " + input.getCol()+ "\n" + input.getLastSnippet();
+    String getMessage(String msg) {
+        return msg + "\nline: " + input.getLine() + ", col: " + input.getCol() + "\n" + input.getLastSnippet();
     }
 }

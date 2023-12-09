@@ -243,6 +243,10 @@ public class JsonReader implements Closeable, ReaderContext
             throw new JsonIoException("error parsing JSON value", e);
         }
 
+        if (returnValue == null) {
+            return null;
+        }
+
 //        if (returnValue instanceof JsonObject)
 //        {
 //            if (readOptions.getReturnType() == ReturnType.JSON_VALUES)
@@ -272,7 +276,7 @@ public class JsonReader implements Closeable, ReaderContext
         if (getReadOptions().getReturnType() == ReturnType.JSON_OBJECTS) {
             return returnValue;
         }
-        
+
         return graph;
     }
 

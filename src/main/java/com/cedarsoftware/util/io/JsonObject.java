@@ -173,15 +173,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         Object[] items = getArray();
         if (items == null) {
             setTarget(null);
-        }
-        else if (items.length == 0) {
+        } else if (items.length == 0) {
             setTarget(new char[0]);
-        }
-        else if (items.length == 1) {
+        } else if (items.length == 1) {
             String s = (String) items[0];
             setTarget(s.toCharArray());
-        }
-        else {
+        } else {
             throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
         }
         hash = null;
@@ -206,8 +203,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 return 0;
             }
             return getArray().length;
-        }
-        else if (containsKey(REF)) {
+        } else if (containsKey(REF)) {
             return 0;
         }
 
