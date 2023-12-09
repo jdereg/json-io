@@ -129,7 +129,7 @@ public class JsonReader implements Closeable, ReaderContext
                         Object value = context.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
 
                         if (value != null) {
-                            if (sub.getJavaType() != null || sub.getTargetClass() != null) {
+                            if (sub.getJavaType() != null) {
                                 arguments.add(value);
                             }
                         }
@@ -272,6 +272,7 @@ public class JsonReader implements Closeable, ReaderContext
         if (getReadOptions().getReturnType() == ReturnType.JSON_OBJECTS) {
             return returnValue;
         }
+        
         return graph;
     }
 

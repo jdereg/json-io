@@ -1,6 +1,6 @@
 ### Revision History
 * 5.0.0-SNAPSHOT
-  * Moved more lists and maps from source code to resource files.
+  * Moved more settings/properties from source code to resource files. 
     > Example changes required due to this update:
     <br><b>Before</b>
     > ```
@@ -9,7 +9,7 @@
     > ```
     > <b>After</b>
     > ```
-    > A. Employee e = JsonIo.toObjects(JsonObject | JsonArray | JsonPrimitive, readOptions, Employee.class)
+    > A. Employee e = JsonIo.toObjects(JsonObject, readOptions, Employee.class)
     > ```
 
 * 4.19.1

@@ -228,7 +228,7 @@ public class ObjectResolver extends Resolver
                 {    // Assign ObjectMap's to Object (or derived) fields
                     Object fieldObject = createInstance(fieldType, jsRhs);
                     injector.inject(target, fieldObject);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getTargetClass());
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
                     if (!isNonRefClass)
                     {
                         // GOTCHA : if the field is an immutable collection,
@@ -329,7 +329,7 @@ public class ObjectResolver extends Resolver
                     if (jObj.getJavaType() != null)
                     {
                         Object javaInstance = createInstance(null, jObj);
-                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                         // TODO: Check is finished here?
                         if (!isNonRefClass && !jObj.isFinished)
                         {
@@ -485,7 +485,7 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     createInstance(Object.class, jObj);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getTargetClass());
+                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                     if (!isNonRefClass)
                     {
                         convertJsonValuesToJava(jObj);
@@ -754,7 +754,7 @@ public class ObjectResolver extends Resolver
             }
             else
             {   // Type inferred from target object
-                c = jsonObj.getTargetClass();
+                c = jsonObj.getJavaType();
             }
         }
         else

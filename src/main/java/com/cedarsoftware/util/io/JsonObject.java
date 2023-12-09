@@ -47,13 +47,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return this.getTarget();
     }
 
-    public Class<?> getTargetClass() {
-        if (getTarget() != null) {
-            return getTarget().getClass();
-        }
-        return null;
-    }
-
     public boolean isLogicalPrimitive() {
         if (getJavaType() == null) {
             return false;
@@ -230,8 +223,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 Object elem = Array.get(array, j);
                 hashCode += elem == null ? 0 : elem.hashCode();
             }
-        }
-        else {
+        } else {
             hashCode = super.hashCode();
         }
         return hashCode;
@@ -241,8 +233,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (hash == null) {
             if (isArray() || isCollection()) {
                 hash = calculateArrayHash();
-            }
-            else {
+            } else {
                 hash = jsonStore.hashCode();
             }
         }

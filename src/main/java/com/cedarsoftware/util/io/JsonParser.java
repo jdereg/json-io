@@ -159,7 +159,8 @@ class JsonParser
 
         while (true) {
             String field = readField();
-            Object value = readValue(jObj.getTargetClass());
+//            Object value = readValue(jObj.getJavaType());      // Causes 60+ injector errors, but the type is correct
+            Object value = readValue(null);
 
             // process key-value pairing
             switch (field) {
@@ -236,6 +237,14 @@ class JsonParser
                 /////////////////////////////////////////////////////////////////////////////////////////
                 // Walk fields on jObj and move their values to the associated Java object (or JsonValue)
                 /////////////////////////////////////////////////////////////////////////////////////////
+//                System.out.println("jObj.getJavaTypeName() = " + jObj.getJavaTypeName());
+//                for (Object key : jObj.keySet())
+//                {
+//                    System.out.println("key = " + key);
+//                }
+//                System.out.println();
+//                System.out.println();
+//                System.out.println();
 //                resolver.traverseFields(jObj);    // no stack
 
                 final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
