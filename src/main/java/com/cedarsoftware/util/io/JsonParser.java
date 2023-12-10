@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -141,7 +143,7 @@ class JsonParser {
      */
     private JsonObject readJsonObject(Class<?> suggestedClass) throws IOException {
         JsonObject jObj = new JsonObject();
-        jObj.setJavaType(suggestedClass);
+        jObj.setHintType(suggestedClass);
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
@@ -156,15 +158,18 @@ class JsonParser {
         in.pushback((char) c);
         ++curParseDepth;
 
+        Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(suggestedClass);
+
         while (true) {
             String field = readField();
-//            Object value = readValue(jObj.getJavaType());      // Causes 60+ injector errors, but the type is correct
-            Object value = readValue(null);
+            Injector injector = injectors.get(field);
+            Object value = readValue(injector == null ? null : injector.getType());
 
             // process key-value pairing
             switch (field) {
                 case TYPE:
-                    loadType(value, jObj);    // @type will override suggestedClass.
+                    // Override 'hintType' if '@type' has a value by setting 'javaType' on JsonObject.
+                    loadType(value, jObj);    // TODO: Can we remove @enum and fold that into @type?
                     break;
                 case REF:
                     loadRef(value, jObj);
@@ -230,11 +235,13 @@ class JsonParser {
                 input.pushback('{');
                 // Should be able to do the below code, so that we have a reasonable default type for when
                 // the root class is not set.  This works perfectly EXCEPT for enums at the root.
-//                if (curParseDepth == 0 && suggestedClass == null) {
+//                if (suggestedClass == null) {
 //                    Class<?> unknownType = readOptions.getUnknownTypeClass();
 //                    suggestedClass = unknownType == null ? LinkedHashMap.class : unknownType;
 //                }
                 JsonObject jObj = readJsonObject(suggestedClass);
+//                Object target = resolver.createInstance(suggestedClass, jObj);
+//                jObj.setTarget(target);
                 /////////////////////////////////////////////////////////////////////////////////////////
                 // Walk fields on jObj and move their values to the associated Java object (or JsonValue)
                 /////////////////////////////////////////////////////////////////////////////////////////
@@ -256,8 +263,7 @@ class JsonParser {
                         return jObj.getPrimitiveValue();
                     }
                 }
-                /////////////////////////////////////////////////////
-
+                
                 return jObj;
             case '[':
                 List<Object> array = readArray(suggestedClass);

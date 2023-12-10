@@ -34,6 +34,7 @@ public abstract class JsonValue {
     public static final String SHORT_REF = "@r";
     public static final String VALUE = "value";
     protected Class<?> javaType = null;
+    protected Class<?> hintType = null;
     private Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
@@ -84,18 +85,23 @@ public abstract class JsonValue {
     abstract public boolean isArray();
     
     public Class<?> getJavaType() {
-        return javaType;
+        return javaType == null ? hintType : javaType;
     }
 
     public void setJavaType(Class<?> type) {
         this.javaType = type;
     }
 
+    public void setHintType(Class<?> type) {
+        this.hintType = type;
+    }
+
     public String getJavaTypeName() {
-        if (javaType == null) {
+        Class<?> type = getJavaType();
+        if (type == null) {
             return null;
         }
-        return javaType.getName();
+        return type.getName();
     }
 
     public long getId() {

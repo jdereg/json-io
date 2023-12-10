@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,9 @@ public class ClassDescriptors {
     }
 
     public Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse) {
+        if (classToTraverse == null) {
+            return Collections.emptyMap();
+        }
         return this.deepInjectors.computeIfAbsent(classToTraverse, this::buildDeepInjectors);
     }
 
