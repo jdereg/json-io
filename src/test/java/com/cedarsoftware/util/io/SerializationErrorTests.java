@@ -99,7 +99,7 @@ class SerializationErrorTests {
         ObjectSerializationIssue o = new ObjectSerializationIssue();
         o.setFoodType(FoodType.MILKS);
 
-        ObjectSerializationIssue actual = JsonIo.deepCopy(o);
+        ObjectSerializationIssue actual = JsonIo.deepCopy(o, new ReadOptions().build(), new WriteOptions().build());
 
         assertThat(actual.getFoodType()).isEqualTo(FoodType.MILKS);
     }

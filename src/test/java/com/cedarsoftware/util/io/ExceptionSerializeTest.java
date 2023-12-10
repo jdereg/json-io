@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.KnownFilteredFields;
 
@@ -308,42 +308,52 @@ class ExceptionSerializeTest
 
     @Test
     void testMultiParameterExceptionWithNullFields() {
+        List<StupidEmojis> emojis = MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
         MultipleParameterConstructor t1 = new MultipleParameterConstructor("foobar",
                 "some random thoughts",
                 null,
-                MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)")),
+                emojis,
                 null);
 
         String json = TestUtil.toJson(t1);
         MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
 
-        // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
-        assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
-
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
-        assert t1.getMessage().equals(t2.getMessage());
-        assert t1.getMessage().equals("foobar");                // Going through arg values in order, will pick up first string.
+        assertThat(t2).hasMessage(t1.getMessage())
+                .hasNoCause();
+
+        assertThat(t2.getRandomThoughts()).isEqualTo(t1.getRandomThoughts());
+        assertThat(t2.getErrorCount()).isNull();
+        assertThat(t2.getEmojis()).hasSameElementsAs(emojis);
+
+        // we didn't send stack trace by default.
+        assertThat(t2.getStackTrace()).isNotEqualTo(t1.getStackTrace());
     }
 
     @Test
     void testMultiParameterExceptionWithNullFields1() {
+        List<StupidEmojis> emojis = MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
         MultipleParameterConstructor t1 = new MultipleParameterConstructor("some random thoughts",
                 "message",
                 null,
-                MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)")),
+                emojis,
                 null);
 
         String json = TestUtil.toJson(t1);
         MultipleParameterConstructor t2 = TestUtil.toObjects(json, null);
 
-        // This test will not compare fields that it does not have access to, like 'detailMessage' on Throwable.
-        assertThat(DeepEquals.deepEquals(t1, t2)).isTrue();
-
         // Here's the issue to verify - can the code that instantiates a derived exception class, get its
         // detail message up to the detailMessage field on Throwable?
-        assert t1.getMessage().equals(t2.getMessage());
-        assert t1.getMessage().equals("some random thoughts");  // Going through arg values in order, will pick up first string.
+        assertThat(t2).hasMessage(t1.getMessage())
+                .hasNoCause();
+
+        assertThat(t2.getRandomThoughts()).isEqualTo(t1.getRandomThoughts());
+        assertThat(t2.getErrorCount()).isNull();
+        assertThat(t2.getEmojis()).hasSameElementsAs(emojis);
+
+        // we didn't send stack trace by default.
+        assertThat(t2.getStackTrace()).isNotEqualTo(t1.getStackTrace());
     }
 
     @Test
@@ -447,6 +457,19 @@ class ExceptionSerializeTest
         @Override
         public String toString() {
             return this.emoji;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof StupidEmojis)) return false;
+            StupidEmojis that = (StupidEmojis) o;
+            return Objects.equals(getEmoji(), that.getEmoji());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getEmoji());
         }
     }
 
