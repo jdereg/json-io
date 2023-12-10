@@ -31,37 +31,42 @@ import lombok.Getter;
  */
 public class Accessor {
 
+    @Getter
+    private final String fieldName;
+
     private final Field field;
     @Getter
     private final String displayName;
-    private MethodHandle accessor;
+    private MethodHandle methodHandle;
 
     @Getter
     private final boolean isPublic;
 
-    public Accessor(Field field) throws Throwable {
+    public Accessor(Field field, String fieldName) throws Throwable {
         this.field = field;
+        this.fieldName = fieldName;
 
         this.displayName = field.getName();
         this.isPublic = Modifier.isPublic(field.getModifiers());
 
         try {
-            this.accessor = MethodHandles.lookup().unreflectGetter(field);
+            this.methodHandle = MethodHandles.lookup().unreflectGetter(field);
         } catch (Exception e) {
             if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
                 MetaUtils.trySetAccessible(field);
             }
-            this.accessor = null;
+            this.methodHandle = null;
         }
     }
 
-    public Accessor(Field field, Method method) throws Throwable {
+    public Accessor(Field field, Method method, String fieldName) throws Throwable {
+        this.fieldName = fieldName;
         this.field = field;
 
         this.displayName = method.getName();
         this.isPublic = Modifier.isPublic(method.getModifiers());
 
-        this.accessor = MethodHandles.lookup().unreflect(method);
+        this.methodHandle = MethodHandles.lookup().unreflect(method);
     }
 
     @Override
@@ -81,10 +86,10 @@ public class Accessor {
 
 
     public Object retrieve(Object o) throws Throwable {
-        if (accessor == null) {
+        if (methodHandle == null) {
             return field.get(o);
         } else {
-            return accessor.invoke(o);
+            return methodHandle.invoke(o);
         }
     }
 
@@ -100,11 +105,11 @@ public class Accessor {
         return this.field.getGenericType();
     }
 
-    public String getFieldName() {
-        return this.field.getName();
-    }
-
     public boolean isTransient() {
         return Modifier.isTransient(this.field.getModifiers());
+    }
+
+    public String getActualFieldName() {
+        return field.getName();
     }
 }

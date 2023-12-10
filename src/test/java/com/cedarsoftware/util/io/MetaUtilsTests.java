@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -34,9 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -171,6 +171,19 @@ public class MetaUtilsTests {
         String s = "\"\"\"This is \"really\" weird.\"\"\"";
         String x = MetaUtils.removeLeadingAndTrailingQuotes(s);
         assert "This is \"really\" weird.".equals(x);
+    }
+
+    private static Stream<Arguments> commaSeparatedStringArguments() {
+        return Stream.of(
+                Arguments.of(" foo, bar, qux, quy "),
+                Arguments.of("foo,bar,qux,quy"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("commaSeparatedStringArguments")
+    void testCommaSeparatedStringToSet(String commaSeparatedString) {
+        Set<String> set = MetaUtils.commaSeparatedStringToSet(commaSeparatedString);
+        assertThat(set).contains("foo", "bar", "qux", "quy");
     }
 
     private static Stream<Arguments> createGetterNameTests() {

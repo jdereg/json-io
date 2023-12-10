@@ -1,0 +1,7 @@
+#
+# These method names are globally filtered when searching for accessor methods
+#
+toString
+hashCode
+getDeclaringClass
+describeConstable

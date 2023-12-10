@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
 
+import com.cedarsoftware.util.reflect.factories.NonStandardMethodNames;
+
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -27,7 +29,10 @@ public interface AccessorFactory {
      *
      * @param field           The field we're trying to access
      * @param possibleMethods a map of possible methods from the class itself
+     * @param key
      * @return The accessor if one fits for this field, otherwise null.
      */
-    Accessor createAccessor(Field field, Map<String, Method> possibleMethods) throws Throwable;
+    Accessor createAccessor(Field field, NonStandardMethodNames nonStandardMethodNames, Map<String, Method> possibleMethods, String key) throws Throwable;
+
+    AccessorFactory createCopy(boolean immutable);
 }

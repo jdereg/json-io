@@ -9,7 +9,7 @@ import java.util.Optional;
 import com.cedarsoftware.util.reflect.Injector;
 import com.cedarsoftware.util.reflect.InjectorFactory;
 
-public class MappedMethodInjectorFactory implements InjectorFactory {
+public class MethodInjectorFactory implements InjectorFactory {
     private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
 
     @Override
@@ -19,7 +19,7 @@ public class MappedMethodInjectorFactory implements InjectorFactory {
         Optional<String> possibleMethod = NonStandardInjectorNames.instance()
                 .getMapping(field.getDeclaringClass(), fieldName);
 
-        Method method = possibleInjectors.get(possibleMethod.orElse(createGetterName(fieldName)));
+        Method method = possibleInjectors.get(possibleMethod.orElse(createSetterName(fieldName)));
 
         if (method == null || (method.getModifiers() & METHOD_MODIFIERS) != Modifier.PUBLIC) {
             return null;
@@ -44,7 +44,7 @@ public class MappedMethodInjectorFactory implements InjectorFactory {
      * @param fieldName - String representing the field name
      * @return String - returns the appropriate method name to access this fieldName.
      */
-    private static String createGetterName(String fieldName) {
-        return "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+    private static String createSetterName(String fieldName) {
+        return "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
     }
 }

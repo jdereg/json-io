@@ -1,10 +1,10 @@
-package com.cedarsoftware.util.reflect.filters;
-
-import com.cedarsoftware.util.reflect.FieldFilter;
+package com.cedarsoftware.util.reflect.filters.field;
 
 import java.lang.reflect.Field;
 
-public class EnumFilter extends FieldFilter {
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+
+public class EnumFieldFilter implements FieldFilter {
     @Override
     public boolean filter(Field field) {
         if (field.getDeclaringClass().isEnum() && ("internal".equals(field.getName()) || "ENUM$VALUES".equals(field.getName()))) {
@@ -16,6 +16,11 @@ public class EnumFilter extends FieldFilter {
         }
 
         return false;
+    }
+
+    @Override
+    public FieldFilter createCopy(boolean immutable) {
+        return new EnumFieldFilter();
     }
 }
 

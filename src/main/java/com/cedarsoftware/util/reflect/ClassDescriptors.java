@@ -12,15 +12,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.reflect.factories.BooleanAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.EnumNameAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.MappedMethodAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.MappedMethodInjectorFactory;
-import com.cedarsoftware.util.reflect.factories.ZoneRegionAccessorFactory;
-import com.cedarsoftware.util.reflect.filters.EnumFilter;
-import com.cedarsoftware.util.reflect.filters.GroovyFilter;
-import com.cedarsoftware.util.reflect.filters.StaticFilter;
+import com.cedarsoftware.util.reflect.factories.MethodInjectorFactory;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -43,44 +39,26 @@ public class ClassDescriptors {
 
     private final List<FieldFilter> fieldFilters;
 
-    private final List<AccessorFactory> accessorFactories;
-
     private final List<InjectorFactory> injectorFactories;
 
-    private final Map<Class<?>, Map<String, Accessor>> deepAccessors;
     private final Map<Class<?>, Map<String, Injector>> deepInjectors;
 
     private static final ClassDescriptors instance = new ClassDescriptors();
 
     private ClassDescriptors() {
         this.fieldFilters = new ArrayList<>();
-        this.fieldFilters.add(new StaticFilter());
-        this.fieldFilters.add(new GroovyFilter());
-        this.fieldFilters.add(new EnumFilter());
-
-        this.accessorFactories = new ArrayList<>();
-        this.accessorFactories.add(new ZoneRegionAccessorFactory());
-        this.accessorFactories.add(new MappedMethodAccessorFactory());
-        this.accessorFactories.add(new BooleanAccessorFactory());
-        this.accessorFactories.add(new EnumNameAccessorFactory());
+        this.fieldFilters.add(new StaticFieldFilter());
+        this.fieldFilters.add(new GroovyFieldFilter());
+        this.fieldFilters.add(new EnumFieldFilter());
 
         this.injectorFactories = new ArrayList<>();
-        this.injectorFactories.add(new MappedMethodInjectorFactory());
+        this.injectorFactories.add(new MethodInjectorFactory());
 
-        this.deepAccessors = new ConcurrentHashMap<>();
         this.deepInjectors = new ConcurrentHashMap<>();
     }
 
     public static ClassDescriptors instance() {
         return instance;
-    }
-
-    public Map<String, Accessor> getDeepAccessorMap(Class<?> classToTraverse) {
-        return this.deepAccessors.computeIfAbsent(classToTraverse, this::buildDeepAccessors);
-    }
-
-    public Collection<Accessor> getDeepAccessors(Class<?> c) {
-        return this.getDeepAccessorMap(c).values();
     }
 
     public Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse) {
@@ -90,12 +68,6 @@ public class ClassDescriptors {
         return this.deepInjectors.computeIfAbsent(classToTraverse, this::buildDeepInjectors);
     }
 
-    private Map<String, Accessor> buildDeepAccessors(Class<?> c) {
-        final Map<String, Field> deepDeclaredFields = MetaUtils.getDeepDeclaredFields(c);
-        final Map<String, Method> possibleMethods = ReflectionUtils.buildDeepAccessorMethods(c);
-
-        return this.buildAccessors(deepDeclaredFields, possibleMethods);
-    }
 
     private Map<String, Injector> buildDeepInjectors(Class<?> classToTraverse) {
         Map<String, Injector> injectorMap = new LinkedHashMap<>();
@@ -111,48 +83,8 @@ public class ClassDescriptors {
 
     public void clearDescriptorCache() {
         deepInjectors.clear();
-        deepAccessors.clear();
     }
 
-    private Map<String, Accessor> buildAccessors(Map<String, Field> deepDeclaredFields, Map<String, Method> possibleMethods) {
-        Map<String, Accessor> accessorMap = new LinkedHashMap<>();
-
-        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
-
-            final Field field = entry.getValue();
-            boolean isKnownFilter = KnownFilteredFields.instance().isFieldFiltered(field);
-
-            if (isKnownFilter || fieldFilters.stream().anyMatch(f -> f.filter(field))) {
-                continue;
-            }
-
-            Optional<Accessor> accessor = this.accessorFactories.stream()
-                    .map(factory -> {
-                        try {
-                            return factory.createAccessor(field, possibleMethods);
-                        } catch (Throwable t) {
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .findFirst();
-
-
-            String fieldName = entry.getKey();
-            String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
-
-            //  If no accessor was found, let's use the default tried and true field accessor.
-            accessorMap.put(key, accessor.orElseGet(() -> {
-                try {
-                    return new Accessor(field);
-                } catch (Throwable t) {
-                    return null;
-                }
-            }));
-        }
-
-        return accessorMap;
-    }
 
     private void buildInjectors(Class<?> c, Map<String, Injector> injectorMap) {
         final Map<String, Method> possibleInjectors = ReflectionUtils.buildInjectorMap(c);
@@ -190,15 +122,5 @@ public class ClassDescriptors {
                 }
             }));
         }
-    }
-
-    public boolean addFilter(FieldFilter filter) {
-        clearDescriptorCache();
-        return this.fieldFilters.add(filter);
-    }
-
-    public boolean removeFilter(FieldFilter filter) {
-        clearDescriptorCache();
-        return this.fieldFilters.remove(filter);
     }
 }

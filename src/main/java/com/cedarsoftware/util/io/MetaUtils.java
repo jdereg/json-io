@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,10 +58,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
+import java.util.stream.Collectors;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -1109,12 +1111,40 @@ public class MetaUtils
     }
 
     /**
+     * Populates a map with a mapping of Class -> Set of Strings
+     */
+    public static Map<Class<?>, Set<String>> loadClassToSetOfStrings(String fileName) {
+        Map<String, String> map = loadMapDefinition(fileName);
+
+        Map<Class<?>, Set<String>> builtMap = new HashMap<>();
+        ClassLoader classLoader = MetaUtils.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null) {
+                continue;
+            }
+
+            Set<String> resultSet = commaSeparatedStringToSet(entry.getValue());
+            safelyIgnoreException(() -> builtMap.put(clazz, resultSet));
+        }
+        return builtMap;
+    }
+
+    public static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
+        return Arrays.stream(commaSeparatedString.split(","))
+                .map(String::trim)
+                .collect(Collectors.toSet());
+    }
+
+    /**
      * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
      * Ignores lines beginning with a # and it also ignores blank lines.
-     * @param map Map destination of the file contents.
      * @param resName String name of the resource file.
      */
-    public static void loadMapDefinition(Map<String, String> map, String resName) {
+    public static Map<String, String> loadMapDefinition(String resName) {
+        Map<String, String> map = new LinkedHashMap<>();
         try {
             String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
@@ -1129,15 +1159,17 @@ public class MetaUtils
         }  catch (Exception e) {
             throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents are expected to have two strings separated by '='. You can use # or blank lines in the file, they will be skipped.");
         }
+        return map;
     }
 
     /**
      * Load in a Set-style simple file of values. Expects values to be one per line.  Ignores lines beginning with a #
      * and it also ignores blank lines.
-     * @param set Set destination of the file contents.
      * @param resName String name of the resource file.
+     * @return the set of strings
      */
-    public static void loadSetDefinition(Set<String> set, String resName) {
+    public static Set<String> loadSetDefinition(String resName) {
+        Set<String> set = new LinkedHashSet<>();
         try {
             String contents = MetaUtils.loadResourceAsString(resName);
             Scanner scanner = new Scanner(contents);
@@ -1151,6 +1183,7 @@ public class MetaUtils
         }  catch (Exception e) {
             throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # or blank lines in the file, they will be skipped.");
         }
+        return set;
     }
 
     /**
@@ -1161,6 +1194,31 @@ public class MetaUtils
     public static String loadResourceAsString(String resourceName) {
         byte[] resourceBytes = loadResourceAsBytes(resourceName);
         return new String(resourceBytes, StandardCharsets.UTF_8);
+    }
+
+
+    /**
+     * Duplicate a map, possibly as unmodifiable
+     *
+     * @param other        map to duplicate
+     * @param unmodifiable will the result be unmoodifiable
+     * @return duplicated map
+     */
+    public static Map<Class<?>, ? extends Set<?>> dupe(Map<Class<?>, ? extends Set<?>> other, boolean unmodifiable) {
+        final Map<Class<?>, Set<?>> newItemsAssocToClass = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, ?> entry : other.entrySet()) {
+            final Set<?> itemsAssocToClass = new LinkedHashSet<>((Collection<?>) entry.getValue());
+            if (unmodifiable) {
+                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
+            } else {
+                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> itemsAssocToClass);
+            }
+        }
+        if (unmodifiable) {
+            return Collections.unmodifiableMap(newItemsAssocToClass);
+        } else {
+            return newItemsAssocToClass;
+        }
     }
 
     /**

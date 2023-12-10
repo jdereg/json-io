@@ -1,4 +1,4 @@
-package com.cedarsoftware.util.reflect;
+package com.cedarsoftware.util.reflect.filters;
 
 import java.lang.reflect.Field;
 
@@ -19,23 +19,15 @@ import java.lang.reflect.Field;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public abstract class FieldFilter {
-    private final int hashCode;
-
-    protected FieldFilter() {
-        this.hashCode = getClass().getName().hashCode() + 97;
-    }
-
-    @Override
-    public int hashCode() {
-        return hashCode;
-    }
+public interface FieldFilter {
 
     /**
-     * returns true if you want to filter the given field
+     * return true if you want to filter the field false if you don't
      *
-     * @param field - field we're checking.
-     * @return true to filter the field, false to keep the field.
+     * @param field - field to check.
+     * @return true to filter the field, false to not filter it.
      */
-    public abstract boolean filter(Field field);
+    boolean filter(Field field);
+
+    FieldFilter createCopy(boolean immutable);
 }

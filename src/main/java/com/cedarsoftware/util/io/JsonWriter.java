@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -24,10 +26,8 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import lombok.Getter;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import lombok.Getter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -505,34 +505,27 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (fields.isEmpty())
         {   // Trace fields using reflection, could filter this with excluded list here
-            fields = ClassDescriptors.instance().getDeepAccessors(obj.getClass());
+            fields = writeOptions.getDeepAccessors(obj.getClass());
         }
 
-        final Collection<Accessor> excludedFields = writeOptions.getExcludedAccessorsForClass(obj.getClass());
+        final Collection<String> excludedFields = writeOptions.getExcludedFieldsPerClass(obj.getClass());
 
         for (final Accessor accessor : fields)
         {
-            if (accessor.isTransient())
-            {
-                if (!fieldsBySpec.contains(accessor))
-                {   // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
-                    // In that case, the field must be traced, even though it is transient.
-                    continue;
-                }
+            // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
+            // In that case, the field must be traced, even though it is transient.
+            if (excludedFields.contains(accessor.getFieldName()) || (accessor.isTransient() && (!fieldsBySpec.contains(accessor)))) {
+                continue;
             }
-            try
-            {
+
+            MetaUtils.safelyIgnoreException(() -> {
                 // make sure excluded fieldss don't get added to the stack.  If a field is proxied, such as
                 // by Hibernate then accessing the item in any way can throw an exception.
-                if (!excludedFields.contains(accessor))
-                {
-                    final Object o = getValueByReflect(obj, accessor);
-                    if (o != null && !writeOptions.isNonReferenceableClass(o.getClass())) {   // Trace through objects that can reference other objects
-                        stack.addFirst(o);
-                    }
+                final Object o = getValueByReflect(obj, accessor);
+                if (o != null && !writeOptions.isNonReferenceableClass(o.getClass())) {   // Trace through objects that can reference other objects
+                    stack.addFirst(o);
                 }
-            }
-            catch (Exception ignored) { }
+            });
         }
     }
 
@@ -1617,7 +1610,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (!enumSet.isEmpty())
         {
-            Map<String, Accessor> mapOfFields = ClassDescriptors.instance().getDeepAccessorMap(elementType);
+            Map<String, Accessor> mapOfFields = writeOptions.getDeepAccessorMap(elementType);
             int enumFieldsCount = mapOfFields.size();
 
             out.write(",");
@@ -1708,34 +1701,26 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         Class<?> clazz = obj.getClass();
-        final Collection<Accessor> excludedAccessors = writeOptions.getExcludedAccessorsForClass(clazz);
-        final Collection<Accessor> includedAccessors = writeOptions.getIncludedAccessorsForClass(clazz);
-        // TODO: Is 'allowTransient' being handle correctly below?
-        if (!includedAccessors.isEmpty())
-        {
-            for (Accessor accessor : includedAccessors)
-            {   //output field if not excluded
-                String fieldName = accessor.getFieldName();
-                if (!excludedAccessors.contains(accessor)) {
-                    // Not currently supporting overwritten field names in hierarchy when using external field specifier
-                    first = writeField(obj, first, fieldName, accessor, true);
-                }//else field is blacklisted.
+
+
+        Collection<Accessor> accessors = writeOptions.getIncludedAccessorsForClass(obj.getClass());
+        Collection<Accessor> includedAccessors = accessors;
+
+        if (accessors.isEmpty()) {   // Trace fields using reflection, could filter this with excluded list here
+            accessors = writeOptions.getDeepAccessors(obj.getClass());
+        }
+
+        final Collection<String> excludedFields = writeOptions.getExcludedFieldsPerClass(obj.getClass());
+
+        for (final Accessor accessor : accessors) {
+            // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
+            // In that case, the field must be traced, even though it is transient.
+            final String fieldName = accessor.getFieldName();
+            if (!excludedFields.contains(fieldName)) {
+                first = writeField(obj, first, fieldName, accessor, includedAccessors.contains(accessor));
             }
         }
-        else
-        {   // Reflectively use fields, skipping transient and static fields
-            final Map<String, Accessor> classFields = ClassDescriptors.instance().getDeepAccessorMap(clazz);
-            for (Map.Entry<String, Accessor> entry : classFields.entrySet())
-            {
-                final String fieldName = entry.getKey();
-                final Accessor field = entry.getValue();
-                //output field if not excluded
-                if (!excludedAccessors.contains(field))
-                {
-                    first = writeField(obj, first, fieldName, field, false);
-                }//else field is excluded.
-            }
-        }
+
 
         if (!bodyOnly)
         {

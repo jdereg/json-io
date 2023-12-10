@@ -13,16 +13,21 @@ public class ZoneRegionAccessorFactory implements AccessorFactory {
     private static final String NAME = "id";
 
     @Override
-    public Accessor createAccessor(Field field, Map<String, Method> possibleMethods) throws Throwable {
+    public Accessor createAccessor(Field field, NonStandardMethodNames nonStandardMethodNames, Map<String, Method> possibleAccessors, String key) throws Throwable {
 
         if (!("id".equals(field.getName()) && ZoneId.class.isAssignableFrom(field.getDeclaringClass()))) {
             return null;
         }
 
         try {
-            return new Accessor(field, ZoneId.class.getMethod("getId"));
+            return new Accessor(field, ZoneId.class.getMethod("getId"), key);
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    @Override
+    public AccessorFactory createCopy(boolean immutable) {
+        return new ZoneRegionAccessorFactory();
     }
 }
