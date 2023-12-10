@@ -1204,10 +1204,10 @@ public class MetaUtils
      * @param unmodifiable will the result be unmoodifiable
      * @return duplicated map
      */
-    public static Map<Class<?>, ? extends Set<?>> dupe(Map<Class<?>, ? extends Set<?>> other, boolean unmodifiable) {
-        final Map<Class<?>, Set<?>> newItemsAssocToClass = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, ?> entry : other.entrySet()) {
-            final Set<?> itemsAssocToClass = new LinkedHashSet<>((Collection<?>) entry.getValue());
+    public static <T> Map<Class<?>, Set<T>> dupe(Map<Class<?>, Set<T>> other, boolean unmodifiable) {
+        final Map<Class<?>, Set<T>> newItemsAssocToClass = new LinkedHashMap<>();
+        for (Map.Entry<Class<?>, Set<T>> entry : other.entrySet()) {
+            final Set<T> itemsAssocToClass = new LinkedHashSet<>(entry.getValue());
             if (unmodifiable) {
                 newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
             } else {

@@ -215,9 +215,9 @@ public class WriteOptions {
 
 
         // Need your own Set instance here per Class, no references to the copied Set.
-        includedFields = (Map<Class<?>, Set<String>>) MetaUtils.dupe(other.includedFields, false);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(other.includedAccessors, false);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(other.excludedAccessors, false);
+        includedFields = MetaUtils.dupe(other.includedFields, false);
+        includedAccessors = MetaUtils.dupe(other.includedAccessors, false);
+        excludedAccessors = MetaUtils.dupe(other.excludedAccessors, false);
     }
 
     /**
@@ -980,10 +980,10 @@ public class WriteOptions {
      */
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
-        includedFields = (Map<Class<?>, Set<String>>) MetaUtils.dupe(includedFields, true);
-        includedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(includedAccessors, true);
-        excludedFieldNames = (Map<Class<?>, Set<String>>) MetaUtils.dupe(excludedFieldNames, true);
-        excludedAccessors = (Map<Class<?>, Set<Accessor>>) MetaUtils.dupe(excludedAccessors, true);
+        includedFields = MetaUtils.dupe(includedFields, true);
+        includedAccessors = MetaUtils.dupe(includedAccessors, true);
+        excludedFieldNames = MetaUtils.dupe(excludedFieldNames, true);
+        excludedAccessors = MetaUtils.dupe(excludedAccessors, true);
         aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
         notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
         nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
