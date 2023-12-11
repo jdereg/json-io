@@ -56,8 +56,8 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
 class JsonParser {
     protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
-    private static final Map<String, String> stringCache = new LRUCache<>(5000);
-    private static final Map<Number, Number> numberCache = new LRUCache<>(1000);
+    private static final Map<String, String> stringCache = new LRUCache<>(2500);
+    private static final Map<Number, Number> numberCache = new LRUCache<>(2500);
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
