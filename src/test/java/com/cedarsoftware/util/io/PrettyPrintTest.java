@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,8 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -52,7 +52,7 @@ class PrettyPrintTest
         nice.dictionary.put("bigdec", new BigDecimal("3.141592653589793238462643383"));
 
         String target = MetaUtils.loadResourceAsString("format/prettyPrint.json");
-        WriteOptions writeOptions = new WriteOptions().prettyPrint(true);
+        WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).build();
         String json = TestUtil.toJson(nice, writeOptions);
 
         assertThat(json).isEqualToIgnoringNewLines(target);

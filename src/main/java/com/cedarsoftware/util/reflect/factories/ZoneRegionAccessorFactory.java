@@ -13,7 +13,7 @@ public class ZoneRegionAccessorFactory implements AccessorFactory {
     private static final String NAME = "id";
 
     @Override
-    public Accessor createAccessor(Field field, NonStandardMethodNames nonStandardMethodNames, Map<String, Method> possibleAccessors, String key) throws Throwable {
+    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, Map<String, Method> possibleAccessors, String key) throws Throwable {
 
         if (!("id".equals(field.getName()) && ZoneId.class.isAssignableFrom(field.getDeclaringClass()))) {
             return null;
@@ -27,7 +27,7 @@ public class ZoneRegionAccessorFactory implements AccessorFactory {
     }
 
     @Override
-    public AccessorFactory createCopy(boolean immutable) {
+    public AccessorFactory createCopy() {
         return new ZoneRegionAccessorFactory();
     }
 }

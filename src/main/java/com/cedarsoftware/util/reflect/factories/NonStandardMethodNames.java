@@ -21,7 +21,7 @@ public class NonStandardMethodNames {
         return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
     }
 
-    public NonStandardMethodNames createCopy(boolean immutable) {
-        return new NonStandardMethodNames(this.classToMapping);
+    public Map<Class<?>, Map<String, String>> getMappings() {
+        return this.classToMapping;
     }
 }

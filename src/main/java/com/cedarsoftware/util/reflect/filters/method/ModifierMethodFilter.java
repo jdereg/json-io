@@ -18,7 +18,7 @@ public class ModifierMethodFilter implements MethodFilter {
     }
 
     @Override
-    public MethodFilter createCopy(boolean immutable) {
+    public MethodFilter createCopy() {
         return new ModifierMethodFilter(mask);
     }
 }

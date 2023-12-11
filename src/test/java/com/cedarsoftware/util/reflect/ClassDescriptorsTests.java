@@ -4,57 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.WriteOptions;
+import com.cedarsoftware.util.io.WriteOptionsBuilder;
 import com.cedarsoftware.util.reflect.filters.models.Car;
 import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
 import com.cedarsoftware.util.reflect.filters.models.Entity;
 import com.cedarsoftware.util.reflect.filters.models.Part;
-import com.cedarsoftware.util.reflect.filters.models.PrivateFinalObject;
 
 class ClassDescriptorsTests {
     @Test
-    void testGetClassDescriptor_whereSomeFieldsHaveAccessorsAndOthersDoNot() {
-
-        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(PrivateFinalObject.class);
-
-        assertThat(accessors).hasSize(4);
-        assertThat(accessors.get("x").isPublic()).isFalse();
-        assertThat(accessors.get("x").getDisplayName()).isEqualTo("x");
-        assertThat(accessors.get("y").isPublic()).isFalse();
-        assertThat(accessors.get("y").getDisplayName()).isEqualTo("y");
-        assertThat(accessors.get("key").isPublic()).isTrue();
-        assertThat(accessors.get("key").getDisplayName()).isEqualTo("getKey");
-        assertThat(accessors.get("flatuated").isPublic()).isTrue();
-        assertThat(accessors.get("flatuated").getDisplayName()).isEqualTo("isFlatuated");
-    }
-
-    @Test
-    void testGetClassDescriptor_onEnumDefinitionClass_findsName() {
-        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(ColorEnum.class);
-        assertThat(accessors).hasSize(1);
-        assertThat(accessors.get("name").isPublic()).isTrue();
-        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
-    }
-
-    @Test
-    void testGetClassDescriptor_onEnumClass() {
-        Map<String, Accessor> accessors = new WriteOptions().getDeepAccessorMap(Enum.class);
-
-        assertThat(accessors).hasSize(1);
-        assertThat(accessors.get("name").isPublic()).isTrue();
-        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
-    }
-
-    @Test
     void testCloningObject_withFieldBlacklistedAtSubclassOfEntity_fieldsAreAvailableOnOtherSubsOfEntity() {
-        WriteOptions options = new WriteOptions()
-                .addExcludedFields(Car.class, MetaUtils.listOf("id", "updated", "created"));
+        WriteOptions options = new WriteOptionsBuilder()
+                .addExcludedFields(Car.class, MetaUtils.listOf("id", "updated", "created")).build();
 
         Car initial = createCar();
 
@@ -80,8 +46,8 @@ class ClassDescriptorsTests {
 
     @Test
     void testCloningObject_fieldBlacklistedAtSuperClassEntity_isNotAvailableOnAnySubClass() {
-        WriteOptions options = new WriteOptions()
-                .addExcludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created"));
+        WriteOptions options = new WriteOptionsBuilder()
+                .addExcludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created")).build();
 
         Car initial = createCar();
 

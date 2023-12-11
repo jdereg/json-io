@@ -1,16 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -68,7 +68,7 @@ public class DoubleTest
     @Test
     void testNanAsRoot()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(Double.NaN, args);
         assert json.contains("null");
 
@@ -82,7 +82,7 @@ public class DoubleTest
     @Test
     void testNanMapKey()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         LinkedHashMap<String, Double> map = new LinkedHashMap<String, Double>(1);
         map.put("field", Double.NaN);
         String json = TestUtil.toJson(map, args);
@@ -105,7 +105,7 @@ public class DoubleTest
         DoubleHolder holder = new DoubleHolder();
         holder.number = Double.NaN;
 
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -121,7 +121,7 @@ public class DoubleTest
     @Test
     public void testNanArrayElement()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)), args);
         assert json.contains("null");
 

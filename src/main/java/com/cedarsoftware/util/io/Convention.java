@@ -6,4 +6,10 @@ public class Convention {
             throw new JsonIoException(message);
         }
     }
+
+    public static void throwIfNullOrEmpty(String value, String message) {
+        if (value == null || value.isEmpty()) {
+            throw new JsonIoException(message);
+        }
+    }
 }

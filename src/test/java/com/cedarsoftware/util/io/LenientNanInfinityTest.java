@@ -72,7 +72,7 @@ class LenientNanInfinityTest
 
     private void testFloatDouble(float float1, double double1)
     {
-        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true);
+        WriteOptions writeOptions = new WriteOptionsBuilder().allowNanAndInfinity(true).build();
         A a = new A(double1, float1);
 
         String json = TestUtil.toJson(a, writeOptions);

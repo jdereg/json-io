@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -37,7 +37,7 @@ public class NDJSONTest {
         to2._other = to1;
 
         FastByteArrayOutputStream fbaos = new FastByteArrayOutputStream();
-        WriteOptions writeOptions = new WriteOptions().closeStream(false);
+        WriteOptions writeOptions = new WriteOptionsBuilder().closeStream(false).build();
         JsonIo.toJson(fbaos, to1, writeOptions);
         fbaos.write("\n".getBytes(StandardCharsets.UTF_8));
         JsonIo.toJson(fbaos, to2, writeOptions);

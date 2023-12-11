@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -7,8 +9,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -74,7 +74,7 @@ public class LongTest
     public void testLongAsString()
     {
         long x = 19;
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
 
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"19\"");
@@ -88,7 +88,7 @@ public class LongTest
     public void testLongArrayAsString()
     {
         Long[] x = new Long[]{1L, 2L, 3L};
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
 
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
@@ -107,7 +107,7 @@ public class LongTest
     public void testObjectArrayOfLongsAsString()
     {
         Object[] x = new Object[]{1L, 2L, 3L};
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
         String json = TestUtil.toJson(x, options);
         assert json.contains("\"1\"");
         assert json.contains("\"2\"");
@@ -128,7 +128,7 @@ public class LongTest
         x.add(1L);
         x.add(2L);
         x.add(3L);
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
         String json = TestUtil.toJson(x, options);
 
         assert json.contains("\"1\"");
@@ -151,7 +151,7 @@ public class LongTest
         x.setAge(49L);
         x.setWeight(205L);
 
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true);
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).build();
         String json = TestUtil.toJson(x, options);
 
         assertThat(json)

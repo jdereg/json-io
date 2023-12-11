@@ -1,5 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -16,22 +27,13 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.ReturnType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -700,7 +702,7 @@ public class ArrayTest
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
-        WriteOptions options = new WriteOptions().showTypeInfoAlways();
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoAlways().build();
 
         String json0 = TestUtil.toJson(ta, options);
         ManyArrays thatTa = TestUtil.toObjects(json0, null);
@@ -927,7 +929,7 @@ public class ArrayTest
         numbers.add(40);
 
         // Serialize the ArrayList to Json
-        String json = TestUtil.toJson(numbers, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(numbers, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         TestUtil.printLine("Numbers ArrayList = " + numbers + ". Numbers to json = " + json);
         // This prints: "Numbers ArrayList = [10, 20, 30, 40]. Numbers to json = [10,20,30,40]"
@@ -942,7 +944,7 @@ public class ArrayTest
     {
         String[] testArray = new String[1];
         testArray[0] = "Test";
-        String testOut = TestUtil.toJson(testArray, new WriteOptions().shortMetaKeys(true));
+        String testOut = TestUtil.toJson(testArray, new WriteOptionsBuilder().shortMetaKeys(true).build());
         TestUtil.printLine(testOut);
 
         // The line below blew-up when the @i was being written by JsonWriter instead of @e in shorthand.
@@ -987,9 +989,9 @@ public class ArrayTest
 
     private static Stream<Arguments> allShowTypeInfos() {
         return Stream.of(
-                Arguments.of(new WriteOptions().showTypeInfoNever()),
-                Arguments.of(new WriteOptions().showTypeInfoAlways()),
-                Arguments.of(new WriteOptions())
+                Arguments.of(new WriteOptionsBuilder().showTypeInfoNever().build()),
+                Arguments.of(new WriteOptionsBuilder().showTypeInfoAlways().build()),
+                Arguments.of(new WriteOptionsBuilder().build())
         );
     }
 
@@ -1072,15 +1074,15 @@ public class ArrayTest
     @ParameterizedTest
     @MethodSource("integerVariants")
     void testObjectArray_withIntegerVariants_andNoTyping_outputsTheSame(Object one, Object two, Object three) {
-        WriteOptions options = new WriteOptions().showTypeInfoNever();
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(new Object[]{one, two, three}, options);
         assertThat(json).isEqualTo("[10,20,30]");
     }
 
     private static Stream<Arguments> alwaysShowAndMinimalShow() {
         return Stream.of(
-                Arguments.of(new WriteOptions().showTypeInfoAlways()),
-                Arguments.of(new WriteOptions())
+                Arguments.of(new WriteOptionsBuilder().showTypeInfoAlways().build()),
+                Arguments.of(new WriteOptionsBuilder().build())
         );
     }
 
@@ -1089,7 +1091,7 @@ public class ArrayTest
     void testObjectArray_withLongsWrittenAsStrings_andMinimalOrAlwaysShow_writesTypes(WriteOptions writeOptions) throws Throwable {
         Object[] array = {10L, 20L, 30L};
 
-        String json = TestUtil.toJson(array, new WriteOptions(writeOptions).writeLongsAsStrings(true));
+        String json = TestUtil.toJson(array, new WriteOptionsBuilder(writeOptions).writeLongsAsStrings(true).build());
         assertThat(json).isEqualTo("[{\"@type\":\"long\",\"value\":\"10\"},{\"@type\":\"long\",\"value\":\"20\"},{\"@type\":\"long\",\"value\":\"30\"}]");
     }
 
@@ -1107,7 +1109,7 @@ public class ArrayTest
     void testObjectArray_withLongsWrittenAsStrings_andNeverShowTypes_writesLikeStringVariants() {
         Object[] array = {10L, 20L, 30L};
 
-        WriteOptions options = new WriteOptions().writeLongsAsStrings(true).showTypeInfoNever();
+        WriteOptions options = new WriteOptionsBuilder().writeLongsAsStrings(true).showTypeInfoNever().build();
 
         String json = TestUtil.toJson(array, options);
         assertThat(json).isEqualTo("[\"10\",\"20\",\"30\"]");

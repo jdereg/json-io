@@ -177,7 +177,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public JsonWriter(OutputStream out)
     {
-        this(out, new WriteOptions());
+        this(out, new WriteOptionsBuilder().build());
     }
 
     /**
@@ -188,7 +188,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        this.writeOptions = writeOptions == null ? new WriteOptions().build() : writeOptions.build();
+        this.writeOptions = writeOptions == null ? new WriteOptionsBuilder().build() : new WriteOptionsBuilder(writeOptions).build();
     }
 
     /**
@@ -500,24 +500,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     {
         // If caller has special Field specifier for a given class
         // then use it, otherwise use reflection.
-        Collection<Accessor> fields = writeOptions.getIncludedAccessorsForClass(obj.getClass());
-        Collection<Accessor> fieldsBySpec = fields;
-
-        if (fields.isEmpty())
-        {   // Trace fields using reflection, could filter this with excluded list here
-            fields = writeOptions.getDeepAccessors(obj.getClass());
-        }
-
-        final Collection<String> excludedFields = writeOptions.getExcludedFieldsPerClass(obj.getClass());
+        Collection<Accessor> fields = writeOptions.getAccessorsForClass(obj.getClass());
 
         for (final Accessor accessor : fields)
         {
-            // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
-            // In that case, the field must be traced, even though it is transient.
-            if (excludedFields.contains(accessor.getFieldName()) || (accessor.isTransient() && (!fieldsBySpec.contains(accessor)))) {
-                continue;
-            }
-
             MetaUtils.safelyIgnoreException(() -> {
                 // make sure excluded fieldss don't get added to the stack.  If a field is proxied, such as
                 // by Hibernate then accessing the item in any way can throw an exception.
@@ -1610,7 +1596,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (!enumSet.isEmpty())
         {
-            Map<String, Accessor> mapOfFields = writeOptions.getDeepAccessorMap(elementType);
+            Collection<Accessor> mapOfFields = writeOptions.getDeepAccessors(elementType);
             int enumFieldsCount = mapOfFields.size();
 
             out.write(",");
@@ -1643,7 +1629,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 {
                     boolean firstInEntry = true;
                     out.write('{');
-                    for (Accessor f : mapOfFields.values())
+                    for (Accessor f : mapOfFields)
                     {
                         firstInEntry = writeField(e, firstInEntry, f.getFieldName(), f, false);
                     }
@@ -1700,27 +1686,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             first = false;
         }
 
-        Class<?> clazz = obj.getClass();
-
-
-        Collection<Accessor> accessors = writeOptions.getIncludedAccessorsForClass(obj.getClass());
-        Collection<Accessor> includedAccessors = accessors;
-
-        if (accessors.isEmpty()) {   // Trace fields using reflection, could filter this with excluded list here
-            accessors = writeOptions.getDeepAccessors(obj.getClass());
-        }
-
-        final Collection<String> excludedFields = writeOptions.getExcludedFieldsPerClass(obj.getClass());
+        Collection<Accessor> accessors = writeOptions.getAccessorsForClass(obj.getClass());
 
         for (final Accessor accessor : accessors) {
-            // Skip tracing transient fields EXCEPT when the field is listed explicitly by using the fieldSpecifiers Map.
-            // In that case, the field must be traced, even though it is transient.
             final String fieldName = accessor.getFieldName();
-            if (!excludedFields.contains(fieldName)) {
-                first = writeField(obj, first, fieldName, accessor, includedAccessors.contains(accessor));
-            }
+            first = writeField(obj, first, fieldName, accessor, true);
         }
-
 
         if (!bodyOnly)
         {

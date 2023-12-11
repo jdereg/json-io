@@ -29,5 +29,5 @@ public interface FieldFilter {
      */
     boolean filter(Field field);
 
-    FieldFilter createCopy(boolean immutable);
+    FieldFilter createCopy();
 }

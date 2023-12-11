@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.LocalDate;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.models.NestedLocalDate;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -127,7 +128,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     public void testLocalDateAsTimeStamp()
     {
         LocalDate ld = LocalDate.of(2023, 12, 25);
-        String json = TestUtil.toJson(ld, new WriteOptions().addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()));
+        String json = TestUtil.toJson(ld, new WriteOptionsBuilder().addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
         LocalDate ld2 = TestUtil.toObjects(json, null);
         assert ld.equals(ld2);
     }

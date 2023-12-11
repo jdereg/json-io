@@ -1,15 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -61,14 +61,14 @@ class TransientTest
         assert json.contains("lname");
         assert !json.contains("fullname");
 
-        final WriteOptions options = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        final WriteOptions options = new WriteOptionsBuilder().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname")).build();
         json = TestUtil.toJson(person, options);
         assert json.contains("fname");
         assert json.contains("lname");
         assert json.contains("fullname");
 
         // Although the Map throws UnsupportedOperation, JsonWriter should catch this and continue
-        final WriteOptions options2 = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "map"));
+        final WriteOptions options2 = new WriteOptionsBuilder().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "map")).build();
         assertDoesNotThrow(()-> {TestUtil.toJson(person, options2); });
     }
 
@@ -94,7 +94,7 @@ class TransientTest
         person.lname = "DeRegnaucourt";
         person.buildFull();
 
-        WriteOptions options = new WriteOptions().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname"));
+        WriteOptions options = new WriteOptionsBuilder().addIncludedFields(Transient1.class, MetaUtils.listOf("fname", "lname", "fullname")).build();
         String json = TestUtil.toJson(person, options);
         assert json.contains("fullname");
 

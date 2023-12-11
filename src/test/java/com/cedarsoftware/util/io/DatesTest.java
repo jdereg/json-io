@@ -1,5 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -7,16 +14,10 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.factory.DateFactory;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -164,7 +165,7 @@ class DatesTest
         dt.setChristmas(new java.sql.Date(c.getTime().getTime()));
 
         // Custom writer that only outputs ISO date portion
-        String json = TestUtil.toJson(dt, new WriteOptions().isoDateFormat());
+        String json = TestUtil.toJson(dt, new WriteOptionsBuilder().isoDateFormat().build());
         TestUtil.printLine("json = " + json);
 
         // Read it back in
@@ -185,7 +186,7 @@ class DatesTest
         compareDatePortion(exp, act);
 
         // Custom writer that outputs date and time portion in ISO format
-        json = TestUtil.toJson(dt, new WriteOptions().isoDateTimeFormat());
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().isoDateTimeFormat().build());
         TestUtil.printLine("json = " + json);
 
         // Read it back in
@@ -226,7 +227,7 @@ class DatesTest
         compareTimePortion(exp, act);
 
         // Version with milliseconds
-        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("yyyy-MM-dd'T'HH:mm:ss.SSS"));
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").build());
         readDt = TestUtil.toObjects(json, null);
 
         exp.setTime(dt.getBirthDay());
@@ -244,7 +245,7 @@ class DatesTest
         compareDatePortion(exp, act);
         compareTimePortion(exp, act);
 
-        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("MM/dd/yyyy HH:mm:ss"));
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("MM/dd/yyyy HH:mm:ss").build());
         readDt = TestUtil.toObjects(json, null);
 
         exp.setTime(dt.getBirthDay());
@@ -263,7 +264,7 @@ class DatesTest
         compareTimePortion(exp, act);
 
         // Nov 15, 2013 format
-        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("MMM dd, yyyy HH:mm.ss"));
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("MMM dd, yyyy HH:mm.ss").build());
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 
@@ -283,7 +284,7 @@ class DatesTest
         compareTimePortion(exp, act);
 
         // 15 Nov 2013 format
-        json = TestUtil.toJson(dt, new WriteOptions().dateTimeFormat("dd MMM yyyy HH:mm.ss"));
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("dd MMM yyyy HH:mm.ss").build());
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 

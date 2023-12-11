@@ -442,25 +442,51 @@ public class MetaUtils
      */
     public static Class<?> classForName(String name, ClassLoader classLoader)
     {
-        if (name == null || name.isEmpty())
-        {
+        if (name == null || name.isEmpty()) {
             return null;
         }
-        try
-        {
-            Class<?> c = nameToClass.get(name);
-            if (c != null)
-            {
-                return c;
-            }
-            c = loadClass(name, classLoader);
-            nameToClass.put(name, c);
+
+        try {
+            return internalClassForName(name, classLoader);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Given the passed in String class name, return the named JVM class.
+     *
+     * @param name        String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @return Class instance of the named JVM class
+     * @throws JsonIoException if the class could not be loaded.
+     */
+    public static Class<?> classForNameThrowsException(String name, ClassLoader classLoader) {
+        Convention.throwIfNullOrEmpty(name, "name cannot be null or empty");
+
+        try {
+            return internalClassForName(name, classLoader);
+        } catch (Exception e) {
+            throw new JsonIoException("Class: " + name + " is undefined.");
+        }
+    }
+
+    /**
+     * Used internally to load a class by name, and takes care of caching name mappings for speed.
+     *
+     * @param name        String name of a JVM class.
+     * @param classLoader ClassLoader to use when searching for JVM classes.
+     * @return Class instance of the named JVM class
+     * @throws JsonIoException if the class could not be loaded.
+     */
+    private static Class<?> internalClassForName(String name, ClassLoader classLoader) throws ClassNotFoundException {
+        Class<?> c = nameToClass.get(name);
+        if (c != null) {
             return c;
         }
-        catch (Exception e)
-        {
-            return null;
-        }
+        c = loadClass(name, classLoader);
+        nameToClass.put(name, c);
+        return c;
     }
 
     /**
@@ -998,7 +1024,8 @@ public class MetaUtils
 
     private static String getJsonStringToMaxLength(Object obj, int argCharLen)
     {
-        String arg = JsonIo.toJson(obj, new WriteOptions().shortMetaKeys(true).showTypeInfoNever());
+        WriteOptions options = new WriteOptionsBuilder().shortMetaKeys(true).showTypeInfoNever().build();
+        String arg = JsonIo.toJson(obj, options);
         if (arg.length() > argCharLen) {
             arg = arg.substring(0, argCharLen) + "...";
         }
@@ -1218,6 +1245,36 @@ public class MetaUtils
         } else {
             return newItemsAssocToClass;
         }
+    }
+
+    public static <T, V> Map<T, Set<V>> cloneMapOfSets(final Map<T, Set<V>> original, final boolean immutable) {
+        return original.entrySet().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                Map.Entry::getKey,
+                                entry -> immutable ? Collections.unmodifiableSet(new LinkedHashSet<>(entry.getValue())) : new LinkedHashSet<>(entry.getValue()),
+                                (existing, replacement) -> {
+                                    throw new JsonIoException("Duplicate key found: " + existing);
+                                },
+                                LinkedHashMap::new // Preserves order of insertion
+                        ),
+                        map -> immutable ? Collections.unmodifiableMap(map) : map
+                ));
+    }
+
+    public static <T, U, V> Map<T, Map<U, V>> cloneMapOfMaps(final Map<T, Map<U, V>> original, final boolean immutable) {
+        return original.entrySet().stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                Map.Entry::getKey,
+                                entry -> immutable ? Collections.unmodifiableMap(entry.getValue()) : new LinkedHashMap<>(entry.getValue()),
+                                (existing, replacement) -> {
+                                    throw new JsonIoException("Duplicate key found: " + existing);
+                                },
+                                LinkedHashMap::new // Preserves order of insertion
+                        ),
+                        map -> immutable ? Collections.unmodifiableMap(map) : map
+                ));
     }
 
     /**

@@ -194,7 +194,7 @@ class ExceptionSerializeTest
     void testExceptionWithThrowableConstructor_andStackTracesIsNotFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-        String json = TestUtil.toJson(t1, new WriteOptions().replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
+    String json = TestUtil.toJson(t1, new WriteOptionsBuilder().replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
         Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(json).contains("stackTrace");
@@ -217,7 +217,7 @@ class ExceptionSerializeTest
     void testExceptionWithThrowableConstructor_andStackTracesOnSubclassIsFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-        String json = TestUtil.toJson(t1, new WriteOptions()
+    String json = TestUtil.toJson(t1, new WriteOptionsBuilder()
                 .replaceExcludedFields(ExceptionWithThrowableConstructor.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
                 .replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
                 .build());
@@ -240,7 +240,7 @@ class ExceptionSerializeTest
     @Test
     void testExceptionWithThrowableConstructor_withNoStackTraces() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
-        WriteOptions options = new WriteOptions().addFieldFilter(Throwable.class, "stackTrace").build();
+    WriteOptions options = new WriteOptionsBuilder().addFieldFilter(Throwable.class, "stackTrace").build();
 
         String json = TestUtil.toJson(t1, options);
         Throwable t2 = TestUtil.toObjects(json, null);

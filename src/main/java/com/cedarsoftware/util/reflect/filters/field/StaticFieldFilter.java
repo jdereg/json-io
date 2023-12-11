@@ -13,7 +13,7 @@ public class StaticFieldFilter implements FieldFilter {
     }
 
     @Override
-    public FieldFilter createCopy(boolean immutable) {
+    public FieldFilter createCopy() {
         return new StaticFieldFilter();
     }
 }

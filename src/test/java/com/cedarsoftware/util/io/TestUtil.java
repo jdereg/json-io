@@ -3,12 +3,14 @@ package com.cedarsoftware.util.io;
 import java.io.InputStream;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cedarsoftware.util.ReturnType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+
 import lombok.Getter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Useful utilities for use in unit testing.
@@ -40,7 +42,7 @@ public class TestUtil
     }
 
     public static <T> Object serializeDeserializeAsMaps(T initial) {
-        String json = toJson(initial, new WriteOptions().showTypeInfoNever());
+        String json = toJson(initial, new WriteOptionsBuilder().showTypeInfoNever().build());
         return toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
     }
 
@@ -105,7 +107,7 @@ public class TestUtil
 
     public static String toJson(Object obj)
     {
-        return toJson(obj, new WriteOptions());
+        return toJson(obj, new WriteOptionsBuilder().build());
     }
 
     /**

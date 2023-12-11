@@ -98,14 +98,14 @@ public class SimpleValuesTest
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenNanAndInfinityNotAllowed_serializesAsNull(Double d) {
-        final String json = TestUtil.toJson(d, new WriteOptions().allowNanAndInfinity(false).build());
+        final String json = TestUtil.toJson(d, new WriteOptionsBuilder().allowNanAndInfinity(false).build());
         assertThat(json).contains("null");
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY})
     void testNanAndInfinity_whenAllowingNanAndInfinity_serializeRoundTrip(Double d) {
-        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(true).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().allowNanAndInfinity(true).build();
         final String json = TestUtil.toJson(d, writeOptions);
         ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(true).build();
         final Double newObj = TestUtil.toObjects(json, readOptions, Double.class);
@@ -116,7 +116,7 @@ public class SimpleValuesTest
     private final void testWriteRead(Object testObj, boolean allowNanAndInfinity)
     {
 
-        WriteOptions writeOptions = new WriteOptions().allowNanAndInfinity(allowNanAndInfinity).build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().allowNanAndInfinity(allowNanAndInfinity).build();
         final String json = TestUtil.toJson(testObj, writeOptions);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
