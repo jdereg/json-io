@@ -1196,12 +1196,11 @@ public class MetaUtils
         return new String(resourceBytes, StandardCharsets.UTF_8);
     }
 
-
     /**
      * Duplicate a map, possibly as unmodifiable
      *
      * @param other        map to duplicate
-     * @param unmodifiable will the result be unmoodifiable
+     * @param unmodifiable will the result be unmodifiable
      * @return duplicated map
      */
     public static <T> Map<Class<?>, Set<T>> dupe(Map<Class<?>, Set<T>> other, boolean unmodifiable) {

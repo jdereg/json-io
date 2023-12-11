@@ -27,7 +27,7 @@ implementation 'com.cedarsoftware:json-io:4.19.1'
 ```
 ___
 
-### [User Guide](/user-guide.md)  <sup>[4.2.0-SNAPSHOT]</sup>
+### [User Guide](/user-guide.md)
 
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
 

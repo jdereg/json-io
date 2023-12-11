@@ -247,7 +247,7 @@ public class JsonReader implements Closeable, ReaderContext
             return null;
         }
 
-//        // One return to suite all cases: ReturnType.JSON_OBJECTS, ReturnType.JAVA_OBJECTS, .value()
+        // One return to suite all cases: ReturnType.JSON_OBJECTS, ReturnType.JAVA_OBJECTS, .value()
 //        JsonObject returnObj = (JsonObject) returnValue;
 //        return (T) returnObj.getTarget();
 
@@ -341,7 +341,9 @@ public class JsonReader implements Closeable, ReaderContext
     @SuppressWarnings("unchecked")
     protected <T> T convertJsonValueToJava(JsonObject rootObj, Class<T> root) {
         try {
-            root = root == null ? (Class<T>)Object.class : root;
+            if (root == null) {
+                root = rootObj.getJavaType() == null ? (Class<T>)Object.class : (Class<T>)rootObj.getJavaType();
+            }
             return reentrantConvertJsonValueToJava(rootObj, root);
         } catch (Exception e) {
             if (readOptions.isCloseStream()) {

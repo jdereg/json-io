@@ -157,7 +157,7 @@ class JsonParser {
         }
         in.pushback((char) c);
         ++curParseDepth;
-
+        Object instance = null;
         Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(suggestedClass);
 
         while (true) {
@@ -168,20 +168,62 @@ class JsonParser {
             // process key-value pairing
             switch (field) {
                 case TYPE:
+                    Class<?> type = loadType(value);    // TODO: Can we remove @enum and fold that into @type?
                     // Override 'hintType' if '@type' has a value by setting 'javaType' on JsonObject.
-                    loadType(value, jObj);    // TODO: Can we remove @enum and fold that into @type?
+                    jObj.setJavaType(type);
+                    // Object could be:
+                    // 1. Normal Java Class
+                    // 2. Map (any Map type)
+                    //    Will have either all String keys, -or- @keys and @items containing it's content to be loaded.
+                    // 3. Primitive type - written in {...} version so the type could be included
+                    // 4. Collection (could be any Collection type) as { } because it needed @type emitted so that
+                    //    the right Collection type would be created.  Elements will be in @items array.
+                    // 5. Array: Could be a typed array Person[], String[] or Object[].  Written as { } with @type
+                    //    so that the right array type will be instantiated.  @items will contain the contents.
+                    // 6. Enum: in Object form {...}
+                    // 7. EnumSet: has @type and @items
+
+                    // May need to be updated because stated type (via @type) read and it may be more refined than
+                    // the suggested type passed in.  In this case the injectors need to be based on the more
+                    // refined type.
+//                    injectors = ClassDescriptors.instance().getDeepInjectorMap(type);
                     break;
+
                 case REF:
                     loadRef(value, jObj);
                     break;
+
                 case ID:
                     loadId(value, jObj);
                     break;
+
+                case "value":
+                    // Load value make sure containing object is marked appropriately, however, if there are
+                    // other non-meta keys besides value, then it is an Object or Map.
+                    jObj.put(field, value);
+                    break;
+
+                case ITEMS:
+                    // load Items
+                    jObj.put(field, value);
+                    break;
+
+                case KEYS:
+                    // load Keys
+                    jObj.put(field, value);
+                    break;
+
                 default:
+                    // TODO: This is where we should be injecting the 'value' into the instance or Map.
                     jObj.put(field, value);
                     break;
             }
 
+            if (jObj.getJavaType() != null && jObj.getJavaType().isArray()) {
+                if (!jObj.containsKey(ITEMS)) {
+                    System.out.println("Array with no @ items: " + jObj.toString());
+                }
+            }
             c = skipWhitespaceRead();
             if (c == '}') {
                 break;
@@ -233,28 +275,7 @@ class JsonParser {
 
             case '{':
                 input.pushback('{');
-                // Should be able to do the below code, so that we have a reasonable default type for when
-                // the root class is not set.  This works perfectly EXCEPT for enums at the root.
-//                if (suggestedClass == null) {
-//                    Class<?> unknownType = readOptions.getUnknownTypeClass();
-//                    suggestedClass = unknownType == null ? LinkedHashMap.class : unknownType;
-//                }
                 JsonObject jObj = readJsonObject(suggestedClass);
-//                Object target = resolver.createInstance(suggestedClass, jObj);
-//                jObj.setTarget(target);
-                /////////////////////////////////////////////////////////////////////////////////////////
-                // Walk fields on jObj and move their values to the associated Java object (or JsonValue)
-                /////////////////////////////////////////////////////////////////////////////////////////
-//                System.out.println("jObj.getJavaTypeName() = " + jObj.getJavaTypeName());
-//                for (Object key : jObj.keySet())
-//                {
-//                    System.out.println("key = " + key);
-//                }
-//                System.out.println();
-//                System.out.println();
-//                System.out.println();
-//                resolver.traverseFields(jObj);    // no stack
-
                 final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
 
                 if (jObj.isLogicalPrimitive()) {
@@ -266,8 +287,8 @@ class JsonParser {
                 
                 return jObj;
             case '[':
-                List<Object> array = readArray(suggestedClass);
-                return array.toArray();
+                Object[] array = readArray(suggestedClass);
+                return array;
             case ']':   // empty array
                 input.pushback(']');
                 return EMPTY_ARRAY;
@@ -291,15 +312,17 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private List<Object> readArray(Class<?> suggestedClass) throws IOException {
+    private Object[] readArray(Class<?> suggestedClass) throws IOException {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
             final Object value = readValue(suggestedClass);
+
             if (value != EMPTY_ARRAY) {
                 array.add(value);
             }
+            
             final int c = skipWhitespaceRead();
 
             if (c == ']') {
@@ -310,7 +333,7 @@ class JsonParser {
         }
 
         --curParseDepth;
-        return array;
+        return array.toArray();
     }
 
     /**
@@ -570,9 +593,8 @@ class JsonParser {
      * Load the @type field listed in the JSON
      *
      * @param value Object should be a String, if not an exception is thrown.  It is the value associated to the @type field.
-     * @param jObj  JsonObject that will have the JavaType set on to it to indicate what the peer class should be.
      */
-    private void loadType(Object value, JsonValue jObj) {
+    private Class<?> loadType(Object value) {
         if (!(value instanceof String)) {
             error("Expected a String for " + TYPE + ", instead got: " + value);
         }
@@ -593,7 +615,7 @@ class JsonParser {
                 clazz = LinkedHashMap.class;
             }
         }
-        jObj.setJavaType(clazz);
+        return clazz;
     }
 
     Object error(String msg) {
