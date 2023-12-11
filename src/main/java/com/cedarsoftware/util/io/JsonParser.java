@@ -221,7 +221,7 @@ class JsonParser {
 
             if (jObj.getJavaType() != null && jObj.getJavaType().isArray()) {
                 if (!jObj.containsKey(ITEMS)) {
-                    System.out.println("Array with no @ items: " + jObj.toString());
+                    System.out.println("Array with no @ items: " + jObj);
                 }
             }
             c = skipWhitespaceRead();

@@ -308,8 +308,6 @@ public class JsonReader implements Closeable, ReaderContext
      * JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
-    @SuppressWarnings("unchecked")
-    @Override
     public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
         return this.resolver.reentrantConvertJsonValueToJava(rootObj, root);
     }
@@ -321,8 +319,6 @@ public class JsonReader implements Closeable, ReaderContext
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    @SuppressWarnings("unchecked")
-    @Override
     public void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj) {
         this.resolver.traverseFields(stack, jsonObj);
     }
