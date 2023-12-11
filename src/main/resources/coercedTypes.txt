@@ -13,7 +13,17 @@ java.util.Collections$SingletonSet = java.util.LinkedHashSet
 java.util.Collections$UnmodifiableMap = java.util.LinkedHashMap
 java.util.Collections$UnmodifiableRandomAccessList = java.util.ArrayList
 java.util.Collections$UnmodifiableSet = java.util.LinkedHashSet
+
+java.util.Collections$SynchronizedCollection = java.util.Vector
+java.util.Collections$SynchronizedList = java.util.Vector
+
 java.util.Collections$SynchronizedSet = java.util.LinkedHashSet
+java.util.Collections$SynchronizedSortedSet = java.util.concurrent.ConcurrentSkipListSet
+java.util.Collections$SynchronizedNavigableSet = java.util.concurrent.ConcurrentSkipListSet
+
+java.util.Collections$SynchronizedMap = java.util.concurrent.ConcurrentHashMap
+java.util.Collections$SynchronizedNavigableMap = java.util.concurrent.ConcurrentSkipListMap
+java.util.Collections$SynchronizedSortedMap = java.util.concurrent.ConcurrentSkipListMap
 
 java.util.concurrent.ConcurrentHashMap$KeySetView = java.util.LinkedHashSet
 java.util.concurrent.ConcurrentHashMap$ValuesView = java.util.ArrayList

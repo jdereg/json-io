@@ -1,10 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
-
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -13,11 +10,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
+
+import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's

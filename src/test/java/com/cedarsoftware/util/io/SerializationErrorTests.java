@@ -105,11 +105,21 @@ class SerializationErrorTests {
     }
 
     @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
+//    @Test
     void testWriteOptions() {
         WriteOptions writeOptions = new WriteOptions();
         String json = TestUtil.toJson(writeOptions);
         WriteOptions backFromSleep = TestUtil.toObjects(json, null);
         assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));
+    }
+
+    @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
+//    @Test
+    void testReadOptions() {
+        ReadOptions readOptions = new ReadOptions();
+        String json = TestUtil.toJson(readOptions);
+        ReadOptions backFromSleep = TestUtil.toObjects(json, null);
+        assertTrue(DeepEquals.deepEquals(readOptions, backFromSleep));
     }
 
     private String loadJsonForTest(String fileName) {
