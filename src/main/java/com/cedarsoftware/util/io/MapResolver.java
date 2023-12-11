@@ -128,7 +128,8 @@ public class MapResolver extends Resolver
                 final Class<?> fieldType = injector.getType();
                 if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
-                    jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));
+                    Object convert = MetaUtils.convert(fieldType, rhs);
+                    jsonObj.put(fieldName, convert);
                 }
                 else if (rhs instanceof String)
                 {

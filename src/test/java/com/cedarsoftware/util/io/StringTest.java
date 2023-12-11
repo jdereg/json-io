@@ -51,9 +51,8 @@ public class StringTest
         assertEquals(bytes[2], (byte) 0x80);
         assertEquals(bytes[3], (byte) 0x80);
 
-        assertSame(that._strArray[0], that._objArray[0]);
+        // Cannot assert same-ness depends on LRU cache size and order tests are run.
         assertEquals(that._strArray[0], that._objArray[0]);
-        assertSame(that._strArray[1], that._objArray[1]);
         assertEquals(that._strArray[1], that._objArray[1]);
 
         assertEquals(5, that._strArray.length);
@@ -67,8 +66,9 @@ public class StringTest
         assertNull(that._objStrArray[3]);
         assertEquals("Poly", that._poly);
 
-        assertSame(that._cache[0], that._cache[1]);// "true' is part of the reusable cache.
-        assertSame(that._cache[2], that._cache[3]);// Strings are immutable and we are instance folding.
+        // Cannot assert same-ness because LRU cache size and order tests are run.
+        assertEquals(that._cache[0], that._cache[1]);// "true" is part of the reusable cache.
+        assertEquals(that._cache[2], that._cache[3]);// Strings are immutable and we are instance folding.
     }
 
     @Test

@@ -948,7 +948,7 @@ public class MetaUtils
         if (rhs == null) {
             return FROM_NULL.get(toType);
         }
-        if (rhs == "" && FROM_EMPTY_QUOTES.contains(toType)) {
+        if ("".equals(rhs) && FROM_EMPTY_QUOTES.contains(toType)) {
             return null;
         }
 

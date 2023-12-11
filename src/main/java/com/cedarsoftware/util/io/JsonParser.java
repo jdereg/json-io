@@ -56,8 +56,9 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
 class JsonParser {
     protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
-    private static final Map<String, String> stringCache = new LinkedHashMap<>(5000);
-    private static final Map<Number, Number> numberCache = new LRUCache<>(2000);
+    private static final Map<String, String> stringCache = new LRUCache<>(2500);
+    private static final Map<Number, Number> numberCache = new LRUCache<>(2500);
+    private static final Map<String, String> substitutes = new LinkedHashMap<>();
     private final FastReader input;
     private final StringBuilder strBuf = new StringBuilder(256);
     private final StringBuilder hexBuf = new StringBuilder();
@@ -70,6 +71,13 @@ class JsonParser {
     private final Resolver resolver;
 
     static {
+        // substitutes
+        substitutes.put(SHORT_ID, ID);
+        substitutes.put(SHORT_REF, REF);
+        substitutes.put(SHORT_ITEMS, ITEMS);
+        substitutes.put(SHORT_TYPE, TYPE);
+        substitutes.put(SHORT_KEYS, KEYS);
+
         // Save heap memory by re-using common strings (String's immutable)
         stringCache.put("", "");
         stringCache.put("true", "true");
@@ -96,11 +104,6 @@ class JsonParser {
         stringCache.put(ITEMS, ITEMS);
         stringCache.put(TYPE, TYPE);
         stringCache.put(KEYS, KEYS);
-        stringCache.put(SHORT_ID, ID);
-        stringCache.put(SHORT_REF, REF);
-        stringCache.put(SHORT_ITEMS, ITEMS);
-        stringCache.put(SHORT_TYPE, TYPE);
-        stringCache.put(SHORT_KEYS, KEYS);
         stringCache.put("0", "0");
         stringCache.put("1", "1");
         stringCache.put("2", "2");
@@ -162,6 +165,9 @@ class JsonParser {
 
         while (true) {
             String field = readField();
+            if (substitutes.containsKey(field)) {
+                field = substitutes.get(field);
+            }
             Injector injector = injectors.get(field);
             Object value = readValue(injector == null ? null : injector.getType());
 
