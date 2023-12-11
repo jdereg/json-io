@@ -46,13 +46,13 @@ In this example, an`InputStream`is supplying the JSON.
 **json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript
 associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
-    String json = // or InputStream to JSON provinding source
+    String json = // or InputStream to JSON providing source
     ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_OBJECTS);
     JsonObject root = JsonIo.toObjects(json, readOptions);    
 
 See the `ReadOptions` below for the feature control options.  In the example above, rather than return the objects
 converted into Java classes, you are being returned the raw JSON values being parsed.  It is a graph that consists of
-all `JsonObject` instances.  
+all `JsonObject` instances, arrays, and primitive types.  
 
 When `JsonObject` is returned, your root value will represent one of:
 * `JSON object {...}`

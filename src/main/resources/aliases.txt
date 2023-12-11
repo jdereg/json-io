@@ -47,3 +47,4 @@ java.util.IdentityHashMap = IdentityHashMap
 java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger = AtomicInteger
 java.util.concurrent.atomic.AtomicLong = AtomicLong
+java.util.Collections$SynchronizedSet = CollectionsSynchronizedSet
