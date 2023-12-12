@@ -1,8 +1,13 @@
 package com.cedarsoftware.util.io.models;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class Race {
     private String name = "Race.name";
-    private String age;
+    private int age;
 
     private int strength;
     private int wisdom;
@@ -10,13 +15,4 @@ public class Race {
 
     private double magicResistance;
     private double fireResistance;
-
-
-    public String getAge() {
-        return this.age;
-    }
-
-    public double getMagicResistance() {
-        return this.magicResistance;
-    }
 }

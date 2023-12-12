@@ -112,7 +112,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @Test
     void create_whenIsEnumClass_andHasNameMapping_canCreateAccessor() throws Throwable {
         Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(Enum.class);
-        Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
+        Map<Class<?>, Map<String, String>> nonStandardMethodNames = new LinkedHashMap<>();
         nonStandardMethodNames.computeIfAbsent(Enum.class, k -> new LinkedHashMap<>()).put("name", "name");
         Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, methodMap, "name");
         assertThat(accessor).isNotNull();

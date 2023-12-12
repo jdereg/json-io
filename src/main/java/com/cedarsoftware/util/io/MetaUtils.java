@@ -479,7 +479,7 @@ public class MetaUtils
      * @return Class instance of the named JVM class
      * @throws JsonIoException if the class could not be loaded.
      */
-    private static Class<?> internalClassForName(String name, ClassLoader classLoader) throws ClassNotFoundException {
+    public static Class<?> internalClassForName(String name, ClassLoader classLoader) throws ClassNotFoundException {
         Class<?> c = nameToClass.get(name);
         if (c != null) {
             return c;
@@ -1093,9 +1093,18 @@ public class MetaUtils
         return trimLength(s) == 0;
     }
 
-    public static boolean hasContent(final String s) {
-        return !(trimLength(s) == 0);    // faster than returning !isEmpty()
+    public static boolean isEmpty(final Collection<?> s) {
+        return s == null || s.isEmpty();
     }
+
+    public static boolean hasContent(final String s) {
+        return trimLength(s) != 0;    // faster than returning !isEmpty()
+    }
+
+    public static <T> boolean doesNotContain(final Collection<T> c, T object) {
+        return c == null || !c.contains(object);
+    }
+
 
     /**
      * Use this method when you don't want a length check to

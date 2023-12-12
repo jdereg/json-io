@@ -6,12 +6,12 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -70,7 +70,7 @@ public class WriteOptions {
     private final boolean allowNanAndInfinity;
     private final boolean enumPublicFieldsOnly;
     private final boolean closeStream;
-    private final JsonWriter.JsonClassWriter enumWriter;
+    final JsonWriter.JsonClassWriter enumWriter;
     private final ClassLoader classLoader;
     final Map<Class<?>, Map<String, String>> nonStandardMappings;
 
@@ -87,9 +87,6 @@ public class WriteOptions {
     final Set<String> filteredMethodNames;
 
 
-    private final Map<Class<?>, Collection<String>> deepExcludedFields = new ConcurrentHashMap<>();
-
-
     private final Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
 
     // Runtime caches (not feature options), since looking up writers can be expensive
@@ -101,10 +98,7 @@ public class WriteOptions {
 
     private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
 
-    private final Map<Class<?>, Set<Field>> deepIncludedCache = new ConcurrentHashMap<>();
-
-    private final Map<Class<?>, Collection<Accessor>> deepAccessorCache = new ConcurrentHashMap<>();
-    private final Map<Class<?>, Collection<Accessor>> includedAccessors = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Map<String, Accessor>> accessorsCache = new ConcurrentHashMap<>();
 
 
     // Enum for the 3-state property
@@ -206,23 +200,6 @@ public class WriteOptions {
      */
     public Map<String, String> aliasTypeNames() {
         return aliasTypeNames;
-    }
-
-    /**
-     * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
-     * @param typeName String fully qualified class name.
-     * @param alias String shorter alias name.
-     */
-    private void addUniqueAlias(String typeName, String alias) {
-        Class<?> clazz = MetaUtils.classForName(typeName, getClassLoader());
-        if (clazz == null) {
-            throw new JsonIoException("Unknown class: " + typeName + " cannot be added to the WriteOptions alias map.");
-        }
-        String existType = aliasTypeNames.get(clazz);
-        if (existType != null) {
-            throw new JsonIoException("Non-unique WriteOptions alias: " + alias + " attempted assign to: " + typeName + ", but is already assigned to: " + existType);
-        }
-        aliasTypeNames.put(clazz.getName(), alias);
     }
 
     /**
@@ -370,81 +347,11 @@ public class WriteOptions {
     }
 
     public Collection<Accessor> getAccessorsForClass(final Class<?> c) {
-        return includedAccessors.computeIfAbsent(c, this::buildDeepAccessors);
+        return getAccessorMapForClass(c).values();
     }
 
-    public Collection<String> getExcludedFieldsPerClass(final Class<?> c) {
-        return this.getDeepExcludedFields(c);
-    }
-
-    public Collection<String> getDeepExcludedFields(final Class<?> c) {
-        return this.deepExcludedFields.computeIfAbsent(c, this::buildDeepExcludedFields);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Collection<String> buildDeepExcludedFields(final Class<?> c) {
-        final Set<String> exclusions = new LinkedHashSet<>();
-        Class<?> curr = c;
-
-        while (curr != Object.class) {
-
-            Collection<String> excluded = this.excludedFieldNames.get(curr);
-
-            if (excluded != null) {
-                exclusions.addAll(excluded);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return exclusions.isEmpty() ? Collections.emptySet() : exclusions;
-
-    }
-
-    // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their sub-objects correctly we should be ok removing
-    // the distance check since we walk up the chain of the class being written.
-    private Set<Field> buildDeepIncludedFields(final Class<?> c) {
-
-        Map<String, Field> fieldsMap = deepFieldCache.computeIfAbsent(c, this::buildDeepFieldMap);
-
-        Class<?> curr = c;
-        Set<Field> fieldSet = new LinkedHashSet<>();
-
-        while (curr != Object.class) {
-            Set<String> names = includedFieldNames.get(curr);
-
-            if (names != null && !names.isEmpty()) {
-                names.stream()
-                        .map(fieldsMap::get)
-                        .filter(Objects::nonNull)
-                        .forEach(fieldSet::add);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return fieldSet;
-    }
-
-    // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their sub-objects correctly we should be ok removing
-    // the distance check since we walk up the chain of the class being written.
-    private static Collection<String> getFilteredFieldNames(final Class<?> c, final Map<Class<?>, ? extends Collection<String>> fields) {
-        Class<?> curr = c;
-        Set<String> accessorSets = new LinkedHashSet<>();
-
-        while (curr != Object.class) {
-            Collection<String> accessorSet = fields.get(curr);
-
-            if (accessorSet != null) {
-                accessorSets.addAll(accessorSet);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return accessorSets;
+    public Map<String, Accessor> getAccessorMapForClass(final Class<?> c) {
+        return accessorsCache.computeIfAbsent(c, this::buildDeepAccessors);
     }
 
     /**
@@ -563,12 +470,7 @@ public class WriteOptions {
 
     ///// ACCESSOR PULL IN ???????
 
-    public Collection<Accessor> getDeepAccessors(Class<?> classToTraverse) {
-        return this.deepAccessorCache.computeIfAbsent(classToTraverse, this::buildDeepAccessors);
-    }
-
     public void clearCaches() {
-        deepAccessorCache.clear();
         deepMethodCache.clear();
         deepFieldCache.clear();
         methodCache.clear();
@@ -579,38 +481,55 @@ public class WriteOptions {
     }
 
 
-    private Collection<Accessor> buildDeepAccessors(Class<?> c) {
-        final Set<Field> deepIncludedFields = deepIncludedCache.computeIfAbsent(c, this::buildDeepIncludedFields);
-        final Map<String, Field> deepDeclaredFields = deepFieldCache.computeIfAbsent(c, this::buildDeepFieldMap);
-        final Map<String, Method> possibleMethods = deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
+    private Map<String, Accessor> buildDeepAccessors(final Class<?> c) {
+        final Set<String> inclusions = includedFieldNames.get(c);
+        final Set<String> exclusions = new HashSet<>();
+        final Map<String, Field> deepDeclaredFields = this.getDeepDeclaredFields(c, exclusions);
+        final Map<String, Method> possibleMethods = getDeepDeclaredMethods(c);
         final Map<String, Accessor> accessorMap = new LinkedHashMap<>();
 
-        final Collection<Field> fields = deepIncludedFields.isEmpty() ? deepDeclaredFields.values() : deepIncludedFields;
+        final boolean isExclusive = inclusions == null;
 
-        for (final Field field : fields) {
-            // If field is an included field it will send transient fields.
-            if (Modifier.isTransient(field.getModifiers()) && !deepIncludedFields.contains(field)) {
-                continue;
-            }
+        final List<Map.Entry<String, Field>> fields = isExclusive ?
+                deepDeclaredFields.entrySet().stream()
+                        .filter(e -> !Modifier.isTransient(e.getValue().getModifiers()))
+                        .filter(e -> !exclusions.contains(e.getValue().getName()))
+                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
+                        .collect(Collectors.toList()) :
+                deepDeclaredFields.entrySet().stream()
+                        .filter(e -> inclusions.contains(e.getKey()))
+                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
+                        .collect(Collectors.toList());
 
-            final String fieldName = field.getName();
+        for (final Map.Entry<String, Field> entry : fields) {
+
+            final Field field = entry.getValue();
+            final String fieldName = entry.getKey();
+
             final String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
 
-            final Optional<Accessor> optionalAccessor = this.accessorFactories.stream()
+            assert key.equals(fieldName);
+
+            final Accessor accessor = this.accessorFactories.stream()
                     .map(createAccessor(field, possibleMethods, key))
                     .filter(Objects::nonNull)
-                    .findFirst();
-
-            //  If no accessor was found, let's use the default tried and true field accessor.
-            final Accessor accessor = optionalAccessor.orElse(createAccessorFromField(field, key));
+                    .findFirst()
+                    .orElse(createAccessorFromField(field, key));
 
             if (accessor != null) {
                 accessorMap.put(key, accessor);
-
             }
         }
 
-        return accessorMap.values();
+        return accessorMap;
+    }
+
+    private Map<String, Method> getDeepDeclaredMethods(Class<?> c) {
+        return deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
+    }
+
+    public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> deepExcludedFields) {
+        return deepFieldCache.computeIfAbsent(c, cls -> this.buildDeepFieldMap(cls, deepExcludedFields));
     }
 
     private static Accessor createAccessorFromField(Field field, String key) {
@@ -656,23 +575,24 @@ public class WriteOptions {
     }
 
     public List<Method> getFilteredMethods(Class<?> c) {
-        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMwthodList(key, methodFilters, filteredMethodNames));
+        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMethodList(key, methodFilters, filteredMethodNames));
     }
 
-    public Map<String, Field> buildDeepFieldMap(Class<?> c) {
-        final Map<String, Field> map = new LinkedHashMap<>();
-        final Set<String> exclusions = new LinkedHashSet<>();
-        Class<?> curr = c;
+    public Map<String, Field> buildDeepFieldMap(Class<?> c, final Set<String> exclusions) {
+        Convention.throwIfNull(c, "class cannot be null");
+        Convention.throwIfNull(exclusions, "exclusions cannot be null");
 
+        final Map<String, Field> map = new LinkedHashMap<>();
+
+        Class<?> curr = c;
         while (curr != Object.class) {
+            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr);
 
             Collection<String> excludedForClass = this.excludedFieldNames.get(curr);
 
             if (excludedForClass != null) {
                 exclusions.addAll(excludedForClass);
             }
-
-            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr, this.fieldFilters, exclusions);
 
             fields.forEach(f -> {
                 String name = f.getName();

@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.WriteOptions.nullWriter;
+
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -141,7 +143,7 @@ public class WriteOptionsBuilder {
         this.allowNanAndInfinity = options.isAllowNanAndInfinity();
         this.enumPublicFieldsOnly = options.isEnumPublicFieldsOnly();
         this.closeStream = options.isCloseStream();
-        this.enumWriter = options.isWriteEnumAsString() ? new Writers.EnumsAsStringWriter() : nullWriter;
+        this.enumWriter = options.enumWriter;
 
         this.filteredMethodNames = new LinkedHashSet<>(options.filteredMethodNames);
 
@@ -249,17 +251,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
-     *
-     * @param typeName String name of type to fetch alias for.  There are no default aliases.
-     * @return String alias name or null if type name is not aliased.
-     */
-    public String getTypeNameAlias(String typeName) {
-        String alias = aliasTypeNames.get(typeName);
-        return alias == null ? typeName : alias;
-    }
-
-    /**
      * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
      *                       be copied, and be the new baseline settings.
      * @return WriteOptionsBuilder for chained access.
@@ -268,6 +259,17 @@ public class WriteOptionsBuilder {
         aliasTypeNames.forEach(this::addUniqueAlias);
         return this;
     }
+
+    /**
+     * Aliases the fully qualifed class name to its short name
+     *
+     * @param type Class to alias
+     * @return ReadOptions for chained access.
+     */
+    public WriteOptionsBuilder aliasTypeName(Class<?> type) {
+        return aliasTypeName(type.getName(), type.getSimpleName());
+    }
+
 
     /**
      * @param type  Class to alias
@@ -291,20 +293,14 @@ public class WriteOptionsBuilder {
 
     /**
      * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
-     *
      * @param typeName String fully qualified class name.
-     * @param alias    String shorter alias name.
+     * @param alias String shorter alias name.
      */
     private void addUniqueAlias(String typeName, String alias) {
-        Class<?> clazz = MetaUtils.classForName(typeName, getClassLoader());
-        if (clazz == null) {
-            throw new JsonIoException("Unknown class: " + typeName + " cannot be added to the WriteOptions alias map.");
-        }
-        String existType = aliasTypeNames.get(clazz);
-        if (existType != null) {
-            throw new JsonIoException("Non-unique WriteOptions alias: " + alias + " attempted assign to: " + typeName + ", but is already assigned to: " + existType);
-        }
-        aliasTypeNames.put(clazz.getName(), alias);
+        Convention.throwIfClassNotFound(typeName, getClassLoader());
+        Convention.throwIfKeyExists(aliasTypeNames, typeName, "Tried to create @type alias" + typeName + " -> " + alias + ", but it is already aliased to: " + aliasTypeNames.get(typeName));
+
+        aliasTypeNames.put(typeName, alias);
     }
 
     /**
@@ -350,31 +346,12 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
-     * white-space and indentations, 'false' will output JSON in one line.  The default is false.
-     */
-    public boolean isPrettyPrint() {
-        return prettyPrint;
-    }
-
-    /**
      * @param prettyPrint boolean 'prettyPrint' setting, true to turn on, false will turn off.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder prettyPrint(boolean prettyPrint) {
         this.prettyPrint = prettyPrint;
         return this;
-    }
-
-    /**
-     * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
-     * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
-     * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
-     * them in Doubles, which cannot handle the precision of an 18-19 digit long, but a String will retain
-     * the full value into Javascript.  The default is false.
-     */
-    public boolean isWriteLongsAsStrings() {
-        return writeLongsAsStrings;
     }
 
     /**
@@ -388,14 +365,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
-     * false will still output the field with an associated null value.  false is the default.
-     */
-    public boolean isSkipNullFields() {
-        return skipNullFields;
-    }
-
-    /**
      * @param skipNullFields boolean setting, where true indicates fields with null values will not be written
      *                       to the JSON, false will allow the field to still be written.
      * @return WriteOptionsBuilder for chained access.
@@ -403,16 +372,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder skipNullFields(boolean skipNullFields) {
         this.skipNullFields = skipNullFields;
         return this;
-    }
-
-    /**
-     * @return boolean 'forceMapOutputAsTwoArrays' setting.  true indicates that two arrays will be written to
-     * represent a Java Map, one for keys, one for values.  false indicates one Java object will be used, if
-     * all the keys of the Map are Strings.  If not, then the Map will be written out with a key array, and a
-     * parallel value array. (@keys:[...], @values:[...]).  false is the default.
-     */
-    public boolean isForceMapOutputAsTwoArrays() {
-        return forceMapOutputAsTwoArrays;
     }
 
     /**
@@ -428,14 +387,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return boolean will return true if NAN and Infinity are allowed to be written out for
-     * Doubles and Floats, else null will be written out..
-     */
-    public boolean isAllowNanAndInfinity() {
-        return allowNanAndInfinity;
-    }
-
-    /**
      * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
      *                            Double and Floats to be output as NAN and INFINITY, false
      *                            and these values will come across as null.
@@ -444,24 +395,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder allowNanAndInfinity(boolean allowNanAndInfinity) {
         this.allowNanAndInfinity = allowNanAndInfinity;
         return this;
-    }
-
-    /**
-     * @return boolean true if enums are to be written out as Strings (not a full JSON object) when possible.
-     */
-    public boolean isWriteEnumAsString() {
-        return enumWriter instanceof Writers.EnumsAsStringWriter;
-    }
-
-    /**
-     * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
-     * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
-     * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
-     * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
-     * showing potentially more than one value, it will require the enum to be written as an object.
-     */
-    public boolean isEnumPublicFieldsOnly() {
-        return enumPublicFieldsOnly;
     }
 
     /**
@@ -486,13 +419,6 @@ public class WriteOptionsBuilder {
         this.enumWriter = nullWriter;
         this.enumPublicFieldsOnly = writePublicFieldsOnly;
         return this;
-    }
-
-    /**
-     * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
-     */
-    public boolean isCloseStream() {
-        return closeStream;
     }
 
     /**
@@ -541,25 +467,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param clazz Class to check to see if there is a custom writer associated to it.
-     * @return boolean true if there is an associated custom writer class associated to the passed in class,
-     * false otherwise.
-     */
-    public boolean isCustomWrittenClass(Class<?> clazz) {
-        return customWrittenClasses.containsKey(clazz);
-    }
-
-    /**
-     * @param clazz Class to see if it is on the not-customized list.  Classes are added to this list when
-     *              a class is being picked up through inheritance, and you don't want it to have a custom
-     *              writer associated to it.
-     * @return boolean true if the passed in class is on the not-customized list, false otherwise.
-     */
-    public boolean isNotCustomWrittenClass(Class<?> clazz) {
-        return notCustomWrittenClasses.contains(clazz);
-    }
-
-    /**
      * Add a class to the not-customized list - the list of classes that you do not want to be picked up by a
      * custom writer (that could happen through inheritance).
      *
@@ -584,44 +491,41 @@ public class WriteOptionsBuilder {
 
     /**
      * @param clazz         Class to add a single field to be included in the written JSON.
-     * @param includedField String name of field to include in written JSON.
+     * @param includedFieldName String name of field to include in written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedField) {
-        addIncludedFields(clazz, MetaUtils.setOf(includedField));    // checked sealed happens in here.
+    public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedFieldName) {
+        Convention.throwIfNull(includedFieldName, "includedFieldName cannot be null");
+        this.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(includedFieldName);
         return this;
     }
 
     /**
      * @param clazz          Class to add a Collection of fields to be included in written JSON.
-     * @param includedFields Collection of String name of fields to include in written JSON.
+     * @param includedFieldNames Collection of String name of fields to include in written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<String> includedFields) {
-        this.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFields);
+    public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<String> includedFieldNames) {
+        this.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFieldNames);
         return this;
     }
 
     /**
-     * @param includedFields Map of Class's mapped to Collection of String field names to include in the written JSON.
+     * @param includedFieldNames Map of Class's mapped to Collection of String field names to include in the written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addIncludedFields(Map<Class<?>, Collection<String>> includedFields) {
-
-        // Need your own Set instance here per Class, keep no reference to excludedFields parameter.
-        for (Map.Entry<Class<?>, Collection<String>> entry : includedFields.entrySet()) {
-            addIncludedFields(entry.getKey(), entry.getValue());
-        }
+    public WriteOptionsBuilder addIncludedFields(Map<Class<?>, Collection<String>> includedFieldNames) {
+        includedFieldNames.forEach(this::addIncludedFields);
         return this;
     }
 
     /**
      * @param clazz         Class to add a single field to be excluded.
-     * @param excludedField String name of field to exclude from written JSON.
+     * @param excludedFieldName String name of field to exclude from written JSON.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedField) {
-        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedField);
+    public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
+        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedFieldName);
         return this;
     }
 
@@ -640,9 +544,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedFields(Map<Class<?>, Collection<String>> excludedFieldNames) {
-        for (Map.Entry<Class<?>, Collection<String>> entry : excludedFieldNames.entrySet()) {
-            addExcludedFields(entry.getKey(), entry.getValue());
-        }
+        excludedFieldNames.forEach(this::addExcludedFields);
         return this;
     }
 
@@ -821,16 +723,6 @@ public class WriteOptionsBuilder {
                 methodFilters,
                 accessorFactories);
     }
-
-    /**
-     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
-     * null value.  Instead, singleton instance of this class is placed where null values
-     * are needed.
-     */
-    private static final class NullClass implements JsonWriter.JsonClassWriter {
-    }
-
-    private static final NullClass nullWriter = new NullClass();
 
     /**
      * Load custom writer classes based on contents of resources/customWriters.txt.

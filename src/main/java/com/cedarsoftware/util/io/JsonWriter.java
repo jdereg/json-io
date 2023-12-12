@@ -19,6 +19,7 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -1373,12 +1374,12 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return objsReferenced.containsKey(jObj) && jObj.hasId();
     }
 
-    private static boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
+    private boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
     {
         if (type != null)
         {
-            Map<String, Field> classFields = MetaUtils.getDeepDeclaredFields(type);
-            Field field = classFields.get(fieldName);
+            Map<String, Field> fieldMap = this.writeOptions.getDeepDeclaredFields(type, new HashSet());
+            Field field = fieldMap.get(fieldName);
             return field != null && field.getType().equals(value.getClass());
         }
         return false;
@@ -1579,6 +1580,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
         Field elementTypeField = MetaUtils.getField(EnumSet.class, "elementType");
+
         Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
         if ( elementType != null)
         {
@@ -1596,7 +1598,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         if (!enumSet.isEmpty())
         {
-            Collection<Accessor> mapOfFields = writeOptions.getDeepAccessors(elementType);
+            Collection<Accessor> mapOfFields = writeOptions.getAccessorsForClass(elementType);
             int enumFieldsCount = mapOfFields.size();
 
             out.write(",");
