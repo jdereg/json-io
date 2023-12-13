@@ -240,14 +240,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
-     * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
-     */
-    public boolean isShortMetaKeys() {
-        return shortMetaKeys;
-    }
-
-    /**
      * @param shortMetaKeys boolean true to turn on short meta-keys, false for long.
      * @return WriteOptionsBuilder for chained access.
      */
