@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 import com.cedarsoftware.util.ReturnType;
 
@@ -61,6 +60,13 @@ import com.cedarsoftware.util.ReturnType;
  *         limitations under the License.*
  */
 public class JsonIo {
+
+    /**
+     * Statically accessed class.
+     */
+    private JsonIo() {
+    }
+
     /**
      * Convert the passed in Java source object to JSON.
      * @param srcObject Java instance to convert to JSON format.  Can be a JsonObject that was loaded earlier
@@ -71,16 +77,13 @@ public class JsonIo {
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
      */
     public static String toJson(Object srcObject, WriteOptions writeOptions) {
-        try {
-            FastByteArrayOutputStream stream = new FastByteArrayOutputStream();
-            JsonWriter writer = new JsonWriter(stream, writeOptions);
+        FastByteArrayOutputStream out = new FastByteArrayOutputStream();
+        try (JsonWriter writer = new JsonWriter(out, writeOptions)) {
             writer.write(srcObject);
-            writer.close();
-            return stream.toString();
+            return out.toString();
+        } catch (JsonIoException je) {
+            throw je;
         } catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
             throw new JsonIoException("Unable to convert object to JSON", e);
         }
     }
@@ -165,11 +168,9 @@ public class JsonIo {
             jr = new JsonReader(in, readOptions);
             T root = jr.readObject(rootType);
             return root;
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException je) {
+            throw je;
+        } catch (Exception e) {
             throw new JsonIoException(e);
         }
         finally {
@@ -203,12 +204,8 @@ public class JsonIo {
      * @return String JSON formatted in human readable, standard multi-line, indented format.
      */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        if (writeOptions == null) {
-            writeOptions = new WriteOptions();
-        } else {
-            writeOptions = new WriteOptions(writeOptions);
-        }
-        writeOptions.prettyPrint(true);
+        WriteOptionsBuilder builder = writeOptions == null ? new WriteOptionsBuilder() : new WriteOptionsBuilder(writeOptions);
+        WriteOptions newWriteOptions = builder.prettyPrint(true).build();
 
         if (readOptions == null) {
             readOptions = new ReadOptions();
@@ -218,7 +215,7 @@ public class JsonIo {
         readOptions.returnType(ReturnType.JSON_OBJECTS);
         
         Object object = toObjects(json, readOptions, null);
-        return toJson(object, writeOptions);
+        return toJson(object, newWriteOptions);
     }
 
     /**
@@ -229,7 +226,7 @@ public class JsonIo {
     public static String formatJson(String json) {
         return formatJson(json,
                 new ReadOptions().returnType(ReturnType.JSON_OBJECTS),
-                new WriteOptions().prettyPrint(true));
+                new WriteOptionsBuilder().prettyPrint(true).build());
     }
 
     /**

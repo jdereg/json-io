@@ -37,6 +37,7 @@ java.time.LocalDateTime = com.cedarsoftware.util.io.Writers$LocalDateTimeWriter
 java.time.LocalTime = com.cedarsoftware.util.io.Writers$LocalTimeWriter
 java.time.MonthDay = com.cedarsoftware.util.io.Writers$MonthDayWriter
 java.time.OffsetDateTime = com.cedarsoftware.util.io.Writers$OffsetDateTimeWriter
+java.time.OffsetTime = com.cedarsoftware.util.io.Writers$OffsetTimeWriter
 java.time.Period = com.cedarsoftware.util.io.writers.PeriodWriter
 java.time.Year = com.cedarsoftware.util.io.Writers$YearWriter
 java.time.YearMonth = com.cedarsoftware.util.io.Writers$YearMonthWriter

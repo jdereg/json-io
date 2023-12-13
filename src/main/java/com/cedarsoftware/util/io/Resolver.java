@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static com.cedarsoftware.util.io.JsonObject.KEYS;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -15,11 +18,9 @@ import java.util.Optional;
 
 import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
 import lombok.AccessLevel;
 import lombok.Getter;
-
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
 /**
  * This class is used to convert a source of Java Maps that were created from

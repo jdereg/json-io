@@ -74,6 +74,7 @@ public class Accessor {
         if (o != null && o.getClass() == getClass()) {
             Accessor other = (Accessor) o;
             return (field.equals(other.field)) &&
+                    fieldName.equals(other.fieldName) &&
                     displayName.equals(other.displayName);
         }
         return false;
@@ -81,7 +82,7 @@ public class Accessor {
 
     @Override
     public int hashCode() {
-        return Objects.hash(displayName, field);
+        return Objects.hash(fieldName, displayName, field, getClass());
     }
 
 

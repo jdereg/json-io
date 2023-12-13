@@ -1,10 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * Test cases for JsonReader / JsonWriter
@@ -36,8 +37,8 @@ public class MapOutputFormatTest
         map1.put("c", "baz");
         map1.put("d", "qux");
         Map map = map1;
-        String json1 = TestUtil.toJson(map, new WriteOptions().forceMapOutputAsTwoArrays(true));
-        String json2 = TestUtil.toJson(map, new WriteOptions().forceMapOutputAsTwoArrays(false));
+        String json1 = TestUtil.toJson(map, new WriteOptionsBuilder().forceMapOutputAsTwoArrays(true).build());
+        String json2 = TestUtil.toJson(map, new WriteOptionsBuilder().forceMapOutputAsTwoArrays(false).build());
         assert !json1.equals(json2);
         assert json1.contains("@keys");
         assert json1.contains("@items");

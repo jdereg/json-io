@@ -3,34 +3,25 @@ package com.cedarsoftware.util.io;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
 import com.cedarsoftware.util.reflect.ReflectionUtils;
-import com.cedarsoftware.util.reflect.factories.MethodAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.NonStandardMethodNames;
 import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import com.cedarsoftware.util.reflect.filters.MethodFilter;
-import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
-import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
-import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -70,197 +61,113 @@ public class WriteOptions {
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
     // Properties
-    private boolean shortMetaKeys;
-    private ShowType showTypeInfo = ShowType.MINIMAL;
-    private boolean prettyPrint = false;
-    private boolean writeLongsAsStrings = false;
-    private boolean skipNullFields = false;
-    private boolean forceMapOutputAsTwoArrays = false;
-    private boolean allowNanAndInfinity = false;
-    private boolean enumPublicFieldsOnly = false;
-    private boolean closeStream = true;
-    private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
-    private ClassLoader classLoader = WriteOptions.class.getClassLoader();
-    private Map<Class<?>, Set<String>> includedFields = new ConcurrentHashMap<>();
-    private Map<Class<?>, Set<Accessor>> includedAccessors = new ConcurrentHashMap<>();
-    private Map<Class<?>, Set<Accessor>> excludedAccessors = new ConcurrentHashMap<>();
-    private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
-    private Set<Class<?>> notCustomWrittenClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-    private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+    private final boolean shortMetaKeys;
+    final ShowType showTypeInfo;
+    private final boolean prettyPrint;
+    private final boolean writeLongsAsStrings;
+    private final boolean skipNullFields;
+    private final boolean forceMapOutputAsTwoArrays;
+    private final boolean allowNanAndInfinity;
+    private final boolean enumPublicFieldsOnly;
+    private final boolean closeStream;
+    final JsonWriter.JsonClassWriter enumWriter;
+    private final ClassLoader classLoader;
+    final Map<Class<?>, Map<String, String>> nonStandardMappings;
 
-    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
+    protected final Map<Class<?>, Set<String>> includedFieldNames;
+    protected final Map<Class<?>, Set<String>> excludedFieldNames;
+    private final Map<String, String> aliasTypeNames;
+    final Set<Class<?>> notCustomWrittenClasses;
+    final Set<Class<?>> nonRefClasses;
 
-    private static final Map<Class<?>, Map<String, Method>> deepMethodCache = new ConcurrentHashMap<>();
+    final List<FieldFilter> fieldFilters;
+    final List<MethodFilter> methodFilters;
+    final List<AccessorFactory> accessorFactories;
 
-    private static final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
-
-    private List<FieldFilter> fieldFilters;
-    private List<MethodFilter> methodFilters;
-    private List<AccessorFactory> accessorFactories;
-
-    private Set<String> globallyFilteredMethodNames;
+    final Set<String> filteredMethodNames;
 
 
-    private Map<Class<?>, Set<String>> excludedFieldNames;
+    private final Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
 
-    private Map<Class<?>, Collection<String>> deepExcludedFields = new ConcurrentHashMap<>();
-
-    private NonStandardMethodNames nonStandardMappings;
-    private final Map<Class<?>, Map<String, Accessor>> deepAccessorCache = new ConcurrentHashMap<>();
-
-    private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
-
-    private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
-
-    // Runtime cache (not feature options), since looking up writers can be expensive
+    // Runtime caches (not feature options), since looking up writers can be expensive
     // when one does not exist, we cache the write or a nullWriter if one does not exist.
     private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
-    
-    private boolean built = false;
+    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
 
-    static {
-        // These are hard-coded below so that the Writer does not get ahead of Readers out in the wild.
-        // Uncomment in the future (year or more after the 4.19 release?)
-        // About 5 tests need updated if the line below is uncommented (they have hard-coded JSON text
-        // used in assertions, e.g. java.util.ArrayList --> ArrayList in the test JSON.
-//        MetaUtils.loadMapDefinition(BASE_ALIAS_MAPPINGS, "aliases.txt");
+    private final Map<Class<?>, Map<String, Method>> deepMethodCache = new ConcurrentHashMap<>();
 
-        // Temporary: see above.
-        addPermanentAlias(Class.class, "class");
-        addPermanentAlias(String.class, "string");
-        addPermanentAlias(Date.class, "date");
+    private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
 
-        addPermanentAlias(Byte.class, "byte");
-        addPermanentAlias(Short.class, "short");
-        addPermanentAlias(Integer.class, "int");
-        addPermanentAlias(Long.class, "long");
-        addPermanentAlias(Float.class, "float");
-        addPermanentAlias(Double.class, "double");
-        addPermanentAlias(Character.class, "char");
-        addPermanentAlias(Boolean.class, "boolean");
+    private final Map<Class<?>, Map<String, Accessor>> accessorsCache = new ConcurrentHashMap<>();
 
-        BASE_WRITERS.putAll(loadWriters());
-        BASE_NON_REFS.addAll(loadNonRefs());
-    }
 
     // Enum for the 3-state property
     public enum ShowType {
         ALWAYS, NEVER, MINIMAL
     }
 
-    /**
-     * Start with default options
-     */
-    public WriteOptions() {
+    WriteOptions(boolean shortMetaKeys,
+                 boolean prettyPrint,
+                 boolean writeLongsAsStrings,
+                 boolean skipNullFields,
+                 boolean allowNanAndInfinity,
+                 boolean forceMapOutputAsTwoArrays,
+                 boolean enumPublicFieldsOnly,
+                 boolean closeStream,
+                 ShowType showTypeInfo,
+                 ClassLoader classLoader,
+                 JsonWriter.JsonClassWriter enumWriter,
+                 Set<Class<?>> notCustomWrittenClasses,
+                 Set<Class<?>> nonRefClasses,
+                 Set<String> filteredMethodNames,
+                 Map<String, String> aliasTypeNames,
+                 Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses,
+                 Map<Class<?>, Set<String>> excludedFieldNames,
+                 Map<Class<?>, Set<String>> includedFieldNames,
+                 Map<Class<?>, Map<String, String>> nonStandardMappings,
+                 List<FieldFilter> fieldFilters,
+                 List<MethodFilter> methodFilters,
+                 List<AccessorFactory> accessorFactories) {
 
-        this.globallyFilteredMethodNames = new ConcurrentSkipListSet<>(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
-        this.excludedFieldNames = new ConcurrentHashMap<>(MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt"));
+        this.shortMetaKeys = shortMetaKeys;
+        this.prettyPrint = prettyPrint;
+        this.writeLongsAsStrings = writeLongsAsStrings;
+        this.skipNullFields = skipNullFields;
+        this.allowNanAndInfinity = allowNanAndInfinity;
+        this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
+        this.enumPublicFieldsOnly = enumPublicFieldsOnly;
+        this.closeStream = closeStream;
 
-        this.nonStandardMappings = new NonStandardMethodNames(loadNonStandardMethodNames());
+        this.classLoader = classLoader;
+        this.enumWriter = enumWriter;
+        this.showTypeInfo = showTypeInfo;
 
+        this.notCustomWrittenClasses = Collections.unmodifiableSet(notCustomWrittenClasses);
+        this.nonRefClasses = Collections.unmodifiableSet(nonRefClasses);
+        this.filteredMethodNames = Collections.unmodifiableSet(filteredMethodNames);
 
-        this.fieldFilters = new ArrayList<>();
-        this.fieldFilters.add(new StaticFieldFilter());
-        this.fieldFilters.add(new GroovyFieldFilter());
-        this.fieldFilters.add(new EnumFieldFilter());
-
-        this.methodFilters = new ArrayList<>();
-        this.methodFilters.add(new AccessorMethodFilter());
-        this.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
-
-        this.accessorFactories = new ArrayList<>();
-        this.accessorFactories.add(new MethodAccessorFactory());
-
-        // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
-        // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
-        aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
-        customWrittenClasses.putAll(BASE_WRITERS);
-        writerCache.putAll(BASE_WRITERS);
-        nonRefClasses.addAll(BASE_NON_REFS);
-    }
-
-    /**
-     * Copy all the settings from the passed in 'other' WriteOptions
-     * @param other WriteOptions - source to copy from.
-     */
-    public WriteOptions(WriteOptions other) {
-
-        shortMetaKeys = other.shortMetaKeys;
-        showTypeInfo = other.showTypeInfo;
-        enumWriter = other.enumWriter;
-        prettyPrint = other.prettyPrint;
-        writeLongsAsStrings = other.writeLongsAsStrings;
-        skipNullFields = other.skipNullFields;
-        allowNanAndInfinity = other.allowNanAndInfinity;
-        forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
-        enumPublicFieldsOnly = other.enumPublicFieldsOnly;
-        closeStream = other.closeStream;
-        notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
-        aliasTypeNames.putAll(other.aliasTypeNames);
-        customWrittenClasses.putAll(other.customWrittenClasses);
-        classLoader = other.classLoader;
-        nonRefClasses.addAll(other.nonRefClasses);
-        writerCache.putAll(other.writerCache);
+        this.aliasTypeNames = Collections.unmodifiableMap(aliasTypeNames);
+        this.customWrittenClasses = Collections.unmodifiableMap(customWrittenClasses);
+        this.writerCache.putAll(customWrittenClasses);
 
 
-        this.excludedFieldNames = new ConcurrentHashMap<>(other.excludedFieldNames);
-        this.globallyFilteredMethodNames = new ConcurrentSkipListSet<>(other.globallyFilteredMethodNames);
-        this.nonStandardMappings = (other.nonStandardMappings.createCopy(false));
-
-        this.fieldFilters = other.fieldFilters.stream().map(f -> f.createCopy(false)).collect(Collectors.toList());
-        this.methodFilters = other.methodFilters.stream().map(m -> m.createCopy(false)).collect(Collectors.toList());
-        this.accessorFactories = other.accessorFactories.stream().map(m -> m.createCopy(false)).collect(Collectors.toList());
-
+        this.excludedFieldNames = MetaUtils.cloneMapOfSets(excludedFieldNames, true);
+        this.includedFieldNames = MetaUtils.cloneMapOfSets(includedFieldNames, true);
 
         // Need your own Set instance here per Class, no references to the copied Set.
-        includedFields = MetaUtils.dupe(other.includedFields, false);
-        includedAccessors = MetaUtils.dupe(other.includedAccessors, false);
-        excludedAccessors = MetaUtils.dupe(other.excludedAccessors, false);
-    }
+        this.nonStandardMappings = MetaUtils.cloneMapOfMaps(nonStandardMappings, true);
 
-    /**
-     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
-     * @param clazz Class that will be aliased by a shorter name in the JSON.
-     * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
-     */
-    public static void addPermanentAlias(Class<?> clazz, String alias) {
-        BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
-    }
+        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
+                .map(FieldFilter::createCopy)
+                .collect(Collectors.toList()));
 
-    /**
-     * Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
-     * when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
-     * useful for small, immutable classes.
-     * @param clazz Class that will no longer be treated as referenceable when being written to JSON.
-     */
-    public static void addPermanentAlias(Class<?> clazz) {
-        BASE_NON_REFS.add(clazz);
-    }
+        this.methodFilters = Collections.unmodifiableList(methodFilters.stream()
+                .map(MethodFilter::createCopy)
+                .collect(Collectors.toList()));
 
-    /**
-     * Call this method to add a custom JSON writer to json-io.  It will
-     * associate the Class 'c' to the writer you pass in.  The writers are
-     * found with isAssignableFrom().  If this is too broad, causing too
-     * many classes to be associated to the custom writer, you can indicate
-     * that json-io should not use a custom write for a particular class,
-     * by calling the addNotCustomWrittenClass() method.  This method will add
-     * the custom writer such that it will be there permanently, for the
-     * life of the JVM (static).
-     *
-     * @param clazz      Class to assign a custom JSON writer to
-     * @param writer The JsonClassWriter which will write the custom JSON format of class.
-     */
-    public static void addPermanentWriter(Class<?> clazz, JsonWriter.JsonClassWriter writer) {
-        BASE_WRITERS.put(clazz, writer);
-    }
-
-    // Private method to check if the object is built
-    private void throwIfBuilt() {
-        if (built) {
-            throw new JsonIoException("This instance of WriteOptions is built and cannot be modified.  You can create another instance from this instance using the constructor for a mutable copy.");
-        }
+        this.accessorFactories = Collections.unmodifiableList(accessorFactories.stream()
+                .map(AccessorFactory::createCopy)
+                .collect(Collectors.toList()));
     }
 
     /**
@@ -271,31 +178,11 @@ public class WriteOptions {
     }
 
     /**
-     * @param classLoader ClassLoader to use when writing JSON to resolve String named classes.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions classLoader(ClassLoader classLoader) {
-        throwIfBuilt();
-        this.classLoader = classLoader;
-        return this;
-    }
-
-    /**
      * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
      * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
      */
     public boolean isShortMetaKeys() {
         return shortMetaKeys;
-    }
-
-    /**
-     * @param shortMetaKeys boolean true to turn on short meta-keys, false for long.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions shortMetaKeys(boolean shortMetaKeys) {
-        throwIfBuilt();
-        this.shortMetaKeys = shortMetaKeys;
-        return this;
     }
 
     /**
@@ -312,57 +199,7 @@ public class WriteOptions {
      * @return Map<String, String> containing String class names to alias names.
      */
     public Map<String, String> aliasTypeNames() {
-        return built ? aliasTypeNames : new LinkedHashMap<>(aliasTypeNames);
-    }
-
-    /**
-     * @param aliasTypeNames Map containing String class names to alias names.  The passed in Map will
-     *                       be copied, and be the new baseline settings.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions aliasTypeNames(Map<String, String> aliasTypeNames) {
-        throwIfBuilt();
-        aliasTypeNames.forEach(this::addUniqueAlias);
-        return this;
-    }
-
-    /**
-     * @param type  Class to alias
-     * @param alias String shorter name to use, typically.
-     * @return ReadOptions for chained access.
-     */
-    public WriteOptions aliasTypeName(Class<?> type, String alias) {
-        throwIfBuilt();
-        aliasTypeNames.put(type.getName(), alias);
-        return this;
-    }
-
-    /**
-     * @param typeName String class name
-     * @param alias String shorter name to use, typically.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions aliasTypeName(String typeName, String alias) {
-        throwIfBuilt();
-        addUniqueAlias(typeName, alias);
-        return this;
-    }
-
-    /**
-     * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
-     * @param typeName String fully qualified class name.
-     * @param alias String shorter alias name.
-     */
-    private void addUniqueAlias(String typeName, String alias) {
-        Class<?> clazz = MetaUtils.classForName(typeName, getClassLoader());
-        if (clazz == null) {
-            throw new JsonIoException("Unknown class: " + typeName + " cannot be added to the WriteOptions alias map.");
-        }
-        String existType = aliasTypeNames.get(clazz);
-        if (existType != null) {
-            throw new JsonIoException("Non-unique WriteOptions alias: " + alias + " attempted assign to: " + typeName + ", but is already assigned to: " + existType);
-        }
-        aliasTypeNames.put(clazz.getName(), alias);
+        return aliasTypeNames;
     }
 
     /**
@@ -387,54 +224,11 @@ public class WriteOptions {
     }
 
     /**
-     * Set to always show type
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions showTypeInfoAlways() {
-        throwIfBuilt();
-        this.showTypeInfo = ShowType.ALWAYS;
-        return this;
-    }
-
-    /**
-     * Set to never show type
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions showTypeInfoNever() {
-        throwIfBuilt();
-        this.showTypeInfo = ShowType.NEVER;
-        return this;
-    }
-
-    /**
-     * Set to show minimal type.  This means that when the type of an object can be inferred, a type field will not
-     * be output.  A Field that points to an instance of the same time, or a typed [] of objects don't need the type
-     * info.  However, an Object[], a Collection with no generics, the reader will need to know what type the JSON
-     * object is, in order to instantiate the write Java class to which the information will be copied.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions showTypeInfoMinimal() {
-        throwIfBuilt();
-        this.showTypeInfo = ShowType.MINIMAL;
-        return this;
-    }
-
-    /**
      * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
      * white-space and indentations, 'false' will output JSON in one line.  The default is false.
      */
     public boolean isPrettyPrint() {
         return prettyPrint;
-    }
-
-    /**
-     * @param prettyPrint boolean 'prettyPrint' setting, true to turn on, false will turn off.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions prettyPrint(boolean prettyPrint) {
-        throwIfBuilt();
-        this.prettyPrint = prettyPrint;
-        return this;
     }
 
     /**
@@ -449,33 +243,11 @@ public class WriteOptions {
     }
 
     /**
-     * @param writeLongsAsStrings boolean true to turn on writing longs as Strings, false to write them as
-     *                            native JSON longs.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions writeLongsAsStrings(boolean writeLongsAsStrings) {
-        throwIfBuilt();
-        this.writeLongsAsStrings = writeLongsAsStrings;
-        return this;
-    }
-
-    /**
      * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
      * false will still output the field with an associated null value.  false is the default.
      */
     public boolean isSkipNullFields() {
         return skipNullFields;
-    }
-
-    /**
-     * @param skipNullFields boolean setting, where true indicates fields with null values will not be written
-     * to the JSON, false will allow the field to still be written.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions skipNullFields(boolean skipNullFields) {
-        throwIfBuilt();
-        this.skipNullFields = skipNullFields;
-        return this;
     }
 
     /**
@@ -489,36 +261,11 @@ public class WriteOptions {
     }
 
     /**
-     * @param forceMapOutputAsTwoArrays boolean 'forceMapOutputAsTwoArrays' setting.  true will force Java Maps to be
-     *                                  written out as two parallel arrays, once for keys, one array for values.
-     *                                  false will write out one JSON { } object, if all keys are Strings.  If not,
-     *                                  then the Map will be output as two parallel arrays (@keys:[...], @values:[...]).
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
-        throwIfBuilt();
-        this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
-        return this;
-    }
-
-    /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for
      * Doubles and Floats, else null will be written out..
      */
     public boolean isAllowNanAndInfinity() {
         return allowNanAndInfinity;
-    }
-
-    /**
-     * @param allowNanAndInfinity boolean 'allowNanAndInfinity' setting.  true will allow
-     *                            Double and Floats to be output as NAN and INFINITY, false
-     *                            and these values will come across as null.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions allowNanAndInfinity(boolean allowNanAndInfinity) {
-        throwIfBuilt();
-        this.allowNanAndInfinity = allowNanAndInfinity;
-        return this;
     }
 
     /**
@@ -540,80 +287,19 @@ public class WriteOptions {
     }
 
     /**
-     * Option to write out enums as a String, it will write out the enum.name() field.
-     * This is the default way enums will be written out.
-     * @return WriteOptions for chained access.per
-     */
-    public WriteOptions writeEnumsAsString() {
-        throwIfBuilt();
-        this.enumWriter = new Writers.EnumsAsStringWriter();
-        return this;
-    }
-
-    /**
-     * Option to write out all the member fields of an enum.  You can also filter the
-     * field to write out only the public fields on the enum.
-     * @param writePublicFieldsOnly boolean, only write out the public fields when writing enums as objects
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions writeEnumAsJsonObject(boolean writePublicFieldsOnly) {
-        throwIfBuilt();
-        this.enumWriter = nullWriter;
-        this.enumPublicFieldsOnly = writePublicFieldsOnly;
-        return this;
-    }
-
-    /**
      * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
      */
     public boolean isCloseStream() {
         return closeStream;
     }
 
-    /**
-     * @param closeStream boolean set to 'true' to have JsonIo close the OutputStream when it is finished writinging
-     *                    to it.  The default is 'true'.  If false, the OutputStream will not be closed, allowing
-     *                    you to continue writing further.  Example, NDJSON that has new line eliminated JSON
-     *                    objects repeated.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions closeStream(boolean closeStream) {
-        throwIfBuilt();
-        this.closeStream = closeStream;
-        return this;
-    }
-
-    /**
-     * @param customWrittenClasses Map of Class to JsonWriter.JsonClassWriter.  Establish the passed in Map as the
-     *                             established Map of custom writers to be used when writing JSON. Using this method
-     *                             more than once, will set the custom writers to only the values from the Set in
-     *                             the last call made.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
-        throwIfBuilt();
-        this.customWrittenClasses.clear();
-        this.customWrittenClasses.putAll(customWrittenClasses);
-        return this;
-    }
-
-    /**
-     * @param clazz Class to add a custom writer for.
-     * @param customWriter JsonClassWriter to use when the passed in Class is encountered during serialization.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter) {
-        throwIfBuilt();
-        customWrittenClasses.put(clazz, customWriter);
-        return this;
-    }
 
     /**
      * @return Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during
      * serialization to JSON.
      */
     public Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses() {
-        return built ? customWrittenClasses : new LinkedHashMap<>(customWrittenClasses);
+        return customWrittenClasses;
     }
 
     /**
@@ -639,31 +325,7 @@ public class WriteOptions {
      * @return Set of all Classes on the not-customized list.
      */
     public Set<Class<?>> getNotCustomWrittenClasses() {
-        return built ? notCustomWrittenClasses : new LinkedHashSet<>(notCustomWrittenClasses);
-    }
-
-    /**
-     * Add a class to the not-customized list - the list of classes that you do not want to be picked up by a
-     * custom writer (that could happen through inheritance).
-     * @param notCustomClass Class to add to the not-customized list.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addNotCustomWrittenClass(Class<?> notCustomClass) {
-        throwIfBuilt();
-        notCustomWrittenClasses.add(notCustomClass);
-        return this;
-    }
-
-    /**
-     * @param notCustomClasses initialize the list of classes on the non-customized list.  All prior associations
-     *                   will be dropped and this Collection will establish the new list.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses) {
-        throwIfBuilt();
-        notCustomWrittenClasses.clear();
-        notCustomWrittenClasses.addAll(notCustomClasses);
-        return this;
+        return notCustomWrittenClasses;
     }
 
     /**
@@ -674,244 +336,22 @@ public class WriteOptions {
      */
     @SuppressWarnings("unchecked")
     public Set<String> getIncludedFields(Class<?> clazz) {
-        return (Set<String>) getItemsForClass(clazz, includedFields);
-    }
-
-    /**
-     * Get the list of Accessors associated to the passed in class that are to be included in the written JSON.
-     * @param clazz Class for which the Accessors to be included in JSON output will be returned.
-     * @return Set of Strings Accessor names associated to the passed in class or an empty
-     * Set if no Accessors.  This is the list of accessors to be included in the written JSON for the given class.
-     */
-    @SuppressWarnings("unchecked")
-    public Set<Accessor> getIncludedAccessors(Class<?> clazz) {
-        return (Set<Accessor>) getItemsForClass(clazz, includedAccessors);
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of fields to be included when serialized to JSON.
-     */
-    public Map<Class<?>, Set<String>> getIncludedFieldsPerAllClasses() {
-        return getClassSetMapFields(includedFields);
-    }
-
-    /**
-     * @return Map of all Classes and their associated Sets of accessors to be included when serialized to JSON.
-     */
-    public Map<Class<?>, Set<Accessor>> getIncludedAccessorsPerAllClasses() {
-        if (built) {
-            return includedAccessors;
-        } else {
-            Map<Class<?>, Set<Accessor>> copy = new LinkedHashMap<>();
-            for (Map.Entry<Class<?>, Set<Accessor>> entry : includedAccessors.entrySet()) {
-                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-            }
-            return copy;
-        }
-    }
-
-    /**
-     * @param clazz Class to add a single field to be included in the written JSON.
-     * @param includedField String name of field to include in written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addIncludedField(Class<?> clazz, String includedField) {
-        addIncludedFields(clazz, MetaUtils.setOf(includedField));    // checked sealed happens in here.
-        return this;
-    }
-
-    /**
-     * @param clazz Class to add a Collection of fields to be included in written JSON.
-     * @param includedFields Collection of String name of fields to include in written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addIncludedFields(Class<?> clazz, Collection<String> includedFields) {
-        throwIfBuilt();
-        this.includedFields.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFields);
-        return copyFieldsToAccessors(clazz, includedFields, includedAccessors);
-    }
-
-    /**
-     * @param includedFields Map of Class's mapped to Collection of String field names to include in the written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addIncludedFields(Map<Class<?>, Collection<String>> includedFields) {
-        throwIfBuilt();
-
-        // Need your own Set instance here per Class, keep no reference to excludedFields parameter.
-        for (Map.Entry<Class<?>, Collection<String>> entry : includedFields.entrySet()) {
-            addIncludedFields(entry.getKey(), entry.getValue());
-        }
-        return this;
-    }
-
-    private Map<Class<?>, Set<String>> getClassSetMapFields(Map<Class<?>, Set<String>> fieldSet) {
-        if (built) {
-            return fieldSet;
-        } else {
-            Map<Class<?>, Set<String>> copy = new LinkedHashMap<>();
-            for (Map.Entry<Class<?>, Set<String>> entry : fieldSet.entrySet()) {
-                copy.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
-            }
-            return copy;
-        }
-    }
-
-    /**
-     * @param clazz Class to add a single field to be excluded.
-     * @param excludedField String name of field to exclude from written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addExcludedField(Class<?> clazz, String excludedField) {
-        throwIfBuilt();
-        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedField);
-        this.clearCaches();
-        return this;
-    }
-
-    /**
-     * @param clazz Class to add a Collection of fields to be excluded in written JSON.
-     * @param excludedFields Collection of String name of fields to exclude in written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
-        throwIfBuilt();
-        this.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
-        this.clearCaches();
-        return this;
-    }
-
-    private WriteOptions copyFieldsToAccessors(Class<?> clazz, Collection<String> fields, Map<Class<?>, Set<Accessor>> accessors) {
-        Map<String, Accessor> accessorMap = this.getDeepAccessorMap(clazz);
-
-        for (Map.Entry<String, Accessor> acessorEntry : accessorMap.entrySet()) {
-            if (fields.contains(acessorEntry.getKey())) {
-                accessors.computeIfAbsent(clazz, l -> new LinkedHashSet<>()).add(acessorEntry.getValue());
-            }
-        }
-
-        return this;
-    }
-
-    /**
-     * @param excludedFieldNames Map of Class's mapped to Collection of String field names to exclude from written JSON.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addExcludedFields(Map<Class<?>, Collection<String>> excludedFieldNames) {
-        throwIfBuilt();
-        for (Map.Entry<Class<?>, Collection<String>> entry : excludedFieldNames.entrySet()) {
-            addExcludedFields(entry.getKey(), entry.getValue());
-        }
-        return this;
+        return (Set<String>) getItemsForClass(clazz, includedFieldNames);
     }
 
     private Set<?> getItemsForClass(Class<?> clazz, Map<?, ? extends Set<?>> classesToSets)
     {
         Set<?> items = classesToSets.get(clazz);
-        if (built) {
-            // Give back real - protected from modifications
-            return items == null ? Collections.unmodifiableSet(new LinkedHashSet<>()) : items;
-        } else {
-            // Copy - protects original because it's a copy (they can play with it).
-            return new LinkedHashSet<>(items == null ? Collections.emptySet() : items);
-        }
+        // Give back real - protected from modifications
+        return items == null ? Collections.unmodifiableSet(new LinkedHashSet<>()) : items;
     }
 
-    public Collection<Accessor> getIncludedAccessorsForClass(final Class<?> c) {
-        return getFilteredAccessors(c, includedAccessors);
+    public Collection<Accessor> getAccessorsForClass(final Class<?> c) {
+        return getAccessorMapForClass(c).values();
     }
 
-    public Collection<String> getExcludedFieldsPerClass(final Class<?> c) {
-        return this.getDeepExcludedFields(c);
-    }
-
-    public Collection<String> getDeepExcludedFields(final Class<?> c) {
-        return this.deepExcludedFields.computeIfAbsent(c, this::buildDeepExcludedFields);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Collection<String> buildDeepExcludedFields(final Class<?> c) {
-        final Set<String> exclusions = new LinkedHashSet<>();
-        Class<?> curr = c;
-
-        while (curr != Object.class) {
-            exclusions.addAll(this.excludedFieldNames.getOrDefault(curr, Collections.emptySet()));
-            curr = curr.getSuperclass();
-        }
-
-        return exclusions.isEmpty() ? Collections.emptySet() : exclusions;
-
-    }
-
-
-    // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their sub-objects correctly we should be ok removing
-    // the distance check since we walk up the chain of the class being written.
-    private static Collection<Accessor> getFilteredAccessors(final Class<?> c, final Map<Class<?>, ? extends Collection<Accessor>> accessors) {
-        Class<?> curr = c;
-        Set<Accessor> accessorSets = new LinkedHashSet<>();
-
-        while (curr != null) {
-            Collection<Accessor> accessorSet = accessors.get(curr);
-
-            if (accessorSet != null) {
-                accessorSets.addAll(accessorSet);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return accessorSets;
-    }
-
-    // This is replacing the reverse walking system that compared all cases for distance
-    // since we're caching all classes and their sub-objects correctly we should be ok removing
-    // the distance check since we walk up the chain of the class being written.
-    private static Collection<String> getFilteredFieldNames(final Class<?> c, final Map<Class<?>, ? extends Collection<String>> fields) {
-        Class<?> curr = c;
-        Set<String> accessorSets = new LinkedHashSet<>();
-
-        while (curr != null) {
-            Collection<String> accessorSet = fields.get(curr);
-
-            if (accessorSet != null) {
-                accessorSets.addAll(accessorSet);
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return accessorSets;
-    }
-
-    /**
-     * Change the date-time format to the ISO date format: "yyyy-MM-dd".  This is for java.util.Data and
-     * java.sql.Date.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions isoDateFormat() {
-        return dateTimeFormat(ISO_DATE_FORMAT);
-    }
-
-    /**
-     * Change the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss" (default).  This is
-     * for java.util.Date and java.sql.Date.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions isoDateTimeFormat() {
-        return dateTimeFormat(ISO_DATE_TIME_FORMAT);
-    }
-
-    /**
-     * Change the java.uti.Date and java.sql.Date format output to a "long," the number of seconds since Jan 1, 1970
-     * at midnight. Useful if you do not need to see the JSON, and want to keep the format smaller.  This is for
-     * java.util.Date and java.sql.Date.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions longDateFormat() {
-        throwIfBuilt();
-        addCustomWrittenClass(Date.class, new Writers.DateAsLongWriter());
-        return this;
+    public Map<String, Accessor> getAccessorMapForClass(final Class<?> c) {
+        return accessorsCache.computeIfAbsent(c, this::buildDeepAccessors);
     }
 
     /**
@@ -924,17 +364,6 @@ public class WriteOptions {
         }
         boolean answer = Writers.DateAsLongWriter.class.equals(a.getClass());
         return answer;
-    }
-    /**
-     * Change the date-time format to the passed in format.  The format pattens can be found in the Java Doc
-     * for the java.time.format.DateTimeFormatter class.  There are many constants you can use, as well as
-     * the definition of how to construct your own patterns.  This is for java.util.Date and java.sql.Date.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions dateTimeFormat(String format) {
-        throwIfBuilt();
-        addCustomWrittenClass(Date.class, new Writers.DateWriter(format));
-        return this;
     }
 
     /**
@@ -959,49 +388,7 @@ public class WriteOptions {
      */
     public Collection<Class<?>> getNonReferenceableClasses()
     {
-        return built ? nonRefClasses : new LinkedHashSet<>(nonRefClasses);
-    }
-
-    /**
-     * @param clazz class to add to be considered a non-referenceable object.  Just like an "int" for example, any
-     *              class added here will never use an @id/@ref pair.  The downside, is that when read,
-     *              each instance, even if the same as another, will use memory.
-     * @return WriteOptions for chained access.
-     */
-    public WriteOptions addNonReferenceableClass(Class<?> clazz) {
-        throwIfBuilt();
-        nonRefClasses.add(clazz);
-        return this;
-    }
-
-    /**
-     * Seal the instance of this class so that no more changes can be made to it.
-     * @return WriteOptions for chained access.
-     */
-    @SuppressWarnings("unchecked")
-    public WriteOptions build() {
-        includedFields = MetaUtils.dupe(includedFields, true);
-        includedAccessors = MetaUtils.dupe(includedAccessors, true);
-        excludedFieldNames = MetaUtils.dupe(excludedFieldNames, true);
-        excludedAccessors = MetaUtils.dupe(excludedAccessors, true);
-        aliasTypeNames = Collections.unmodifiableMap(new LinkedHashMap<>(aliasTypeNames));
-        notCustomWrittenClasses = Collections.unmodifiableSet(new LinkedHashSet<>(notCustomWrittenClasses));
-        nonRefClasses = Collections.unmodifiableSet(new LinkedHashSet<>(nonRefClasses));
-        customWrittenClasses = Collections.unmodifiableMap(new LinkedHashMap<>(customWrittenClasses));
-        globallyFilteredMethodNames = Collections.unmodifiableSet(new LinkedHashSet<>(globallyFilteredMethodNames));
-        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
-                .map(field -> field.createCopy(true))
-                .collect(Collectors.toList()));
-        this.built = true;
-        return this;
-    }
-
-    /**
-     * @return boolean true if the instance of this class is built (read-only), otherwise false is returned,
-     * indicating that changes can still be made to this WriteOptions instance.
-     */
-    public boolean isBuilt() {
-        return built;
+        return nonRefClasses;
     }
 
     /**
@@ -1012,7 +399,7 @@ public class WriteOptions {
     private static final class NullClass implements JsonWriter.JsonClassWriter {
     }
 
-    private static final NullClass nullWriter = new NullClass();
+    static final NullClass nullWriter = new NullClass();
 
     /**
      * Fetch the custom writer for the passed in Class.  If it is cached (already associated to the
@@ -1065,101 +452,25 @@ public class WriteOptions {
         return closestWriter;
     }
 
-    /**
-     * Load custom writer classes based on contents of resources/customWriters.txt.
-     * Verify that classes listed are indeed valid classes loaded in the JVM.
-     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
-     */
-    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("customWriters.txt");
-        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            String writerClassName = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
-            if (clazz == null)
-            {
-                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
-                continue;
-            }
-            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
-            if (customWriter == null)
-            {
-                throw new JsonIoException("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
-            }
-            try {
-                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter) MetaUtils.newInstance(customWriter, null);
-                writers.put(clazz, writer);
-            }
-            catch (Exception e) {
-                throw new JsonIoException("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
-            }
-        }
-        return writers;
-    }
-
-    /**
-     * Load custom writer classes based on contents of resources/customWriters.txt.
-     * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
-     */
-    private static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("nonStandardAccessors.txt");
-        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            String mappings = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
-            if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM");
-                continue;
-            }
-
-            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
-            for (String split : mappings.split(",")) {
-                String[] parts = split.split(":");
-                mapping.put(parts[0].trim(), parts[1].trim());
-            }
-        }
-        return nonStandardMapping;
-    }
-
 
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      * @return Set<Class<?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
     static Set<Class<?>> loadNonRefs() {
-        Set<Class<?>> nonRefs = new LinkedHashSet<>();
-        Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
-        set.forEach((className) -> {
-            Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
-            if (clazz == null) {
-                throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
-            }
-            nonRefs.add(clazz);
-        });
-        return nonRefs;
+        final Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
+        final ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        return set.stream()
+                .map(className -> MetaUtils.classForNameThrowsException(className, classLoader))
+                .filter(Objects::isNull)
+                .collect(Collectors.toSet());
     }
 
 
     ///// ACCESSOR PULL IN ???????
 
-    public Map<String, Accessor> getDeepAccessorMap(Class<?> classToTraverse) {
-        return this.deepAccessorCache.computeIfAbsent(classToTraverse, this::buildDeepAccessors);
-    }
-
-    public Collection<Accessor> getDeepAccessors(Class<?> c) {
-        return this.getDeepAccessorMap(c).values();
-    }
-
     public void clearCaches() {
-        deepAccessorCache.clear();
         deepMethodCache.clear();
         deepFieldCache.clear();
         methodCache.clear();
@@ -1169,44 +480,76 @@ public class WriteOptions {
         methodCache.clear();
     }
 
-    private Map<String, Accessor> buildDeepAccessors(Class<?> c) {
-        final Map<String, Field> deepDeclaredFields = deepFieldCache.computeIfAbsent(c, this::buildDeepFieldMap);
-        final Map<String, Method> possibleMethods = deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
+
+    private Map<String, Accessor> buildDeepAccessors(final Class<?> c) {
+        final Set<String> inclusions = includedFieldNames.get(c);
+        final Set<String> exclusions = new HashSet<>();
+        final Map<String, Field> deepDeclaredFields = this.getDeepDeclaredFields(c, exclusions);
+        final Map<String, Method> possibleMethods = getDeepDeclaredMethods(c);
         final Map<String, Accessor> accessorMap = new LinkedHashMap<>();
 
-        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
+        final boolean isExclusive = inclusions == null;
+
+        final List<Map.Entry<String, Field>> fields = isExclusive ?
+                deepDeclaredFields.entrySet().stream()
+                        .filter(e -> !Modifier.isTransient(e.getValue().getModifiers()))
+                        .filter(e -> !exclusions.contains(e.getValue().getName()))
+                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
+                        .collect(Collectors.toList()) :
+                deepDeclaredFields.entrySet().stream()
+                        .filter(e -> inclusions.contains(e.getKey()))
+                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
+                        .collect(Collectors.toList());
+
+        for (final Map.Entry<String, Field> entry : fields) {
 
             final Field field = entry.getValue();
+            final String fieldName = entry.getKey();
 
-            String fieldName = entry.getKey();
-            String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
+            final String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
 
-            Optional<Accessor> accessor = this.accessorFactories.stream()
-                    .map(factory -> {
-                        try {
-                            return factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
-                        } catch (Throwable t) {
-                            return null;
-                        }
-                    })
+            assert key.equals(fieldName);
+
+            final Accessor accessor = this.accessorFactories.stream()
+                    .map(createAccessor(field, possibleMethods, key))
                     .filter(Objects::nonNull)
-                    .findFirst();
+                    .findFirst()
+                    .orElse(createAccessorFromField(field, key));
 
-
-
-            //  If no accessor was found, let's use the default tried and true field accessor.
-            accessorMap.put(key, accessor.orElseGet(() -> {
-                try {
-                    return new Accessor(field, key);
-                } catch (ThreadDeath td) {
-                    throw td;
-                } catch (Throwable t) {
-                    return null;
-                }
-            }));
+            if (accessor != null) {
+                accessorMap.put(key, accessor);
+            }
         }
 
         return accessorMap;
+    }
+
+    private Map<String, Method> getDeepDeclaredMethods(Class<?> c) {
+        return deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
+    }
+
+    public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> deepExcludedFields) {
+        return deepFieldCache.computeIfAbsent(c, cls -> this.buildDeepFieldMap(cls, deepExcludedFields));
+    }
+
+    private static Accessor createAccessorFromField(Field field, String key) {
+        try {
+            return new Accessor(field, key);
+        } catch (ThreadDeath td) {
+            throw td;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private Function<AccessorFactory, Accessor> createAccessor(Field field, Map<String, Method> possibleMethods, String key) {
+        return factory -> {
+            try {
+                return factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
+            } catch (Throwable t) {
+                return null;
+            }
+        };
     }
 
     /**
@@ -1232,24 +575,30 @@ public class WriteOptions {
     }
 
     public List<Method> getFilteredMethods(Class<?> c) {
-        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMwthodList(key, methodFilters, globallyFilteredMethodNames));
+        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMethodList(key, methodFilters, filteredMethodNames));
     }
 
-    public Map<String, Field> buildDeepFieldMap(Class<?> c) {
+    public Map<String, Field> buildDeepFieldMap(Class<?> c, final Set<String> exclusions) {
+        Convention.throwIfNull(c, "class cannot be null");
+        Convention.throwIfNull(exclusions, "exclusions cannot be null");
+
         final Map<String, Field> map = new LinkedHashMap<>();
-        final Set<String> exclusions = new LinkedHashSet<>();
+
         Class<?> curr = c;
-
         while (curr != Object.class) {
+            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr);
 
-            exclusions.addAll(this.excludedFieldNames.getOrDefault(curr, Collections.emptySet()));
+            Collection<String> excludedForClass = this.excludedFieldNames.get(curr);
 
-            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr, this.fieldFilters, exclusions);
+            if (excludedForClass != null) {
+                exclusions.addAll(excludedForClass);
+            }
 
             fields.forEach(f -> {
                 String name = f.getName();
-                String key = map.containsKey(name) ? f.getDeclaringClass().getSimpleName() + '.' + name : name;
-                map.put(key, f);
+                if (map.putIfAbsent(name, f) != null) {
+                    map.put(f.getDeclaringClass().getSimpleName() + '.' + name, f);
+                }
             });
 
             curr = curr.getSuperclass();
@@ -1257,14 +606,7 @@ public class WriteOptions {
         return map;
     }
 
-    public boolean addFilter(FieldFilter filter) {
-        clearCaches();
-        return this.fieldFilters.add(filter);
+    ShowType getShowTypeInfo() {
+        return showTypeInfo;
     }
-
-    public boolean removeFilter(FieldFilter filter) {
-        clearCaches();
-        return this.fieldFilters.remove(filter);
-    }
-
 }

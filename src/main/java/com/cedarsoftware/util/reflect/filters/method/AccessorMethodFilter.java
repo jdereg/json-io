@@ -14,7 +14,7 @@ public class AccessorMethodFilter implements MethodFilter {
     }
 
     @Override
-    public MethodFilter createCopy(boolean immutable) {
+    public MethodFilter createCopy() {
         return new AccessorMethodFilter();
     }
 }

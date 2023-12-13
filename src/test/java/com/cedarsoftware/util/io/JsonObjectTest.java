@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,15 +12,13 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -72,7 +73,7 @@ class JsonObjectTest
     void testRefsInArray_generatesIdAndRef(Class<? extends Map> c) throws Exception {
         Map jsonObj1 = generateBatman_withCircularReference_usingObjectArray(c);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         assertThat(json)
                 .containsOnlyOnce("@id")
@@ -109,7 +110,7 @@ class JsonObjectTest
     void testRefsInArray_createsJsonWithoutTypes_inOrderOfInsertion(Class<? extends Map> c) throws Exception {
         Map jsonObj1 = generateBatman_withCircularReference_usingObjectArray(c);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         assertThat(json)
                 .isEqualToIgnoringWhitespace("{\"@id\":1,\"name\":\"Batman\",\"partners\":[{\"name\":\"Robin\",\"partners\":[{\"@ref\":1}]}]}");
@@ -192,7 +193,7 @@ class JsonObjectTest
     void testRefsInCollection_generatesIdAndRef(Class<? extends Map> mapClass, Class<? extends Collection> collectionclass) throws Exception {
         Map jsonObj1 = generateBatman_withCircularReference_usingCollections(mapClass, collectionclass);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         assertThat(json)
                 .containsOnlyOnce("@id")
@@ -218,7 +219,7 @@ class JsonObjectTest
     void testRefsInMaps_generatesIdAndRef(Class<? extends Map> c) throws Exception {
         Map jsonObj1 = generateBatman_withCircularReference_usingMaps(c);
 
-        String json = TestUtil.toJson(jsonObj1, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(jsonObj1, new WriteOptionsBuilder().showTypeInfoNever().build());
 
         assertThat(json)
                 .containsOnlyOnce("@id")

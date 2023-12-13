@@ -29,5 +29,5 @@ public interface MethodFilter {
      */
     boolean filter(Method method);
 
-    MethodFilter createCopy(boolean immutable);
+    MethodFilter createCopy();
 }

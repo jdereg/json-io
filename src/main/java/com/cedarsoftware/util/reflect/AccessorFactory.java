@@ -3,8 +3,7 @@ package com.cedarsoftware.util.reflect;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
-
-import com.cedarsoftware.util.reflect.factories.NonStandardMethodNames;
+import java.util.Optional;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -32,7 +31,12 @@ public interface AccessorFactory {
      * @param key
      * @return The accessor if one fits for this field, otherwise null.
      */
-    Accessor createAccessor(Field field, NonStandardMethodNames nonStandardMethodNames, Map<String, Method> possibleMethods, String key) throws Throwable;
+    Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, Map<String, Method> possibleMethods, String key) throws Throwable;
 
-    AccessorFactory createCopy(boolean immutable);
+    AccessorFactory createCopy();
+
+    default Optional<String> getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
+        Map<String, String> mapping = classToMapping.get(c);
+        return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
+    }
 }

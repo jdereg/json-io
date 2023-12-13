@@ -28,8 +28,8 @@ class SerializationErrorTests {
 
     @Test
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
-        WriteOptions writeOptions = new WriteOptions()
-                .addExcludedFields(SecurityGroup.class, MetaUtils.listOf("id"));
+        WriteOptions writeOptions = new WriteOptionsBuilder()
+                .addExcludedFields(SecurityGroup.class, MetaUtils.listOf("id")).build();
 
         SecurityGroup group = new SecurityGroup();
         group.setId(45L);
@@ -67,7 +67,7 @@ class SerializationErrorTests {
         MismatchedGetter model = new MismatchedGetter();
         model.generate("foo");
 
-        String json = TestUtil.toJson(model, new WriteOptions().showTypeInfoAlways());
+        String json = TestUtil.toJson(model, new WriteOptionsBuilder().showTypeInfoAlways().build());
         MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptions(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
@@ -99,7 +99,7 @@ class SerializationErrorTests {
         ObjectSerializationIssue o = new ObjectSerializationIssue();
         o.setFoodType(FoodType.MILKS);
 
-        ObjectSerializationIssue actual = JsonIo.deepCopy(o, new ReadOptions().build(), new WriteOptions().build());
+        ObjectSerializationIssue actual = JsonIo.deepCopy(o, new ReadOptions().build(), new WriteOptionsBuilder().build());
 
         assertThat(actual.getFoodType()).isEqualTo(FoodType.MILKS);
     }
@@ -107,7 +107,7 @@ class SerializationErrorTests {
     @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
 //    @Test
     void testWriteOptions() {
-        WriteOptions writeOptions = new WriteOptions();
+        WriteOptions writeOptions = new WriteOptionsBuilder().build();
         String json = TestUtil.toJson(writeOptions);
         WriteOptions backFromSleep = TestUtil.toObjects(json, null);
         assertTrue(DeepEquals.deepEquals(writeOptions, backFromSleep));

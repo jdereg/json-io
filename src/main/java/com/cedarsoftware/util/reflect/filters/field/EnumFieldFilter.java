@@ -19,7 +19,7 @@ public class EnumFieldFilter implements FieldFilter {
     }
 
     @Override
-    public FieldFilter createCopy(boolean immutable) {
+    public FieldFilter createCopy() {
         return new EnumFieldFilter();
     }
 }

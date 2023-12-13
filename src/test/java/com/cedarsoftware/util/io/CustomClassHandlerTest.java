@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
@@ -10,8 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -36,8 +36,8 @@ public class CustomClassHandlerTest
     public void testCustomClassReaderWriter()
     {
         WeirdDate now = new WeirdDate(System.currentTimeMillis());
-        String json = TestUtil.toJson(now, new WriteOptions()
-                .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter()));
+        String json = TestUtil.toJson(now, new WriteOptionsBuilder()
+                .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter()).build());
         TestUtil.printLine("json=" + json);
 
         Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
@@ -45,9 +45,9 @@ public class CustomClassHandlerTest
         WeirdDate date = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(map3), null);
         assertEquals(now, date);
 
-        json = TestUtil.toJson(now, new WriteOptions()
+        json = TestUtil.toJson(now, new WriteOptionsBuilder()
                 .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter())
-                .setNotCustomWrittenClasses(MetaUtils.listOf(WeirdDate.class)));
+                .setNotCustomWrittenClasses(MetaUtils.listOf(WeirdDate.class)).build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);
     }

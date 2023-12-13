@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
-import com.cedarsoftware.util.ReturnType;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -14,6 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.ReturnType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -98,7 +99,7 @@ public class FloatTest
     @Test
     public void testNanAsRoot()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(Float.NaN, args);
         assert json.contains("null");
 
@@ -112,7 +113,7 @@ public class FloatTest
     @Test
     public void testNanMapKey()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         LinkedHashMap<String, Float> map = new LinkedHashMap<>(1);
         map.put("field", Float.NaN);
         String json = TestUtil.toJson(map, args);
@@ -135,7 +136,7 @@ public class FloatTest
         Simple holder = new Simple();
         holder.setX(Float.NaN);
 
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(holder, args);
         assert json.contains("null");
 
@@ -151,7 +152,7 @@ public class FloatTest
     @Test
     public void testNanArrayElement()
     {
-        WriteOptions args = new WriteOptions().showTypeInfoNever();
+        WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Float.NaN)), args);
         assert json.contains("null");
 
@@ -216,7 +217,7 @@ public class FloatTest
     @Test
     public void testNanArrayElement2()
     {
-        WriteOptions options = new WriteOptions().allowNanAndInfinity(false);
+        WriteOptions options = new WriteOptionsBuilder().allowNanAndInfinity(false).build();
         String json = TestUtil.toJson(MetaUtils.listOf(Float.NaN), options);
         assert json.contains("null");
 

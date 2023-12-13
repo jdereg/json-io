@@ -27,10 +27,10 @@ import com.cedarsoftware.util.reflect.AccessorFactory;
  */
 public class MethodAccessorFactory implements AccessorFactory {
     @Override
-    public Accessor createAccessor(Field field, NonStandardMethodNames nonStandardMethodNames, Map<String, Method> possibleAccessors, String key) throws Throwable {
+    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, Map<String, Method> possibleAccessors, String key) throws Throwable {
         String fieldName = field.getName();
 
-        Optional<String> possibleMethod = nonStandardMethodNames.getMapping(field.getDeclaringClass(), fieldName);
+        Optional<String> possibleMethod = getMapping(mappings, field.getDeclaringClass(), fieldName);
 
         Method method = possibleAccessors.get(possibleMethod.orElse(createGetterName(fieldName)));
 
@@ -71,7 +71,7 @@ public class MethodAccessorFactory implements AccessorFactory {
     }
 
     @Override
-    public AccessorFactory createCopy(boolean immutable) {
+    public AccessorFactory createCopy() {
         return new MethodAccessorFactory();
     }
 }

@@ -1,9 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -29,7 +30,7 @@ class AlwaysShowTypeTest
     {
         TestObject btc = new TestObject("Bitcoin");
         btc._other = new TestObject("Satoshi");
-        String json0 = TestUtil.toJson(btc, new WriteOptions().showTypeInfoAlways());
+        String json0 = TestUtil.toJson(btc, new WriteOptionsBuilder().showTypeInfoAlways().build());
         TestObject thatBtc = TestUtil.toObjects(json0, null);
         assertTrue(DeepEquals.deepEquals(btc, thatBtc));
         String json1 = TestUtil.toJson(btc);

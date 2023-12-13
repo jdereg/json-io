@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -13,7 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.WriteOptions;
+import com.cedarsoftware.util.io.WriteOptionsBuilder;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
 import com.cedarsoftware.util.reflect.filters.models.CarEnumWithCustomFields;
@@ -43,7 +43,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkSuccessfulCreationSituations")
     void create_whenMethodIsPublicAndNotStatic_canCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(cls);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(cls);
         assertThat(methodMap).containsKey(fieldName);
     }
 
@@ -70,7 +70,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkFailedToCreateSituations")
     void create_whenIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(cls);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(cls);
         assertThat(methodMap).doesNotContainKey(fieldName);
     }
 
@@ -78,7 +78,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkSuccessfulCreationSituations")
     void create_whenBooleanIsPublicAndNotStatic_canCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(cls);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(cls);
 
         assertThat(methodMap).containsKey(fieldName);
     }
@@ -87,40 +87,40 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @ParameterizedTest
     @MethodSource("checkFailedToCreateSituations")
     void create_whenBooleanIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
-        NonStandardMethodNames nonStandardMethodNames = new NonStandardMethodNames(Collections.emptyMap());
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(cls);
+        Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(cls);
         Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), nonStandardMethodNames, methodMap, fieldName);
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenMethodDoesNotExist_cannotCreateAccessor() throws Throwable {
-        NonStandardMethodNames nonStandardMethodNames = new NonStandardMethodNames(Collections.emptyMap());
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(ObjectWithBooleanObjects.class);
+        Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(ObjectWithBooleanObjects.class);
         Accessor accessor = this.factory.createAccessor(PrivateFinalObject.class.getDeclaredField("x"), nonStandardMethodNames, methodMap, "x");
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenIsEnumClass_canCreateAccessor_ifNameMappingIsPresent() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(Enum.class);
-        NonStandardMethodNames nonStandardMethodNames = new NonStandardMethodNames(Collections.emptyMap());
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(Enum.class);
+        Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
         Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, methodMap, "name");
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenIsEnumClass_andHasNameMapping_canCreateAccessor() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(Enum.class);
-        NonStandardMethodNames nonStandardMethodNames = new NonStandardMethodNames(new HashMap<>());
-        nonStandardMethodNames.addMapping(Enum.class, "name", "name");
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(Enum.class);
+        Map<Class<?>, Map<String, String>> nonStandardMethodNames = new LinkedHashMap<>();
+        nonStandardMethodNames.computeIfAbsent(Enum.class, k -> new LinkedHashMap<>()).put("name", "name");
         Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, methodMap, "name");
         assertThat(accessor).isNotNull();
     }
 
     @Test
     void buildDeepAccessorMethods_findsPublicGetMethod() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(GetMethodTestObject.class);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(GetMethodTestObject.class);
 
         assertThat(methodMap)
                 .hasSize(1)
@@ -129,7 +129,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
 
     @Test
     void buildDeepAccessorMethods_findsPublicIsMethod() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(ObjectWithBooleanValues.class);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(ObjectWithBooleanValues.class);
 
         assertThat(methodMap)
                 .hasSize(1)
@@ -138,7 +138,7 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
 
     @Test
     void buildDeepAccessorMethods_findEnumWithCustomFields() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptions().buildDeepMethods(CarEnumWithCustomFields.class);
+        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(CarEnumWithCustomFields.class);
 
         assertThat(methodMap)
                 .hasSize(2)

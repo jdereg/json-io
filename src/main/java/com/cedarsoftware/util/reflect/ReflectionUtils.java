@@ -11,7 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import com.cedarsoftware.util.reflect.filters.MethodFilter;
 
 /**
@@ -33,14 +32,10 @@ import com.cedarsoftware.util.reflect.filters.MethodFilter;
  */
 public class ReflectionUtils {
 
-    private static final Map<Class<?>, Map<String, Field>> fieldMetaCache = new ConcurrentHashMap<>();
-
-    private static final Map<Class<?>, Map<String, Field>> accesorMethodMetaCache = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
 
     private ReflectionUtils() {
     }
-
-
 
     /**
      * Builds a list of methods with zero parameter methods taking precedence over overrides
@@ -67,7 +62,7 @@ public class ReflectionUtils {
         return method1.getParameterCount() == 1 ? method1 : method2;
     }
 
-    public static List<Method> buildFilteredMwthodList(Class<?> c, List<MethodFilter> filters, Set<String> exclusions) {
+    public static List<Method> buildFilteredMethodList(Class<?> c, List<MethodFilter> filters, Set<String> exclusions) {
         final Method[] methods = c.getDeclaredMethods();
 
         return Arrays.stream(methods)
@@ -80,12 +75,12 @@ public class ReflectionUtils {
      * @param c Class instance
      * @return list of fields filtered by filters
      */
-    public static List<Field> buildFilteredFields(Class<?> c, List<FieldFilter> filters, Set<String> excluded) {
+    public static List<Field> buildFilteredFields(Class<?> c) {
         final Field[] fields = c.getDeclaredFields();
 
         return Arrays.stream(fields)
-                .filter(field -> !excluded.contains(field.getName()))
-                .filter(field -> filters.stream().noneMatch(f -> f.filter(field)))
+                //.filter(field -> !exclusions.contains(field.getName()))
+                //.filter(field -> filters.stream().noneMatch(f -> f.filter(field)))
                 .collect(Collectors.toList());
     }
 }

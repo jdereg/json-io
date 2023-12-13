@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Kai Hufenbach
@@ -50,7 +50,7 @@ public class ObjectHolderTest
 
     private void testSerialization(ObjectHolder holder)
     {
-        String json = TestUtil.toJson(holder, new WriteOptions().showTypeInfoNever());
+        String json = TestUtil.toJson(holder, new WriteOptionsBuilder().showTypeInfoNever().build());
         ObjectHolder deserialized = TestUtil.toObjects(json, new ReadOptions().unknownTypeClass(ObjectHolder.class), null);
         assertEquals(holder, deserialized);
     }

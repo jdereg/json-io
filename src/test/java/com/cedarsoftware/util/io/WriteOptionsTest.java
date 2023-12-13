@@ -1,289 +1,532 @@
 package com.cedarsoftware.util.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.io.models.Human;
 
 class WriteOptionsTest {
 
-    private WriteOptions options;
-
-    @BeforeEach
-    void setUp() {
-        options = new WriteOptions();
-    }
-
     @Test
-    void testDefaultSkipNullFields() {
-        assertFalse(options.isSkipNullFields());
+    void tesSkipNullFields_default() {
+        assertFalse(new WriteOptionsBuilder().build().isSkipNullFields());
     }
 
     // Example test for a setter method (skipNullFields)
-    @Test
-    void testSetSkipNullFields() {
-        options.skipNullFields(true);
-        assertTrue(options.isSkipNullFields());
-        options.skipNullFields(false);
-        assertFalse(options.isSkipNullFields());
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testSetSkipNullFields(boolean value) {
+        WriteOptions options = new WriteOptionsBuilder().skipNullFields(value).build();
+        assertThat(options.isSkipNullFields()).isEqualTo(value);
+    }
+
+    private static Stream<Arguments> classLoadersTest() {
+        return Stream.of(
+                Arguments.of(ClassLoader.getSystemClassLoader()),
+                Arguments.of(WriteOptionsTest.class.getClassLoader())
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("classLoadersTest")
+    void testClassLoader(ClassLoader classLoader) {
+        WriteOptions options = new WriteOptionsBuilder().classLoader(classLoader).build();
+        assertThat(options.getClassLoader()).isSameAs(classLoader);
     }
 
     @Test
-    void testClassLoader() {
-        options.classLoader(ClassLoader.getSystemClassLoader());
-        assertSame(options.getClassLoader(), ClassLoader.getSystemClassLoader());
-        options.classLoader(WriteOptionsTest.class.getClassLoader());
-        assertSame(options.getClassLoader(), WriteOptionsTest.class.getClassLoader());
+    void testClassLoader_default() {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertThat(options.getClassLoader()).isSameAs(WriteOptionsBuilder.class.getClassLoader());
     }
 
-    // Test for forceMapOutputAsTwoArrays method
     @Test
-    void testForceMapOutputAsTwoArrays() {
-        options.forceMapOutputAsTwoArrays(true);
-        assertTrue(options.isForceMapOutputAsTwoArrays());
+    void testForceMapOutputAsTwoArrays_defaultValue() {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertThat(options.isForceMapOutputAsTwoArrays()).isFalse();
+    }
+
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testForceMapOutputAsTwoArrays(boolean value) {
+        WriteOptions options = new WriteOptionsBuilder().forceMapOutputAsTwoArrays(value).build();
+        assertThat(options.isForceMapOutputAsTwoArrays()).isEqualTo(value);
     }
 
     // Test for isNonReferenceableClass method
-    @Test
-    void testIsNonReferenceableType() {
-        assertTrue(options.isNonReferenceableClass(Date.class)); // Assuming Date is a logical primitive
-        assertFalse(options.isNonReferenceableClass(Object.class)); // Assuming Object is not
+    private static Stream<Arguments> nonReferenceableClasses() {
+        return Stream.of(
+                Arguments.of(byte.class),
+                Arguments.of(short.class),
+                Arguments.of(int.class),
+                Arguments.of(long.class),
+                Arguments.of(float.class),
+                Arguments.of(double.class),
+                Arguments.of(char.class),
+                Arguments.of(boolean.class),
+                Arguments.of(Byte.class),
+                Arguments.of(Short.class),
+                Arguments.of(Integer.class),
+                Arguments.of(Long.class),
+                Arguments.of(Float.class),
+                Arguments.of(Double.class),
+                Arguments.of(Character.class),
+                Arguments.of(Boolean.class),
+                Arguments.of(Class.class),
+                Arguments.of(String.class),
+                Arguments.of(Date.class),
+                Arguments.of(BigInteger.class),
+                Arguments.of(BigDecimal.class),
+                Arguments.of(AtomicBoolean.class),
+                Arguments.of(AtomicInteger.class),
+                Arguments.of(AtomicLong.class),
+                Arguments.of(Duration.class),
+                Arguments.of(Instant.class),
+                Arguments.of(LocalDate.class),
+                Arguments.of(LocalDateTime.class),
+                Arguments.of(LocalTime.class),
+                Arguments.of(MonthDay.class),
+                Arguments.of(OffsetDateTime.class),
+                Arguments.of(OffsetTime.class),
+                Arguments.of(Period.class),
+                Arguments.of(Year.class),
+                Arguments.of(YearMonth.class),
+                Arguments.of(ZonedDateTime.class),
+                Arguments.of(ZoneId.class),
+                Arguments.of(ZoneOffset.class)
+        );
     }
 
-    // Test for getNonReferenceable method
+    @ParameterizedTest
+    @MethodSource("nonReferenceableClasses")
+    void testIsNonReferenceable_defaults(Class<?> c) {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertTrue(options.isNonReferenceableClass(c)); // Assuming Date is a logical primitive
+    }
+
+    @Test
+    void testIsNonReferenceable_notInDefaults() {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertFalse(options.isNonReferenceableClass(NoTypeTest.Person.class)); // Assuming Date is a logical primitive
+    }
+
+
     @Test
     void testGetNotReferenceableTypes() {
-        Collection<Class<?>> nonReferenceableClasses = options.getNonReferenceableClasses();
+        Collection<Class<?>> nonReferenceableClasses = new WriteOptionsBuilder().build().getNonReferenceableClasses();
         assertNotNull(nonReferenceableClasses);
-        assertTrue(nonReferenceableClasses instanceof LinkedHashSet);
     }
 
-    // Test for addNonReferenceable method
-    @Test
-    void testAddNonReferenceableClass() {
-        options.addNonReferenceableClass(String.class);
-        assertTrue(options.isNonReferenceableClass(String.class));
-    }
-
-    // Test for sealing the options
-    @Test
-    void testSeal() {
-        assertFalse(options.isBuilt());
-        options.build();
-        assertTrue(options.isBuilt());
-    }
-
-    // Test for mutating methods after sealing
-    @Test
-    void testModificationAfterSealing() {
-        options.build();
-        assertThrows(JsonIoException.class, () -> options.skipNullFields(true));
-        // Repeat for other setters
-    }
 
     @Test
-    void testAliases() {
-        assertThrows(JsonIoException.class, () -> options.aliasTypeName("foo", "foobar"));
-        options.aliasTypeNames(new HashMap<>());
-        options.aliasTypeName("int", "properInt");
-        options.aliasTypeName("java.lang.Integer", "Int");
-        options.build();
-
-        assertEquals("properInt", options.aliasTypeNames().get("int"));
-        assertEquals("Int", options.aliasTypeNames().get("java.lang.Integer"));
-
-        // Asserting that we had at least one alias already loaded (non-empty resources/aliases.txt)
-        assert options.aliasTypeNames().size() > 2;
+    void testAddNonReferenceableClass_isFound() {
+        WriteOptions options = new WriteOptionsBuilder().addNonReferenceableClass(MapOfMapsTest.Person.class).build();
+        assertTrue(options.isNonReferenceableClass(MapOfMapsTest.Person.class));
     }
+
+    private static Stream<Arguments> aliasDefaults() {
+        return Stream.of(
+                Arguments.of("java.lang.Class", "class"),
+                Arguments.of("java.lang.String", "string"),
+                Arguments.of("java.util.Date", "date"),
+                Arguments.of("java.lang.Byte", "byte"),
+                Arguments.of("java.lang.Short", "short"),
+                Arguments.of("java.lang.Integer", "int"),
+                Arguments.of("java.lang.Long", "long"),
+                Arguments.of("java.lang.Float", "float"),
+                Arguments.of("java.lang.Double", "double"),
+                Arguments.of("java.lang.Character", "char"),
+                Arguments.of("java.lang.Boolean", "boolean")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("aliasDefaults")
+    void testAliasTypeNames_defaults(String fqName, String shortName) {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertThat(options.getTypeNameAlias(fqName)).isEqualTo(shortName);
+    }
+
+    private static Stream<Arguments> aliasWithExtended() {
+        return Stream.of(
+                Arguments.of("java.lang.Class", "class"),
+                Arguments.of("java.lang.String", "string"),
+                Arguments.of("java.util.Date", "date"),
+                Arguments.of("java.lang.Byte", "byte"),
+                Arguments.of("java.lang.Short", "short"),
+                Arguments.of("java.lang.Integer", "int"),
+                Arguments.of("java.lang.Long", "long"),
+                Arguments.of("java.lang.Float", "float"),
+                Arguments.of("java.lang.Double", "double"),
+                Arguments.of("java.lang.Character", "char"),
+                Arguments.of("java.lang.Boolean", "boolean"),
+                Arguments.of("java.util.ArrayList", "ArrayList"),
+                Arguments.of("java.util.LinkedHashMap$LinkedValues", "LinkedValues"),
+                Arguments.of("java.util.HashMap$Values", "HashMapValues"),
+                Arguments.of("java.util.HashMap", "HashMap"),
+                Arguments.of("java.util.TreeMap", "TreeMap"),
+                Arguments.of("java.util.LinkedHashMap", "LinkedHashMap"),
+                Arguments.of("java.util.Collections$SingletonMap", "SingletonMap"),
+                Arguments.of("java.util.Collections$UnmodifiableMap", "UnmodifiableMap"),
+                Arguments.of("java.util.HashMap$KeySet", "HashMapKeySet"),
+                Arguments.of("java.util.concurrent.ConcurrentHashMap$KeySetView", "ConcurrentHashMapKeySetView"),
+                Arguments.of("java.util.concurrent.ConcurrentSkipListMap$KeySet", "ConcurrentSkipListMapKeySet")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("aliasWithExtended")
+    void testAliasTypeNames_includingExtendedDefaults(String fqName, String shortName) {
+        WriteOptions options = new WriteOptionsBuilder().withExtendedAliases().build();
+        assertThat(options.getTypeNameAlias(fqName)).isEqualTo(shortName);
+    }
+
+    private static Stream<Arguments> aliasExceptions() {
+        return Stream.of(
+                Arguments.of(null, "ArrayList"),
+                Arguments.of("foo", "bar")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("aliasExceptions")
+    void testAliasTypeNames_exceptionCases(String fqName, String shortName) {
+        WriteOptions options = new WriteOptionsBuilder().withExtendedAliases().build();
+        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() ->
+                new WriteOptionsBuilder().aliasTypeName(fqName, shortName));
+    }
+
+    @Test
+    void testAliasTypeNames_addedByMap() {
+        Map<String, String> map = MetaUtils.mapOf("int", "properInt", "long", "properLong");
+
+        WriteOptions options = new WriteOptionsBuilder()
+                .aliasTypeNames(map)
+                .build();
+
+        assertEquals("properInt", options.getTypeNameAlias("int"));
+        assertEquals("properLong", options.getTypeNameAlias("long"));
+    }
+
+    // TODO: not sure we want to throw an exception on this?
+    @Test
+    void teatAliasTypeNames_whenAliasAlreadyExists_throwsException() {
+        Map<String, String> map = MetaUtils.mapOf("java.lang.Integer", "properInt");
+
+        WriteOptionsBuilder builder = new WriteOptionsBuilder();
+        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() -> builder.aliasTypeNames(map));
+    }
+
+    @Test
+    void testAliasTypeNames_addedByNameValue() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .aliasTypeName("int", "properInt")
+                .aliasTypeName("long", "properLong")
+                .build();
+
+        assertEquals("properInt", options.getTypeNameAlias("int"));
+        assertEquals("properLong", options.getTypeNameAlias("long"));
+    }
+
+    @Test
+    void testAliasTypeNames_addedByNameValue_whenAlreadyExists_throwsException() {
+        WriteOptionsBuilder builder = new WriteOptionsBuilder();
+        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() -> builder.aliasTypeName("java.lang.Integer", "properInt"));
+    }
+
+    @Test
+    void testShowTypeInfoMinimal_defaultValue() {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertTrue(options.isMinimalShowingType());
+        assertFalse(options.isNeverShowingType());
+        assertFalse(options.isAlwaysShowingType());
+    }
+
 
     @Test
     void testShowTypeInfoMinimal() {
-        assert options.isMinimalShowingType();     // default on
-        options.showTypeInfoAlways();               // turn off
-        assert !options.isMinimalShowingType();     // stays off
-        options.showTypeInfoMinimal();              // turn on
-        assert options.isMinimalShowingType();     // back on
-        options.build();
-        assertThrows(JsonIoException.class, () -> options.showTypeInfoMinimal());
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoMinimal().build();
+        assertTrue(options.isMinimalShowingType());
+        assertFalse(options.isNeverShowingType());
+        assertFalse(options.isAlwaysShowingType());
     }
 
     @Test
-    void testEnums() {
-        assert options.isWriteEnumAsString();
-        options.writeEnumAsJsonObject(true);
-        assert !options.isWriteEnumAsString();
-        options.writeEnumAsJsonObject(false);
-        assert !options.isWriteEnumAsString();
-        options.writeEnumsAsString();
-        assert options.isWriteEnumAsString();
+    void testShowTypeInfoAlways() {
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoAlways().build();
+        assertFalse(options.isMinimalShowingType());
+        assertFalse(options.isNeverShowingType());
+        assertTrue(options.isAlwaysShowingType());
     }
 
     @Test
-    void testCustomWrittenClasses() {
-        Map<Class<?>, JsonWriter.JsonClassWriter> custom = options.getCustomWrittenClasses();
-        assert !custom.isEmpty();
-        options.setCustomWrittenClasses(new HashMap<>());
-        custom = options.getCustomWrittenClasses();
-        assert custom.isEmpty();
-        options.build();
-        custom = options.getCustomWrittenClasses();
-        assert custom.isEmpty();
-        assertThrows(JsonIoException.class, () -> options.addCustomWrittenClass(String.class, new Writers.JsonStringWriter()));
+    void testShowTypeInfoNever() {
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
+        assertFalse(options.isMinimalShowingType());
+        assertTrue(options.isNeverShowingType());
+        assertFalse(options.isAlwaysShowingType());
+    }
+
+    private static Stream<Arguments> customWrittenClasses_true() {
+        return Stream.of(
+                Arguments.of(Class.class),
+                Arguments.of(String.class),
+                Arguments.of(Date.class),
+                Arguments.of(BigInteger.class),
+                Arguments.of(BigDecimal.class),
+                Arguments.of(Duration.class),
+                Arguments.of(Instant.class),
+                Arguments.of(LocalDate.class),
+                Arguments.of(LocalDateTime.class),
+                Arguments.of(LocalTime.class),
+                Arguments.of(MonthDay.class),
+                Arguments.of(OffsetDateTime.class),
+                Arguments.of(OffsetTime.class),
+                Arguments.of(Period.class),
+                Arguments.of(Year.class),
+                Arguments.of(YearMonth.class),
+                Arguments.of(ZonedDateTime.class),
+                Arguments.of(ZoneId.class),
+                Arguments.of(ZoneOffset.class)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("customWrittenClasses_true")
+    void testCustomWrittenClasses_defaults(Class<?> c) {
+        WriteOptions options = new WriteOptionsBuilder().build();
+        assertThat(options.getCustomWriter(c)).isNotNull();
     }
 
     @Test
-    void testCustomWrittenClasses2() {
-        Map<Class<?>, JsonWriter.JsonClassWriter> custom = options.getCustomWrittenClasses();
-        int x = custom.size();
-        options.setCustomWrittenClasses(new HashMap<>());
-        custom = options.getCustomWrittenClasses();
-        assert custom.isEmpty();
-        options.build();
-        assertThrows(JsonIoException.class, () -> options.addCustomWrittenClass(String.class, new Writers.JsonStringWriter()));
+    void testCustomWrittenClasses_asAsMap() {
+        Map<Class<?>, JsonWriter.JsonClassWriter> map = MetaUtils.mapOf(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter());
+
+        WriteOptions options = new WriteOptionsBuilder()
+                .addCustomWrittenClasses(map)
+                .build();
+
+        assertThat(options.getCustomWriter(CustomWriterTest.Person.class)).isNotNull();
     }
 
     @Test
-    void testCustomWrittenClasses3() {
-        options.addCustomWrittenClass(ConcurrentHashMap.class, new Writers.JsonStringWriter());
-        assert options.isCustomWrittenClass(ConcurrentHashMap.class);
+    void testCustomWrittenClasses_addedIndividually() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .addCustomWrittenClass(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter())
+                .build();
+
+        assertThat(options.getCustomWriter(CustomWriterTest.Person.class)).isNotNull();
     }
 
     @Test
-    void testNotCustomWrittenClass() {
-        Set<Class<?>> notCustom = options.getNotCustomWrittenClasses();
-        assert notCustom.isEmpty();   // lock in default of 0
-        options.addNotCustomWrittenClass(LocalDate.class);
-        options.setNotCustomWrittenClasses(MetaUtils.setOf(LocalDateTime.class, ZonedDateTime.class));
-        assert options.getNotCustomWrittenClasses().size() == 2;
-        options.addNotCustomWrittenClass(LocalDate.class);
-        assert options.getNotCustomWrittenClasses().size() == 3;
-        assert options.getNotCustomWrittenClasses().contains(LocalDate.class);
-        assert options.getNotCustomWrittenClasses().contains(LocalDateTime.class);
-        assert options.getNotCustomWrittenClasses().contains(ZonedDateTime.class);
+    void testNotCustomWrittenClass_default() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .build();
+
+        assertThat(options.getNotCustomWrittenClasses()).isEmpty();
+    }
+
+    @Test
+    void testIsNotCustomWrittenClass_default_returnsFalseWhenNotContained() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .build();
+
+        assertThat(options.isNotCustomWrittenClass(String.class)).isFalse();
+    }
+
+    @Test
+    void testAddNotCustomWrittenClass() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .addNotCustomWrittenClass(String.class)
+                .build();
+
+        assertThat(options.isNotCustomWrittenClass(String.class)).isTrue();
+    }
+
+    @Test
+    void testSetNotCustomWrittenClasses() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .setNotCustomWrittenClasses(MetaUtils.setOf(String.class, Long.class, Integer.class))
+                .build();
+
+        assertThat(options.isCustomWrittenClass(String.class)).isTrue();
+        assertThat(options.isCustomWrittenClass(Long.class)).isTrue();
+        assertThat(options.isCustomWrittenClass(Integer.class)).isTrue();
     }
 
     @Test
     void testIncludedFields()
     {
-        Map<Class<?>, Set<String>> map = options.getIncludedFieldsPerAllClasses();
-        assert map.isEmpty();
-        options.addIncludedField(String.class, "dog");
-        options.addIncludedFields(String.class, MetaUtils.setOf("cat", "bird"));
-        options.addIncludedField(Integer.class, "really?");
-        assert options.getIncludedFields(String.class).size() == 3;
-        map = options.getIncludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert map.containsKey(String.class);
-        assert map.containsKey(Integer.class);
+        WriteOptions options = new WriteOptionsBuilder()
+                .addIncludedField(Human.class, "name")
+                .build();
 
-        Set<Accessor> accessors = options.getIncludedAccessors(String.class);
-        assert accessors.isEmpty();
-        
-        options.build();
-
-        accessors = options.getIncludedAccessors(String.class);
-        assert accessors.isEmpty();
-        
-        assert options.getIncludedFields(String.class).containsAll(MetaUtils.setOf("dog", "cat", "bird"));
-        assert options.getIncludedFields(Integer.class).containsAll(MetaUtils.setOf("really?"));
-        assertThrows(JsonIoException.class, () -> options.addIncludedField(String.class, "dog"));
-        assertThrows(JsonIoException.class, () -> options.addIncludedFields(String.class, MetaUtils.setOf("cat", "bird")));
-        map = options.getIncludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert map.containsKey(String.class);
-        assert map.containsKey(Integer.class);
-
-        WriteOptions copy = new WriteOptions(options);
-        assert !copy.isBuilt();
-        map = copy.getIncludedFieldsPerAllClasses();
-        assert map.size() == 2;
-        assert copy.getIncludedFields(String.class).containsAll(MetaUtils.setOf("dog", "cat", "bird"));
-        assert copy.getIncludedFields(Integer.class).containsAll(MetaUtils.setOf("really?"));
+        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
+        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
     }
 
     @Test
-    void testExcludedFields_containsBaseExclusions() {
-        Collection<String> fieldNames = new WriteOptions().getExcludedFieldsPerClass(Throwable.class);
+    void testIncludedFields_overridesExclusions() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .addIncludedField(Human.class, "name")
+                .addExcludedFields(Human.class, MetaUtils.listOf("magicResistance", "name"))
+                .build();
 
-        assertThat(fieldNames)
-                .hasSize(4);
+        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
+        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
     }
 
     @Test
-    void testExcludedFields_subclassPicksUpSuperclassExclusions() {
-        Collection<String> fieldNames = new WriteOptions().getExcludedFieldsPerClass(Exception.class);
+    void testIncludedFields_withNestedNames_onlyIncludesMatchingName() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .addIncludedField(Human.class, "Race.name")
+                .addExcludedFields(Human.class, MetaUtils.listOf("magicResistance", "name"))
+                .build();
 
-        assertThat(fieldNames)
-                .hasSize(4);
+        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
+        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
     }
 
     @Test
-    void testExcludeFields_containsUniqueFieldNames()
+    void testIsLongFormat_defaultIsTrue()
     {
-        options.addExcludedField(String.class, "dog");
-        options.addExcludedFields(String.class, MetaUtils.setOf("dog", "cat"));
+        WriteOptions options = new WriteOptionsBuilder()
+                .build();
 
-        assertThat(options.getExcludedFieldsPerClass(String.class))
-                .hasSize(2);
+        assertThat(options.isLongDateFormat()).isTrue();
     }
 
     @Test
-    void testExcludeFields_addsNewExclusionsToBase() {
-        options.addExcludedField(String.class, "dog");
-        options.addExcludedFields(String.class, MetaUtils.setOf("dog", "cat"));
-        options.addExcludedFields(Integer.class, MetaUtils.setOf("fly"));
+    void testIsLongFormat_whenIsoDateFormat_returnsFalse() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .isoDateFormat()
+                .build();
 
-        Collection<String> set = options.getExcludedFieldsPerClass(String.class);
-        assertThat(set)
-                .hasSize(2)
-                .contains("dog", "cat");
-
+        assertThat(options.isLongDateFormat()).isFalse();
     }
 
     @Test
-    void testLongDateFormat()
-    {
-        assert options.isLongDateFormat();  // assert default setting
+    void testIsLongFormat_whenIsoDateTimeFormat_returnsFalse() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .isoDateTimeFormat()
+                .build();
+
+        assertThat(options.isLongDateFormat()).isFalse();
+    }
+
+    @Test
+    void testWritingLongFormat() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .longDateFormat()
+                .build();
+
         Date now = new Date();
-        Date[] dates = new Date[] {now};
+        Date[] dates = new Date[]{now};
         String json = TestUtil.toJson(dates, options);
-        Date[] dates2 = TestUtil.toObjects(json, null);
-        assertEquals(dates2[0], dates[0]);
-        assertEquals(dates2[0], now);
-
-        WriteOptions writeOptions = new WriteOptions(options);
-        writeOptions.isoDateTimeFormat();
-        assert !writeOptions.isLongDateFormat();
-        json = TestUtil.toJson(dates, writeOptions);
-        dates2 = TestUtil.toObjects(json, null);
+        Date[] dates2 = TestUtil.toObjects(json, Date[].class);
+        assertThat(dates).isEqualTo(dates2);
+        assertThat(dates[0]).isEqualTo(now);
         assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
         assertEquals(dates2[0].toString(), now.toString());         // differ in millis
-
-        writeOptions = new WriteOptions(writeOptions);
-        assert !writeOptions.isLongDateFormat();
-        writeOptions.longDateFormat();
-        assert writeOptions.isLongDateFormat();
-
-        json = TestUtil.toJson(dates, writeOptions);
-        assert json.contains("" + now.getTime());
     }
+
+    @Test
+    void testWritingIsoDateTimeFormat() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .isoDateTimeFormat()
+                .build();
+
+        Date now = new Date();
+        Date[] dates = new Date[]{now};
+        String json = TestUtil.toJson(dates, options);
+        Date[] dates2 = TestUtil.toObjects(json, Date[].class);
+        // ISO DateTime format does not include milliseconds.....whhhhyyyyyy?
+        assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
+        assertEquals(dates2[0].toString(), now.toString());         // differ in millis
+        //this date time format does not support ms, so don't use the more accrate isEqualTo
+//        assertThat(dates2).isEqualTo(dates);
+//        assertThat(dates2[0]).isEqualTo(now);
+    }
+
+    @Test
+    void testCustomFormat_thatIncludesMillisencs() {
+        WriteOptions options = new WriteOptionsBuilder()
+                .addCustomWrittenClass(Date.class, new Writers.DateWriter("YYYY-MM-dd'T'HH:mm:ss.SSSZ"))
+                .build();
+
+        Date now = new Date();
+        String json = TestUtil.toJson(now, options);
+        Date date2 = TestUtil.toObjects(json, Date.class);
+        assertThat(date2).isEqualTo(now);
+    }
+
+//    @Test
+//    void testGetDeepAccessorMap_whereSomeFieldsHaveAccessorsAndOthersDoNot() {
+//
+//        Collection<Accessor> accessors = new WriteOptionsBuilder().build().getDeepAccessors(PrivateFinalObject.class);
+//
+//        assertThat(accessors).hasSize(4);
+//        assertThat(accessors.get("x").isPublic()).isFalse();
+//        assertThat(accessors.get("x").getDisplayName()).isEqualTo("x");
+//        assertThat(accessors.get("y").isPublic()).isFalse();
+//        assertThat(accessors.get("y").getDisplayName()).isEqualTo("y");
+//        assertThat(accessors.get("key").isPublic()).isTrue();
+//        assertThat(accessors.get("key").getDisplayName()).isEqualTo("getKey");
+//        assertThat(accessors.get("flatuated").isPublic()).isTrue();
+//        assertThat(accessors.get("flatuated").getDisplayName()).isEqualTo("isFlatuated");
+//    }
+//
+//    @Test
+//    void testGetDeepAccessorMap_onEnumDefinitionClass_findsName() {
+//        Map<String, Accessor> accessors = new WriteOptionsBuilder().getDeepAccessorMap(ColorEnum.class);
+//        assertThat(accessors).hasSize(1);
+//        assertThat(accessors.get("name").isPublic()).isTrue();
+//        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
+//    }
+//
+//    @Test
+//    void testGetDeepAccessorMap_onEnumClass() {
+//        Map<String, Accessor> accessors = new WriteOptionsBuilder().getDeepAccessorMap(Enum.class);
+//
+//        assertThat(accessors).hasSize(1);
+//        assertThat(accessors.get("name").isPublic()).isTrue();
+//        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
+//    }
+
+
 }
