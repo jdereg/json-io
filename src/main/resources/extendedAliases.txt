@@ -19,31 +19,54 @@ java.lang.Character = char
 java.lang.Boolean = boolean
 
 java.util.ArrayList = ArrayList
-java.util.LinkedHashMap$LinkedValues = LinkedValues
-java.util.HashMap$Values = HashMapValues
-java.util.TreeMap$Values = TreeMapValues
-java.util.concurrent.ConcurrentHashMap$ValuesView = ConcurrentHashMapValuesView
-java.util.concurrent.ConcurrentSkipListMap$Values = ConcurrentSkipListMapValues
-java.util.IdentityHashMap$Values = IdentityHashMapValues
-java.util.Collections$EmptyList = EmptyList
-java.util.Collections$SingletonList = CollectionsSingletonList
-java.util.Collections$UnmodifiableRandomAccessList = CollectionsUnmodifiableRandomAccessList
-java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
-java.util.HashMap$KeySet = HashMapKeySet
-java.util.TreeMap$KeySet = TreeMapKeySet
-java.util.concurrent.ConcurrentHashMap$KeySetView = ConcurrentHashMapKeySetView
-java.util.concurrent.ConcurrentSkipListMap$KeySet = ConcurrentSkipListMapKeySet
-java.util.IdentityHashMap$KeySet = IdentityHashMapKeySet
-java.util.Collections$SingletonSet = CollectionsSingletonSet
-java.util.Collections$UnmodifiableSet = CollectionsUnmodifiableSet
-java.util.HashMap = HashMap
 java.util.LinkedHashMap = LinkedHashMap
-java.util.TreeMap = TreeMap
-java.util.concurrent.ConcurrentHashMap = ConcurrentHashMap
-java.util.concurrent.ConcurrentSkipListMap = ConcurrentSkipListMap
-java.util.Collections$UnmodifiableMap = UnmodifiableMap
-java.util.Collections$SingletonMap = SingletonMap
+java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
+java.util.LinkedHashMap$LinkedValues = LinkedValues
+
+java.util.HashMap = HashMap
+java.util.HashMap$KeySet = HashMapKeySet
+java.util.HashMap$Values = HashMapValues
+
 java.util.IdentityHashMap = IdentityHashMap
+java.util.IdentityHashMap$KeySet = IdentityHashMapKeySet
+java.util.IdentityHashMap$Values = IdentityHashMapValues
+
+java.util.TreeMap = TreeMap
+java.util.TreeMap$KeySet = TreeMapKeySet
+java.util.TreeMap$Values = TreeMapValues
+
+java.util.Collections$EmptyList = EmptyList
+
+java.util.Collections$UnmodifiableRandomAccessList = CollectionsUnmodifiableRandomAccessList
+java.util.Collections$UnmodifiableMap = UnmodifiableMap
+java.util.Collections$UnmodifiableSet = CollectionsUnmodifiableSet
+
+java.util.Collections$SingletonList = CollectionsSingletonList
+java.util.Collections$SingletonMap = SingletonMap
+java.util.Collections$SingletonSet = CollectionsSingletonSet
+
+java.util.Collections$SynchronizedSet = CollectionsSynchronizedSet
+java.util.Collections$SynchronizedMap = CollectionsSynchronizedMap
+java.util.Collections$SynchronizedNavigableMap = CollectionsSynchronizedNavigableMap
+
+java.util.Collections$SynchronizedCollection = CollectionsSynchronizedCollection
+java.util.Collections$SynchronizedList = CollectionsSynchronizedList
+
+java.util.Collections$SynchronizedSortedSet = CollectionsSynchronizedSortedSet
+java.util.Collections$SynchronizedNavigableSet = CollectionsSynchronizedNavigableSet
+
+java.util.Collections$SynchronizedMap = CollectionsSynchronizedMap
+java.util.Collections$SynchronizedNavigableMap = CollectionsSynchronizedNavigableMap
+java.util.Collections$SynchronizedSortedMap = CollectionsSynchronizedSortedMap
+
 java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger = AtomicInteger
 java.util.concurrent.atomic.AtomicLong = AtomicLong
+
+java.util.concurrent.ConcurrentHashMap = ConcurrentHashMap
+java.util.concurrent.ConcurrentSkipListMap = ConcurrentSkipListMap
+java.util.concurrent.ConcurrentSkipListSet = ConcurrentSkipListSet
+java.util.concurrent.ConcurrentSkipListMap$KeySet = ConcurrentSkipListMapKeySet
+java.util.concurrent.ConcurrentSkipListMap$Values = ConcurrentSkipListMapValues
+java.util.concurrent.ConcurrentHashMap$KeySetView = ConcurrentHashMapKeySetView
+java.util.concurrent.ConcurrentHashMap$ValuesView = ConcurrentHashMapValuesView
