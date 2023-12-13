@@ -150,6 +150,7 @@ public class WriteOptionsBuilder {
         this.enumPublicFieldsOnly = options.isEnumPublicFieldsOnly();
         this.closeStream = options.isCloseStream();
         this.enumWriter = options.enumWriter;
+        this.classLoader = options.getClassLoader();
 
         this.filteredMethodNames.addAll(options.filteredMethodNames);
 
@@ -224,13 +225,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return ClassLoader to be used when writing JSON to resolve String named classes.
-     */
-    public ClassLoader getClassLoader() {
-        return classLoader;
-    }
-
-    /**
      * @param classLoader ClassLoader to use when writing JSON to resolve String named classes.
      * @return WriteOptionsBuilder for chained access.
      */
@@ -295,7 +289,7 @@ public class WriteOptionsBuilder {
      * @param alias String shorter alias name.
      */
     private void addUniqueAlias(String typeName, String alias) {
-        Convention.throwIfClassNotFound(typeName, getClassLoader());
+        Convention.throwIfClassNotFound(typeName, classLoader);
         Convention.throwIfKeyExists(aliasTypeNames, typeName, "Tried to create @type alias" + typeName + " -> " + alias + ", but it is already aliased to: " + aliasTypeNames.get(typeName));
 
         aliasTypeNames.put(typeName, alias);

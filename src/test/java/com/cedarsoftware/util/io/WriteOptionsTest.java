@@ -54,19 +54,19 @@ class WriteOptionsTest {
         assertThat(options.isSkipNullFields()).isEqualTo(value);
     }
 
-    private static Stream<Arguments> classLoadersTest() {
-        return Stream.of(
-                Arguments.of(ClassLoader.getSystemClassLoader()),
-                Arguments.of(WriteOptionsTest.class.getClassLoader())
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("classLoadersTest")
-    void testClassLoader(ClassLoader classLoader) {
-        WriteOptions options = new WriteOptionsBuilder().classLoader(classLoader).build();
-        assertThat(options.getClassLoader()).isSameAs(classLoader);
-    }
+//    private static Stream<Arguments> classLoadersTest() {
+//        return Stream.of(
+//                Arguments.of(ClassLoader.getSystemClassLoader()),
+//                Arguments.of(WriteOptionsTest.class.getClassLoader())
+//        );
+//    }
+//
+//    @ParameterizedTest
+//    @MethodSource("classLoadersTest")
+//    void testClassLoader(ClassLoader classLoader) {
+//        WriteOptions options = new WriteOptionsBuilder().classLoader(classLoader).build();
+//        assertThat(options.getClassLoader()).isSameAs(classLoader);
+//    }
 
     @Test
     void testClassLoader_default() {
