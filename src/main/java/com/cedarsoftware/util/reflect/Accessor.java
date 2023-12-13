@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.util.Objects;
 
 import com.cedarsoftware.util.io.MetaUtils;
 
@@ -86,23 +85,6 @@ public class Accessor {
 
         this.methodHandle = MethodHandles.lookup().unreflect(method);
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o != null && o.getClass() == getClass()) {
-            Accessor other = (Accessor) o;
-            return (field.equals(other.field)) &&
-                    uniqueFieldName.equals(other.uniqueFieldName) &&
-                    displayName.equals(other.displayName);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(uniqueFieldName, displayName, field, getClass());
-    }
-
 
     public Object retrieve(Object o) {
         try {
