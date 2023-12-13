@@ -45,6 +45,7 @@ public class Readers
     
     public static class URLReader implements JsonReader.JsonClassReader
     {
+        @Override
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
             boolean isString = o instanceof String;
@@ -66,7 +67,7 @@ public class Readers
         }
 
         URL createURLFromJsonObject(JsonObject jObj) throws MalformedURLException {
-            if (jObj.containsKey("value")) {
+            if (jObj.hasValue()) {
                 jObj.setTarget(createUrlNewWay(jObj));
             } else {
                 jObj.setTarget(createUrlOldWay(jObj));
@@ -191,7 +192,7 @@ public class Readers
             }
 
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            if (jObj.hasValue())
             {
                 jObj.setTarget(jObj.getValue());
                 return jObj.getTarget();
@@ -216,7 +217,7 @@ public class Readers
             }
 
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            if (jObj.hasValue())
             {
                 String value = (String) jObj.getValue();
                 jObj.setTarget(MetaUtils.classForName(value, context.getReadOptions().getClassLoader()));
@@ -312,7 +313,7 @@ public class Readers
         if (o instanceof JsonObject)
         {
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            if (jObj.hasValue())
             {
                 value = jObj.getValue();
             }
@@ -334,7 +335,7 @@ public class Readers
             if (o instanceof JsonObject)
             {
                 jObj = (JsonObject) o;
-                if (jObj.containsKey("value"))
+                if (jObj.hasValue())
                 {
                     value = jObj.getValue();
                 }
@@ -381,7 +382,7 @@ public class Readers
             if (o instanceof JsonObject)
             {
                 jObj = (JsonObject) o;
-                if (jObj.containsKey("value"))
+                if (jObj.hasValue())
                 {
                     value = jObj.getValue();
                 }
@@ -428,7 +429,7 @@ public class Readers
             }
 
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            if (jObj.hasValue())
             {
                 jObj.setTarget(new StringBuilder((String) jObj.getValue()));
                 return jObj.getTarget();
@@ -447,7 +448,7 @@ public class Readers
             }
 
             JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("value"))
+            if (jObj.hasValue())
             {
                 jObj.setTarget(new StringBuffer((String) jObj.getValue()));
                 return jObj.getTarget();

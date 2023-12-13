@@ -249,20 +249,14 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public boolean writeUsingCustomWriter(Object o, boolean showType, Writer output)
     {
-        if (writeOptions.isNeverShowingType())
-        {
-            showType = false;
-        }
         Class<?> c = o.getClass();
-
-        if (writeOptions.isNotCustomWrittenClass(c))
-        {
+        if (writeOptions.isNotCustomWrittenClass(c)) {
             return false;
         }
 
         try
         {
-            return writeCustom(c, o, showType, output);
+            return writeCustom(c, o, !writeOptions.isNeverShowingType() && showType, output);
         }
         catch (IOException e)
         {
@@ -506,9 +500,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         for (final Accessor accessor : fields)
         {
             MetaUtils.safelyIgnoreException(() -> {
-                // make sure excluded fieldss don't get added to the stack.  If a field is proxied, such as
-                // by Hibernate then accessing the item in any way can throw an exception.
-                final Object o = getValueByReflect(obj, accessor);
+                final Object o = accessor.retrieve(obj);
                 if (o != null && !writeOptions.isNonReferenceableClass(o.getClass())) {   // Trace through objects that can reference other objects
                     stack.addFirst(o);
                 }
@@ -550,96 +542,47 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * object, or a JsonObject representing a regular object.
      * @param obj Object to be written
      * @param showType if set to true, the @type tag will be output.  If false, it will be
-     * dropped.
      * @throws IOException if one occurs on the underlying output stream.
      */
     public void writeImpl(Object obj, boolean showType) throws IOException
     {
-        writeImpl(obj, showType, true, true);
-    }
+        // For security - write instances of these classes out as null
+        if (obj == null ||
+                obj instanceof ProcessBuilder ||
+                obj instanceof Process ||
+                obj instanceof ClassLoader ||
+                obj instanceof Constructor ||
+                obj instanceof Method ||
+                obj instanceof Field) {
+            out.write("null");
+            return;
+        }
 
-    /**
-     * Main entry point (mostly used internally, but may be called from a Custom JSON writer).
-     * This method will write out whatever object type it is given, including JsonObject's.
-     * It will handle null, detecting if a custom writer should be called, array, array of
-     * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
-     * object, or a JsonObject representing a regular object.
-     * @param obj Object to be written
-     * @param showType if set to true, the @type tag will be output.  If false, it will be
-     * @param allowRef if set to true, @ref will be used, otherwise 2+ occurrence will be
-     * output as full object.
-     * @param allowCustom if set to true, the object being called will be checked for a matching
-     * custom writer to be used. This does not affect sub-objects, just the top-level 'obj'
-     * being passed in.
-     * @throws IOException if one occurs on the underlying output stream.
-     */
-    public void writeImpl(Object obj, boolean showType, boolean allowRef, boolean allowCustom) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
 
-        // For security - write instances of these classes out as null
-        if (obj instanceof ProcessBuilder ||
-            obj instanceof Process ||
-            obj instanceof ClassLoader ||
-            obj instanceof Constructor ||
-            obj instanceof Method ||
-            obj instanceof Field)
-        {
-            out.write("null");
+        if (writeUsingCustomWriter(obj, showType, out) || writeOptionalReference(obj)) {
             return;
         }
 
-        if (obj == null)
-        {
-            out.write("null");
-            return;
-        }
-
-        if (allowCustom && writeUsingCustomWriter(obj, showType, out))
-        {
-            return;
-        }
-
-        if (allowRef && writeOptionalReference(obj))
-        {
-            return;
-        }
-
-        if (obj.getClass().isArray())
-        {
+        if (obj.getClass().isArray()) {
             writeArray(obj, showType);
-        }
-        else if (obj instanceof EnumSet)
-        {
+        } else if (obj instanceof EnumSet) {
             writeEnumSet((EnumSet<?>)obj);
-        }
-        else if (obj instanceof Collection)
-        {
+        } else if (obj instanceof Collection) {
             writeCollection((Collection<?>) obj, showType);
-        }
-        else if (obj instanceof JsonObject)
-        {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
+        } else if (obj instanceof JsonObject) {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
             JsonObject jObj = (JsonObject) obj;
-            if (jObj.isArray())
-            {
+            if (jObj.isArray()) {
                 writeJsonObjectArray(jObj, showType);
-            }
-            else if (jObj.isCollection())
-            {
+            } else if (jObj.isCollection()) {
                 writeJsonObjectCollection(jObj, showType);
-            }
-            else if (jObj.isMap())
-            {
-                if (!writeJsonObjectMapWithStringKeys(jObj, showType))
-                {
+            } else if (jObj.isMap()) {
+                if (!writeJsonObjectMapWithStringKeys(jObj, showType)) {
                     writeJsonObjectMap(jObj, showType);
                 }
-            }
-            else
-            {
+            } else {
                 writeJsonObjectObject(jObj, showType);
             }
         }
@@ -1633,7 +1576,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     out.write('{');
                     for (Accessor f : mapOfFields)
                     {
-                        firstInEntry = writeField(e, firstInEntry, f.getFieldName(), f, false);
+                        firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f, false);
                     }
                     out.write('}');
                 }
@@ -1691,7 +1634,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Collection<Accessor> accessors = writeOptions.getAccessorsForClass(obj.getClass());
 
         for (final Accessor accessor : accessors) {
-            final String fieldName = accessor.getFieldName();
+            final String fieldName = accessor.getUniqueFieldName();
             first = writeField(obj, first, fieldName, accessor, true);
         }
 
@@ -1735,7 +1678,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 return first;
             }
 
-            o = getValueByReflect(obj, accessor);
+            o = accessor.retrieve(obj);
         }
         else if (ObjectResolver.isBasicWrapperType(fieldDeclaringClass))
         {
@@ -1743,7 +1686,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         else
         {
-            o = getValueByReflect(obj, accessor);
+            o = accessor.retrieve(obj);
         }
 
         if (writeOptions.isSkipNullFields() && o == null)
@@ -1771,14 +1714,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         // When no type is written we can check the Object itself not the declaration
-        if (Primitives.isPrimitive(type) || (writeOptions.isNeverShowingType() && Primitives.isPrimitive(o.getClass())))
-        {
-            writeImpl(o, false);
-        }
-        else
-        {
-            writeImpl(o, forceType || writeOptions.isAlwaysShowingType(), true, true);
-        }
+        boolean primitiveCondition = Primitives.isPrimitive(type) || (writeOptions.isNeverShowingType() && Primitives.isPrimitive(o.getClass()));
+        boolean showType = !primitiveCondition && (forceType || writeOptions.isAlwaysShowingType());
+
+        writeImpl(o, showType);
         return false;
     }
 
