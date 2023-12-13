@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-import java.util.Objects;
 
 import com.cedarsoftware.util.io.MetaUtils;
 
@@ -31,27 +30,45 @@ import lombok.Getter;
  */
 public class Accessor {
 
+    /**
+     * The unique field name if two fields have the same name in the same class structure,
+     * the more parent field will be qualified with the ShortName of the Declaring class
+     */
     @Getter
-    private final String fieldName;
+    private final String uniqueFieldName;
 
+    /**
+     * The field we are trying to access with this method handle
+     */
     private final Field field;
+
+    /**
+     * The display name will be either the underlying field name or the underlying
+     * method name from which the method handle was created.
+     */
     @Getter
     private final String displayName;
     private MethodHandle methodHandle;
 
+    /**
+     * This will be the modifiers of the field or method that defines this MethodHandle
+     * (or Field) itself if we had to fall back to field access.
+     */
     @Getter
-    private final boolean isPublic;
+    private final int modifiers;
 
-    public Accessor(Field field, String fieldName) throws Throwable {
+    public Accessor(Field field, String uniqueFieldName) throws Throwable {
         this.field = field;
-        this.fieldName = fieldName;
+        this.uniqueFieldName = uniqueFieldName;
 
         this.displayName = field.getName();
-        this.isPublic = Modifier.isPublic(field.getModifiers());
+        this.modifiers = field.getModifiers();
 
         try {
             this.methodHandle = MethodHandles.lookup().unreflectGetter(field);
-        } catch (Exception e) {
+        } catch (ThreadDeath td) {
+            throw td;
+        } catch (Throwable t) {
             if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
                 MetaUtils.trySetAccessible(field);
             }
@@ -59,38 +76,25 @@ public class Accessor {
         }
     }
 
-    public Accessor(Field field, Method method, String fieldName) throws Throwable {
-        this.fieldName = fieldName;
+    public Accessor(Field field, Method method, String uniqueFieldName) throws Throwable {
+        this.uniqueFieldName = uniqueFieldName;
         this.field = field;
 
         this.displayName = method.getName();
-        this.isPublic = Modifier.isPublic(method.getModifiers());
+        this.modifiers = method.getModifiers();
 
         this.methodHandle = MethodHandles.lookup().unreflect(method);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o != null && o.getClass() == getClass()) {
-            Accessor other = (Accessor) o;
-            return (field.equals(other.field)) &&
-                    fieldName.equals(other.fieldName) &&
-                    displayName.equals(other.displayName);
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(fieldName, displayName, field, getClass());
-    }
-
-
-    public Object retrieve(Object o) throws Throwable {
-        if (methodHandle == null) {
-            return field.get(o);
-        } else {
-            return methodHandle.invoke(o);
+    public Object retrieve(Object o) {
+        try {
+            if (methodHandle == null) {
+                return field.get(o);
+            } else {
+                return methodHandle.invoke(o);
+            }
+        } catch (Throwable t) {
+            return null;
         }
     }
 
@@ -112,5 +116,9 @@ public class Accessor {
 
     public String getActualFieldName() {
         return field.getName();
+    }
+
+    public boolean isPublic() {
+        return Modifier.isPublic(this.modifiers);
     }
 }

@@ -1,12 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Map;
-
-import com.cedarsoftware.util.ReturnType;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.util.Map;
+
+import org.junit.jupiter.api.RepeatedTest;
+
+import com.cedarsoftware.util.ReturnType;
 /**
  * Test cases for JsonReader / JsonWriter
  *
@@ -28,31 +29,25 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 class BigJsonTest
 {
-    @Test
+    @RepeatedTest(2)
     void testBigJsonToJava()
     {
-        for (int i=0; i < 2; i++)
-        {
-            String json = MetaUtils.loadResourceAsString("big/big5D.json");
-            Map map = TestUtil.toObjects(json, null);
-            assertEquals("big5D", map.get("ncube"));
-            assertEquals(0L, map.get("defaultCellValue"));
-            assertNotNull(map.get("axes"));
-            assertNotNull(map.get("cells"));
-        }
+        String json = MetaUtils.loadResourceAsString("big/big5D.json");
+        Map map = TestUtil.toObjects(json, null);
+        assertEquals("big5D", map.get("ncube"));
+        assertEquals(0L, map.get("defaultCellValue"));
+        assertNotNull(map.get("axes"));
+        assertNotNull(map.get("cells"));
     }
 
-    @Test
+    @RepeatedTest(2)
     void testBigJsonToMaps()
     {
-        for (int i=0; i < 2; i++)
-        {
-            String json = MetaUtils.loadResourceAsString("big/big5D.json");
-            Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
-            assertEquals("big5D", map.get("ncube"));
-            assertEquals(0L, map.get("defaultCellValue"));
-            assertNotNull(map.get("axes"));
-            assertNotNull(map.get("cells"));
-        }
+        String json = MetaUtils.loadResourceAsString("big/big5D.json");
+        Map map = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        assertEquals("big5D", map.get("ncube"));
+        assertEquals(0L, map.get("defaultCellValue"));
+        assertNotNull(map.get("axes"));
+        assertNotNull(map.get("cells"));
     }
 }

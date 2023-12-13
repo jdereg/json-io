@@ -67,15 +67,13 @@ public class WriteOptionsBuilder {
     private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
     private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
 
-    private final Map<Class<?>, Map<String, String>> nonStandardMappings;
+    private final Map<Class<?>, Map<String, String>> nonStandardMappings = new ConcurrentHashMap<>();
 
     private final List<FieldFilter> fieldFilters;
     private final List<MethodFilter> methodFilters;
     private final List<AccessorFactory> accessorFactories;
-
-    private final Set<String> filteredMethodNames;
-
-    private final Map<Class<?>, Set<String>> excludedFieldNames;
+    private final Set<String> filteredMethodNames = new LinkedHashSet<>();
+    private final Map<Class<?>, Set<String>> excludedFieldNames = new ConcurrentHashMap<>();
 
     private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new ConcurrentHashMap<>();
 
@@ -83,10 +81,20 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new LinkedHashSet<>();
 
+    private static final Set<String> BASE_FILTERED_METHOD_NAMES = new LinkedHashSet();
+
+    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
+
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
+
+
     static {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
+        BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt"));
+        BASE_NONSTANDARD_MAPPINGS.putAll(loadNonStandardMethodNames());
     }
 
     // Enum for the 3-state property
@@ -108,12 +116,6 @@ public class WriteOptionsBuilder {
         this.enumPublicFieldsOnly = false;
         this.closeStream = true;
 
-
-        this.filteredMethodNames = MetaUtils.loadSetDefinition("excludedAccessorMethods.txt");
-        this.excludedFieldNames = MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt");
-
-        this.nonStandardMappings = loadNonStandardMethodNames();
-
         this.fieldFilters = new ArrayList<>();
         this.fieldFilters.add(new StaticFieldFilter());
         this.fieldFilters.add(new GroovyFieldFilter());
@@ -128,9 +130,13 @@ public class WriteOptionsBuilder {
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
+
+        nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
         aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         customWrittenClasses.putAll(BASE_WRITERS);
         nonRefClasses.addAll(BASE_NON_REFS);
+        filteredMethodNames.addAll(BASE_FILTERED_METHOD_NAMES);
+        excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
     }
 
     public WriteOptionsBuilder(WriteOptions options) {
@@ -145,7 +151,7 @@ public class WriteOptionsBuilder {
         this.closeStream = options.isCloseStream();
         this.enumWriter = options.enumWriter;
 
-        this.filteredMethodNames = new LinkedHashSet<>(options.filteredMethodNames);
+        this.filteredMethodNames.addAll(options.filteredMethodNames);
 
         this.notCustomWrittenClasses = new LinkedHashSet<>(options.notCustomWrittenClasses);
         this.nonRefClasses.addAll(options.nonRefClasses);
@@ -153,9 +159,9 @@ public class WriteOptionsBuilder {
         this.aliasTypeNames = new LinkedHashMap<>(options.aliasTypeNames());
         this.customWrittenClasses = new LinkedHashMap<>(options.getCustomWrittenClasses());
 
-        this.excludedFieldNames = MetaUtils.cloneMapOfSets(options.excludedFieldNames, false);
-        this.includedFieldNames = MetaUtils.cloneMapOfSets(options.includedFieldNames, false);
-        this.nonStandardMappings = MetaUtils.cloneMapOfMaps(options.nonStandardMappings, false);
+        this.excludedFieldNames.putAll(MetaUtils.cloneMapOfSets(options.excludedFieldNames, false));
+        this.includedFieldNames.putAll(MetaUtils.cloneMapOfSets(options.includedFieldNames, false));
+        this.nonStandardMappings.putAll(MetaUtils.cloneMapOfMaps(options.nonStandardMappings, false));
 
         this.fieldFilters = options.fieldFilters.stream()
                 .map(FieldFilter::createCopy)
@@ -231,14 +237,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder classLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
         return this;
-    }
-
-    /**
-     * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
-     * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
-     */
-    public boolean isShortMetaKeys() {
-        return shortMetaKeys;
     }
 
     /**

@@ -56,10 +56,6 @@ import com.cedarsoftware.util.reflect.filters.MethodFilter;
  * limitations under the License.
  */
 public class WriteOptions {
-    // Constants
-    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-
     // Properties
     private final boolean shortMetaKeys;
     final ShowType showTypeInfo;
@@ -521,7 +517,7 @@ public class WriteOptions {
             }
         }
 
-        return accessorMap;
+        return Collections.synchronizedMap(accessorMap);
     }
 
     private Map<String, Method> getDeepDeclaredMethods(Class<?> c) {
@@ -571,7 +567,7 @@ public class WriteOptions {
             currentClass = currentClass.getSuperclass();
         }
 
-        return map;
+        return Collections.synchronizedMap(map);
     }
 
     public List<Method> getFilteredMethods(Class<?> c) {
@@ -603,7 +599,8 @@ public class WriteOptions {
 
             curr = curr.getSuperclass();
         }
-        return map;
+
+        return Collections.synchronizedMap(map);
     }
 
     ShowType getShowTypeInfo() {

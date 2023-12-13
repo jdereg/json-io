@@ -336,7 +336,6 @@ public class FieldsTest
                 .addExcludedField(MorePainfulToSerialize.class, "age")
                 .build();
         String json = TestUtil.toJson(painful, writeOptions);
-        System.out.println(json);
         Map check = TestUtil.toObjects(json, readOptions, null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
