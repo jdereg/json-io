@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.lang.reflect.Constructor;
+
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import java.lang.reflect.Constructor;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -75,6 +75,7 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
         return new StackTraceElement(declaringClass, methodName, fileName, lineNumber.intValue());
     }
 
+    @Override
     public boolean isObjectFinal() {
         return true;
     }
