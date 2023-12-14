@@ -57,37 +57,33 @@ import com.cedarsoftware.util.reflect.filters.MethodFilter;
  */
 public class WriteOptions {
     // Properties
-    private final boolean shortMetaKeys;
-    final ShowType showTypeInfo;
-    private final boolean prettyPrint;
-    private final boolean writeLongsAsStrings;
-    private final boolean skipNullFields;
-    private final boolean forceMapOutputAsTwoArrays;
-    private final boolean allowNanAndInfinity;
-    private final boolean enumPublicFieldsOnly;
-    private final boolean closeStream;
-    final JsonWriter.JsonClassWriter enumWriter;
-    private final ClassLoader classLoader;
-    final Map<Class<?>, Map<String, String>> nonStandardMappings;
-
-    protected final Map<Class<?>, Set<String>> includedFieldNames;
-    protected final Map<Class<?>, Set<String>> excludedFieldNames;
-    private final Map<String, String> aliasTypeNames;
-    final Set<Class<?>> notCustomWrittenClasses;
-    final Set<Class<?>> nonRefClasses;
-
-    final List<FieldFilter> fieldFilters;
-    final List<MethodFilter> methodFilters;
-    final List<AccessorFactory> accessorFactories;
-
-    final Set<String> filteredMethodNames;
-
-
-    private final Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
+    protected boolean shortMetaKeys;
+    protected ShowType showTypeInfo;
+    protected boolean prettyPrint;
+    protected boolean writeLongsAsStrings;
+    protected boolean skipNullFields;
+    protected boolean forceMapOutputAsTwoArrays;
+    protected boolean allowNanAndInfinity;
+    protected boolean enumPublicFieldsOnly;
+    protected boolean closeStream;
+    protected JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
+    protected ClassLoader classLoader = WriteOptions.class.getClassLoader();
+    protected Map<Class<?>, Set<String>> includedFieldNames;
+    protected Map<Class<?>, Map<String, String>> nonStandardMappings;
+    protected Map<String, String> aliasTypeNames;
+    protected Set<Class<?>> notCustomWrittenClasses;
+    protected Set<Class<?>> nonRefClasses;
+    protected Map<Class<?>, Set<String>> excludedFieldNames;
+    protected List<FieldFilter> fieldFilters;
+    protected List<MethodFilter> methodFilters;
+    protected List<AccessorFactory> accessorFactories;
+    protected Set<String> filteredMethodNames;
+    protected Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
 
     // Runtime caches (not feature options), since looking up writers can be expensive
     // when one does not exist, we cache the write or a nullWriter if one does not exist.
-    private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+    protected Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+
     private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
 
     private final Map<Class<?>, Map<String, Method>> deepMethodCache = new ConcurrentHashMap<>();
@@ -102,68 +98,43 @@ public class WriteOptions {
         ALWAYS, NEVER, MINIMAL
     }
 
-    WriteOptions(boolean shortMetaKeys,
-                 boolean prettyPrint,
-                 boolean writeLongsAsStrings,
-                 boolean skipNullFields,
-                 boolean allowNanAndInfinity,
-                 boolean forceMapOutputAsTwoArrays,
-                 boolean enumPublicFieldsOnly,
-                 boolean closeStream,
-                 ShowType showTypeInfo,
-                 ClassLoader classLoader,
-                 JsonWriter.JsonClassWriter enumWriter,
-                 Set<Class<?>> notCustomWrittenClasses,
-                 Set<Class<?>> nonRefClasses,
-                 Set<String> filteredMethodNames,
-                 Map<String, String> aliasTypeNames,
-                 Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses,
-                 Map<Class<?>, Set<String>> excludedFieldNames,
-                 Map<Class<?>, Set<String>> includedFieldNames,
-                 Map<Class<?>, Map<String, String>> nonStandardMappings,
-                 List<FieldFilter> fieldFilters,
-                 List<MethodFilter> methodFilters,
-                 List<AccessorFactory> accessorFactories) {
+    WriteOptions() {
+        this.shortMetaKeys = false;
+        this.showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        this.prettyPrint = false;
+        this.writeLongsAsStrings = false;
+        this.skipNullFields = false;
+        this.forceMapOutputAsTwoArrays = false;
+        this.allowNanAndInfinity = false;
+        this.enumPublicFieldsOnly = false;
+        this.closeStream = true;
 
-        this.shortMetaKeys = shortMetaKeys;
-        this.prettyPrint = prettyPrint;
-        this.writeLongsAsStrings = writeLongsAsStrings;
-        this.skipNullFields = skipNullFields;
-        this.allowNanAndInfinity = allowNanAndInfinity;
-        this.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
-        this.enumPublicFieldsOnly = enumPublicFieldsOnly;
-        this.closeStream = closeStream;
-
-        this.classLoader = classLoader;
-        this.enumWriter = enumWriter;
-        this.showTypeInfo = showTypeInfo;
-
-        this.notCustomWrittenClasses = Collections.unmodifiableSet(notCustomWrittenClasses);
-        this.nonRefClasses = Collections.unmodifiableSet(nonRefClasses);
-        this.filteredMethodNames = Collections.unmodifiableSet(filteredMethodNames);
-
-        this.aliasTypeNames = Collections.unmodifiableMap(aliasTypeNames);
-        this.customWrittenClasses = Collections.unmodifiableMap(customWrittenClasses);
-        this.writerCache.putAll(customWrittenClasses);
-
-
-        this.excludedFieldNames = MetaUtils.cloneMapOfSets(excludedFieldNames, true);
-        this.includedFieldNames = MetaUtils.cloneMapOfSets(includedFieldNames, true);
-
-        // Need your own Set instance here per Class, no references to the copied Set.
-        this.nonStandardMappings = MetaUtils.cloneMapOfMaps(nonStandardMappings, true);
-
-        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
-                .map(FieldFilter::createCopy)
-                .collect(Collectors.toList()));
-
-        this.methodFilters = Collections.unmodifiableList(methodFilters.stream()
-                .map(MethodFilter::createCopy)
-                .collect(Collectors.toList()));
-
-        this.accessorFactories = Collections.unmodifiableList(accessorFactories.stream()
-                .map(AccessorFactory::createCopy)
-                .collect(Collectors.toList()));
+//        this.notCustomWrittenClasses = Collections.unmodifiableSet(notCustomWrittenClasses);
+//        this.nonRefClasses = Collections.unmodifiableSet(nonRefClasses);
+//        this.filteredMethodNames = Collections.unmodifiableSet(filteredMethodNames);
+//
+//        this.aliasTypeNames = Collections.unmodifiableMap(aliasTypeNames);
+//        this.customWrittenClasses = Collections.unmodifiableMap(customWrittenClasses);
+//        this.writerCache.putAll(customWrittenClasses);
+//
+//
+//        this.excludedFieldNames = MetaUtils.cloneMapOfSets(excludedFieldNames, true);
+//        this.includedFieldNames = MetaUtils.cloneMapOfSets(includedFieldNames, true);
+//
+//        // Need your own Set instance here per Class, no references to the copied Set.
+//        this.nonStandardMappings = MetaUtils.cloneMapOfMaps(nonStandardMappings, true);
+//
+//        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
+//                .map(FieldFilter::createCopy)
+//                .collect(Collectors.toList()));
+//
+//        this.methodFilters = Collections.unmodifiableList(methodFilters.stream()
+//                .map(MethodFilter::createCopy)
+//                .collect(Collectors.toList()));
+//
+//        this.accessorFactories = Collections.unmodifiableList(accessorFactories.stream()
+//                .map(AccessorFactory::createCopy)
+//                .collect(Collectors.toList()));
     }
 
     /**
