@@ -675,6 +675,8 @@ public class WriteOptionsBuilder {
                 .map(AccessorFactory::createCopy)
                 .collect(Collectors.toList()));
 
+        this.options.clearCaches();
+
         return this.options;
     }
 

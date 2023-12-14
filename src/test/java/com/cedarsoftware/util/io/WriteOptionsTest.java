@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
@@ -23,7 +22,6 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -143,13 +141,6 @@ class WriteOptionsTest {
     void testIsNonReferenceable_notInDefaults() {
         WriteOptions options = new WriteOptionsBuilder().build();
         assertFalse(options.isNonReferenceableClass(NoTypeTest.Person.class)); // Assuming Date is a logical primitive
-    }
-
-
-    @Test
-    void testGetNotReferenceableTypes() {
-        Collection<Class<?>> nonReferenceableClasses = new WriteOptionsBuilder().build().getNonReferenceableClasses();
-        assertNotNull(nonReferenceableClasses);
     }
 
 
@@ -351,14 +342,6 @@ class WriteOptionsTest {
                 .build();
 
         assertThat(options.getCustomWriter(CustomWriterTest.Person.class)).isNotNull();
-    }
-
-    @Test
-    void testNotCustomWrittenClass_default() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .build();
-
-        assertThat(options.getNotCustomWrittenClasses()).isEmpty();
     }
 
     @Test

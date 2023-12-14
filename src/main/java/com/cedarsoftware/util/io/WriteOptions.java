@@ -108,33 +108,6 @@ public class WriteOptions {
         this.allowNanAndInfinity = false;
         this.enumPublicFieldsOnly = false;
         this.closeStream = true;
-
-//        this.notCustomWrittenClasses = Collections.unmodifiableSet(notCustomWrittenClasses);
-//        this.nonRefClasses = Collections.unmodifiableSet(nonRefClasses);
-//        this.filteredMethodNames = Collections.unmodifiableSet(filteredMethodNames);
-//
-//        this.aliasTypeNames = Collections.unmodifiableMap(aliasTypeNames);
-//        this.customWrittenClasses = Collections.unmodifiableMap(customWrittenClasses);
-//        this.writerCache.putAll(customWrittenClasses);
-//
-//
-//        this.excludedFieldNames = MetaUtils.cloneMapOfSets(excludedFieldNames, true);
-//        this.includedFieldNames = MetaUtils.cloneMapOfSets(includedFieldNames, true);
-//
-//        // Need your own Set instance here per Class, no references to the copied Set.
-//        this.nonStandardMappings = MetaUtils.cloneMapOfMaps(nonStandardMappings, true);
-//
-//        this.fieldFilters = Collections.unmodifiableList(fieldFilters.stream()
-//                .map(FieldFilter::createCopy)
-//                .collect(Collectors.toList()));
-//
-//        this.methodFilters = Collections.unmodifiableList(methodFilters.stream()
-//                .map(MethodFilter::createCopy)
-//                .collect(Collectors.toList()));
-//
-//        this.accessorFactories = Collections.unmodifiableList(accessorFactories.stream()
-//                .map(AccessorFactory::createCopy)
-//                .collect(Collectors.toList()));
     }
 
     /**
@@ -160,13 +133,6 @@ public class WriteOptions {
     public String getTypeNameAlias(String typeName) {
         String alias = aliasTypeNames.get(typeName);
         return alias == null ? typeName : alias;
-    }
-
-    /**
-     * @return Map<String, String> containing String class names to alias names.
-     */
-    public Map<String, String> aliasTypeNames() {
-        return aliasTypeNames;
     }
 
     /**
@@ -236,13 +202,6 @@ public class WriteOptions {
     }
 
     /**
-     * @return boolean true if enums are to be written out as Strings (not a full JSON object) when possible.
-     */
-    public boolean isWriteEnumAsString() {
-        return enumWriter instanceof Writers.EnumsAsStringWriter;
-    }
-
-    /**
      * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
      * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
      * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
@@ -262,14 +221,6 @@ public class WriteOptions {
 
 
     /**
-     * @return Map of Class to custom JsonClassWriter's use to write JSON when the class is encountered during
-     * serialization to JSON.
-     */
-    public Map<Class<?>, JsonWriter.JsonClassWriter> getCustomWrittenClasses() {
-        return customWrittenClasses;
-    }
-
-    /**
      * @param clazz Class to check to see if there is a custom writer associated to it.
      * @return boolean true if there is an associated custom writer class associated to the passed in class,
      * false otherwise.
@@ -286,13 +237,6 @@ public class WriteOptions {
      */
     public boolean isNotCustomWrittenClass(Class<?> clazz) {
         return notCustomWrittenClasses.contains(clazz);
-    }
-
-    /**
-     * @return Set of all Classes on the not-customized list.
-     */
-    public Set<Class<?>> getNotCustomWrittenClasses() {
-        return notCustomWrittenClasses;
     }
 
     /**
@@ -347,15 +291,6 @@ public class WriteOptions {
                 Number.class.isAssignableFrom(clazz) ||
                 Date.class.isAssignableFrom(clazz) ||
                 clazz.isEnum();
-    }
-
-    /**
-     * @return Collection of classes specifically listed as Logical Primitives.  In addition to the return
-     * classes, derivatives of Number and Date are also considered Logical Primitives by json-io.
-     */
-    public Collection<Class<?>> getNonReferenceableClasses()
-    {
-        return nonRefClasses;
     }
 
     /**
@@ -441,10 +376,18 @@ public class WriteOptions {
         deepMethodCache.clear();
         deepFieldCache.clear();
         methodCache.clear();
+        accessorsCache.clear();
     }
 
-    public void clearUnfilteredAccessorCache() {
+    public void clearMethodCaches() {
         methodCache.clear();
+        deepMethodCache.clear();
+        accessorsCache.clear();
+    }
+
+    public void clearFieldCaches() {
+        deepFieldCache.clear();
+        accessorsCache.clear();
     }
 
 
