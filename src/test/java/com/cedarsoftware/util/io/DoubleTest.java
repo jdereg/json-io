@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -187,7 +188,7 @@ public class DoubleTest
     void testNanArrayElement2()
     {
         String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)));
-        assert json.contains("null");
+        assertThat(json).contains("null");
 
         json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NEGATIVE_INFINITY)));
         assert json.contains("null");

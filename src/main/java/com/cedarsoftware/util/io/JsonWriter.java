@@ -621,23 +621,29 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             showType = false;
         }
-
-
-        if (obj instanceof Long && writeOptions.isWriteLongsAsStrings()) {
-            if (showType) {
-                out.write('{');
-                writeType("long", out);
-                out.write(',');
-            }
-
-            JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
-            writer.write(obj, showType, out, this);
-
-            if (showType) {
-                out.write('}');
-            }
+        if (obj instanceof Character) {
+            writeJsonUtf8String(out, String.valueOf(obj));
         } else {
-            out.write(obj.toString());
+            if (obj instanceof Long && getWriteOptions().isWriteLongsAsStrings()) {
+                if (showType) {
+                    out.write('{');
+                    writeType("long", out);
+                    out.write(',');
+                }
+
+                JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
+                writer.write(obj, showType, out, this);
+
+                if (showType) {
+                    out.write('}');
+                }
+            } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
+                out.write("null");
+            } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
+                out.write("null");
+            } else {
+                out.write(obj.toString());
+            }
         }
     }
 
@@ -1033,20 +1039,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
             if (value == null) {
                 output.write("null");
-            } else if (!writeArrayElementIfMatching(componentClass, value, false, output)) {
-                // do nothing
-                if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
+            } else if (Character.class == componentClass || char.class == componentClass) {
+                writeJsonUtf8String(output, (String) value);
+            } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
                     writePrimitive(value, value.getClass() != componentClass);
-                } else {
-                    boolean doNotShowType =
-                            (writeOptions.isNeverShowingType() && Primitives.isPrimitive(value.getClass()) ||
-                                    value instanceof String ||
-                                    Character.class == componentClass ||
-                                    char.class == componentClass) ||
-                                    !(isForceType(value.getClass(), componentClass) || writeOptions.isAlwaysShowingType());
-
-                    writeImpl(value, !doNotShowType);
-                }
+            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
+                writePrimitive(value, false);
+            } else if (value instanceof String) {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
+                writeJsonUtf8String(output, (String) value);
+            } else if (writeArrayElementIfMatching(componentClass, value, false, output)) {
+            } else {   // Specific Class-type arrays - only force type when
+                // the instance is derived from array base class.
+                boolean forceType = isForceType(value.getClass(), componentClass);
+                writeImpl(value, forceType || getWriteOptions().isAlwaysShowingType());
             }
 
             if (i != lenMinus1)
@@ -1291,12 +1296,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             if (value == null)
             {
                 output.write("null");
+            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
+                writePrimitive(value, false);
             }
             else if (value instanceof BigDecimal || value instanceof BigInteger)
             {
                 writeImpl(value, !doesValueTypeMatchFieldType(type, fieldName, value));
-            } else if (value instanceof Number || value instanceof Boolean || value instanceof String || value instanceof Character) {
-                writeImpl(value, false);
+            } else if (value instanceof Number || value instanceof Boolean) {
+                output.write(value.toString());
+            } else if (value instanceof String) {
+                writeJsonUtf8String(output, (String) value);
+            } else if (value instanceof Character) {
+                writeJsonUtf8String(output, String.valueOf(value));
             }
             else
             {
@@ -1481,16 +1492,18 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (o == null)
         {
             out.write("null");
-            return;
+        } else if (o instanceof Boolean || o instanceof Double) {
+            writePrimitive(o, false);
+        } else if (o instanceof Long) {
+            writePrimitive(o, getWriteOptions().isWriteLongsAsStrings());
+        } else if (o instanceof String) {   // Never do an @ref to a String (they are treated as logical primitives and intern'ed on read)
+            writeJsonUtf8String(out, (String) o);
+        } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(o.getClass())) {   // If neverShowType, then force primitives (and primitive wrappers)
+            // to be output with toString() - prevents {"value":6} for example
+            writePrimitive(o, false);
+        } else {
+            writeImpl(o, true);
         }
-
-        boolean doNotShowType = o instanceof Boolean ||
-                o instanceof Double ||
-                o instanceof String ||
-                (o instanceof Long && !writeOptions.isWriteLongsAsStrings()) ||
-                writeOptions.isNeverShowingType() && Primitives.isPrimitive(o.getClass());
-
-        writeImpl(o, !doNotShowType);
     }
 
     private void writeEnumSet(final EnumSet<?> enumSet) throws IOException
