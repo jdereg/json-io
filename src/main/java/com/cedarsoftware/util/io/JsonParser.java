@@ -160,7 +160,6 @@ class JsonParser {
         }
         in.pushback((char) c);
         ++curParseDepth;
-        Object instance = null;
         Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(suggestedClass);
 
         while (true) {
@@ -186,12 +185,6 @@ class JsonParser {
                     loadId(value, jObj);
                     break;
 
-                case "value":
-                    // Load value make sure containing object is marked appropriately, however, if there are
-                    // other non-meta keys besides value, then it is an Object or Map.
-                    jObj.put(field, value);
-                    break;
-
                 case ITEMS:
                     // load Items
                     jObj.put(field, value);
@@ -203,7 +196,7 @@ class JsonParser {
                     break;
 
                 default:
-                    jObj.put(field, value);
+                    jObj.put(field, value); // Load field/value pair
                     break;
             }
 
@@ -216,28 +209,17 @@ class JsonParser {
         }
 
         --curParseDepth;
-        // Override 'hintType' if '@type' has a value by setting 'javaType' on JsonObject.
-        // injectors = ClassDescriptors.instance().getDeepInjectorMap(type);
 
-        // TODO: This is where we should be injecting the 'value' into the instance or Map.
-        // 1st time here, instance should be created, as the meta-properties (@type, value, etc.) will have been read.
-        // Instance can be at least one of the 7 types listed above.
-        // Object could be:
-        // 1. Normal Java Class
-        // 2. Map (any Map type)
-        //    Will have either all String keys, -or- @keys and @items containing it's content to be loaded.
-        // 3. Primitive type - written in {...} version so the type could be included
-        // 4. Collection (could be any Collection type) as { } because it needed @type emitted so that
-        //    the right Collection type would be created.  Elements will be in @items array.
-        // 5. Array: Could be a typed array Person[], String[] or Object[].  Written as { } with @type
-        //    so that the right array type will be instantiated.  @items will contain the contents.
-        // 6. Enum: in Object form {...}
-        // 7. EnumSet: has @type and @items
-
-        // May need to be updated because stated type (via @type) read and it may be more refined than
-        // the suggested type passed in.  In this case the injectors need to be based on the more
-        // refined type.
-
+        if (false) {
+            Object javaObject = resolver.newInstance(jObj);
+            System.out.println("JsonObject=" + jObj.toString());
+            if (javaObject == null) {
+                System.out.println("  JavaObject=null");
+            } else {
+                System.out.println("  JavaObject=" + javaObject.getClass().getName());
+            }
+            resolver.inject(jObj, javaObject);
+        }
         return jObj;
     }
 

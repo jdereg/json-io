@@ -19,6 +19,8 @@ import java.util.Optional;
 import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 
+import com.cedarsoftware.util.reflect.ClassDescriptors;
+import com.cedarsoftware.util.reflect.Injector;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -62,7 +64,7 @@ public abstract class Resolver implements ReaderContext
 
     @Getter(AccessLevel.PUBLIC)
     private final ReferenceTracker references;
-
+    
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -318,12 +320,81 @@ public abstract class Resolver implements ReaderContext
      * The '@type' is not often specified in the JSON input stream, as in many
      * cases it can be inferred from a field reference or array component type.
      *
+     * @param jsonObj Map-of-Map representation of object to create.  It contains a JavaType field that
+     *                indicates the Class of the type to create.  This came from either @type, in which
+     *                case it will take highest priority and be used.  Otherwise, it contains a suggested
+     *                type from a referencing field, typed array, or generic typed Collection.  If this type
+     *                is an interface, a concrete implementation will need to be selected.
+     * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
+     * enough hints to get the right class instantiated.  It is not populated when returned.
+     */
+    protected Object newInstance(JsonObject jsonObj) {
+        // Try ClassFactory first!
+        Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
+        if (mate != null) {
+            return mate;
+        }
+        
+        String type = jsonObj.getJavaTypeName();
+
+        // We can't set values to an Object, so well try to use the contained type instead
+        if ("java.lang.Object".equals(type)) {   // Primitive
+            Object value = jsonObj.getValue();
+            if (jsonObj.keySet().size() == 1 && value != null) {
+                jsonObj.setJavaType(value.getClass());
+                type = value.getClass().getName();
+            }
+        }
+        if (type == null) {   // Enum
+            Object mayEnumSpecial = jsonObj.get("@enum");
+            if (mayEnumSpecial instanceof String) {
+                type = "java.util.EnumSet";
+                jsonObj.setJavaType(MetaUtils.classForName(type, Resolver.class.getClassLoader()));
+            }
+        }
+
+        // @type always takes precedence over inferred Java (clazz) type.
+        if (type != null) {    // @type is explicitly set, use that as it always takes precedence
+            return newInstanceUsingType(jsonObj);
+        } else {
+            return newInstanceUsingClass(jsonObj);
+        }
+    }
+
+    public Object newInstanceUsingType(JsonObject jObj) {
+        return jObj;
+    }
+
+    public Object newInstanceUsingClass(JsonObject jObj) {
+        return jObj;
+    }
+
+    public void inject(JsonObject jObj, Object javaObject) {
+        Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(jObj.getJavaType());
+    }
+
+    /**
+     * This method creates a Java Object instance based on the passed in parameters.
+     * If the JsonObject contains a key '@type' then that is used, as the type was explicitly
+     * set in the JSON stream.  If the key '@type' does not exist, then the passed in Class
+     * is used to create the instance, handling creating an Array or regular Object
+     * instance.
+     * <br>
+     * The '@type' is not often specified in the JSON input stream, as in many
+     * cases it can be inferred from a field reference or array component type.
+     *
      * @param clazz   Instance will be create of this class.
      * @param jsonObj Map-of-Map representation of object to create.
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
     protected Object createInstance(Class<?> clazz, JsonObject jsonObj) {
+        // Try ClassFactory first!
+        Object mate = createInstanceUsingClassFactory(clazz, jsonObj);
+        if (mate != null) {
+            return mate;
+        }
+
         String type = jsonObj.getJavaTypeName();
 
         // We can't set values to an Object, so well try to use the contained type instead
@@ -345,8 +416,7 @@ public abstract class Resolver implements ReaderContext
         // @type always takes precedence over inferred Java (clazz) type.
         if (type != null) {    // @type is explicitly set, use that as it always takes precedence
             return createInstanceUsingType(jsonObj);
-        }
-        else {
+        } else {
             return createInstanceUsingClass(clazz, jsonObj);
         }
     }
@@ -360,17 +430,12 @@ public abstract class Resolver implements ReaderContext
         Class<?> c;
         if (jsonObj.getJavaType() == null) {
             c = MetaUtils.classForName(type, readOptions.getClassLoader());
-        }
-        else {
+        } else {
             c = jsonObj.getJavaType();
         }
         c = coerceClassIfNeeded(c);
 
-        // If a ClassFactory exists for a class, use it to instantiate the class.
-        Object mate = createInstanceUsingClassFactory(c, jsonObj);
-        if (mate != null) {
-            return mate;
-        }
+        Object mate;
 
         // Use other methods to determine the type of class to be instantiated, including looking at the
         // component type of the array.  Also, need to look at primitives, Enums, Immutable collection types.
@@ -380,26 +445,20 @@ public abstract class Resolver implements ReaderContext
             if (c == char[].class) {
                 jsonObj.moveCharsToMate();
                 mate = jsonObj.getTarget();
-            }
-            else {
+            } else {
                 mate = Array.newInstance(c.getComponentType(), size);
             }
-        }
-        else {   // Handle regular field.object reference
+        } else {   // Handle regular field.object reference
             if (Primitives.isPrimitive(c)) {
                 mate = MetaUtils.convert(c, jsonObj.getValue());
                 jsonObj.isFinished = true;
-            }
-            else if (c == Class.class) {
+            } else if (c == Class.class) {
                 mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
-            }
-            else if (EnumSet.class.isAssignableFrom(c)) {
+            } else if (EnumSet.class.isAssignableFrom(c)) {
                 mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
-            }
-            else if ((mate = coerceCertainTypes(c)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
-            }
-            else {
+            } else if ((mate = coerceCertainTypes(c)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
+            } else {
                 // ClassFactory already consulted above, likely regular business/data classes.
                 // If the newInstance(c) fails, it throws a JsonIoException.
                 mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
@@ -412,47 +471,28 @@ public abstract class Resolver implements ReaderContext
     /**
      * Create an instance using the Class (clazz) provided and the values in the jsonObj.
      */
-    protected Object createInstanceUsingClass(Class clazz, JsonObject jsonObj)
-    {
-        // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
-        // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
-        // return.
-        Object mate = createInstanceUsingClassFactory(clazz, jsonObj);
-        if (mate != null)
-        {
-            return mate;
-        }
-
+    protected Object createInstanceUsingClass(Class clazz, JsonObject jsonObj) {
         Object[] items = jsonObj.getArray();
-
         final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
+        Object mate;
 
         // if @items is specified, it must be an [] type.
         // if clazz.isArray(), then it must be an [] type.
-        if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS)))
-        {
+        if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS))) {
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-        } else if ((mate = coerceCertainTypes(clazz)) != null)
-        {   // if coerceCertainTypes() returns non-null, it did the work
-        }
-        else if (clazz == Object.class && !useMaps)
-        {
+        } else if ((mate = coerceCertainTypes(clazz)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
+        } else if (clazz == Object.class && !useMaps) {
             final Class<?> unknownClass = readOptions.getUnknownTypeClass();
 
-            if (unknownClass == null)
-            {
+            if (unknownClass == null) {
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.setJavaType(Map.class);
                 mate = jsonObject;
-            }
-            else
-            {
+            } else {
                 mate = MetaUtils.newInstance(unknownClass, null);   // can add constructor arg values
             }
-        }
-        else
-        {
+        } else {
             // ClassFactory consulted above, no need to check it here.
             mate = MetaUtils.newInstance(clazz, null);  // can add constructor arg values
         }

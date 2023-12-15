@@ -20,6 +20,7 @@ java.time.YearMonth = com.cedarsoftware.util.io.factory.YearMonthFactory
 java.time.ZonedDateTime = com.cedarsoftware.util.io.factory.ZonedDateTimeFactory
 java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
 java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
+java.time.ZoneRegion = com.cedarsoftware.util.io.factory.ZoneIdFactory
 
 java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
 java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory
