@@ -212,11 +212,11 @@ class JsonParser {
 
         if (false) {
             Object javaObject = resolver.newInstance(jObj);
-            System.out.println("JsonObject=" + jObj.toString());
+//            System.out.println("JsonObject=" + jObj.toString());
             if (javaObject == null) {
-                System.out.println("  JavaObject=null");
+//                System.out.println("  JavaObject=null");
             } else {
-                System.out.println("  JavaObject=" + javaObject.getClass().getName());
+//                System.out.println("  JavaObject=" + javaObject.getClass().getName());
             }
             resolver.inject(jObj, javaObject);
         }

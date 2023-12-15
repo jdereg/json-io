@@ -118,8 +118,8 @@ public class MapResolver extends Resolver
                 {
                     stack.addFirst(jObj);
                 }
-            } else if (injector != null)
-            {   // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
+            } else if (injector != null) {
+                // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
                 // by using the @type class name (when specified and exists), to coerce the vanilla
                 // JSON values into the proper types defined by the class listed in @type.  This is
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will

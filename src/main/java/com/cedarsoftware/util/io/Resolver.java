@@ -128,8 +128,7 @@ public abstract class Resolver implements ReaderContext
      */
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root)
-    {
+    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
         if (rootObj == null) {
             return null;
         }
@@ -174,6 +173,9 @@ public abstract class Resolver implements ReaderContext
         while (!stack.isEmpty())
         {
             final JsonObject jsonObj = stack.removeFirst();
+            if (jsonObj.isFinished) {
+                continue;
+            }
 
             if (jsonObj.isArray())
             {
@@ -395,26 +397,14 @@ public abstract class Resolver implements ReaderContext
             return mate;
         }
 
-        String type = jsonObj.getJavaTypeName();
-
-        // We can't set values to an Object, so well try to use the contained type instead
-        if ("java.lang.Object".equals(type)) {   // Primitive
-            Object value = jsonObj.getValue();
-            if (jsonObj.keySet().size() == 1 && value != null) {
-                jsonObj.setJavaType(value.getClass());
-                type = value.getClass().getName();
-            }
-        }
-        if (type == null) {   // Enum
+        if (jsonObj.getJavaType() == null) {   // Enum
             Object mayEnumSpecial = jsonObj.get("@enum");
             if (mayEnumSpecial instanceof String) {
-                type = "java.util.EnumSet";
-                jsonObj.setJavaType(MetaUtils.classForName(type, Resolver.class.getClassLoader()));
+                jsonObj.setJavaType(MetaUtils.classForName("java.util.EnumSet", Resolver.class.getClassLoader()));
             }
         }
-
         // @type always takes precedence over inferred Java (clazz) type.
-        if (type != null) {    // @type is explicitly set, use that as it always takes precedence
+        if (jsonObj.getJavaType() != null) {    // @type is explicitly set, use that as it always takes precedence
             return createInstanceUsingType(jsonObj);
         } else {
             return createInstanceUsingClass(clazz, jsonObj);
@@ -426,13 +416,7 @@ public abstract class Resolver implements ReaderContext
      * used for determining type, just for clarity in an exception message.
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
-        String type = jsonObj.getJavaTypeName();
-        Class<?> c;
-        if (jsonObj.getJavaType() == null) {
-            c = MetaUtils.classForName(type, readOptions.getClassLoader());
-        } else {
-            c = jsonObj.getJavaType();
-        }
+        Class<?> c = jsonObj.getJavaType();
         c = coerceClassIfNeeded(c);
 
         Object mate;
@@ -454,6 +438,7 @@ public abstract class Resolver implements ReaderContext
                 jsonObj.isFinished = true;
             } else if (c == Class.class) {
                 mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
+                jsonObj.isFinished = true;
             } else if (EnumSet.class.isAssignableFrom(c)) {
                 mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
@@ -548,8 +533,7 @@ public abstract class Resolver implements ReaderContext
     protected Object coerceCertainTypes(Class<?> type)
     {
         Class clazz = readOptions.getCoercedClass(type);
-        if (clazz == null)
-        {
+        if (clazz == null) {
             return null;
         }
 
@@ -562,8 +546,7 @@ public abstract class Resolver implements ReaderContext
         Class enumClass = enumClassName == null ? null
                 : MetaUtils.classForName(enumClassName, readOptions.getClassLoader());
         Object[] items = jsonObj.getArray();
-        if (items == null || items.length == 0)
-        {
+        if (items == null || items.length == 0) {
             if (enumClass != null) {
                 return EnumSet.noneOf(enumClass);
             } else {
@@ -574,25 +557,18 @@ public abstract class Resolver implements ReaderContext
         }
 
         EnumSet enumSet = null;
-        for (Object item : items)
-        {
+        for (Object item : items) {
             Enum enumItem;
-            if (item instanceof String)
-            {
-                enumItem = Enum.valueOf(enumClass, (String)item);
-            }
-            else
-            {
+            if (item instanceof String) {
+                enumItem = Enum.valueOf(enumClass, (String) item);
+            } else {
                 JsonObject jObj = (JsonObject) item;
                 enumItem = Enum.valueOf(enumClass, (String) jObj.get("name"));
             }
 
-            if (enumSet == null)
-            {   // Lazy init the EnumSet
+            if (enumSet == null) {   // Lazy init the EnumSet
                 enumSet = EnumSet.of(enumItem);
-            }
-            else
-            {
+            } else {
                 enumSet.add(enumItem);
             }
         }
