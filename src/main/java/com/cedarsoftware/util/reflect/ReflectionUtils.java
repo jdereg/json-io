@@ -4,14 +4,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.cedarsoftware.util.reflect.filters.MethodFilter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -60,27 +56,5 @@ public class ReflectionUtils {
      */
     public static Method oneParameterMethodPreference(Method method1, Method method2) {
         return method1.getParameterCount() == 1 ? method1 : method2;
-    }
-
-    public static List<Method> buildFilteredMethodList(Class<?> c, List<MethodFilter> filters, Set<String> exclusions) {
-        final Method[] methods = c.getDeclaredMethods();
-
-        return Arrays.stream(methods)
-                .filter(method -> !exclusions.contains(method.getName()))
-                .filter(method -> filters.stream().noneMatch(f -> f.filter(method)))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * @param c Class instance
-     * @return list of fields filtered by filters
-     */
-    public static List<Field> buildFilteredFields(Class<?> c) {
-        final Field[] fields = c.getDeclaredFields();
-
-        return Arrays.stream(fields)
-                //.filter(field -> !exclusions.contains(field.getName()))
-                //.filter(field -> filters.stream().noneMatch(f -> f.filter(field)))
-                .collect(Collectors.toList());
     }
 }

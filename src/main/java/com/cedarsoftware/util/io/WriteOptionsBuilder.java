@@ -5,7 +5,6 @@ import static com.cedarsoftware.util.io.WriteOptions.nullWriter;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,12 +13,9 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
-import com.cedarsoftware.util.reflect.AccessorFactory;
 import com.cedarsoftware.util.reflect.factories.MethodAccessorFactory;
 import com.cedarsoftware.util.reflect.filters.FieldFilter;
-import com.cedarsoftware.util.reflect.filters.MethodFilter;
 import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
 import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
@@ -51,17 +47,12 @@ public class WriteOptionsBuilder {
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
     private final WriteOptions options;
-
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new LinkedHashSet<>();
-
-    private static final Set<String> BASE_FILTERED_METHOD_NAMES = new LinkedHashSet<>();
-
+    private static final Set<Class<?>> BASE_NON_REFS = new HashSet<>();
+    private static final Set<String> BASE_FILTERED_METHOD_NAMES = new HashSet<>();
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
-
 
     static {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("aliases.txt"));
@@ -112,29 +103,6 @@ public class WriteOptionsBuilder {
 
     public WriteOptionsBuilder(WriteOptions options) {
         this.options = options;
-
-        this.options.filteredMethodNames = new HashSet<>(options.filteredMethodNames);
-        this.options.notCustomWrittenClasses = new HashSet<>(options.notCustomWrittenClasses);
-        this.options.nonRefClasses = new HashSet<>(options.nonRefClasses);
-
-        this.options.aliasTypeNames = new LinkedHashMap<>(options.aliasTypeNames);
-        this.options.customWrittenClasses = new HashMap<>(options.customWrittenClasses);
-
-        this.options.excludedFieldNames = MetaUtils.cloneMapOfSets(options.excludedFieldNames, false);
-        this.options.includedFieldNames = MetaUtils.cloneMapOfSets(options.includedFieldNames, false);
-        this.options.nonStandardMappings = MetaUtils.cloneMapOfMaps(options.nonStandardMappings, false);
-
-        this.options.fieldFilters = options.fieldFilters.stream()
-                .map(FieldFilter::createCopy)
-                .collect(Collectors.toList());
-
-        this.options.methodFilters = options.methodFilters.stream()
-                .map(MethodFilter::createCopy)
-                .collect(Collectors.toList());
-
-        this.options.accessorFactories = options.accessorFactories.stream()
-                .map(AccessorFactory::createCopy)
-                .collect(Collectors.toList());
     }
 
     /**
@@ -651,32 +619,7 @@ public class WriteOptionsBuilder {
      */
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
-
-        this.options.filteredMethodNames = Collections.unmodifiableSet(options.filteredMethodNames);
-        this.options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
-        this.options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
-
-        this.options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
-        this.options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
-
-        this.options.excludedFieldNames = MetaUtils.cloneMapOfSets(options.excludedFieldNames, true);
-        this.options.includedFieldNames = MetaUtils.cloneMapOfSets(options.includedFieldNames, true);
-        this.options.nonStandardMappings = MetaUtils.cloneMapOfMaps(options.nonStandardMappings, true);
-
-        this.options.fieldFilters = Collections.unmodifiableList(options.fieldFilters.stream()
-                .map(FieldFilter::createCopy)
-                .collect(Collectors.toList()));
-
-        this.options.methodFilters = Collections.unmodifiableList(options.methodFilters.stream()
-                .map(MethodFilter::createCopy)
-                .collect(Collectors.toList()));
-
-        this.options.accessorFactories = Collections.unmodifiableList(options.accessorFactories.stream()
-                .map(AccessorFactory::createCopy)
-                .collect(Collectors.toList()));
-
         this.options.clearCaches();
-
         return this.options;
     }
 
