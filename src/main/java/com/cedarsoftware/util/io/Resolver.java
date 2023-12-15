@@ -108,13 +108,6 @@ public abstract class Resolver implements ReaderContext
         }
     }
 
-    /**
-     * Dummy place-holder class exists only because ConcurrentHashMap cannot contain a
-     * null value.  Instead, singleton instance of this class is placed where null values
-     * are needed.
-     */
-    private static final class NullClass implements JsonReader.JsonClassReader { }
-
     protected Resolver(ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions;
         this.references = references;

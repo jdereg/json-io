@@ -35,8 +35,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.cedarsoftware.util.io.models.Human;
-
 class WriteOptionsTest {
 
     @Test
@@ -370,39 +368,6 @@ class WriteOptionsTest {
         assertThat(options.isCustomWrittenClass(String.class)).isTrue();
         assertThat(options.isCustomWrittenClass(Long.class)).isTrue();
         assertThat(options.isCustomWrittenClass(Integer.class)).isTrue();
-    }
-
-    @Test
-    void testIncludedFields()
-    {
-        WriteOptions options = new WriteOptionsBuilder()
-                .addIncludedField(Human.class, "name")
-                .build();
-
-        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
-        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
-    }
-
-    @Test
-    void testIncludedFields_overridesExclusions() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .addIncludedField(Human.class, "name")
-                .addExcludedFields(Human.class, MetaUtils.listOf("magicResistance", "name"))
-                .build();
-
-        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
-        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
-    }
-
-    @Test
-    void testIncludedFields_withNestedNames_onlyIncludesMatchingName() {
-        WriteOptions options = new WriteOptionsBuilder()
-                .addIncludedField(Human.class, "Race.name")
-                .addExcludedFields(Human.class, MetaUtils.listOf("magicResistance", "name"))
-                .build();
-
-        assertThat(options.getIncludedFields(Human.class)).hasSize(1);
-        assertThat(options.getAccessorsForClass(Human.class)).hasSize(1);
     }
 
     @Test

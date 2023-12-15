@@ -1256,34 +1256,39 @@ public class MetaUtils
         }
     }
 
+    //  Keeping next two methods in case we need to make certains sets unmodifiable still.
     public static <T, V> Map<T, Set<V>> cloneMapOfSets(final Map<T, Set<V>> original, final boolean immutable) {
-        return original.entrySet().stream()
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toMap(
-                                Map.Entry::getKey,
-                                entry -> immutable ? Collections.unmodifiableSet(new LinkedHashSet<>(entry.getValue())) : new LinkedHashSet<>(entry.getValue()),
-                                (existing, replacement) -> {
-                                    throw new JsonIoException("Duplicate key found: " + existing);
-                                },
-                                LinkedHashMap::new // Preserves order of insertion
-                        ),
-                        map -> immutable ? Collections.unmodifiableMap(map) : map
-                ));
+        final Map<T, Set<V>> result = new HashMap<>();
+
+        for (Map.Entry<T, Set<V>> entry : original.entrySet()) {
+            final T key = entry.getKey();
+            final Set<V> value = entry.getValue();
+
+            final Set<V> clonedSet = immutable
+                    ? Collections.unmodifiableSet(value)
+                    : new HashSet<>(value);
+
+            result.put(key, clonedSet);
+        }
+
+        return immutable ? Collections.unmodifiableMap(result) : result;
     }
 
     public static <T, U, V> Map<T, Map<U, V>> cloneMapOfMaps(final Map<T, Map<U, V>> original, final boolean immutable) {
-        return original.entrySet().stream()
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toMap(
-                                Map.Entry::getKey,
-                                entry -> immutable ? Collections.unmodifiableMap(entry.getValue()) : new LinkedHashMap<>(entry.getValue()),
-                                (existing, replacement) -> {
-                                    throw new JsonIoException("Duplicate key found: " + existing);
-                                },
-                                LinkedHashMap::new // Preserves order of insertion
-                        ),
-                        map -> immutable ? Collections.unmodifiableMap(map) : map
-                ));
+        final Map<T, Map<U, V>> result = new LinkedHashMap<>();
+
+        for (Map.Entry<T, Map<U, V>> entry : original.entrySet()) {
+            final T key = entry.getKey();
+            final Map<U, V> value = entry.getValue();
+
+            final Map<U, V> clonedMap = immutable
+                    ? Collections.unmodifiableMap(value)
+                    : new LinkedHashMap<>(value);
+
+            result.put(key, clonedMap);
+        }
+
+        return immutable ? Collections.unmodifiableMap(result) : result;
     }
 
     /**

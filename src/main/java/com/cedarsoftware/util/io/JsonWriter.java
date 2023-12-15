@@ -189,7 +189,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
-        this.writeOptions = writeOptions == null ? new WriteOptionsBuilder().build() : new WriteOptionsBuilder(writeOptions).build();
+        this.writeOptions = writeOptions == null ? new WriteOptionsBuilder().build() : writeOptions;
     }
 
     /**

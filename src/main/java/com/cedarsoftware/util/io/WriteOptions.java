@@ -3,23 +3,19 @@ package com.cedarsoftware.util.io;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
-import com.cedarsoftware.util.reflect.ReflectionUtils;
 import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import com.cedarsoftware.util.reflect.filters.MethodFilter;
 
@@ -90,7 +86,7 @@ public class WriteOptions {
 
     private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
 
-    private final Map<Class<?>, Map<String, Accessor>> accessorsCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>();
 
 
     // Enum for the 3-state property
@@ -239,29 +235,7 @@ public class WriteOptions {
         return notCustomWrittenClasses.contains(clazz);
     }
 
-    /**
-     * Get the list of fields associated to the passed in class that are to be included in the written JSON.
-     * @param clazz Class for which the fields to be included in JSON output will be returned.
-     * @return Set of Strings field names associated to the passed in class or an empty
-     * Set if no fields.  This is the list of fields to be included in the written JSON for the given class.
-     */
-    @SuppressWarnings("unchecked")
-    public Set<String> getIncludedFields(Class<?> clazz) {
-        return (Set<String>) getItemsForClass(clazz, includedFieldNames);
-    }
-
-    private Set<?> getItemsForClass(Class<?> clazz, Map<?, ? extends Set<?>> classesToSets)
-    {
-        Set<?> items = classesToSets.get(clazz);
-        // Give back real - protected from modifications
-        return items == null ? Collections.unmodifiableSet(new LinkedHashSet<>()) : items;
-    }
-
-    public Collection<Accessor> getAccessorsForClass(final Class<?> c) {
-        return getAccessorMapForClass(c).values();
-    }
-
-    public Map<String, Accessor> getAccessorMapForClass(final Class<?> c) {
+    public List<Accessor> getAccessorsForClass(final Class<?> c) {
         return accessorsCache.computeIfAbsent(c, this::buildDeepAccessors);
     }
 
@@ -363,10 +337,19 @@ public class WriteOptions {
         final Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
         final ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
-        return set.stream()
-                .map(className -> MetaUtils.classForNameThrowsException(className, classLoader))
-                .filter(Objects::isNull)
-                .collect(Collectors.toSet());
+        final Set<Class<?>> result = new HashSet<>();
+
+        for (String className : set) {
+            Class<?> loadedClass = MetaUtils.classForName(className, classLoader);
+
+            if (loadedClass != null) {
+                result.add(loadedClass);
+            } else {
+                throw new JsonIoException("Class: " + className + " is undefined.");
+            }
+        }
+
+        return result;
     }
 
 
@@ -391,47 +374,87 @@ public class WriteOptions {
     }
 
 
-    private Map<String, Accessor> buildDeepAccessors(final Class<?> c) {
+    private List<Accessor> buildDeepAccessors(final Class<?> c) {
         final Set<String> inclusions = includedFieldNames.get(c);
         final Set<String> exclusions = new HashSet<>();
         final Map<String, Field> deepDeclaredFields = this.getDeepDeclaredFields(c, exclusions);
         final Map<String, Method> possibleMethods = getDeepDeclaredMethods(c);
-        final Map<String, Accessor> accessorMap = new LinkedHashMap<>();
+        final List<Accessor> accessors = new ArrayList<>(deepDeclaredFields.size());
 
-        final boolean isExclusive = inclusions == null;
-
-        final List<Map.Entry<String, Field>> fields = isExclusive ?
-                deepDeclaredFields.entrySet().stream()
-                        .filter(e -> !Modifier.isTransient(e.getValue().getModifiers()))
-                        .filter(e -> !exclusions.contains(e.getValue().getName()))
-                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
-                        .collect(Collectors.toList()) :
-                deepDeclaredFields.entrySet().stream()
-                        .filter(e -> inclusions.contains(e.getKey()))
-                        .filter(e -> this.fieldFilters.stream().noneMatch(f -> f.filter(e.getValue())))
-                        .collect(Collectors.toList());
+        final List<Map.Entry<String, Field>> fields = (inclusions == null) ?
+                buildExclusiveFields(deepDeclaredFields, exclusions) :
+                buildInclusiveFields(deepDeclaredFields, inclusions);
 
         for (final Map.Entry<String, Field> entry : fields) {
 
             final Field field = entry.getValue();
-            final String fieldName = entry.getKey();
+            final String key = entry.getKey();
 
-            final String key = accessorMap.containsKey(fieldName) ? field.getDeclaringClass().getSimpleName() + '.' + fieldName : fieldName;
+            Accessor accessor = this.findAccessor(field, possibleMethods, key);
 
-            assert key.equals(fieldName);
-
-            final Accessor accessor = this.accessorFactories.stream()
-                    .map(createAccessor(field, possibleMethods, key))
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(createAccessorFromField(field, key));
+            if (accessor == null) {
+                accessor = createAccessorFromField(field, key);
+            }
 
             if (accessor != null) {
-                accessorMap.put(key, accessor);
+                accessors.add(accessor);
             }
         }
 
-        return Collections.synchronizedMap(accessorMap);
+        return Collections.unmodifiableList(accessors);
+    }
+
+    private Accessor findAccessor(Field field, Map<String, Method> possibleMethods, String key) {
+        for (final AccessorFactory factory : this.accessorFactories) {
+            try {
+                final Accessor accessor = factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
+
+                if (accessor != null) {
+                    return accessor;
+                }
+            } catch (ThreadDeath td) {
+                throw td;
+            } catch (Throwable e) {
+                // Handle the exception if needed
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private List<Map.Entry<String, Field>> buildInclusiveFields(final Map<String, Field> deepDeclaredFields, final Set<String> inclusions) {
+        final List<Map.Entry<String, Field>> fields = new ArrayList<>(deepDeclaredFields.size());
+
+        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
+            if (inclusions.contains(entry.getKey()) && fieldIsNotFiltered(entry.getValue())) {
+                fields.add(entry);
+            }
+        }
+
+        return fields;
+    }
+
+    private List<Map.Entry<String, Field>> buildExclusiveFields(final Map<String, Field> deepDeclaredFields, final Set<String> exclusions) {
+        final List<Map.Entry<String, Field>> fields = new ArrayList<>(deepDeclaredFields.size());
+
+        for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
+            Field field = entry.getValue();
+
+            if (!Modifier.isTransient(field.getModifiers()) && !exclusions.contains(field.getName()) && fieldIsNotFiltered(field)) {
+                fields.add(entry);
+            }
+        }
+
+        return fields;
+    }
+
+    private boolean fieldIsNotFiltered(Field field) {
+        for (FieldFilter filter : this.fieldFilters) {
+            if (filter.filter(field)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Map<String, Method> getDeepDeclaredMethods(Class<?> c) {
@@ -452,16 +475,6 @@ public class WriteOptions {
         }
     }
 
-    private Function<AccessorFactory, Accessor> createAccessor(Field field, Map<String, Method> possibleMethods, String key) {
-        return factory -> {
-            try {
-                return factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
-            } catch (Throwable t) {
-                return null;
-            }
-        };
-    }
-
     /**
      * Builds a list of methods with zero parameter methods taking precedence over overrides
      * for a given single level class.
@@ -476,8 +489,10 @@ public class WriteOptions {
         Class<?> currentClass = classToTraverse;
 
         while (currentClass != Object.class) {
-            final List<Method> methods = this.getFilteredMethods(currentClass);
-            methods.forEach(m -> map.put(m.getName(), m));
+            for (final Method m : this.getFilteredMethods(currentClass)) {
+                map.put(m.getName(), m);
+            }
+
             currentClass = currentClass.getSuperclass();
         }
 
@@ -485,7 +500,29 @@ public class WriteOptions {
     }
 
     public List<Method> getFilteredMethods(Class<?> c) {
-        return methodCache.computeIfAbsent(c, key -> ReflectionUtils.buildFilteredMethodList(key, methodFilters, filteredMethodNames));
+        return methodCache.computeIfAbsent(c, this::buildFilteredMethods);
+    }
+
+    public List<Method> buildFilteredMethods(Class<?> c) {
+        final List<Method> methods = new ArrayList<>();
+
+        for (Method method : c.getDeclaredMethods()) {
+            if (!filteredMethodNames.contains(method.getName()) && noMethodFiltersMatch(this.methodFilters, method)) {
+                methods.add(method);
+            }
+        }
+
+        return methods;
+    }
+
+    // Helper method to check if none of the filters match
+    private static boolean noMethodFiltersMatch(List<MethodFilter> filters, Method method) {
+        for (MethodFilter filter : filters) {
+            if (filter.filter(method)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public Map<String, Field> buildDeepFieldMap(Class<?> c, final Set<String> exclusions) {
@@ -496,28 +533,24 @@ public class WriteOptions {
 
         Class<?> curr = c;
         while (curr != Object.class) {
-            final List<Field> fields = ReflectionUtils.buildFilteredFields(curr);
+            final Field[] fields = curr.getDeclaredFields();
 
-            Collection<String> excludedForClass = this.excludedFieldNames.get(curr);
+            final Collection<String> excludedForClass = this.excludedFieldNames.get(curr);
 
             if (excludedForClass != null) {
                 exclusions.addAll(excludedForClass);
             }
 
-            fields.forEach(f -> {
-                String name = f.getName();
+            for (Field f : fields) {
+                final String name = f.getName();
                 if (map.putIfAbsent(name, f) != null) {
                     map.put(f.getDeclaringClass().getSimpleName() + '.' + name, f);
                 }
-            });
+            }
 
             curr = curr.getSuperclass();
         }
 
         return Collections.synchronizedMap(map);
-    }
-
-    ShowType getShowTypeInfo() {
-        return showTypeInfo;
     }
 }
