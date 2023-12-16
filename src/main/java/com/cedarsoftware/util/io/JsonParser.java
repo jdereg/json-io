@@ -150,10 +150,10 @@ class JsonParser {
         final FastReader in = input;
 
         // Start reading the object, skip white space and find {
-        skipWhitespaceRead();           // Burn '{'
+        skipWhitespaceRead(true);           // Burn '{'
         jObj.line = in.getLine();
         jObj.col = in.getCol();
-        int c = skipWhitespaceRead();
+        int c = skipWhitespaceRead(true);
         if (c == '}') {    // empty object
             // Using new JsonObject() below will prevent @id/@ref if more than one {} appears in the JSON.
             return new JsonObject();
@@ -200,7 +200,7 @@ class JsonParser {
                     break;
             }
 
-            c = skipWhitespaceRead();
+            c = skipWhitespaceRead(true);
             if (c == '}') {
                 break;
             } else if (c != ',') {
@@ -229,12 +229,12 @@ class JsonParser {
      * @return String field name.
      */
     private String readField() throws IOException {
-        int c = skipWhitespaceRead();
+        int c = skipWhitespaceRead(true);
         if (c != '"') {
             error("Expected quote before field name");
         }
         String field = readString();
-        c = skipWhitespaceRead();
+        c = skipWhitespaceRead(true);
         if (c != ':') {
             error("Expected ':' between field and value, instead found '" + (char) c + "'");
         }
@@ -251,7 +251,7 @@ class JsonParser {
             error("Maximum parsing depth exceeded");
         }
 
-        int c = skipWhitespaceRead();
+        int c = skipWhitespaceRead(true);
         if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I') {
             return readNumber(c);
         }
@@ -310,7 +310,7 @@ class JsonParser {
                 array.add(value);
             }
             
-            final int c = skipWhitespaceRead();
+            final int c = skipWhitespaceRead(true);
 
             if (c == ']') {
                 break;
@@ -450,13 +450,20 @@ class JsonParser {
         final FastReader in = input;
 
         while (true) {
-            final int c = in.read();
+            int c = in.read();
             if (c == -1) {
                 error("EOF reached while reading JSON string");
             }
 
             if (state == STRING_START) {
                 if (c == '"') {
+                    if (curParseDepth == 0) {
+                        // Enforce JSON grammar.  At root, a String must be complete, with only whitespace and then EOF after
+                        c = skipWhitespaceRead(false);
+                        if (c != -1) {
+                            throw new JsonIoException("EOF expected, content found after \"" + str + "\" --> " + (char) c);
+                        }
+                    }
                     break;
                 } else if (c == '\\') {
                     state = STRING_SLASH;
@@ -534,14 +541,14 @@ class JsonParser {
      * @return int representing the next non-whitespace character in the stream.
      * @throws IOException for stream errors or parsing errors.
      */
-    private int skipWhitespaceRead() throws IOException {
+    private int skipWhitespaceRead(boolean throwOnEof) throws IOException {
         Reader in = input;
         int c;
         do {
             c = in.read();
         } while (c == ' ' || c == '\n' || c == '\r' || c == '\t');
 
-        if (c == -1) {
+        if (c == -1 && throwOnEof) {
             error("EOF reached prematurely");
         }
         return c;

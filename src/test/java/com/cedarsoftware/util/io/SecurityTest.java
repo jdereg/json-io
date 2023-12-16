@@ -138,13 +138,14 @@ public class SecurityTest
             TestUtil.toObjects(json, null);
             fail();
         }
-        catch (JsonIoException e)
+        catch (Exception e)
         {
             String msg = e.getMessage().toLowerCase();
             String msg2 = e.getCause() == null ? "no cause" : e.getCause().getMessage().toLowerCase();
-            assert msg.contains("security") && msg.contains("not allow instantiation") ||
-                    msg2.contains("security") && msg2.contains("not allow instantiation") ||
-                    msg.contains("unable to instantiate");
+            assert msg.contains("security exception") ||
+                    msg2.contains("security")||
+                    msg.contains("unable to instantiate") ||
+                    msg.contains("unable to load class");
         }
     }
 

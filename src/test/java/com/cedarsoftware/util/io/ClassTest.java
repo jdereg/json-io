@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -49,6 +51,59 @@ public class ClassTest
         TestUtil.printLine("json=" + json);
         OneNestedClass actual = TestUtil.toObjects(json, null);
         assert expected.cls.equals(actual.cls);
+    }
+
+    @Test
+    void testBadClassName()
+    {
+        String json = "{\"@type\":\"class\",\"value\":\"foo.bar.baz.Qux\"}";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unable to load class: foo.bar.baz.Qux");
+    }
+
+    @Test
+    void testBadClassNameRoot()
+    {
+        String json = "\"foo.bar.baz.Qux\"";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unable to load class: foo.bar.baz.Qux");
+    }
+
+    @Test
+    void testNoClassNameValue()
+    {
+        String json = "{\"@type\":\"class\"}";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Non-string type used for class name: null");
+    }
+
+    @Test
+    void testBadClassValueType()
+    {
+        String json = "{\"@type\":\"class\",\"value\":16.0}";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Non-string type used for class name");
+    }
+
+    @Test
+    void testGoodClassNameRoot()
+    {
+        String json = "\"java.util.HashMap\"";
+        Object x = TestUtil.toObjects(json, Class.class);
+        assert x.equals(HashMap.class);
+    }
+
+    @Test
+    void testBadClassValueTypeAtRoot()
+    {
+        String json = "16.0";
+        assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Non-string type used for class name");
     }
 
     @Test
@@ -123,7 +178,6 @@ public class ClassTest
         private final Object[] _charClassArrayO;
         private final Object[] _CharacterClassArrayO;
     }
-
     private static class OneNestedClass
     {
         private Class<?> cls;

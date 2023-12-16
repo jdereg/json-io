@@ -143,7 +143,7 @@ public abstract class Resolver implements ReaderContext
             graph = (T) rootObj.getTarget();
         } else {
             rootObj.setHintType(root);
-            Object instance = createInstance(rootObj);
+            Object instance = rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget();
             if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
                 graph = (T) instance;
             } else {
@@ -352,19 +352,11 @@ public abstract class Resolver implements ReaderContext
             return mate;
         }
 
-        // @type always takes precedence over inferred Java (clazz) type.
-        if (jsonObj.getJavaType() != null) {    // @type is explicitly set, use that as it always takes precedence
-            return newInstanceUsingType(jsonObj);
-        } else {
-            return newInstanceUsingClass(jsonObj);
-        }
+        // TODO: the rest go here - new instance AND load
+        return newInstanceUsingType(jsonObj);
     }
 
     public Object newInstanceUsingType(JsonObject jObj) {
-        return jObj;
-    }
-
-    public Object newInstanceUsingClass(JsonObject jObj) {
         return jObj;
     }
 
@@ -451,9 +443,6 @@ public abstract class Resolver implements ReaderContext
         } else {   // Handle regular field.object reference
             if (Primitives.isPrimitive(c)) {
                 mate = MetaUtils.convert(c, jsonObj.getValue());
-                jsonObj.isFinished = true;
-            } else if (c == Class.class) {
-                mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
                 jsonObj.isFinished = true;
             } else {
                 // ClassFactory already consulted above, likely regular business/data classes.

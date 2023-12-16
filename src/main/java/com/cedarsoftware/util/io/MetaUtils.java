@@ -448,26 +448,11 @@ public class MetaUtils
 
         try {
             return internalClassForName(name, classLoader);
-        } catch (Exception e) {
-            return null;
+        } catch(SecurityException e) {
+            throw new JsonIoException("Security exception, classForName() call on: " + name, e);
         }
-    }
-
-    /**
-     * Given the passed in String class name, return the named JVM class.
-     *
-     * @param name        String name of a JVM class.
-     * @param classLoader ClassLoader to use when searching for JVM classes.
-     * @return Class instance of the named JVM class
-     * @throws JsonIoException if the class could not be loaded.
-     */
-    public static Class<?> classForNameThrowsException(String name, ClassLoader classLoader) {
-        Convention.throwIfNullOrEmpty(name, "name cannot be null or empty");
-
-        try {
-            return internalClassForName(name, classLoader);
-        } catch (Exception e) {
-            throw new JsonIoException("Class: " + name + " is undefined.");
+        catch (Exception e) {
+            return null;
         }
     }
 
@@ -485,6 +470,16 @@ public class MetaUtils
             return c;
         }
         c = loadClass(name, classLoader);
+        
+        if (ClassLoader.class.isAssignableFrom(c) ||
+                ProcessBuilder.class.isAssignableFrom(c) ||
+                Process.class.isAssignableFrom(c) ||
+                Constructor.class.isAssignableFrom(c) ||
+                Method.class.isAssignableFrom(c) ||
+                Field.class.isAssignableFrom(c)) {
+            throw new SecurityException("For security reasons, cannot instantiate: " + c.getName() + " when loading JSON.");
+        }
+        
         nameToClass.put(name, c);
         return c;
     }

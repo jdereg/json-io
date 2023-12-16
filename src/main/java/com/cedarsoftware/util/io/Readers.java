@@ -175,37 +175,7 @@ public class Readers
             }
         }
     }
-
-    public static class ClassReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            if (o instanceof String)
-            {
-                String cname = (String) o;
-                Class c = MetaUtils.classForName(cname, context.getReadOptions().getClassLoader());
-                if (c != null)
-                {   // The user is attempting to load a java.lang.Class
-                    return c;
-                }
-                throw new JsonIoException("Unable to load class: " + o);
-            }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.hasValue())
-            {
-                String value = (String) jObj.getValue();
-                jObj.setTarget(MetaUtils.classForName(value, context.getReadOptions().getClassLoader()));
-                if (jObj.getTarget() == null)
-                {
-                    throw new JsonIoException("Unable to load Class: " + value + ", class not found in JVM.");
-                }
-                return jObj.getTarget();
-            }
-            throw new JsonIoException("Class missing 'value' field");
-        }
-    }
-
+    
     public static class AtomicBooleanReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)

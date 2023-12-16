@@ -56,8 +56,9 @@ class ErrorsTest
                 "},\n" +
                 "\"string:\" \"Hello World\"\n" +
                 "}";
-        Object x = TestUtil.toObjects(json, null);
-        assert "array".equals(x);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("EOF expected, content found after");
     }
 
     @Test

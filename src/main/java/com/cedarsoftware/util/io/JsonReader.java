@@ -265,6 +265,10 @@ public class JsonReader implements Closeable, ReaderContext
 //        }
 
         JsonObject rootObj = new JsonObject();
+        if (rootType != null) {
+            rootObj.setHintType(rootType);
+        }
+        
         T graph;
         if (returnValue instanceof Object[]) {
             rootObj.setJavaType(Object[].class);
@@ -272,7 +276,16 @@ public class JsonReader implements Closeable, ReaderContext
             rootObj.put(ITEMS, returnValue);
             graph = convertJsonValueToJava(rootObj, rootType);
         } else {
-            graph = returnValue instanceof JsonValue ? convertJsonValueToJava((JsonObject) returnValue, rootType) : returnValue;
+            if (returnValue instanceof JsonObject) {
+                graph = convertJsonValueToJava((JsonObject) returnValue, rootType);
+            } else {
+                rootObj.setValue(returnValue);
+                graph = convertJsonValueToJava(rootObj, rootType);
+                if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null)
+                {
+                    graph = (T)((JsonObject)graph).getValue();
+                }
+            }
         }
 
         // Allow a complete 'Map' return (Javascript style)

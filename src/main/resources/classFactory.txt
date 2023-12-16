@@ -1,6 +1,7 @@
 #
 # JsonReader.ClassFactory mappings
 #
+java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory
 java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
 
