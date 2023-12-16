@@ -331,32 +331,26 @@ public abstract class Resolver implements ReaderContext
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
     protected Object newInstance(JsonObject jsonObj) {
-        // Try ClassFactory first!
+        // Coerce class first.
+        if (jsonObj.getJavaType() != null) {
+            jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+        }
+        
+        // Now try class factory
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
         if (mate != null) {
             return mate;
         }
         
-        String type = jsonObj.getJavaTypeName();
-
-        // We can't set values to an Object, so well try to use the contained type instead
-        if ("java.lang.Object".equals(type)) {   // Primitive
-            Object value = jsonObj.getValue();
-            if (jsonObj.keySet().size() == 1 && value != null) {
-                jsonObj.setJavaType(value.getClass());
-                type = value.getClass().getName();
-            }
-        }
-        if (type == null) {   // Enum
+        if (jsonObj.getJavaType() == null) {
             Object mayEnumSpecial = jsonObj.get("@enum");
-            if (mayEnumSpecial instanceof String) {
-                type = "java.util.EnumSet";
-                jsonObj.setJavaType(MetaUtils.classForName(type, Resolver.class.getClassLoader()));
+            if (mayEnumSpecial instanceof String) { // EnumSet
+                jsonObj.setJavaType(MetaUtils.classForName("java.util.EnumSet", Resolver.class.getClassLoader()));
             }
         }
 
         // @type always takes precedence over inferred Java (clazz) type.
-        if (type != null) {    // @type is explicitly set, use that as it always takes precedence
+        if (jsonObj.getJavaType() != null) {    // @type is explicitly set, use that as it always takes precedence
             return newInstanceUsingType(jsonObj);
         } else {
             return newInstanceUsingClass(jsonObj);
@@ -391,18 +385,29 @@ public abstract class Resolver implements ReaderContext
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
     protected Object createInstance(Class<?> clazz, JsonObject jsonObj) {
-        // Try ClassFactory first!
+        // Coerce class first
+        if (jsonObj.getJavaType() != null) {
+            jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+        }
+        if (clazz != null) {
+            clazz = coerceClassIfNeeded(clazz);
+        }
+        
+        // Now try ClassFactory.
         Object mate = createInstanceUsingClassFactory(clazz, jsonObj);
         if (mate != null) {
             return mate;
         }
 
+        // EnumSet?
         if (jsonObj.getJavaType() == null) {   // Enum
             Object mayEnumSpecial = jsonObj.get("@enum");
             if (mayEnumSpecial instanceof String) {
                 jsonObj.setJavaType(MetaUtils.classForName("java.util.EnumSet", Resolver.class.getClassLoader()));
+                // Extract EnumSet needs to go here, so it is loaded.
             }
         }
+
         // @type always takes precedence over inferred Java (clazz) type.
         if (jsonObj.getJavaType() != null) {    // @type is explicitly set, use that as it always takes precedence
             return createInstanceUsingType(jsonObj);
@@ -417,7 +422,6 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();
-        c = coerceClassIfNeeded(c);
 
         Object mate;
 
@@ -442,7 +446,6 @@ public abstract class Resolver implements ReaderContext
             } else if (EnumSet.class.isAssignableFrom(c)) {
                 mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
-            } else if ((mate = coerceCertainTypes(c)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
             } else {
                 // ClassFactory already consulted above, likely regular business/data classes.
                 // If the newInstance(c) fails, it throws a JsonIoException.
@@ -466,7 +469,6 @@ public abstract class Resolver implements ReaderContext
         if (clazz.isArray() || (items != null && clazz == Object.class && !jsonObj.containsKey(KEYS))) {
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
-        } else if ((mate = coerceCertainTypes(clazz)) != null) {   // if coerceCertainTypes() returns non-null, it did the work
         } else if (clazz == Object.class && !useMaps) {
             final Class<?> unknownClass = readOptions.getUnknownTypeClass();
 
@@ -528,16 +530,6 @@ public abstract class Resolver implements ReaderContext
     protected Class<?> coerceClassIfNeeded(Class<?> type) {
         Class clazz = readOptions.getCoercedClass(type);
         return clazz == null ? type : clazz;
-    }
-
-    protected Object coerceCertainTypes(Class<?> type)
-    {
-        Class clazz = readOptions.getCoercedClass(type);
-        if (clazz == null) {
-            return null;
-        }
-
-        return MetaUtils.newInstance(clazz, null);  // can add constructor arg values
     }
 
     protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj)
