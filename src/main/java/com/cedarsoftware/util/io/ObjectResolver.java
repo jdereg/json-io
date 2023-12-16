@@ -174,8 +174,8 @@ public class ObjectResolver extends Resolver
             if (rhs == JsonParser.EMPTY_OBJECT)
             {
                 final JsonObject jObj = new JsonObject();
-                jObj.setJavaType(fieldType);
-                Object value = createInstance(fieldType, jObj);
+                jObj.setHintType(fieldType);
+                Object value = createInstance(jObj);
                 injector.inject(target, value);
             }
             else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
@@ -201,7 +201,8 @@ public class ObjectResolver extends Resolver
                 else
                 {
                     jsonArray.put(ITEMS, elements);
-                    createInstance(fieldType, jsonArray);
+                    jsonArray.setHintType(fieldType);
+                    createInstance(jsonArray);
                     injector.inject(target, jsonArray.getTarget());
                     stack.addFirst(jsonArray);
                 }
@@ -226,7 +227,8 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
-                    Object fieldObject = createInstance(fieldType, jsRhs);
+                    jsRhs.setHintType(fieldType);
+                    Object fieldObject = createInstance(jsRhs);
                     injector.inject(target, fieldObject);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
                     if (!isNonRefClass)
@@ -328,7 +330,7 @@ public class ObjectResolver extends Resolver
                     // check that jObj as a type
                     if (jObj.getJavaType() != null)
                     {
-                        Object javaInstance = createInstance(null, jObj);
+                        Object javaInstance = createInstance(jObj);
                         boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                         // TODO: Check is finished here?
                         if (!isNonRefClass && !jObj.isFinished)
@@ -455,8 +457,9 @@ public class ObjectResolver extends Resolver
             else if (element.getClass().isArray())
             {
                 final JsonObject jObj = new JsonObject();
+                jObj.setHintType(Object.class);
                 jObj.put(ITEMS, element);
-                createInstance(Object.class, jObj);
+                createInstance(jObj);
                 col.add(jObj.getTarget());
                 convertJsonValuesToJava(jObj);
             }
@@ -484,7 +487,8 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {
-                    createInstance(Object.class, jObj);
+                    jObj.setHintType(Object.class);
+                    createInstance(jObj);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                     if (!isNonRefClass)
                     {
@@ -589,7 +593,9 @@ public class ObjectResolver extends Resolver
             }
             else if (element == JsonParser.EMPTY_OBJECT)
             {    // Use either explicitly defined type in ObjectMap associated to JSON, or array component type.
-                Object arrayElement = createInstance(compType, new JsonObject());
+                JsonObject jObj = new JsonObject();
+                jObj.setHintType(compType);
+                Object arrayElement = createInstance(jObj);
                 Array.set(array, i, arrayElement);
             }
             else if ((special = readWithFactoryIfExists(element, compType, stack)) != null)
@@ -629,7 +635,8 @@ public class ObjectResolver extends Resolver
                 {
                     JsonObject jsonObject = new JsonObject();
                     jsonObject.put(ITEMS, element);
-                    Array.set(array, i, createInstance(compType, jsonObject));
+                    jsonObject.setHintType(compType);
+                    Array.set(array, i, createInstance(jsonObject));
                     stack.addFirst(jsonObject);
                 }
             }
@@ -652,7 +659,8 @@ public class ObjectResolver extends Resolver
                 }
                 else
                 {    // Convert JSON HashMap to Java Object instance and assign values
-                    Object arrayElement = createInstance(compType, jsonObject);
+                    jsonObject.setHintType(compType);
+                    Object arrayElement = createInstance(jsonObject);
                     Array.set(array, i, arrayElement);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(arrayElement.getClass());
                     if (!isNonRefClass && !jsonObject.isFinished) {
@@ -739,7 +747,8 @@ public class ObjectResolver extends Resolver
                             return null;
                         }
                     }
-                    Object factoryCreated = createInstance(c, jsonObj);
+                    jsonObj.setHintType(c);
+                    Object factoryCreated = createInstance(jsonObj);
                     if (factoryCreated != null && jsonObj.isFinished) {
                         return factoryCreated;
                     }
