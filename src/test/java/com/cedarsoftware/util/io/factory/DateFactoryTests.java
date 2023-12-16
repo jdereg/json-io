@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io.factory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.ZoneId;
 import java.util.Date;
 
 import com.cedarsoftware.util.io.JsonReader;
@@ -9,6 +10,11 @@ import com.cedarsoftware.util.io.JsonReader;
 public class DateFactoryTests extends HandWrittenDateFactoryTests<Date> {
     @Override
     protected JsonReader.ClassFactory createFactory() {
+        return new DateFactory();
+    }
+
+    @Override
+    protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
         return new DateFactory();
     }
 
@@ -52,12 +58,18 @@ public class DateFactoryTests extends HandWrittenDateFactoryTests<Date> {
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(Date dt) {
+        Date expected = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        assertThat(dt).isEqualTo(expected);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_inSaigon(Date dt) {
         assertThat(dt).hasYear(2011)
-                .hasMonth(12)
+                .hasMonth(2)
                 .hasDayOfMonth(3)
-                .hasHourOfDay(10)
-                .hasMinute(15)
-                .hasSecond(30)
-                .hasMillisecond(50);
+                .hasHourOfDay(20)
+                .hasMinute(9)
+                .hasSecond(3)
+                .hasMillisecond(0);
     }
 }

@@ -16,9 +16,4 @@ public class GroovyFieldFilter implements FieldFilter {
     public boolean filter(Field field) {
         return META_CLASS_FIELD_NAME.equals(field.getName()) && META_CLASS_NAME.equals(field.getType().getName());
     }
-
-    @Override
-    public FieldFilter createCopy() {
-        return new GroovyFieldFilter();
-    }
 }

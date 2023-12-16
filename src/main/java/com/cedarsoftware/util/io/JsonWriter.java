@@ -1589,7 +1589,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     out.write('{');
                     for (Accessor f : mapOfFields)
                     {
-                        firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f, false);
+                        firstInEntry = writeField(e, firstInEntry, f.getUniqueFieldName(), f);
                     }
                     out.write('}');
                 }
@@ -1648,7 +1648,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         for (final Accessor accessor : accessors) {
             final String fieldName = accessor.getUniqueFieldName();
-            first = writeField(obj, first, fieldName, accessor, true);
+            first = writeField(obj, first, fieldName, accessor);
         }
 
         if (!bodyOnly)
@@ -1674,13 +1674,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor, boolean allowTransient) throws IOException
+    private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException
     {
-        if (!allowTransient && accessor.isTransient())
-        {   // Do not write transient fields
-            return first;
-        }
-
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
         Object o;
 

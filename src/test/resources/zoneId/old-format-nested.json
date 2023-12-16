@@ -1,0 +1,11 @@
+{
+  "@type": "com.cedarsoftware.util.io.ZoneIdTests$NestedZoneId",
+  "one": {
+    "@type": "java.time.ZoneRegion",
+    "id": "Asia/Aden"
+  },
+  "two": {
+    "@type": "java.time.ZoneOffset",
+    "value": "Z"
+  }
+}

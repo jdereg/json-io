@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 
 import java.time.ZoneId;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -106,6 +107,38 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     }
 
     @Test
+    void testOldFormat_simpleFile() {
+        String json = loadJsonForTest("old-format-simple.json");
+        ZoneId zone = toObjects(json, ZoneId.class);
+        assertThat(zone.getId()).isEqualTo("Asia/Aden");
+    }
+
+    @Test
+    void testOldFormat_nestedJson() {
+        String json = loadJsonForTest("old-format-nested.json");
+        NestedZoneId zone = toObjects(json, NestedZoneId.class);
+        assertThat(zone.one.getId()).isEqualTo("Asia/Aden");
+        assertThat(zone.two.getId()).isEqualTo("Z");
+    }
+
+    @Test
+    void testOldForm_list() {
+        String json = loadJsonForTest("old-format-list.json");
+        List list = toObjects(json, null);
+        assertThat(((ZoneId) list.get(0)).getId()).isEqualTo("Asia/Aden");
+        assertThat(((ZoneId) list.get(3)).getId()).isEqualTo("Z");
+    }
+
+
+    @Test
+    void testOldForm_array() {
+        String json = loadJsonForTest("old-format-array.json");
+        Object[] zone = toObjects(json, Object[].class);
+        assertThat(((ZoneId) zone[0]).getId()).isEqualTo("Asia/Aden");
+        assertThat(((ZoneId) zone[3]).getId()).isEqualTo("Z");
+    }
+
+    @Test
     void testZoneId_inArray() {
         ZoneId[] initial = new ZoneId[]{
                 ZoneId.of("+06"),
@@ -130,4 +163,9 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
             this(date, date);
         }
     }
+
+    private String loadJsonForTest(String fileName) {
+        return MetaUtils.loadResourceAsString("zoneId/" + fileName);
+    }
+
 }

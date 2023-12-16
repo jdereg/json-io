@@ -93,6 +93,8 @@ public class Accessor {
             } else {
                 return methodHandle.invoke(o);
             }
+        } catch (ThreadDeath td) {
+            throw td;
         } catch (Throwable t) {
             return null;
         }
@@ -108,10 +110,6 @@ public class Accessor {
 
     public Type getGenericType() {
         return this.field.getGenericType();
-    }
-
-    public boolean isTransient() {
-        return Modifier.isTransient(this.field.getModifiers());
     }
 
     public String getActualFieldName() {

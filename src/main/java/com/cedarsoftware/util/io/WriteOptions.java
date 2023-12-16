@@ -244,11 +244,7 @@ public class WriteOptions {
      */
     public boolean isLongDateFormat() {
         Object a = customWrittenClasses.get(Date.class);
-        if (a == null) {
-            return false;
-        }
-        boolean answer = Writers.DateAsLongWriter.class.equals(a.getClass());
-        return answer;
+        return a instanceof Writers.DateAsLongWriter;
     }
 
     /**

@@ -12,9 +12,4 @@ public class AccessorMethodFilter implements MethodFilter {
                 Modifier.isStatic(m.getModifiers()) ||
                 !Modifier.isPublic(m.getDeclaringClass().getModifiers());
     }
-
-    @Override
-    public MethodFilter createCopy() {
-        return new AccessorMethodFilter();
-    }
 }

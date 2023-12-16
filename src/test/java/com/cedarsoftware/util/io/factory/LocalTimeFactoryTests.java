@@ -1,18 +1,20 @@
 package com.cedarsoftware.util.io.factory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 
 class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
     private static Stream<Arguments> nonValueVariants() {
@@ -80,6 +82,11 @@ class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
     }
 
     @Override
+    protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
+        return new LocalTimeFactory(DateTimeFormatter.ISO_LOCAL_TIME, zoneId);
+    }
+
+    @Override
     protected Class<LocalTime> getClassForFactory() {
         return LocalTime.class;
     }
@@ -113,6 +120,19 @@ class LocalTimeFactoryTests extends HandWrittenDateFactoryTests<LocalTime> {
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(LocalTime dt) {
+        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        assertThat(date).isNotNull();
 
+        LocalTime actual = date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
+        assertThat(actual).isEqualTo(dt);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_inSaigon(LocalTime dt) {
+        Date date = DateFactory.parseDate("2011-02-03 20:09:03");
+        assertThat(date).isNotNull();
+
+        LocalTime actual = date.toInstant().atZone(SAIGON_ZONE_ID).toLocalTime();
+        assertThat(actual).isEqualTo(dt);
     }
 }

@@ -52,7 +52,7 @@ public class MonthDayFactory extends AbstractTemporalFactory<MonthDay> {
             return MonthDay.parse(s, dateTimeFormatter);
         } catch (Exception e) {
             ZonedDateTime dt = convertToZonedDateTime(s);
-            return MonthDay.of(dt.getYear(), dt.getMonthValue());
+            return MonthDay.of(dt.getMonthValue(), dt.getDayOfMonth());
         }
     }
 
@@ -63,5 +63,4 @@ public class MonthDayFactory extends AbstractTemporalFactory<MonthDay> {
 
         return MonthDay.of(month.intValue(), day.intValue());
     }
-
 }

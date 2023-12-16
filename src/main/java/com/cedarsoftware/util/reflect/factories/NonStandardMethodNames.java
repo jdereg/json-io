@@ -20,8 +20,4 @@ public class NonStandardMethodNames {
         Map<String, String> mapping = this.classToMapping.get(c);
         return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
     }
-
-    public Map<Class<?>, Map<String, String>> getMappings() {
-        return this.classToMapping;
-    }
 }

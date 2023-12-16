@@ -1,0 +1,15 @@
+{
+  "@type": "java.util.Collections$UnmodifiableRandomAccessList",
+  "@items": [
+    {
+      "@type": "java.time.ZoneRegion",
+      "id": "Asia/Aden"
+    },
+    "foo",
+    9,
+    {
+      "@type": "java.time.ZoneOffset",
+      "value": "Z"
+    }
+  ]
+}
