@@ -332,10 +332,8 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object newInstance(JsonObject jsonObj) {
         // Coerce class first.
-        if (jsonObj.getJavaType() != null) {
-            jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
-        }
-        
+        jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+
         // Now try class factory
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
         if (mate != null) {
@@ -386,13 +384,9 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object createInstance(Class<?> clazz, JsonObject jsonObj) {
         // Coerce class first
-        if (jsonObj.getJavaType() != null) {
-            jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
-        }
-        if (clazz != null) {
-            clazz = coerceClassIfNeeded(clazz);
-        }
-        
+        jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+        clazz = coerceClassIfNeeded(clazz);
+
         // Now try ClassFactory.
         Object mate = createInstanceUsingClassFactory(clazz, jsonObj);
         if (mate != null) {
@@ -400,12 +394,12 @@ public abstract class Resolver implements ReaderContext
         }
 
         // EnumSet?
-        if (jsonObj.getJavaType() == null) {   // Enum
-            Object mayEnumSpecial = jsonObj.get("@enum");
-            if (mayEnumSpecial instanceof String) {
-                jsonObj.setJavaType(MetaUtils.classForName("java.util.EnumSet", Resolver.class.getClassLoader()));
-                // Extract EnumSet needs to go here, so it is loaded.
-            }
+        Object mayEnumSpecial = jsonObj.get("@enum");
+        if (mayEnumSpecial instanceof String) {
+            jsonObj.setJavaType(MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader()));
+            mate = extractEnumSet(clazz, jsonObj);
+            jsonObj.isFinished = true;
+            return mate;
         }
 
         // @type always takes precedence over inferred Java (clazz) type.
@@ -442,9 +436,6 @@ public abstract class Resolver implements ReaderContext
                 jsonObj.isFinished = true;
             } else if (c == Class.class) {
                 mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
-                jsonObj.isFinished = true;
-            } else if (EnumSet.class.isAssignableFrom(c)) {
-                mate = extractEnumSet(c, jsonObj);
                 jsonObj.isFinished = true;
             } else {
                 // ClassFactory already consulted above, likely regular business/data classes.
@@ -528,6 +519,9 @@ public abstract class Resolver implements ReaderContext
     }
 
     protected Class<?> coerceClassIfNeeded(Class<?> type) {
+        if (type == null) {
+            return null;
+        }
         Class clazz = readOptions.getCoercedClass(type);
         return clazz == null ? type : clazz;
     }
