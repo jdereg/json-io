@@ -1,9 +1,12 @@
 package com.cedarsoftware.util.io;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -134,6 +137,108 @@ public class PrimitivesTest
         assertEquals("true", tsf.getValues()[1]);
         assertEquals("3.14159", tsf.getValues()[2]);
         assertEquals(null, tsf.getValues()[3]);
+    }
+
+    @Test
+    void testValueAtRootNoType()
+    {
+        Object x = TestUtil.toObjects("120.1", null);
+        assertInstanceOf(Double.class, x);
+        assertEquals(x, 120.1d);
+
+        x = TestUtil.toObjects("true", null);
+        assertInstanceOf(Boolean.class, x);
+        assertEquals(x, true);
+
+        x = TestUtil.toObjects("false", null);
+        assertInstanceOf(Boolean.class, x);
+        assertEquals(x, false);
+
+        x = TestUtil.toObjects("\"42\"", null);
+        assertInstanceOf(String.class, x);
+        assertEquals(x, "42");
+
+        x = TestUtil.toObjects("1e2", null);
+        assertInstanceOf(Double.class, x);
+        assertEquals(x, 100d);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"java.lang.Byte", "byte"})
+    void testByteValueAtRoot(String stringType)
+    {
+        Class<?> type = MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Object x = TestUtil.toObjects("120.1", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)120);
+
+        x = TestUtil.toObjects("true", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)1);
+
+        x = TestUtil.toObjects("false", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)0);
+
+        x = TestUtil.toObjects("\"42\"", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)42);
+
+        x = TestUtil.toObjects("1e2", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)100);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"java.lang.Byte", "byte"})
+    void testByteObjectValueAtRoot(String stringType)
+    {
+        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)120);
+
+        x = TestUtil.toObjects("{\"value\":true}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)1);
+
+        x = TestUtil.toObjects("{\"value\":false}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)0);
+
+        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)42);
+
+        x = TestUtil.toObjects("{\"value\":1e2}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)100);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"java.lang.Byte", "byte", "null"})
+    void testTypedByteObjectValueAtRoot(String stringType)
+    {
+        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Object x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":120.1}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)120);
+
+        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":true}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)1);
+
+        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":false}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)0);
+
+        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":\"42\"}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)42);
+
+        x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":1e2}", type);
+        assertInstanceOf(Byte.class, x);
+        assertEquals(x, (byte)100);
     }
 
     public class AllPrimitives

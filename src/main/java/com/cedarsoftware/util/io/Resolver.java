@@ -388,7 +388,7 @@ public abstract class Resolver implements ReaderContext
         }
         jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
 
-        // Now try ClassFactory.
+        // Now try ClassFactory.  Covers all built-in (known a priori) classes.
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
         if (mate != NO_FACTORY) {
             return mate;

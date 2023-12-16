@@ -1,12 +1,19 @@
 #
 # JsonReader.ClassFactory mappings
 #
+byte = com.cedarsoftware.util.io.factory.ByteFactory
+short = com.cedarsoftware.util.io.factory.ShortFactory
+int = com.cedarsoftware.util.io.factory.IntegerFactory
+long = com.cedarsoftware.util.io.factory.LongFactory
+float = com.cedarsoftware.util.io.factory.FloatFactory
+double = com.cedarsoftware.util.io.factory.DoubleFactory
+
 java.lang.Byte = com.cedarsoftware.util.io.factory.ByteFactory
 java.lang.Short = com.cedarsoftware.util.io.factory.ShortFactory
 java.lang.Integer = com.cedarsoftware.util.io.factory.IntegerFactory
 java.lang.Long = com.cedarsoftware.util.io.factory.LongFactory
-java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 java.lang.Float = com.cedarsoftware.util.io.factory.FloatFactory
+java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory

@@ -18,5 +18,7 @@ package com.cedarsoftware.util.io.factory;
  *         limitations under the License.*
  */
 public class ByteFactory extends NumberFactory {
-    public Class<?> getType() { return Byte.class; }
+    public Class<?> getType() {
+        return Byte.class;
+    }
 }
