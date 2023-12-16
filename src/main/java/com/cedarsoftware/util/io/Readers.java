@@ -176,31 +176,6 @@ public class Readers
         }
     }
 
-
-    public static class StringReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            if (o instanceof String)
-            {
-                return o;
-            }
-
-            if (Primitives.isPrimitive(o.getClass()))
-            {
-                return o.toString();
-            }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.hasValue())
-            {
-                jObj.setTarget(jObj.getValue());
-                return jObj.getTarget();
-            }
-            throw new JsonIoException("String missing 'value' field");
-        }
-    }
-
     public static class ClassReader implements JsonReader.JsonClassReader
     {
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)

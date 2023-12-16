@@ -117,17 +117,8 @@ public class PrimitivesTest
 
         json = "{\"@type\":\"string\"}";
         String str = null;
-        try
-        {
-            str = TestUtil.toObjects(json, null);
-            fail();
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("'value'"));
-        }
-
-        assertTrue(str == null);
+        str = TestUtil.toObjects(json, null);
+        assert "".equals(str);
     }
 
     @Test
