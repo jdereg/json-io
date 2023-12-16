@@ -339,12 +339,15 @@ public abstract class Resolver implements ReaderContext
         if (mate != null) {
             return mate;
         }
-        
-        if (jsonObj.getJavaType() == null) {
-            Object mayEnumSpecial = jsonObj.get("@enum");
-            if (mayEnumSpecial instanceof String) { // EnumSet
-                jsonObj.setJavaType(MetaUtils.classForName("java.util.EnumSet", Resolver.class.getClassLoader()));
-            }
+
+        // EnumSet?
+        Object mayEnumSpecial = jsonObj.get("@enum");
+        if (mayEnumSpecial instanceof String) {
+            Class clazz = MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader());
+            mate = extractEnumSet(clazz, jsonObj);
+            jsonObj.setTarget(mate);
+            jsonObj.isFinished = true;
+            return mate;
         }
 
         // @type always takes precedence over inferred Java (clazz) type.
@@ -396,8 +399,9 @@ public abstract class Resolver implements ReaderContext
         // EnumSet?
         Object mayEnumSpecial = jsonObj.get("@enum");
         if (mayEnumSpecial instanceof String) {
-            jsonObj.setJavaType(MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader()));
+            clazz = MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader());
             mate = extractEnumSet(clazz, jsonObj);
+            jsonObj.setTarget(mate);
             jsonObj.isFinished = true;
             return mate;
         }
@@ -416,7 +420,6 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();
-
         Object mate;
 
         // Use other methods to determine the type of class to be instantiated, including looking at the
@@ -462,7 +465,6 @@ public abstract class Resolver implements ReaderContext
             mate = Array.newInstance(clazz.isArray() ? clazz.getComponentType() : Object.class, size);
         } else if (clazz == Object.class && !useMaps) {
             final Class<?> unknownClass = readOptions.getUnknownTypeClass();
-
             if (unknownClass == null) {
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.setJavaType(Map.class);
@@ -471,7 +473,6 @@ public abstract class Resolver implements ReaderContext
                 mate = MetaUtils.newInstance(unknownClass, null);   // can add constructor arg values
             }
         } else {
-            // ClassFactory consulted above, no need to check it here.
             mate = MetaUtils.newInstance(clazz, null);  // can add constructor arg values
         }
 
