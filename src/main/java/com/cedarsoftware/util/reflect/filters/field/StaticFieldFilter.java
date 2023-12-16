@@ -11,9 +11,4 @@ public class StaticFieldFilter implements FieldFilter {
     public boolean filter(Field field) {
         return Modifier.isStatic(field.getModifiers());
     }
-
-    @Override
-    public FieldFilter createCopy() {
-        return new StaticFieldFilter();
-    }
 }

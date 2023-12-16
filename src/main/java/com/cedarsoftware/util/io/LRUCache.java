@@ -41,6 +41,7 @@ public class LRUCache<K, V> implements Map<K, V> {
     }
 
     // Implement Map interface
+    @Override
     public int size() {
         lock.readLock().lock();
         try {
@@ -50,6 +51,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public boolean isEmpty() {
         lock.readLock().lock();
         try {
@@ -59,6 +61,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public boolean containsKey(Object key) {
         lock.readLock().lock();
         try {
@@ -68,6 +71,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public boolean containsValue(Object value) {
         lock.readLock().lock();
         try {
@@ -77,6 +81,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public V get(Object key) {
         lock.readLock().lock();
         try {
@@ -86,6 +91,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public V put(K key, V value) {
         lock.writeLock().lock();
         try {
@@ -95,6 +101,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public V remove(Object key) {
         lock.writeLock().lock();
         try {
@@ -104,6 +111,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public void putAll(Map<? extends K, ? extends V> m) {
         lock.writeLock().lock();
         try {
@@ -113,6 +121,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public void clear() {
         lock.writeLock().lock();
         try {
@@ -122,6 +131,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public Set<K> keySet() {
         lock.readLock().lock();
         try {
@@ -131,6 +141,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public Collection<V> values() {
         lock.readLock().lock();
         try {
@@ -140,6 +151,7 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public Set<Map.Entry<K, V>> entrySet() {
         lock.readLock().lock();
         try {
@@ -149,15 +161,11 @@ public class LRUCache<K, V> implements Map<K, V> {
         }
     }
 
+    @Override
     public V putIfAbsent(K key, V value) {
         lock.writeLock().lock();
         try {
-            V existingValue = cache.get(key);
-            if (existingValue == null) {
-                cache.put(key, value);
-                return null;
-            }
-            return existingValue;
+            return cache.computeIfAbsent(key, k -> value);
         } finally {
             lock.writeLock().unlock();
         }

@@ -11,16 +11,7 @@ public class EnumFieldFilter implements FieldFilter {
             return true;
         }
 
-        if (field.getDeclaringClass().isAssignableFrom(Enum.class) && ("hash".equals(field.getName()) || "ordinal".equals(field.getName()))) {
-            return true;
-        }
-
-        return false;
-    }
-
-    @Override
-    public FieldFilter createCopy() {
-        return new EnumFieldFilter();
+        return field.getDeclaringClass().isAssignableFrom(Enum.class) && ("hash".equals(field.getName()) || "ordinal".equals(field.getName()));
     }
 }
 

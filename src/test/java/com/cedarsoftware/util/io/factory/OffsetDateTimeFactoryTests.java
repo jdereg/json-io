@@ -1,15 +1,20 @@
 package com.cedarsoftware.util.io.factory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
+
+import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.MetaUtils;
 
 class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 
@@ -54,26 +59,20 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
     }
 
     @Test
-    void newInstance_formattedDateTest() {
-        OffsetDateTimeFactory factory = new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.of("UTC"));
+    void newInstance_oldFormats_simpleCase() {
         JsonObject jsonObject = new JsonObject();
-        jsonObject.setValue("2011-12-03T10:15:30");
+        jsonObject.setJavaType(MetaUtils.classForName("java.time.OffsetDateTime", this.getClass().getClassLoader()));
+        jsonObject.put("dateTime", "2019-12-15T09:07:16.000002");
+        jsonObject.put("offset", "Z");
+        OffsetDateTime actual = new OffsetDateTimeFactory().newInstance(OffsetDateTime.class, jsonObject, null);
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
-
-        assertThat(dt.getYear()).isEqualTo(2011);
-        assertThat(dt.getMonthValue()).isEqualTo(12);
-        assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(15);
-        assertThat(dt.getMinute()).isEqualTo(15);
-        assertThat(dt.getSecond()).isEqualTo(30);
-        assertThat(dt.getNano()).isZero();
-        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+        OffsetDateTime original = OffsetDateTime.of(LocalDateTime.parse("2019-12-15T09:07:16.000002", DateTimeFormatter.ISO_LOCAL_DATE_TIME), ZoneOffset.of("Z"));
+        assertThat(actual).isEqualTo(original);
     }
 
     @Override
     protected JsonReader.ClassFactory createFactory() {
-        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.of("Z"));
+        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.systemDefault());
     }
 
     @Override
@@ -84,49 +83,49 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withNoTime(OffsetDateTime dt) {
-        assertThat(dt.getYear()).isEqualTo(2011);
-        assertThat(dt.getMonthValue()).isEqualTo(2);
-        assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(5);
-        assertThat(dt.getMinute()).isZero();
-        assertThat(dt.getSecond()).isZero();
-        assertThat(dt.getNano()).isZero();
-        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+        Date date = DateFactory.parseDate("2011-02-03");
+        assertThat(date).isNotNull();
+
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
+
+        assertThat(dt).isEqualTo(original);
     }
 
     @Override
     protected void assert_handWrittenDate_withTime(OffsetDateTime dt) {
-        assertThat(dt.getYear()).isEqualTo(2011);
-        assertThat(dt.getMonthValue()).isEqualTo(2);
-        assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(13);
-        assertThat(dt.getMinute()).isEqualTo(9);
-        assertThat(dt.getSecond()).isEqualTo(3);
-        assertThat(dt.getNano()).isZero();
-        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+        Date date = DateFactory.parseDate("2011-02-03T08:09:03");
+        assertThat(date).isNotNull();
+
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
+
+        assertThat(dt).isEqualTo(original);
     }
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(OffsetDateTime dt) {
-        assertThat(dt.getYear()).isEqualTo(2011);
-        assertThat(dt.getMonthValue()).isEqualTo(12);
-        assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(15);
-        assertThat(dt.getMinute()).isEqualTo(15);
-        assertThat(dt.getSecond()).isEqualTo(30);
-        assertThat(dt.getNano()).isEqualTo(50000000);
-        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050");
+        assertThat(date).isNotNull();
+
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
+
+        assertThat(dt).isEqualTo(original);
     }
 
     @Override
     protected void assert_handWrittenDate_withNoZone(OffsetDateTime dt) {
-        assertThat(dt.getYear()).isEqualTo(2011);
-        assertThat(dt.getMonthValue()).isEqualTo(12);
-        assertThat(dt.getDayOfMonth()).isEqualTo(3);
-        assertThat(dt.getHour()).isEqualTo(15);
-        assertThat(dt.getMinute()).isEqualTo(15);
-        assertThat(dt.getSecond()).isEqualTo(30);
-        assertThat(dt.getNano()).isZero();
-        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("Z"));
+        Date date = DateFactory.parseDate("2011-12-03T10:15:30");
+        assertThat(date).isNotNull();
+
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
+
+        assertThat(dt).isEqualTo(original);
+    }
+
+    private String loadJsonForTest(String fileName) {
+        return MetaUtils.loadResourceAsString("offsetdatetime/" + fileName);
     }
 }

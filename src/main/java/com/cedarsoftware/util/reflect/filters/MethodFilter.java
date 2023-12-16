@@ -28,6 +28,4 @@ public interface MethodFilter {
      * @return true to filter the method, false to not filter.
      */
     boolean filter(Method method);
-
-    MethodFilter createCopy();
 }

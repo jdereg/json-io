@@ -16,9 +16,4 @@ public class ModifierMethodFilter implements MethodFilter {
     public boolean filter(Method method) {
         return (method.getModifiers() & mask) == 0;
     }
-
-    @Override
-    public MethodFilter createCopy() {
-        return new ModifierMethodFilter(mask);
-    }
 }

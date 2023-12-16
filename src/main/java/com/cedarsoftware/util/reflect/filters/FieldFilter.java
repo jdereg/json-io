@@ -28,6 +28,4 @@ public interface FieldFilter {
      * @return true to filter the field, false to not filter it.
      */
     boolean filter(Field field);
-
-    FieldFilter createCopy();
 }
