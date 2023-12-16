@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.time.ZoneId;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -9,7 +11,11 @@ import com.cedarsoftware.util.io.JsonReader;
 
 public abstract class HandWrittenDateFactoryTests<T> {
 
+    protected ZoneId SAIGON_ZONE_ID = ZoneId.of("Asia/Saigon");
+
     protected abstract JsonReader.ClassFactory createFactory();
+
+    protected abstract JsonReader.ClassFactory createFactory(ZoneId zoneId);
 
     protected abstract Class<T> getClassForFactory();
 
@@ -65,7 +71,6 @@ public abstract class HandWrittenDateFactoryTests<T> {
     @ParameterizedTest
     @ValueSource(strings = {
             "2011-2-3 08:09:03",
-            "2011-02-03T08:09:03",
             "FEB 03, 2011 08:09.03",
             "02/03/2011 08:09:03",
             "2/3/2011T08:09:03",
@@ -92,7 +97,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
     @Test
     void newInstance_handWrittenDate_includingMilliseconds() {
         JsonObject jsonObject = new JsonObject();
-        jsonObject.setValue("2011-12-03T10:15:30.050");
+        jsonObject.setValue("2011-12-03T10:15:30.050-0500");
 
         JsonReader.ClassFactory factory = createFactory();
 
@@ -103,4 +108,30 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
     protected abstract void assert_handWrittenDate_withMilliseconds(T dt);
 
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "2011-2-3 20:09:03",
+            "FEB 03, 2011 20:09.03",
+            "02/03/2011 20:09:03",
+            "2/3/2011T20:09:03",
+            "2011/2/3 20:09:03",
+            "2011/02/03T20:09:03",
+            "02.3.2011 20:09:03",
+            "2.03.2011T20:09:03",
+            "2011.02.03 20:09:03"
+    })
+    void testDifferentZone(String parseable) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.setValue(parseable);
+
+        JsonReader.ClassFactory factory = createFactory(SAIGON_ZONE_ID);
+
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+
+        assert_handWrittenDate_inSaigon(dt);
+    }
+
+    protected abstract void assert_handWrittenDate_inSaigon(T dt);
 }

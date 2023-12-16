@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io.factory;
 
 import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -126,9 +126,10 @@ public class DateFactory implements JsonReader.ClassFactory {
         }
 
         try {
-            return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(dateStr);
-        } catch (ParseException ignore) {
-            //  trying special iso with milliseconds first.
+            ZonedDateTime zdt = ZonedDateTime.from(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(dateStr));
+            return Date.from(zdt.toInstant());
+        } catch (Exception e) {
+            // ignore.
         }
 
         // Determine which date pattern (Matcher) to use

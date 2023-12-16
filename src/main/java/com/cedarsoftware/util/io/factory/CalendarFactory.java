@@ -11,6 +11,16 @@ import com.cedarsoftware.util.io.MetaUtils;
 
 public class CalendarFactory implements JsonReader.ClassFactory {
 
+    private final TimeZone timeZone;
+
+    public CalendarFactory(TimeZone timeZone) {
+        this.timeZone = timeZone;
+    }
+
+    public CalendarFactory() {
+        this(TimeZone.getDefault());
+    }
+
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj) {
         Object value = jObj.getValue();
@@ -62,6 +72,7 @@ public class CalendarFactory implements JsonReader.ClassFactory {
             }
 
             calendar.setTime(date);
+
             if (tz != null) {
                 calendar.setTimeZone(tz);
             }

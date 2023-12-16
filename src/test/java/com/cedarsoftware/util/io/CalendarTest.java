@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Serializable;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -238,8 +237,7 @@ public class CalendarTest
 
     private ReadOptions createOldOptionsFormat(String timeZone) {
         TimeZone zone = TimeZone.getTimeZone(timeZone);
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        CalendarFactory factory = new CalendarFactory();
+        CalendarFactory factory = new CalendarFactory(zone);
 
         return new ReadOptions()
                 .addClassFactory(Calendar.class, factory)

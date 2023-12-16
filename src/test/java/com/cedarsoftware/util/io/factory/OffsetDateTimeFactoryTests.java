@@ -18,6 +18,12 @@ import com.cedarsoftware.util.io.MetaUtils;
 
 class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 
+    @Override
+    protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
+        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, zoneId);
+    }
+
+
     @Test
     void newInstance_testOffsetStringFormat() {
         OffsetDateTimeFactory factory = new OffsetDateTimeFactory();
@@ -105,11 +111,22 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050");
+        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());
         OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
+
+        assertThat(dt).isEqualTo(original);
+    }
+
+    @Override
+    protected void assert_handWrittenDate_inSaigon(OffsetDateTime dt) {
+        Date date = DateFactory.parseDate("2011-02-03 20:09:03");
+        assertThat(date).isNotNull();
+
+        Instant instant = Instant.ofEpochMilli(date.getTime());
+        OffsetDateTime original = OffsetDateTime.from(instant.atZone(SAIGON_ZONE_ID));
 
         assertThat(dt).isEqualTo(original);
     }
@@ -123,9 +140,5 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
         OffsetDateTime original = OffsetDateTime.from(instant.atZone(ZoneId.systemDefault()));
 
         assertThat(dt).isEqualTo(original);
-    }
-
-    private String loadJsonForTest(String fileName) {
-        return MetaUtils.loadResourceAsString("offsetdatetime/" + fileName);
     }
 }

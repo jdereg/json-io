@@ -1,16 +1,18 @@
 package com.cedarsoftware.util.io.factory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 
 class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     private static Stream<Arguments> nonValueVariants() {
@@ -57,6 +59,11 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     }
 
     @Override
+    protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
+        return new YearMonthFactory(YearMonthFactory.FORMATTER, zoneId);
+    }
+
+    @Override
     protected Class<YearMonth> getClassForFactory() {
         return YearMonth.class;
     }
@@ -81,6 +88,13 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(YearMonth dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(12);
+    }
 
+    @Override
+    protected void assert_handWrittenDate_inSaigon(YearMonth dt) {
+        assertThat(dt.getYear()).isEqualTo(2011);
+        assertThat(dt.getMonthValue()).isEqualTo(2);
     }
 }
