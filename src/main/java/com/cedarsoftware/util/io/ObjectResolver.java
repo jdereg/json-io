@@ -787,8 +787,7 @@ public class ObjectResolver extends Resolver
             // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
-
-
+        
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);

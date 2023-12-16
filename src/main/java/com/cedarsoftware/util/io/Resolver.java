@@ -52,6 +52,7 @@ import lombok.Getter;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public abstract class Resolver implements ReaderContext
 {
+    private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
 
@@ -337,7 +338,7 @@ public abstract class Resolver implements ReaderContext
 
         // Now try class factory
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
-        if (mate != null) {
+        if (mate != NO_FACTORY) {
             return mate;
         }
 
@@ -387,11 +388,17 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object createInstance(JsonObject jsonObj) {
         // Coerce class first
+        Object target = jsonObj.getTarget();
+        if (target != null) {
+            // TODO: Can we throw exception (and eventually not need this check)?
+            // TODO: Why are you calling createInstance() when you already have a target?
+            return target;
+        }
         jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
 
         // Now try ClassFactory.
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
-        if (mate != null) {
+        if (mate != NO_FACTORY) {
             return mate;
         }
 
@@ -412,6 +419,9 @@ public abstract class Resolver implements ReaderContext
     /**
      * Create an instance of a Java class using the ".type" field on the jsonObj.  The clazz argument is not
      * used for determining type, just for clarity in an exception message.
+     * TODO: These instances are not all LOADED yet, so that is why they are not in the main createInstance()
+     * TODO: method.  As they are loaded, they will move up.  Also, pulling primitives, class, and others into
+     * TODO: factories will shrink this to just unknown generic classes, Object[]'s, and Collections of such.
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();
@@ -429,7 +439,7 @@ public abstract class Resolver implements ReaderContext
             } else {
                 mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
             }
-        } else if (c == Object.class && !useMaps) {
+        } else if (c == Object.class && !useMaps) {  // JsonObject
             Class<?> unknownClass = readOptions.getUnknownTypeClass();
             if (unknownClass == null) {
                 JsonObject jsonObject = new JsonObject();
@@ -465,19 +475,13 @@ public abstract class Resolver implements ReaderContext
      */
     Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj)
     {
-        //  If a target exists then the item has already gone through
-        //  the create instance process. Don't recreate
-        if (jsonObj.getTarget() != null) {
-            return jsonObj.getTarget();
-        }
-
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
         JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
 
         if (classFactory == null) {
-            return null;
+            return NO_FACTORY;
         }
 
         Object target = classFactory.newInstance(c, jsonObj, this);

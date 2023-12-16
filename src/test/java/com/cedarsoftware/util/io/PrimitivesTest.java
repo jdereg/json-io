@@ -118,7 +118,7 @@ public class PrimitivesTest
         json = "{\"@type\":\"string\"}";
         String str = null;
         str = TestUtil.toObjects(json, null);
-        assert "".equals(str);
+        assertNull(str);
     }
 
     @Test
