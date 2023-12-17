@@ -1,4 +1,4 @@
 #
 # Map of class to JsonReader.JsonClassReader
 #
-java.net.URL = com.cedarsoftware.util.io.Readers$URLReader
+

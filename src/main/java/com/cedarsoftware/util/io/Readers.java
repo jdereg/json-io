@@ -35,87 +35,15 @@ import java.util.concurrent.atomic.AtomicLong;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-@Deprecated
 public class Readers
 {
     private Readers () {}
-    
-    public static class URLReader implements JsonReader.JsonClassReader
-    {
-        @Override
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            boolean isString = o instanceof String;
-
-            try
-            {
-                if (isString)
-                {
-                    URI uri = URI.create((String)o);
-                    return uri.toURL();
-                }
-
-                return createURLFromJsonObject((JsonObject)o);
-            }
-            catch(MalformedURLException e)
-            {
-                throw new JsonIoException("java.net.URL malformed URL:  " + ((o instanceof String) ? o : e.getMessage()));
-            }
-        }
-
-        URL createURLFromJsonObject(JsonObject jObj) throws MalformedURLException {
-            if (jObj.hasValue()) {
-                jObj.setTarget(createUrlNewWay(jObj));
-            } else {
-                jObj.setTarget(createUrlOldWay(jObj));
-            }
-            return (URL)jObj.getTarget();
-        }
-
-        URL createUrlNewWay(JsonObject jObj) throws MalformedURLException
-        {
-            return URI.create((String)jObj.getValue()).toURL();
-        }
-
-        URL createUrlOldWay(JsonObject jObj) throws MalformedURLException {
-            String protocol = (String)jObj.get("protocol");
-            String host = (String)jObj.get("host");
-            String file = (String)jObj.get("file");
-            String authority = (String)jObj.get("authority");
-            String ref = (String)jObj.get("ref");
-            Long port = (Long)jObj.get("port");
-
-            StringBuilder builder = new StringBuilder(protocol + ":");
-            if (!protocol.equalsIgnoreCase("jar")) {
-                builder.append("//");
-            }
-            if (authority != null && !authority.isEmpty()) {
-                builder.append(authority);
-            } else {
-                if (host != null && !host.isEmpty()) {
-                    builder.append(host);
-                }
-                if (!port.equals(-1L)) {
-                    builder.append(":" + port);
-                }
-            }
-            if (file != null && !file.isEmpty()) {
-                builder.append(file);
-            }
-            if (ref != null && !ref.isEmpty()) {
-                builder.append("#" + ref);
-            }
-            return new URL(builder.toString());
-        }
-    }
 
     public static class RecordReader implements JsonReader.JsonClassReader
     {
-        @Override
         public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
         {
-            try
-            {
+            try {
                 JsonObject jsonObj = (JsonObject) o;
 
                 ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
@@ -149,8 +77,7 @@ public class Readers
 
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("Record de-serialization only works with java>=16.", e);
-            } catch (Exception e)
-            {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
