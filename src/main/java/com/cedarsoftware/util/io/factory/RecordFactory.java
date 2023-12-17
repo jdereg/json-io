@@ -1,22 +1,14 @@
-package com.cedarsoftware.util.io;
+package com.cedarsoftware.util.io.factory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Deque;
-import java.util.Locale;
-import java.util.TimeZone;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -35,9 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class Readers
-{
-    private Readers () {}
+public class RecordFactory implements JsonReader.ClassFactory {
+    private RecordFactory() {}
 
     public static class RecordReader implements JsonReader.JsonClassReader
     {
@@ -54,8 +45,7 @@ public class Readers
                 // we implement this with reflection due to code compatibility Java<16
                 Method getRecordComponents = Class.class.getMethod("getRecordComponents");
                 Object[] recordComponents = (Object[]) getRecordComponents.invoke(c);
-                for (Object recordComponent : recordComponents)
-                {
+                for (Object recordComponent : recordComponents) {
                     Class<?> type = (Class<?>) recordComponent.getClass().getMethod("getType").invoke(recordComponent);
                     lParameterTypes.add(type);
 
@@ -65,21 +55,25 @@ public class Readers
                     parameterValueJsonObj.setJavaType(type);
                     parameterValueJsonObj.setValue(jsonObj.get(parameterName));
 
-                    if(parameterValueJsonObj.isLogicalPrimitive())
+                    if (parameterValueJsonObj.isLogicalPrimitive()) {
                         lParameterValues.add(parameterValueJsonObj.getPrimitiveValue());
-                    else
+                    }  else {
                         lParameterValues.add(parameterValueJsonObj.getValue());
+                    }
                 }
 
                 Constructor<?> constructor = c.getDeclaredConstructor(lParameterTypes.toArray(new Class[0]));
                 MetaUtils.trySetAccessible(constructor);
                 return constructor.newInstance(lParameterValues.toArray(new Object[0]));
-
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("Record de-serialization only works with java>=16.", e);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public boolean isObjectFinal() {
+        return true;
     }
 }

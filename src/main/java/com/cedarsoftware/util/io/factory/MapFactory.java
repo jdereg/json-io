@@ -14,6 +14,7 @@ import com.cedarsoftware.util.io.ReaderContext;
  * Use to create new instances of Map interfaces (needed for empty Maps).  Used
  * internally to handle Map, SortedMap when they are within parameterized types.
  */
+@Deprecated // Not really, indicating it is creating, but not LOADING.
 public class MapFactory implements JsonReader.ClassFactory
 {
     /**

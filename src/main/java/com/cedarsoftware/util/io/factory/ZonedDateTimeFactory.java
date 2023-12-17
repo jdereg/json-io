@@ -12,10 +12,6 @@ import com.cedarsoftware.util.io.ReaderContext;
 /**
  * Abstract class to help create temporal items.
  * <p>
- * All custom writers for json-io subclass this class.  Special writers are not needed for handling
- * user-defined classes.  However, special writers are built/supplied by json-io for many of the
- * primitive types and other JDK classes simply to allow for a more concise form.
- * <p>
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC

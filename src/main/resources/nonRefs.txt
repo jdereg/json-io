@@ -24,10 +24,16 @@ java.lang.Boolean
 
 java.lang.Class
 java.lang.String
-java.util.Date
 
 java.math.BigInteger
 java.math.BigDecimal
+
+java.net.URI
+java.net.URL
+
+java.util.Calendar
+java.util.Date
+java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong
@@ -46,3 +52,4 @@ java.time.YearMonth
 java.time.ZonedDateTime
 java.time.ZoneId
 java.time.ZoneOffset
+java.time.ZoneRegion

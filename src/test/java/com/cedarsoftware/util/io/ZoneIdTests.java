@@ -66,7 +66,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
 
         assertThat(actualDate.one)
                 .isEqualTo(expectedDate.one)
-                .isSameAs(actualDate.two);
+                .isNotSameAs(actualDate.two);          // non-ref
 
         assertThat(actualDate.one).isEqualTo(expectedDate.one);
     }

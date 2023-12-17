@@ -9,6 +9,7 @@ import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -81,7 +82,7 @@ public class UUIDTest
 
         uuids = TestUtil.toObjects(json, null);
         assertEquals(2, uuids.length);
-        assertSame(uuids[0], uuids[1]);
+        assertNotSame(uuids[0], uuids[1]);              // Proving it is a non-ref
         assertEquals(UUID.fromString(s), uuids[0]);
         json = TestUtil.toJson(typedUUIDs);
         TestUtil.printLine("json=" + json);
@@ -103,7 +104,7 @@ public class UUIDTest
         list = TestUtil.toObjects(json, null);
         assertEquals(2, list.size());
         assertEquals(UUID.fromString(s), list.get(0));
-        assertSame(list.get(0), list.get(1));
+        assertNotSame(list.get(0), list.get(1));        // Proving it is a non-ref
     }
 
     @Test

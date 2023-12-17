@@ -16,6 +16,7 @@ import com.cedarsoftware.util.io.ReaderContext;
 /**
  * Use to create new instances of collection interfaces (needed for empty collections)
  */
+@Deprecated // Not really, using as marker to indicate it is not yet LOADING, only creating.
 public class CollectionFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
