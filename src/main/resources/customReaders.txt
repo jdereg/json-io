@@ -1,9 +1,6 @@
 #
 # Map of class to JsonReader.JsonClassReader
 #
-java.lang.StringBuffer = com.cedarsoftware.util.io.Readers$StringBufferReader
-java.lang.StringBuilder = com.cedarsoftware.util.io.Readers$StringBuilderReader
-
 java.net.URL = com.cedarsoftware.util.io.Readers$URLReader
 
 java.util.Locale = com.cedarsoftware.util.io.Readers$LocaleReader

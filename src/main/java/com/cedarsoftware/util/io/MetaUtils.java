@@ -156,7 +156,7 @@ public class MetaUtils
         FROM_NULL.put(char.class, '\u0000');
         FROM_NULL.put(Character.class, '\u0000');
 
-        // "" is to set to null (requested by customers)
+        // "" is used to set to null (requested by customers)
         FROM_EMPTY_QUOTES.add(BigInteger.class);
         FROM_EMPTY_QUOTES.add(BigDecimal.class);
         FROM_EMPTY_QUOTES.add(AtomicBoolean.class);

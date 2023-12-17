@@ -137,61 +137,6 @@ public class Readers
         }
     }
     
-    private static Object getValueFromJsonObject(Object o, Object value, String typeName)
-    {
-        if (o instanceof JsonObject)
-        {
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.hasValue())
-            {
-                value = jObj.getValue();
-            }
-            else
-            {
-                throw new JsonIoException(typeName + " defined as JSON {} object, missing 'value' field");
-            }
-        }
-        return value;
-    }
-    
-    public static class StringBuilderReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            if (o instanceof String)
-            {
-                return new StringBuilder((String) o);
-            }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.hasValue())
-            {
-                jObj.setTarget(new StringBuilder((String) jObj.getValue()));
-                return jObj.getTarget();
-            }
-            throw new JsonIoException("StringBuilder missing 'value' field");
-        }
-    }
-
-    public static class StringBufferReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            if (o instanceof String)
-            {
-                return new StringBuffer((String) o);
-            }
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.hasValue())
-            {
-                jObj.setTarget(new StringBuffer((String) jObj.getValue()));
-                return jObj.getTarget();
-            }
-            throw new JsonIoException("StringBuffer missing 'value' field");
-        }
-    }
-
     public static class UUIDReader implements JsonReader.JsonClassReader
     {
         @Override

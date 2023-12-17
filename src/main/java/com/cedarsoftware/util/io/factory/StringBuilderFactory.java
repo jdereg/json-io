@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
 /**
@@ -23,28 +22,23 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public abstract class ConvertableFactory implements JsonReader.ClassFactory {
+public class StringBuilderFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value = jObj.getValue();
-        if (value instanceof JsonObject) {
-            JsonObject valueObj = (JsonObject) value;
-            if (valueObj.hasValue()) {
-                return MetaUtils.convert(getType(), valueObj.getValue());
-            } else {
-                throw new JsonIoException("Complex object: " + valueObj.getJavaTypeName() + " attempting to be converted to: " + getType().getName());
-            }
-        } else {
-            return MetaUtils.convert(getType(), value);
+        if (value instanceof String) {
+            return new StringBuilder((String)value);
         }
+
+        if (jObj.hasValue()) {
+            return new StringBuilder((String) jObj.getValue());
+        }
+        throw new JsonIoException("StringBuilder missing 'value' field");
     }
 
-    public abstract Class<?> getType();
-    
     /**
      * @return true.  Strings are always immutable, final.
      */
     public boolean isObjectFinal() {
         return true;
     }
-
 }

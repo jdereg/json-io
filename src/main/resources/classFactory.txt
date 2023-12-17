@@ -22,6 +22,8 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory
 java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
+java.lang.StringBuffer = com.cedarsoftware.util.io.factory.StringBufferFactory
+java.lang.StringBuilder = com.cedarsoftware.util.io.factory.StringBuilderFactory
 
 java.math.BigDecimal = com.cedarsoftware.util.io.factory.BigDecimalFactory
 java.math.BigInteger = com.cedarsoftware.util.io.factory.BigIntegerFactory
