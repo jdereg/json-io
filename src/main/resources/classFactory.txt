@@ -20,6 +20,7 @@ java.lang.Float = com.cedarsoftware.util.io.factory.FloatFactory
 java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
+java.util.Locale = com.cedarsoftware.util.io.factory.LocaleFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory
 java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
 java.lang.StringBuffer = com.cedarsoftware.util.io.factory.StringBufferFactory
@@ -51,6 +52,7 @@ java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.util.io.factory.At
 java.util.concurrent.atomic.AtomicInteger = com.cedarsoftware.util.io.factory.AtomicIntegerFactory
 java.util.concurrent.atomic.AtomicLong = com.cedarsoftware.util.io.factory.AtomicLongFactory
 
+java.util.UUID = com.cedarsoftware.util.io.factory.UUIDFactory
 java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
 java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory
 java.util.Date = com.cedarsoftware.util.io.factory.DateFactory

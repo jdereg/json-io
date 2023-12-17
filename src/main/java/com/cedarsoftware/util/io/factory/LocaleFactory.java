@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.Locale;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
@@ -22,19 +24,27 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class StringBuilderFactory implements JsonReader.ClassFactory {
+public class LocaleFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-        if (value instanceof String) {
-            return new StringBuilder((String)value);
+        Object language = jObj.get("language");
+        if (language == null) {
+            throw new JsonIoException("java.util.Locale must specify 'language' field");
+        }
+        Object country = jObj.get("country");
+        Object variant = jObj.get("variant");
+        if (country == null) {
+            return new Locale((String) language);
+        }
+        if (variant == null) {
+            return new Locale((String) language, (String) country);
         }
 
-        if (jObj.hasValue()) {
-            return new StringBuilder((String) jObj.getValue());
-        }
-        throw new JsonIoException("StringBuilder missing 'value' field");
+        return new Locale((String) language, (String) country, (String) variant);
     }
 
+    /**
+     * @return true.  Strings are always immutable, final.
+     */
     public boolean isObjectFinal() {
         return true;
     }

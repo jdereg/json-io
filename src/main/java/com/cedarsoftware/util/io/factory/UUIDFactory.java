@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.UUID;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
@@ -22,19 +24,33 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class StringBuilderFactory implements JsonReader.ClassFactory {
+public class UUIDFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value = jObj.getValue();
         if (value instanceof String) {
-            return new StringBuilder((String)value);
+            try {
+                return UUID.fromString((String) value);
+            }
+            catch (Exception e) {
+                throw new JsonIoException("Unable to load UUID from JSON string: " + value, e);
+            }
         }
 
-        if (jObj.hasValue()) {
-            return new StringBuilder((String) jObj.getValue());
+        Long mostSigBits = (Long) jObj.get("mostSigBits");
+        if (mostSigBits == null) {
+            throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field and it cannot be empty in JSON");
         }
-        throw new JsonIoException("StringBuilder missing 'value' field");
+        Long leastSigBits = (Long) jObj.get("leastSigBits");
+        if (leastSigBits == null) {
+            throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field and it cannot be empty in JSON");
+        }
+
+        return new UUID(mostSigBits, leastSigBits);
     }
 
+    /**
+     * @return true.  UUIDs are always immutable, final.
+     */
     public boolean isObjectFinal() {
         return true;
     }

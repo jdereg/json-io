@@ -35,9 +35,6 @@ public class StringBufferFactory implements JsonReader.ClassFactory {
         throw new JsonIoException("StringBuffer missing 'value' field");
     }
 
-    /**
-     * @return true.  Strings are always immutable, final.
-     */
     public boolean isObjectFinal() {
         return true;
     }
