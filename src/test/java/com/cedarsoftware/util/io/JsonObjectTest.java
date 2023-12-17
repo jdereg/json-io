@@ -63,8 +63,6 @@ class JsonObjectTest
             assert e.getMessage().toLowerCase().contains("called");
             assert e.getMessage().toLowerCase().contains("non-collection");
         }
-
-        jObj.moveCharsToMate();
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

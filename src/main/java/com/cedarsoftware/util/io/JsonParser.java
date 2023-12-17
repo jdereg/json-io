@@ -210,14 +210,8 @@ class JsonParser {
         --curParseDepth;
 
         if (false) {
-            Object javaObject = resolver.newInstance(jObj);
-            System.out.println("JsonObject=" + jObj.toString());
-            if (javaObject == null) {
-                System.out.println("  JavaObject=null");
-            } else {
-                System.out.println("  JavaObject=" + javaObject.getClass().getName());
-            }
-            resolver.inject(jObj, javaObject);
+            // TODO: Solve for why 'c' is null when I uncomment the below.
+            Object javaObject = resolver.createInstance(jObj);
         }
         return jObj;
     }

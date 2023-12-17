@@ -169,38 +169,28 @@ public abstract class Resolver implements ReaderContext
             return (T) root.getTarget();
         }
 
-        final Deque<JsonObject> stack = new ArrayDeque<>();
-        stack.addFirst(root);
+        if (true) {
+            final Deque<JsonObject> stack = new ArrayDeque<>();
+            stack.addFirst(root);
 
-        while (!stack.isEmpty())
-        {
-            final JsonObject jsonObj = stack.removeFirst();
-            if (jsonObj.isFinished) {
-                continue;
-            }
-
-            if (jsonObj.isArray())
-            {
-                traverseArray(stack, jsonObj);
-            }
-            else if (jsonObj.isCollection())
-            {
-                traverseCollection(stack, jsonObj);
-            }
-            else if (jsonObj.isMap())
-            {
-                traverseMap(stack, jsonObj);
-            }
-            else
-            {
-                Object special;
-                if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
-                {
-                    jsonObj.setTarget(special);
+            while (!stack.isEmpty()) {
+                final JsonObject jsonObj = stack.removeFirst();
+                if (jsonObj.isFinished) {
+                    continue;
                 }
-                else
-                {
-                    traverseFields(stack, jsonObj);
+                if (jsonObj.isArray()) {
+                    traverseArray(stack, jsonObj);
+                } else if (jsonObj.isCollection()) {
+                    traverseCollection(stack, jsonObj);
+                } else if (jsonObj.isMap()) {
+                    traverseMap(stack, jsonObj);
+                } else {
+                    Object special;
+                    if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null) {
+                        jsonObj.setTarget(special);
+                    } else {
+                        traverseFields(stack, jsonObj);
+                    }
                 }
             }
         }
@@ -411,13 +401,8 @@ public abstract class Resolver implements ReaderContext
         Object[] items = jsonObj.getArray();
         if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
             int size = (items == null) ? 0 : items.length;
-            if (c == char[].class) {
-                jsonObj.moveCharsToMate();
-                mate = jsonObj.getTarget();
-            } else {
-                mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
-                // TODO: Process array elements NOW (not later)
-            }
+            mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
+            // TODO: Process array elements NOW (not later)
             jsonObj.setTarget(mate);
             return mate;
         }

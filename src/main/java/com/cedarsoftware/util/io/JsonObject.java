@@ -145,6 +145,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 Object[] items = (Object[]) get(ITEMS);
                 return items == null ? 0 : items.length;
             }
+            if (char[].class.isAssignableFrom(getTarget().getClass())) {
+                // Verify this for Character[]
+                return 1;
+            }
             return Array.getLength(getTarget());
         }
         if (isCollection() || isMap()) {
@@ -156,21 +160,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public Class<?> getComponentType() {
         return getTarget().getClass().getComponentType();
-    }
-    
-    void moveCharsToMate() {
-        Object[] items = getArray();
-        if (items == null) {
-            setTarget(null);
-        } else if (items.length == 0) {
-            setTarget(new char[0]);
-        } else if (items.length == 1) {
-            String s = (String) items[0];
-            setTarget(s.toCharArray());
-        } else {
-            throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + line + ", col " + col);
-        }
-        hash = null;
     }
 
     public Object setValue(Object o) {

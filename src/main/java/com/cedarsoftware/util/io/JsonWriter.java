@@ -363,12 +363,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     {
         traceReferences(obj);
         objVisited.clear();
-        try
-        {
+        try {
             writeImpl(obj, true);
-        }
-        catch (Exception e)
-        {
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("Error writing object to JSON:", e);
         }
         flush();
@@ -961,21 +960,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         tabIn();
     }
 
-    private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    private void writeJsonObjectArray(JsonObject jObj, boolean showType) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
         int len = jObj.getLength();
         Class<?> arrayClass;
         Class<?> jsonObjectType = jObj.getJavaType();
-        if (jsonObjectType == null || Object[].class.equals(jsonObjectType))
-        {
+        if (jsonObjectType == null || Object[].class.equals(jsonObjectType)) {
             arrayClass = Object[].class;
-        }
-        else
-        {
+        } else {
             arrayClass = jsonObjectType;
         }
 
@@ -985,47 +979,37 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         boolean referenced = adjustIfReferenced(jObj);
         boolean typeWritten = showType && !isObjectArray;
 
-        if (typeWritten || referenced)
-        {
+        if (typeWritten || referenced) {
             output.write('{');
             tabIn();
         }
 
-        if (referenced)
-        {
+        if (referenced) {
             writeId(Long.toString(jObj.id));
             output.write(',');
             newLine();
         }
 
-        if (typeWritten)
-        {
+        if (typeWritten) {
             writeType(arrayClass.getName(), output);
             output.write(',');
             newLine();
         }
 
-        if (len == 0)
-        {
-            if (typeWritten || referenced)
-            {
+        if (len == 0) {
+            if (typeWritten || referenced) {
                 output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[]" : "\"@items\":[]");
                 tabOut();
                 output.write("}");
-            }
-            else
-            {
+            } else {
                 output.write("[]");
             }
             return;
         }
 
-        if (typeWritten || referenced)
-        {
+        if (typeWritten || referenced) {
             output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
-        }
-        else
-        {
+        } else {
             output.write('[');
         }
         tabIn();
@@ -1033,8 +1017,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Object[] items = (Object[]) jObj.get(ITEMS);
         final int lenMinus1 = len - 1;
 
-        for (int i = 0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             final Object value = items[i];
 
             if (value == null) {
@@ -1042,7 +1025,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             } else if (Character.class == componentClass || char.class == componentClass) {
                 writeJsonUtf8String(output, (String) value);
             } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
-                    writePrimitive(value, value.getClass() != componentClass);
+                writePrimitive(value, value.getClass() != componentClass);
             } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
                 writePrimitive(value, false);
             } else if (value instanceof String) {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
@@ -1054,8 +1037,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 writeImpl(value, forceType || getWriteOptions().isAlwaysShowingType());
             }
 
-            if (i != lenMinus1)
-            {
+            if (i != lenMinus1) {
                 output.write(',');
                 newLine();
             }
@@ -1063,8 +1045,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         tabOut();
         output.write(']');
-        if (typeWritten || referenced)
-        {
+        if (typeWritten || referenced) {
             tabOut();
             output.write('}');
         }

@@ -19,7 +19,7 @@ java.lang.Long = com.cedarsoftware.util.io.factory.LongFactory
 java.lang.Float = com.cedarsoftware.util.io.factory.FloatFactory
 java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 
-# [C = com.cedarsoftware.util.io.factory.CharacterPrimArrayFactory
+[C = com.cedarsoftware.util.io.factory.CharacterPrimArrayFactory
 [Z = com.cedarsoftware.util.io.factory.BooleanPrimArrayFactory
 [B = com.cedarsoftware.util.io.factory.BytePrimArrayFactory
 [S = com.cedarsoftware.util.io.factory.ShortPrimArrayFactory
