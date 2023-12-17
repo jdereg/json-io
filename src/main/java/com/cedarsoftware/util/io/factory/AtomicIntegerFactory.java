@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -17,6 +19,8 @@ package com.cedarsoftware.util.io.factory;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class FloatFactory extends ConvertableFactory {
-    public Class<?> getType() { return Float.class; }
+public class AtomicIntegerFactory extends ConvertableFactory {
+    public Class<?> getType() {
+        return AtomicInteger.class;
+    }
 }

@@ -17,6 +17,8 @@ package com.cedarsoftware.util.io.factory;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class FloatFactory extends ConvertableFactory {
-    public Class<?> getType() { return Float.class; }
+public class CharacterFactory extends ConvertableFactory {
+    public Class<?> getType() {
+        return Character.class;
+    }
 }

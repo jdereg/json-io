@@ -1,6 +1,8 @@
 #
 # JsonReader.ClassFactory mappings
 #
+char = com.cedarsoftware.util.io.factory.CharacterFactory
+boolean = com.cedarsoftware.util.io.factory.BooleanFactory
 byte = com.cedarsoftware.util.io.factory.ByteFactory
 short = com.cedarsoftware.util.io.factory.ShortFactory
 int = com.cedarsoftware.util.io.factory.IntegerFactory
@@ -8,6 +10,8 @@ long = com.cedarsoftware.util.io.factory.LongFactory
 float = com.cedarsoftware.util.io.factory.FloatFactory
 double = com.cedarsoftware.util.io.factory.DoubleFactory
 
+java.lang.Character = com.cedarsoftware.util.io.factory.CharacterFactory
+java.lang.Boolean = com.cedarsoftware.util.io.factory.BooleanFactory
 java.lang.Byte = com.cedarsoftware.util.io.factory.ByteFactory
 java.lang.Short = com.cedarsoftware.util.io.factory.ShortFactory
 java.lang.Integer = com.cedarsoftware.util.io.factory.IntegerFactory
@@ -18,6 +22,9 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory
 java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
+
+java.math.BigDecimal = com.cedarsoftware.util.io.factory.BigDecimalFactory
+java.math.BigInteger = com.cedarsoftware.util.io.factory.BigIntegerFactory
 
 java.sql.Date = com.cedarsoftware.util.io.factory.SqlDateFactory
 java.sql.Timestamp = com.cedarsoftware.util.io.factory.DateFactory
@@ -37,6 +44,10 @@ java.time.ZonedDateTime = com.cedarsoftware.util.io.factory.ZonedDateTimeFactory
 java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
 java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
 java.time.ZoneRegion = com.cedarsoftware.util.io.factory.ZoneIdFactory
+
+java.util.concurrent.atomic.AtomicBoolean = com.cedarsoftware.util.io.factory.AtomicBooleanFactory
+java.util.concurrent.atomic.AtomicInteger = com.cedarsoftware.util.io.factory.AtomicIntegerFactory
+java.util.concurrent.atomic.AtomicLong = com.cedarsoftware.util.io.factory.AtomicLongFactory
 
 java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
 java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory

@@ -19,10 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * All custom readers for json-io subclass this class.  Special readers are not needed for handling
- * user-defined classes.  However, special readers are built/supplied by json-io for many of the
- * primitive types and other JDK classes simply to allow for a more concise form.
- *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -39,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
+@Deprecated
 public class Readers
 {
     private Readers () {}
@@ -139,120 +136,7 @@ public class Readers
             return jObj.getTarget();
         }
     }
-
-    public static class CalendarReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            String time = null;
-            try
-            {
-                JsonObject jObj = (JsonObject) o;
-                time = (String) jObj.get("time");
-                if (time == null)
-                {
-                    throw new JsonIoException("Calendar missing 'time' field");
-                }
-                Date date = MetaUtils.dateFormat.get().parse(time);
-                Class<?> c = jObj.getJavaType();
-
-                // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
-                // the special Calendar class, don't try to do that via a custom reader.  That is why only
-                // MetaUtils.newInstance() is used below.
-                Calendar calendar = (Calendar) MetaUtils.newInstance(c, null); // can add constructor arg values
-                calendar.setTime(date);
-                jObj.setFinishedTarget(calendar, true);
-                String zone = (String) jObj.get("zone");
-                if (zone != null)
-                {
-                    calendar.setTimeZone(TimeZone.getTimeZone(zone));
-                }
-                return calendar;
-            }
-            catch(Exception e)
-            {
-                throw new JsonIoException("Failed to parse calendar, time: " + time);
-            }
-        }
-    }
     
-    public static class AtomicBooleanReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            Object value = o;
-            value = getValueFromJsonObject(o, value, "AtomicBoolean");
-
-            if (value instanceof String)
-            {
-                String state = (String) value;
-                if ("".equals(state.trim()))
-                {   // special case
-                    return null;
-                }
-                return new AtomicBoolean("true".equalsIgnoreCase(state));
-            }
-            else if (value instanceof Boolean)
-            {
-                return new AtomicBoolean((Boolean) value);
-            }
-            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
-            {
-                return new AtomicBoolean(((Number)value).longValue() != 0);
-            }
-            throw new JsonIoException("Unknown value in JSON assigned to AtomicBoolean, value type = " + value.getClass().getName());
-        }
-    }
-
-    public static class AtomicIntegerReader implements JsonReader.JsonClassReader
-    {
-        @Override
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            Object value = o;
-            value = getValueFromJsonObject(o, value, "AtomicInteger");
-
-            if (value instanceof String)
-            {
-                String num = (String) value;
-                if ("".equals(num.trim()))
-                {   // special case
-                    return null;
-                }
-                return new AtomicInteger(Integer.parseInt(MetaUtils.removeLeadingAndTrailingQuotes(num)));
-            }
-            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
-            {
-                return new AtomicInteger(((Number)value).intValue());
-            }
-            throw new JsonIoException("Unknown value in JSON assigned to AtomicInteger, value type = " + value.getClass().getName());
-        }
-    }
-
-    public static class AtomicLongReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            Object value = o;
-            value = getValueFromJsonObject(o, value, "AtomicLong");
-
-            if (value instanceof String)
-            {
-                String num = (String) value;
-                if ("".equals(num.trim()))
-                {   // special case
-                    return null;
-                }
-                return new AtomicLong(Long.parseLong(MetaUtils.removeLeadingAndTrailingQuotes(num)));
-            }
-            else if (value instanceof Number && !(value instanceof Double) && !(value instanceof Float))
-            {
-                return new AtomicLong(((Number)value).longValue());
-            }
-            throw new JsonIoException("Unknown value in JSON assigned to AtomicLong, value type = " + value.getClass().getName());
-        }
-    }
-
     private static Object getValueFromJsonObject(Object o, Object value, String typeName)
     {
         if (o instanceof JsonObject)
@@ -268,100 +152,6 @@ public class Readers
             }
         }
         return value;
-    }
-
-    public static class BigIntegerReader implements JsonReader.JsonClassReader
-    {
-        @Override
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            JsonObject jObj = null;
-            Object value = o;
-            if (o instanceof JsonObject)
-            {
-                jObj = (JsonObject) o;
-                if (jObj.hasValue())
-                {
-                    value = jObj.getValue();
-                }
-                else
-                {
-                    throw new JsonIoException("BigInteger missing 'value' field");
-                }
-            }
-
-            if (value instanceof JsonObject)
-            {
-                JsonObject valueObj = (JsonObject)value;
-                if (BigDecimal.class.equals(valueObj.getJavaType()))
-                {
-                    BigDecimalReader reader = new BigDecimalReader();
-                    value = reader.read(value, stack, context);
-                }
-                else if (BigInteger.class.equals(valueObj.getJavaType()))
-                {
-                    value = read(value, stack, context);
-                }
-                else
-                {
-                    value = valueObj.getValue();
-                }
-            }
-
-            BigInteger x = (BigInteger) MetaUtils.convert(BigInteger.class, value);
-            if (jObj != null)
-            {
-                jObj.setTarget(x);
-            }
-
-            return x;
-        }
-    }
-
-    public static class BigDecimalReader implements JsonReader.JsonClassReader
-    {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            JsonObject jObj = null;
-            Object value = o;
-            if (o instanceof JsonObject)
-            {
-                jObj = (JsonObject) o;
-                if (jObj.hasValue())
-                {
-                    value = jObj.getValue();
-                }
-                else
-                {
-                    throw new JsonIoException("BigDecimal missing 'value' field");
-                }
-            }
-
-            if (value instanceof JsonObject)
-            {
-                JsonObject valueObj = (JsonObject)value;
-                if (BigInteger.class.equals(valueObj.getJavaType()))
-                {
-                    BigIntegerReader reader = new BigIntegerReader();
-                    value = reader.read(value, stack, context);
-                }
-                else if (BigDecimal.class.equals(valueObj.getJavaType()))
-                {
-                    value = read(value, stack, context);
-                }
-                else
-                {
-                    value = valueObj.getValue();
-                }
-            }
-
-            BigDecimal x = (BigDecimal) MetaUtils.convert(BigDecimal.class, value);
-            if (jObj != null)
-            {
-                jObj.setTarget(x);
-            }
-            return x;
-        }
     }
     
     public static class StringBuilderReader implements JsonReader.JsonClassReader

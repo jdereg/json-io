@@ -1,9 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
+import java.math.BigDecimal;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,18 +19,8 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class NumberFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-        return MetaUtils.convert(getType(), value);
+public class BigDecimalFactory extends ConvertableFactory {
+    public Class<?> getType() {
+        return BigDecimal.class;
     }
-
-    public Class<?> getType() { return String.class; }
-    /**
-     * @return true.  Strings are always immutable, final.
-     */
-    public boolean isObjectFinal() {
-        return true;
-    }
-
 }

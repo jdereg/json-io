@@ -64,13 +64,8 @@ class AtomicBooleanTest
         assertThat(json).isEqualTo("{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":true,\"nullValue\":null,\"strValue\":true,\"emptyStrValue\":null,\"objValue\":false,\"values\":[false,null,true,true]}");
 
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicBooleanTest$TestAtomicBooleanField\",\"value\":16.5}";
-        try
-        {
-            Object x = TestUtil.toObjects(json, null);
-            fail("should not make it here");
-        }
-        catch (Exception ignore)
-        { }
+        TestAtomicBooleanField abf = TestUtil.toObjects(json, null);
+        assert abf.value.get();
     }
 
     @Test

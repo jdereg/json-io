@@ -440,15 +440,11 @@ public abstract class Resolver implements ReaderContext
             } else {
                 mate = MetaUtils.newInstance(unknownClass, null);   // can add constructor arg values
             }
-        } else {   // Handle regular field.object reference
-            if (Primitives.isPrimitive(c)) {
-                mate = MetaUtils.convert(c, jsonObj.getValue());
-                jsonObj.isFinished = true;
-            } else {
-                // ClassFactory already consulted above, likely regular business/data classes.
-                // If the newInstance(c) fails, it throws a JsonIoException.
-                mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
-            }
+        } else {
+            // Handle regular field.object reference
+            // ClassFactory already consulted above, likely regular business/data classes.
+            // If the newInstance(c) fails, it throws a JsonIoException.
+            mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
         }
         jsonObj.setTarget(mate);
         return mate;

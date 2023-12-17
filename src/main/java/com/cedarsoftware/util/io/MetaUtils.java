@@ -159,6 +159,9 @@ public class MetaUtils
         // "" is to set to null (requested by customers)
         FROM_EMPTY_QUOTES.add(BigInteger.class);
         FROM_EMPTY_QUOTES.add(BigDecimal.class);
+        FROM_EMPTY_QUOTES.add(AtomicBoolean.class);
+        FROM_EMPTY_QUOTES.add(AtomicInteger.class);
+        FROM_EMPTY_QUOTES.add(AtomicLong.class);
     }
 
     /**

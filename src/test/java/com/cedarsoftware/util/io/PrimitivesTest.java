@@ -216,6 +216,32 @@ public class PrimitivesTest
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"null"})
+    void testByteObjectValueAtNullRoot(String stringType)
+    {
+//        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+//        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
+//        assertInstanceOf(Double.class, x);
+//        assertEquals(x, 120d);
+//
+//        x = TestUtil.toObjects("{\"value\":true}", type);
+//        assertInstanceOf(Boolean.class, x);
+//        assertEquals(x, true);
+//
+//        x = TestUtil.toObjects("{\"value\":false}", type);
+//        assertInstanceOf(Boolean.class, x);
+//        assertEquals(x, false);
+//
+//        x = TestUtil.toObjects("{\"value\":\"42\"}", type);
+//        assertInstanceOf(String.class, x);
+//        assertEquals(x, "42");
+//
+//        x = TestUtil.toObjects("{\"value\":1e2}", type);
+//        assertInstanceOf(Double.class, x);
+//        assertEquals(x, 100d);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"java.lang.Byte", "byte", "null"})
     void testTypedByteObjectValueAtRoot(String stringType)
     {

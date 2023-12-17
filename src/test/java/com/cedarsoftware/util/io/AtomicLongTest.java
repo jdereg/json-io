@@ -63,13 +63,8 @@ class AtomicLongTest
 
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicLongTest$TestAtomicLongField\",\"value\":16.5}";
 
-        try
-        {
-            TestUtil.toObjects(json, null);
-            fail("should not make it here");
-        }
-        catch (JsonIoException ignore)
-        { }
+        TestAtomicLongField alf = TestUtil.toObjects(json, null);
+        assert alf.value.get() == 16L;
     }
 
     @Test

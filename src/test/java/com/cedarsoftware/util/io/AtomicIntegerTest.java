@@ -45,7 +45,7 @@ class AtomicIntegerTest
     void testAssignAtomicInteger()
     {
         String json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":\"50\",\"emptyStrValue\":\"\", \"objValue\":{\"value\":-9},\"values\":[-5,null,5, \"45\"]}";
-        TestAtomicIntegerField atom2 = (TestAtomicIntegerField) TestUtil.toObjects(json, null);
+        TestAtomicIntegerField atom2 = TestUtil.toObjects(json, null);
 
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
@@ -62,13 +62,8 @@ class AtomicIntegerTest
         assert json.equals("{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":null,\"objValue\":-9,\"values\":[-5,null,5,45]}");
         
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16.5}";
-        try
-        {
-            TestUtil.toObjects(json, null);
-            fail("should not make it here");
-        }
-        catch (JsonIoException ignore)
-        { }
+        TestAtomicIntegerField aif = TestUtil.toObjects(json, null);
+        assert aif.value.get() == 16;
     }
 
     @Test

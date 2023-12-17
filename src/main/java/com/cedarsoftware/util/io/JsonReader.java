@@ -281,8 +281,7 @@ public class JsonReader implements Closeable, ReaderContext
             } else {
                 rootObj.setValue(returnValue);
                 graph = convertJsonValueToJava(rootObj, rootType);
-                if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null)
-                {
+                if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null) {
                     graph = (T)((JsonObject)graph).getValue();
                 }
             }

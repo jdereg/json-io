@@ -96,6 +96,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return MetaUtils.convert(clazz, value);
     }
 
+    public boolean isValue() {
+        return containsKey("value") && size() == 1;
+    }
+
     // Map APIs
     public boolean isMap() {
         return isMap || getTarget() instanceof Map;

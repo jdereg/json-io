@@ -17,6 +17,6 @@ package com.cedarsoftware.util.io.factory;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class LongFactory extends NumberFactory {
+public class LongFactory extends ConvertableFactory {
     public Class<?> getType() { return Long.class; }
 }

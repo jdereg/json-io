@@ -238,8 +238,7 @@ public class ObjectResolver extends Resolver
                         // and "final instance' (say MetaUtils.listOf() ) can _not_ be the same.
                         // So, the later the assignment, the better.
                         Object javaObj = convertJsonValuesToJava(jsRhs);
-                        if (javaObj != fieldObject)
-                        {
+                        if (javaObj != fieldObject) {
                             injector.inject(target, javaObj);
                         }
                     }
@@ -247,21 +246,10 @@ public class ObjectResolver extends Resolver
             }
             else
             {
-                if (Primitives.isPrimitive(fieldType))
-                {
-                    Object converted = MetaUtils.convert(fieldType, rhs);
-                    if (isBasicWrapperType(targetClass)) {
-                        jsonObj.setTarget(converted);
-                    } else {
-                        injector.inject(target, converted);
-                    }
-                }
-                else if (rhs instanceof String && ((String) rhs).trim().isEmpty() && fieldType != String.class)
-                {   // Allow "" to null out a non-String field
+                if (rhs instanceof String && ((String) rhs).trim().isEmpty() && fieldType != String.class) {
+                    // Allow "" to null out a non-String field
                     injector.inject(target, null);
-                }
-                else
-                {
+                } else {
                     injector.inject(target, rhs);
                 }
             }
