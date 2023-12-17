@@ -19,6 +19,24 @@ java.lang.Long = com.cedarsoftware.util.io.factory.LongFactory
 java.lang.Float = com.cedarsoftware.util.io.factory.FloatFactory
 java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 
+# [C = com.cedarsoftware.util.io.factory.CharacterPrimArrayFactory
+[Z = com.cedarsoftware.util.io.factory.BooleanPrimArrayFactory
+[B = com.cedarsoftware.util.io.factory.BytePrimArrayFactory
+[S = com.cedarsoftware.util.io.factory.ShortPrimArrayFactory
+[I = com.cedarsoftware.util.io.factory.IntegerPrimArrayFactory
+[J = com.cedarsoftware.util.io.factory.LongPrimArrayFactory
+[F = com.cedarsoftware.util.io.factory.FloatPrimArrayFactory
+[D = com.cedarsoftware.util.io.factory.DoublePrimArrayFactory
+
+[Ljava.lang.Character; = com.cedarsoftware.util.io.factory.CharacterArrayFactory
+[Ljava.lang.Boolean; = com.cedarsoftware.util.io.factory.BooleanArrayFactory
+[Ljava.lang.Byte; = com.cedarsoftware.util.io.factory.ByteArrayFactory
+[Ljava.lang.Short; = com.cedarsoftware.util.io.factory.ShortArrayFactory
+[Ljava.lang.Integer; = com.cedarsoftware.util.io.factory.IntegerArrayFactory
+[Ljava.lang.Long; = com.cedarsoftware.util.io.factory.LongArrayFactory
+[Ljava.lang.Float; = com.cedarsoftware.util.io.factory.FloatArrayFactory
+[Ljava.lang.Double; = com.cedarsoftware.util.io.factory.DoubleArrayFactory
+
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.util.Locale = com.cedarsoftware.util.io.factory.LocaleFactory
 java.lang.String = com.cedarsoftware.util.io.factory.StringFactory

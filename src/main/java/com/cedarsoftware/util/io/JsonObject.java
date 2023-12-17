@@ -157,18 +157,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public Class<?> getComponentType() {
         return getTarget().getClass().getComponentType();
     }
-
-    void moveBytesToMate() {
-        final byte[] bytes = (byte[]) getTarget();
-        final Object[] items = getArray();
-        final int len = items.length;
-
-        for (int i = 0; i < len; i++) {
-            bytes[i] = ((Number) items[i]).byteValue();
-        }
-        hash = null;
-    }
-
+    
     void moveCharsToMate() {
         Object[] items = getArray();
         if (items == null) {

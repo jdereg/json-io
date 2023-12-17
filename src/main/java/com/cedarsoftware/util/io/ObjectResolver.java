@@ -171,14 +171,7 @@ public class ObjectResolver extends Resolver
             }
 
             Object special;
-            if (rhs == JsonParser.EMPTY_OBJECT)
-            {
-                final JsonObject jObj = new JsonObject();
-                jObj.setHintType(fieldType);
-                Object value = createInstance(jObj);
-                injector.inject(target, value);
-            }
-            else if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
+            if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
             {
                 injector.inject(target, special);
             }
@@ -290,11 +283,7 @@ public class ObjectResolver extends Resolver
 
             // we have a jsonobject with a type
             Object special;
-            if (rhs == JsonParser.EMPTY_OBJECT)
-            {
-                storeMissingField(target, missingField, null);
-            }
-            else if ((special = readWithFactoryIfExists(rhs, null, stack)) != null)
+            if ((special = readWithFactoryIfExists(rhs, null, stack)) != null)
             {
                 storeMissingField(target, missingField, special);
             }
@@ -427,10 +416,6 @@ public class ObjectResolver extends Resolver
             {
                 col.add(null);
             }
-            else if (element == JsonParser.EMPTY_OBJECT)
-            {   // Handles {}
-                col.add(new JsonObject());
-            }
             else if ((special = readWithFactoryIfExists(element, null, stack)) != null)
             {
                 col.add(special);
@@ -547,21 +532,18 @@ public class ObjectResolver extends Resolver
     protected void traverseArray(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final int len = jsonObj.getLength();
-        if (len == 0)
-        {
+        if (len == 0) {
             return;
         }
 
         final Class compType = jsonObj.getComponentType();
 
-        if (char.class == compType)
-        {
+        if (char.class == compType) {
             return;
         }
 
-        if (byte.class == compType)
-        {   // Handle byte[] special for performance boost.
-            jsonObj.moveBytesToMate();
+        if (byte.class == compType) {
+            // Handle byte[] special for performance boost.
             jsonObj.clearArray();
             return;
         }
@@ -578,13 +560,6 @@ public class ObjectResolver extends Resolver
             if (element == null)
             {
                 Array.set(array, i, null);
-            }
-            else if (element == JsonParser.EMPTY_OBJECT)
-            {    // Use either explicitly defined type in ObjectMap associated to JSON, or array component type.
-                JsonObject jObj = new JsonObject();
-                jObj.setHintType(compType);
-                Object arrayElement = createInstance(jObj);
-                Array.set(array, i, arrayElement);
             }
             else if ((special = readWithFactoryIfExists(element, compType, stack)) != null)
             {

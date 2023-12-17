@@ -54,7 +54,6 @@ import static com.cedarsoftware.util.io.JsonObject.TYPE;
  * limitations under the License.
  */
 class JsonParser {
-    protected static final JsonObject EMPTY_OBJECT = new JsonObject();  // compared with ==
     private static final JsonObject EMPTY_ARRAY = new JsonObject();  // compared with ==
     private static final Map<String, String> stringCache = new LRUCache<>(2500);
     private static final Map<Number, Number> numberCache = new LRUCache<>(2500);

@@ -247,7 +247,7 @@ public class JsonReader implements Closeable, ReaderContext
             return null;
         }
 
-        // One return to suite all cases: ReturnType.JSON_OBJECTS, ReturnType.JAVA_OBJECTS, .value()
+        // One return to suit all cases: ReturnType.JSON_OBJECTS, ReturnType.JAVA_OBJECTS, .value()
 //        JsonObject returnObj = (JsonObject) returnValue;
 //        return (T) returnObj.getTarget();
 

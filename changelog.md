@@ -1,10 +1,9 @@
 ### Revision History
-* 4.2.0-SNAPSHOT
+* 4.20.0-SNAPSHOT
   * Moved more settings/properties from source code to resource files. 
     > Example changes required due to this update:
     <br><b>Before</b>
     > ```
-    > // Using [key: value] to indicate a Map 
     > A. Employee e = (Employee) JsonReader.jsonObjectsToJava(JsonObject employee, readOptions)
     > ```
     > <b>After</b>
