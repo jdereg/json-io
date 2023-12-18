@@ -383,7 +383,7 @@ public abstract class Resolver implements ReaderContext
         if (mate != NO_FACTORY) {
             return mate;
         }
-        // TODO: Additional Factory Classes: EnumSet, Primitive[]
+        // TODO: Additional Factory Classes: EnumSet
 
         // EnumSet
         Object mayEnumSpecial = jsonObj.get("@enum");

@@ -27,7 +27,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory {
         Object[] items = jObj.getArray();
 
         if (items == null) {
-            jObj.setTarget(arrayType.cast(null));
+            jObj.setTarget(null);
         } else if (items.length == 0) {
             jObj.setTarget(new char[0]);
         } else if (items.length == 1) {

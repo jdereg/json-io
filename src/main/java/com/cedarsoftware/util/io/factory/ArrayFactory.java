@@ -27,16 +27,14 @@ import static com.cedarsoftware.util.io.MetaUtils.convert;
  */
 public abstract class ArrayFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Class<?> arrayType = getType();
-        Class<?> componentType = arrayType.getComponentType();
         Object[] items = jObj.getArray();
 
         if (items == null) {
-            jObj.setTarget(arrayType.cast(null));
-        } else if (items.length == 0) {
-            jObj.setTarget(Array.newInstance(componentType, 0));
+            jObj.setTarget(null);
         } else {
             int len = items.length;
+            Class<?> arrayType = getType();
+            Class<?> componentType = arrayType.getComponentType();
             Object array = Array.newInstance(componentType, len);
 
             for (int i = 0; i < len; i++) {
@@ -58,5 +56,4 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
     public boolean isObjectFinal() {
         return true;
     }
-
 }
