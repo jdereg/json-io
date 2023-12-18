@@ -780,8 +780,7 @@ public class ArrayTest
     {
         String json = "{\"@type\":\"[Ljava.lang.String;\"}";
         String[] s = TestUtil.toObjects(json, null);
-        assertNotNull(s);
-        assertEquals(0, s.length);
+        assertNull(s);
     }
 
     @Test

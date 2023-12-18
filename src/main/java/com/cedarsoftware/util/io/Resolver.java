@@ -314,56 +314,6 @@ public abstract class Resolver implements ReaderContext
      * The '@type' is not often specified in the JSON input stream, as in many
      * cases it can be inferred from a field reference or array component type.
      *
-     * @param jsonObj Map-of-Map representation of object to create.  It contains a JavaType field that
-     *                indicates the Class of the type to create.  This came from either @type, in which
-     *                case it will take highest priority and be used.  Otherwise, it contains a suggested
-     *                type from a referencing field, typed array, or generic typed Collection.  If this type
-     *                is an interface, a concrete implementation will need to be selected.
-     * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
-     * enough hints to get the right class instantiated.  It is not populated when returned.
-     */
-    protected Object newInstance(JsonObject jsonObj) {
-        // Coerce class first.
-        jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
-
-        // Now try class factory
-        Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
-        if (mate != NO_FACTORY) {
-            return mate;
-        }
-
-        // EnumSet?
-        Object mayEnumSpecial = jsonObj.get("@enum");
-        if (mayEnumSpecial instanceof String) {
-            Class clazz = MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader());
-            mate = extractEnumSet(clazz, jsonObj);
-            jsonObj.setTarget(mate);
-            jsonObj.isFinished = true;
-            return mate;
-        }
-
-        // TODO: the rest go here - new instance AND load
-        return newInstanceUsingType(jsonObj);
-    }
-
-    public Object newInstanceUsingType(JsonObject jObj) {
-        return jObj;
-    }
-
-    public void inject(JsonObject jObj, Object javaObject) {
-        Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(jObj.getJavaType());
-    }
-
-    /**
-     * This method creates a Java Object instance based on the passed in parameters.
-     * If the JsonObject contains a key '@type' then that is used, as the type was explicitly
-     * set in the JSON stream.  If the key '@type' does not exist, then the passed in Class
-     * is used to create the instance, handling creating an Array or regular Object
-     * instance.
-     * <br>
-     * The '@type' is not often specified in the JSON input stream, as in many
-     * cases it can be inferred from a field reference or array component type.
-     *
      * @param jsonObj Map-of-Map representation of object to create.
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
@@ -372,8 +322,8 @@ public abstract class Resolver implements ReaderContext
         // Coerce class first
         Object target = jsonObj.getTarget();
         if (target != null) {
-            // TODO: The way this is reached, is always from a trace* method.  Meaning, once we remove the
-            // TODO: traverse at the end of parsing, we will not need this if check here.
+            // TODO: The way this is reached, is always from a traverse* method.  Meaning, once we remove the
+            // TODO: traverse at the end of parsing, we will not need this "if" check here.
             return target;
         }
         jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
@@ -399,7 +349,7 @@ public abstract class Resolver implements ReaderContext
         // Arrays
         Class<?> c = jsonObj.getJavaType();
         Object[] items = jsonObj.getArray();
-        if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
+        if (c != null && (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS)))) {    // Handle []
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
             // TODO: Process array elements NOW (not later)
