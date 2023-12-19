@@ -1,17 +1,22 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.Instant;
-import java.util.stream.Stream;
-
+import com.cedarsoftware.util.io.models.NestedInstant;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.models.NestedInstant;
+import java.time.Instant;
+import java.util.stream.Stream;
 
-public class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
+import static org.assertj.core.api.Assertions.assertThat;
+
+class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
+
+    @Override
+    protected boolean isReferenceable() {
+        return false;
+    }
+
     @Override
     protected Instant provideT1() {
         return Instant.ofEpochMilli(1700668272163L);
@@ -35,38 +40,28 @@ public class InstantTests extends SerializationDeserializationMinimumTests<Insta
     }
 
     @Override
-    protected Object provideNestedInObject() {
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedInstant(provideT1(), provideT4());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedInstant instant1 = (NestedInstant) expected;
-        NestedInstant instant2 = (NestedInstant) actual;
-        assertThat(instant2.getInstant1())
-                .isEqualTo(instant1.getInstant1());
-        assertThat(instant2.getInstant2()).isEqualTo(instant1.getInstant2());
+    protected Instant[] extractNestedInObject(Object o) {
+        NestedInstant nested = (NestedInstant) o;
+
+        return new Instant[]{
+                nested.getInstant1(),
+                nested.getInstant2()
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         Instant instant = Instant.now();
         return new NestedInstant(instant, instant);
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedInstant instant1 = (NestedInstant) expected;
-        NestedInstant instant2 = (NestedInstant) actual;
-        
-        assertThat(instant2.getInstant1())
-                .isEqualTo(instant1.getInstant1());
-        // Uncomment if we remove from nonRefs.txt
-//                .isSameAs(instant2.getInstant2());
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(Instant expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(Instant expected, Object actual) {
         assertThat(actual).isEqualTo("2023-11-22T15:56:12.135Z");
     }
 

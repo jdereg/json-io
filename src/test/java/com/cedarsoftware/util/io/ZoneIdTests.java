@@ -1,17 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
 
@@ -35,44 +34,37 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
         return ZoneId.of("Etc/GMT-5");
     }
 
+
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedZoneId(
                 provideT1(),
                 provideT2());
     }
 
+
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedZoneId expectedDate = (NestedZoneId) expected;
-        NestedZoneId actualDate = (NestedZoneId) actual;
+    protected ZoneId[] extractNestedInObject(Object o) {
+        NestedZoneId nested = (NestedZoneId) o;
 
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isNotSameAs(actualDate.two);
-
-        assertThat(actualDate.one).isEqualTo(expectedDate.one);
+        return new ZoneId[]{
+                nested.one,
+                nested.two
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedZoneId(provideT1());
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedZoneId expectedDate = (NestedZoneId) expected;
-        NestedZoneId actualDate = (NestedZoneId) actual;
-
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isNotSameAs(actualDate.two);          // non-ref
-
-        assertThat(actualDate.one).isEqualTo(expectedDate.one);
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(ZoneId expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(ZoneId expected, Object actual) {
         assertThat(actual).isEqualTo(expected.toString());
     }
 

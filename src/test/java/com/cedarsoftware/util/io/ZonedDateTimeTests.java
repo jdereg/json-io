@@ -1,7 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import com.cedarsoftware.util.io.models.NestedZonedDateTime;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -13,12 +16,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import com.cedarsoftware.util.io.models.NestedZonedDateTime;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedDateTime> {
     private static final ZoneId Z1 = ZoneId.of("America/Chicago");
@@ -28,6 +27,12 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     private static final ZoneId Z3 = ZoneId.of("America/Los_Angeles");
 
     private static final ZoneId Z4 = ZoneId.of("Asia/Saigon");
+
+
+    @Override
+    protected boolean isReferenceable() {
+        return false;
+    }
 
     @Test
     void testSimpleCase() {
@@ -108,7 +113,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Override
-    protected NestedZonedDateTime provideNestedInObject() {
+    protected NestedZonedDateTime provideNestedInObject_withNoDuplicates() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         LocalDateTime localDateTime2 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
@@ -117,34 +122,24 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedZonedDateTime nestedExpected = (NestedZonedDateTime) expected;
-        NestedZonedDateTime nestedActual = (NestedZonedDateTime) actual;
+    protected ZonedDateTime[] extractNestedInObject(Object o) {
+        NestedZonedDateTime nested = (NestedZonedDateTime) o;
 
-        assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
-        assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
+        return new ZonedDateTime[]{
+                nested.date1,
+                nested.date2
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
                 ZonedDateTime.of(localDateTime1, Z1));
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedZonedDateTime nestedExpected = (NestedZonedDateTime) expected;
-        NestedZonedDateTime nestedActual = (NestedZonedDateTime) actual;
-
-        assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
-        assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
-        // Uncomment if we move temporal classes out of nonRefs.txt
-//        assertThat(nestedActual.date2).isSameAs(nestedActual.date1);
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(ZonedDateTime expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(ZonedDateTime expected, Object actual) {
         String value = (String) actual;
         assertThat(value).isEqualTo("2027-12-23T06:07:16.000002+07:00[Asia/Saigon]");
     }

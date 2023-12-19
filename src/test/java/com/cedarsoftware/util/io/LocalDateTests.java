@@ -1,16 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.LocalDate;
-import java.util.stream.Stream;
-
+import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.models.NestedLocalDate;
+import java.time.LocalDate;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -35,48 +34,35 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
 
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedLocalDate(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedLocalDate expectedDate = (NestedLocalDate) expected;
-        NestedLocalDate actualDate = (NestedLocalDate) actual;
+    protected LocalDate[] extractNestedInObject(Object o) {
+        NestedLocalDate nested = (NestedLocalDate) o;
 
-        assertThat(actualDate.getDate1())
-                .isEqualTo(expectedDate.getDate1())
-                .isNotSameAs(actualDate.getDate2());
-
-        assertThat(actualDate.getDate1()).isEqualTo(expectedDate.getDate1());
-        assertThat(actualDate.getHoliday()).isEqualTo(expectedDate.getHoliday());
-        assertThat(actualDate.getValue()).isEqualTo(expectedDate.getValue());
+        return new LocalDate[]{
+                nested.getDate1(),
+                nested.getDate2()
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedLocalDate(provideT1());
     }
 
-    @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedLocalDate expectedDate = (NestedLocalDate) expected;
-        NestedLocalDate actualDate = (NestedLocalDate) actual;
-
-        assertThat(actualDate.getDate1())
-                .isEqualTo(expectedDate.getDate1());
-        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
-//                .isSameAs(actualDate.getDate2());
-
-        assertThat(actualDate.getDate1()).isEqualTo(expectedDate.getDate1());
-        assertThat(actualDate.getHoliday()).isEqualTo(expectedDate.getHoliday());
-        assertThat(actualDate.getValue()).isEqualTo(expectedDate.getValue());
-    }
 
     @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(LocalDate expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(LocalDate expected, Object actual) {
         assertThat(actual).isEqualTo("1950-01-27");
     }
 

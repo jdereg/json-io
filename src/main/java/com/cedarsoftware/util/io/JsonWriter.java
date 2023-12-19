@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.reflect.Accessor;
+import lombok.Getter;
 
 import java.io.Closeable;
 import java.io.Flushable;
@@ -26,9 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
-import com.cedarsoftware.util.reflect.Accessor;
-
-import lombok.Getter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -708,6 +707,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         // Intentionally processing each primitive array type in separate
         // custom loop for speed. All of them could be handled using
         // reflective Array.get() but it is slower.  I chose speed over code length.
+
         if (byte[].class == arrayType)
         {
             writeByteArray((byte[]) array, lenMinus1);

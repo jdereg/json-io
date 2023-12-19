@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import java.time.LocalTime;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.LocalTime;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,48 +33,34 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     }
 
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedLocalTime(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedLocalTime expectedDate = (NestedLocalTime) expected;
-        NestedLocalTime actualDate = (NestedLocalTime) actual;
+    protected LocalTime[] extractNestedInObject(Object o) {
+        NestedLocalTime nested = (NestedLocalTime) o;
 
-        assertThat(actualDate.time1)
-                .isEqualTo(expectedDate.time1)
-                .isNotSameAs(actualDate.time2);
-
-        assertThat(actualDate.time1).isEqualTo(expectedDate.time1);
-        assertThat(actualDate.holiday).isEqualTo(expectedDate.holiday);
-        assertThat(actualDate.value).isEqualTo(expectedDate.value);
+        return new LocalTime[]{
+                nested.time1,
+                nested.time2
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedLocalTime(provideT1());
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedLocalTime expectedDate = (NestedLocalTime) expected;
-        NestedLocalTime actualDate = (NestedLocalTime) actual;
-
-        // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
-        assertThat(actualDate.time1)
-                .isEqualTo(expectedDate.time1);
-//                .isSameAs(actualDate.time2);
-
-        assertThat(actualDate.time1).isEqualTo(expectedDate.time1);
-        assertThat(actualDate.holiday).isEqualTo(expectedDate.holiday);
-        assertThat(actualDate.value).isEqualTo(expectedDate.value);
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(LocalTime expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(LocalTime expected, Object actual) {
         assertThat(actual).isEqualTo("23:59:59.999999999");
     }
 
