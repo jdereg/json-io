@@ -37,10 +37,8 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
                 }
                 value = jsonObject.getValue();
             } while (value instanceof JsonObject);
-            return convert(getType(), value);
-        } else {
-            return convert(getType(), value);
         }
+        return convert(getType(), value);
     }
 
     public abstract Class<?> getType();

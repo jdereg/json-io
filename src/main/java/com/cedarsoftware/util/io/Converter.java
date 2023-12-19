@@ -23,7 +23,7 @@ import com.cedarsoftware.util.io.factory.DateFactory;
 
 /**
  * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Date, TimeStamp SQL Date,
- * LocalDate, LocalDateTime, ZonedDateTime, and the Atomic's.
+ * LocalDate, LocalDateTime, ZonedDateTime, Big*, Atomic*, Class, UUID, ...
  * <p>
  * `Converter.convert2*()` methods: If `null` passed in, primitive 'logical zero' is returned.
  * Example: `Converter.convert(null, boolean.class)` returns `false`.
