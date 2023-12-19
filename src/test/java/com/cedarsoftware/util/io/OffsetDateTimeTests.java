@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
+import org.junit.jupiter.api.Test;
+
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-
-import com.cedarsoftware.util.io.models.NestedOffsetDateTime;
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -19,6 +19,12 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     private static final ZoneOffset Z3 = ZoneOffset.of("Z");
 
     private static final ZoneOffset Z4 = ZoneOffset.of("+07:00");
+
+
+    @Override
+    protected boolean isReferenceable() {
+        return false;
+    }
     
     @Test
     void testOldFormat_nested_withRef() {
@@ -85,7 +91,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     @Override
-    protected NestedOffsetDateTime provideNestedInObject() {
+    protected NestedOffsetDateTime provideNestedInObject_withNoDuplicates() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         LocalDateTime localDateTime2 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedOffsetDateTime(
@@ -94,34 +100,24 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedOffsetDateTime nestedExpected = (NestedOffsetDateTime) expected;
-        NestedOffsetDateTime nestedActual = (NestedOffsetDateTime) actual;
+    protected OffsetDateTime[] extractNestedInObject(Object o) {
+        NestedOffsetDateTime nested = (NestedOffsetDateTime) o;
 
-        assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
-        assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
+        return new OffsetDateTime[]{
+                nested.date1,
+                nested.date2
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedOffsetDateTime(
                 OffsetDateTime.of(localDateTime1, Z1));
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedOffsetDateTime nestedExpected = (NestedOffsetDateTime) expected;
-        NestedOffsetDateTime nestedActual = (NestedOffsetDateTime) actual;
-
-        assertThat(nestedActual.date1).isEqualTo(nestedExpected.date1);
-        assertThat(nestedActual.date2).isEqualTo(nestedExpected.date2);
-        // Uncomment if we move temporal classes out of nonRefs.txt
-//        assertThat(nestedActual.date2).isSameAs(nestedActual.date1);
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(OffsetDateTime expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(OffsetDateTime expected, Object actual) {
         String value = (String) actual;
         assertThat(value).isEqualTo("2027-12-23T06:07:16.999999999+07:00");
     }

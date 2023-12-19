@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import java.time.ZoneOffset;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.ZoneOffset;
+import java.util.stream.Stream;
 
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,45 +33,38 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
         return ZoneOffset.of("-04:25:33");
     }
 
+
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedZoneOffset(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedZoneOffset expectedDate = (NestedZoneOffset) expected;
-        NestedZoneOffset actualDate = (NestedZoneOffset) actual;
+    protected ZoneOffset[] extractNestedInObject(Object o) {
+        NestedZoneOffset nested = (NestedZoneOffset) o;
 
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isNotSameAs(actualDate.two);
-
-        assertThat(actualDate.one).isEqualTo(expectedDate.one);
+        return new ZoneOffset[]{
+                nested.one,
+                nested.two
+        };
     }
 
+
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedZoneOffset(provideT1());
     }
 
-    @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedZoneOffset expectedDate = (NestedZoneOffset) expected;
-        NestedZoneOffset actualDate = (NestedZoneOffset) actual;
-
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one);
-        // Uncomment if we move temporal classes out of nonRefs.txt
-//                .isSameAs(actualDate.two);
-
-        assertThat(actualDate.one).isEqualTo(expectedDate.one);
-    }
 
     @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(ZoneOffset expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(ZoneOffset expected, Object actual) {
         assertThat(actual).isEqualTo(expected.toString());
     }
 

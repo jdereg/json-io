@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import java.time.Year;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.util.io.TestUtil.toJson;
+import java.time.Year;
+import java.util.stream.Stream;
+
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,47 +33,36 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
         return Year.of(1950);
     }
 
+
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedYear(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedYear expectedDate = (NestedYear) expected;
-        NestedYear actualDate = (NestedYear) actual;
+    protected Year[] extractNestedInObject(Object o) {
+        NestedYear nested = (NestedYear) o;
 
-        assertThat(actualDate.dateTime1)
-                .isEqualTo(expectedDate.dateTime1)
-                .isNotSameAs(actualDate.dateTime2);
-
-        assertThat(actualDate.dateTime1).isEqualTo(expectedDate.dateTime1);
+        return new Year[]{
+                nested.dateTime1,
+                nested.dateTime2
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedYear(provideT1());
     }
 
     @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedYear expectedDate = (NestedYear) expected;
-        NestedYear actualDate = (NestedYear) actual;
-
-        String json = toJson(expected);
-
-        assertThat(actualDate.dateTime1)
-                .isEqualTo(expectedDate.dateTime1);
-        // Uncomment if we move temporal classes out of nonRefs.txt
-//                .isSameAs(actualDate.dateTime2);
-
-        assertThat(actualDate.dateTime1).isEqualTo(expectedDate.dateTime1);
-    }
-
-    @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(Year expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(Year expected, Object actual) {
         assertThat(actual).isEqualTo(1950L);
     }
 

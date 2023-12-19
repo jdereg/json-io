@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import java.time.MonthDay;
-
 import org.junit.jupiter.api.Test;
+
+import java.time.MonthDay;
 
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,45 +29,37 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
         return MonthDay.of(9, 1);
     }
 
+
     @Override
-    protected Object provideNestedInObject() {
+    protected boolean isReferenceable() {
+        return false;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
         return new NestedMonthDay(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected void assertNestedInObject(Object expected, Object actual) {
-        NestedMonthDay expectedDate = (NestedMonthDay) expected;
-        NestedMonthDay actualDate = (NestedMonthDay) actual;
+    protected MonthDay[] extractNestedInObject(Object o) {
+        NestedMonthDay nested = (NestedMonthDay) o;
 
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one)
-                .isNotSameAs(actualDate.two);
-
-        assertThat(actualDate.one).isEqualTo(expectedDate.one);
+        return new MonthDay[]{
+                nested.one,
+                nested.two
+        };
     }
 
     @Override
-    protected Object provideDuplicatesNestedInObject() {
+    protected Object provideNestedInObject_withDuplicates() {
         return new NestedMonthDay(provideT1());
     }
 
-    @Override
-    protected void assertDuplicatesNestedInObject(Object expected, Object actual) {
-        NestedMonthDay expectedDate = (NestedMonthDay) expected;
-        NestedMonthDay actualDate = (NestedMonthDay) actual;
-
-        assertThat(actualDate.one)
-                .isEqualTo(expectedDate.one);
-        // Uncomment if we move temporal classes out of nonRefs.txt
-//                .isSameAs(actualDate.two);
-
-        assertThat(actualDate.two).isEqualTo(expectedDate.two);
-    }
 
     @Override
-    protected void assertT1_serializedWithoutType_parsedAsMaps(MonthDay expected, Object actual) {
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(MonthDay expected, Object actual) {
         assertThat(actual).isEqualTo("09-01");
     }
 

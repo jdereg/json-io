@@ -1,9 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.models.NestedByteArray;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -23,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class ByteArrayTest
+class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
 {
     @Test
     void testPerformance()
@@ -38,5 +40,88 @@ class ByteArrayTest
         {
             assertEquals(bytes[i], bytes2[i]);
         }
+    }
+
+    @Test
+    void testMultiDimensionalArray() {
+        byte[][][] expected = createMultiDimensionalArray(3, 4, 5);
+
+        String json = TestUtil.toJson(expected);
+
+        byte[][][] actual = TestUtil.toObjects(json, null);
+        assertMultiDimensionalArray(actual, 3, 4, 5);
+    }
+
+    private byte[][][] createMultiDimensionalArray(int one, int two, int three) {
+        byte[][][] threeDArray = new byte[one][two][three];
+        for (int i = 0; i < one; i++) {
+            for (int j = 0; j < two; j++) {
+                for (int k = 0; k < three; k++) {
+                    threeDArray[i][j][k] = (byte) (i + j + k);
+                }
+            }
+        }
+        return threeDArray;
+    }
+
+    private void assertMultiDimensionalArray(byte[][][] bytes, int one, int two, int three) {
+        for (int i = 0; i < one; i++) {
+            for (int j = 0; j < two; j++) {
+                for (int k = 0; k < three; k++) {
+                    assertThat(bytes[i][j][k]).isEqualTo((byte) (i + j + k));
+                }
+            }
+        }
+    }
+
+    @Override
+    protected byte[] provideT1() {
+        return new byte[]{0, 0x10, 0x20, 0x30};
+    }
+
+    @Override
+    protected byte[] provideT2() {
+        return new byte[]{0x01, 0x11, 0x21, 0x31};
+    }
+
+    @Override
+    protected byte[] provideT3() {
+        return new byte[]{0x02, 0x22, 0x32, 0x42};
+    }
+
+    @Override
+    protected byte[] provideT4() {
+        return new byte[]{0x11, 0x22, 0x33, 0x44};
+
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates() {
+        return new NestedByteArray(provideT1(), provideT2());
+    }
+
+    @Override
+    protected Object provideNestedInObject_withDuplicates() {
+        byte[] t1 = provideT1();
+        return new NestedByteArray(t1, t1);
+    }
+
+    @Override
+    protected byte[][] extractNestedInObject(Object o) {
+        NestedByteArray nested = (NestedByteArray) o;
+        return new byte[][]{
+                nested.getOne(),
+                nested.getTwo()
+        };
+    }
+
+    @Override
+    protected void assertT1_serializedWithoutType_parsedAsJsonTypes(byte[] expected, Object actual) {
+        // not typed information so comes in as Object[] of longs.
+        Object[] longs = new Object[expected.length];
+        for (int i = 0; i < expected.length; i++) {
+            longs[i] = (long) expected[i];
+        }
+        assertThat(actual).isEqualTo(longs);
     }
 }
