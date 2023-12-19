@@ -23,19 +23,20 @@ import com.cedarsoftware.util.io.ReaderContext;
  */
 public class CharacterPrimArrayFactory extends ArrayFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Class<?> arrayType = getType();
         Object[] items = jObj.getArray();
-
+        Object value;
+        
         if (items == null) {
-            jObj.setTarget(null);
+            value = null;
         } else if (items.length == 0) {
-            jObj.setTarget(new char[0]);
+            value = new char[0];
         } else if (items.length == 1) {
             String s = (String) items[0];
-            jObj.setTarget(s.toCharArray());
+            value = s.toCharArray();
         } else {
             throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + jObj.getLine() + ", col " + jObj.getCol());
         }
+        jObj.setTarget(value);
         return jObj.getTarget();
     }
 

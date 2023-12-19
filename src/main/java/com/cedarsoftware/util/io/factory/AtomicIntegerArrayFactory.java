@@ -1,10 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,8 +19,8 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class ClassClassFactory extends ConvertableFactory {
+public class AtomicIntegerArrayFactory extends ArrayFactory {
     public Class<?> getType() {
-        return Class.class;
+        return AtomicInteger[].class;
     }
 }

@@ -407,10 +407,9 @@ public class Writers
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             UUID uuid = (UUID) obj;
-            output.write("\"mostSigBits\": ");
-            output.write(Long.toString(uuid.getMostSignificantBits()));
-            output.write(",\"leastSigBits\":");
-            output.write(Long.toString(uuid.getLeastSignificantBits()));
+            output.write("\"value\":\"");
+            output.write(uuid.toString());
+            output.write("\"");
         }
 
         @Override

@@ -14,6 +14,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -102,6 +103,8 @@ public final class Converter {
         conversion.put(AtomicInteger.class, Converter::convertToAtomicInteger);
         conversion.put(AtomicLong.class, Converter::convertToAtomicLong);
         conversion.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
+        conversion.put(Class.class, Converter::convertToClass);
+        conversion.put(UUID.class, Converter::convertToUUID);
 
         conversionToString.put(String.class, fromInstance -> fromInstance);
         conversionToString.put(BigDecimal.class, fromInstance -> {
@@ -126,10 +129,14 @@ public final class Converter {
         Work<?> toNoExpString = Object::toString;
         conversionToString.put(Double.class, toNoExpString);
         conversionToString.put(Float.class, toNoExpString);
-
+        conversionToString.put(Class.class, fromInstance -> {
+            Class<?> clazz = (Class<?>) fromInstance;
+            return clazz.getName();
+        });
+        conversionToString.put(UUID.class, Object::toString);
         conversionToString.put(Date.class, fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Date)fromInstance).getTime());
+            return simpleDateFormat.format(((Date) fromInstance).getTime());
         });
         conversionToString.put(Character.class, fromInstance -> "" + fromInstance);
         conversionToString.put(LocalDate.class, fromInstance -> {
@@ -218,15 +225,45 @@ public final class Converter {
         Work work = conversionToString.get(clazz);
         if (work != null) {
             return (String) work.convert(fromInstance);
-        }
-        else if (fromInstance instanceof Calendar) {   // Done this way (as opposed to putting a closure in conversionToString) because Calendar.class is not == to GregorianCalendar.class
+        } else if (fromInstance instanceof Calendar) {   // Done this way (as opposed to putting a closure in conversionToString) because Calendar.class is not == to GregorianCalendar.class
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Calendar)fromInstance).getTime());
-        }
-        else if (fromInstance instanceof Enum) {
+            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
+        } else if (fromInstance instanceof Enum) {
             return ((Enum) fromInstance).name();
         }
         return nope(fromInstance, "String");
+    }
+
+    public static Class<?> convertToClass(Object fromInstance) {
+        if (fromInstance instanceof Class) {
+            return (Class<?>)fromInstance;
+        } else if (fromInstance instanceof String) {
+            Class<?> clazz = MetaUtils.classForName((String) fromInstance, Converter.class.getClassLoader());
+            if (clazz != null) {
+                return clazz;
+            }
+        }
+        throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Class'");
+    }
+    
+    public static UUID convertToUUID(Object fromInstance) {
+        try {
+            if (fromInstance instanceof UUID) {
+                return (UUID)fromInstance;
+            } else if (fromInstance instanceof String) {
+                return UUID.fromString((String)fromInstance);
+            } else if (fromInstance instanceof BigInteger) {
+                BigInteger bigInteger = (BigInteger) fromInstance;
+                BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
+                long mostSignificantBits = bigInteger.shiftRight(64).and(mask).longValue();
+                long leastSignificantBits = bigInteger.and(mask).longValue();
+                return new UUID(mostSignificantBits, leastSignificantBits);
+            }
+        } catch (Exception e) {
+            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'UUID'");
+        }
+        nope(fromInstance, "UUID");
+        return null;
     }
 
     /**
@@ -257,44 +294,31 @@ public final class Converter {
                     return BigDecimal.ZERO;
                 }
                 return new BigDecimal(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 return (BigDecimal) fromInstance;
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 return new BigDecimal((BigInteger) fromInstance);
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 return new BigDecimal((Long) fromInstance);
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 return new BigDecimal(((AtomicLong) fromInstance).get());
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return new BigDecimal(String.valueOf(fromInstance));
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO;
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return new BigDecimal(((Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return new BigDecimal(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return new BigDecimal(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return new BigDecimal(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return new BigDecimal(((Calendar) fromInstance).getTime().getTime());
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return new BigDecimal(((Character) fromInstance));
             }
         }
@@ -333,38 +357,33 @@ public final class Converter {
                     return BigInteger.ZERO;
                 }
                 return new BigInteger(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 return (BigInteger) fromInstance;
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 return ((BigDecimal) fromInstance).toBigInteger();
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return new BigInteger(Long.toString(((Number) fromInstance).longValue()));
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof UUID) {
+                UUID uuid = (UUID) fromInstance;
+                BigInteger mostSignificant = BigInteger.valueOf(uuid.getMostSignificantBits());
+                BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
+                // Shift the most significant bits to the left and add the least significant bits
+                return mostSignificant.shiftLeft(64).add(leastSignificant);
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO;
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return new BigInteger(Long.toString(((Date) fromInstance).getTime()));
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return BigInteger.valueOf(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return new BigInteger(Long.toString(((Calendar) fromInstance).getTime().getTime()));
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return new BigInteger(Long.toString(((Character) fromInstance)));
             }
         }
@@ -386,50 +405,37 @@ public final class Converter {
         try {
             if (fromInstance instanceof java.sql.Date) {   // Return a clone of the current date time because java.sql.Date is mutable.
                 return new java.sql.Date(((java.sql.Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof Timestamp) {
+            } else if (fromInstance instanceof Timestamp) {
                 Timestamp timestamp = (Timestamp) fromInstance;
                 return new java.sql.Date(timestamp.getTime());
-            }
-            else if (fromInstance instanceof Date) {   // convert from java.util.Date to java.sql.Date
+            } else if (fromInstance instanceof Date) {   // convert from java.util.Date to java.sql.Date
                 return new java.sql.Date(((Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof String) {
+            } else if (fromInstance instanceof String) {
                 Date date = DateFactory.parseDate(((String) fromInstance).trim());
                 if (date == null) {
                     return null;
                 }
                 return new java.sql.Date(date.getTime());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return new java.sql.Date(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 return new java.sql.Date((Long) fromInstance);
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 return new java.sql.Date(((BigInteger) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 return new java.sql.Date(((BigDecimal) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 return new java.sql.Date(((AtomicLong) fromInstance).get());
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'java.sql.Date'", e);
         }
         nope(fromInstance, "java.sql.Date");
@@ -447,49 +453,36 @@ public final class Converter {
         try {
             if (fromInstance instanceof java.sql.Date) {   // convert from java.sql.Date to java.util.Date
                 return new Timestamp(((java.sql.Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof Timestamp) {   // return a clone of the Timestamp because it is mutable
+            } else if (fromInstance instanceof Timestamp) {   // return a clone of the Timestamp because it is mutable
                 return new Timestamp(((Timestamp) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return new Timestamp(((Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return new Timestamp(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof String) {
+            } else if (fromInstance instanceof String) {
                 Date date = DateFactory.parseDate(((String) fromInstance).trim());
                 if (date == null) {
                     return null;
                 }
                 return new Timestamp(date.getTime());
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return new Timestamp(((Calendar) fromInstance).getTime().getTime());
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 return new Timestamp((Long) fromInstance);
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 return new Timestamp(((BigInteger) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 return new Timestamp(((BigDecimal) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 return new Timestamp(((AtomicLong) fromInstance).get());
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Timestamp'", e);
         }
         nope(fromInstance, "Timestamp");
@@ -506,46 +499,33 @@ public final class Converter {
         try {
             if (fromInstance instanceof String) {
                 return DateFactory.parseDate(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof java.sql.Date) {   // convert from java.sql.Date to java.util.Date
+            } else if (fromInstance instanceof java.sql.Date) {   // convert from java.sql.Date to java.util.Date
                 return new Date(((java.sql.Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof Timestamp) {
+            } else if (fromInstance instanceof Timestamp) {
                 Timestamp timestamp = (Timestamp) fromInstance;
                 return new Date(timestamp.getTime());
-            }
-            else if (fromInstance instanceof Date) {   // Return a clone, not the same instance because Dates are not immutable
+            } else if (fromInstance instanceof Date) {   // Return a clone, not the same instance because Dates are not immutable
                 return new Date(((Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return new Date(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return new Date(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).getTime();
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 return new Date((Long) fromInstance);
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 return new Date(((BigInteger) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 return new Date(((BigDecimal) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 return new Date(((AtomicLong) fromInstance).get());
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Date'", e);
         }
         nope(fromInstance, "Date");
@@ -557,49 +537,36 @@ public final class Converter {
             if (fromInstance instanceof String) {
                 Date date = DateFactory.parseDate(((String) fromInstance).trim());
                 return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof LocalDate) {   // return passed in instance (no need to copy, LocalDate is immutable)
+            } else if (fromInstance instanceof LocalDate) {   // return passed in instance (no need to copy, LocalDate is immutable)
                 return (LocalDate) fromInstance;
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return ((LocalDateTime) fromInstance).toLocalDate();
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return ((ZonedDateTime) fromInstance).toLocalDate();
-            }
-            else if (fromInstance instanceof java.sql.Date) {
+            } else if (fromInstance instanceof java.sql.Date) {
                 return ((java.sql.Date) fromInstance).toLocalDate();
-            }
-            else if (fromInstance instanceof Timestamp) {
+            } else if (fromInstance instanceof Timestamp) {
                 return ((Timestamp) fromInstance).toLocalDateTime().toLocalDate();
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 Long dateInMillis = (Long) fromInstance;
                 return Instant.ofEpochMilli(dateInMillis).atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 BigInteger big = (BigInteger) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 BigDecimal big = (BigDecimal) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDate'", e);
         }
         nope(fromInstance, "LocalDate");
@@ -611,49 +578,36 @@ public final class Converter {
             if (fromInstance instanceof String) {
                 Date date = DateFactory.parseDate(((String) fromInstance).trim());
                 return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return ((LocalDate) fromInstance).atStartOfDay();
-            }
-            else if (fromInstance instanceof LocalDateTime) {   // return passed in instance (no need to copy, LocalDateTime is immutable)
+            } else if (fromInstance instanceof LocalDateTime) {   // return passed in instance (no need to copy, LocalDateTime is immutable)
                 return ((LocalDateTime) fromInstance);
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return ((ZonedDateTime) fromInstance).toLocalDateTime();
-            }
-            else if (fromInstance instanceof java.sql.Date) {
+            } else if (fromInstance instanceof java.sql.Date) {
                 return ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay();
-            }
-            else if (fromInstance instanceof Timestamp) {
+            } else if (fromInstance instanceof Timestamp) {
                 return ((Timestamp) fromInstance).toLocalDateTime();
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 Long dateInMillis = (Long) fromInstance;
                 return Instant.ofEpochMilli(dateInMillis).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 BigInteger big = (BigInteger) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 BigDecimal big = (BigDecimal) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
@@ -665,49 +619,36 @@ public final class Converter {
             if (fromInstance instanceof String) {
                 Date date = DateFactory.parseDate(((String) fromInstance).trim());
                 return date.toInstant().atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return ((LocalDate) fromInstance).atStartOfDay(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof LocalDateTime) {   // return passed in instance (no need to copy, LocalDateTime is immutable)
+            } else if (fromInstance instanceof LocalDateTime) {   // return passed in instance (no need to copy, LocalDateTime is immutable)
                 return ((LocalDateTime) fromInstance).atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof ZonedDateTime) {   // return passed in instance (no need to copy, ZonedDateTime is immutable)
+            } else if (fromInstance instanceof ZonedDateTime) {   // return passed in instance (no need to copy, ZonedDateTime is immutable)
                 return ((ZonedDateTime) fromInstance);
-            }
-            else if (fromInstance instanceof java.sql.Date) {
+            } else if (fromInstance instanceof java.sql.Date) {
                 return ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof Timestamp) {
+            } else if (fromInstance instanceof Timestamp) {
                 return ((Timestamp) fromInstance).toInstant().atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof Long) {
+            } else if (fromInstance instanceof Long) {
                 Long dateInMillis = (Long) fromInstance;
                 return Instant.ofEpochMilli(dateInMillis).atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof BigInteger) {
+            } else if (fromInstance instanceof BigInteger) {
                 BigInteger big = (BigInteger) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof BigDecimal) {
+            } else if (fromInstance instanceof BigDecimal) {
                 BigDecimal big = (BigDecimal) fromInstance;
                 return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
-            }
-            else if (fromInstance instanceof AtomicLong) {
+            } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault());
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'ZonedDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
@@ -751,24 +692,18 @@ public final class Converter {
                     return 0;
                 }
                 return (char) Integer.parseInt(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return (char) ((Number) fromInstance).shortValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (boolean) fromInstance ? '1' : '0';
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? '1' : '0';
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return (Character) fromInstance;
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Character'", e);
         }
         nope(fromInstance, "Character");
@@ -806,24 +741,18 @@ public final class Converter {
                     }
                     return (byte) value;
                 }
-            }
-            else if (fromInstance instanceof Byte) {
+            } else if (fromInstance instanceof Byte) {
                 return (Byte) fromInstance;
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).byteValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO;
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Byte'", e);
         }
         nope(fromInstance, "Byte");
@@ -861,27 +790,20 @@ public final class Converter {
                     }
                     return (short) value;
                 }
-            }
-            else if (fromInstance instanceof Short) {
+            } else if (fromInstance instanceof Short) {
                 return (Short) fromInstance;
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).shortValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO;
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return (short) ((char) fromInstance);
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Short'", e);
         }
         nope(fromInstance, "Short");
@@ -907,11 +829,9 @@ public final class Converter {
         try {
             if (fromInstance instanceof Integer) {
                 return (Integer) fromInstance;
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).intValue();
-            }
-            else if (fromInstance instanceof String) {
+            } else if (fromInstance instanceof String) {
                 if (MetaUtils.isEmpty((String) fromInstance)) {
                     return INTEGER_ZERO;
                 }
@@ -925,21 +845,16 @@ public final class Converter {
                     }
                     return (int) value;
                 }
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO;
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return (int) ((char) fromInstance);
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'Integer'", e);
         }
         nope(fromInstance, "Integer");
@@ -969,8 +884,7 @@ public final class Converter {
         try {
             if (fromInstance instanceof Long) {
                 return (Long) fromInstance;
-            }
-            else if (fromInstance instanceof String) {
+            } else if (fromInstance instanceof String) {
                 if ("".equals(fromInstance)) {
                     return LONG_ZERO;
                 }
@@ -980,39 +894,28 @@ public final class Converter {
                 catch (NumberFormatException e) {
                     return convertToBigDecimal(fromInstance).longValue();
                 }
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).longValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? LONG_ONE : LONG_ZERO;
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return ((Date) fromInstance).getTime();
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return localDateToMillis((LocalDate) fromInstance);
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return localDateTimeToMillis((LocalDateTime) fromInstance);
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return zonedDateTimeToMillis((ZonedDateTime) fromInstance);
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO;
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).getTime().getTime();
-            }
-            else if (fromInstance instanceof Character) {
+            } else if (fromInstance instanceof Character) {
                 return (long) ((char) fromInstance);
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Long'", e);
         }
         nope(fromInstance, "Long");
@@ -1041,24 +944,18 @@ public final class Converter {
                     return FLOAT_ZERO;
                 }
                 return Float.valueOf(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof Float) {
+            } else if (fromInstance instanceof Float) {
                 return (Float) fromInstance;
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).floatValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO;
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Float'", e);
         }
         nope(fromInstance, "Float");
@@ -1087,24 +984,18 @@ public final class Converter {
                     return DOUBLE_ZERO;
                 }
                 return Double.valueOf(((String) fromInstance).trim());
-            }
-            else if (fromInstance instanceof Double) {
+            } else if (fromInstance instanceof Double) {
                 return (Double) fromInstance;
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).doubleValue();
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO;
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO;
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Double'", e);
         }
         nope(fromInstance, "Double");
@@ -1129,22 +1020,18 @@ public final class Converter {
     public static Boolean convertToBoolean(Object fromInstance) {
         if (fromInstance instanceof Boolean) {
             return (Boolean) fromInstance;
-        }
-        else if (fromInstance instanceof String) {
+        } else if (fromInstance instanceof String) {
             // faster equals check "true" and "false"
             if ("true".equals(fromInstance)) {
                 return true;
-            }
-            else if ("false".equals(fromInstance)) {
+            } else if ("false".equals(fromInstance)) {
                 return false;
             }
 
             return "true".equalsIgnoreCase((String) fromInstance);
-        }
-        else if (fromInstance instanceof Number) {
+        } else if (fromInstance instanceof Number) {
             return ((Number) fromInstance).longValue() != 0;
-        }
-        else if (fromInstance instanceof AtomicBoolean) {
+        } else if (fromInstance instanceof AtomicBoolean) {
             return ((AtomicBoolean) fromInstance).get();
         }
         nope(fromInstance, "Boolean");
@@ -1171,27 +1058,21 @@ public final class Converter {
         try {
             if (fromInstance instanceof AtomicInteger) {   // return a new instance because AtomicInteger is mutable
                 return new AtomicInteger(((AtomicInteger) fromInstance).get());
-            }
-            else if (fromInstance instanceof String) {
+            } else if (fromInstance instanceof String) {
                 if (MetaUtils.isEmpty((String) fromInstance)) {
                     return new AtomicInteger(0);
                 }
                 return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return new AtomicInteger(((Number) fromInstance).intValue());
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? new AtomicInteger(1) : new AtomicInteger(0);
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0);
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicInteger'", e);
         }
         nope(fromInstance, "AtomicInteger");
@@ -1224,39 +1105,28 @@ public final class Converter {
                     return new AtomicLong(0);
                 }
                 return new AtomicLong(Long.parseLong(((String) fromInstance).trim()));
-            }
-            else if (fromInstance instanceof AtomicLong) {   // return a clone of the AtomicLong because it is mutable
+            } else if (fromInstance instanceof AtomicLong) {   // return a clone of the AtomicLong because it is mutable
                 return new AtomicLong(((AtomicLong) fromInstance).get());
-            }
-            else if (fromInstance instanceof Number) {
+            } else if (fromInstance instanceof Number) {
                 return new AtomicLong(((Number) fromInstance).longValue());
-            }
-            else if (fromInstance instanceof Date) {
+            } else if (fromInstance instanceof Date) {
                 return new AtomicLong(((Date) fromInstance).getTime());
-            }
-            else if (fromInstance instanceof LocalDate) {
+            } else if (fromInstance instanceof LocalDate) {
                 return new AtomicLong(localDateToMillis((LocalDate) fromInstance));
-            }
-            else if (fromInstance instanceof LocalDateTime) {
+            } else if (fromInstance instanceof LocalDateTime) {
                 return new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof ZonedDateTime) {
+            } else if (fromInstance instanceof ZonedDateTime) {
                 return new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            }
-            else if (fromInstance instanceof Boolean) {
+            } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? new AtomicLong(1L) : new AtomicLong(0L);
-            }
-            else if (fromInstance instanceof AtomicBoolean) {
+            } else if (fromInstance instanceof AtomicBoolean) {
                 return ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1L) : new AtomicLong(0L);
-            }
-            else if (fromInstance instanceof Calendar) {
+            } else if (fromInstance instanceof Calendar) {
                 return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
             }
-        }
-        catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
-            }
+        } catch (JsonIoException e) {
+            throw e;
+        } catch (Exception e) {
             throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicLong'", e);
         }
         nope(fromInstance, "AtomicLong");
@@ -1286,14 +1156,11 @@ public final class Converter {
             }
             String value = (String) fromInstance;
             return new AtomicBoolean("true".equalsIgnoreCase(value));
-        }
-        else if (fromInstance instanceof AtomicBoolean) {   // return a clone of the AtomicBoolean because it is mutable
+        } else if (fromInstance instanceof AtomicBoolean) {   // return a clone of the AtomicBoolean because it is mutable
             return new AtomicBoolean(((AtomicBoolean) fromInstance).get());
-        }
-        else if (fromInstance instanceof Boolean) {
+        } else if (fromInstance instanceof Boolean) {
             return new AtomicBoolean((Boolean) fromInstance);
-        }
-        else if (fromInstance instanceof Number) {
+        } else if (fromInstance instanceof Number) {
             return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
         }
         nope(fromInstance, "AtomicBoolean");
@@ -1308,7 +1175,10 @@ public final class Converter {
     }
 
     private static String name(Object fromInstance) {
-        return fromInstance.getClass().getName() + " (" + fromInstance.toString() + ")";
+        if (fromInstance == null) {
+            return "null";
+        }
+        return fromInstance.getClass().getName() + " (" + fromInstance + ")";
     }
 
     /**

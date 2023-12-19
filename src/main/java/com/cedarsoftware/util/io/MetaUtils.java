@@ -969,7 +969,7 @@ public class MetaUtils
      */
     public static <T> Object convert(Class<T> toType, Object rhs)
     {
-        if (rhs == null) {
+        if (rhs == null && FROM_NULL.containsKey(toType)) {
             return FROM_NULL.get(toType);
         }
         if ("".equals(rhs) && FROM_EMPTY_QUOTES.contains(toType)) {

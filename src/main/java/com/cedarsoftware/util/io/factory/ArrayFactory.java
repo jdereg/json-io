@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io.factory;
 
 import java.lang.reflect.Array;
 
+import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
@@ -39,8 +40,21 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
 
             for (int i = 0; i < len; i++) {
                 Object val = items[i];
-                Object value = val == null ? null : convert(componentType, val);
-                Array.set(array, i, value);
+                if (val == null) {
+                } else if (val instanceof JsonObject) {
+                    do {
+                        // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
+                        JsonObject jsonObject = (JsonObject) val;
+                        if (!jsonObject.hasValue()) {
+                            throw new JsonIoException("Unknown JSON {} inside array, expecting single value type. Line: " + jsonObject.getLine() + ", col: " + jsonObject.getCol());
+                        }
+                        val = jsonObject.getValue();
+                    } while (val instanceof JsonObject);
+                    val = convert(componentType, val);
+                } else {
+                    val = convert(componentType, val);
+                }
+                Array.set(array, i, val);
             }
 
             jObj.setTarget(array);

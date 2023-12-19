@@ -82,7 +82,7 @@ public class UUIDTest
 
         uuids = TestUtil.toObjects(json, null);
         assertEquals(2, uuids.length);
-        assertNotSame(uuids[0], uuids[1]);              // Proving it is a non-ref
+        assertSame(uuids[0], uuids[1]);              // Proving it is not a non-ref
         assertEquals(UUID.fromString(s), uuids[0]);
         json = TestUtil.toJson(typedUUIDs);
         TestUtil.printLine("json=" + json);
@@ -104,7 +104,7 @@ public class UUIDTest
         list = TestUtil.toObjects(json, null);
         assertEquals(2, list.size());
         assertEquals(UUID.fromString(s), list.get(0));
-        assertNotSame(list.get(0), list.get(1));        // Proving it is a non-ref
+        assertSame(list.get(0), list.get(1));        // Proving it is not a non-ref
     }
 
     @Test

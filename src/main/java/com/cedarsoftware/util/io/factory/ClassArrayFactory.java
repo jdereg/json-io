@@ -1,8 +1,9 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.lang.reflect.Array;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
@@ -23,8 +24,8 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class ClassClassFactory extends ConvertableFactory {
+public class ClassArrayFactory extends ArrayFactory {
     public Class<?> getType() {
-        return Class.class;
+        return Class[].class;
     }
 }

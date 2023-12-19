@@ -59,7 +59,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":\"foo.bar.baz.Qux\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unable to load class: foo.bar.baz.Qux");
+                .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
     }
 
     @Test
@@ -68,7 +68,7 @@ public class ClassTest
         String json = "\"foo.bar.baz.Qux\"";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unable to load class: foo.bar.baz.Qux");
+                .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
     }
 
     @Test
@@ -77,7 +77,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Non-string type used for class name: null");
+                .hasMessageContaining("value [null] could not be converted to a 'Class'");
     }
 
     @Test
@@ -86,7 +86,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":16.0}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Non-string type used for class name");
+                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
     }
 
     @Test
@@ -103,7 +103,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Non-string type used for class name");
+                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
     }
 
     @Test

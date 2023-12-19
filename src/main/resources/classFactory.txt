@@ -36,7 +36,14 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 [Ljava.lang.Long; = com.cedarsoftware.util.io.factory.LongArrayFactory
 [Ljava.lang.Float; = com.cedarsoftware.util.io.factory.FloatArrayFactory
 [Ljava.lang.Double; = com.cedarsoftware.util.io.factory.DoubleArrayFactory
+
+[Ljava.lang.Class; = com.cedarsoftware.util.io.factory.ClassArrayFactory
 [Ljava.lang.String; = com.cedarsoftware.util.io.factory.StringArrayFactory
+[Ljava.math.BigDecimal; = com.cedarsoftware.util.io.factory.BigDecimalArrayFactory
+[Ljava.math.BigInteger; = com.cedarsoftware.util.io.factory.BigIntegerArrayFactory
+[Ljava.util.concurrent.atomic.AtomicBoolean; = com.cedarsoftware.util.io.factory.AtomicBooleanArrayFactory
+[Ljava.util.concurrent.atomic.AtomicInteger; = com.cedarsoftware.util.io.factory.AtomicIntegerArrayFactory
+[Ljava.util.concurrent.atomic.AtomicLong; = com.cedarsoftware.util.io.factory.AtomicLongArrayFactory
 
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.util.Locale = com.cedarsoftware.util.io.factory.LocaleFactory

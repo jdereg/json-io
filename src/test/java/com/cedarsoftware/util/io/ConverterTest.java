@@ -13,6 +13,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -40,8 +41,10 @@ import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToBigDecimal;
+import static com.cedarsoftware.util.io.Converter.convertToBigInteger;
 import static com.cedarsoftware.util.io.Converter.convertToByte;
 import static com.cedarsoftware.util.io.Converter.convertToCharacter;
+import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToDate;
 import static com.cedarsoftware.util.io.Converter.convertToDouble;
 import static com.cedarsoftware.util.io.Converter.convertToFloat;
@@ -53,12 +56,14 @@ import static com.cedarsoftware.util.io.Converter.convertToShort;
 import static com.cedarsoftware.util.io.Converter.convertToSqlDate;
 import static com.cedarsoftware.util.io.Converter.convertToString;
 import static com.cedarsoftware.util.io.Converter.convertToTimestamp;
+import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
 import static com.cedarsoftware.util.io.Converter.localDateToMillis;
 import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
-import static com.cedarsoftware.util.io.TestConverter.fubar.bar;
-import static com.cedarsoftware.util.io.TestConverter.fubar.foo;
+import static com.cedarsoftware.util.io.ConverterTest.fubar.bar;
+import static com.cedarsoftware.util.io.ConverterTest.fubar.foo;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -84,7 +89,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class TestConverter
+public class ConverterTest
 {
     enum fubar
     {
@@ -752,6 +757,14 @@ public class TestConverter
         {
             assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
+    }
+
+    @Test
+    void testBogusSqlDate2()
+    {
+        assertThatThrownBy(() -> Converter.convertToSqlDate(true))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unsupported value type [java.lang.Boolean (true)] attempting to convert to 'java.sql.Date'");
     }
 
     @Test
@@ -1673,5 +1686,101 @@ public class TestConverter
 
         AtomicLong atomicLong = convertToAtomicLong(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
         assert atomicLong.get() == cal.getTime().getTime();
+    }
+
+    @Test
+    public void testStringToClass()
+    {
+        Class<?> clazz = convertToClass("java.math.BigInteger");
+        assert clazz.getName().equals("java.math.BigInteger");
+
+        assertThatThrownBy(() -> convertToClass("foo.bar.baz.Qux"))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
+
+        assertThatThrownBy(() -> convertToClass(null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [null] could not be converted to a 'Class'");
+
+        assertThatThrownBy(() -> convertToClass(16.0))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+    }
+
+    @Test
+    void testClassToClass()
+    {
+        Class<?> clazz = convertToClass(ConverterTest.class);
+        assert clazz.getName() == ConverterTest.class.getName();
+    }
+
+    @Test
+    public void testStringToUUID()
+    {
+        UUID uuid = Converter.convertToUUID("00000000-0000-0000-0000-000000000064");
+        BigInteger bigInt = Converter.convertToBigInteger(uuid);
+        assert bigInt.intValue() == 100;
+
+        assertThatThrownBy(() -> Converter.convertToUUID("00000000"))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [java.lang.String (00000000)] could not be converted to a 'UUID'");
+    }
+
+    @Test
+    public void testUUIDToUUID()
+    {
+        UUID uuid = Converter.convertToUUID("00000007-0000-0000-0000-000000000064");
+        UUID uuid2 = Converter.convertToUUID(uuid);
+        assert uuid.equals(uuid2);
+    }
+
+    @Test
+    public void testBogusToUUID()
+    {
+        assertThatThrownBy(() -> Converter.convertToUUID((short)77))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("Unsupported value type [java.lang.Short (77)] attempting to convert to 'UUID'");
+    }
+
+    @Test
+    public void testBigIntegerToUUID()
+    {
+        UUID uuid = convertToUUID(new BigInteger("100"));
+        BigInteger hundred = convertToBigInteger(uuid);
+        assert hundred.intValue() == 100;
+    }
+
+    @Test
+    public void testUUIDToBigInteger()
+    {
+        BigInteger bigInt = Converter.convertToBigInteger(UUID.fromString("00000000-0000-0000-0000-000000000064"));
+        assert bigInt.intValue() == 100;
+
+        bigInt = Converter.convertToBigInteger(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        assert bigInt.toString().equals("-18446744073709551617");
+
+        bigInt = Converter.convertToBigInteger(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        System.out.println("bigInt = " + bigInt);
+        assert bigInt.intValue() == 0;
+
+        assertThatThrownBy(() -> convertToClass(16.0))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+    }
+
+    @Test
+    public void testClassToString()
+    {
+        String str = Converter.convertToString(BigInteger.class);
+        assert str.equals("java.math.BigInteger");
+
+        str = Converter.convert2String(BigInteger.class);
+        assert str.equals("java.math.BigInteger");
+
+        str = Converter.convert2String(null);
+        assert "".equals(str);
+
+        str = Converter.convertToString(null);
+        assert str == null;
     }
 }

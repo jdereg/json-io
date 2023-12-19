@@ -103,7 +103,6 @@ public class StringTest
         assertThatThrownBy(() -> TestUtil.toObjects("", null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
-
     }
 
     @Test

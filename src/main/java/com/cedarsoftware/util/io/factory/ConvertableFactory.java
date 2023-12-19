@@ -6,6 +6,8 @@ import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
+import static com.cedarsoftware.util.io.MetaUtils.convert;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -27,14 +29,17 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value = jObj.getValue();
         if (value instanceof JsonObject) {
-            JsonObject valueObj = (JsonObject) value;
-            if (valueObj.hasValue()) {
-                return MetaUtils.convert(getType(), valueObj.getValue());
-            } else {
-                throw new JsonIoException("Complex object: " + valueObj.getJavaTypeName() + " attempting to be converted to: " + getType().getName());
-            }
+            do {
+                // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
+                JsonObject jsonObject = (JsonObject) value;
+                if (!jsonObject.hasValue()) {
+                    throw new JsonIoException("Unknown JSON {}, expecting single value type. Line: " + jsonObject.getLine() + ", col: " + jsonObject.getCol());
+                }
+                value = jsonObject.getValue();
+            } while (value instanceof JsonObject);
+            return convert(getType(), value);
         } else {
-            return MetaUtils.convert(getType(), value);
+            return convert(getType(), value);
         }
     }
 
@@ -46,5 +51,4 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
     public boolean isObjectFinal() {
         return true;
     }
-
 }
