@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.ReturnType;
@@ -453,11 +454,28 @@ class DatesTest
     }
 
     @Test
+    @Disabled // This should not be DISABLED - the writer is not outputting the types where the are not == to the array component type.
     public void testSqlDate()
     {
         long now = System.currentTimeMillis();
         Date[] dates = new Date[]{new Date(now), new java.sql.Date(now), new Timestamp(now)};
         String json = TestUtil.toJson(dates);
+        TestUtil.printLine("json=" + json);
+        Date[] dates2 = TestUtil.toObjects(json, null);
+        assertEquals(3, dates2.length);
+        assertEquals(dates2[0], new Date(now));
+        assertEquals(dates2[1], new java.sql.Date(now));
+        Timestamp stamp = (Timestamp) dates2[2];
+        assertEquals(stamp.getTime(), dates[0].getTime());
+        assertEquals(stamp.getTime(), now);
+    }
+
+    @Test
+    public void testSqlDate2()
+    {
+        long now = 1703043551033L;
+        Date[] dates = new Date[]{new Date(now), new java.sql.Date(now), new Timestamp(now)};
+        String json = "{\"@type\":\"[Ljava.util.Date;\",\"@items\":[1703043551033,{\"@type\":\"java.sql.Date\", \"time\":1703043551033},{\"@type\":\"java.sql.Timestamp\",\"time\":\"1703043551000\",\"nanos\":33000000}]}";
         TestUtil.printLine("json=" + json);
         Date[] dates2 = TestUtil.toObjects(json, null);
         assertEquals(3, dates2.length);

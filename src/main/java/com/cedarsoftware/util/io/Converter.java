@@ -259,8 +259,18 @@ public final class Converter {
                 long leastSignificantBits = bigInteger.and(mask).longValue();
                 return new UUID(mostSignificantBits, leastSignificantBits);
             }
+            else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
+                    long mostSigBits = convert2long(map.get("mostSigBits"));
+                    long leastSigBits = convert2long(map.get("leastSigBits"));
+                    return new UUID(mostSigBits, leastSigBits);
+                } else {
+                    throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both a 'mostSigBits' and 'leastSigBits' key.");
+                }
+            }
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'UUID'");
+            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'UUID'", e);
         }
         nope(fromInstance, "UUID");
         return null;
@@ -426,6 +436,15 @@ public final class Converter {
                 return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
             } else if (fromInstance instanceof Long) {
                 return new java.sql.Date((Long) fromInstance);
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                if (map.containsKey("time")) {
+                    long time = convert2long(map.get("time"));
+                    // ignore nanos if supplied
+                    return new java.sql.Date(time);
+                } else {
+                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' key");
+                }
             } else if (fromInstance instanceof BigInteger) {
                 return new java.sql.Date(((BigInteger) fromInstance).longValue());
             } else if (fromInstance instanceof BigDecimal) {
@@ -473,6 +492,17 @@ public final class Converter {
                 return new Timestamp(((Calendar) fromInstance).getTime().getTime());
             } else if (fromInstance instanceof Long) {
                 return new Timestamp((Long) fromInstance);
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                if (map.containsKey("time")) {
+                    long time = convert2long(map.get("time"));
+                    int ns = convert2int(map.get("nanos"));
+                    Timestamp timeStamp = new Timestamp(time);
+                    timeStamp.setNanos(ns);
+                    return timeStamp;
+                } else {
+                    throw new IllegalArgumentException("To convert Map to Timestamp, the Map must contain a 'time' key and an optional 'nanos' key");
+                }
             } else if (fromInstance instanceof BigInteger) {
                 return new Timestamp(((BigInteger) fromInstance).longValue());
             } else if (fromInstance instanceof BigDecimal) {
@@ -516,6 +546,15 @@ public final class Converter {
                 return ((Calendar) fromInstance).getTime();
             } else if (fromInstance instanceof Long) {
                 return new Date((Long) fromInstance);
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                if (map.containsKey("time")) {
+                    long time = convert2long(map.get("time"));
+                    // ignore nanos if presente
+                    return new Date(time);
+                } else {
+                    throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' key or a 'value' key");
+                }
             } else if (fromInstance instanceof BigInteger) {
                 return new Date(((BigInteger) fromInstance).longValue());
             } else if (fromInstance instanceof BigDecimal) {

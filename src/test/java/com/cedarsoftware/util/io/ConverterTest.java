@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1760,12 +1761,33 @@ public class ConverterTest
         assert bigInt.toString().equals("-18446744073709551617");
 
         bigInt = Converter.convertToBigInteger(UUID.fromString("00000000-0000-0000-0000-000000000000"));
-        System.out.println("bigInt = " + bigInt);
         assert bigInt.intValue() == 0;
 
         assertThatThrownBy(() -> convertToClass(16.0))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+    }
+
+    @Test
+    public void testMapToUUID()
+    {
+        UUID uuid = convertToUUID(new BigInteger("100"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("mostSigBits", uuid.getMostSignificantBits());
+        map.put("leastSigBits", uuid.getLeastSignificantBits());
+        UUID hundred = convertToUUID(map);
+        assertEquals("00000000-0000-0000-0000-000000000064", hundred.toString());
+    }
+
+    @Test
+    public void testBadMapToUUID()
+    {
+        UUID uuid = convertToUUID(new BigInteger("100"));
+        Map<String, Object> map = new HashMap<>();
+        map.put("leastSigBits", uuid.getLeastSignificantBits());
+        assertThatThrownBy(() -> convertToUUID(map))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("value [java.util.HashMap ({leastSigBits=100})] could not be converted to a 'UUID'");
     }
 
     @Test

@@ -33,7 +33,7 @@ java.net.URL
 
 java.util.Calendar
 java.util.Date
-#java.util.UUID
+java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong

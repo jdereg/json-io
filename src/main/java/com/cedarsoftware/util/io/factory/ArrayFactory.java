@@ -40,17 +40,24 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
 
             for (int i = 0; i < len; i++) {
                 Object val = items[i];
+                Class<?> type = null;
                 if (val == null) {
                 } else if (val instanceof JsonObject) {
                     do {
                         // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
                         JsonObject jsonObject = (JsonObject) val;
+                        type = jsonObject.getJavaType();
                         if (!jsonObject.hasValue()) {
-                            throw new JsonIoException("Unknown JSON {} inside array, expecting single value type. Line: " + jsonObject.getLine() + ", col: " + jsonObject.getCol());
+                            break;
                         }
                         val = jsonObject.getValue();
                     } while (val instanceof JsonObject);
-                    val = convert(componentType, val);
+
+                    if (type == null) {
+                        type = componentType;
+                    }
+                    val = convert(type, val);
+                    
                 } else {
                     val = convert(componentType, val);
                 }
