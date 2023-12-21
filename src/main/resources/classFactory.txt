@@ -40,6 +40,8 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 [Ljava.lang.Class; = com.cedarsoftware.util.io.factory.ClassArrayFactory
 [Ljava.lang.String; = com.cedarsoftware.util.io.factory.StringArrayFactory
 [Ljava.util.Date; = com.cedarsoftware.util.io.factory.DateArrayFactory
+[Ljava.sql.Date; = com.cedarsoftware.util.io.factory.SqlDateArrayFactory
+[Ljava.sql.Timestamp; = com.cedarsoftware.util.io.factory.TimestampArrayFactory
 [Ljava.math.BigDecimal; = com.cedarsoftware.util.io.factory.BigDecimalArrayFactory
 [Ljava.math.BigInteger; = com.cedarsoftware.util.io.factory.BigIntegerArrayFactory
 [Ljava.util.concurrent.atomic.AtomicBoolean; = com.cedarsoftware.util.io.factory.AtomicBooleanArrayFactory
@@ -59,7 +61,7 @@ java.math.BigInteger = com.cedarsoftware.util.io.factory.BigIntegerFactory
 java.net.URL = com.cedarsoftware.util.io.factory.URLFactory
 
 java.sql.Date = com.cedarsoftware.util.io.factory.SqlDateFactory
-java.sql.Timestamp = com.cedarsoftware.util.io.factory.DateFactory
+java.sql.Timestamp = com.cedarsoftware.util.io.factory.TimestampFactory
 
 java.time.Duration = com.cedarsoftware.util.io.factory.DurationFactory
 java.time.Instant = com.cedarsoftware.util.io.factory.InstantFactory
