@@ -78,15 +78,13 @@ public class WriteOptions {
 
     // Runtime caches (not feature options), since looking up writers can be expensive
     // when one does not exist, we cache the write or a nullWriter if one does not exist.
-    protected Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(300);
+    protected Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-    private final Map<Class<?>, Map<String, Method>> deepMethodCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-    private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>();
-
-    private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
 
     // Enum for the 3-state property
@@ -352,7 +350,6 @@ public class WriteOptions {
     ///// ACCESSOR PULL IN ???????
 
     public void clearCaches() {
-        deepMethodCache.clear();
         deepFieldCache.clear();
         methodCache.clear();
         accessorsCache.clear();
@@ -360,7 +357,6 @@ public class WriteOptions {
 
     public void clearMethodCaches() {
         methodCache.clear();
-        deepMethodCache.clear();
         accessorsCache.clear();
     }
 
@@ -374,7 +370,6 @@ public class WriteOptions {
         final Set<String> inclusions = includedFieldNames.get(c);
         final Set<String> exclusions = new HashSet<>();
         final Map<String, Field> deepDeclaredFields = this.getDeepDeclaredFields(c, exclusions);
-        final Map<String, Method> possibleMethods = getDeepDeclaredMethods(c);
         final List<Accessor> accessors = new ArrayList<>(deepDeclaredFields.size());
 
         final List<Map.Entry<String, Field>> fields = (inclusions == null) ?
@@ -386,10 +381,10 @@ public class WriteOptions {
             final Field field = entry.getValue();
             final String key = entry.getKey();
 
-            Accessor accessor = this.findAccessor(field, possibleMethods, key);
+            Accessor accessor = this.findAccessor(field, key);
 
             if (accessor == null) {
-                accessor = createAccessorFromField(field, key);
+                accessor = Accessor.create(field, key);
             }
 
             if (accessor != null) {
@@ -400,17 +395,15 @@ public class WriteOptions {
         return Collections.unmodifiableList(accessors);
     }
 
-    private Accessor findAccessor(Field field, Map<String, Method> possibleMethods, String key) {
+    private Accessor findAccessor(Field field, String key) {
         for (final AccessorFactory factory : this.accessorFactories) {
             try {
-                final Accessor accessor = factory.createAccessor(field, this.nonStandardMappings, possibleMethods, key);
+                final Accessor accessor = factory.createAccessor(field, this.nonStandardMappings, key);
 
                 if (accessor != null) {
                     return accessor;
                 }
-            } catch (ThreadDeath td) {
-                throw td;
-            } catch (Throwable e) {
+            } catch (Exception e) {
                 // Handle the exception if needed
                 return null;
             }
@@ -453,23 +446,10 @@ public class WriteOptions {
         return true;
     }
 
-    private Map<String, Method> getDeepDeclaredMethods(Class<?> c) {
-        return deepMethodCache.computeIfAbsent(c, this::buildDeepMethods);
-    }
-
     public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> deepExcludedFields) {
         return deepFieldCache.computeIfAbsent(c, cls -> this.buildDeepFieldMap(cls, deepExcludedFields));
     }
 
-    private static Accessor createAccessorFromField(Field field, String key) {
-        try {
-            return new Accessor(field, key);
-        } catch (ThreadDeath td) {
-            throw td;
-        } catch (Throwable t) {
-            return null;
-        }
-    }
 
     /**
      * Builds a list of methods with zero parameter methods taking precedence over overrides

@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReturnType;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

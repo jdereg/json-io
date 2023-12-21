@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.reflect.factories;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,27 +26,21 @@ import com.cedarsoftware.util.reflect.AccessorFactory;
  */
 public class MethodAccessorFactory implements AccessorFactory {
     @Override
-    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, Map<String, Method> possibleAccessors, String key) throws Throwable {
+    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
         String fieldName = field.getName();
 
         Optional<String> possibleMethod = getMapping(mappings, field.getDeclaringClass(), fieldName);
 
-        Method method = possibleAccessors.get(possibleMethod.orElse(createGetterName(fieldName)));
+        String method = possibleMethod.orElse(createGetterName(fieldName));
+
+        Accessor accessor = Accessor.create(field, method, key);
 
         final Class<?> c = field.getType();
-        if (method == null && (c == Boolean.class || c == boolean.class)) {
-            method = possibleAccessors.get(createIsName(fieldName));
+        if (accessor == null && (c == Boolean.class || c == boolean.class)) {
+            accessor = Accessor.create(field, createIsName(fieldName), key);
         }
 
-        if (method == null || !method.getReturnType().isAssignableFrom(field.getType())) {
-            return null;
-        }
-
-        try {
-            return new Accessor(field, method, key);
-        } catch (Throwable t) {
-            return null;
-        }
+        return accessor;
     }
 
     /**
@@ -68,10 +61,5 @@ public class MethodAccessorFactory implements AccessorFactory {
      */
     public static String createIsName(String fieldName) {
         return "is" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
-    }
-
-    @Override
-    public AccessorFactory createCopy() {
-        return new MethodAccessorFactory();
     }
 }

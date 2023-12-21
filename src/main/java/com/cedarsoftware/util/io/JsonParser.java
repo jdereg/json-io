@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.reflect.ClassDescriptors;
 import com.cedarsoftware.util.reflect.Injector;
 

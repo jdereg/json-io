@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -11,17 +15,13 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.CalendarFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

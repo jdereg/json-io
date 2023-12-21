@@ -29,6 +29,11 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
         return YearMonth.of(1950, 1);
     }
 
+    @Override
+    protected Class<YearMonth> getTestClass() {
+        return YearMonth.class;
+    }
+
 
     @Override
     protected boolean isReferenceable() {
@@ -36,14 +41,14 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedYearMonth(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected YearMonth[] extractNestedInObject(Object o) {
+    protected YearMonth[] extractNestedInObject_withMatchingFieldTypes(Object o) {
         NestedYearMonth nested = (NestedYearMonth) o;
 
         return new YearMonth[]{
@@ -53,7 +58,7 @@ class YearMonthTests extends SerializationDeserializationMinimumTests<YearMonth>
     }
 
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedYearMonth(provideT1());
     }
 

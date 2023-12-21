@@ -274,7 +274,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public boolean writeArrayElementIfMatching(Class<?> arrayComponentClass, Object o, boolean showType, Writer output)
     {
-        if (!o.getClass().isAssignableFrom(arrayComponentClass) || writeOptions.isNotCustomWrittenClass(o.getClass()))
+        if (!arrayComponentClass.isAssignableFrom(o.getClass()) || writeOptions.isNotCustomWrittenClass(o.getClass()))
         {
             return false;
         }
@@ -303,7 +303,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             showType = false;
         }
-        JsonClassWriter closestWriter = writeOptions.getCustomWriter(arrayComponentClass);
+        JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
         if (closestWriter == null)
         {
@@ -742,22 +742,20 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             final Class<?> componentClass = array.getClass().getComponentType();
             final boolean isPrimitiveArray = Primitives.isPrimitive(componentClass);
-
             for (int i = 0; i < len; i++)
             {
                 final Object value = Array.get(array, i);
 
-                if (value == null)
-                {
+                if (value == null) {
                     output.write("null");
-                }
-                else if (writeArrayElementIfMatching(componentClass, value, false, output)) { }
-                else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double)
-                {
-                    writePrimitive(value, value.getClass() != componentClass);
-                } else {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
-                    writeImpl(value, !(writeOptions.isNeverShowingType() && Primitives.isPrimitive(value.getClass())) &&
-                            (isForceType(value.getClass(), componentClass) || writeOptions.isAlwaysShowingType()));
+                } else {
+                    final boolean forceType = isForceType(value.getClass(), componentClass);
+                    if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                    } else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double) {
+                        writePrimitive(value, value.getClass() != componentClass);
+                    } else {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
+                        writeImpl(value, forceType);
+                    }
                 }
 
                 if (i != lenMinus1)
@@ -1022,19 +1020,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
             if (value == null) {
                 output.write("null");
-            } else if (Character.class == componentClass || char.class == componentClass) {
-                writeJsonUtf8String(output, (String) value);
-            } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
-                writePrimitive(value, value.getClass() != componentClass);
-            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
-                writePrimitive(value, false);
-            } else if (value instanceof String) {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
-                writeJsonUtf8String(output, (String) value);
-            } else if (writeArrayElementIfMatching(componentClass, value, false, output)) {
-            } else {   // Specific Class-type arrays - only force type when
-                // the instance is derived from array base class.
-                boolean forceType = isForceType(value.getClass(), componentClass);
-                writeImpl(value, forceType || getWriteOptions().isAlwaysShowingType());
+            } else {
+                final boolean forceType = isForceType(value.getClass(), componentClass);
+                if (Character.class == componentClass || char.class == componentClass) {
+                    writeJsonUtf8String(output, (String) value);
+                } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
+                    writePrimitive(value, value.getClass() != componentClass);
+                } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
+                    writePrimitive(value, false);
+                } else if (value instanceof String) {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
+                    writeJsonUtf8String(output, (String) value);
+                } else if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                } else {   // Specific Class-type arrays - only force type when
+                    // the instance is derived from array base class.
+                    writeImpl(value, forceType);
+                }
             }
 
             if (i != lenMinus1) {
@@ -1647,14 +1647,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
     }
 
-    private Object getValueByReflect(Object obj, Accessor accessor) {
-        try {
-            return accessor.retrieve(obj);
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
     private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException
     {
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
@@ -1703,14 +1695,32 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
 
         // When no type is written we can check the Object itself not the declaration
-        boolean primitiveCondition = Primitives.isPrimitive(type) || (writeOptions.isNeverShowingType() && Primitives.isPrimitive(o.getClass()));
-        boolean showType = !primitiveCondition && (forceType || writeOptions.isAlwaysShowingType());
-
-        writeImpl(o, showType);
+        writeImpl(o, forceType);
         return false;
     }
 
     private boolean isForceType(Class<?> objectClass, Class<?> declaredType) {
+        // When no type is written we can check the Object itself not the declaration
+        final boolean writeLongsAsStrings = writeOptions.isWriteLongsAsStrings();
+        final boolean objectClassIsLongWrittenAsString = (objectClass == Long.class || objectClass == long.class) && writeLongsAsStrings;
+        final boolean declaredClassIsLongWrittenAsString = (declaredType == Long.class || objectClass == long.class) && writeLongsAsStrings;
+
+        final boolean isNativeJson = Primitives.isNativeJsonType(objectClass) && !objectClassIsLongWrittenAsString;
+        final boolean isPrimitiveDeclaredType = Primitives.isPrimitive(declaredType) && !declaredClassIsLongWrittenAsString;
+        final boolean isPrimitiveObjectClass = writeOptions.isNeverShowingType() && Primitives.isPrimitive(objectClass) && !objectClassIsLongWrittenAsString;
+
+        final boolean primitiveCondition = isNativeJson ||
+                isPrimitiveDeclaredType ||
+                isPrimitiveObjectClass;
+
+        if (primitiveCondition) {
+            return false;
+        }
+
+        if (writeOptions.isAlwaysShowingType()) {
+            return true;
+        }
+
         if (objectClass == declaredType) {
             return false;
         }
@@ -1720,7 +1730,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return declaredType != optionalClass.orElse(null);
         }
 
-        return writeOptions.getCustomWriter(declaredType) == null;
+        return true;
     }
 
     public void flush()
@@ -1769,12 +1779,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public static void writeBasicString(final Writer writer, String s) throws IOException {
         writer.write('\"');
         writer.write(s);
-        writer.write('\"');
-    }
-
-    public static void writeJsonUtf8Char(final Writer writer, char c) throws IOException {
-        writer.write('\"');
-        writeChar(writer, c);
         writer.write('\"');
     }
 

@@ -33,6 +33,11 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
         return Year.of(1950);
     }
 
+    @Override
+    protected Class<Year> getTestClass() {
+        return Year.class;
+    }
+
 
     @Override
     protected boolean isReferenceable() {
@@ -40,14 +45,14 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedYear(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected Year[] extractNestedInObject(Object o) {
+    protected Year[] extractNestedInObject_withMatchingFieldTypes(Object o) {
         NestedYear nested = (NestedYear) o;
 
         return new Year[]{
@@ -57,7 +62,7 @@ class YearTests extends SerializationDeserializationMinimumTests<Year> {
     }
 
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedYear(provideT1());
     }
 

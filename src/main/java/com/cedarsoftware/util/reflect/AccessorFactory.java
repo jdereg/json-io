@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.reflect;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,13 +26,10 @@ public interface AccessorFactory {
      * Creates accessors for accessing data from an object.
      *
      * @param field           The field we're trying to access
-     * @param possibleMethods a map of possible methods from the class itself
-     * @param key
+     * @param key             The uniqueName to use as a key in the cache map.
      * @return The accessor if one fits for this field, otherwise null.
      */
-    Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, Map<String, Method> possibleMethods, String key) throws Throwable;
-
-    AccessorFactory createCopy();
+    Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, String key);
 
     default Optional<String> getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
         Map<String, String> mapping = classToMapping.get(c);

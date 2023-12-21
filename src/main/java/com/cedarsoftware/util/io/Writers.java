@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.MonthDayFactory;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -21,9 +24,6 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
-
-import com.cedarsoftware.util.io.factory.MonthDayFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
 
@@ -75,23 +75,6 @@ public class Writers
         @Override
         public boolean hasPrimitiveForm() { return true; }
     }
-
-    /**
-     * Used for Native JSON primitives that never need to write their type.
-     */
-    public static class NativeJsonPrimitive implements JsonWriter.JsonClassWriter {
-        @Override
-        public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException {
-            writePrimitiveForm(obj, output, context);
-        }
-
-        @Override
-        public boolean hasPrimitiveForm() {
-            return true;
-        }
-    }
-
-
 
     /**
      * Used as a template to write out primitive value types such as int, boolean, etc. that we extract as a String,
