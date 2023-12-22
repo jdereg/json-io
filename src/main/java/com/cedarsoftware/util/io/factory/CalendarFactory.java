@@ -99,10 +99,6 @@ public class CalendarFactory implements JsonReader.ClassFactory {
         }
     }
 
-    private Class<?> extractClass(JsonObject jObj) {
-        return jObj.getJavaType();
-    }
-
     @Override
     public boolean isObjectFinal() {
         return true;

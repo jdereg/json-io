@@ -230,6 +230,9 @@ public final class Converter {
             return simpleDateFormat.format(((Calendar) fromInstance).getTime());
         } else if (fromInstance instanceof Enum) {
             return ((Enum) fromInstance).name();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convertToString(map.get("value"));
         }
         return nope(fromInstance, "String");
     }
@@ -244,8 +247,7 @@ public final class Converter {
             }
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            Class<?> clazz = convertToClass(map.get("value"));
-            return clazz;
+            return convertToClass(map.get("value"));
         }
         throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Class'");
     }
