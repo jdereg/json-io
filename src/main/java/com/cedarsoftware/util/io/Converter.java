@@ -242,6 +242,10 @@ public final class Converter {
             if (clazz != null) {
                 return clazz;
             }
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            Class<?> clazz = convertToClass(map.get("value"));
+            return clazz;
         }
         throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Class'");
     }
@@ -266,7 +270,7 @@ public final class Converter {
                     long leastSigBits = convert2long(map.get("leastSigBits"));
                     return new UUID(mostSigBits, leastSigBits);
                 } else {
-                    throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both a 'mostSigBits' and 'leastSigBits' key.");
+                    throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
                 }
             }
         } catch (Exception e) {
@@ -310,6 +314,9 @@ public final class Converter {
                 return new BigDecimal((BigInteger) fromInstance);
             } else if (fromInstance instanceof Long) {
                 return new BigDecimal((Long) fromInstance);
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2BigDecimal(map.get("value"));
             } else if (fromInstance instanceof AtomicLong) {
                 return new BigDecimal(((AtomicLong) fromInstance).get());
             } else if (fromInstance instanceof Number) {
@@ -379,6 +386,9 @@ public final class Converter {
                 BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
                 // Shift the most significant bits to the left and add the least significant bits
                 return mostSignificant.shiftLeft(64).add(leastSignificant);
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2BigInteger(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -439,11 +449,11 @@ public final class Converter {
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
-                    long time = convert2long(map.get("time"));
-                    // ignore nanos if supplied
-                    return new java.sql.Date(time);
+                    return convertToSqlDate(map.get("time"));
+                } else if (map.containsKey("value")) {
+                    return convertToSqlDate(map.get("value"));
                 } else {
-                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' key");
+                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
                 }
             } else if (fromInstance instanceof BigInteger) {
                 return new java.sql.Date(((BigInteger) fromInstance).longValue());
@@ -549,11 +559,11 @@ public final class Converter {
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
-                    long time = convert2long(map.get("time"));
-                    // ignore nanos if presente
-                    return new Date(time);
+                    return convertToDate(map.get("time"));
+                } else if (map.containsKey("value")) {
+                    return convertToDate(map.get("value"));
                 } else {
-                    throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' key or a 'value' key");
+                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
                 }
             } else if (fromInstance instanceof BigInteger) {
                 return new Date(((BigInteger) fromInstance).longValue());
@@ -602,6 +612,9 @@ public final class Converter {
             } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convertToLocalDate(map.get("value"));
             }
         } catch (JsonIoException e) {
             throw e;
@@ -643,6 +656,9 @@ public final class Converter {
             } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convertToLocalDateTime(map.get("value"));
             }
         } catch (JsonIoException e) {
             throw e;
@@ -684,6 +700,9 @@ public final class Converter {
             } else if (fromInstance instanceof AtomicLong) {
                 AtomicLong atomicLong = (AtomicLong) fromInstance;
                 return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault());
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convertToZonedDateTime(map.get("value"));
             }
         } catch (JsonIoException e) {
             throw e;
@@ -733,6 +752,9 @@ public final class Converter {
                 return (char) Integer.parseInt(((String) fromInstance).trim());
             } else if (fromInstance instanceof Number) {
                 return (char) ((Number) fromInstance).shortValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2char(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (boolean) fromInstance ? '1' : '0';
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -784,6 +806,9 @@ public final class Converter {
                 return (Byte) fromInstance;
             } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).byteValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2byte(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -833,6 +858,9 @@ public final class Converter {
                 return (Short) fromInstance;
             } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).shortValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2short(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -876,14 +904,16 @@ public final class Converter {
                 }
                 try {
                     return Integer.valueOf(((String) fromInstance).trim());
-                }
-                catch (NumberFormatException e) {
+                } catch (NumberFormatException e) {
                     long value = convertToBigDecimal(fromInstance).longValue();
                     if (value < -2147483648 || value > 2147483647) {
                         throw new NumberFormatException("Integer value: " + fromInstance + " outside -2147483648 to 2147483647");
                     }
                     return (int) value;
                 }
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2int(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -935,6 +965,9 @@ public final class Converter {
                 }
             } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).longValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2long(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? LONG_ONE : LONG_ZERO;
             } else if (fromInstance instanceof Date) {
@@ -987,6 +1020,9 @@ public final class Converter {
                 return (Float) fromInstance;
             } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).floatValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2float(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -1027,6 +1063,9 @@ public final class Converter {
                 return (Double) fromInstance;
             } else if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).doubleValue();
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2double(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO;
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -1066,10 +1105,12 @@ public final class Converter {
             } else if ("false".equals(fromInstance)) {
                 return false;
             }
-
             return "true".equalsIgnoreCase((String) fromInstance);
         } else if (fromInstance instanceof Number) {
             return ((Number) fromInstance).longValue() != 0;
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert2boolean(map.get("value"));
         } else if (fromInstance instanceof AtomicBoolean) {
             return ((AtomicBoolean) fromInstance).get();
         }
@@ -1104,6 +1145,9 @@ public final class Converter {
                 return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
             } else if (fromInstance instanceof Number) {
                 return new AtomicInteger(((Number) fromInstance).intValue());
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2AtomicInteger(map.get("value"));
             } else if (fromInstance instanceof Boolean) {
                 return (Boolean) fromInstance ? new AtomicInteger(1) : new AtomicInteger(0);
             } else if (fromInstance instanceof AtomicBoolean) {
@@ -1148,6 +1192,9 @@ public final class Converter {
                 return new AtomicLong(((AtomicLong) fromInstance).get());
             } else if (fromInstance instanceof Number) {
                 return new AtomicLong(((Number) fromInstance).longValue());
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert2AtomicLong(map.get("value"));
             } else if (fromInstance instanceof Date) {
                 return new AtomicLong(((Date) fromInstance).getTime());
             } else if (fromInstance instanceof LocalDate) {
@@ -1201,6 +1248,9 @@ public final class Converter {
             return new AtomicBoolean((Boolean) fromInstance);
         } else if (fromInstance instanceof Number) {
             return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert2AtomicBoolean(map.get("value"));
         }
         nope(fromInstance, "AtomicBoolean");
         return null;

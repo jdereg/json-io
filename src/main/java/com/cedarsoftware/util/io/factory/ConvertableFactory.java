@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io.factory;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
 
 import static com.cedarsoftware.util.io.MetaUtils.convert;
@@ -27,18 +26,25 @@ import static com.cedarsoftware.util.io.MetaUtils.convert;
  */
 public abstract class ConvertableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-        if (value instanceof JsonObject) {
+        Object value;
+        if (jObj.hasValue()) {
+            return convert(getType(), jObj.getValue());
+        } else {
+            Class<?> type;
+            value = jObj;
             do {
                 // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-                JsonObject jsonObject = (JsonObject) value;
-                if (!jsonObject.hasValue()) {
-                    throw new JsonIoException("Unknown JSON {}, expecting single value type. Line: " + jsonObject.getLine() + ", col: " + jsonObject.getCol());
+                type = jObj.getJavaType();
+                if (!jObj.hasValue()) {
+                    break;
                 }
-                value = jsonObject.getValue();
+                value = jObj.getValue();
             } while (value instanceof JsonObject);
+            if (type == null) {
+                type = getType();
+            }
+            return convert(type, value);
         }
-        return convert(getType(), value);
     }
 
     public abstract Class<?> getType();

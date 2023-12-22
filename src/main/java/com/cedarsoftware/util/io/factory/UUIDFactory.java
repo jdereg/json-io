@@ -24,34 +24,9 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class UUIDFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-        if (value instanceof String) {
-            try {
-                return UUID.fromString((String) value);
-            }
-            catch (Exception e) {
-                throw new JsonIoException("Unable to load UUID from JSON string: " + value, e);
-            }
-        }
-
-        Long mostSigBits = (Long) jObj.get("mostSigBits");
-        if (mostSigBits == null) {
-            throw new JsonIoException("java.util.UUID must specify 'mostSigBits' field and it cannot be empty in JSON");
-        }
-        Long leastSigBits = (Long) jObj.get("leastSigBits");
-        if (leastSigBits == null) {
-            throw new JsonIoException("java.util.UUID must specify 'leastSigBits' field and it cannot be empty in JSON");
-        }
-
-        return new UUID(mostSigBits, leastSigBits);
-    }
-
-    /**
-     * @return true.  UUIDs are always immutable, final.
-     */
-    public boolean isObjectFinal() {
-        return true;
+public class UUIDFactory extends ConvertableFactory {
+    @Override
+    public Class<?> getType() {
+        return UUID.class;
     }
 }

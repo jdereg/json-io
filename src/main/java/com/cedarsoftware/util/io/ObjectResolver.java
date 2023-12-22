@@ -715,9 +715,9 @@ public class ObjectResolver extends Resolver
                     if (factoryCreated != null && jsonObj.isFinished) {
                         return factoryCreated;
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (JsonIoException e) {
+                    throw e;
+                } catch (Exception e) {
                     if (e instanceof JsonIoException) {
                         throw e;
                     }
