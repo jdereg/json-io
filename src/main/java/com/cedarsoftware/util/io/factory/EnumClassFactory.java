@@ -55,8 +55,8 @@ public class EnumClassFactory implements JsonReader.ClassFactory {
     }
 
 
-    protected String getEnumName(JsonObject job) {
-        String name = (String) job.get("Enum.name");
-        return name != null ? name : (String) job.get("name");
+    protected String getEnumName(JsonObject jObj) {
+        String name = (String) jObj.get("Enum.name");
+        return name != null ? name : (String) jObj.get("name");
     }
 }

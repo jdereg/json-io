@@ -41,8 +41,8 @@ public class LongTest
         Assertions.assertEquals(710L, that._polyRefTarget);
         Assertions.assertEquals(710L, that._polyRef);
         Assertions.assertEquals(710L, that._polyNotRef);
-        Assertions.assertSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
-        Assertions.assertSame(that._polyNotRef, that._polyRef);
+        Assertions.assertNotSame(that._polyRef, that._polyRefTarget);
+        Assertions.assertNotSame(that._polyNotRef, that._polyRef);
 
         Assertions.assertEquals(6, that._typeArray.length);
         Assertions.assertSame(that._typeArray[0], that._arrayElement);

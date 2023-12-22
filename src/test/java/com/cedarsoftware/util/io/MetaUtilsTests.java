@@ -97,14 +97,14 @@ public class MetaUtilsTests {
         try {
             MetaUtils.convert(TimeZone.class, "");
             fail();
-        } catch (JsonIoException e) {
+        } catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported type", "TimeZone");
         }
         
         try {
             MetaUtils.convert(Float.class, "float");
             fail();
-        } catch (JsonIoException e) {
+        } catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "(float)", "not be converted", "Float");
         }
 

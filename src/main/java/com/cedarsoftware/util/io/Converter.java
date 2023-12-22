@@ -66,88 +66,249 @@ public final class Converter {
     public static final Double DOUBLE_ONE = 1.0d;
     public static final BigDecimal BIG_DECIMAL_ZERO = BigDecimal.ZERO;
     public static final BigInteger BIG_INTEGER_ZERO = BigInteger.ZERO;
-    private static final Map<Class<?>, Work<?>> conversion = new HashMap<>();
-    private static final Map<Class<?>, Work<?>> conversionToString = new HashMap<>();
-
-    protected interface Work<T> {
-        Object convert(T fromInstance);
+    private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toShort = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLong = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
+    private static final Map<Class<?>, Object> fromNull = new HashMap<>();
+    
+    protected interface Convert<T> {
+        T convert(Object fromInstance);
     }
 
     static {
-        conversion.put(String.class, Converter::convertToString);
-        conversion.put(long.class, Converter::convert2long);
-        conversion.put(Long.class, Converter::convertToLong);
-        conversion.put(int.class, Converter::convert2int);
-        conversion.put(Integer.class, Converter::convertToInteger);
-        conversion.put(short.class, Converter::convert2short);
-        conversion.put(Short.class, Converter::convertToShort);
-        conversion.put(byte.class, Converter::convert2byte);
-        conversion.put(Byte.class, Converter::convertToByte);
-        conversion.put(char.class, Converter::convert2char);
-        conversion.put(boolean.class, Converter::convert2boolean);
-        conversion.put(Boolean.class, Converter::convertToBoolean);
-        conversion.put(double.class, Converter::convert2double);
-        conversion.put(Double.class, Converter::convertToDouble);
-        conversion.put(float.class, Converter::convert2float);
-        conversion.put(Float.class, Converter::convertToFloat);
-        conversion.put(Character.class, Converter::convertToCharacter);
-        conversion.put(Calendar.class, Converter::convertToCalendar);
-        conversion.put(Date.class, Converter::convertToDate);
-        conversion.put(LocalDate.class, Converter::convertToLocalDate);
-        conversion.put(LocalDateTime.class, Converter::convertToLocalDateTime);
-        conversion.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
-        conversion.put(BigDecimal.class, Converter::convertToBigDecimal);
-        conversion.put(BigInteger.class, Converter::convertToBigInteger);
-        conversion.put(java.sql.Date.class, Converter::convertToSqlDate);
-        conversion.put(Timestamp.class, Converter::convertToTimestamp);
-        conversion.put(AtomicInteger.class, Converter::convertToAtomicInteger);
-        conversion.put(AtomicLong.class, Converter::convertToAtomicLong);
-        conversion.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
-        conversion.put(Class.class, Converter::convertToClass);
-        conversion.put(UUID.class, Converter::convertToUUID);
+        fromNull.put(byte.class, (byte)0);
+        fromNull.put(short.class, (short)0);
+        fromNull.put(int.class, 0);
+        fromNull.put(long.class, 0L);
+        fromNull.put(float.class, 0.0f);
+        fromNull.put(double.class, 0.0d);
+        fromNull.put(boolean.class, false);
+        fromNull.put(char.class, (char)0);
 
-        conversionToString.put(String.class, fromInstance -> fromInstance);
-        conversionToString.put(BigDecimal.class, fromInstance -> {
-            BigDecimal bd = convertToBigDecimal(fromInstance);
-            return bd.stripTrailingZeros().toPlainString();
-        });
-        conversionToString.put(BigInteger.class, fromInstance -> {
-            BigInteger bi = convertToBigInteger(fromInstance);
-            return bi.toString();
-        });
-        Work<?> toString = Object::toString;
-        conversionToString.put(Boolean.class, toString);
-        conversionToString.put(AtomicBoolean.class, toString);
-        conversionToString.put(Byte.class, toString);
-        conversionToString.put(Short.class, toString);
-        conversionToString.put(Integer.class, toString);
-        conversionToString.put(AtomicInteger.class, toString);
-        conversionToString.put(Long.class, toString);
-        conversionToString.put(AtomicLong.class, toString);
+        fromNull.put(Byte.class, null);
+        fromNull.put(Short.class, null);
+        fromNull.put(Integer.class, null);
+        fromNull.put(Long.class, null);
+        fromNull.put(Float.class, null);
+        fromNull.put(Double.class, null);
+        fromNull.put(Boolean.class, null);
+        fromNull.put(Character.class, null);
 
-        // Should eliminate possibility of 'e' (exponential) notation
-        Work<?> toNoExpString = Object::toString;
-        conversionToString.put(Double.class, toNoExpString);
-        conversionToString.put(Float.class, toNoExpString);
-        conversionToString.put(Class.class, fromInstance -> {
-            Class<?> clazz = (Class<?>) fromInstance;
-            return clazz.getName();
+        fromNull.put(String.class, null);
+
+        converters.put(byte.class, Converter::convertToByte);
+        converters.put(Byte.class, Converter::convertToByte);
+        converters.put(short.class, Converter::convertToShort);
+        converters.put(Short.class, Converter::convertToShort);
+        converters.put(int.class, Converter::convertToInteger);
+        converters.put(Integer.class, Converter::convertToInteger);
+        converters.put(long.class, Converter::convertToLong);
+        converters.put(Long.class, Converter::convertToLong);
+        converters.put(float.class, Converter::convertToFloat);
+        converters.put(Float.class, Converter::convertToFloat);
+        converters.put(double.class, Converter::convertToDouble);
+        converters.put(Double.class, Converter::convertToDouble);
+        converters.put(boolean.class, Converter::convert2boolean);
+        converters.put(Boolean.class, Converter::convertToBoolean);
+        converters.put(char.class, Converter::convert2char);
+        converters.put(Character.class, Converter::convertToCharacter);
+        converters.put(BigDecimal.class, Converter::convertToBigDecimal);
+        converters.put(BigInteger.class, Converter::convertToBigInteger);
+        converters.put(AtomicInteger.class, Converter::convertToAtomicInteger);
+        converters.put(AtomicLong.class, Converter::convertToAtomicLong);
+        converters.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
+        converters.put(String.class, Converter::convertToString);
+        converters.put(Class.class, Converter::convertToClass);
+        converters.put(Calendar.class, Converter::convertToCalendar);
+        converters.put(Date.class, Converter::convertToDate);
+        converters.put(LocalDate.class, Converter::convertToLocalDate);
+        converters.put(LocalDateTime.class, Converter::convertToLocalDateTime);
+        converters.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
+        converters.put(java.sql.Date.class, Converter::convertToSqlDate);
+        converters.put(Timestamp.class, Converter::convertToTimestamp);
+        converters.put(UUID.class, Converter::convertToUUID);
+
+        // ? to Byte/byte
+        toByte.put(byte.class, fromInstance -> fromInstance);
+        toByte.put(Byte.class, fromInstance -> fromInstance);
+        toByte.put(boolean.class, fromInstance -> (boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
+        toByte.put(Boolean.class, fromInstance -> (boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
+        toShort.put(char.class, fromInstance -> (byte) ((char) fromInstance));
+        toShort.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
+        toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
+        toByte.put(Map.class, fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), Byte.class);
         });
-        conversionToString.put(UUID.class, Object::toString);
-        conversionToString.put(Date.class, fromInstance -> {
+        toByte.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return BYTE_ZERO;
+            }
+            try {
+                return Byte.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
+                }
+                return (byte) value;
+            }
+        });
+
+        // ? to Short/short
+        toShort.put(short.class, fromInstance -> fromInstance);
+        toShort.put(Short.class, fromInstance -> fromInstance);
+        toShort.put(boolean.class, fromInstance -> (boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(Boolean.class, fromInstance -> (boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(char.class, fromInstance -> (short) ((char) fromInstance));
+        toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
+        toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return SHORT_ZERO;
+            }
+            try {
+                return Short.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
+                }
+                return (short) value;
+            }
+        });
+
+        // ? to Integer/int
+        toInteger.put(int.class, fromInstance -> fromInstance);
+        toInteger.put(Integer.class, fromInstance -> fromInstance);
+        toInteger.put(boolean.class, fromInstance -> (boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(Boolean.class, fromInstance -> (boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(char.class, fromInstance -> (int) ((char) fromInstance));
+        toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
+        toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return INTEGER_ZERO;
+            }
+            try {
+                return Integer.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
+                }
+                return (int) value;
+            }
+        });
+
+        // ? to Long/long
+        toLong.put(int.class, fromInstance -> fromInstance);
+        toLong.put(Integer.class, fromInstance -> fromInstance);
+        toLong.put(boolean.class, fromInstance -> (boolean) fromInstance ? LONG_ONE : LONG_ZERO);
+        toLong.put(Boolean.class, fromInstance -> (boolean) fromInstance ? LONG_ONE : LONG_ZERO);
+        toLong.put(char.class, fromInstance -> (long) ((char) fromInstance));
+        toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
+        toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
+        toLong.put(Date.class, fromInstance -> ((Date) fromInstance).getTime());
+        toLong.put(LocalDate.class, fromInstance -> localDateToMillis((LocalDate) fromInstance));
+        toLong.put(LocalDateTime.class, fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
+        toLong.put(ZonedDateTime.class, fromInstance -> zonedDateTimeToMillis((ZonedDateTime)fromInstance));
+        toLong.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return LONG_ZERO;
+            }
+            try {
+                return Long.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                return convertToBigDecimal(fromInstance).longValue();
+            }
+        });
+
+        // ? to Float/float
+        toFloat.put(float.class, fromInstance -> fromInstance);
+        toFloat.put(Float.class, fromInstance -> fromInstance);
+        toFloat.put(boolean.class, fromInstance -> (boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
+        toFloat.put(Boolean.class, fromInstance -> (boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
+        toFloat.put(char.class, fromInstance -> (float) ((char) fromInstance));
+        toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
+        toFloat.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
+        toFloat.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return FLOAT_ZERO;
+            }
+            try {
+                return Float.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                double value = convert(fromInstance, double.class);
+                if (value < Float.MIN_VALUE || value > Float.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Float.MIN_VALUE + " to " + Float.MAX_VALUE);
+                }
+                return (float) value;
+            }
+        });
+
+        // ? to Double/double
+        toDouble.put(double.class, fromInstance -> fromInstance);
+        toDouble.put(Double.class, fromInstance -> fromInstance);
+        toDouble.put(boolean.class, fromInstance -> (boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
+        toDouble.put(Boolean.class, fromInstance -> (boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
+        toDouble.put(char.class, fromInstance -> (double) ((char) fromInstance));
+        toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
+        toDouble.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
+        toDouble.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return DOUBLE_ZERO;
+            }
+            try {
+                return Double.valueOf(((String) fromInstance).trim());
+            }
+            catch (NumberFormatException e) {
+                return convertToBigDecimal(fromInstance).doubleValue();
+            }
+        });
+
+        // ? to String
+        Convert<?> toString = Object::toString;
+        Convert<?> toNoExpString = Object::toString;
+        toStr.put(String.class, fromInstance -> fromInstance);
+        toStr.put(Boolean.class, toString);
+        toStr.put(AtomicBoolean.class, toString);
+        toStr.put(Byte.class, toString);
+        toStr.put(Short.class, toString);
+        toStr.put(Integer.class, toString);
+        toStr.put(AtomicInteger.class, toString);
+        toStr.put(BigInteger.class, fromInstance -> convertToBigInteger(fromInstance).toString());
+        toStr.put(Long.class, toString);
+        toStr.put(AtomicLong.class, toString);
+        toStr.put(Double.class, toNoExpString);
+        toStr.put(BigDecimal.class, fromInstance -> convertToBigDecimal(fromInstance).stripTrailingZeros().toPlainString());
+        toStr.put(Float.class, toNoExpString);
+        toStr.put(Class.class, fromInstance -> ((Class<?>) fromInstance).getName());
+        toStr.put(UUID.class, Object::toString);
+        toStr.put(Date.class, fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance).getTime());
         });
-        conversionToString.put(Character.class, fromInstance -> "" + fromInstance);
-        conversionToString.put(LocalDate.class, fromInstance -> {
+        toStr.put(Character.class, fromInstance -> "" + fromInstance);
+        toStr.put(LocalDate.class, fromInstance -> {
             LocalDate localDate = (LocalDate) fromInstance;
             return String.format("%04d-%02d-%02d", localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
         });
-        conversionToString.put(LocalDateTime.class, fromInstance -> {
+        toStr.put(LocalDateTime.class, fromInstance -> {
             LocalDateTime localDateTime = (LocalDateTime) fromInstance;
             return String.format("%04d-%02d-%02dT%02d:%02d:%02d", localDateTime.getYear(), localDateTime.getMonthValue(), localDateTime.getDayOfMonth(), localDateTime.getHour(), localDateTime.getMinute(), localDateTime.getSecond());
         });
-        conversionToString.put(ZonedDateTime.class, fromInstance -> {
+        toStr.put(ZonedDateTime.class, fromInstance -> {
             ZonedDateTime zonedDateTime = (ZonedDateTime) fromInstance;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
             return zonedDateTime.format(formatter);
@@ -179,9 +340,9 @@ public final class Converter {
      * @param toType       Class which indicates the targeted (final) data type.
      *                     Please note that in addition to the 8 Java primitives, the targeted class
      *                     can also be Date.class, String.class, BigInteger.class, BigDecimal.class, and
-     *                     the Atomic classes.  The primitive class can be either primitive class or primitive
-     *                     wrapper class, however, the returned value will always [obviously] be a primitive
-     *                     wrapper.
+     *                     many other JDK classes, including Map.  For Map, often it will seek a 'value'
+     *                     field, however, for some complex objects, like UUID, it will look for specific
+     *                     fields within the Map to perform the conversion.
      * @return An instanceof targetType class, based upon the value passed in.
      */
     @SuppressWarnings("unchecked")
@@ -190,49 +351,36 @@ public final class Converter {
             throw new JsonIoException("Type cannot be null in Converter.convert(value, type)");
         }
 
-        Work work = conversion.get(toType);
-        if (work != null) {
-            return (T) work.convert(fromInstance);
+        if (fromInstance == null && fromNull.containsKey(toType)) {
+            return (T) fromNull.get(toType);
         }
-        throw new JsonIoException("Unsupported type '" + toType.getName() + "' for conversion");
+        
+        Convert<?> converter = converters.get(toType);
+        if (converter != null) {
+            return (T) converter.convert(fromInstance);
+        }
+        
+        throw new IllegalArgumentException("Unsupported type '" + toType.getName() + "' for conversion");
     }
 
-    /**
-     * Convert from the passed in instance to a String.  If null is passed in, this method will return "".
-     * Possible inputs are any primitive or primitive wrapper, Date (returns ISO-DATE format: 2020-04-10T12:15:47),
-     * Calendar (returns ISO-DATE format: 2020-04-10T12:15:47), any Enum (returns Enum's name()), BigDecimal,
-     * BigInteger, AtomicBoolean, AtomicInteger, AtomicLong, and Character.
-     */
-    public static String convert2String(Object fromInstance) {
-        if (fromInstance == null) {
-            return "";
-        }
-        return convertToString(fromInstance);
-    }
+    private static String convertToString(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toStr.get(fromType);
 
-    /**
-     * Convert from the passed in instance to a String.  If null is passed in, this method will return null.
-     * Possible inputs are any primitive/primitive wrapper, Date (returns ISO-DATE format: 2020-04-10T12:15:47),
-     * Calendar (returns ISO-DATE format: 2020-04-10T12:15:47), any Enum (returns Enum's name()), BigDecimal,
-     * BigInteger, AtomicBoolean, AtomicInteger, AtomicLong, and Character.
-     */
-    @SuppressWarnings("unchecked")
-    public static String convertToString(Object fromInstance) {
-        if (fromInstance == null) {
-            return null;
+        // Handle straight Class to Class case
+        if (converter != null) {
+            return (String) converter.convert(fromInstance);
         }
-        Class<?> clazz = fromInstance.getClass();
-        Work work = conversionToString.get(clazz);
-        if (work != null) {
-            return (String) work.convert(fromInstance);
-        } else if (fromInstance instanceof Calendar) {   // Done this way (as opposed to putting a closure in conversionToString) because Calendar.class is not == to GregorianCalendar.class
+
+        // Handle Class isAssignable Class cases
+        if (fromInstance instanceof Calendar) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Calendar) fromInstance).getTime());
         } else if (fromInstance instanceof Enum) {
-            return ((Enum) fromInstance).name();
+            return ((Enum<?>) fromInstance).name();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convertToString(map.get("value"));
+            return convert(map.get("value"), String.class);
         }
         return nope(fromInstance, "String");
     }
@@ -268,8 +416,8 @@ public final class Converter {
             else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
-                    long mostSigBits = convert2long(map.get("mostSigBits"));
-                    long leastSigBits = convert2long(map.get("leastSigBits"));
+                    long mostSigBits = convert(map.get("mostSigBits"), long.class);
+                    long leastSigBits = convert(map.get("leastSigBits"), long.class);
                     return new UUID(mostSigBits, leastSigBits);
                 } else {
                     throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
@@ -507,8 +655,8 @@ public final class Converter {
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
-                    long time = convert2long(map.get("time"));
-                    int ns = convert2int(map.get("nanos"));
+                    long time = convert(map.get("time"), long.class);
+                    int ns = convert(map.get("nanos"), int.class);
                     Timestamp timeStamp = new Timestamp(time);
                     timeStamp.setNanos(ns);
                     return timeStamp;
@@ -773,312 +921,149 @@ public final class Converter {
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a byte.  If null is passed in, (byte) 0 is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static byte convert2byte(Object fromInstance) {
-        if (fromInstance == null) {
-            return 0;
-        }
-        return convertToByte(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a Byte.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static Byte convertToByte(Object fromInstance) {
+    private static byte convertToByte(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return BYTE_ZERO;
-                }
-                try {
-                    return Byte.valueOf(((String) fromInstance).trim());
-                }
-                catch (NumberFormatException e) {
-                    long value = convertToBigDecimal(fromInstance).longValue();
-                    if (value < -128 || value > 127) {
-                        throw new NumberFormatException("Value: " + fromInstance + " outside -128 to 127");
-                    }
-                    return (byte) value;
-                }
-            } else if (fromInstance instanceof Byte) {
-                return (Byte) fromInstance;
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toByte.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Byte)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).byteValue();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2byte(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO;
+                return convert(map.get("value"), byte.class);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Byte'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'byte'", e);
         }
-        nope(fromInstance, "Byte");
-        return null;
+        nope(fromInstance, "byte");
+        return 0;
     }
 
-    /**
-     * Convert from the passed in instance to a short.  If null is passed in, (short) 0 is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static short convert2short(Object fromInstance) {
-        if (fromInstance == null) {
-            return 0;
-        }
-        return convertToShort(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a Short.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static Short convertToShort(Object fromInstance) {
+    private static short convertToShort(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return SHORT_ZERO;
-                }
-                try {
-                    return Short.valueOf(((String) fromInstance).trim());
-                }
-                catch (NumberFormatException e) {
-                    long value = convertToBigDecimal(fromInstance).longValue();
-                    if (value < -32768 || value > 32767) {
-                        throw new NumberFormatException("Short value: " + fromInstance + " outside -32768 to 32767");
-                    }
-                    return (short) value;
-                }
-            } else if (fromInstance instanceof Short) {
-                return (Short) fromInstance;
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toShort.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Short)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).shortValue();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2short(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO;
-            } else if (fromInstance instanceof Character) {
-                return (short) ((char) fromInstance);
+                return convert(map.get("value"), short.class);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Short'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'short'", e);
         }
-        nope(fromInstance, "Short");
-        return null;
+        nope(fromInstance, "short");
+        return 0;
     }
 
-    /**
-     * Convert from the passed in instance to an int.  If null is passed in, (int) 0 is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static int convert2int(Object fromInstance) {
-        if (fromInstance == null) {
-            return 0;
-        }
-        return convertToInteger(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to an Integer.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static Integer convertToInteger(Object fromInstance) {
+    private static Integer convertToInteger(Object fromInstance) {
         try {
-            if (fromInstance instanceof Integer) {
-                return (Integer) fromInstance;
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toInteger.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Integer)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).intValue();
-            } else if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return INTEGER_ZERO;
-                }
-                try {
-                    return Integer.valueOf(((String) fromInstance).trim());
-                } catch (NumberFormatException e) {
-                    long value = convertToBigDecimal(fromInstance).longValue();
-                    if (value < -2147483648 || value > 2147483647) {
-                        throw new NumberFormatException("Integer value: " + fromInstance + " outside -2147483648 to 2147483647");
-                    }
-                    return (int) value;
-                }
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2int(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO;
-            } else if (fromInstance instanceof Character) {
-                return (int) ((char) fromInstance);
+                return convert(map.get("value"), int.class);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to an 'Integer'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'int'", e);
         }
-        nope(fromInstance, "Integer");
+        nope(fromInstance, "int");
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a long.  If null is passed in, (long) 0 is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.  In
-     * addition, Date, LocalDate, LocalDateTime, ZonedDateTime, java.sql.Date, Timestamp, and Calendar can be passed in,
-     * in which case the long returned is the number of milliseconds since Jan 1, 1970.
-     */
-    public static long convert2long(Object fromInstance) {
-        if (fromInstance == null) {
-            return LONG_ZERO;
-        }
-        return convertToLong(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a Long.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.  In
-     * addition, Date, LocalDate, LocalDateTime, ZonedDateTime, java.sql.Date, Timestamp, and Calendar can be passed in,
-     * in which case the long returned is the number of milliseconds since Jan 1, 1970.
-     */
-    public static Long convertToLong(Object fromInstance) {
+    private static Long convertToLong(Object fromInstance) {
         try {
-            if (fromInstance instanceof Long) {
-                return (Long) fromInstance;
-            } else if (fromInstance instanceof String) {
-                if ("".equals(fromInstance)) {
-                    return LONG_ZERO;
-                }
-                try {
-                    return Long.valueOf(((String) fromInstance).trim());
-                }
-                catch (NumberFormatException e) {
-                    return convertToBigDecimal(fromInstance).longValue();
-                }
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toLong.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Long)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).longValue();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2long(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? LONG_ONE : LONG_ZERO;
-            } else if (fromInstance instanceof Date) {
-                return ((Date) fromInstance).getTime();
-            } else if (fromInstance instanceof LocalDate) {
-                return localDateToMillis((LocalDate) fromInstance);
-            } else if (fromInstance instanceof LocalDateTime) {
-                return localDateTimeToMillis((LocalDateTime) fromInstance);
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return zonedDateTimeToMillis((ZonedDateTime) fromInstance);
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO;
+                return convert(map.get("value"), long.class);
             } else if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).getTime().getTime();
-            } else if (fromInstance instanceof Character) {
-                return (long) ((char) fromInstance);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Long'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a long'", e);
         }
-        nope(fromInstance, "Long");
+        nope(fromInstance, "long");
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a float.  If null is passed in, 0.0f is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static float convert2float(Object fromInstance) {
-        if (fromInstance == null) {
-            return FLOAT_ZERO;
-        }
-        return convertToFloat(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a Float.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static Float convertToFloat(Object fromInstance) {
+    private static Float convertToFloat(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return FLOAT_ZERO;
-                }
-                return Float.valueOf(((String) fromInstance).trim());
-            } else if (fromInstance instanceof Float) {
-                return (Float) fromInstance;
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toFloat.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Float)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).floatValue();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2float(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO;
+                return convert(map.get("value"), float.class);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Float'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'float'", e);
         }
-        nope(fromInstance, "Float");
+        nope(fromInstance, "float");
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a double.  If null is passed in, 0.0d is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static double convert2double(Object fromInstance) {
-        if (fromInstance == null) {
-            return DOUBLE_ZERO;
-        }
-        return convertToDouble(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a Double.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static Double convertToDouble(Object fromInstance) {
+    private static Double convertToDouble(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return DOUBLE_ZERO;
-                }
-                return Double.valueOf(((String) fromInstance).trim());
-            } else if (fromInstance instanceof Double) {
-                return (Double) fromInstance;
-            } else if (fromInstance instanceof Number) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toDouble.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Double)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
                 return ((Number) fromInstance).doubleValue();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2double(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO;
+                return convert(map.get("value"), double.class);
             }
-        } catch (JsonIoException e) {
-            throw e;
         } catch (Exception e) {
-            throw new JsonIoException("value [" + name(fromInstance) + "] could not be converted to a 'Double'", e);
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'double'", e);
         }
-        nope(fromInstance, "Double");
+        nope(fromInstance, "double");
         return null;
     }
 

@@ -24,11 +24,6 @@ import com.cedarsoftware.util.io.ReaderContext;
  */
 public class StringBufferFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-        if (value instanceof String) {
-            return new StringBuffer((String)value);
-        }
-
         if (jObj.hasValue()) {
             return new StringBuffer((String) jObj.getValue());
         }

@@ -29,33 +29,19 @@ import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
 import static com.cedarsoftware.util.io.Converter.convert2BigDecimal;
 import static com.cedarsoftware.util.io.Converter.convert2BigInteger;
-import static com.cedarsoftware.util.io.Converter.convert2String;
 import static com.cedarsoftware.util.io.Converter.convert2boolean;
-import static com.cedarsoftware.util.io.Converter.convert2byte;
 import static com.cedarsoftware.util.io.Converter.convert2char;
-import static com.cedarsoftware.util.io.Converter.convert2double;
-import static com.cedarsoftware.util.io.Converter.convert2float;
-import static com.cedarsoftware.util.io.Converter.convert2int;
-import static com.cedarsoftware.util.io.Converter.convert2long;
-import static com.cedarsoftware.util.io.Converter.convert2short;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToBigDecimal;
 import static com.cedarsoftware.util.io.Converter.convertToBigInteger;
-import static com.cedarsoftware.util.io.Converter.convertToByte;
 import static com.cedarsoftware.util.io.Converter.convertToCharacter;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToDate;
-import static com.cedarsoftware.util.io.Converter.convertToDouble;
-import static com.cedarsoftware.util.io.Converter.convertToFloat;
-import static com.cedarsoftware.util.io.Converter.convertToInteger;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
-import static com.cedarsoftware.util.io.Converter.convertToLong;
-import static com.cedarsoftware.util.io.Converter.convertToShort;
 import static com.cedarsoftware.util.io.Converter.convertToSqlDate;
-import static com.cedarsoftware.util.io.Converter.convertToString;
 import static com.cedarsoftware.util.io.Converter.convertToTimestamp;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
@@ -138,7 +124,7 @@ public class ConverterTest
         assert (byte)1 == convert(new AtomicBoolean(true), byte.class);
         assert (byte)0 == convert(new AtomicBoolean(false), byte.class);
 
-        byte z = convert2byte("11.5");
+        byte z = convert("11.5", byte.class);
         assert z == 11;
 
         try
@@ -156,17 +142,17 @@ public class ConverterTest
             convert("45badNumber", byte.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
 
         try
         {
-            convert2byte("257");
+            convert("257", byte.class);
             fail();
         }
-        catch (JsonIoException e) { }
+        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -195,7 +181,7 @@ public class ConverterTest
         assert (short)1 == convert(new AtomicBoolean(true), Short.class);
         assert (short)0 == convert(new AtomicBoolean(false), Short.class);
 
-        int z = convert2short("11.5");
+        int z = convert("11.5", short.class);
         assert z == 11;
 
         try
@@ -213,17 +199,17 @@ public class ConverterTest
             convert("45badNumber", short.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
 
         try
         {
-            convert2short("33000");
+            convert("33000", short.class);
             fail();
         }
-        catch (JsonIoException e) { }
+        catch (IllegalArgumentException e) { }
 
     }
 
@@ -253,7 +239,7 @@ public class ConverterTest
         assert 1 == convert(new AtomicBoolean(true), Integer.class);
         assert 0 == convert(new AtomicBoolean(false), Integer.class);
 
-        int z = convert2int("11.5");
+        int z = convert("11.5", int.class);
         assert z == 11;
 
         try
@@ -271,18 +257,17 @@ public class ConverterTest
             convert("45badNumber", int.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
 
         try
         {
-            convert2int("2147483649");
+            convert("2147483649", int.class);
             fail();
         }
-        catch (JsonIoException e) { }
-
+        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -323,7 +308,7 @@ public class ConverterTest
         assert 1L == convert(new AtomicBoolean(true), Long.class);
         assert 0L == convert(new AtomicBoolean(false), Long.class);
 
-        long z = convert2int("11.5");
+        long z = convert("11.5", int.class);
         assert z == 11;
 
         try
@@ -341,7 +326,7 @@ public class ConverterTest
             convert("45badNumber", long.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
@@ -432,7 +417,7 @@ public class ConverterTest
         assertEquals("1.23456789", convert(1.23456789d, String.class));
 
         int x = 8;
-        String s = convertToString(x);
+        String s = convert(x, String.class);
         assert s.equals("8");
         // TODO: Add following test once we have preferred method of removing exponential notation, yet retain decimal separator
 //        assertEquals("123456789.12345", convert(123456789.12345, String.class));
@@ -452,14 +437,14 @@ public class ConverterTest
             convert(new HashMap<>(), HashMap.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported type"));
         }
 
         try
         {
-            convertToString(ZoneId.systemDefault());
+            convert(ZoneId.systemDefault(), String.class);
             fail();
         }
         catch (Exception e)
@@ -1298,7 +1283,7 @@ public class ConverterTest
             convert("45.6badNumber", Float.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
@@ -1338,7 +1323,7 @@ public class ConverterTest
             convert("45.6badNumber", Double.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
@@ -1462,12 +1447,12 @@ public class ConverterTest
         assert null == convert(null, AtomicInteger.class);
         assert null == convert(null, AtomicLong.class);
 
-        assert null == convertToByte(null);
-        assert null == convertToInteger(null);
-        assert null == convertToShort(null);
-        assert null == convertToLong(null);
-        assert null == convertToFloat(null);
-        assert null == convertToDouble(null);
+        assert null == convert(null, Byte.class);
+        assert null == convert(null, Integer.class);
+        assert null == convert(null, Short.class);
+        assert null == convert(null, Long.class);
+        assert null == convert(null, Float.class);
+        assert null == convert(null, Double.class);
         assert null == convertToCharacter(null);
         assert null == convertToDate(null);
         assert null == convertToSqlDate(null);
@@ -1475,41 +1460,41 @@ public class ConverterTest
         assert null == convertToAtomicBoolean(null);
         assert null == convertToAtomicInteger(null);
         assert null == convertToAtomicLong(null);
-        assert null == convertToString(null);
+        assert null == convert(null, String.class);
 
         assert false == convert2boolean(null);
-        assert 0 == convert2byte(null);
-        assert 0 == convert2int(null);
-        assert 0 == convert2short(null);
-        assert 0 == convert2long(null);
-        assert 0.0f == convert2float(null);
-        assert 0.0d == convert2double(null);
+        assert 0 == convert(null, byte.class);
+        assert 0 == convert(null, int.class);
+        assert 0 == convert(null, short.class);
+        assert 0 == convert(null, long.class);
+        assert 0.0f == convert(null, float.class);
+        assert 0.0d == convert(null, double.class);
         assert (char)0 == convert2char(null);
         assert BIG_INTEGER_ZERO == convert2BigInteger(null);
         assert BIG_DECIMAL_ZERO == convert2BigDecimal(null);
         assert false == convert2AtomicBoolean(null).get();
         assert 0 == convert2AtomicInteger(null).get();
         assert 0L == convert2AtomicLong(null).get();
-        assert "".equals(convert2String(null));
+        assert null == convert(null, String.class);
     }
 
     @Test
     public void testConvert2()
     {
         assert convert2boolean("true");
-        assert -8 == convert2byte("-8");
-        assert -8 == convert2int("-8");
-        assert -8 == convert2short("-8");
-        assert -8 == convert2long("-8");
-        assert -8.0f == convert2float("-8");
-        assert -8.0d == convert2double("-8");
+        assert -8 == convert("-8", byte.class);
+        assert -8 == convert("-8", int.class);
+        assert -8 == convert("-8", short.class);
+        assert -8 == convert("-8", long.class);
+        assert -8.0f == convert("-8", float.class);
+        assert -8.0d == convert("-8", double.class);
         assert 'A' == convert2char(65);
         assert new BigInteger("-8").equals(convert2BigInteger("-8"));
         assert new BigDecimal(-8.0d).equals(convert2BigDecimal("-8"));
         assert convert2AtomicBoolean("true").get();
         assert -8 == convert2AtomicInteger("-8").get();
         assert -8L == convert2AtomicLong("-8").get();
-        assert "-8".equals(convert2String(-8));
+        assert "-8".equals(convert(-8, String.class));
     }
 
     @Test
@@ -1591,7 +1576,7 @@ public class ConverterTest
     {
         try
         {
-            convertToString(TimeZone.getDefault());
+            convert(TimeZone.getDefault(), String.class);
             fail();
         }
         catch (JsonIoException e) { }
@@ -1630,7 +1615,7 @@ public class ConverterTest
         Date date = convertToDate(LocalDate.of(2020, 9, 4));
         assert date.getTime() == cal.getTime().getTime();
 
-        Long lng = convertToLong(LocalDate.of(2020, 9, 4));
+        Long lng = convert(LocalDate.of(2020, 9, 4), Long.class);
         assert lng == cal.getTime().getTime();
 
         AtomicLong atomicLong = convertToAtomicLong(LocalDate.of(2020, 9, 4));
@@ -1659,7 +1644,7 @@ public class ConverterTest
         Date date = convertToDate(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
         assert date.getTime() == cal.getTime().getTime();
 
-        Long lng = convertToLong(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        Long lng = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Long.class);
         assert lng == cal.getTime().getTime();
 
         AtomicLong atomicLong = convertToAtomicLong(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
@@ -1793,16 +1778,10 @@ public class ConverterTest
     @Test
     public void testClassToString()
     {
-        String str = Converter.convertToString(BigInteger.class);
+        String str = Converter.convert(BigInteger.class, String.class);
         assert str.equals("java.math.BigInteger");
-
-        str = Converter.convert2String(BigInteger.class);
-        assert str.equals("java.math.BigInteger");
-
-        str = Converter.convert2String(null);
-        assert "".equals(str);
-
-        str = Converter.convertToString(null);
+        
+        str = Converter.convert(null, String.class);
         assert str == null;
     }
 }
