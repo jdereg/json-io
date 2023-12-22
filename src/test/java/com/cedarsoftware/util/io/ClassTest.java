@@ -75,9 +75,7 @@ public class ClassTest
     void testNoClassNameValue()
     {
         String json = "{\"@type\":\"class\"}";
-        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
-                .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("value [null] could not be converted to a 'Class'");
+        assert null == TestUtil.toObjects(json, null);
     }
 
     @Test
@@ -86,7 +84,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":16.0}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+                .hasMessageContaining("nsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
 
     @Test
@@ -103,7 +101,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+                .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
 
     @Test

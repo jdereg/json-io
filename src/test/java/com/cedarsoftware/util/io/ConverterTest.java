@@ -28,12 +28,10 @@ import static com.cedarsoftware.util.io.Converter.convert2AtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
 import static com.cedarsoftware.util.io.Converter.convert2BigDecimal;
-import static com.cedarsoftware.util.io.Converter.convert2BigInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToBigDecimal;
-import static com.cedarsoftware.util.io.Converter.convertToBigInteger;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
@@ -1467,7 +1465,7 @@ public class ConverterTest
         assert 0.0f == convert(null, float.class);
         assert 0.0d == convert(null, double.class);
         assert (char)0 == convert(null, char.class);
-        assert BIG_INTEGER_ZERO == convert2BigInteger(null);
+        assert null == convert(null, BigInteger.class);
         assert BIG_DECIMAL_ZERO == convert2BigDecimal(null);
         assert false == convert2AtomicBoolean(null).get();
         assert 0 == convert2AtomicInteger(null).get();
@@ -1493,7 +1491,7 @@ public class ConverterTest
         assert -8.0f == convert("-8", float.class);
         assert -8.0d == convert("-8", double.class);
         assert 'A' == convert(65, char.class);
-        assert new BigInteger("-8").equals(convert2BigInteger("-8"));
+        assert new BigInteger("-8").equals(convert("-8", BigInteger.class));
         assert new BigDecimal(-8.0d).equals(convert2BigDecimal("-8"));
         assert convert2AtomicBoolean("true").get();
         assert -8 == convert2AtomicInteger("-8").get();
@@ -1607,7 +1605,7 @@ public class ConverterTest
         BigDecimal big = convert2BigDecimal(LocalDate.of(2020, 9, 4));
         assert big.longValue() == cal.getTime().getTime();
 
-        BigInteger bigI = convert2BigInteger(LocalDate.of(2020, 9, 4));
+        BigInteger bigI = convert(LocalDate.of(2020, 9, 4), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
         java.sql.Date sqlDate = convertToSqlDate(LocalDate.of(2020, 9, 4));
@@ -1636,7 +1634,7 @@ public class ConverterTest
         BigDecimal big = convert2BigDecimal(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
         assert big.longValue() == cal.getTime().getTime();
 
-        BigInteger bigI = convert2BigInteger(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        BigInteger bigI = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
         java.sql.Date sqlDate = convertToSqlDate(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
@@ -1665,7 +1663,7 @@ public class ConverterTest
         BigDecimal big = convert2BigDecimal(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
         assert big.longValue() == cal.getTime().getTime();
 
-        BigInteger bigI = convert2BigInteger(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
+        BigInteger bigI = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
         java.sql.Date sqlDate = convertToSqlDate(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
@@ -1694,7 +1692,7 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convertToClass(16.0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+                .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
 
     @Test
@@ -1708,7 +1706,7 @@ public class ConverterTest
     public void testStringToUUID()
     {
         UUID uuid = Converter.convertToUUID("00000000-0000-0000-0000-000000000064");
-        BigInteger bigInt = Converter.convertToBigInteger(uuid);
+        BigInteger bigInt = Converter.convert(uuid, BigInteger.class);
         assert bigInt.intValue() == 100;
 
         assertThatThrownBy(() -> Converter.convertToUUID("00000000"))
@@ -1736,25 +1734,25 @@ public class ConverterTest
     public void testBigIntegerToUUID()
     {
         UUID uuid = convertToUUID(new BigInteger("100"));
-        BigInteger hundred = convertToBigInteger(uuid);
+        BigInteger hundred = convert(uuid, BigInteger.class);
         assert hundred.intValue() == 100;
     }
 
     @Test
     public void testUUIDToBigInteger()
     {
-        BigInteger bigInt = Converter.convertToBigInteger(UUID.fromString("00000000-0000-0000-0000-000000000064"));
+        BigInteger bigInt = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000064"), BigInteger.class);
         assert bigInt.intValue() == 100;
 
-        bigInt = Converter.convertToBigInteger(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        bigInt = Converter.convert(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"), BigInteger.class);
         assert bigInt.toString().equals("-18446744073709551617");
 
-        bigInt = Converter.convertToBigInteger(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        bigInt = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000000"), BigInteger.class);
         assert bigInt.intValue() == 0;
 
         assertThatThrownBy(() -> convertToClass(16.0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
+                .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
 
     @Test
