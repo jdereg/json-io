@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
@@ -181,7 +182,7 @@ class BigIntegerTest
     void testBigNumberParsers()
     {
         assertNull(Converter.convert(null, BigInteger.class));
-        assertNull(Converter.convertToBigDecimal(null));
+        assertNull(Converter.convert(null, BigDecimal.class));
         
         try
         {
@@ -193,7 +194,7 @@ class BigIntegerTest
 
         try
         {
-            Converter.convertToBigDecimal("Glock");
+            Converter.convert("Glock", BigDecimal.class);
             fail();
         }
         catch (Exception ignore)

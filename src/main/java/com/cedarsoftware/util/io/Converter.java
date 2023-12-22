@@ -65,7 +65,6 @@ public final class Converter {
     public static final Double DOUBLE_ZERO = 0.0d;
     public static final Double DOUBLE_ONE = 1.0d;
     public static final BigDecimal BIG_DECIMAL_ZERO = BigDecimal.ZERO;
-    public static final BigInteger BIG_INTEGER_ZERO = BigInteger.ZERO;
     private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
@@ -78,6 +77,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toClass = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -106,6 +106,7 @@ public final class Converter {
         fromNull.put(String.class, null);
         fromNull.put(Class.class, null);
         fromNull.put(BigInteger.class, null);
+        fromNull.put(BigDecimal.class, null);
 
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
@@ -325,36 +326,6 @@ public final class Converter {
             throw new IllegalArgumentException("Cannot convert String '" + fromInstance + "' to class.  Class not found.");
         });
 
-        /*
-            } else if (fromInstance instanceof UUID) {
-                UUID uuid = (UUID) fromInstance;
-                BigInteger mostSignificant = BigInteger.valueOf(uuid.getMostSignificantBits());
-                BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
-                // Shift the most significant bits to the left and add the least significant bits
-                return mostSignificant.shiftLeft(64).add(leastSignificant);
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2BigInteger(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO;
-            } else if (fromInstance instanceof Date) {
-                return new BigInteger(Long.toString(((Date) fromInstance).getTime()));
-            } else if (fromInstance instanceof LocalDate) {
-                return BigInteger.valueOf(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            } else if (fromInstance instanceof Calendar) {
-                return new BigInteger(Long.toString(((Calendar) fromInstance).getTime().getTime()));
-            } else if (fromInstance instanceof Character) {
-                return new BigInteger(Long.toString(((Character) fromInstance)));
-            }
-
-         */
-
         // ? to BigInteger
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
         toBigInteger.put(boolean.class, fromInstance -> (boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
@@ -379,6 +350,36 @@ public final class Converter {
                 return BigInteger.ZERO;
             }
             return new BigInteger((String) fromInstance);
+        });
+
+        // ? to BigDecimal
+        toBigDecimal.put(BigDecimal.class, fromInstance -> fromInstance);
+        toBigDecimal.put(boolean.class, fromInstance -> (boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(Boolean.class, fromInstance -> (boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(char.class, fromInstance -> BigDecimal.valueOf(((char) fromInstance)));
+        toBigDecimal.put(Character.class, fromInstance -> BigDecimal.valueOf(((char) fromInstance)));
+        toBigDecimal.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(float.class, fromInstance -> BigDecimal.valueOf((float)fromInstance));
+        toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((float)fromInstance));
+        toBigDecimal.put(double.class, fromInstance -> BigDecimal.valueOf((double)fromInstance));
+        toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((double)fromInstance));
+        toBigDecimal.put(Date.class, fromInstance -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
+        toBigDecimal.put(LocalDate.class, fromInstance -> BigDecimal.valueOf(localDateToMillis((LocalDate) fromInstance)));
+        toBigDecimal.put(LocalDateTime.class, fromInstance -> BigDecimal.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toBigDecimal.put(ZonedDateTime.class, fromInstance -> BigDecimal.valueOf(zonedDateTimeToMillis((ZonedDateTime)fromInstance)));
+        toBigDecimal.put(BigInteger.class, fromInstance -> new BigDecimal((BigInteger)fromInstance));
+        toBigDecimal.put(UUID.class, fromInstance -> {
+            UUID uuid = (UUID) fromInstance;
+            BigInteger mostSignificant = BigInteger.valueOf(uuid.getMostSignificantBits());
+            BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
+            // Shift the most significant bits to the left and add the least significant bits
+            return new BigDecimal(mostSignificant.shiftLeft(64).add(leastSignificant));
+        });
+        toBigDecimal.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return BigDecimal.ZERO;
+            }
+            return new BigDecimal((String) fromInstance);
         });
 
         // ? to String
@@ -541,63 +542,24 @@ public final class Converter {
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a BigDecimal.  If null or "" is passed in, this method will return a
-     * BigDecimal with the value of 0.  Possible inputs are String (base10 numeric values in string), BigInteger,
-     * any primitive/primitive wrapper, Boolean/AtomicBoolean (returns BigDecimal of 0 or 1), Date/Calendar
-     * (returns BigDecimal with the value of number of milliseconds since Jan 1, 1970), and Character (returns integer
-     * value of character).
-     */
-    public static BigDecimal convert2BigDecimal(Object fromInstance) {
-        if (fromInstance == null) {
-            return BIG_DECIMAL_ZERO;
-        }
-        return convertToBigDecimal(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to a BigDecimal.  If null is passed in, this method will return null.  If ""
-     * is passed in, this method will return a BigDecimal with the value of 0.  Possible inputs are String (base10
-     * numeric values in string), BigInteger, any primitive/primitive wrapper, Boolean/AtomicBoolean (returns
-     * BigDecimal of 0 or 1), Date, Calendar, LocalDate, LocalDateTime, ZonedDateTime (returns BigDecimal with the
-     * value of number of milliseconds since Jan 1, 1970), and Character (returns integer value of character).
-     */
-    public static BigDecimal convertToBigDecimal(Object fromInstance) {
+    private static BigDecimal convertToBigDecimal(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return BigDecimal.ZERO;
-                }
-                return new BigDecimal(((String) fromInstance).trim());
-            } else if (fromInstance instanceof BigDecimal) {
-                return (BigDecimal) fromInstance;
-            } else if (fromInstance instanceof BigInteger) {
-                return new BigDecimal((BigInteger) fromInstance);
-            } else if (fromInstance instanceof Long) {
-                return new BigDecimal((Long) fromInstance);
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toBigDecimal.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (BigDecimal)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
+                return BigDecimal.valueOf(((Number) fromInstance).longValue());
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2BigDecimal(map.get("value"));
-            } else if (fromInstance instanceof AtomicLong) {
-                return new BigDecimal(((AtomicLong) fromInstance).get());
-            } else if (fromInstance instanceof Number) {
-                return new BigDecimal(String.valueOf(fromInstance));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO;
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO;
-            } else if (fromInstance instanceof Date) {
-                return new BigDecimal(((Date) fromInstance).getTime());
-            } else if (fromInstance instanceof LocalDate) {
-                return new BigDecimal(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return new BigDecimal(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return new BigDecimal(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
+                return convert(map.get("value"), BigDecimal.class);
             } else if (fromInstance instanceof Calendar) {
-                return new BigDecimal(((Calendar) fromInstance).getTime().getTime());
-            } else if (fromInstance instanceof Character) {
-                return new BigDecimal(((Character) fromInstance));
+                return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
             }
         }
         catch (Exception e) {

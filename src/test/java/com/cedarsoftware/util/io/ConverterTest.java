@@ -22,16 +22,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.BIG_DECIMAL_ZERO;
-import static com.cedarsoftware.util.io.Converter.BIG_INTEGER_ZERO;
 import static com.cedarsoftware.util.io.Converter.convert;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
-import static com.cedarsoftware.util.io.Converter.convert2BigDecimal;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
-import static com.cedarsoftware.util.io.Converter.convertToBigDecimal;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
@@ -1466,7 +1463,7 @@ public class ConverterTest
         assert 0.0d == convert(null, double.class);
         assert (char)0 == convert(null, char.class);
         assert null == convert(null, BigInteger.class);
-        assert BIG_DECIMAL_ZERO == convert2BigDecimal(null);
+        assert null == convert(null, BigDecimal.class);
         assert false == convert2AtomicBoolean(null).get();
         assert 0 == convert2AtomicInteger(null).get();
         assert 0L == convert2AtomicLong(null).get();
@@ -1492,7 +1489,7 @@ public class ConverterTest
         assert -8.0d == convert("-8", double.class);
         assert 'A' == convert(65, char.class);
         assert new BigInteger("-8").equals(convert("-8", BigInteger.class));
-        assert new BigDecimal(-8.0d).equals(convert2BigDecimal("-8"));
+        assert new BigDecimal(-8.0d).equals(convert("-8", BigDecimal.class));
         assert convert2AtomicBoolean("true").get();
         assert -8 == convert2AtomicInteger("-8").get();
         assert -8L == convert2AtomicLong("-8").get();
@@ -1587,11 +1584,11 @@ public class ConverterTest
     @Test
     public void testLongToBigDecimal()
     {
-        BigDecimal big = convert2BigDecimal(7L);
+        BigDecimal big = convert(7L, BigDecimal.class);
         assert big instanceof BigDecimal;
         assert big.longValue() == 7L;
 
-        big = convertToBigDecimal(null);
+        big = convert(null, BigDecimal.class);
         assert big == null;
     }
 
@@ -1602,7 +1599,7 @@ public class ConverterTest
         cal.clear();
         cal.set(2020, 8, 4);   // 0-based for month
 
-        BigDecimal big = convert2BigDecimal(LocalDate.of(2020, 9, 4));
+        BigDecimal big = convert(LocalDate.of(2020, 9, 4), BigDecimal.class);
         assert big.longValue() == cal.getTime().getTime();
 
         BigInteger bigI = convert(LocalDate.of(2020, 9, 4), BigInteger.class);
@@ -1631,7 +1628,7 @@ public class ConverterTest
         cal.clear();
         cal.set(2020, 8, 8, 13, 11, 1);   // 0-based for month
 
-        BigDecimal big = convert2BigDecimal(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        BigDecimal big = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), BigDecimal.class);
         assert big.longValue() == cal.getTime().getTime();
 
         BigInteger bigI = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), BigInteger.class);
@@ -1660,7 +1657,7 @@ public class ConverterTest
         cal.clear();
         cal.set(2020, 8, 8, 13, 11, 1);   // 0-based for month
 
-        BigDecimal big = convert2BigDecimal(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
+        BigDecimal big = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), BigDecimal.class);
         assert big.longValue() == cal.getTime().getTime();
 
         BigInteger bigI = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), BigInteger.class);
