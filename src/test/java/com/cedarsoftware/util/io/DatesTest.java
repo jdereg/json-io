@@ -507,7 +507,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("must be specified");
         }
@@ -570,11 +570,10 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("crunchy");
         }
-
     }
 
     @Test
@@ -589,7 +588,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("between 1 and 12");
         }
@@ -608,7 +607,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("between 1 and 31");
         }
@@ -627,7 +626,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("between 0 and 23");
         }
@@ -646,7 +645,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("between 0 and 59");
         }
@@ -665,7 +664,7 @@ class DatesTest
             factory.newInstance(Date.class, object, null);
            fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("between 0 and 59");
         }

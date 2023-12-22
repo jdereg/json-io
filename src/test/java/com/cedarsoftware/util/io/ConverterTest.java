@@ -29,14 +29,11 @@ import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
 import static com.cedarsoftware.util.io.Converter.convert2BigDecimal;
 import static com.cedarsoftware.util.io.Converter.convert2BigInteger;
-import static com.cedarsoftware.util.io.Converter.convert2boolean;
-import static com.cedarsoftware.util.io.Converter.convert2char;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToBigDecimal;
 import static com.cedarsoftware.util.io.Converter.convertToBigInteger;
-import static com.cedarsoftware.util.io.Converter.convertToCharacter;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
@@ -132,7 +129,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), byte.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -189,7 +186,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), short.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -247,7 +244,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), int.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -316,7 +313,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), long.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -379,7 +376,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), AtomicLong.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -389,9 +386,9 @@ public class ConverterTest
             convert("45badNumber", AtomicLong.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
         }
     }
 
@@ -427,7 +424,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), String.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -485,7 +482,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), BigDecimal.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -495,7 +492,7 @@ public class ConverterTest
             convert("45badNumber", BigDecimal.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
@@ -533,7 +530,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), BigInteger.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -543,7 +540,7 @@ public class ConverterTest
             convert("45badNumber", BigInteger.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
         }
@@ -571,7 +568,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), AtomicInteger.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -581,9 +578,9 @@ public class ConverterTest
             convert("45badNumber", AtomicInteger.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
         }
     }
 
@@ -706,7 +703,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), Date.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
@@ -717,7 +714,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), java.sql.Date.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
@@ -728,7 +725,7 @@ public class ConverterTest
             convert("2015/01/33", Date.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
@@ -739,7 +736,7 @@ public class ConverterTest
             convert("2015/01/33", java.sql.Date.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
@@ -749,7 +746,7 @@ public class ConverterTest
     void testBogusSqlDate2()
     {
         assertThatThrownBy(() -> Converter.convertToSqlDate(true))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [java.lang.Boolean (true)] attempting to convert to 'java.sql.Date'");
     }
 
@@ -938,7 +935,7 @@ public class ConverterTest
             convertToLocalDate("2020-12-40");
             fail();
         }
-        catch (JsonIoException e) {
+        catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
@@ -1051,7 +1048,7 @@ public class ConverterTest
             convertToLocalDateTime("2020-12-40");
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
@@ -1169,8 +1166,8 @@ public class ConverterTest
             convertToZonedDateTime("2020-12-40");
             fail();
         }
-        catch (JsonIoException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
+        catch (IllegalArgumentException e) {
+            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
         }
 
         assert convertToZonedDateTime(null) == null;
@@ -1233,7 +1230,7 @@ public class ConverterTest
             convert(Boolean.TRUE, Timestamp.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("unsupported value type");
         }
@@ -1243,7 +1240,7 @@ public class ConverterTest
             convert("123dhksdk", Timestamp.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assert e.getMessage().toLowerCase().contains("unable to parse: 123");
         }
@@ -1273,7 +1270,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), float.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -1313,7 +1310,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), double.class);
             fail();
         }
-        catch (JsonIoException e)
+        catch (IllegalArgumentException e)
         {
             assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
         }
@@ -1453,7 +1450,7 @@ public class ConverterTest
         assert null == convert(null, Long.class);
         assert null == convert(null, Float.class);
         assert null == convert(null, Double.class);
-        assert null == convertToCharacter(null);
+        assert null == convert(null, Character.class);
         assert null == convertToDate(null);
         assert null == convertToSqlDate(null);
         assert null == convertToTimestamp(null);
@@ -1462,14 +1459,14 @@ public class ConverterTest
         assert null == convertToAtomicLong(null);
         assert null == convert(null, String.class);
 
-        assert false == convert2boolean(null);
+        assert false == convert(null, boolean.class);
         assert 0 == convert(null, byte.class);
         assert 0 == convert(null, int.class);
         assert 0 == convert(null, short.class);
         assert 0 == convert(null, long.class);
         assert 0.0f == convert(null, float.class);
         assert 0.0d == convert(null, double.class);
-        assert (char)0 == convert2char(null);
+        assert (char)0 == convert(null, char.class);
         assert BIG_INTEGER_ZERO == convert2BigInteger(null);
         assert BIG_DECIMAL_ZERO == convert2BigDecimal(null);
         assert false == convert2AtomicBoolean(null).get();
@@ -1481,14 +1478,21 @@ public class ConverterTest
     @Test
     public void testConvert2()
     {
-        assert convert2boolean("true");
+        assert convert("true", boolean.class);
+        assert convert("true", Boolean.class);
+        assert !convert("false", boolean.class);
+        assert !convert("false", Boolean.class);
+        assert !convert("", boolean.class);
+        assert !convert("", Boolean.class);
+        assert !convert(null, boolean.class);
+        assert null == convert(null, Boolean.class);
         assert -8 == convert("-8", byte.class);
         assert -8 == convert("-8", int.class);
         assert -8 == convert("-8", short.class);
         assert -8 == convert("-8", long.class);
         assert -8.0f == convert("-8", float.class);
         assert -8.0d == convert("-8", double.class);
-        assert 'A' == convert2char(65);
+        assert 'A' == convert(65, char.class);
         assert new BigInteger("-8").equals(convert2BigInteger("-8"));
         assert new BigDecimal(-8.0d).equals(convert2BigDecimal("-8"));
         assert convert2AtomicBoolean("true").get();
@@ -1548,27 +1552,27 @@ public class ConverterTest
         assert 65 == convert('A', BigInteger.class).longValue();
         assert 65 == convert('A', BigDecimal.class).longValue();
 
-        assert '1' == convert2char(true);
-        assert '0' == convert2char(false);
-        assert '1' == convert2char(new AtomicBoolean(true));
-        assert '0' == convert2char(new AtomicBoolean(false));
-        assert 'z' == convert2char('z');
-        assert 0 == convert2char("");
-        assert 0 == convertToCharacter("");
-        assert 'A' == convert2char("65");
-        assert 'A' == convertToCharacter("65");
+        assert '1' == convert(true, char.class);
+        assert '0' == convert(false, char.class);
+        assert '1' == convert(new AtomicBoolean(true), char.class);
+        assert '0' == convert(new AtomicBoolean(false), char.class);
+        assert 'z' == convert('z', char.class);
+        assert 0 == convert("", char.class);
+        assert 0 == convert("", Character.class);
+        assert 'A' == convert("65", char.class);
+        assert 'A' == convert("65", Character.class);
         try
         {
-            convert2char("This is not a number");
+            convert("This is not a number", char.class);
             fail();
         }
-        catch (JsonIoException e) { }
+        catch (IllegalArgumentException e) { }
         try
         {
-            convert2char(new Date());
+            convert(new Date(), char.class);
             fail();
         }
-        catch (JsonIoException e) { }
+        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -1579,7 +1583,7 @@ public class ConverterTest
             convert(TimeZone.getDefault(), String.class);
             fail();
         }
-        catch (JsonIoException e) { }
+        catch (IllegalArgumentException e) { }
     }
 
     @Test
@@ -1681,15 +1685,15 @@ public class ConverterTest
         assert clazz.getName().equals("java.math.BigInteger");
 
         assertThatThrownBy(() -> convertToClass("foo.bar.baz.Qux"))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
 
         assertThatThrownBy(() -> convertToClass(null))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [null] could not be converted to a 'Class'");
 
         assertThatThrownBy(() -> convertToClass(16.0))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
     }
 
@@ -1708,7 +1712,7 @@ public class ConverterTest
         assert bigInt.intValue() == 100;
 
         assertThatThrownBy(() -> Converter.convertToUUID("00000000"))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.lang.String (00000000)] could not be converted to a 'UUID'");
     }
 
@@ -1724,7 +1728,7 @@ public class ConverterTest
     public void testBogusToUUID()
     {
         assertThatThrownBy(() -> Converter.convertToUUID((short)77))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [java.lang.Short (77)] attempting to convert to 'UUID'");
     }
 
@@ -1749,7 +1753,7 @@ public class ConverterTest
         assert bigInt.intValue() == 0;
 
         assertThatThrownBy(() -> convertToClass(16.0))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.lang.Double (16.0)] could not be converted to a 'Class'");
     }
 
@@ -1771,7 +1775,7 @@ public class ConverterTest
         Map<String, Object> map = new HashMap<>();
         map.put("leastSigBits", uuid.getLeastSignificantBits());
         assertThatThrownBy(() -> convertToUUID(map))
-                .isInstanceOf(JsonIoException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.util.HashMap ({leastSigBits=100})] could not be converted to a 'UUID'");
     }
 

@@ -11,7 +11,6 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
@@ -105,7 +104,7 @@ public class DateFactory implements JsonReader.ClassFactory {
     protected Object fromJsonObject(Class<?> c, JsonObject object) {
         Object time = object.get("time");
         if (time == null) {
-            throw new JsonIoException("'time' field must be specified'");
+            throw new IllegalArgumentException("'time' field must be specified'");
         }
         Object nanos = object.get("nanos");
 
@@ -173,7 +172,7 @@ public class DateFactory implements JsonReader.ClassFactory {
                         } else {
                             matcher = datePattern6.matcher(dateStr);
                             if (!matcher.find()) {
-                                throw new JsonIoException("Unable to parse: " + dateStr);
+                                throw new IllegalArgumentException("Unable to parse: " + dateStr);
                             }
                             year = matcher.group(5);
                             mon = matcher.group(2);
@@ -238,7 +237,7 @@ public class DateFactory implements JsonReader.ClassFactory {
         if (remains != null && remains.length() > 0) {
             remains = remains.trim();
             if (!remains.equals(",") && (!remains.equals("T"))) {
-                throw new JsonIoException("Issue parsing data/time, other characters present: " + remains);
+                throw new IllegalArgumentException("Issue parsing data/time, other characters present: " + remains);
             }
         }
 
@@ -258,10 +257,10 @@ public class DateFactory implements JsonReader.ClassFactory {
         int d = Integer.parseInt(day);
 
         if (m < 0 || m > 11) {
-            throw new JsonIoException("Month must be between 1 and 12 inclusive, date: " + dateStr);
+            throw new IllegalArgumentException("Month must be between 1 and 12 inclusive, date: " + dateStr);
         }
         if (d < 1 || d > 31) {
-            throw new JsonIoException("Day must be between 1 and 31 inclusive, date: " + dateStr);
+            throw new IllegalArgumentException("Day must be between 1 and 31 inclusive, date: " + dateStr);
         }
 
         if (matcher == null) {   // no [valid] time portion
@@ -274,13 +273,13 @@ public class DateFactory implements JsonReader.ClassFactory {
             int ms = Integer.parseInt(milli);
 
             if (h > 23) {
-                throw new JsonIoException("Hour must be between 0 and 23 inclusive, time: " + dateStr);
+                throw new IllegalArgumentException("Hour must be between 0 and 23 inclusive, time: " + dateStr);
             }
             if (mn > 59) {
-                throw new JsonIoException("Minute must be between 0 and 59 inclusive, time: " + dateStr);
+                throw new IllegalArgumentException("Minute must be between 0 and 59 inclusive, time: " + dateStr);
             }
             if (s > 59) {
-                throw new JsonIoException("Second must be between 0 and 59 inclusive, time: " + dateStr);
+                throw new IllegalArgumentException("Second must be between 0 and 59 inclusive, time: " + dateStr);
             }
 
             // regex enforces millis to number

@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,8 +45,8 @@ public class DoubleTest
         assertEquals(71.0d, that._polyRefTarget);
         assertEquals(71.0d, that._polyRef);
         assertEquals(71.0d, that._polyNotRef);
-        assertSame(that._polyRef, that._polyRefTarget);// Primitive wrappers are treated like primitives (no ref)
-        assertSame(that._polyNotRef, that._polyRef);
+        assertNotSame(that._polyRef, that._polyRefTarget);
+        assertNotSame(that._polyNotRef, that._polyRef);
 
         assertEquals(6, that._typeArray.length);
         assertNotNull(that._typeArray[1]);
