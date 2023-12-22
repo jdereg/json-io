@@ -40,9 +40,9 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
 
             for (int i = 0; i < len; i++) {
                 Object val = items[i];
-                Class<?> type = null;
                 if (val == null) {
                 } else if (val instanceof JsonObject) {
+                    Class<?> type;
                     do {
                         // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
                         JsonObject jsonObject = (JsonObject) val;

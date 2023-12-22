@@ -31,12 +31,8 @@ java.math.BigDecimal
 java.net.URI
 java.net.URL
 
-java.util.Calendar
-java.util.Date
-java.util.UUID
-java.util.concurrent.atomic.AtomicBoolean
-java.util.concurrent.atomic.AtomicInteger
-java.util.concurrent.atomic.AtomicLong
+java.sql.Date
+java.sql.Timestamp
 
 java.time.Duration
 java.time.Instant
@@ -53,3 +49,10 @@ java.time.ZonedDateTime
 java.time.ZoneId
 java.time.ZoneOffset
 java.time.ZoneRegion
+
+java.util.Calendar
+java.util.Date
+java.util.UUID
+java.util.concurrent.atomic.AtomicBoolean
+java.util.concurrent.atomic.AtomicInteger
+java.util.concurrent.atomic.AtomicLong

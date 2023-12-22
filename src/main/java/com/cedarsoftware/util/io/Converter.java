@@ -534,7 +534,7 @@ public final class Converter {
             } else if (fromInstance instanceof Timestamp) {
                 Timestamp timestamp = (Timestamp) fromInstance;
                 return new Date(timestamp.getTime());
-            } else if (fromInstance instanceof Date) {   // Return a clone, not the same instance because Dates are not immutable
+            } else if (fromInstance instanceof Date) {   // Return a clone, not the same instance because Dates are mutable
                 return new Date(((Date) fromInstance).getTime());
             } else if (fromInstance instanceof LocalDate) {
                 return new Date(localDateToMillis((LocalDate) fromInstance));
