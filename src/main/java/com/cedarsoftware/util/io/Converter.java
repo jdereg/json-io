@@ -64,7 +64,6 @@ public final class Converter {
     public static final Float FLOAT_ONE = 1.0f;
     public static final Double DOUBLE_ZERO = 0.0d;
     public static final Double DOUBLE_ONE = 1.0d;
-    public static final BigDecimal BIG_DECIMAL_ZERO = BigDecimal.ZERO;
     private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
@@ -78,6 +77,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toClass = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -107,6 +107,7 @@ public final class Converter {
         fromNull.put(Class.class, null);
         fromNull.put(BigInteger.class, null);
         fromNull.put(BigDecimal.class, null);
+        fromNull.put(Date.class, null);
 
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
@@ -158,8 +159,7 @@ public final class Converter {
             }
             try {
                 return Byte.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
@@ -182,8 +182,7 @@ public final class Converter {
             }
             try {
                 return Short.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
@@ -206,8 +205,7 @@ public final class Converter {
             }
             try {
                 return Integer.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
@@ -234,8 +232,7 @@ public final class Converter {
             }
             try {
                 return Long.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 return convertToBigDecimal(fromInstance).longValue();
             }
         });
@@ -254,8 +251,7 @@ public final class Converter {
             }
             try {
                 return Float.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 double value = convert(fromInstance, double.class);
                 if (value < Float.MIN_VALUE || value > Float.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Float.MIN_VALUE + " to " + Float.MAX_VALUE);
@@ -278,8 +274,7 @@ public final class Converter {
             }
             try {
                 return Double.valueOf(((String) fromInstance).trim());
-            }
-            catch (NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 return convertToBigDecimal(fromInstance).doubleValue();
             }
         });
@@ -381,6 +376,20 @@ public final class Converter {
             }
             return new BigDecimal((String) fromInstance);
         });
+        
+        // ? to Date
+        toDate.put(Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));  // Date is mutable
+        toDate.put(String.class, fromInstance -> DateFactory.parseDate(((String) fromInstance).trim()));
+        toDate.put(java.sql.Date.class, fromInstance -> new Date(((java.sql.Date) fromInstance).getTime()));
+        toDate.put(java.sql.Timestamp.class, fromInstance -> new Date(((Timestamp) fromInstance).getTime()));
+        toDate.put(LocalDate.class, fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
+        toDate.put(LocalDateTime.class, fromInstance -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toDate.put(ZonedDateTime.class, fromInstance -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toDate.put(long.class, fromInstance -> new Date((long) fromInstance));
+        toDate.put(Long.class, fromInstance -> new Date((long) fromInstance));
+        toDate.put(BigInteger.class, fromInstance -> new Date(((BigInteger) fromInstance).longValue()));
+        toDate.put(BigDecimal.class, fromInstance -> new Date(((BigDecimal) fromInstance).longValue()));
+        toDate.put(AtomicLong.class, fromInstance -> new Date(((AtomicLong) fromInstance).get()));
 
         // ? to String
         Convert<?> toString = Object::toString;
@@ -656,7 +665,7 @@ public final class Converter {
     /**
      * Convert from the passed in instance to a Timestamp.  If null is passed in, this method will return null.
      * Possible inputs are java.sql.Date, Date, Calendar, LocalDate, LocalDateTime, ZonedDateTime, TimeStamp
-     * (will return a copy), String (which will be parsed by DateFactory into a Date and a Timestamp will created
+     * (will return a copy), String (which will be parsed by DateFactory into a Date and a Timestamp will be created
      * from that), Long, BigInteger, BigDecimal, and AtomicLong (all of which the Timestamp will be created directly
      * from [number of milliseconds since Jan 1, 1970]).
      */
@@ -717,27 +726,19 @@ public final class Converter {
      * by DateFactory and returned as a new Date instance), Long, BigInteger, BigDecimal, and AtomicLong (all of
      * which the Date will be created directly from [number of milliseconds since Jan 1, 1970]).
      */
-    public static Date convertToDate(Object fromInstance) {
+    private static Date convertToDate(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                return DateFactory.parseDate(((String) fromInstance).trim());
-            } else if (fromInstance instanceof java.sql.Date) {   // convert from java.sql.Date to java.util.Date
-                return new Date(((java.sql.Date) fromInstance).getTime());
-            } else if (fromInstance instanceof Timestamp) {
-                Timestamp timestamp = (Timestamp) fromInstance;
-                return new Date(timestamp.getTime());
-            } else if (fromInstance instanceof Date) {   // Return a clone, not the same instance because Dates are mutable
-                return new Date(((Date) fromInstance).getTime());
-            } else if (fromInstance instanceof LocalDate) {
-                return new Date(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return new Date(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            } else if (fromInstance instanceof Calendar) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toDate.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Date)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).getTime();
-            } else if (fromInstance instanceof Long) {
-                return new Date((Long) fromInstance);
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
@@ -745,18 +746,11 @@ public final class Converter {
                 } else if (map.containsKey("value")) {
                     return convertToDate(map.get("value"));
                 } else {
-                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
+                    throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' or a 'value' key");
                 }
-            } else if (fromInstance instanceof BigInteger) {
-                return new Date(((BigInteger) fromInstance).longValue());
-            } else if (fromInstance instanceof BigDecimal) {
-                return new Date(((BigDecimal) fromInstance).longValue());
-            } else if (fromInstance instanceof AtomicLong) {
-                return new Date(((AtomicLong) fromInstance).get());
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'Date'", e);
         }
         nope(fromInstance, "Date");

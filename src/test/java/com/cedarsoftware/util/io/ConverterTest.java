@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.Converter.BIG_DECIMAL_ZERO;
 import static com.cedarsoftware.util.io.Converter.convert;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
@@ -30,7 +29,6 @@ import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
-import static com.cedarsoftware.util.io.Converter.convertToDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
 import static com.cedarsoftware.util.io.Converter.convertToSqlDate;
@@ -722,7 +720,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
+            assertTrue(e.getCause().getMessage().contains("Day must be between 1 and 31 inclusive, date: 2015/01/33"));
         }
 
         // Invalid source date for java.sql.Date
@@ -1175,9 +1173,9 @@ public class ConverterTest
         assertNull(convert("", java.util.Date.class));
         assertNull(convert(null, java.util.Date.class));
 
-        assertNull(convertToDate(" "));
-        assertNull(convertToDate(""));
-        assertNull(convertToDate(null));
+        assertNull(convert(" ", Date.class));
+        assertNull(convert("", Date.class));
+        assertNull(convert(null, Date.class));
 
         assertNull(convert(" ", java.sql.Date.class));
         assertNull(convert("", java.sql.Date.class));
@@ -1446,7 +1444,7 @@ public class ConverterTest
         assert null == convert(null, Float.class);
         assert null == convert(null, Double.class);
         assert null == convert(null, Character.class);
-        assert null == convertToDate(null);
+        assert null == convert(null, Date.class);
         assert null == convertToSqlDate(null);
         assert null == convertToTimestamp(null);
         assert null == convertToAtomicBoolean(null);
@@ -1611,7 +1609,7 @@ public class ConverterTest
         Timestamp timestamp = convertToTimestamp(LocalDate.of(2020, 9, 4));
         assert timestamp.getTime() == cal.getTime().getTime();
 
-        Date date = convertToDate(LocalDate.of(2020, 9, 4));
+        Date date = convert(LocalDate.of(2020, 9, 4), Date.class);
         assert date.getTime() == cal.getTime().getTime();
 
         Long lng = convert(LocalDate.of(2020, 9, 4), Long.class);
@@ -1640,7 +1638,7 @@ public class ConverterTest
         Timestamp timestamp = convertToTimestamp(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
         assert timestamp.getTime() == cal.getTime().getTime();
 
-        Date date = convertToDate(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        Date date = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Date.class);
         assert date.getTime() == cal.getTime().getTime();
 
         Long lng = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Long.class);
@@ -1666,7 +1664,7 @@ public class ConverterTest
         java.sql.Date sqlDate = convertToSqlDate(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
         assert sqlDate.getTime() == cal.getTime().getTime();
 
-        Date date = convertToDate(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
+        Date date = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), Date.class);
         assert date.getTime() == cal.getTime().getTime();
 
         AtomicLong atomicLong = convertToAtomicLong(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
