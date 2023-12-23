@@ -80,6 +80,9 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -111,7 +114,10 @@ public final class Converter {
         fromNull.put(BigDecimal.class, null);
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
-        fromNull.put(java.sql.Timestamp.class, null);
+        fromNull.put(Timestamp.class, null);
+        fromNull.put(LocalDate.class, null);
+        fromNull.put(LocalDateTime.class, null);
+        fromNull.put(ZonedDateTime.class, null);
 
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
@@ -435,6 +441,32 @@ public final class Converter {
             return new Timestamp(date.getTime());
         });
 
+        // ? to LocalDate
+        toLocalDate.put(LocalDate.class, fromInstance -> fromInstance);
+        toLocalDate.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
+        toLocalDate.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDate());
+        toLocalDate.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
+        toLocalDate.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
+        toLocalDate.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        toLocalDate.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDate());
+        toLocalDate.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((AtomicLong) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDate());
+        toLocalDate.put(BigInteger.class, fromInstance -> {
+            BigInteger big = (BigInteger) fromInstance;
+            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
+        });
+        toLocalDate.put(BigDecimal.class, fromInstance -> {
+            BigDecimal big = (BigDecimal) fromInstance;
+            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
+        });
+        toLocalDate.put(String.class, fromInstance -> {
+            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            if (date == null) {
+                return null;
+            }
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        });
+
+
         // ? to String
         Convert<?> toString = Object::toString;
         Convert<?> toNoExpString = Object::toString;
@@ -543,7 +575,7 @@ public final class Converter {
         return nope(fromInstance, "String");
     }
 
-    public static Class<?> convertToClass(Object fromInstance) {
+    private static Class<?> convertToClass(Object fromInstance) {
         try {
             Class<?> fromType = fromInstance.getClass();
             Convert<?> converter = toClass.get(fromType);
@@ -742,44 +774,25 @@ public final class Converter {
         return null;
     }
 
-    public static LocalDate convertToLocalDate(Object fromInstance) {
+    private static LocalDate convertToLocalDate(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                Date date = DateFactory.parseDate(((String) fromInstance).trim());
-                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof LocalDate) {   // return passed in instance (no need to copy, LocalDate is immutable)
-                return (LocalDate) fromInstance;
-            } else if (fromInstance instanceof LocalDateTime) {
-                return ((LocalDateTime) fromInstance).toLocalDate();
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return ((ZonedDateTime) fromInstance).toLocalDate();
-            } else if (fromInstance instanceof java.sql.Date) {
-                return ((java.sql.Date) fromInstance).toLocalDate();
-            } else if (fromInstance instanceof Timestamp) {
-                return ((Timestamp) fromInstance).toLocalDateTime().toLocalDate();
-            } else if (fromInstance instanceof Date) {
-                return ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof Calendar) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toLocalDate.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (LocalDate)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof Long) {
-                Long dateInMillis = (Long) fromInstance;
-                return Instant.ofEpochMilli(dateInMillis).atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof BigInteger) {
-                BigInteger big = (BigInteger) fromInstance;
-                return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof BigDecimal) {
-                BigDecimal big = (BigDecimal) fromInstance;
-                return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof AtomicLong) {
-                AtomicLong atomicLong = (AtomicLong) fromInstance;
-                return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convertToLocalDate(map.get("value"));
+                return convert(map.get("value"), LocalDate.class);
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDate'", e);
         }
         nope(fromInstance, "LocalDate");

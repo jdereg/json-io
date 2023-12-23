@@ -28,8 +28,6 @@ import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
-import static com.cedarsoftware.util.io.Converter.convertToClass;
-import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
@@ -833,21 +831,21 @@ public class ConverterTest
         assertEquals(localDateToMillis(localDate), now.getTime());
 
         // LocalDate to LocalDate - identity check
-        LocalDate x = convertToLocalDate(localDate);
+        LocalDate x = convert(localDate, LocalDate.class);
         assert localDate == x;
 
         // LocalDateTime to LocalDate
         LocalDateTime ldt = LocalDateTime.of(2020, 8, 30, 0, 0, 0);
-        x = convertToLocalDate(ldt);
+        x = convert(ldt, LocalDate.class);
         assert localDateTimeToMillis(ldt) == localDateToMillis(x);
 
         // ZonedDateTime to LocalDate
         ZonedDateTime zdt = ZonedDateTime.of(2020, 8, 30, 0, 0, 0, 0, ZoneId.systemDefault());
-        x = convertToLocalDate(zdt);
+        x = convert(zdt, LocalDate.class);
         assert zonedDateTimeToMillis(zdt) == localDateToMillis(x);
 
         // Calendar to LocalDate
-        x = convertToLocalDate(calendar);
+        x = convert(calendar, LocalDate.class);
         assert localDateToMillis(localDate) == calendar.getTime().getTime();
 
         // SqlDate to LocalDate
@@ -923,14 +921,14 @@ public class ConverterTest
 
         // Error handling
         try {
-            convertToLocalDate("2020-12-40");
+            convert("2020-12-40", LocalDate.class);
             fail();
         }
         catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
+            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
         }
 
-        assert convertToLocalDate(null) == null;
+        assert convert(null, LocalDate.class) == null;
     }
 
     @Test
@@ -1672,18 +1670,16 @@ public class ConverterTest
     @Test
     public void testStringToClass()
     {
-        Class<?> clazz = convertToClass("java.math.BigInteger");
+        Class<?> clazz = convert("java.math.BigInteger", Class.class);
         assert clazz.getName().equals("java.math.BigInteger");
 
-        assertThatThrownBy(() -> convertToClass("foo.bar.baz.Qux"))
+        assertThatThrownBy(() -> convert("foo.bar.baz.Qux", Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
 
-        assertThatThrownBy(() -> convertToClass(null))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [null] could not be converted to a 'Class'");
+        assert null == convert(null, Class.class);
 
-        assertThatThrownBy(() -> convertToClass(16.0))
+        assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
@@ -1691,7 +1687,7 @@ public class ConverterTest
     @Test
     void testClassToClass()
     {
-        Class<?> clazz = convertToClass(ConverterTest.class);
+        Class<?> clazz = convert(ConverterTest.class, Class.class);
         assert clazz.getName() == ConverterTest.class.getName();
     }
 
@@ -1743,7 +1739,7 @@ public class ConverterTest
         bigInt = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000000"), BigInteger.class);
         assert bigInt.intValue() == 0;
 
-        assertThatThrownBy(() -> convertToClass(16.0))
+        assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
     }
