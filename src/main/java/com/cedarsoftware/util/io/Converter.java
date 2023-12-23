@@ -670,6 +670,8 @@ public final class Converter {
             } catch (Exception e) {
                 throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
             }
+        } else {
+            throw new IllegalArgumentException("Unsupported destination type '" + getShortName(toType) + "' requested for conversion");
         }
         throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], not convertable to a '" + getShortName(toType) + "'");
     }

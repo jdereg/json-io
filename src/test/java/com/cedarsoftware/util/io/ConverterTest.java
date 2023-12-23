@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -417,7 +418,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported destination type"));
         }
 
         try
@@ -1636,7 +1637,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported destination type"));
         }
     }
 
@@ -1800,6 +1801,11 @@ public class ConverterTest
             fail();
         }
         catch (IllegalArgumentException e) { }
+
+        assertThatThrownBy(() -> convert(Long.MAX_VALUE, char.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [Long (9223372036854775807)] could not be converted to a 'char'");
+
     }
 
     @Test
@@ -1966,6 +1972,18 @@ public class ConverterTest
     }
 
     @Test
+    public void testBigDecimalToUUID()
+    {
+        UUID uuid = convert(new BigDecimal("100"), UUID.class);
+        BigDecimal hundred = convert(uuid, BigDecimal.class);
+        assert hundred.intValue() == 100;
+
+        uuid = convert(new BigDecimal("100.4"), UUID.class);
+        hundred = convert(uuid, BigDecimal.class);
+        assert hundred.intValue() == 100;
+    }
+
+    @Test
     public void testUUIDToBigInteger()
     {
         BigInteger bigInt = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000064"), BigInteger.class);
@@ -1980,6 +1998,19 @@ public class ConverterTest
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [Double (16.0)], not convertable to a 'Class'");
+    }
+
+    @Test
+    public void testUUIDToBigDecimal()
+    {
+        BigDecimal bigDec = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000064"), BigDecimal.class);
+        assert bigDec.intValue() == 100;
+
+        bigDec = Converter.convert(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"), BigDecimal.class);
+        assert bigDec.toString().equals("-18446744073709551617");
+
+        bigDec = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000000"), BigDecimal.class);
+        assert bigDec.intValue() == 0;
     }
 
     @Test
@@ -2012,5 +2043,14 @@ public class ConverterTest
         
         str = Converter.convert(null, String.class);
         assert str == null;
+    }
+
+    @Test
+    void testUnknownType()
+    {
+        assertThatThrownBy(() -> convert(null, Collection.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported destination type 'Collection' requested for conversion");
+
     }
 }

@@ -98,7 +98,7 @@ public class MetaUtilsTests {
             MetaUtils.convert(TimeZone.class, "");
             fail();
         } catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported value type", "TimeZone");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported destination type", "timezone");
         }
         
         try {
