@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
@@ -59,7 +60,7 @@ public abstract class AbstractTemporalFactory<T extends TemporalAccessor> implem
     }
 
     protected ZonedDateTime convertToZonedDateTime(String s) {
-        Date date = DateFactory.parseDate(s);
+        Date date = DateUtilities.parseDate(s);
 
         if (date == null) {
             throw new JsonIoException("Could not parse date: " + s);

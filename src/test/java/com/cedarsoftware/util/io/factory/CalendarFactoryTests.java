@@ -6,6 +6,7 @@ import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import com.cedarsoftware.util.io.JsonReader;
 
 public class CalendarFactoryTests extends HandWrittenDateFactoryTests<Calendar> {
@@ -60,7 +61,7 @@ public class CalendarFactoryTests extends HandWrittenDateFactoryTests<Calendar> 
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(Calendar dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30.050-0500");
 
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
@@ -70,7 +71,7 @@ public class CalendarFactoryTests extends HandWrittenDateFactoryTests<Calendar> 
 
     @Override
     protected void assert_handWrittenDate_inSaigon(Calendar dt) {
-        Date date = DateFactory.parseDate("2011-2-3 20:09:03");
+        Date date = DateUtilities.parseDate("2011-2-3 20:09:03");
 
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);

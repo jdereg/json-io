@@ -7,6 +7,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.io.JsonObject;
@@ -32,7 +33,7 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected void assert_handWrittenDate_withNoZone(Instant dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30");
 
         assertThat(date).isNotNull();
         assertThat(dt).isEqualTo(date.toInstant());
@@ -40,7 +41,7 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected void assert_handWrittenDate_withNoTime(Instant dt) {
-        Date date = DateFactory.parseDate("2011-2-3");
+        Date date = DateUtilities.parseDate("2011-2-3");
 
         assertThat(date).isNotNull();
         assertThat(dt).isEqualTo(date.toInstant());
@@ -48,7 +49,7 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected void assert_handWrittenDate_withTime(Instant dt) {
-        Date date = DateFactory.parseDate("02/03/2011 08:09:03");
+        Date date = DateUtilities.parseDate("02/03/2011 08:09:03");
 
         assertThat(date).isNotNull();
         assertThat(dt).isEqualTo(date.toInstant());
@@ -56,7 +57,7 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(Instant dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30.050-0500");
 
         assertThat(date).isNotNull();
         assertThat(dt).isEqualTo(date.toInstant());
@@ -64,7 +65,7 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected void assert_handWrittenDate_inSaigon(Instant dt) {
-        Date date = DateFactory.parseDate("2011-02-03T20:09:03");
+        Date date = DateUtilities.parseDate("2011-02-03T20:09:03");
         assertThat(date).isNotNull();
 
         Instant actual = date.toInstant();

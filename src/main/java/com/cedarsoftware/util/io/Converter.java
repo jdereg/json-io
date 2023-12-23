@@ -20,8 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
-
 /**
  * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Number, Date,
  * TimeStamp, SQL Date, LocalDate, LocalDateTime, ZonedDateTime, Calendar, Big*, Atomic*, Class, UUID,
@@ -384,7 +382,7 @@ public final class Converter {
         toDate.put(BigInteger.class, fromInstance -> new Date(((BigInteger) fromInstance).longValue()));
         toDate.put(BigDecimal.class, fromInstance -> new Date(((BigDecimal) fromInstance).longValue()));
         toDate.put(AtomicLong.class, fromInstance -> new Date(((AtomicLong) fromInstance).get()));
-        toDate.put(String.class, fromInstance -> DateFactory.parseDate(((String) fromInstance).trim()));
+        toDate.put(String.class, fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
 
         // ? to java.sql.Date
         toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
@@ -398,7 +396,7 @@ public final class Converter {
         toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((BigDecimal) fromInstance).longValue()));
         toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((AtomicLong) fromInstance).get()));
         toSqlDate.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -417,7 +415,7 @@ public final class Converter {
         toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((BigDecimal) fromInstance).longValue()));
         toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((AtomicLong) fromInstance).get()));
         toTimestamp.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -438,7 +436,7 @@ public final class Converter {
         toCalendar.put(BigDecimal.class, fromInstance -> initCal(((BigDecimal) fromInstance).longValue()));
         toCalendar.put(AtomicLong.class, fromInstance -> initCal(((AtomicLong) fromInstance).longValue()));
         toCalendar.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -463,7 +461,7 @@ public final class Converter {
             return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
         });
         toLocalDate.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -488,7 +486,7 @@ public final class Converter {
             return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
         });
         toLocalDateTime.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -513,7 +511,7 @@ public final class Converter {
             return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
         });
         toZonedDateTime.put(String.class, fromInstance -> {
-            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
                 return null;
             }
@@ -652,14 +650,10 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        if (toType == null) {
-            throw new IllegalArgumentException("Type cannot be null in Converter.convert(value, type)");
-        }
-
         if (fromInstance == null && fromNull.containsKey(toType)) {
             return (T) fromNull.get(toType);
         }
-        
+
         Convert<?> converter = converters.get(toType);
         if (converter != null) {
             try {
@@ -673,6 +667,7 @@ public final class Converter {
         } else {
             throw new IllegalArgumentException("Unsupported destination type '" + getShortName(toType) + "' requested for conversion");
         }
+        
         throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], not convertable to a '" + getShortName(toType) + "'");
     }
 

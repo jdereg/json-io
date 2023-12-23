@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
@@ -54,7 +55,7 @@ public class CalendarFactory implements JsonReader.ClassFactory {
 
     private Object fromString(String value) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTime(DateFactory.parseDate(value));
+        calendar.setTime(DateUtilities.parseDate(value));
         return calendar;
     }
 
@@ -75,7 +76,7 @@ public class CalendarFactory implements JsonReader.ClassFactory {
             String zone = (String) object.get("zone");
             TimeZone tz = zone == null ? null : TimeZone.getTimeZone(zone);
 
-            Date date = DateFactory.parseDate(time);
+            Date date = DateUtilities.parseDate(time);
 
             // If a Calendar reader needs a ClassFactory.newInstance() call, then write a ClassFactory for
             // the special Calendar class, don't try to do that via a custom reader.  That is why only

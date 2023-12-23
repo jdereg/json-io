@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.ZoneId;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import com.cedarsoftware.util.io.JsonReader;
 
 public class DateFactoryTests extends HandWrittenDateFactoryTests<Date> {
@@ -58,7 +59,7 @@ public class DateFactoryTests extends HandWrittenDateFactoryTests<Date> {
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(Date dt) {
-        Date expected = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        Date expected = DateUtilities.parseDate("2011-12-03T10:15:30.050-0500");
         assertThat(dt).isEqualTo(expected);
     }
 

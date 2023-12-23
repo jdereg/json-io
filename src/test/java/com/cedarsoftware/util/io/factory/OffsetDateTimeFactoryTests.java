@@ -10,6 +10,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.io.JsonObject;
@@ -89,7 +90,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withNoTime(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-02-03");
+        Date date = DateUtilities.parseDate("2011-02-03");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());
@@ -100,7 +101,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withTime(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-02-03T08:09:03");
+        Date date = DateUtilities.parseDate("2011-02-03T08:09:03");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());
@@ -111,7 +112,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30.050-0500");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());
@@ -122,7 +123,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_inSaigon(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-02-03 20:09:03");
+        Date date = DateUtilities.parseDate("2011-02-03 20:09:03");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());
@@ -133,7 +134,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected void assert_handWrittenDate_withNoZone(OffsetDateTime dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30");
         assertThat(date).isNotNull();
 
         Instant instant = Instant.ofEpochMilli(date.getTime());

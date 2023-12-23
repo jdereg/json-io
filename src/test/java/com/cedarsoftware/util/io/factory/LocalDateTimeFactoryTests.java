@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.DateUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -137,7 +138,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
 
     @Override
     protected void assert_handWrittenDate_withMilliseconds(LocalDateTime dt) {
-        Date date = DateFactory.parseDate("2011-12-03T10:15:30.050-0500");
+        Date date = DateUtilities.parseDate("2011-12-03T10:15:30.050-0500");
         assertThat(date).isNotNull();
 
         LocalDateTime actual = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
@@ -146,7 +147,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
 
     @Override
     protected void assert_handWrittenDate_inSaigon(LocalDateTime dt) {
-        Date date = DateFactory.parseDate("2011-02-03 20:09:03");
+        Date date = DateUtilities.parseDate("2011-02-03 20:09:03");
         assertThat(date).isNotNull();
 
         LocalDateTime actual = date.toInstant().atZone(SAIGON_ZONE_ID).toLocalDateTime();
