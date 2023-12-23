@@ -78,6 +78,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -108,6 +109,7 @@ public final class Converter {
         fromNull.put(BigInteger.class, null);
         fromNull.put(BigDecimal.class, null);
         fromNull.put(Date.class, null);
+        fromNull.put(java.sql.Date.class, null);
 
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
@@ -379,7 +381,6 @@ public final class Converter {
         
         // ? to Date
         toDate.put(Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));  // Date is mutable
-        toDate.put(String.class, fromInstance -> DateFactory.parseDate(((String) fromInstance).trim()));
         toDate.put(java.sql.Date.class, fromInstance -> new Date(((java.sql.Date) fromInstance).getTime()));
         toDate.put(java.sql.Timestamp.class, fromInstance -> new Date(((Timestamp) fromInstance).getTime()));
         toDate.put(LocalDate.class, fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
@@ -390,6 +391,27 @@ public final class Converter {
         toDate.put(BigInteger.class, fromInstance -> new Date(((BigInteger) fromInstance).longValue()));
         toDate.put(BigDecimal.class, fromInstance -> new Date(((BigDecimal) fromInstance).longValue()));
         toDate.put(AtomicLong.class, fromInstance -> new Date(((AtomicLong) fromInstance).get()));
+        toDate.put(String.class, fromInstance -> DateFactory.parseDate(((String) fromInstance).trim()));
+
+        // ? to java.sql.Date
+        toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
+        toSqlDate.put(Date.class, fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
+        toSqlDate.put(java.sql.Timestamp.class, fromInstance -> new java.sql.Date(((Timestamp) fromInstance).getTime()));
+        toSqlDate.put(LocalDate.class, fromInstance -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
+        toSqlDate.put(LocalDateTime.class, fromInstance -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toSqlDate.put(ZonedDateTime.class, fromInstance -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toSqlDate.put(long.class, fromInstance -> new java.sql.Date((long) fromInstance));
+        toSqlDate.put(Long.class, fromInstance -> new java.sql.Date((long) fromInstance));
+        toSqlDate.put(BigInteger.class, fromInstance -> new java.sql.Date(((BigInteger) fromInstance).longValue()));
+        toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((BigDecimal) fromInstance).longValue()));
+        toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((AtomicLong) fromInstance).get()));
+        toSqlDate.put(String.class, fromInstance -> {
+            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            if (date == null) {
+                return null;
+            }
+            return new java.sql.Date(date.getTime());
+        });
 
         // ? to String
         Convert<?> toString = Object::toString;
@@ -605,57 +627,31 @@ public final class Converter {
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a java.sql.Date.  If null is passed in, this method will return null.
-     * Possible inputs are TimeStamp, Date, Calendar, java.sql.Date (will return a copy), LocalDate, LocalDateTime,
-     * ZonedDateTime, String (which will be parsed by DateFactory into a Date and a java.sql.Date will be created from that),
-     * Long, BigInteger, BigDecimal, and AtomicLong (all of which the java.sql.Date will be created directly from
-     * [number of milliseconds since Jan 1, 1970]).
-     */
-    public static java.sql.Date convertToSqlDate(Object fromInstance) {
+    private static java.sql.Date convertToSqlDate(Object fromInstance) {
         try {
-            if (fromInstance instanceof java.sql.Date) {   // Return a clone of the current date time because java.sql.Date is mutable.
-                return new java.sql.Date(((java.sql.Date) fromInstance).getTime());
-            } else if (fromInstance instanceof Timestamp) {
-                Timestamp timestamp = (Timestamp) fromInstance;
-                return new java.sql.Date(timestamp.getTime());
-            } else if (fromInstance instanceof Date) {   // convert from java.util.Date to java.sql.Date
-                return new java.sql.Date(((Date) fromInstance).getTime());
-            } else if (fromInstance instanceof String) {
-                Date date = DateFactory.parseDate(((String) fromInstance).trim());
-                if (date == null) {
-                    return null;
-                }
-                return new java.sql.Date(date.getTime());
-            } else if (fromInstance instanceof LocalDate) {
-                return new java.sql.Date(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            } else if (fromInstance instanceof Calendar) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toSqlDate.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (java.sql.Date)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Calendar) {
                 return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
-            } else if (fromInstance instanceof Long) {
-                return new java.sql.Date((Long) fromInstance);
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
-                    return convertToSqlDate(map.get("time"));
+                    return convert(map.get("time"), java.sql.Date.class);
                 } else if (map.containsKey("value")) {
-                    return convertToSqlDate(map.get("value"));
+                    return convert(map.get("value"), java.sql.Date.class);
                 } else {
                     throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
                 }
-            } else if (fromInstance instanceof BigInteger) {
-                return new java.sql.Date(((BigInteger) fromInstance).longValue());
-            } else if (fromInstance instanceof BigDecimal) {
-                return new java.sql.Date(((BigDecimal) fromInstance).longValue());
-            } else if (fromInstance instanceof AtomicLong) {
-                return new java.sql.Date(((AtomicLong) fromInstance).get());
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'java.sql.Date'", e);
         }
         nope(fromInstance, "java.sql.Date");
@@ -720,12 +716,6 @@ public final class Converter {
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a Date.  If null is passed in, this method will return null.
-     * Possible inputs are java.sql.Date, Timestamp, Calendar, Date (will return a copy), String (which will be parsed
-     * by DateFactory and returned as a new Date instance), Long, BigInteger, BigDecimal, and AtomicLong (all of
-     * which the Date will be created directly from [number of milliseconds since Jan 1, 1970]).
-     */
     private static Date convertToDate(Object fromInstance) {
         try {
             Class<?> fromType = fromInstance.getClass();
@@ -742,9 +732,9 @@ public final class Converter {
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
-                    return convertToDate(map.get("time"));
+                    return convert(map.get("time"), Date.class);
                 } else if (map.containsKey("value")) {
-                    return convertToDate(map.get("value"));
+                    return convert(map.get("value"), Date.class);
                 } else {
                     throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' or a 'value' key");
                 }

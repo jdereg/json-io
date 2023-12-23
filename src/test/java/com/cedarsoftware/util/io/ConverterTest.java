@@ -31,7 +31,6 @@ import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
-import static com.cedarsoftware.util.io.Converter.convertToSqlDate;
 import static com.cedarsoftware.util.io.Converter.convertToTimestamp;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
@@ -731,14 +730,14 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
+            assertTrue(e.getCause().getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
     }
 
     @Test
     void testBogusSqlDate2()
     {
-        assertThatThrownBy(() -> Converter.convertToSqlDate(true))
+        assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported value type [java.lang.Boolean (true)] attempting to convert to 'java.sql.Date'");
     }
@@ -1181,9 +1180,9 @@ public class ConverterTest
         assertNull(convert("", java.sql.Date.class));
         assertNull(convert(null, java.sql.Date.class));
 
-        assertNull(convertToSqlDate(" "));
-        assertNull(convertToSqlDate(""));
-        assertNull(convertToSqlDate(null));
+        assertNull(convert(" ", java.sql.Date.class));
+        assertNull(convert("", java.sql.Date.class));
+        assertNull(convert(null, java.sql.Date.class));
 
         assertNull(convert(" ", java.sql.Timestamp.class));
         assertNull(convert("", java.sql.Timestamp.class));
@@ -1445,7 +1444,7 @@ public class ConverterTest
         assert null == convert(null, Double.class);
         assert null == convert(null, Character.class);
         assert null == convert(null, Date.class);
-        assert null == convertToSqlDate(null);
+        assert null == convert(null, java.sql.Date.class);
         assert null == convertToTimestamp(null);
         assert null == convertToAtomicBoolean(null);
         assert null == convertToAtomicInteger(null);
@@ -1603,7 +1602,7 @@ public class ConverterTest
         BigInteger bigI = convert(LocalDate.of(2020, 9, 4), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
-        java.sql.Date sqlDate = convertToSqlDate(LocalDate.of(2020, 9, 4));
+        java.sql.Date sqlDate = convert(LocalDate.of(2020, 9, 4), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
 
         Timestamp timestamp = convertToTimestamp(LocalDate.of(2020, 9, 4));
@@ -1632,7 +1631,7 @@ public class ConverterTest
         BigInteger bigI = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
-        java.sql.Date sqlDate = convertToSqlDate(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        java.sql.Date sqlDate = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
 
         Timestamp timestamp = convertToTimestamp(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
@@ -1661,7 +1660,7 @@ public class ConverterTest
         BigInteger bigI = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), BigInteger.class);
         assert bigI.longValue() == cal.getTime().getTime();
 
-        java.sql.Date sqlDate = convertToSqlDate(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
+        java.sql.Date sqlDate = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
 
         Date date = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), Date.class);
