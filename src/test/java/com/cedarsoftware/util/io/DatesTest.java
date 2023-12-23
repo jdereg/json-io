@@ -500,18 +500,9 @@ class DatesTest
     public void testDateReaderNullHandling()
     {
         DateFactory factory = new DateFactory();
-        try
-        {
-            JsonObject object = new JsonObject();
-            object.setValue(null);
-            factory.newInstance(Date.class, object, null);
-           fail();
-        }
-        catch (IllegalArgumentException e)
-        {
-            assert e.getMessage().toLowerCase().contains("must be specified");
-        }
-
+        JsonObject object = new JsonObject();
+        object.setValue(null);
+        assert null == factory.newInstance(Date.class, object, null);
     }
 
     @Test
@@ -590,9 +581,8 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("between 1 and 12");
+            assert e.getCause().getMessage().toLowerCase().contains("between 1 and 12");
         }
-
     }
 
     @Test
@@ -609,9 +599,8 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("between 1 and 31");
+            assert e.getCause().getMessage().toLowerCase().contains("between 1 and 31");
         }
-
     }
 
     @Test
@@ -628,7 +617,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("between 0 and 23");
+            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 23");
         }
 
     }
@@ -647,7 +636,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("between 0 and 59");
+            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 59");
         }
 
     }
@@ -666,7 +655,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("between 0 and 59");
+            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 59");
         }
 
     }
