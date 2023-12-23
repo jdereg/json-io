@@ -15,6 +15,7 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -928,7 +929,25 @@ public final class Converter {
         // Handle "is" assignable
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), Calendar.class);
+            if (map.containsKey("time")) {
+                Object zoneRaw = map.get("zone");
+                TimeZone tz;
+                if (zoneRaw instanceof String) {
+                    String zone = (String) zoneRaw;
+                    tz = TimeZone.getTimeZone(zone);
+                } else {
+                    tz = TimeZone.getDefault();
+                }
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeZone(tz);
+                Date epochInMillis = convert(map.get("time"), Date.class);
+                cal.setTimeInMillis(epochInMillis.getTime());
+                return cal;
+            } else if (map.containsKey("value")) {
+                return convert(map.get("value"), Calendar.class);
+            } else {
+                throw new IllegalArgumentException("To convert Map to a Calendar, the Map must contain a 'time' and optional 'zone' key, or a 'value' key");
+            }
         }
         return NOPE;
     }

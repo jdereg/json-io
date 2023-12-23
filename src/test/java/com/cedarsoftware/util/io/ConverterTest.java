@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
@@ -1451,44 +1452,81 @@ public class ConverterTest
     void testMapToCalendar()
     {
         long now = System.currentTimeMillis();
-        Map map = new HashMap();
+        final Map map = new HashMap();
         map.put("value", new Date(now));
         Calendar cal = convert(map, Calendar.class);
         assert now == cal.getTimeInMillis();
 
-        map = new HashMap();
+        map.clear();
         map.put("value", "");
         assert null == convert(map, Calendar.class);
 
-        map = new HashMap();
+        map.clear();
         map.put("value", null);
         assert null == convert(map, Calendar.class);
 
-        map = new HashMap();
         map.clear();
-        assert null == convert(map, Calendar.class);
+        assertThatThrownBy(() -> convert(map, Calendar.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Calendar'");
+    }
+
+    @Test
+    void testMapToCalendarWithTimeZone()
+    {
+        long now = System.currentTimeMillis();
+        Calendar cal = Calendar.getInstance();
+        cal.clear();
+        cal.setTimeZone(TimeZone.getTimeZone("Asia/Tokyo"));
+        cal.setTimeInMillis(now);
+
+        final Map map = new HashMap();
+        map.put("time", cal.getTimeInMillis());
+        map.put("zone", cal.getTimeZone().getID());
+
+        Calendar newCal = convert(map, Calendar.class);
+        assert cal.equals(newCal);
+        assert DeepEquals.deepEquals(cal, newCal);
+    }
+
+    @Test
+    void testMapToCalendarWithTimeNoZone()
+    {
+        long now = System.currentTimeMillis();
+        Calendar cal = Calendar.getInstance();
+        cal.clear();
+        cal.setTimeZone(TimeZone.getDefault());
+        cal.setTimeInMillis(now);
+
+        final Map map = new HashMap();
+        map.put("time", cal.getTimeInMillis());
+
+        Calendar newCal = convert(map, Calendar.class);
+        assert cal.equals(newCal);
+        assert DeepEquals.deepEquals(cal, newCal);
     }
 
     @Test
     void testMapToGregCalendar()
     {
         long now = System.currentTimeMillis();
-        Map map = new HashMap();
+        final Map map = new HashMap();
         map.put("value", new Date(now));
         GregorianCalendar cal = convert(map, GregorianCalendar.class);
         assert now == cal.getTimeInMillis();
 
-        map = new HashMap();
+        map.clear();
         map.put("value", "");
         assert null == convert(map, GregorianCalendar.class);
 
-        map = new HashMap();
+        map.clear();
         map.put("value", null);
         assert null == convert(map, GregorianCalendar.class);
 
-        map = new HashMap();
         map.clear();
-        assert null == convert(map, GregorianCalendar.class);
+        assertThatThrownBy(() -> convert(map, GregorianCalendar.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'GregorianCalendar'");
     }
 
     @Test

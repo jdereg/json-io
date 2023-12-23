@@ -237,7 +237,7 @@ public class CalendarTest
 
     private ReadOptions createOldOptionsFormat(String timeZone) {
         TimeZone zone = TimeZone.getTimeZone(timeZone);
-        CalendarFactory factory = new CalendarFactory(zone);
+        CalendarFactory factory = new CalendarFactory();
 
         return new ReadOptions()
                 .addClassFactory(Calendar.class, factory)
@@ -245,15 +245,14 @@ public class CalendarTest
     }
 
     @Test
-    void testBadCalendar()
-    {
-        try
-        {
+    void testBadCalendar() {
+        try {
             TestUtil.toObjects("{\"@type\":\"java.util.GregorianCalendar\",\"time\":\"2011-12-08X13:29:58.822-0500\",\"zone\":\"bad zone\"}", null);
             fail();
         }
-        catch (Exception ignored)
-        { }
+        catch (Exception e) {
+            TestUtil.assertContainsIgnoreCase("could not be converted to a 'gregoriancalendar'");
+        }
     }
 
     @Test
