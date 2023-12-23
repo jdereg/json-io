@@ -31,7 +31,6 @@ import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToClass;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDate;
 import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
-import static com.cedarsoftware.util.io.Converter.convertToTimestamp;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
@@ -1188,9 +1187,9 @@ public class ConverterTest
         assertNull(convert("", java.sql.Timestamp.class));
         assertNull(convert(null, java.sql.Timestamp.class));
 
-        assertNull(convertToTimestamp(" "));
-        assertNull(convertToTimestamp(""));
-        assertNull(convertToTimestamp(null));
+        assertNull(convert(" ", Timestamp.class));
+        assertNull(convert("", Timestamp.class));
+        assertNull(convert(null, Timestamp.class));
     }
 
     @Test
@@ -1215,7 +1214,7 @@ public class ConverterTest
         assertEquals(christmas2, convert(al, Timestamp.class));
 
         ZonedDateTime zdt = ZonedDateTime.of(2020, 8, 30, 13, 11, 17, 0, ZoneId.systemDefault());
-        Timestamp alexaBirthday = convertToTimestamp(zdt);
+        Timestamp alexaBirthday = convert(zdt, Timestamp.class);
         assert alexaBirthday.getTime() == zonedDateTimeToMillis(zdt);
         try
         {
@@ -1234,7 +1233,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("unable to parse: 123");
+            assert e.getCause().getMessage().toLowerCase().contains("unable to parse: 123");
         }
     }
 
@@ -1445,7 +1444,7 @@ public class ConverterTest
         assert null == convert(null, Character.class);
         assert null == convert(null, Date.class);
         assert null == convert(null, java.sql.Date.class);
-        assert null == convertToTimestamp(null);
+        assert null == convert(null, Timestamp.class);
         assert null == convertToAtomicBoolean(null);
         assert null == convertToAtomicInteger(null);
         assert null == convertToAtomicLong(null);
@@ -1605,7 +1604,7 @@ public class ConverterTest
         java.sql.Date sqlDate = convert(LocalDate.of(2020, 9, 4), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
 
-        Timestamp timestamp = convertToTimestamp(LocalDate.of(2020, 9, 4));
+        Timestamp timestamp = convert(LocalDate.of(2020, 9, 4), Timestamp.class);
         assert timestamp.getTime() == cal.getTime().getTime();
 
         Date date = convert(LocalDate.of(2020, 9, 4), Date.class);
@@ -1634,7 +1633,7 @@ public class ConverterTest
         java.sql.Date sqlDate = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
 
-        Timestamp timestamp = convertToTimestamp(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        Timestamp timestamp = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Timestamp.class);
         assert timestamp.getTime() == cal.getTime().getTime();
 
         Date date = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Date.class);

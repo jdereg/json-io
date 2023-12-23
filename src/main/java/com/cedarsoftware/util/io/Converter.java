@@ -79,6 +79,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -110,6 +111,7 @@ public final class Converter {
         fromNull.put(BigDecimal.class, null);
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
+        fromNull.put(java.sql.Timestamp.class, null);
 
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
@@ -382,7 +384,7 @@ public final class Converter {
         // ? to Date
         toDate.put(Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));  // Date is mutable
         toDate.put(java.sql.Date.class, fromInstance -> new Date(((java.sql.Date) fromInstance).getTime()));
-        toDate.put(java.sql.Timestamp.class, fromInstance -> new Date(((Timestamp) fromInstance).getTime()));
+        toDate.put(Timestamp.class, fromInstance -> new Date(((Timestamp) fromInstance).getTime()));
         toDate.put(LocalDate.class, fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
         toDate.put(LocalDateTime.class, fromInstance -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toDate.put(ZonedDateTime.class, fromInstance -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
@@ -396,7 +398,7 @@ public final class Converter {
         // ? to java.sql.Date
         toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
         toSqlDate.put(Date.class, fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
-        toSqlDate.put(java.sql.Timestamp.class, fromInstance -> new java.sql.Date(((Timestamp) fromInstance).getTime()));
+        toSqlDate.put(Timestamp.class, fromInstance -> new java.sql.Date(((Timestamp) fromInstance).getTime()));
         toSqlDate.put(LocalDate.class, fromInstance -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
         toSqlDate.put(LocalDateTime.class, fromInstance -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toSqlDate.put(ZonedDateTime.class, fromInstance -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
@@ -411,6 +413,26 @@ public final class Converter {
                 return null;
             }
             return new java.sql.Date(date.getTime());
+        });
+
+        // ? to Timestamp
+        toTimestamp.put(Timestamp.class, fromInstance -> new Timestamp(((Timestamp)fromInstance).getTime()));  // Timestamp is mutable
+        toTimestamp.put(java.sql.Date.class, fromInstance -> new Timestamp(((java.sql.Date) fromInstance).getTime()));
+        toTimestamp.put(Date.class, fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
+        toTimestamp.put(LocalDate.class, fromInstance -> new Timestamp(localDateToMillis((LocalDate) fromInstance)));
+        toTimestamp.put(LocalDateTime.class, fromInstance -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toTimestamp.put(ZonedDateTime.class, fromInstance -> new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toTimestamp.put(long.class, fromInstance -> new Timestamp((long) fromInstance));
+        toTimestamp.put(Long.class, fromInstance -> new Timestamp((long) fromInstance));
+        toTimestamp.put(BigInteger.class, fromInstance -> new Timestamp(((BigInteger) fromInstance).longValue()));
+        toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((BigDecimal) fromInstance).longValue()));
+        toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((AtomicLong) fromInstance).get()));
+        toTimestamp.put(String.class, fromInstance -> {
+            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            if (date == null) {
+                return null;
+            }
+            return new Timestamp(date.getTime());
         });
 
         // ? to String
@@ -658,37 +680,19 @@ public final class Converter {
         return null;
     }
 
-    /**
-     * Convert from the passed in instance to a Timestamp.  If null is passed in, this method will return null.
-     * Possible inputs are java.sql.Date, Date, Calendar, LocalDate, LocalDateTime, ZonedDateTime, TimeStamp
-     * (will return a copy), String (which will be parsed by DateFactory into a Date and a Timestamp will be created
-     * from that), Long, BigInteger, BigDecimal, and AtomicLong (all of which the Timestamp will be created directly
-     * from [number of milliseconds since Jan 1, 1970]).
-     */
-    public static Timestamp convertToTimestamp(Object fromInstance) {
+    private static Timestamp convertToTimestamp(Object fromInstance) {
         try {
-            if (fromInstance instanceof java.sql.Date) {   // convert from java.sql.Date to java.util.Date
-                return new Timestamp(((java.sql.Date) fromInstance).getTime());
-            } else if (fromInstance instanceof Timestamp) {   // return a clone of the Timestamp because it is mutable
-                return new Timestamp(((Timestamp) fromInstance).getTime());
-            } else if (fromInstance instanceof Date) {
-                return new Timestamp(((Date) fromInstance).getTime());
-            } else if (fromInstance instanceof LocalDate) {
-                return new Timestamp(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            } else if (fromInstance instanceof String) {
-                Date date = DateFactory.parseDate(((String) fromInstance).trim());
-                if (date == null) {
-                    return null;
-                }
-                return new Timestamp(date.getTime());
-            } else if (fromInstance instanceof Calendar) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toTimestamp.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (Timestamp)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Calendar) {
                 return new Timestamp(((Calendar) fromInstance).getTime().getTime());
-            } else if (fromInstance instanceof Long) {
-                return new Timestamp((Long) fromInstance);
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("time")) {
@@ -697,25 +701,16 @@ public final class Converter {
                     Timestamp timeStamp = new Timestamp(time);
                     timeStamp.setNanos(ns);
                     return timeStamp;
-                } else {
-                    throw new IllegalArgumentException("To convert Map to Timestamp, the Map must contain a 'time' key and an optional 'nanos' key");
                 }
-            } else if (fromInstance instanceof BigInteger) {
-                return new Timestamp(((BigInteger) fromInstance).longValue());
-            } else if (fromInstance instanceof BigDecimal) {
-                return new Timestamp(((BigDecimal) fromInstance).longValue());
-            } else if (fromInstance instanceof AtomicLong) {
-                return new Timestamp(((AtomicLong) fromInstance).get());
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'Timestamp'", e);
         }
         nope(fromInstance, "Timestamp");
         return null;
     }
-
+    
     private static Date convertToDate(Object fromInstance) {
         try {
             Class<?> fromType = fromInstance.getClass();
