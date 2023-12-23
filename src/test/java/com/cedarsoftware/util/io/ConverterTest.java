@@ -22,14 +22,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
-import static com.cedarsoftware.util.io.Converter.convert2AtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
-import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
-import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
 import static com.cedarsoftware.util.io.Converter.localDateToMillis;
 import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
@@ -1056,26 +1053,26 @@ public class ConverterTest
         assertEquals(zonedDateTimeToMillis(zonedDateTime), now.getTime());
 
         // ZonedDateTime to ZonedDateTime - identity check
-        ZonedDateTime x = convertToZonedDateTime(zonedDateTime);
+        ZonedDateTime x = convert(zonedDateTime, ZonedDateTime.class);
         assert zonedDateTime == x;
 
         // LocalDate to ZonedDateTime
         LocalDate ld = LocalDate.of(2020, 8, 30);
-        x = convertToZonedDateTime(ld);
+        x = convert(ld, ZonedDateTime.class);
         assert localDateToMillis(ld) == zonedDateTimeToMillis(x);
 
         // LocalDateTime to ZonedDateTime
         LocalDateTime ldt = LocalDateTime.of(2020, 8, 30, 13, 1, 11);
-        x = convertToZonedDateTime(ldt);
+        x = convert(ldt, ZonedDateTime.class);
         assert localDateTimeToMillis(ldt) == zonedDateTimeToMillis(x);
 
         // ZonedDateTime to ZonedDateTime
         ZonedDateTime zdt = ZonedDateTime.of(2020, 8, 30, 13, 1, 11, 0, ZoneId.systemDefault());
-        x = convertToZonedDateTime(zdt);
+        x = convert(zdt, ZonedDateTime.class);
         assert zonedDateTimeToMillis(zdt) == zonedDateTimeToMillis(x);
 
         // Calendar to ZonedDateTime
-        x = convertToZonedDateTime(calendar);
+        x = convert(calendar, ZonedDateTime.class);
         assert zonedDateTimeToMillis(zonedDateTime) == calendar.getTime().getTime();
 
         // SqlDate to ZonedDateTime
@@ -1151,14 +1148,14 @@ public class ConverterTest
 
         // Error handling
         try {
-            convertToZonedDateTime("2020-12-40");
+            convert("2020-12-40", ZonedDateTime.class);
             fail();
         }
         catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
         }
 
-        assert convertToZonedDateTime(null) == null;
+        assert convert(null, ZonedDateTime.class) == null;
     }
 
     @Test
@@ -1442,7 +1439,7 @@ public class ConverterTest
         assert null == convert(null, Date.class);
         assert null == convert(null, java.sql.Date.class);
         assert null == convert(null, Timestamp.class);
-        assert null == convertToAtomicBoolean(null);
+        assert null == convert(null, AtomicBoolean.class);
         assert null == convertToAtomicInteger(null);
         assert null == convertToAtomicLong(null);
         assert null == convert(null, String.class);
@@ -1457,7 +1454,7 @@ public class ConverterTest
         assert (char)0 == convert(null, char.class);
         assert null == convert(null, BigInteger.class);
         assert null == convert(null, BigDecimal.class);
-        assert false == convert2AtomicBoolean(null).get();
+        assert null == convert(null, AtomicBoolean.class);
         assert 0 == convert2AtomicInteger(null).get();
         assert 0L == convert2AtomicLong(null).get();
         assert null == convert(null, String.class);
@@ -1483,7 +1480,7 @@ public class ConverterTest
         assert 'A' == convert(65, char.class);
         assert new BigInteger("-8").equals(convert("-8", BigInteger.class));
         assert new BigDecimal(-8.0d).equals(convert("-8", BigDecimal.class));
-        assert convert2AtomicBoolean("true").get();
+        assert convert("true", AtomicBoolean.class).get();
         assert -8 == convert2AtomicInteger("-8").get();
         assert -8L == convert2AtomicLong("-8").get();
         assert "-8".equals(convert(-8, String.class));
