@@ -52,6 +52,7 @@ import com.cedarsoftware.util.io.factory.DateFactory;
  * limitations under the License.
  */
 public final class Converter {
+    public static final String NOPE = "~nope~";
     public static final Byte BYTE_ZERO = (byte) 0;
     public static final Byte BYTE_ONE = (byte) 1;
     public static final Short SHORT_ZERO = (short) 0;
@@ -163,7 +164,8 @@ public final class Converter {
         converters.put(UUID.class, Converter::convertToUUID);
 
         if (fromNull.size() != converters.size()) {
-            System.err.println("Mismatch in size of fromNull versus converters in Converters.java");
+            System.err.println("Mismatch in size of 'fromNull' versus 'converters' in Converters.java");
+            new Throwable().printStackTrace();
         }
 
         // ? to Byte/byte
@@ -178,7 +180,7 @@ public final class Converter {
             try {
                 return Byte.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convertToLong(fromInstance);
+                long value = convert(fromInstance, long.class);
                 if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
                     throw new IllegalArgumentException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
                 }
@@ -198,7 +200,7 @@ public final class Converter {
             try {
                 return Short.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convertToLong(fromInstance);
+                long value = convert(fromInstance, long.class);
                 if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
                 }
@@ -218,7 +220,7 @@ public final class Converter {
             try {
                 return Integer.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convertToLong(fromInstance);
+                long value = convert(fromInstance, long.class);
                 if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
                 }
@@ -242,7 +244,7 @@ public final class Converter {
             try {
                 return Long.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                return convertToBigDecimal(fromInstance).longValue();
+                return convert(fromInstance, BigDecimal.class).longValue();
             }
         });
 
@@ -563,7 +565,10 @@ public final class Converter {
         toStr.put(Long.class, toString);
         toStr.put(AtomicLong.class, toString);
         toStr.put(Double.class, toNoExpString);
-        toStr.put(BigDecimal.class, fromInstance -> convertToBigDecimal(fromInstance).stripTrailingZeros().toPlainString());
+        toStr.put(BigDecimal.class, fromInstance -> {
+            BigDecimal bigDecimal = (BigDecimal)fromInstance;
+            return bigDecimal.stripTrailingZeros().toPlainString();
+        });
         toStr.put(Float.class, toNoExpString);
         toStr.put(Class.class, fromInstance -> ((Class<?>) fromInstance).getName());
         toStr.put(UUID.class, Object::toString);
@@ -629,19 +634,32 @@ public final class Converter {
         
         Convert<?> converter = converters.get(toType);
         if (converter != null) {
-            return (T) converter.convert(fromInstance);
+            try {
+                Object value = converter.convert(fromInstance);
+                if (value != NOPE) {
+                    return (T) value;
+                }
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
+            }
         }
-        
-        throw new IllegalArgumentException("Unsupported type '" + toType.getName() + "' for conversion");
+
+        String typeName = java.sql.Date.class.equals(toType) ? toType.getName() : toType.getSimpleName();
+        throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], attempted conversion to '" + getShortName(toType) + "'");
     }
 
-    private static String convertToString(Object fromInstance) {
+    private static String getShortName(Class<?> type)
+    {
+        return java.sql.Date.class.equals(type) ? type.getName() : type.getSimpleName();
+    }
+
+    private static Object convertToString(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toStr.get(fromType);
 
         // Handle straight Class to Class case
         if (converter != null) {
-            return (String) converter.convert(fromInstance);
+            return converter.convert(fromInstance);
         }
 
         // Handle Class isAssignable Class cases
@@ -654,584 +672,452 @@ public final class Converter {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             return convert(map.get("value"), String.class);
         }
-        return nope(fromInstance, "String");
+        return NOPE;
     }
 
-    private static Class<?> convertToClass(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toClass.get(fromType);
+    private static Object convertToClass(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toClass.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (Class)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), Class.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'Class'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "Class");
-        return null;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), Class.class);
+        }
+        return NOPE;
     }
     
-    public static UUID convertToUUID(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toUUID.get(fromType);
+    private static Object convertToUUID(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toUUID.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (UUID)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
-                    long mostSigBits = convert(map.get("mostSigBits"), long.class);
-                    long leastSigBits = convert(map.get("leastSigBits"), long.class);
-                    return new UUID(mostSigBits, leastSigBits);
-                } else {
-                    throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
-                }
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'UUID'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "UUID");
-        return null;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
+                long mostSigBits = convert(map.get("mostSigBits"), long.class);
+                long leastSigBits = convert(map.get("leastSigBits"), long.class);
+                return new UUID(mostSigBits, leastSigBits);
+            } else {
+                throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
+            }
+        }
+        return NOPE;
     }
 
-    private static BigDecimal convertToBigDecimal(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toBigDecimal.get(fromType);
+    private static Object convertToBigDecimal(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toBigDecimal.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (BigDecimal)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return BigDecimal.valueOf(((Number) fromInstance).longValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), BigDecimal.class);
-            } else if (fromInstance instanceof Calendar) {
-                return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return BigDecimal.valueOf(((Number) fromInstance).longValue());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), BigDecimal.class);
+        } else if (fromInstance instanceof Calendar) {
+            return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'BigDecimal'", e);
-        }
-        nope(fromInstance, "BigDecimal");
-        return null;
+        return NOPE;
     }
 
-    private static BigInteger convertToBigInteger(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toBigInteger.get(fromType);
+    private static Object convertToBigInteger(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toBigInteger.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (BigInteger)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return BigInteger.valueOf(((Number) fromInstance).longValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), BigInteger.class);
-            } else if (fromInstance instanceof Calendar) {
-                return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return BigInteger.valueOf(((Number) fromInstance).longValue());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), BigInteger.class);
+        } else if (fromInstance instanceof Calendar) {
+            return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'BigInteger'", e);
-        }
-        nope(fromInstance, "BigInteger");
-        return null;
+        return NOPE;
     }
 
-    private static java.sql.Date convertToSqlDate(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toSqlDate.get(fromType);
+    private static Object convertToSqlDate(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toSqlDate.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (java.sql.Date)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                if (map.containsKey("time")) {
-                    return convert(map.get("time"), java.sql.Date.class);
-                } else if (map.containsKey("value")) {
-                    return convert(map.get("value"), java.sql.Date.class);
-                } else {
-                    throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
-                }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                return convert(map.get("time"), java.sql.Date.class);
+            } else if (map.containsKey("value")) {
+                return convert(map.get("value"), java.sql.Date.class);
+            } else {
+                throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
             }
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'java.sql.Date'", e);
-        }
-        nope(fromInstance, "java.sql.Date");
-        return null;
+        return NOPE;
     }
 
-    private static Timestamp convertToTimestamp(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toTimestamp.get(fromType);
+    private static Object convertToTimestamp(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toTimestamp.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (Timestamp)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return new Timestamp(((Calendar) fromInstance).getTime().getTime());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                if (map.containsKey("time")) {
-                    long time = convert(map.get("time"), long.class);
-                    int ns = convert(map.get("nanos"), int.class);
-                    Timestamp timeStamp = new Timestamp(time);
-                    timeStamp.setNanos(ns);
-                    return timeStamp;
-                }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return new Timestamp(((Calendar) fromInstance).getTime().getTime());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                long time = convert(map.get("time"), long.class);
+                int ns = convert(map.get("nanos"), int.class);
+                Timestamp timeStamp = new Timestamp(time);
+                timeStamp.setNanos(ns);
+                return timeStamp;
             }
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'Timestamp'", e);
-        }
-        nope(fromInstance, "Timestamp");
-        return null;
+        return NOPE;
     }
     
-    private static Date convertToDate(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toDate.get(fromType);
+    private static Object convertToDate(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toDate.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (Date)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return ((Calendar) fromInstance).getTime();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                if (map.containsKey("time")) {
-                    return convert(map.get("time"), Date.class);
-                } else if (map.containsKey("value")) {
-                    return convert(map.get("value"), Date.class);
-                } else {
-                    throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' or a 'value' key");
-                }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return ((Calendar) fromInstance).getTime();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                return convert(map.get("time"), Date.class);
+            } else if (map.containsKey("value")) {
+                return convert(map.get("value"), Date.class);
+            } else {
+                throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' or a 'value' key");
             }
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'Date'", e);
-        }
-        nope(fromInstance, "Date");
-        return null;
+        return NOPE;
     }
 
-    private static LocalDate convertToLocalDate(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toLocalDate.get(fromType);
+    private static Object convertToLocalDate(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toLocalDate.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (LocalDate)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), LocalDate.class);
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), LocalDate.class);
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDate'", e);
-        }
-        nope(fromInstance, "LocalDate");
-        return null;
+        return NOPE;
     }
 
-    private static LocalDateTime convertToLocalDateTime(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toLocalDateTime.get(fromType);
+    private static Object convertToLocalDateTime(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toLocalDateTime.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (LocalDateTime)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), LocalDateTime.class);
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), LocalDateTime.class);
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDateTime'", e);
-        }
-        nope(fromInstance, "LocalDateTime");
-        return null;
+        return NOPE;
     }
     
-    private static ZonedDateTime convertToZonedDateTime(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toZonedDateTime.get(fromType);
+    private static Object convertToZonedDateTime(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toZonedDateTime.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (ZonedDateTime)converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Calendar) {
-                return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), ZonedDateTime.class);
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Calendar) {
+            return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), ZonedDateTime.class);
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'ZonedDateTime'", e);
-        }
-        nope(fromInstance, "ZonedDateTime");
-        return null;
+        return NOPE;
     }
 
-    /**
-     * Convert from the passed in instance to a Calendar.  If null is passed in, this method will return null.
-     * Possible inputs are java.sql.Date, Timestamp, Date, Calendar (will return a copy), String (which will be parsed
-     * by DateFactory and returned as a new Date instance), Long, BigInteger, BigDecimal, and AtomicLong (all of
-     * which the Date will be created directly from [number of milliseconds since Jan 1, 1970]).
-     */
-    public static Calendar convertToCalendar(Object fromInstance) {
-        if (fromInstance == null) {
-            return null;
-        }
+    private static Calendar convertToCalendar(Object fromInstance) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTime(convertToDate(fromInstance));
+        calendar.setTime(convert(fromInstance, Date.class));
         return calendar;
     }
 
-    private static char convertToCharacter(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toCharacter.get(fromType);
+    private static Object convertToCharacter(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toCharacter.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (char)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                Number number = (Number) fromInstance;
-                long value = number.longValue();
-                if (value >= 0 && value <= Character.MAX_VALUE) {
-                    return (char)value;
-                }
-                throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), char.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'char'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "char");
-        return 0;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            Number number = (Number) fromInstance;
+            long value = number.longValue();
+            if (value >= 0 && value <= Character.MAX_VALUE) {
+                return (char)value;
+            }
+            throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), char.class);
+        }
+        return NOPE;
     }
 
-    private static byte convertToByte(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toByte.get(fromType);
+    private static Object convertToByte(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toByte.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (byte)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).byteValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), byte.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'byte'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "byte");
-        return 0;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).byteValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), byte.class);
+        }
+        return NOPE;
     }
 
-    private static short convertToShort(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toShort.get(fromType);
+    private static Object convertToShort(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toShort.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (short)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).shortValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), short.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'short'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return (short)converter.convert(fromInstance);
         }
-        nope(fromInstance, "short");
-        return 0;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).shortValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), short.class);
+        }
+        return NOPE;
     }
 
-    private static int convertToInteger(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toInteger.get(fromType);
+    private static Object convertToInteger(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toInteger.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (int)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).intValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), int.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'int'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "int");
-        return 0;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).intValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), int.class);
+        }
+        return NOPE;
     }
 
-    private static long convertToLong(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toLong.get(fromType);
+    private static Object convertToLong(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toLong.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (long)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).longValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), long.class);
-            } else if (fromInstance instanceof Calendar) {
-                return ((Calendar) fromInstance).getTime().getTime();
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a long'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "long");
-        return 0;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).longValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), long.class);
+        } else if (fromInstance instanceof Calendar) {
+            return ((Calendar) fromInstance).getTime().getTime();
+        }
+        return NOPE;
     }
 
-    private static float convertToFloat(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toFloat.get(fromType);
+    private static Object convertToFloat(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toFloat.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (float)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).floatValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), float.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'float'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "float");
-        return 0.0f;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).floatValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), float.class);
+        }
+        return NOPE;
     }
 
-    private static double convertToDouble(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toDouble.get(fromType);
+    private static Object convertToDouble(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toDouble.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (double)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).doubleValue();
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), double.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'double'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "double");
-        return 0.0d;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).doubleValue();
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), double.class);
+        }
+        return NOPE;
     }
 
-    private static boolean convertToBoolean(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toBoolean.get(fromType);
+    private static Object convertToBoolean(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toBoolean.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (boolean)converter.convert(fromInstance);
-            }
-
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return ((Number) fromInstance).longValue() != 0;
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), boolean.class);
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'boolean'", e);
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
         }
-        nope(fromInstance, "boolean");
-        return false;
+
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).longValue() != 0;
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), boolean.class);
+        }
+        return NOPE;
     }
 
-    private static AtomicBoolean convertToAtomicBoolean(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toAtomicBoolean.get(fromType);
+    private static Object convertToAtomicBoolean(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toAtomicBoolean.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (AtomicBoolean) converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), AtomicBoolean.class);
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), AtomicBoolean.class);
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicBoolean'", e);
-        }
-        nope(fromInstance, "AtomicBoolean");
-        return null;
+        return NOPE;
     }
 
-    private static AtomicInteger convertToAtomicInteger(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toAtomicInteger.get(fromType);
+    private static Object convertToAtomicInteger(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toAtomicInteger.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (AtomicInteger) converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return new AtomicInteger(((Number) fromInstance).intValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), AtomicInteger.class);
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return new AtomicInteger(((Number) fromInstance).intValue());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), AtomicInteger.class);
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicInteger'", e);
-        }
-        nope(fromInstance, "AtomicInteger");
-        return null;
+        return NOPE;
     }
 
-    private static AtomicLong convertToAtomicLong(Object fromInstance) {
-        try {
-            Class<?> fromType = fromInstance.getClass();
-            Convert<?> converter = toAtomicLong.get(fromType);
+    private static Object convertToAtomicLong(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toAtomicLong.get(fromType);
 
-            // Handle the Class equals Class (double dispatch)
-            if (converter != null) {
-                return (AtomicLong) converter.convert(fromInstance);
-            }
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
 
-            // Handle Class is assignable Class
-            if (fromInstance instanceof Number) {
-                return new AtomicLong(((Number) fromInstance).longValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert(map.get("value"), AtomicLong.class);
-            } else if (fromInstance instanceof Calendar) {
-                return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
-            }
+        // Handle Class is assignable Class
+        if (fromInstance instanceof Number) {
+            return new AtomicLong(((Number) fromInstance).longValue());
+        } else if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), AtomicLong.class);
+        } else if (fromInstance instanceof Calendar) {
+            return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
         }
-        catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicLong'", e);
-        }
-        nope(fromInstance, "AtomicLong");
-        return null;
-    }
-    
-    private static String nope(Object fromInstance, String targetType) {
-        if (fromInstance == null) {
-            return null;
-        }
-        throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "] attempting to convert to '" + targetType + "'");
+        return NOPE;
     }
 
     private static String name(Object fromInstance) {
         if (fromInstance == null) {
             return "null";
         }
-        return fromInstance.getClass().getName() + " (" + fromInstance + ")";
+        return getShortName(fromInstance.getClass()) + " (" + fromInstance + ")";
     }
 
     /**

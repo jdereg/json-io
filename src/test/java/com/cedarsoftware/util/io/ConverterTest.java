@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
-import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
 import static com.cedarsoftware.util.io.Converter.localDateToMillis;
 import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
@@ -112,7 +111,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -169,7 +168,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -227,7 +226,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -296,7 +295,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -359,7 +358,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -407,7 +406,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -417,7 +416,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -427,7 +426,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported", "type", "zone");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported value type");
         }
     }
 
@@ -465,7 +464,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -513,7 +512,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -551,7 +550,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -728,7 +727,7 @@ public class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [java.lang.Boolean (true)] attempting to convert to 'java.sql.Date'");
+                .hasMessageContaining("Unsupported value type [Boolean (true)], attempted conversion to 'java.sql.Date'");
     }
 
     @Test
@@ -1253,7 +1252,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -1293,7 +1292,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
 
         try
@@ -1338,7 +1337,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
     }
 
@@ -1376,7 +1375,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
     }
 
@@ -1390,7 +1389,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
         }
     }
 
@@ -1667,13 +1666,13 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert("foo.bar.baz.Qux", Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [java.lang.String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
+                .hasMessageContaining("Value [String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
 
         assert null == convert(null, Class.class);
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
+                .hasMessageContaining("Unsupported value type [Double (16.0)], attempted conversion to 'Class'");
     }
 
     @Test
@@ -1686,35 +1685,35 @@ public class ConverterTest
     @Test
     public void testStringToUUID()
     {
-        UUID uuid = Converter.convertToUUID("00000000-0000-0000-0000-000000000064");
+        UUID uuid = Converter.convert("00000000-0000-0000-0000-000000000064", UUID.class);
         BigInteger bigInt = Converter.convert(uuid, BigInteger.class);
         assert bigInt.intValue() == 100;
 
-        assertThatThrownBy(() -> Converter.convertToUUID("00000000"))
+        assertThatThrownBy(() -> Converter.convert("00000000", UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [java.lang.String (00000000)] could not be converted to a 'UUID'");
+                .hasMessageContaining("Value [String (00000000)] could not be converted to a 'UUID'");
     }
 
     @Test
     public void testUUIDToUUID()
     {
-        UUID uuid = Converter.convertToUUID("00000007-0000-0000-0000-000000000064");
-        UUID uuid2 = Converter.convertToUUID(uuid);
+        UUID uuid = Converter.convert("00000007-0000-0000-0000-000000000064", UUID.class);
+        UUID uuid2 = Converter.convert(uuid, UUID.class);
         assert uuid.equals(uuid2);
     }
 
     @Test
     public void testBogusToUUID()
     {
-        assertThatThrownBy(() -> Converter.convertToUUID((short)77))
+        assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [java.lang.Short (77)] attempting to convert to 'UUID'");
+                .hasMessageContaining("Unsupported value type [Short (77)], attempted conversion to 'UUID'");
     }
 
     @Test
     public void testBigIntegerToUUID()
     {
-        UUID uuid = convertToUUID(new BigInteger("100"));
+        UUID uuid = convert(new BigInteger("100"), UUID.class);
         BigInteger hundred = convert(uuid, BigInteger.class);
         assert hundred.intValue() == 100;
     }
@@ -1733,29 +1732,29 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [java.lang.Double (16.0)] attempting to convert to 'Class'");
+                .hasMessageContaining("Unsupported value type [Double (16.0)], attempted conversion to 'Class'");
     }
 
     @Test
     public void testMapToUUID()
     {
-        UUID uuid = convertToUUID(new BigInteger("100"));
+        UUID uuid = convert(new BigInteger("100"), UUID.class);
         Map<String, Object> map = new HashMap<>();
         map.put("mostSigBits", uuid.getMostSignificantBits());
         map.put("leastSigBits", uuid.getLeastSignificantBits());
-        UUID hundred = convertToUUID(map);
+        UUID hundred = convert(map, UUID.class);
         assertEquals("00000000-0000-0000-0000-000000000064", hundred.toString());
     }
 
     @Test
     public void testBadMapToUUID()
     {
-        UUID uuid = convertToUUID(new BigInteger("100"));
+        UUID uuid = convert(new BigInteger("100"), UUID.class);
         Map<String, Object> map = new HashMap<>();
         map.put("leastSigBits", uuid.getLeastSignificantBits());
-        assertThatThrownBy(() -> convertToUUID(map))
+        assertThatThrownBy(() -> convert(map, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("value [java.util.HashMap ({leastSigBits=100})] could not be converted to a 'UUID'");
+                .hasMessageContaining("Value [HashMap ({leastSigBits=100})] could not be converted to a 'UUID'");
     }
 
     @Test
