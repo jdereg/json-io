@@ -25,14 +25,17 @@ import com.cedarsoftware.util.io.factory.DateFactory;
 /**
  * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Number, Date,
  * TimeStamp, SQL Date, LocalDate, LocalDateTime, ZonedDateTime, Calendar, Big*, Atomic*, Class, UUID,
- * String, ...
- * <p>
- * `Converter.convertTo*()` methods: if `null` passed in, `null` is returned.  Allows "tri-state" Boolean.
- * Example: `Converter.convert(null, Boolean.class)` returns `null`.
- * <p>
- * `Converter.convert()` converts using `convertTo*()` methods for primitive wrappers, and
- * `convert2*()` methods for primitives.
- * <p>
+ * String, ...<br/>
+ * <br/>
+ * Converter.convert(value, class) if null passed in, null is returned for most types, which allows "tri-state"
+ * Boolean, for example, however, for primitive types, it chooses zero for the numeric ones, `false` for boolean,
+ * and 0 for char.<br/>
+ * <br/>
+ * A Map can be converted to almost all data types.  For some, like UUID, it is expected for the Map to have
+ * certain keys ("mostSigBits", "leastSigBits").  For the older Java Date/Time related classes, it expects
+ * "time" or "nanos", and for all others, a Map as the source, the "value" key will be used to source the value
+ * for the conversion.<br/>
+ * <br/>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -623,7 +626,7 @@ public final class Converter {
 
     /**
      * Turn the passed in value to the class indicated.  This will allow, for
-     * example, a String value to be passed in and have it coerced to a Long.
+     * example, a String to be passed in and be converted to a Long.
      * <pre>
      *     Examples:
      *     Long x = convert("35", Long.class);
@@ -633,6 +636,8 @@ public final class Converter {
      *     String date = convert(calendar, String.class)
      *     Short t = convert(true, short.class);     // returns (short) 1 or  (short) 0
      *     Long date = convert(calendar, long.class); // get calendar's time into long
+     *     Map containing ["value": "75.0"]
+     *     convert(map, double.class)   // Converter will extract the value associated to the "value" key and convert it.
      * </pre>
      *
      * @param fromInstance A value used to create the targetType, even though it may
@@ -666,7 +671,7 @@ public final class Converter {
                 throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
             }
         }
-        throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], attempted conversion to '" + getShortName(toType) + "'");
+        throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], not convertable to a '" + getShortName(toType) + "'");
     }
 
     private static String getShortName(Class<?> type)
@@ -823,6 +828,10 @@ public final class Converter {
                 Timestamp timeStamp = new Timestamp(time);
                 timeStamp.setNanos(ns);
                 return timeStamp;
+            } else if (map.containsKey("value")) {
+                return convert(map.get("value"), Timestamp.class);
+            } else {
+                throw new IllegalArgumentException("To convert Map to Timestamp, the Map must contain a 'time' and optional 'nanos' key or a 'value' key");
             }
         }
         return NOPE;
@@ -847,7 +856,7 @@ public final class Converter {
             } else if (map.containsKey("value")) {
                 return convert(map.get("value"), Date.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to Date, the Map must contain a 'time' or a 'value' key");
+                throw new IllegalArgumentException("To convert Map to a Date, the Map must contain a 'time' or a 'value' key");
             }
         }
         return NOPE;

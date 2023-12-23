@@ -11,6 +11,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
@@ -727,7 +728,7 @@ public class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Boolean (true)], attempted conversion to 'java.sql.Date'");
+                .hasMessageContaining("Unsupported value type [Boolean (true)], not convertable to a 'java.sql.Date'");
     }
 
     @Test
@@ -1380,6 +1381,252 @@ public class ConverterTest
     }
 
     @Test
+    void testMapToAtomicBoolean()
+    {
+        Map map = new HashMap();
+        map.put("value", 57);
+        AtomicBoolean ab = convert(map, AtomicBoolean.class);
+        assert ab.get();
+
+        map = new HashMap();
+        map.put("value", "");
+        ab = convert(map, AtomicBoolean.class);
+        assert !ab.get();
+
+        map = new HashMap();
+        map.put("value", null);
+        assert null == convert(map, AtomicBoolean.class);
+
+        map = new HashMap();
+        map.clear();
+        assert null == convert(map, AtomicBoolean.class);
+    }
+
+    @Test
+    void testMapToAtomicInteger()
+    {
+        Map map = new HashMap();
+        map.put("value", 58);
+        AtomicInteger ai = convert(map, AtomicInteger.class);
+        assert 58 == ai.get();
+
+        map = new HashMap();
+        map.put("value", "");
+        ai = convert(map, AtomicInteger.class);
+        assert 0 == ai.get();
+
+        map = new HashMap();
+        map.put("value", null);
+        assert null == convert(map, AtomicInteger.class);
+
+        map = new HashMap();
+        map.clear();
+        assert null == convert(map, AtomicInteger.class);
+    }
+
+    @Test
+    void testMapToAtomicLong()
+    {
+        Map map = new HashMap();
+        map.put("value", 58);
+        AtomicLong al = convert(map, AtomicLong.class);
+        assert 58 == al.get();
+
+        map = new HashMap();
+        map.put("value", "");
+        al = convert(map, AtomicLong.class);
+        assert 0 == al.get();
+
+        map = new HashMap();
+        map.put("value", null);
+        assert null == convert(map, AtomicLong.class);
+
+        map = new HashMap();
+        map.clear();
+        assert null == convert(map, AtomicLong.class);
+    }
+
+    @Test
+    void testMapToCalendar()
+    {
+        long now = System.currentTimeMillis();
+        Map map = new HashMap();
+        map.put("value", new Date(now));
+        Calendar cal = convert(map, Calendar.class);
+        assert now == cal.getTimeInMillis();
+
+        map = new HashMap();
+        map.put("value", "");
+        assert null == convert(map, Calendar.class);
+
+        map = new HashMap();
+        map.put("value", null);
+        assert null == convert(map, Calendar.class);
+
+        map = new HashMap();
+        map.clear();
+        assert null == convert(map, Calendar.class);
+    }
+
+    @Test
+    void testMapToGregCalendar()
+    {
+        long now = System.currentTimeMillis();
+        Map map = new HashMap();
+        map.put("value", new Date(now));
+        GregorianCalendar cal = convert(map, GregorianCalendar.class);
+        assert now == cal.getTimeInMillis();
+
+        map = new HashMap();
+        map.put("value", "");
+        assert null == convert(map, GregorianCalendar.class);
+
+        map = new HashMap();
+        map.put("value", null);
+        assert null == convert(map, GregorianCalendar.class);
+
+        map = new HashMap();
+        map.clear();
+        assert null == convert(map, GregorianCalendar.class);
+    }
+
+    @Test
+    void testMapToDate()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        Date date = convert(map, Date.class);
+        assert now == date.getTime();
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, Date.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, Date.class);
+        
+        map.clear();
+        assertThatThrownBy(() -> convert(map, Date.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Date'");
+    }
+
+    @Test
+    void testMapToSqlDate()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        java.sql.Date date = convert(map, java.sql.Date.class);
+        assert now == date.getTime();
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, java.sql.Date.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, java.sql.Date.class);
+
+        map.clear();
+        assertThatThrownBy(() -> convert(map, java.sql.Date.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'java.sql.Date'");
+    }
+
+    @Test
+    void testMapToTimestamp()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        Timestamp date = convert(map, Timestamp.class);
+        assert now == date.getTime();
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, Timestamp.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, Timestamp.class);
+
+        map.clear();
+        assertThatThrownBy(() -> convert(map, Timestamp.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Timestamp'");
+    }
+
+    @Test
+    void testMapToLocalDate()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        LocalDate date = convert(map, LocalDate.class);
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(now);
+        assert date.getMonthValue() == cal.get(Calendar.MONTH) + 1;
+        assert date.getDayOfMonth() == cal.get(Calendar.DAY_OF_MONTH);
+        assert date.getYear() == cal.get(Calendar.YEAR);
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, LocalDate.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, LocalDate.class);
+
+        map.clear();
+        assert null == convert(map, LocalDate.class);
+    }
+
+    @Test
+    void testMapToLocalDateTime()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        LocalDateTime ld = convert(map, LocalDateTime.class);
+        assert ld.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() == now;
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, LocalDateTime.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, LocalDateTime.class);
+
+        map.clear();
+        assert null == convert(map, LocalDateTime.class);
+    }
+
+    @Test
+    void testMapToZonedDateTime()
+    {
+        long now = System.currentTimeMillis();
+        final Map map = new HashMap();
+        map.put("value", now);
+        ZonedDateTime zd = convert(map, ZonedDateTime.class);
+        assert zd.toInstant().toEpochMilli() == now;
+
+        map.clear();
+        map.put("value", "");
+        assert null == convert(map, ZonedDateTime.class);
+
+        map.clear();
+        map.put("value", null);
+        assert null == convert(map, ZonedDateTime.class);
+
+        map.clear();
+        assert null == convert(map, ZonedDateTime.class);
+    }
+
+    @Test
     public void testUnsupportedType()
     {
         try
@@ -1672,7 +1919,7 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Double (16.0)], attempted conversion to 'Class'");
+                .hasMessageContaining("Unsupported value type [Double (16.0)], not convertable to a 'Class'");
     }
 
     @Test
@@ -1707,7 +1954,7 @@ public class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Short (77)], attempted conversion to 'UUID'");
+                .hasMessageContaining("Unsupported value type [Short (77)], not convertable to a 'UUID'");
     }
 
     @Test
@@ -1732,7 +1979,7 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Double (16.0)], attempted conversion to 'Class'");
+                .hasMessageContaining("Unsupported value type [Double (16.0)], not convertable to a 'Class'");
     }
 
     @Test
