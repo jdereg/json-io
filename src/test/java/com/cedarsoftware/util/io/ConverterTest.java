@@ -28,7 +28,6 @@ import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicBoolean;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
 import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
-import static com.cedarsoftware.util.io.Converter.convertToLocalDateTime;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.convertToZonedDateTime;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
@@ -943,21 +942,21 @@ public class ConverterTest
         assertEquals(localDateTimeToMillis(localDateTime), now.getTime());
 
         // LocalDateTime to LocalDateTime - identity check
-        LocalDateTime x = convertToLocalDateTime(localDateTime);
+        LocalDateTime x = convert(localDateTime, LocalDateTime.class);
         assert localDateTime == x;
 
         // LocalDate to LocalDateTime
         LocalDate ld = LocalDate.of(2020, 8, 30);
-        x = convertToLocalDateTime(ld);
+        x = convert(ld, LocalDateTime.class);
         assert localDateToMillis(ld) == localDateTimeToMillis(x);
 
         // ZonedDateTime to LocalDateTime
         ZonedDateTime zdt = ZonedDateTime.of(2020, 8, 30, 13, 1, 11, 0, ZoneId.systemDefault());
-        x = convertToLocalDateTime(zdt);
+        x = convert(zdt, LocalDateTime.class);
         assert zonedDateTimeToMillis(zdt) == localDateTimeToMillis(x);
 
         // Calendar to LocalDateTime
-        x = convertToLocalDateTime(calendar);
+        x = convert(calendar, LocalDateTime.class);
         assert localDateTimeToMillis(localDateTime) == calendar.getTime().getTime();
 
         // SqlDate to LocalDateTime
@@ -1034,15 +1033,15 @@ public class ConverterTest
         // Error handling
         try
         {
-            convertToLocalDateTime("2020-12-40");
+            convert("2020-12-40", LocalDateTime.class);
             fail();
         }
         catch (IllegalArgumentException e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
+            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
         }
 
-        assert convertToLocalDateTime(null) == null;
+        assert convert(null, LocalDateTime.class) == null;
     }
 
     @Test

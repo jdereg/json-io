@@ -466,6 +466,30 @@ public final class Converter {
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         });
 
+        // ? to LocalDateTime
+        toLocalDateTime.put(LocalDateTime.class, fromInstance -> fromInstance);
+        toLocalDateTime.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).atStartOfDay());
+        toLocalDateTime.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDateTime());
+        toLocalDateTime.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime());
+        toLocalDateTime.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((AtomicLong) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(java.sql.Date.class, fromInstance -> ((java.sql.Date)fromInstance).toLocalDate().atStartOfDay());
+        toLocalDateTime.put(BigInteger.class, fromInstance -> {
+            BigInteger big = (BigInteger) fromInstance;
+            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
+        });
+        toLocalDateTime.put(BigDecimal.class, fromInstance -> {
+            BigDecimal big = (BigDecimal) fromInstance;
+            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
+        });
+        toLocalDateTime.put(String.class, fromInstance -> {
+            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            if (date == null) {
+                return null;
+            }
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        });
 
         // ? to String
         Convert<?> toString = Object::toString;
@@ -799,50 +823,31 @@ public final class Converter {
         return null;
     }
 
-    public static LocalDateTime convertToLocalDateTime(Object fromInstance) {
+    private static LocalDateTime convertToLocalDateTime(Object fromInstance) {
         try {
-            if (fromInstance instanceof String) {
-                Date date = DateFactory.parseDate(((String) fromInstance).trim());
-                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof LocalDate) {
-                return ((LocalDate) fromInstance).atStartOfDay();
-            } else if (fromInstance instanceof LocalDateTime) {   // return passed in instance (no need to copy, LocalDateTime is immutable)
-                return ((LocalDateTime) fromInstance);
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return ((ZonedDateTime) fromInstance).toLocalDateTime();
-            } else if (fromInstance instanceof java.sql.Date) {
-                return ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay();
-            } else if (fromInstance instanceof Timestamp) {
-                return ((Timestamp) fromInstance).toLocalDateTime();
-            } else if (fromInstance instanceof Date) {
-                return ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof Calendar) {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toLocalDateTime.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (LocalDateTime)converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Calendar) {
                 return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof Long) {
-                Long dateInMillis = (Long) fromInstance;
-                return Instant.ofEpochMilli(dateInMillis).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof BigInteger) {
-                BigInteger big = (BigInteger) fromInstance;
-                return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof BigDecimal) {
-                BigDecimal big = (BigDecimal) fromInstance;
-                return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-            } else if (fromInstance instanceof AtomicLong) {
-                AtomicLong atomicLong = (AtomicLong) fromInstance;
-                return Instant.ofEpochMilli(atomicLong.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
             } else if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convertToLocalDateTime(map.get("value"));
+                return convert(map.get("value"), LocalDateTime.class);
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to a 'LocalDateTime'", e);
         }
         nope(fromInstance, "LocalDateTime");
         return null;
     }
-
+    
     public static ZonedDateTime convertToZonedDateTime(Object fromInstance) {
         try {
             if (fromInstance instanceof String) {
