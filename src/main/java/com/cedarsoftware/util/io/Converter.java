@@ -12,6 +12,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -22,11 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.cedarsoftware.util.io.factory.DateFactory;
 
 /**
- * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Date, TimeStamp SQL Date,
- * LocalDate, LocalDateTime, ZonedDateTime, Big*, Atomic*, Class, UUID, ...
- * <p>
- * `Converter.convert2*()` methods: If `null` passed in, primitive 'logical zero' is returned.
- * Example: `Converter.convert(null, boolean.class)` returns `false`.
+ * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Number, Date,
+ * TimeStamp, SQL Date, LocalDate, LocalDateTime, ZonedDateTime, Calendar, Big*, Atomic*, Class, UUID,
+ * String, ...
  * <p>
  * `Converter.convertTo*()` methods: if `null` passed in, `null` is returned.  Allows "tri-state" Boolean.
  * Example: `Converter.convert(null, Boolean.class)` returns `null`.
@@ -34,25 +33,25 @@ import com.cedarsoftware.util.io.factory.DateFactory;
  * `Converter.convert()` converts using `convertTo*()` methods for primitive wrappers, and
  * `convert2*()` methods for primitives.
  * <p>
- *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- * <br>
- * Copyright (c) Cedar Software LLC
- * <br><br>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <br><br>
- * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- * <br><br>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.*
  */
+
 public final class Converter {
-    public static final String NOPE = "~nope~";
+    public static final String NOPE = "~nope!";
     public static final Byte BYTE_ZERO = (byte) 0;
     public static final Byte BYTE_ONE = (byte) 1;
     public static final Short SHORT_ZERO = (short) 0;
@@ -84,6 +83,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
@@ -124,6 +124,7 @@ public final class Converter {
         fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
         fromNull.put(Calendar.class, null);
+        fromNull.put(GregorianCalendar.class, null);
         fromNull.put(LocalDate.class, null);
         fromNull.put(LocalDateTime.class, null);
         fromNull.put(ZonedDateTime.class, null);
@@ -158,6 +159,7 @@ public final class Converter {
         converters.put(java.sql.Date.class, Converter::convertToSqlDate);
         converters.put(Timestamp.class, Converter::convertToTimestamp);
         converters.put(Calendar.class, Converter::convertToCalendar);
+        converters.put(GregorianCalendar.class, Converter::convertToCalendar);
         converters.put(LocalDate.class, Converter::convertToLocalDate);
         converters.put(LocalDateTime.class, Converter::convertToLocalDateTime);
         converters.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
@@ -419,6 +421,27 @@ public final class Converter {
             return new Timestamp(date.getTime());
         });
 
+        // ? to Calendar
+        toCalendar.put(Calendar.class, fromInstance -> ((Calendar) fromInstance).clone());  // Calendar is mutable
+        toCalendar.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).clone());
+        toCalendar.put(Date.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
+        toCalendar.put(java.sql.Date.class, fromInstance -> initCal(((java.sql.Date) fromInstance).getTime()));
+        toCalendar.put(Timestamp.class, fromInstance -> initCal(((Timestamp) fromInstance).getTime()));
+        toCalendar.put(LocalDate.class, fromInstance -> initCal(localDateToMillis((LocalDate)fromInstance)));
+        toCalendar.put(LocalDateTime.class, fromInstance -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toCalendar.put(ZonedDateTime.class, fromInstance -> initCal(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toCalendar.put(Long.class, fromInstance -> initCal((Long)fromInstance));
+        toCalendar.put(BigInteger.class, fromInstance -> initCal(((BigInteger) fromInstance).longValue()));
+        toCalendar.put(BigDecimal.class, fromInstance -> initCal(((BigDecimal) fromInstance).longValue()));
+        toCalendar.put(AtomicLong.class, fromInstance -> initCal(((AtomicLong) fromInstance).longValue()));
+        toCalendar.put(String.class, fromInstance -> {
+            Date date = DateFactory.parseDate(((String) fromInstance).trim());
+            if (date == null) {
+                return null;
+            }
+            return initCal(date.getTime());
+        });
+
         // ? to LocalDate
         toLocalDate.put(LocalDate.class, fromInstance -> fromInstance);
         toLocalDate.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
@@ -643,8 +666,6 @@ public final class Converter {
                 throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
             }
         }
-
-        String typeName = java.sql.Date.class.equals(toType) ? toType.getName() : toType.getSimpleName();
         throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], attempted conversion to '" + getShortName(toType) + "'");
     }
 
@@ -662,7 +683,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class isAssignable Class cases
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Calendar) fromInstance).getTime());
@@ -684,7 +705,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             return convert(map.get("value"), Class.class);
@@ -701,7 +722,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
@@ -724,7 +745,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return BigDecimal.valueOf(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
@@ -745,7 +766,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return BigInteger.valueOf(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
@@ -766,7 +787,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
         } else if (fromInstance instanceof Map) {
@@ -791,7 +812,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return new Timestamp(((Calendar) fromInstance).getTime().getTime());
         } else if (fromInstance instanceof Map) {
@@ -816,7 +837,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).getTime();
         } else if (fromInstance instanceof Map) {
@@ -841,7 +862,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         } else if (fromInstance instanceof Map) {
@@ -860,7 +881,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         } else if (fromInstance instanceof Map) {
@@ -879,7 +900,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
         } else if (fromInstance instanceof Map) {
@@ -889,10 +910,21 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Calendar convertToCalendar(Object fromInstance) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(convert(fromInstance, Date.class));
-        return calendar;
+    private static Object convertToCalendar(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toCalendar.get(fromType);
+
+        // Handle the Class equals Class (double dispatch)
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
+
+        // Handle "is" assignable
+        if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return convert(map.get("value"), Calendar.class);
+        }
+        return NOPE;
     }
 
     private static Object convertToCharacter(Object fromInstance) {
@@ -904,7 +936,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             Number number = (Number) fromInstance;
             long value = number.longValue();
@@ -928,7 +960,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).byteValue();
         } else if (fromInstance instanceof Map) {
@@ -944,10 +976,10 @@ public final class Converter {
 
         // Handle the Class equals Class (double dispatch)
         if (converter != null) {
-            return (short)converter.convert(fromInstance);
+            return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).shortValue();
         } else if (fromInstance instanceof Map) {
@@ -966,7 +998,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).intValue();
         } else if (fromInstance instanceof Map) {
@@ -985,7 +1017,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).longValue();
         } else if (fromInstance instanceof Map) {
@@ -1006,7 +1038,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).floatValue();
         } else if (fromInstance instanceof Map) {
@@ -1025,7 +1057,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).doubleValue();
         } else if (fromInstance instanceof Map) {
@@ -1044,7 +1076,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return ((Number) fromInstance).longValue() != 0;
         } else if (fromInstance instanceof Map) {
@@ -1063,7 +1095,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
         } else if (fromInstance instanceof Map) {
@@ -1082,7 +1114,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return new AtomicInteger(((Number) fromInstance).intValue());
         } else if (fromInstance instanceof Map) {
@@ -1101,7 +1133,7 @@ public final class Converter {
             return converter.convert(fromInstance);
         }
 
-        // Handle Class is assignable Class
+        // Handle "is" assignable
         if (fromInstance instanceof Number) {
             return new AtomicLong(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
@@ -1118,6 +1150,14 @@ public final class Converter {
             return "null";
         }
         return getShortName(fromInstance.getClass()) + " (" + fromInstance + ")";
+    }
+
+    private static Calendar initCal(long ms)
+    {
+        Calendar cal = Calendar.getInstance();
+        cal.clear();
+        cal.setTimeInMillis(ms);
+        return cal;
     }
 
     /**
