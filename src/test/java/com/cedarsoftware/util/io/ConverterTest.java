@@ -22,10 +22,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
-import static com.cedarsoftware.util.io.Converter.convert2AtomicInteger;
-import static com.cedarsoftware.util.io.Converter.convert2AtomicLong;
-import static com.cedarsoftware.util.io.Converter.convertToAtomicInteger;
-import static com.cedarsoftware.util.io.Converter.convertToAtomicLong;
 import static com.cedarsoftware.util.io.Converter.convertToUUID;
 import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
 import static com.cedarsoftware.util.io.Converter.localDateToMillis;
@@ -373,7 +369,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
+            assertTrue(e.getCause().getMessage().toLowerCase().contains("input string: \"45bad"));
         }
     }
 
@@ -565,7 +561,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
+            assertTrue(e.getCause().getMessage().toLowerCase().contains("input string: \"45bad"));
         }
     }
 
@@ -1440,8 +1436,8 @@ public class ConverterTest
         assert null == convert(null, java.sql.Date.class);
         assert null == convert(null, Timestamp.class);
         assert null == convert(null, AtomicBoolean.class);
-        assert null == convertToAtomicInteger(null);
-        assert null == convertToAtomicLong(null);
+        assert null == convert(null, AtomicInteger.class);
+        assert null == convert(null, AtomicLong.class);
         assert null == convert(null, String.class);
 
         assert false == convert(null, boolean.class);
@@ -1455,8 +1451,8 @@ public class ConverterTest
         assert null == convert(null, BigInteger.class);
         assert null == convert(null, BigDecimal.class);
         assert null == convert(null, AtomicBoolean.class);
-        assert 0 == convert2AtomicInteger(null).get();
-        assert 0L == convert2AtomicLong(null).get();
+        assert null == convert(null, AtomicInteger.class);
+        assert null == convert(null, AtomicLong.class);
         assert null == convert(null, String.class);
     }
 
@@ -1481,8 +1477,8 @@ public class ConverterTest
         assert new BigInteger("-8").equals(convert("-8", BigInteger.class));
         assert new BigDecimal(-8.0d).equals(convert("-8", BigDecimal.class));
         assert convert("true", AtomicBoolean.class).get();
-        assert -8 == convert2AtomicInteger("-8").get();
-        assert -8L == convert2AtomicLong("-8").get();
+        assert -8 == convert("-8", AtomicInteger.class).get();
+        assert -8L == convert("-8", AtomicLong.class).get();
         assert "-8".equals(convert(-8, String.class));
     }
 
@@ -1607,7 +1603,7 @@ public class ConverterTest
         Long lng = convert(LocalDate.of(2020, 9, 4), Long.class);
         assert lng == cal.getTime().getTime();
 
-        AtomicLong atomicLong = convertToAtomicLong(LocalDate.of(2020, 9, 4));
+        AtomicLong atomicLong = convert(LocalDate.of(2020, 9, 4), AtomicLong.class);
         assert atomicLong.get() == cal.getTime().getTime();
     }
 
@@ -1636,7 +1632,7 @@ public class ConverterTest
         Long lng = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), Long.class);
         assert lng == cal.getTime().getTime();
 
-        AtomicLong atomicLong = convertToAtomicLong(LocalDateTime.of(2020, 9, 8, 13, 11, 1));
+        AtomicLong atomicLong = convert(LocalDateTime.of(2020, 9, 8, 13, 11, 1), AtomicLong.class);
         assert atomicLong.get() == cal.getTime().getTime();
     }
 
@@ -1659,7 +1655,7 @@ public class ConverterTest
         Date date = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), Date.class);
         assert date.getTime() == cal.getTime().getTime();
 
-        AtomicLong atomicLong = convertToAtomicLong(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()));
+        AtomicLong atomicLong = convert(ZonedDateTime.of(2020, 9, 8, 13, 11, 1, 0, ZoneId.systemDefault()), AtomicLong.class);
         assert atomicLong.get() == cal.getTime().getTime();
     }
 

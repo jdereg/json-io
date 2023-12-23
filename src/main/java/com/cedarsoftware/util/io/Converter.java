@@ -86,6 +86,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     
     protected interface Convert<T> {
@@ -121,10 +122,13 @@ public final class Converter {
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
+        fromNull.put(Calendar.class, null);
         fromNull.put(LocalDate.class, null);
         fromNull.put(LocalDateTime.class, null);
         fromNull.put(ZonedDateTime.class, null);
+        fromNull.put(UUID.class, null);
 
+        // Convertable types
         converters.put(byte.class, Converter::convertToByte);
         converters.put(Byte.class, Converter::convertToByte);
         converters.put(short.class, Converter::convertToShort);
@@ -141,31 +145,32 @@ public final class Converter {
         converters.put(Boolean.class, Converter::convertToBoolean);
         converters.put(char.class, Converter::convertToCharacter);
         converters.put(Character.class, Converter::convertToCharacter);
+
+        converters.put(String.class, Converter::convertToString);
+        converters.put(Class.class, Converter::convertToClass);
         converters.put(BigDecimal.class, Converter::convertToBigDecimal);
         converters.put(BigInteger.class, Converter::convertToBigInteger);
         converters.put(AtomicInteger.class, Converter::convertToAtomicInteger);
         converters.put(AtomicLong.class, Converter::convertToAtomicLong);
         converters.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
-        converters.put(String.class, Converter::convertToString);
-        converters.put(Class.class, Converter::convertToClass);
-        converters.put(Calendar.class, Converter::convertToCalendar);
         converters.put(Date.class, Converter::convertToDate);
+        converters.put(java.sql.Date.class, Converter::convertToSqlDate);
+        converters.put(Timestamp.class, Converter::convertToTimestamp);
+        converters.put(Calendar.class, Converter::convertToCalendar);
         converters.put(LocalDate.class, Converter::convertToLocalDate);
         converters.put(LocalDateTime.class, Converter::convertToLocalDateTime);
         converters.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
-        converters.put(java.sql.Date.class, Converter::convertToSqlDate);
-        converters.put(Timestamp.class, Converter::convertToTimestamp);
         converters.put(UUID.class, Converter::convertToUUID);
+
+        if (fromNull.size() != converters.size()) {
+            System.err.println("Mismatch in size of fromNull versus converters in Converters.java");
+        }
 
         // ? to Byte/byte
         toByte.put(Byte.class, fromInstance -> fromInstance);
-        toByte.put(Boolean.class, fromInstance -> (boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
+        toByte.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
         toByte.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
         toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
-        toByte.put(Map.class, fromInstance -> {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), Byte.class);
-        });
         toByte.put(String.class, fromInstance -> {
             if (MetaUtils.isEmpty((String) fromInstance)) {
                 return BYTE_ZERO;
@@ -173,9 +178,9 @@ public final class Converter {
             try {
                 return Byte.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
+                long value = convertToLong(fromInstance);
                 if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
+                    throw new IllegalArgumentException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
                 }
                 return (byte) value;
             }
@@ -183,7 +188,7 @@ public final class Converter {
 
         // ? to Short/short
         toShort.put(Short.class, fromInstance -> fromInstance);
-        toShort.put(Boolean.class, fromInstance -> (boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
         toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
         toShort.put(String.class, fromInstance -> {
@@ -193,7 +198,7 @@ public final class Converter {
             try {
                 return Short.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
+                long value = convertToLong(fromInstance);
                 if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
                 }
@@ -203,7 +208,7 @@ public final class Converter {
 
         // ? to Integer/int
         toInteger.put(Integer.class, fromInstance -> fromInstance);
-        toInteger.put(Boolean.class, fromInstance -> (boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
         toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(String.class, fromInstance -> {
@@ -213,7 +218,7 @@ public final class Converter {
             try {
                 return Integer.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
+                long value = convertToLong(fromInstance);
                 if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                     throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
                 }
@@ -223,7 +228,7 @@ public final class Converter {
 
         // ? to Long/long
         toLong.put(Integer.class, fromInstance -> fromInstance);
-        toLong.put(Boolean.class, fromInstance -> (boolean) fromInstance ? LONG_ONE : LONG_ZERO);
+        toLong.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? LONG_ONE : LONG_ZERO);
         toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
         toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
         toLong.put(Date.class, fromInstance -> ((Date) fromInstance).getTime());
@@ -243,7 +248,7 @@ public final class Converter {
 
         // ? to Float/float
         toFloat.put(Float.class, fromInstance -> fromInstance);
-        toFloat.put(Boolean.class, fromInstance -> (boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
+        toFloat.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
         toFloat.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(String.class, fromInstance -> {
@@ -253,17 +258,13 @@ public final class Converter {
             try {
                 return Float.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                double value = convert(fromInstance, double.class);
-                if (value < Float.MIN_VALUE || value > Float.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Float.MIN_VALUE + " to " + Float.MAX_VALUE);
-                }
-                return (float) value;
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
 
         // ? to Double/double
         toDouble.put(Double.class, fromInstance -> fromInstance);
-        toDouble.put(Boolean.class, fromInstance -> (boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
+        toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
         toDouble.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(String.class, fromInstance -> {
@@ -273,7 +274,7 @@ public final class Converter {
             try {
                 return Double.valueOf(((String) fromInstance).trim());
             } catch (NumberFormatException e) {
-                return convertToBigDecimal(fromInstance).doubleValue();
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
 
@@ -296,7 +297,7 @@ public final class Converter {
 
         // ? to Character/char
         toCharacter.put(Character.class, fromInstance -> fromInstance);
-        toCharacter.put(Boolean.class, fromInstance -> ((boolean)fromInstance) ? '1' : '0');
+        toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
         toCharacter.put(String.class, fromInstance -> {
             if ("".equals(fromInstance)) {
@@ -317,7 +318,7 @@ public final class Converter {
 
         // ? to BigInteger
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
-        toBigInteger.put(Boolean.class, fromInstance -> (boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
+        toBigInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
         toBigInteger.put(Character.class, fromInstance -> BigInteger.valueOf(((char) fromInstance)));
         toBigInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO);
         toBigInteger.put(Date.class, fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
@@ -341,11 +342,11 @@ public final class Converter {
 
         // ? to BigDecimal
         toBigDecimal.put(BigDecimal.class, fromInstance -> fromInstance);
-        toBigDecimal.put(Boolean.class, fromInstance -> (boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
         toBigDecimal.put(Character.class, fromInstance -> BigDecimal.valueOf(((char) fromInstance)));
         toBigDecimal.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO);
-        toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((float)fromInstance));
-        toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((double)fromInstance));
+        toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((Float)fromInstance));
+        toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((Double)fromInstance));
         toBigDecimal.put(Date.class, fromInstance -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
         toBigDecimal.put(LocalDate.class, fromInstance -> BigDecimal.valueOf(localDateToMillis((LocalDate) fromInstance)));
         toBigDecimal.put(LocalDateTime.class, fromInstance -> BigDecimal.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
@@ -493,13 +494,59 @@ public final class Converter {
         
         // ? to AtomicBoolean
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
-        toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((boolean) fromInstance));
+        toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
         toAtomicBoolean.put(String.class, fromInstance -> {
             String value = (String) fromInstance;
             if (MetaUtils.isEmpty(value)) {
                 return new AtomicBoolean(false);
             }
             return new AtomicBoolean("true".equalsIgnoreCase(value));
+        });
+
+        // ? to AtomicInteger
+        toAtomicInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
+        toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
+        toAtomicInteger.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return new AtomicInteger(0);
+            }
+            return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
+        });
+
+        // ? to AtomicLong
+        toAtomicLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1) : new AtomicLong(0));
+        toAtomicLong.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));
+        toAtomicLong.put(Date.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
+        toAtomicLong.put(LocalDate.class, fromInstance -> new AtomicLong(localDateToMillis((LocalDate) fromInstance)));
+        toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        toAtomicLong.put(ZonedDateTime.class, fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toAtomicLong.put(String.class, fromInstance -> {
+            if (MetaUtils.isEmpty((String) fromInstance)) {
+                return new AtomicLong(0L);
+            }
+            try {
+                return new AtomicLong(Long.parseLong(((String) fromInstance).trim()));
+            }
+            catch (NumberFormatException e) {
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+            }
+        });
+
+        // ? to UUID
+        toUUID.put(UUID.class, fromInstance -> fromInstance);
+        toUUID.put(String.class, fromInstance -> UUID.fromString((String)fromInstance));
+        toUUID.put(BigInteger.class, fromInstance -> {
+            BigInteger bigInteger = (BigInteger) fromInstance;
+            BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
+            long mostSignificantBits = bigInteger.shiftRight(64).and(mask).longValue();
+            long leastSignificantBits = bigInteger.and(mask).longValue();
+            return new UUID(mostSignificantBits, leastSignificantBits);
+        });
+        toUUID.put(BigDecimal.class, fromInstance -> {
+            BigDecimal bigDecimal = (BigDecimal) fromInstance;
+            BigInteger bigInteger = bigDecimal.toBigInteger();
+            Convert<?> converter = toUUID.get(BigInteger.class);
+            return converter.convert(bigInteger);
         });
 
         // ? to String
@@ -634,18 +681,16 @@ public final class Converter {
     
     public static UUID convertToUUID(Object fromInstance) {
         try {
-            if (fromInstance instanceof UUID) {
-                return (UUID)fromInstance;
-            } else if (fromInstance instanceof String) {
-                return UUID.fromString((String)fromInstance);
-            } else if (fromInstance instanceof BigInteger) {
-                BigInteger bigInteger = (BigInteger) fromInstance;
-                BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
-                long mostSignificantBits = bigInteger.shiftRight(64).and(mask).longValue();
-                long leastSignificantBits = bigInteger.and(mask).longValue();
-                return new UUID(mostSignificantBits, leastSignificantBits);
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toUUID.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (UUID)converter.convert(fromInstance);
             }
-            else if (fromInstance instanceof Map) {
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Map) {
                 Map<?, ?> map = (Map<?, ?>) fromInstance;
                 if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
                     long mostSigBits = convert(map.get("mostSigBits"), long.class);
@@ -1098,107 +1143,6 @@ public final class Converter {
         return false;
     }
 
-    /**
-     * Convert from the passed in instance to an AtomicInteger.  If null is passed in, a new AtomicInteger(0) is
-     * returned. Possible inputs are String, all primitive/primitive wrappers, boolean, AtomicBoolean,
-     * (false=0, true=1), and all Atomic*s.
-     */
-    public static AtomicInteger convert2AtomicInteger(Object fromInstance) {
-        if (fromInstance == null) {
-            return new AtomicInteger(0);
-        }
-        return convertToAtomicInteger(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to an AtomicInteger.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.
-     */
-    public static AtomicInteger convertToAtomicInteger(Object fromInstance) {
-        try {
-            if (fromInstance instanceof AtomicInteger) {   // return a new instance because AtomicInteger is mutable
-                return new AtomicInteger(((AtomicInteger) fromInstance).get());
-            } else if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return new AtomicInteger(0);
-                }
-                return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
-            } else if (fromInstance instanceof Number) {
-                return new AtomicInteger(((Number) fromInstance).intValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2AtomicInteger(map.get("value"));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? new AtomicInteger(1) : new AtomicInteger(0);
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0);
-            }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicInteger'", e);
-        }
-        nope(fromInstance, "AtomicInteger");
-        return null;
-    }
-
-    /**
-     * Convert from the passed in instance to an AtomicLong.  If null is passed in, new AtomicLong(0L) is returned.
-     * Possible inputs are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and
-     * all Atomic*s.  In addition, Date, LocalDate, LocalDateTime, ZonedDateTime, java.sql.Date, Timestamp, and Calendar
-     * can be passed in, in which case the AtomicLong returned is the number of milliseconds since Jan 1, 1970.
-     */
-    public static AtomicLong convert2AtomicLong(Object fromInstance) {
-        if (fromInstance == null) {
-            return new AtomicLong(0);
-        }
-        return convertToAtomicLong(fromInstance);
-    }
-
-    /**
-     * Convert from the passed in instance to an AtomicLong.  If null is passed in, null is returned. Possible inputs
-     * are String, all primitive/primitive wrappers, boolean, AtomicBoolean, (false=0, true=1), and all Atomic*s.  In
-     * addition, Date, LocalDate, LocalDateTime, ZonedDateTime, java.sql.Date, Timestamp, and Calendar can be passed in,
-     * in which case the AtomicLong returned is the number of milliseconds since Jan 1, 1970.
-     */
-    public static AtomicLong convertToAtomicLong(Object fromInstance) {
-        try {
-            if (fromInstance instanceof String) {
-                if (MetaUtils.isEmpty((String) fromInstance)) {
-                    return new AtomicLong(0);
-                }
-                return new AtomicLong(Long.parseLong(((String) fromInstance).trim()));
-            } else if (fromInstance instanceof AtomicLong) {   // return a clone of the AtomicLong because it is mutable
-                return new AtomicLong(((AtomicLong) fromInstance).get());
-            } else if (fromInstance instanceof Number) {
-                return new AtomicLong(((Number) fromInstance).longValue());
-            } else if (fromInstance instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) fromInstance;
-                return convert2AtomicLong(map.get("value"));
-            } else if (fromInstance instanceof Date) {
-                return new AtomicLong(((Date) fromInstance).getTime());
-            } else if (fromInstance instanceof LocalDate) {
-                return new AtomicLong(localDateToMillis((LocalDate) fromInstance));
-            } else if (fromInstance instanceof LocalDateTime) {
-                return new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance));
-            } else if (fromInstance instanceof ZonedDateTime) {
-                return new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-            } else if (fromInstance instanceof Boolean) {
-                return (Boolean) fromInstance ? new AtomicLong(1L) : new AtomicLong(0L);
-            } else if (fromInstance instanceof AtomicBoolean) {
-                return ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1L) : new AtomicLong(0L);
-            } else if (fromInstance instanceof Calendar) {
-                return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
-            }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicLong'", e);
-        }
-        nope(fromInstance, "AtomicLong");
-        return null;
-    }
-
     private static AtomicBoolean convertToAtomicBoolean(Object fromInstance) {
         try {
             Class<?> fromType = fromInstance.getClass();
@@ -1224,6 +1168,58 @@ public final class Converter {
         return null;
     }
 
+    private static AtomicInteger convertToAtomicInteger(Object fromInstance) {
+        try {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toAtomicInteger.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (AtomicInteger) converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
+                return new AtomicInteger(((Number) fromInstance).intValue());
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert(map.get("value"), AtomicInteger.class);
+            }
+        }
+        catch (Exception e) {
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicInteger'", e);
+        }
+        nope(fromInstance, "AtomicInteger");
+        return null;
+    }
+
+    private static AtomicLong convertToAtomicLong(Object fromInstance) {
+        try {
+            Class<?> fromType = fromInstance.getClass();
+            Convert<?> converter = toAtomicLong.get(fromType);
+
+            // Handle the Class equals Class (double dispatch)
+            if (converter != null) {
+                return (AtomicLong) converter.convert(fromInstance);
+            }
+
+            // Handle Class is assignable Class
+            if (fromInstance instanceof Number) {
+                return new AtomicLong(((Number) fromInstance).longValue());
+            } else if (fromInstance instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) fromInstance;
+                return convert(map.get("value"), AtomicLong.class);
+            } else if (fromInstance instanceof Calendar) {
+                return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
+            }
+        }
+        catch (Exception e) {
+            throw new IllegalArgumentException("value [" + name(fromInstance) + "] could not be converted to an 'AtomicLong'", e);
+        }
+        nope(fromInstance, "AtomicLong");
+        return null;
+    }
+    
     private static String nope(Object fromInstance, String targetType) {
         if (fromInstance == null) {
             return null;
