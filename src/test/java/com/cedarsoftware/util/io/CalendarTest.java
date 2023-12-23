@@ -42,7 +42,30 @@ import com.cedarsoftware.util.io.factory.CalendarFactory;
  */
 public class CalendarTest
 {
-    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    static class Calendars
+    {
+        Calendar[] calendars;
+
+        Calendars()
+        {
+            Calendar now = Calendar.getInstance();
+            calendars = new Calendar[] {now, now};
+        }
+    }
+
+    @Test
+    void testCalendarArray()
+    {
+        Calendars cals = new Calendars();
+        String json = TestUtil.toJson(cals);
+        System.out.println("json = " + json);
+
+        Calendars cals2 = TestUtil.toObjects(json, new ReadOptions(), null);
+        assert cals2.calendars.length == 2;
+        assert cals.calendars[0].equals(cals2.calendars[0]);
+        assert cals.calendars[1].equals(cals2.calendars[1]);
+        assert cals2.calendars[0] != cals2.calendars[1];
+    }
 
     @Test
     void testCalendarAsField()
