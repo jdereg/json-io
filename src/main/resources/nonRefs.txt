@@ -51,6 +51,7 @@ java.time.ZoneOffset
 java.time.ZoneRegion
 
 java.util.Calendar
+java.util.GregorianCalendar
 java.util.Date
 java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean

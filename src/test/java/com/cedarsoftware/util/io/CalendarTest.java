@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -14,14 +11,17 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.CalendarFactory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -44,27 +44,47 @@ public class CalendarTest
 {
     static class Calendars
     {
-        Calendar[] calendars;
+        GregorianCalendar[] calendars1;
+        Calendar[] calendars2;
+        Object[] calendars3;
 
         Calendars()
         {
             Calendar now = Calendar.getInstance();
-            calendars = new Calendar[] {now, now};
+            calendars1 = new GregorianCalendar[] {(GregorianCalendar) now, (GregorianCalendar) now};
+            calendars2 = new Calendar[] {now, now};
+            calendars3 = new Object[] {now, now};
         }
     }
-
+    
     @Test
     void testCalendarArray()
     {
         Calendars cals = new Calendars();
         String json = TestUtil.toJson(cals);
-        System.out.println("json = " + json);
+        Calendars calsEx = TestUtil.toObjects(json, new ReadOptions(), null);
 
-        Calendars cals2 = TestUtil.toObjects(json, new ReadOptions(), null);
-        assert cals2.calendars.length == 2;
-        assert cals.calendars[0].equals(cals2.calendars[0]);
-        assert cals.calendars[1].equals(cals2.calendars[1]);
-        assert cals2.calendars[0] != cals2.calendars[1];
+        assert calsEx.calendars1.length == 2;
+        assert calsEx.calendars2.length == 2;
+        assert calsEx.calendars3.length == 2;
+
+        assert cals.calendars1[0].equals(calsEx.calendars1[0]);
+        assert cals.calendars1[1].equals(calsEx.calendars1[1]);
+        assertNotSame(calsEx.calendars1[0], calsEx.calendars1[1]);
+
+        assert cals.calendars2[0].equals(calsEx.calendars2[0]);
+        assert cals.calendars2[1].equals(calsEx.calendars2[1]);
+        assertNotSame(calsEx.calendars2[0], calsEx.calendars2[1]);
+
+        assert cals.calendars3[0].equals(calsEx.calendars3[0]);
+        assert cals.calendars3[1].equals(calsEx.calendars3[1]);
+        assertNotSame(calsEx.calendars3[0], calsEx.calendars3[1]);
+
+        assertNotSame(calsEx.calendars1[0], calsEx.calendars2[0]);
+        assertNotSame(calsEx.calendars2[0], calsEx.calendars3[0]);
+
+        assertNotSame(calsEx.calendars1[1], calsEx.calendars2[1]);
+        assertNotSame(calsEx.calendars2[1], calsEx.calendars3[1]);
     }
 
     @Test
