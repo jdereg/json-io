@@ -168,8 +168,7 @@ public final class Converter {
         converters.put(UUID.class, Converter::convertToUUID);
 
         if (fromNull.size() != converters.size()) {
-            System.err.println("Mismatch in size of 'fromNull' versus 'converters' in Converters.java");
-            new Throwable().printStackTrace();
+            new Throwable("Mismatch in size of 'fromNull' versus 'converters' in Converters.java").printStackTrace();
         }
 
         // ? to Byte/byte
