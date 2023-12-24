@@ -899,7 +899,7 @@ public class ConverterTest
 
         // LocalDate to AtomicLong
         atomicLong = convert(localDate, AtomicLong.class);
-        assertEquals(localDateToMillis(localDate), atomicLong.get());
+        assertEquals(localDate.toEpochDay(), atomicLong.get());
 
         // LocalDate to String
         strDate = convert(localDate, String.class);
@@ -908,11 +908,13 @@ public class ConverterTest
 
         // LocalDate to BigInteger
         bigInt = convert(localDate, BigInteger.class);
-        assertEquals(now.getTime(), bigInt.longValue());
+        LocalDate nd = LocalDate.ofEpochDay(bigInt.longValue());
+        assertEquals(localDate, nd);
 
         // LocalDate to BigDecimal
         bigDec = convert(localDate, BigDecimal.class);
-        assertEquals(now.getTime(), bigDec.longValue());
+        nd = LocalDate.ofEpochDay(bigDec.longValue());
+        assertEquals(localDate, nd);
 
         // Error handling
         try {
@@ -924,6 +926,88 @@ public class ConverterTest
         }
 
         assert convert(null, LocalDate.class) == null;
+    }
+
+    @Test
+    void testStringToLocalDate()
+    {
+        String dec23rd2023 = "19714";
+        LocalDate ld = convert(dec23rd2023, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23rd2023 = "2023-12-23";
+        ld = convert(dec23rd2023, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23rd2023 = "2023/12/23";
+        ld = convert(dec23rd2023, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23rd2023 = "12/23/2023";
+        ld = convert(dec23rd2023, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+    }
+
+    @Test
+    void testStringOnMapToLocalDate()
+    {
+        Map<String, Object> map = new HashMap<>();
+        String dec23Epoch = "19714";
+        map.put("value", dec23Epoch);
+        LocalDate ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23Epoch = "2023-12-23";
+        map.put("value", dec23Epoch);
+        ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23Epoch = "2023/12/23";
+        map.put("value", dec23Epoch);
+        ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        dec23Epoch = "12/23/2023";
+        map.put("value", dec23Epoch);
+        ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+    }
+
+    @Test
+    void testStringKeysOnMapToLocalDate()
+    {
+        Map<String, Object> map = new HashMap<>();
+        map.put("day", "23");
+        map.put("month", "12");
+        map.put("year", "2023");
+        LocalDate ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
+
+        map.put("day", 23);
+        map.put("month", 12);
+        map.put("year", 2023);
+        ld = convert(map, LocalDate.class);
+        assert ld.getYear() == 2023;
+        assert ld.getMonthValue() == 12;
+        assert ld.getDayOfMonth() == 23;
     }
 
     @Test
@@ -1877,10 +1961,16 @@ public class ConverterTest
         cal.set(2020, 8, 4);   // 0-based for month
 
         BigDecimal big = convert(LocalDate.of(2020, 9, 4), BigDecimal.class);
-        assert big.longValue() == cal.getTime().getTime();
+        LocalDate out = LocalDate.ofEpochDay(big.longValue());
+        assert out.getYear() == 2020;
+        assert out.getMonthValue() == 9;
+        assert out.getDayOfMonth() == 4;
 
         BigInteger bigI = convert(LocalDate.of(2020, 9, 4), BigInteger.class);
-        assert bigI.longValue() == cal.getTime().getTime();
+        out = LocalDate.ofEpochDay(bigI.longValue());
+        assert out.getYear() == 2020;
+        assert out.getMonthValue() == 9;
+        assert out.getDayOfMonth() == 4;
 
         java.sql.Date sqlDate = convert(LocalDate.of(2020, 9, 4), java.sql.Date.class);
         assert sqlDate.getTime() == cal.getTime().getTime();
@@ -1897,7 +1987,10 @@ public class ConverterTest
         assertEquals(xyz, particular);
 
         AtomicLong atomicLong = convert(LocalDate.of(2020, 9, 4), AtomicLong.class);
-        assert atomicLong.get() == cal.getTime().getTime();
+        out = LocalDate.ofEpochDay(atomicLong.longValue());
+        assert out.getYear() == 2020;
+        assert out.getMonthValue() == 9;
+        assert out.getDayOfMonth() == 4;
     }
 
     @Test

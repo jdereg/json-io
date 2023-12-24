@@ -1,7 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
  *         limitations under the License.*
  */
 public class DateUtilities {
+    private static final Pattern allDigits = Pattern.compile("^\\d+$");
     private static final String DAYS = "(monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thur|thu|friday|fri|saturday|sat|sunday|sun)"; // longer before shorter matters
     private static final String MOS = "(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)";
     private static final Pattern datePattern1 = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
@@ -70,18 +71,26 @@ public class DateUtilities {
     }
     
     public static Date parseDate(String dateStr) {
+        if (dateStr == null) {
+            return null;
+        }
+        
         dateStr = dateStr.trim();
         if (dateStr.isEmpty()) {
             return null;
         }
 
-        try {
-            ZonedDateTime zdt = ZonedDateTime.from(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parse(dateStr));
-            return Date.from(zdt.toInstant());
-        } catch (Exception e) {
-            // ignore.
+        if (allDigits.matcher(dateStr).matches()) {
+            long num = Long.parseLong(dateStr);
+            if (dateStr.length() < 7) {         // days since epoch
+                return new Date(LocalDate.ofEpochDay(num).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
+            } else if (dateStr.length() < 11) { // seconds since epoch
+                return new Date(num * 1000);
+            } else {                            // millis since epoch
+                return new Date(num);
+            }
         }
-
+        
         // Determine which date pattern (Matcher) to use
         Matcher matcher = datePattern1.matcher(dateStr);
 
