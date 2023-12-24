@@ -39,6 +39,7 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 
 [Ljava.lang.Class; = com.cedarsoftware.util.io.factory.ClassArrayFactory
 [Ljava.lang.String; = com.cedarsoftware.util.io.factory.StringArrayFactory
+[Ljava.util.Calendar; = com.cedarsoftware.util.io.factory.CalendarArrayFactory
 [Ljava.util.Date; = com.cedarsoftware.util.io.factory.DateArrayFactory
 [Ljava.sql.Date; = com.cedarsoftware.util.io.factory.SqlDateArrayFactory
 [Ljava.sql.Timestamp; = com.cedarsoftware.util.io.factory.TimestampArrayFactory
