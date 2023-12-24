@@ -37,15 +37,15 @@ public class InternalAPIsTest
     @Test
     public void testCleanString()
     {
-        String s = MetaUtils.removeLeadingAndTrailingQuotes("\"Foo\"");
+        String s = Converter.removeLeadingAndTrailingQuotes("\"Foo\"");
         assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("Foo");
+        s = Converter.removeLeadingAndTrailingQuotes("Foo");
         assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("\"Foo");
+        s = Converter.removeLeadingAndTrailingQuotes("\"Foo");
         assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("Foo\"");
+        s = Converter.removeLeadingAndTrailingQuotes("Foo\"");
         assert "Foo".equals(s);
-        s = MetaUtils.removeLeadingAndTrailingQuotes("\"\"Foo\"\"");
+        s = Converter.removeLeadingAndTrailingQuotes("\"\"Foo\"\"");
         assert "Foo".equals(s);
     }
 

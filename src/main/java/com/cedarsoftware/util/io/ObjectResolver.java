@@ -137,11 +137,11 @@ public class ObjectResolver extends Resolver
                 {
                     if (isBasicWrapperType(targetClass))
                     {
-                        jsonObj.setTarget(MetaUtils.convert(fieldType, "0"));
+                        jsonObj.setTarget(Converter.convert("0", fieldType));
                     }
                     else
                     {
-                        injector.inject(target, MetaUtils.convert(fieldType, "0"));
+                        injector.inject(target, Converter.convert("0", fieldType));
                     }
                 }
                 else
@@ -570,7 +570,7 @@ public class ObjectResolver extends Resolver
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, MetaUtils.convert(compType, element));
+                Array.set(array, i, Converter.convert(element, compType));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays

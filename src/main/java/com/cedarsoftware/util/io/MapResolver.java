@@ -103,7 +103,7 @@ public class MapResolver extends Resolver
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(injector.getType());
                     if (isNonRefClass) {
                         // This will be JsonPrimitive.setValue() in the future (clean)
-                        jObj.setValue(MetaUtils.convert(injector.getType(), jObj.getValue()));
+                        jObj.setValue(Converter.convert(jObj.getValue(), injector.getType()));
                         continue;
                     }
                 }
@@ -128,7 +128,7 @@ public class MapResolver extends Resolver
                 final Class<?> fieldType = injector.getType();
                 if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
-                    Object convert = MetaUtils.convert(fieldType, rhs);
+                    Object convert = Converter.convert(rhs, fieldType);
                     jsonObj.put(fieldName, convert);
                 }
                 else if (rhs instanceof String)

@@ -127,7 +127,6 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         lda.localDates = new LocalDate[] {now, now};
         lda.otherDates = new Object[] {now, new Date(System.currentTimeMillis()), now};
         String json = TestUtil.toJson(lda);
-        System.out.println("json = " + json);
         LocalDateArray lda2 = TestUtil.toObjects(json, null);
         assert lda.localDates.length == 2;
         assert lda.otherDates.length == 3;

@@ -2,12 +2,10 @@ package com.cedarsoftware.util.io.factory;
 
 import java.lang.reflect.Array;
 
-import com.cedarsoftware.util.io.JsonIoException;
+import com.cedarsoftware.util.io.Converter;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import static com.cedarsoftware.util.io.MetaUtils.convert;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -56,10 +54,10 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
                     if (type == null) {
                         type = componentType;
                     }
-                    val = convert(type, val);
+                    val = Converter.convert(val, type);
                     
                 } else {
-                    val = convert(componentType, val);
+                    val = Converter.convert(val, componentType);
                 }
                 Array.set(array, i, val);
             }

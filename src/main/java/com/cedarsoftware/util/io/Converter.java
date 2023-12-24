@@ -20,6 +20,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Number, Date,
@@ -66,7 +68,8 @@ public final class Converter {
     private static final Float FLOAT_ONE = 1.0f;
     private static final Double DOUBLE_ZERO = 0.0d;
     private static final Double DOUBLE_ONE = 1.0d;
-    
+    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
+
     private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
@@ -310,9 +313,14 @@ public final class Converter {
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
         toCharacter.put(String.class, fromInstance -> {
-            if ("".equals(fromInstance)) {
+            String str = (String)fromInstance;
+            if (str.isEmpty()) {
                 return (char)0;
             }
+            if (str.length() == 1) {
+                return str.charAt(0);
+            }
+            // Treat as a String number, like "65" = 'A'
             return (char) Integer.parseInt(((String) fromInstance).trim());
         });
 
@@ -344,8 +352,9 @@ public final class Converter {
             return mostSignificant.shiftLeft(64).add(leastSignificant);
         });
         toBigInteger.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
-                return BigInteger.ZERO;
+            String str = (String) fromInstance;
+            if (str.isEmpty()) {
+                return null;
             }
             return new BigInteger((String) fromInstance);
         });
@@ -370,8 +379,9 @@ public final class Converter {
             return new BigDecimal(mostSignificant.shiftLeft(64).add(leastSignificant));
         });
         toBigDecimal.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
-                return BigDecimal.ZERO;
+            String str = (String) fromInstance;
+            if (str.isEmpty()) {
+                return null;
             }
             return new BigDecimal((String) fromInstance);
         });
@@ -522,11 +532,11 @@ public final class Converter {
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
         toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
         toAtomicBoolean.put(String.class, fromInstance -> {
-            String value = (String) fromInstance;
-            if (MetaUtils.isEmpty(value)) {
-                return new AtomicBoolean(false);
+            String str = (String) fromInstance;
+            if (str.isEmpty()) {
+                return null;
             }
-            return new AtomicBoolean("true".equalsIgnoreCase(value));
+            return new AtomicBoolean("true".equalsIgnoreCase(str));
         });
 
         // ? to AtomicInteger
@@ -534,8 +544,9 @@ public final class Converter {
         toAtomicInteger.put(LocalDate.class, fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
         toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
         toAtomicInteger.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
-                return new AtomicInteger(0);
+            String str = (String) fromInstance;
+            if (str.isEmpty()) {
+                return null;
             }
             return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
         });
@@ -548,8 +559,9 @@ public final class Converter {
         toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toAtomicLong.put(ZonedDateTime.class, fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         toAtomicLong.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
-                return new AtomicLong(0L);
+            String str = (String) fromInstance;
+            if (str.isEmpty()) {
+                return null;
             }
             try {
                 return new AtomicLong(Long.parseLong(((String) fromInstance).trim()));
@@ -1218,5 +1230,18 @@ public final class Converter {
      */
     public static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
         return zonedDateTime.toInstant().toEpochMilli();
+    }
+
+    /**
+     * Strip leading and trailing double quotes from the passed in String. If there are more than one
+     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
+     * this is weird.  Note that: ["""this is "really" weird""] will be: [this is "really" weird].
+     */
+    public static String removeLeadingAndTrailingQuotes(String input) {
+        Matcher m = extraQuotes.matcher(input);
+        if (m.find()) {
+            input = m.group(1);
+        }
+        return input;
     }
 }

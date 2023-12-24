@@ -93,7 +93,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (clazz == null) {
             throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }
-        return MetaUtils.convert(clazz, value);
+        return Converter.convert(value, clazz);
     }
     
     // Map APIs

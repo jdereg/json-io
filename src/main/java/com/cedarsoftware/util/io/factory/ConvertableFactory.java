@@ -1,10 +1,9 @@
 package com.cedarsoftware.util.io.factory;
 
+import com.cedarsoftware.util.io.Converter;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import static com.cedarsoftware.util.io.MetaUtils.convert;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,7 +26,7 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value;
         if (jObj.hasValue()) {
-            return convert(getType(), jObj.getValue());
+            return Converter.convert(jObj.getValue(), getType());
         } else {
             Class<?> type;
             value = jObj;
@@ -42,7 +41,7 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
             if (type == null) {
                 type = getType();
             }
-            return convert(type, value);
+            return Converter.convert(value, type);
         }
     }
 

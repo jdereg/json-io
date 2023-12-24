@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -37,6 +34,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -95,20 +95,20 @@ public class MetaUtilsTests {
     @Test
     public void testNewPrimitiveWrapper() {
         try {
-            MetaUtils.convert(TimeZone.class, "");
+            Converter.convert("", TimeZone.class);
             fail();
         } catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported destination type", "timezone");
         }
         
         try {
-            MetaUtils.convert(Float.class, "float");
+            Converter.convert("float", Float.class);
             fail();
         } catch (IllegalArgumentException e) {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "(float)", "not be converted", "Float");
         }
 
-        assertThat((Character) MetaUtils.convert(Character.class, '0')).isEqualTo(Character.valueOf('0'));
+        assertThat((Character) Converter.convert('0', Character.class)).isEqualTo(Character.valueOf('0'));
     }
 
     @Test
@@ -169,7 +169,7 @@ public class MetaUtilsTests {
     @Test
     void convertTrimQuotes() {
         String s = "\"\"\"This is \"really\" weird.\"\"\"";
-        String x = MetaUtils.removeLeadingAndTrailingQuotes(s);
+        String x = Converter.removeLeadingAndTrailingQuotes(s);
         assert "This is \"really\" weird.".equals(x);
     }
 

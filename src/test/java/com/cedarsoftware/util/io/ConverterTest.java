@@ -1478,7 +1478,7 @@ public class ConverterTest
         map = new HashMap();
         map.put("value", "");
         ab = convert(map, AtomicBoolean.class);
-        assert !ab.get();
+        assert null == ab;
 
         map = new HashMap();
         map.put("value", null);
@@ -1500,7 +1500,7 @@ public class ConverterTest
         map = new HashMap();
         map.put("value", "");
         ai = convert(map, AtomicInteger.class);
-        assert 0 == ai.get();
+        assert null == ai;
 
         map = new HashMap();
         map.put("value", null);
@@ -1522,7 +1522,7 @@ public class ConverterTest
         map = new HashMap();
         map.put("value", "");
         al = convert(map, AtomicLong.class);
-        assert 0 == al.get();
+        assert null == al;
 
         map = new HashMap();
         map.put("value", null);
@@ -1877,11 +1877,11 @@ public class ConverterTest
         assert (long) 0 == convert("", long.class);
         assert 0.0f == convert("", float.class);
         assert 0.0d == convert("", double.class);
-        assertEquals(BigDecimal.ZERO, convert("", BigDecimal.class));
-        assertEquals(BigInteger.ZERO, convert("", BigInteger.class));
-        assertEquals(new AtomicBoolean(false).get(), convert("", AtomicBoolean.class).get());
-        assertEquals(new AtomicInteger(0).get(), convert("", AtomicInteger.class).get());
-        assertEquals(new AtomicLong(0L).get(), convert("", AtomicLong.class).get());
+        assertEquals(null, convert("", BigDecimal.class));
+        assertEquals(null, convert("", BigInteger.class));
+        assertEquals(null, convert("", AtomicBoolean.class));
+        assertEquals(null, convert("", AtomicInteger.class));
+        assertEquals(null, convert("", AtomicLong.class));
     }
 
     @Test

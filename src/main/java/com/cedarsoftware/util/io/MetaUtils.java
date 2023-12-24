@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static java.lang.reflect.Modifier.isProtected;
-import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,9 +52,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -86,8 +84,6 @@ public class MetaUtils
 
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
-    private static final Byte[] byteCache = new Byte[256];
-    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
@@ -99,8 +95,6 @@ public class MetaUtils
     private static Unsafe unsafe;
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
-    private static final Map<Class<?>, Object> FROM_NULL = new LinkedHashMap<>();
-    private static final Set<Class<?>> FROM_EMPTY_QUOTES = new LinkedHashSet<>();
 
     static {
 
@@ -138,30 +132,6 @@ public class MetaUtils
         ASSIGNABLE_CLASS_MAPPING.put(Collection.class, ArrayList::new);
         ASSIGNABLE_CLASS_MAPPING.put(Calendar.class, Calendar::getInstance);
         ASSIGNABLE_CLASS_MAPPING.put(LinkedHashSet.class, LinkedHashSet::new);
-
-        FROM_NULL.put(Boolean.class, false);
-        FROM_NULL.put(boolean.class, false);
-        FROM_NULL.put(byte.class, (byte) 0);
-        FROM_NULL.put(Byte.class, (byte) 0);
-        FROM_NULL.put(short.class, (short) 0);
-        FROM_NULL.put(Short.class, (short) 0);
-        FROM_NULL.put(int.class, 0);
-        FROM_NULL.put(Integer.class, 0);
-        FROM_NULL.put(long.class, 0L);
-        FROM_NULL.put(Long.class, 0L);
-        FROM_NULL.put(double.class, 0.0d);
-        FROM_NULL.put(Double.class, 0.0d);
-        FROM_NULL.put(float.class, 0.0f);
-        FROM_NULL.put(Float.class, 0.0f);
-        FROM_NULL.put(char.class, '\u0000');
-        FROM_NULL.put(Character.class, '\u0000');
-
-        // "" is used to set to null (requested by customers)
-        FROM_EMPTY_QUOTES.add(BigInteger.class);
-        FROM_EMPTY_QUOTES.add(BigDecimal.class);
-        FROM_EMPTY_QUOTES.add(AtomicBoolean.class);
-        FROM_EMPTY_QUOTES.add(AtomicInteger.class);
-        FROM_EMPTY_QUOTES.add(AtomicLong.class);
     }
 
     /**
@@ -172,14 +142,11 @@ public class MetaUtils
     public static void setUseUnsafe(boolean state)
     {
         useUnsafe = state;
-        if (state)
-        {
-            try
-            {
+        if (state) {
+            try {
                 unsafe = new Unsafe();
             }
-            catch (InvocationTargetException e)
-            {
+            catch (InvocationTargetException e) {
                 useUnsafe = false;
             }
         }
@@ -563,21 +530,6 @@ public class MetaUtils
         return currentClass;
     }
 
-    /**
-     * Strip leading and trailing double quotes from the passed in String. If there are more than one
-     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
-     * this is weird.  Note that: """this is "really" weird" will be: this is "really" weird.
-     */
-    public static String removeLeadingAndTrailingQuotes(String input)
-    {
-        Matcher m = extraQuotes.matcher(input);
-        if (m.find())
-        {
-            input = m.group(1);
-        }
-        return input;
-    }
-
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
     {
         if (securityConcern.isAssignableFrom(c)) {
@@ -587,7 +539,7 @@ public class MetaUtils
 
     static Object getArgForType(Class<?> argType) {
         if (Primitives.isPrimitive(argType)) {
-            return convert(argType, null);  // Get the defaults (false, 0, 0.0d, etc.)
+            return Converter.convert(null, argType);  // Get the defaults (false, 0, 0.0d, etc.)
         }
 
         Supplier<Object> directClassMapping = DIRECT_CLASS_MAPPING.get(argType);
@@ -630,7 +582,7 @@ public class MetaUtils
             Object value = pickBestValue(paramType, copyValues);
             if (value == null) {
                 if (useNull) {
-                    value = paramType.isPrimitive() ? convert(paramType, null) : null;  // don't send null to a primitive parameter
+                    value = paramType.isPrimitive() ? Converter.convert(null, paramType) : null;  // don't send null to a primitive parameter
                 } else {
                     value = getArgForType(paramType);
                 }
@@ -957,46 +909,6 @@ public class MetaUtils
             }
         }
         return null;
-    }
-
-    /**
-     * @return a new primitive wrapper instance for the given class, using the
-     * rhs parameter as a hint.  For example, convert(long.class, "45")
-     * will return 45L.  However, if null is passed for the rhs, then the value 0L
-     * would be returned in this case.  For boolean, it would return false if null
-     * was passed in.  This method is similar to the GitHub project java-util's
-     * Converter.convert() API.
-     */
-    public static <T> Object convert(Class<T> toType, Object rhs)
-    {
-        if (rhs == null && FROM_NULL.containsKey(toType)) {
-            return FROM_NULL.get(toType);
-        }
-        if ("".equals(rhs) && FROM_EMPTY_QUOTES.contains(toType)) {
-            return null;
-        }
-
-        // Special handling of character.
-        if (toType == char.class || toType == Character.class) {
-            if (rhs instanceof String) {
-                if (rhs.equals("\"")) {
-                    return '\"';
-                }
-                if ("".equals(rhs)) {
-                    rhs = "\u0000";
-                }
-                return ((CharSequence) rhs).charAt(0);
-            }
-            if (rhs instanceof Character) {
-                return rhs;
-            }
-        }
-
-        if (rhs instanceof String && ((String) rhs).startsWith("\"")) {
-            rhs = removeLeadingAndTrailingQuotes((String)rhs);
-        }
-
-        return Converter.convert(rhs, toType);
     }
 
     /**
