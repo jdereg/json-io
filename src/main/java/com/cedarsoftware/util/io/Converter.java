@@ -15,7 +15,10 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -199,6 +202,7 @@ public final class Converter {
 
         // ? to Short/short
         toShort.put(Short.class, fromInstance -> fromInstance);
+        toShort.put(Byte.class, fromInstance -> ((Number) fromInstance).shortValue());
         toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
         toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
@@ -221,6 +225,7 @@ public final class Converter {
 
         // ? to Integer/int
         toInteger.put(Integer.class, fromInstance -> fromInstance);
+        toInteger.put(Byte.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
         toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
@@ -243,6 +248,7 @@ public final class Converter {
 
         // ? to Long/long
         toLong.put(Integer.class, fromInstance -> fromInstance);
+        toLong.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue());
         toLong.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? LONG_ONE : LONG_ZERO);
         toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
         toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
@@ -264,6 +270,7 @@ public final class Converter {
 
         // ? to Float/float
         toFloat.put(Float.class, fromInstance -> fromInstance);
+        toFloat.put(Byte.class, fromInstance -> ((Number) fromInstance).floatValue());
         toFloat.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
         toFloat.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
@@ -282,6 +289,7 @@ public final class Converter {
 
         // ? to Double/double
         toDouble.put(Double.class, fromInstance -> fromInstance);
+        toDouble.put(Byte.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
         toDouble.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
@@ -300,6 +308,7 @@ public final class Converter {
 
         // ? to Boolean/boolean
         toBoolean.put(Boolean.class, fromInstance -> fromInstance);
+        toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
         toBoolean.put(Character.class, fromInstance -> ((char) fromInstance) > 0);
         toBoolean.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get());
         toBoolean.put(String.class, fromInstance -> {
@@ -318,6 +327,7 @@ public final class Converter {
 
         // ? to Character/char
         toCharacter.put(Character.class, fromInstance -> fromInstance);
+        toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() == 0 ? '1' : '0');
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
         toCharacter.put(String.class, fromInstance -> {
@@ -345,6 +355,7 @@ public final class Converter {
 
         // ? to BigInteger
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
+        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).longValue()));
         toBigInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
         toBigInteger.put(Character.class, fromInstance -> BigInteger.valueOf(((char) fromInstance)));
         toBigInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO);
@@ -373,6 +384,7 @@ public final class Converter {
         toBigDecimal.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
         toBigDecimal.put(Character.class, fromInstance -> BigDecimal.valueOf(((char) fromInstance)));
         toBigDecimal.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(Byte.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((Float)fromInstance));
         toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((Double)fromInstance));
         toBigDecimal.put(Date.class, fromInstance -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
@@ -477,7 +489,10 @@ public final class Converter {
         toLocalDate.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
         toLocalDate.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
         toLocalDate.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        toLocalDate.put(Short.class, fromInstance -> LocalDate.ofEpochDay((Short) fromInstance));
+        toLocalDate.put(Integer.class, fromInstance -> LocalDate.ofEpochDay((Integer) fromInstance));
         toLocalDate.put(Long.class, fromInstance -> LocalDate.ofEpochDay((Long) fromInstance));
+        toLocalDate.put(AtomicInteger.class, fromInstance -> LocalDate.ofEpochDay(((AtomicInteger) fromInstance).longValue()));
         toLocalDate.put(AtomicLong.class, fromInstance -> LocalDate.ofEpochDay(((AtomicLong) fromInstance).longValue()));
         toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((BigInteger) fromInstance).longValue()));
         toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((BigDecimal) fromInstance).longValue()));
@@ -544,6 +559,7 @@ public final class Converter {
         
         // ? to AtomicBoolean
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
+        toAtomicBoolean.put(Byte.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
         toAtomicBoolean.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -557,6 +573,7 @@ public final class Converter {
         toAtomicInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
         toAtomicInteger.put(LocalDate.class, fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
         toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
+        toAtomicInteger.put(Byte.class, fromInstance -> new AtomicInteger(((Number) fromInstance).intValue()));
         toAtomicInteger.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -568,6 +585,7 @@ public final class Converter {
         // ? to AtomicLong
         toAtomicLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1) : new AtomicLong(0));
         toAtomicLong.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));
+        toAtomicLong.put(Byte.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
         toAtomicLong.put(Date.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
         toAtomicLong.put(LocalDate.class, fromInstance -> new AtomicLong(((LocalDate) fromInstance).toEpochDay()));
         toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
@@ -1219,6 +1237,59 @@ public final class Converter {
         return cal;
     }
 
+    public static String getSupportedConversions() {
+        StringBuilder str = new StringBuilder();
+        Object[][] conversions = new Object[][] {
+            {"String", toStr},
+            {"byte", toByte},
+            {"short", toShort},
+            {"int", toInteger},
+            {"long", toLong},
+            {"float", toFloat},
+            {"double", toDouble},
+            {"boolean", toBoolean},
+            {"char", toCharacter},
+            {"class", toClass},
+            {"BigInteger", toBigInteger},
+            {"BigDecimal", toBigDecimal},
+            {"AtomicBoolean", toAtomicBoolean},
+            {"AtomicInteger", toAtomicInteger},
+            {"AtomicLong", toAtomicLong},
+            {"Date", toDate},
+            {"java.sql.Date", toSqlDate},
+            {"Timestamp", toTimestamp},
+            {"Calendar", toCalendar},
+            {"LocalDate", toLocalDate},
+            {"LocalDateTime", toLocalDateTime},
+            {"ZonedDateTime", toZonedDateTime},
+            {"UUID", toUUID}
+        };
+
+        Map<String, Set<String>> fromTo = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (Object[] sub : conversions) {
+            String destTypeName = (String) sub[0];
+            Map<Class<?>, Convert<?>> map = (Map<Class<?>, Convert<?>>) sub[1];
+            Set<Class<?>> fromTypes = map.keySet();
+
+            for (Class<?> srcType : fromTypes) {
+                String srcTypeName = getShortName(srcType);
+                fromTo.computeIfAbsent(srcTypeName, k-> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(destTypeName);
+            }
+        }
+
+        for (Map.Entry<String, Set<String>> entry : fromTo.entrySet()) {
+            // Append the key
+            str.append(entry.getKey()).append("\n");
+
+            // Append the values from the set, each on a new line with 4 spaces indentation
+            for (String value : entry.getValue()) {
+                str.append("    ").append(value).append("\n");
+            }
+        }
+
+        return str.toString();
+    }
+    
     /**
      * @param localDate A Java LocalDate
      * @return a long representing the localDate as the number of millis since the epoch, Jan 1, 1970

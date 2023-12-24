@@ -2187,4 +2187,10 @@ public class ConverterTest
                 .hasMessageContaining("Unsupported destination type 'Collection' requested for conversion");
 
     }
+
+    @Test
+    void printSupportedConversions()
+    {
+        Converter.getSupportedConversions();
+    }
 }
