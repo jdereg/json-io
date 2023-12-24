@@ -1,15 +1,18 @@
 package com.cedarsoftware.util.io;
 
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.stream.Stream;
+
+import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.LocalDate;
-import java.util.stream.Stream;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -110,6 +113,40 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
                 .hasDayOfMonth(12);
     }
 
+    static class LocalDateArray
+    {
+        LocalDate[] localDates;
+        Object[] otherDates;
+    }
+
+    @Test
+    void testLocalDateArray()
+    {
+        LocalDateArray lda = new LocalDateArray();
+        LocalDate now = LocalDate.now();
+        lda.localDates = new LocalDate[] {now, now};
+        lda.otherDates = new Object[] {now, new Date(System.currentTimeMillis()), now};
+        String json = TestUtil.toJson(lda);
+        System.out.println("json = " + json);
+        LocalDateArray lda2 = TestUtil.toObjects(json, null);
+        assert lda.localDates.length == 2;
+        assert lda.otherDates.length == 3;
+
+        assert DeepEquals.deepEquals(lda, lda2);
+    }
+
+    @Test
+    public void testLocalDateArrayAtRoot()
+    {
+        LocalDate now = LocalDate.now();
+        LocalDate[] dates = new LocalDate[]{now, now};
+        String json = TestUtil.toJson(dates);
+        LocalDate[] dates2 = TestUtil.toObjects(json, null);
+        assertEquals(2, dates2.length);
+        assertEquals(dates2[0], now);
+        assertEquals(dates2[0], dates2[1]);
+    }
+
     @Test
     public void testLocalDateAsTimeStamp()
     {
@@ -118,7 +155,7 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         LocalDate ld2 = TestUtil.toObjects(json, null);
         assert ld.equals(ld2);
     }
-    
+
     private String loadJsonForTest(String fileName) {
         return MetaUtils.loadResourceAsString("localdate/" + fileName);
     }

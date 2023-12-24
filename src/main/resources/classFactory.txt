@@ -43,6 +43,7 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 [Ljava.util.Date; = com.cedarsoftware.util.io.factory.DateArrayFactory
 [Ljava.sql.Date; = com.cedarsoftware.util.io.factory.SqlDateArrayFactory
 [Ljava.sql.Timestamp; = com.cedarsoftware.util.io.factory.TimestampArrayFactory
+[Ljava.time.LocalDate; = com.cedarsoftware.util.io.factory.LocalDateArrayFactory
 [Ljava.math.BigDecimal; = com.cedarsoftware.util.io.factory.BigDecimalArrayFactory
 [Ljava.math.BigInteger; = com.cedarsoftware.util.io.factory.BigIntegerArrayFactory
 [Ljava.util.concurrent.atomic.AtomicBoolean; = com.cedarsoftware.util.io.factory.AtomicBooleanArrayFactory

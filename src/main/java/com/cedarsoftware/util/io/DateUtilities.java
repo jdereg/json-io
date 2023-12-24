@@ -81,16 +81,9 @@ public class DateUtilities {
         }
 
         if (allDigits.matcher(dateStr).matches()) {
-            long num = Long.parseLong(dateStr);
-            if (dateStr.length() < 7) {         // days since epoch
-                return new Date(LocalDate.ofEpochDay(num).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
-            } else if (dateStr.length() < 11) { // seconds since epoch
-                return new Date(num * 1000);
-            } else {                            // millis since epoch
-                return new Date(num);
-            }
+            return parseEpochString(dateStr);
         }
-        
+
         // Determine which date pattern (Matcher) to use
         Matcher matcher = datePattern1.matcher(dateStr);
 
@@ -248,5 +241,15 @@ public class DateUtilities {
         }
         return c.getTime();
     }
-}
 
+    private static Date parseEpochString(String dateStr) {
+        long num = Long.parseLong(dateStr);
+        if (dateStr.length() < 7) {         // days since epoch
+            return new Date(LocalDate.ofEpochDay(num).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        } else if (dateStr.length() < 12) { // seconds since epoch
+            return new Date(num * 1000);
+        } else {                            // millis since epoch
+            return new Date(num);
+        }
+    }
+}
