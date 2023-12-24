@@ -1,11 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * Abstract class to help create temporal items.
@@ -30,40 +25,8 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class LocalDateFactory extends AbstractTemporalFactory<LocalDate> {
-
-    public LocalDateFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
-        super(dateFormatter, zoneId);
-    }
-
-    public LocalDateFactory() {
-        super(DateTimeFormatter.ISO_LOCAL_DATE, ZoneId.systemDefault());
-    }
-
-    @Override
-    protected LocalDate fromString(String s)
-    {
-        try
-        {
-            return LocalDate.parse(s, dateTimeFormatter);
-        }
-        catch (Exception e)
-        {   // Increase date format flexibility - JSON not written by json-io.
-            return convertToZonedDateTime(s).toLocalDate();
-        }
-    }
-
-    @Override
-    protected LocalDate fromNumber(Number l) {
-        return LocalDate.ofEpochDay(l.longValue());
-    }
-
-    @Override
-    protected LocalDate fromJsonObject(JsonObject job, ReaderContext context) {
-        Number month = (Number) job.get("month");
-        Number day = (Number) job.get("day");
-        Number year = (Number) job.get("year");
-
-        return LocalDate.of(year.intValue(), month.intValue(), day.intValue());
+public class LocalDateFactory extends ConvertableFactory {
+    public Class<?> getType() {
+        return LocalDate.class;
     }
 }

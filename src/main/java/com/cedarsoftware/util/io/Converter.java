@@ -450,16 +450,10 @@ public final class Converter {
         toLocalDate.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
         toLocalDate.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
         toLocalDate.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-        toLocalDate.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDate());
-        toLocalDate.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((AtomicLong) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDate());
-        toLocalDate.put(BigInteger.class, fromInstance -> {
-            BigInteger big = (BigInteger) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-        });
-        toLocalDate.put(BigDecimal.class, fromInstance -> {
-            BigDecimal big = (BigDecimal) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDate();
-        });
+        toLocalDate.put(Long.class, fromInstance -> LocalDate.ofEpochDay((Long) fromInstance));
+        toLocalDate.put(AtomicLong.class, fromInstance -> LocalDate.ofEpochDay(((AtomicLong) fromInstance).longValue()));
+        toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((BigInteger) fromInstance).longValue()));
+        toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((BigDecimal) fromInstance).longValue()));
         toLocalDate.put(String.class, fromInstance -> {
             Date date = DateUtilities.parseDate(((String) fromInstance).trim());
             if (date == null) {
@@ -873,7 +867,16 @@ public final class Converter {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), LocalDate.class);
+            if (map.containsKey("month") && map.containsKey("day") && map.containsKey("year")) {
+                int month = convert(map.get("month"), int.class);
+                int day = convert(map.get("day"), int.class);
+                int year = convert(map.get("year"), int.class);
+                return LocalDate.of(year, month, day);
+            } else if (map.containsKey("value")) {
+                return convert(map.get("value"), LocalDate.class);
+            } else {
+                throw new IllegalArgumentException("To convert Map to a LocalDate, the Map must contain  'year,' 'month,' and 'day' keys or a 'value' key");
+            }
         }
         return NOPE;
     }
@@ -1186,8 +1189,7 @@ public final class Converter {
 
     /**
      * @param localDate A Java LocalDate
-     * @return a long representing the localDate as the number of milliseconds since the
-     * number of milliseconds since Jan 1, 1970
+     * @return a long representing the localDate as the number of millis since the epoch, Jan 1, 1970
      */
     public static long localDateToMillis(LocalDate localDate) {
         return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();

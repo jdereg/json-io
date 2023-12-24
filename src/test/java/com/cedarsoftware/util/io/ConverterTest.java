@@ -852,14 +852,15 @@ public class ConverterTest
         localDate = convert(timestamp, LocalDate.class);
         assertEquals(localDateToMillis(localDate), timestamp.getTime());
 
+        LocalDate nowDate = LocalDate.now();
         // Long to LocalDate
-        localDate = convert(now.getTime(), LocalDate.class);
-        assertEquals(localDateToMillis(localDate), now.getTime());
+        localDate = convert(nowDate.toEpochDay(), LocalDate.class);
+        assertEquals(localDate, nowDate);
 
         // AtomicLong to LocalDate
-        AtomicLong atomicLong = new AtomicLong(now.getTime());
+        AtomicLong atomicLong = new AtomicLong(nowDate.toEpochDay());
         localDate = convert(atomicLong, LocalDate.class);
-        assertEquals(localDateToMillis(localDate), now.getTime());
+        assertEquals(localDate, nowDate);
 
         // String to LocalDate
         String strDate = convert(now, String.class);
@@ -868,14 +869,14 @@ public class ConverterTest
         assert strDate.startsWith(strDate2);
 
         // BigInteger to LocalDate
-        BigInteger bigInt = new BigInteger("" + now.getTime());
+        BigInteger bigInt = new BigInteger("" + nowDate.toEpochDay());
         localDate = convert(bigInt, LocalDate.class);
-        assertEquals(localDateToMillis(localDate), now.getTime());
+        assertEquals(localDate, nowDate);
 
         // BigDecimal to LocalDate
-        BigDecimal bigDec = new BigDecimal(now.getTime());
+        BigDecimal bigDec = new BigDecimal(nowDate.toEpochDay());
         localDate = convert(bigDec, LocalDate.class);
-        assertEquals(localDateToMillis(localDate), now.getTime());
+        assertEquals(localDate, nowDate);
 
         // Other direction --> LocalDate to other date types
 
@@ -1601,15 +1602,12 @@ public class ConverterTest
     @Test
     void testMapToLocalDate()
     {
-        long now = System.currentTimeMillis();
+        LocalDate today = LocalDate.now();
+        long now = today.toEpochDay();
         final Map map = new HashMap();
         map.put("value", now);
         LocalDate date = convert(map, LocalDate.class);
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(now);
-        assert date.getMonthValue() == cal.get(Calendar.MONTH) + 1;
-        assert date.getDayOfMonth() == cal.get(Calendar.DAY_OF_MONTH);
-        assert date.getYear() == cal.get(Calendar.YEAR);
+        assert date.equals(today);
 
         map.clear();
         map.put("value", "");
@@ -1620,7 +1618,10 @@ public class ConverterTest
         assert null == convert(map, LocalDate.class);
 
         map.clear();
-        assert null == convert(map, LocalDate.class);
+
+        assertThatThrownBy(() -> convert(map, LocalDate.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'LocalDate'");
     }
 
     @Test

@@ -4,9 +4,7 @@ import java.time.LocalDate;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReadOptions;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
@@ -14,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.io.Converter.convert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalDateFactoryTests {
@@ -27,11 +26,8 @@ class LocalDateFactoryTests {
     @ParameterizedTest
     @MethodSource("nonValueVariants")
     void newInstance_testNonValueVariants(Integer year, Integer month, Integer day) {
-        LocalDateFactory factory = new LocalDateFactory();
         JsonObject jsonObject = buildJsonObject(year, month, day);
-
-        JsonReader reader = new JsonReader(new ReadOptions());
-        LocalDate time = factory.newInstance(LocalDate.class, jsonObject, reader);
+        LocalDate time = convert(jsonObject, LocalDate.class);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)
@@ -44,8 +40,7 @@ class LocalDateFactoryTests {
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue("2023-09-05");
 
-        JsonReader reader = new JsonReader(new ReadOptions());
-        LocalDate time = factory.newInstance(LocalDate.class, jsonObject, reader);
+        LocalDate time = convert(jsonObject, LocalDate.class);
 
         assertThat(time)
                 .hasYear(2023)
