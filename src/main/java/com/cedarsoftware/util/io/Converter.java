@@ -181,11 +181,12 @@ public final class Converter {
         toByte.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
         toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
         toByte.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return BYTE_ZERO;
             }
             try {
-                return Byte.valueOf(((String) fromInstance).trim());
+                return Byte.valueOf(str);
             } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
@@ -202,11 +203,12 @@ public final class Converter {
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
         toShort.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toShort.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return SHORT_ZERO;
             }
             try {
-                return Short.valueOf(((String) fromInstance).trim());
+                return Short.valueOf(str);
             } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
@@ -223,11 +225,12 @@ public final class Converter {
         toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toInteger.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return INTEGER_ZERO;
             }
             try {
-                return Integer.valueOf(((String) fromInstance).trim());
+                return Integer.valueOf(str);
             } catch (NumberFormatException e) {
                 long value = convert(fromInstance, long.class);
                 if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
@@ -247,11 +250,12 @@ public final class Converter {
         toLong.put(LocalDateTime.class, fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         toLong.put(ZonedDateTime.class, fromInstance -> zonedDateTimeToMillis((ZonedDateTime)fromInstance));
         toLong.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return LONG_ZERO;
             }
             try {
-                return Long.valueOf(((String) fromInstance).trim());
+                return Long.valueOf(str);
             } catch (NumberFormatException e) {
                 return convert(fromInstance, BigDecimal.class).longValue();
             }
@@ -264,11 +268,12 @@ public final class Converter {
         toFloat.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         toFloat.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return FLOAT_ZERO;
             }
             try {
-                return Float.valueOf(((String) fromInstance).trim());
+                return Float.valueOf(str);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
@@ -281,11 +286,12 @@ public final class Converter {
         toDouble.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         toDouble.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return DOUBLE_ZERO;
             }
             try {
-                return Double.valueOf(((String) fromInstance).trim());
+                return Double.valueOf(str);
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
@@ -296,16 +302,17 @@ public final class Converter {
         toBoolean.put(Character.class, fromInstance -> ((char) fromInstance) > 0);
         toBoolean.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get());
         toBoolean.put(String.class, fromInstance -> {
-            if (MetaUtils.isEmpty((String) fromInstance)) {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
                 return false;
             }
             // faster equals check "true" and "false"
-            if ("true".equals(fromInstance)) {
+            if ("true".equals(str)) {
                 return true;
-            } else if ("false".equals(fromInstance)) {
+            } else if ("false".equals(str)) {
                 return false;
             }
-            return "true".equalsIgnoreCase((String) fromInstance);
+            return "true".equalsIgnoreCase(str);
         });
 
         // ? to Character/char
@@ -313,7 +320,7 @@ public final class Converter {
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
         toCharacter.put(String.class, fromInstance -> {
-            String str = (String)fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return (char)0;
             }
@@ -321,17 +328,18 @@ public final class Converter {
                 return str.charAt(0);
             }
             // Treat as a String number, like "65" = 'A'
-            return (char) Integer.parseInt(((String) fromInstance).trim());
+            return (char) Integer.parseInt(str);
         });
 
         // ? to Class
         toClass.put(Class.class, fromInstance -> fromInstance);
         toClass.put(String.class, fromInstance -> {
-            Class<?> clazz = MetaUtils.classForName((String) fromInstance, Converter.class.getClassLoader());
+            String str = ((String) fromInstance).trim();
+            Class<?> clazz = MetaUtils.classForName(str, Converter.class.getClassLoader());
             if (clazz != null) {
                 return clazz;
             }
-            throw new IllegalArgumentException("Cannot convert String '" + fromInstance + "' to class.  Class not found.");
+            throw new IllegalArgumentException("Cannot convert String '" + str + "' to class.  Class not found.");
         });
 
         // ? to BigInteger
@@ -352,11 +360,11 @@ public final class Converter {
             return mostSignificant.shiftLeft(64).add(leastSignificant);
         });
         toBigInteger.put(String.class, fromInstance -> {
-            String str = (String) fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return null;
             }
-            return new BigInteger((String) fromInstance);
+            return new BigInteger(str);
         });
 
         // ? to BigDecimal
@@ -379,11 +387,11 @@ public final class Converter {
             return new BigDecimal(mostSignificant.shiftLeft(64).add(leastSignificant));
         });
         toBigDecimal.put(String.class, fromInstance -> {
-            String str = (String) fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return null;
             }
-            return new BigDecimal((String) fromInstance);
+            return new BigDecimal(str);
         });
         
         // ? to Date
@@ -411,7 +419,8 @@ public final class Converter {
         toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((BigDecimal) fromInstance).longValue()));
         toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((AtomicLong) fromInstance).get()));
         toSqlDate.put(String.class, fromInstance -> {
-            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -430,7 +439,8 @@ public final class Converter {
         toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((BigDecimal) fromInstance).longValue()));
         toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((AtomicLong) fromInstance).get()));
         toTimestamp.put(String.class, fromInstance -> {
-            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -451,7 +461,8 @@ public final class Converter {
         toCalendar.put(BigDecimal.class, fromInstance -> initCal(((BigDecimal) fromInstance).longValue()));
         toCalendar.put(AtomicLong.class, fromInstance -> initCal(((AtomicLong) fromInstance).longValue()));
         toCalendar.put(String.class, fromInstance -> {
-            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -470,8 +481,8 @@ public final class Converter {
         toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((BigInteger) fromInstance).longValue()));
         toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((BigDecimal) fromInstance).longValue()));
         toLocalDate.put(String.class, fromInstance -> {
-            String val = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(val);
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -496,7 +507,8 @@ public final class Converter {
             return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
         });
         toLocalDateTime.put(String.class, fromInstance -> {
-            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -521,7 +533,8 @@ public final class Converter {
             return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
         });
         toZonedDateTime.put(String.class, fromInstance -> {
-            Date date = DateUtilities.parseDate(((String) fromInstance).trim());
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
             if (date == null) {
                 return null;
             }
@@ -532,7 +545,7 @@ public final class Converter {
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
         toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
         toAtomicBoolean.put(String.class, fromInstance -> {
-            String str = (String) fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return null;
             }
@@ -544,11 +557,11 @@ public final class Converter {
         toAtomicInteger.put(LocalDate.class, fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
         toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
         toAtomicInteger.put(String.class, fromInstance -> {
-            String str = (String) fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return null;
             }
-            return new AtomicInteger(Integer.parseInt(((String) fromInstance).trim()));
+            return new AtomicInteger(Integer.parseInt(str));
         });
 
         // ? to AtomicLong
@@ -559,12 +572,12 @@ public final class Converter {
         toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toAtomicLong.put(ZonedDateTime.class, fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         toAtomicLong.put(String.class, fromInstance -> {
-            String str = (String) fromInstance;
+            String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
                 return null;
             }
             try {
-                return new AtomicLong(Long.parseLong(((String) fromInstance).trim()));
+                return new AtomicLong(Long.parseLong(str));
             }
             catch (NumberFormatException e) {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
@@ -573,7 +586,7 @@ public final class Converter {
 
         // ? to UUID
         toUUID.put(UUID.class, fromInstance -> fromInstance);
-        toUUID.put(String.class, fromInstance -> UUID.fromString((String)fromInstance));
+        toUUID.put(String.class, fromInstance -> UUID.fromString(((String)fromInstance).trim()));
         toUUID.put(BigInteger.class, fromInstance -> {
             BigInteger bigInteger = (BigInteger) fromInstance;
             BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
