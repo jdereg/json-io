@@ -56,6 +56,7 @@ import java.util.regex.Pattern;
 
 public final class Converter {
     private static final String NOPE = "~nope!";
+    private static final String VALUE = "value";
     private static final Byte BYTE_ZERO = (byte) 0;
     private static final Byte BYTE_ONE = (byte) 1;
     private static final Short SHORT_ZERO = (short) 0;
@@ -719,7 +720,7 @@ public final class Converter {
             return ((Enum<?>) fromInstance).name();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), String.class);
+            return convert(map.get(VALUE), String.class);
         }
         return NOPE;
     }
@@ -736,7 +737,7 @@ public final class Converter {
         // Handle "is" assignable
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), Class.class);
+            return convert(map.get(VALUE), Class.class);
         }
         return NOPE;
     }
@@ -778,7 +779,7 @@ public final class Converter {
             return BigDecimal.valueOf(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), BigDecimal.class);
+            return convert(map.get(VALUE), BigDecimal.class);
         } else if (fromInstance instanceof Calendar) {
             return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -799,7 +800,7 @@ public final class Converter {
             return BigInteger.valueOf(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), BigInteger.class);
+            return convert(map.get(VALUE), BigInteger.class);
         } else if (fromInstance instanceof Calendar) {
             return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -822,8 +823,8 @@ public final class Converter {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
                 return convert(map.get("time"), java.sql.Date.class);
-            } else if (map.containsKey("value")) {
-                return convert(map.get("value"), java.sql.Date.class);
+            } else if (map.containsKey(VALUE)) {
+                return convert(map.get(VALUE), java.sql.Date.class);
             } else {
                 throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
             }
@@ -851,8 +852,8 @@ public final class Converter {
                 Timestamp timeStamp = new Timestamp(time);
                 timeStamp.setNanos(ns);
                 return timeStamp;
-            } else if (map.containsKey("value")) {
-                return convert(map.get("value"), Timestamp.class);
+            } else if (map.containsKey(VALUE)) {
+                return convert(map.get(VALUE), Timestamp.class);
             } else {
                 throw new IllegalArgumentException("To convert Map to Timestamp, the Map must contain a 'time' and optional 'nanos' key or a 'value' key");
             }
@@ -876,8 +877,8 @@ public final class Converter {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
                 return convert(map.get("time"), Date.class);
-            } else if (map.containsKey("value")) {
-                return convert(map.get("value"), Date.class);
+            } else if (map.containsKey(VALUE)) {
+                return convert(map.get(VALUE), Date.class);
             } else {
                 throw new IllegalArgumentException("To convert Map to a Date, the Map must contain a 'time' or a 'value' key");
             }
@@ -904,8 +905,8 @@ public final class Converter {
                 int day = convert(map.get("day"), int.class);
                 int year = convert(map.get("year"), int.class);
                 return LocalDate.of(year, month, day);
-            } else if (map.containsKey("value")) {
-                return convert(map.get("value"), LocalDate.class);
+            } else if (map.containsKey(VALUE)) {
+                return convert(map.get(VALUE), LocalDate.class);
             } else {
                 throw new IllegalArgumentException("To convert Map to a LocalDate, the Map must contain  'year,' 'month,' and 'day' keys or a 'value' key");
             }
@@ -927,7 +928,7 @@ public final class Converter {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), LocalDateTime.class);
+            return convert(map.get(VALUE), LocalDateTime.class);
         }
         return NOPE;
     }
@@ -946,7 +947,7 @@ public final class Converter {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), ZonedDateTime.class);
+            return convert(map.get(VALUE), ZonedDateTime.class);
         }
         return NOPE;
     }
@@ -977,8 +978,8 @@ public final class Converter {
                 Date epochInMillis = convert(map.get("time"), Date.class);
                 cal.setTimeInMillis(epochInMillis.getTime());
                 return cal;
-            } else if (map.containsKey("value")) {
-                return convert(map.get("value"), Calendar.class);
+            } else if (map.containsKey(VALUE)) {
+                return convert(map.get(VALUE), Calendar.class);
             } else {
                 throw new IllegalArgumentException("To convert Map to a Calendar, the Map must contain a 'time' and optional 'zone' key, or a 'value' key");
             }
@@ -1005,7 +1006,7 @@ public final class Converter {
             throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), char.class);
+            return convert(map.get(VALUE), char.class);
         }
         return NOPE;
     }
@@ -1024,7 +1025,7 @@ public final class Converter {
             return ((Number) fromInstance).byteValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), byte.class);
+            return convert(map.get(VALUE), byte.class);
         }
         return NOPE;
     }
@@ -1043,7 +1044,7 @@ public final class Converter {
             return ((Number) fromInstance).shortValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), short.class);
+            return convert(map.get(VALUE), short.class);
         }
         return NOPE;
     }
@@ -1062,7 +1063,7 @@ public final class Converter {
             return ((Number) fromInstance).intValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), int.class);
+            return convert(map.get(VALUE), int.class);
         }
         return NOPE;
     }
@@ -1081,7 +1082,7 @@ public final class Converter {
             return ((Number) fromInstance).longValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), long.class);
+            return convert(map.get(VALUE), long.class);
         } else if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).getTime().getTime();
         }
@@ -1102,7 +1103,7 @@ public final class Converter {
             return ((Number) fromInstance).floatValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), float.class);
+            return convert(map.get(VALUE), float.class);
         }
         return NOPE;
     }
@@ -1121,7 +1122,7 @@ public final class Converter {
             return ((Number) fromInstance).doubleValue();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), double.class);
+            return convert(map.get(VALUE), double.class);
         }
         return NOPE;
     }
@@ -1140,7 +1141,7 @@ public final class Converter {
             return ((Number) fromInstance).longValue() != 0;
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), boolean.class);
+            return convert(map.get(VALUE), boolean.class);
         }
         return NOPE;
     }
@@ -1159,7 +1160,7 @@ public final class Converter {
             return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), AtomicBoolean.class);
+            return convert(map.get(VALUE), AtomicBoolean.class);
         }
         return NOPE;
     }
@@ -1178,7 +1179,7 @@ public final class Converter {
             return new AtomicInteger(((Number) fromInstance).intValue());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), AtomicInteger.class);
+            return convert(map.get(VALUE), AtomicInteger.class);
         }
         return NOPE;
     }
@@ -1197,7 +1198,7 @@ public final class Converter {
             return new AtomicLong(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get("value"), AtomicLong.class);
+            return convert(map.get(VALUE), AtomicLong.class);
         } else if (fromInstance instanceof Calendar) {
             return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
         }
@@ -1211,8 +1212,7 @@ public final class Converter {
         return getShortName(fromInstance.getClass()) + " (" + fromInstance + ")";
     }
 
-    private static Calendar initCal(long ms)
-    {
+    private static Calendar initCal(long ms) {
         Calendar cal = Calendar.getInstance();
         cal.clear();
         cal.setTimeInMillis(ms);
