@@ -320,7 +320,7 @@ public final class Converter {
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
         toCharacter.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
+            String str = ((String) fromInstance);
             if (str.isEmpty()) {
                 return (char)0;
             }
@@ -328,7 +328,7 @@ public final class Converter {
                 return str.charAt(0);
             }
             // Treat as a String number, like "65" = 'A'
-            return (char) Integer.parseInt(str);
+            return (char) Integer.parseInt(str.trim());
         });
 
         // ? to Class
