@@ -1,7 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
 import java.sql.Timestamp;
-import java.util.Date;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

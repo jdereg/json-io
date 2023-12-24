@@ -2,9 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import java.sql.Timestamp;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
-
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -22,8 +19,9 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class TimestampFactory extends DateFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        return new java.sql.Timestamp(((Timestamp) super.newInstance(c, jObj, context)).getTime());
+public class TimestampFactory extends ConvertableFactory {
+    @Override
+    public Class<?> getType() {
+        return Timestamp.class;
     }
 }

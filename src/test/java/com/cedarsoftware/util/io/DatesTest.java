@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -14,11 +7,17 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
+import com.cedarsoftware.util.ReturnType;
+import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.DateFactory;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -484,6 +483,17 @@ class DatesTest
         Timestamp stamp = (Timestamp) dates2[2];
         assertEquals(stamp.getTime(), dates[0].getTime());
         assertEquals(stamp.getTime(), now);
+    }
+
+    @Test
+    void testTimestampAsValue()
+    {
+        String json = MetaUtils.loadResourceAsString("timestamp/timestamp-as-value.json");
+        Timestamp ts = TestUtil.toObjects(json, null);
+        Calendar cal = Converter.convert(ts, Calendar.class);
+        assert cal.get(Calendar.MONTH) == 11;
+        assert cal.get(Calendar.DAY_OF_MONTH) == 24;
+        assert cal.get(Calendar.YEAR) == 1996;
     }
 
     @Test

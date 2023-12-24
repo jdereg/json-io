@@ -1,6 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
