@@ -280,7 +280,7 @@ public class ConverterTest
         assert now70 == convert(today, Long.class);
 
         LocalDate localDate = LocalDate.now();
-        now70 = Converter.localDateToMillis(localDate);
+        now70 = localDate.toEpochDay();
         assert now70 == convert(localDate, long.class);
 
         assert 25L == convert(new AtomicInteger(25), long.class);
@@ -895,7 +895,7 @@ public class ConverterTest
 
         // LocalDate to Long
         long tnow = convert(localDate, long.class);
-        assertEquals(localDateToMillis(localDate), tnow);
+        assertEquals(localDate.toEpochDay(), tnow);
 
         // LocalDate to AtomicLong
         atomicLong = convert(localDate, AtomicLong.class);
@@ -1891,8 +1891,10 @@ public class ConverterTest
         Date date = convert(LocalDate.of(2020, 9, 4), Date.class);
         assert date.getTime() == cal.getTime().getTime();
 
+        LocalDate particular = LocalDate.of(2020, 9, 4);
         Long lng = convert(LocalDate.of(2020, 9, 4), Long.class);
-        assert lng == cal.getTime().getTime();
+        LocalDate xyz = LocalDate.ofEpochDay(lng);
+        assertEquals(xyz, particular);
 
         AtomicLong atomicLong = convert(LocalDate.of(2020, 9, 4), AtomicLong.class);
         assert atomicLong.get() == cal.getTime().getTime();

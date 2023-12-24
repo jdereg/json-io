@@ -196,6 +196,7 @@ public final class Converter {
         toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
         toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toShort.put(String.class, fromInstance -> {
             if (MetaUtils.isEmpty((String) fromInstance)) {
                 return SHORT_ZERO;
@@ -216,6 +217,7 @@ public final class Converter {
         toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
         toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toInteger.put(String.class, fromInstance -> {
             if (MetaUtils.isEmpty((String) fromInstance)) {
                 return INTEGER_ZERO;
@@ -237,7 +239,7 @@ public final class Converter {
         toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
         toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
         toLong.put(Date.class, fromInstance -> ((Date) fromInstance).getTime());
-        toLong.put(LocalDate.class, fromInstance -> localDateToMillis((LocalDate) fromInstance));
+        toLong.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         toLong.put(LocalDateTime.class, fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         toLong.put(ZonedDateTime.class, fromInstance -> zonedDateTimeToMillis((ZonedDateTime)fromInstance));
         toLong.put(String.class, fromInstance -> {
