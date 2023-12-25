@@ -203,7 +203,10 @@ class BigIntegerTest
         BigInteger allowed = Converter.convert(new Date(), BigInteger.class);
         assert allowed.longValue() > 0;
 
-        BigInteger bi = Converter.convert(3.14, BigInteger.class);
+        BigInteger bi = Converter.convert(3.14d, BigInteger.class);
+        assertEquals(3, bi.intValue());
+
+        bi = Converter.convert(3.14f, BigInteger.class);
         assertEquals(3, bi.intValue());
     }
 }
