@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.WriteOptions.nullWriter;
-
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,6 +19,8 @@ import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
 import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
 import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
+
+import static com.cedarsoftware.util.io.WriteOptions.nullWriter;
 
 /**
  * Builder class for building the writeOptions.
@@ -181,7 +181,7 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Aliases the fully qualifed class name to its short name
+     * Aliases the fully qualified class name to its short name
      *
      * @param type Class to alias
      * @return ReadOptions for chained access.
@@ -660,7 +660,7 @@ public class WriteOptionsBuilder {
      * Load custom writer classes based on contents of resources/customWriters.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames() {
         Map<String, String> map = MetaUtils.loadMapDefinition("nonStandardAccessors.txt");
