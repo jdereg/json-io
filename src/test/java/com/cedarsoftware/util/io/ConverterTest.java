@@ -379,7 +379,8 @@ public class ConverterTest
     public void testString()
     {
         assertEquals("Hello", convert("Hello", String.class));
-        assertEquals("25.0", convert(25.0, String.class));
+        assertEquals("25", convert(25.0d, String.class));
+        assertEquals("3141592653589793300", convert(3.1415926535897932384626433e18, String.class));
         assertEquals("true", convert(true, String.class));
         assertEquals("J", convert('J', String.class));
         assertEquals("3.1415926535897932384626433", convert(new BigDecimal("3.1415926535897932384626433"), String.class));

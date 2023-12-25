@@ -3,14 +3,12 @@ package com.cedarsoftware.util.io;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.cedarsoftware.util.ReturnType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Useful utilities for use in unit testing.

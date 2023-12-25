@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -183,7 +184,12 @@ public final class Converter {
         toByte.put(Byte.class, fromInstance -> fromInstance);
         toByte.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
         toByte.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
+        toByte.put(Double.class, fromInstance -> ((Number) fromInstance).byteValue());
         toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
+        toByte.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).byteValue());
+        toByte.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).byteValue());
+        toByte.put(BigInteger.class, fromInstance -> ((Number) fromInstance).byteValue());
+        toByte.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).byteValue());
         toByte.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -205,7 +211,12 @@ public final class Converter {
         toShort.put(Byte.class, fromInstance -> ((Number) fromInstance).shortValue());
         toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
         toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
+        toShort.put(Double.class, fromInstance ->  ((Number) fromInstance).shortValue());
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
+        toShort.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).shortValue());
+        toShort.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).shortValue());
+        toShort.put(BigInteger.class, fromInstance -> ((Number) fromInstance).shortValue());
+        toShort.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).shortValue());
         toShort.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toShort.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -227,8 +238,13 @@ public final class Converter {
         toInteger.put(Integer.class, fromInstance -> fromInstance);
         toInteger.put(Byte.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(Double.class, fromInstance ->  ((Number) fromInstance).intValue());
         toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
         toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
+        toInteger.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).intValue());
+        toInteger.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).intValue());
+        toInteger.put(BigInteger.class, fromInstance -> ((Number) fromInstance).intValue());
+        toInteger.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
         toInteger.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -251,11 +267,17 @@ public final class Converter {
         toLong.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue());
         toLong.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? LONG_ONE : LONG_ZERO);
         toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
+        toLong.put(Double.class, fromInstance ->  ((Number) fromInstance).longValue());
         toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
+        toLong.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).longValue());
+        toLong.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).longValue());
+        toLong.put(BigInteger.class, fromInstance -> ((Number) fromInstance).longValue());
+        toLong.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).longValue());
         toLong.put(Date.class, fromInstance -> ((Date) fromInstance).getTime());
         toLong.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         toLong.put(LocalDateTime.class, fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         toLong.put(ZonedDateTime.class, fromInstance -> zonedDateTimeToMillis((ZonedDateTime)fromInstance));
+        toLong.put(GregorianCalendar.class, fromInstance -> ((Calendar)fromInstance).getTime().getTime());
         toLong.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -271,10 +293,15 @@ public final class Converter {
         // ? to Float/float
         toFloat.put(Float.class, fromInstance -> fromInstance);
         toFloat.put(Byte.class, fromInstance -> ((Number) fromInstance).floatValue());
+        toFloat.put(Double.class, fromInstance ->  ((Number) fromInstance).floatValue());
         toFloat.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
         toFloat.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         toFloat.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
+        toFloat.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).floatValue());
+        toFloat.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).floatValue());
+        toFloat.put(BigInteger.class, fromInstance -> ((Number) fromInstance).floatValue());
+        toFloat.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).floatValue());
         toFloat.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -293,7 +320,13 @@ public final class Converter {
         toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
         toDouble.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
+        toDouble.put(GregorianCalendar.class, fromInstance -> (double)((Calendar)fromInstance).getTime().getTime());
+        toDouble.put(Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
         toDouble.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
+        toDouble.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).doubleValue());
+        toDouble.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).doubleValue());
+        toDouble.put(BigInteger.class, fromInstance -> ((Number) fromInstance).doubleValue());
+        toDouble.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -308,9 +341,14 @@ public final class Converter {
 
         // ? to Boolean/boolean
         toBoolean.put(Boolean.class, fromInstance -> fromInstance);
-        toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
+        toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0);
+        toBoolean.put(Double.class, fromInstance -> ((Number) fromInstance).doubleValue() != 0.0d);
         toBoolean.put(Character.class, fromInstance -> ((char) fromInstance) > 0);
         toBoolean.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get());
+        toBoolean.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).intValue() != 0);
+        toBoolean.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
+        toBoolean.put(BigInteger.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
+        toBoolean.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
         toBoolean.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -327,9 +365,14 @@ public final class Converter {
 
         // ? to Character/char
         toCharacter.put(Character.class, fromInstance -> fromInstance);
-        toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() == 0 ? '1' : '0');
+        toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0 ? '1' : '0');
+        toCharacter.put(Double.class, fromInstance -> numberToCharacter((Number)fromInstance));
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
         toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
+        toCharacter.put(AtomicInteger.class, fromInstance -> numberToCharacter((Number)fromInstance));
+        toCharacter.put(AtomicLong.class, fromInstance -> numberToCharacter((Number)fromInstance));
+        toCharacter.put(BigInteger.class, fromInstance -> numberToCharacter((Number)fromInstance));
+        toCharacter.put(BigDecimal.class, fromInstance -> numberToCharacter((Number)fromInstance));
         toCharacter.put(String.class, fromInstance -> {
             String str = ((String) fromInstance);
             if (str.isEmpty()) {
@@ -355,14 +398,18 @@ public final class Converter {
 
         // ? to BigInteger
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
-        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).longValue()));
+        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).byteValue()));
+        toBigInteger.put(Double.class, fromInstance -> new BigInteger(String.format("%.0f", (double)fromInstance)));
         toBigInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
         toBigInteger.put(Character.class, fromInstance -> BigInteger.valueOf(((char) fromInstance)));
         toBigInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO);
+        toBigInteger.put(AtomicInteger.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).intValue()));
+        toBigInteger.put(AtomicLong.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).longValue()));
         toBigInteger.put(Date.class, fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
         toBigInteger.put(LocalDate.class, fromInstance -> BigInteger.valueOf(((LocalDate) fromInstance).toEpochDay()));
         toBigInteger.put(LocalDateTime.class, fromInstance -> BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toBigInteger.put(ZonedDateTime.class, fromInstance -> BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime)fromInstance)));
+        toBigInteger.put(ZonedDateTime.class, fromInstance -> BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toBigInteger.put(GregorianCalendar.class, fromInstance -> BigInteger.valueOf(((Calendar)fromInstance).getTime().getTime()));
         toBigInteger.put(BigDecimal.class, fromInstance -> ((BigDecimal)fromInstance).toBigInteger());
         toBigInteger.put(UUID.class, fromInstance -> {
             UUID uuid = (UUID) fromInstance;
@@ -384,6 +431,8 @@ public final class Converter {
         toBigDecimal.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigDecimal.ONE : BigDecimal.ZERO);
         toBigDecimal.put(Character.class, fromInstance -> BigDecimal.valueOf(((char) fromInstance)));
         toBigDecimal.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigDecimal.ONE : BigDecimal.ZERO);
+        toBigDecimal.put(AtomicInteger.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).intValue()));
+        toBigDecimal.put(AtomicLong.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Byte.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((Float)fromInstance));
         toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((Double)fromInstance));
@@ -391,6 +440,7 @@ public final class Converter {
         toBigDecimal.put(LocalDate.class, fromInstance -> BigDecimal.valueOf(((LocalDate) fromInstance).toEpochDay()));
         toBigDecimal.put(LocalDateTime.class, fromInstance -> BigDecimal.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toBigDecimal.put(ZonedDateTime.class, fromInstance -> BigDecimal.valueOf(zonedDateTimeToMillis((ZonedDateTime)fromInstance)));
+        toBigDecimal.put(GregorianCalendar.class, fromInstance -> BigDecimal.valueOf(((Calendar)fromInstance).getTime().getTime()));
         toBigDecimal.put(BigInteger.class, fromInstance -> new BigDecimal((BigInteger)fromInstance));
         toBigDecimal.put(UUID.class, fromInstance -> {
             UUID uuid = (UUID) fromInstance;
@@ -414,10 +464,12 @@ public final class Converter {
         toDate.put(LocalDate.class, fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
         toDate.put(LocalDateTime.class, fromInstance -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toDate.put(ZonedDateTime.class, fromInstance -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toDate.put(GregorianCalendar.class, fromInstance -> new Date(((Calendar)fromInstance).getTime().getTime()));
         toDate.put(Long.class, fromInstance -> new Date((long) fromInstance));
-        toDate.put(BigInteger.class, fromInstance -> new Date(((BigInteger) fromInstance).longValue()));
-        toDate.put(BigDecimal.class, fromInstance -> new Date(((BigDecimal) fromInstance).longValue()));
-        toDate.put(AtomicLong.class, fromInstance -> new Date(((AtomicLong) fromInstance).get()));
+        toDate.put(Double.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
+        toDate.put(BigInteger.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
+        toDate.put(BigDecimal.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
+        toDate.put(AtomicLong.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
         toDate.put(String.class, fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
 
         // ? to java.sql.Date
@@ -427,10 +479,12 @@ public final class Converter {
         toSqlDate.put(LocalDate.class, fromInstance -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
         toSqlDate.put(LocalDateTime.class, fromInstance -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toSqlDate.put(ZonedDateTime.class, fromInstance -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toSqlDate.put(GregorianCalendar.class, fromInstance -> new java.sql.Date(((Calendar)fromInstance).getTime().getTime()));
         toSqlDate.put(Long.class, fromInstance -> new java.sql.Date((long) fromInstance));
-        toSqlDate.put(BigInteger.class, fromInstance -> new java.sql.Date(((BigInteger) fromInstance).longValue()));
-        toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((BigDecimal) fromInstance).longValue()));
-        toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((AtomicLong) fromInstance).get()));
+        toSqlDate.put(Double.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        toSqlDate.put(BigInteger.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
         toSqlDate.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -447,10 +501,12 @@ public final class Converter {
         toTimestamp.put(LocalDate.class, fromInstance -> new Timestamp(localDateToMillis((LocalDate) fromInstance)));
         toTimestamp.put(LocalDateTime.class, fromInstance -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toTimestamp.put(ZonedDateTime.class, fromInstance -> new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toTimestamp.put(GregorianCalendar.class, fromInstance -> new Timestamp(((Calendar)fromInstance).getTime().getTime()));
         toTimestamp.put(Long.class, fromInstance -> new Timestamp((long) fromInstance));
-        toTimestamp.put(BigInteger.class, fromInstance -> new Timestamp(((BigInteger) fromInstance).longValue()));
-        toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((BigDecimal) fromInstance).longValue()));
-        toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((AtomicLong) fromInstance).get()));
+        toTimestamp.put(Double.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        toTimestamp.put(BigInteger.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
         toTimestamp.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -461,7 +517,6 @@ public final class Converter {
         });
 
         // ? to Calendar
-        toCalendar.put(Calendar.class, fromInstance -> ((Calendar) fromInstance).clone());  // Calendar is mutable
         toCalendar.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).clone());
         toCalendar.put(Date.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
         toCalendar.put(java.sql.Date.class, fromInstance -> initCal(((java.sql.Date) fromInstance).getTime()));
@@ -470,9 +525,10 @@ public final class Converter {
         toCalendar.put(LocalDateTime.class, fromInstance -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toCalendar.put(ZonedDateTime.class, fromInstance -> initCal(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         toCalendar.put(Long.class, fromInstance -> initCal((Long)fromInstance));
-        toCalendar.put(BigInteger.class, fromInstance -> initCal(((BigInteger) fromInstance).longValue()));
-        toCalendar.put(BigDecimal.class, fromInstance -> initCal(((BigDecimal) fromInstance).longValue()));
-        toCalendar.put(AtomicLong.class, fromInstance -> initCal(((AtomicLong) fromInstance).longValue()));
+        toCalendar.put(Double.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
+        toCalendar.put(BigInteger.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
+        toCalendar.put(BigDecimal.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
+        toCalendar.put(AtomicLong.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
         toCalendar.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -486,16 +542,18 @@ public final class Converter {
         toLocalDate.put(LocalDate.class, fromInstance -> fromInstance);
         toLocalDate.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
         toLocalDate.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDate());
+        toLocalDate.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
         toLocalDate.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
         toLocalDate.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
         toLocalDate.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
         toLocalDate.put(Short.class, fromInstance -> LocalDate.ofEpochDay((Short) fromInstance));
         toLocalDate.put(Integer.class, fromInstance -> LocalDate.ofEpochDay((Integer) fromInstance));
         toLocalDate.put(Long.class, fromInstance -> LocalDate.ofEpochDay((Long) fromInstance));
-        toLocalDate.put(AtomicInteger.class, fromInstance -> LocalDate.ofEpochDay(((AtomicInteger) fromInstance).longValue()));
-        toLocalDate.put(AtomicLong.class, fromInstance -> LocalDate.ofEpochDay(((AtomicLong) fromInstance).longValue()));
-        toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((BigInteger) fromInstance).longValue()));
-        toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((BigDecimal) fromInstance).longValue()));
+        toLocalDate.put(AtomicInteger.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        toLocalDate.put(AtomicLong.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        toLocalDate.put(Double.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
         toLocalDate.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -509,19 +567,15 @@ public final class Converter {
         toLocalDateTime.put(LocalDateTime.class, fromInstance -> fromInstance);
         toLocalDateTime.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).atStartOfDay());
         toLocalDateTime.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDateTime());
+        toLocalDateTime.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
         toLocalDateTime.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime());
         toLocalDateTime.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
         toLocalDateTime.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((AtomicLong) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(Double.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(BigInteger.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        toLocalDateTime.put(BigDecimal.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
         toLocalDateTime.put(java.sql.Date.class, fromInstance -> ((java.sql.Date)fromInstance).toLocalDate().atStartOfDay());
-        toLocalDateTime.put(BigInteger.class, fromInstance -> {
-            BigInteger big = (BigInteger) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-        });
-        toLocalDateTime.put(BigDecimal.class, fromInstance -> {
-            BigDecimal big = (BigDecimal) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime();
-        });
         toLocalDateTime.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -535,19 +589,15 @@ public final class Converter {
         toZonedDateTime.put(ZonedDateTime.class, fromInstance -> fromInstance);
         toZonedDateTime.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).atZone(ZoneId.systemDefault()));
         toZonedDateTime.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).atStartOfDay(ZoneId.systemDefault()));
+        toZonedDateTime.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
         toZonedDateTime.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
         toZonedDateTime.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
         toZonedDateTime.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()));
-        toZonedDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((AtomicLong) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
+        toZonedDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
+        toZonedDateTime.put(Double.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
+        toZonedDateTime.put(BigInteger.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
+        toZonedDateTime.put(BigDecimal.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
         toZonedDateTime.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay(ZoneId.systemDefault()));
-        toZonedDateTime.put(BigInteger.class, fromInstance -> {
-            BigInteger big = (BigInteger) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
-        });
-        toZonedDateTime.put(BigDecimal.class, fromInstance -> {
-            BigDecimal big = (BigDecimal) fromInstance;
-            return Instant.ofEpochMilli(big.longValue()).atZone(ZoneId.systemDefault());
-        });
         toZonedDateTime.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             Date date = DateUtilities.parseDate(str);
@@ -559,8 +609,14 @@ public final class Converter {
         
         // ? to AtomicBoolean
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
+        toAtomicBoolean.put(AtomicInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).intValue() != 0));
+        toAtomicBoolean.put(AtomicLong.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        toAtomicBoolean.put(BigInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        toAtomicBoolean.put(BigDecimal.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        toAtomicBoolean.put(Double.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Byte.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
+        toAtomicBoolean.put(Character.class, fromInstance -> new AtomicBoolean((char) fromInstance > 0));
         toAtomicBoolean.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -570,10 +626,16 @@ public final class Converter {
         });
 
         // ? to AtomicInteger
+        toAtomicInteger.put(AtomicInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue())); // mutable, so dupe
         toAtomicInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
+        toAtomicInteger.put(AtomicLong.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        toAtomicInteger.put(BigInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        toAtomicInteger.put(BigDecimal.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        toAtomicInteger.put(Double.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(LocalDate.class, fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
         toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
         toAtomicInteger.put(Byte.class, fromInstance -> new AtomicInteger(((Number) fromInstance).intValue()));
+        toAtomicInteger.put(Character.class, fromInstance -> new AtomicInteger(((char) fromInstance)));
         toAtomicInteger.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -583,13 +645,20 @@ public final class Converter {
         });
 
         // ? to AtomicLong
+        toAtomicLong.put(AtomicLong.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));   // mutable, so dupe
+        toAtomicLong.put(AtomicInteger.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
         toAtomicLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1) : new AtomicLong(0));
+        toAtomicLong.put(BigInteger.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        toAtomicLong.put(BigDecimal.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        toAtomicLong.put(Double.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));
         toAtomicLong.put(Byte.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
+        toAtomicLong.put(Character.class, fromInstance -> new AtomicLong(((char) fromInstance)));
         toAtomicLong.put(Date.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
         toAtomicLong.put(LocalDate.class, fromInstance -> new AtomicLong(((LocalDate) fromInstance).toEpochDay()));
         toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
         toAtomicLong.put(ZonedDateTime.class, fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        toAtomicLong.put(GregorianCalendar.class, fromInstance -> new AtomicLong(((Calendar) fromInstance).getTime().getTime()));
         toAtomicLong.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -621,24 +690,19 @@ public final class Converter {
         });
 
         // ? to String
-        Convert<?> toString = Object::toString;
-        Convert<?> toNoExpString = Object::toString;
         toStr.put(String.class, fromInstance -> fromInstance);
-        toStr.put(Boolean.class, toString);
-        toStr.put(AtomicBoolean.class, toString);
-        toStr.put(Byte.class, toString);
-        toStr.put(Short.class, toString);
-        toStr.put(Integer.class, toString);
-        toStr.put(AtomicInteger.class, toString);
-        toStr.put(BigInteger.class, fromInstance -> convertToBigInteger(fromInstance).toString());
-        toStr.put(Long.class, toString);
-        toStr.put(AtomicLong.class, toString);
-        toStr.put(Double.class, toNoExpString);
-        toStr.put(BigDecimal.class, fromInstance -> {
-            BigDecimal bigDecimal = (BigDecimal)fromInstance;
-            return bigDecimal.stripTrailingZeros().toPlainString();
-        });
-        toStr.put(Float.class, toNoExpString);
+        toStr.put(Boolean.class, Object::toString);
+        toStr.put(AtomicBoolean.class, Object::toString);
+        toStr.put(Byte.class, Object::toString);
+        toStr.put(Short.class, Object::toString);
+        toStr.put(Integer.class, Object::toString);
+        toStr.put(AtomicInteger.class, Object::toString);
+        toStr.put(BigInteger.class, Object::toString);
+        toStr.put(Long.class, Object::toString);
+        toStr.put(AtomicLong.class, Object::toString);
+        toStr.put(Double.class, fromInstance -> new DecimalFormat("#.####################").format((double)fromInstance));
+        toStr.put(BigDecimal.class, fromInstance -> ((BigDecimal)fromInstance).stripTrailingZeros().toPlainString());
+        toStr.put(Float.class, fromInstance -> new DecimalFormat("#.####################").format((float)fromInstance));
         toStr.put(Class.class, fromInstance -> ((Class<?>) fromInstance).getName());
         toStr.put(UUID.class, Object::toString);
         toStr.put(Date.class, fromInstance -> {
@@ -1237,32 +1301,31 @@ public final class Converter {
         return cal;
     }
 
-    public static String getSupportedConversions() {
-        StringBuilder str = new StringBuilder();
-        Object[][] conversions = new Object[][] {
-            {"String", toStr},
-            {"byte", toByte},
-            {"short", toShort},
-            {"int", toInteger},
-            {"long", toLong},
-            {"float", toFloat},
-            {"double", toDouble},
-            {"boolean", toBoolean},
-            {"char", toCharacter},
-            {"class", toClass},
-            {"BigInteger", toBigInteger},
-            {"BigDecimal", toBigDecimal},
-            {"AtomicBoolean", toAtomicBoolean},
-            {"AtomicInteger", toAtomicInteger},
-            {"AtomicLong", toAtomicLong},
-            {"Date", toDate},
-            {"java.sql.Date", toSqlDate},
-            {"Timestamp", toTimestamp},
-            {"Calendar", toCalendar},
-            {"LocalDate", toLocalDate},
-            {"LocalDateTime", toLocalDateTime},
-            {"ZonedDateTime", toZonedDateTime},
-            {"UUID", toUUID}
+    public static Map<String, Set<String>> getSupportedConversions() {
+        Object[][] conversions = new Object[][]{
+                {"String", toStr},
+                {"byte", toByte},
+                {"short", toShort},
+                {"int", toInteger},
+                {"long", toLong},
+                {"float", toFloat},
+                {"double", toDouble},
+                {"boolean", toBoolean},
+                {"char", toCharacter},
+                {"class", toClass},
+                {"BigInteger", toBigInteger},
+                {"BigDecimal", toBigDecimal},
+                {"AtomicBoolean", toAtomicBoolean},
+                {"AtomicInteger", toAtomicInteger},
+                {"AtomicLong", toAtomicLong},
+                {"Date", toDate},
+                {"java.sql.Date", toSqlDate},
+                {"Timestamp", toTimestamp},
+                {"Calendar", toCalendar},
+                {"LocalDate", toLocalDate},
+                {"LocalDateTime", toLocalDateTime},
+                {"ZonedDateTime", toZonedDateTime},
+                {"UUID", toUUID}
         };
 
         Map<String, Set<String>> fromTo = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -1273,21 +1336,11 @@ public final class Converter {
 
             for (Class<?> srcType : fromTypes) {
                 String srcTypeName = getShortName(srcType);
-                fromTo.computeIfAbsent(srcTypeName, k-> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(destTypeName);
+                fromTo.computeIfAbsent(srcTypeName, k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(destTypeName);
             }
         }
 
-        for (Map.Entry<String, Set<String>> entry : fromTo.entrySet()) {
-            // Append the key
-            str.append(entry.getKey()).append("\n");
-
-            // Append the values from the set, each on a new line with 4 spaces indentation
-            for (String value : entry.getValue()) {
-                str.append("    ").append(value).append("\n");
-            }
-        }
-
-        return str.toString();
+        return fromTo;
     }
     
     /**
@@ -1314,6 +1367,14 @@ public final class Converter {
      */
     public static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
         return zonedDateTime.toInstant().toEpochMilli();
+    }
+
+    public static char numberToCharacter(Number number) {
+        long value = number.longValue();
+        if (value >= 0 && value <= Character.MAX_VALUE) {
+            return (char)value;
+        }
+        throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
     }
 
     /**

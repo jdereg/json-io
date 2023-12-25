@@ -246,4 +246,10 @@ public class JsonIo {
         String json = toJson(source, writeOptions);
         return (T) toObjects(json, readOptions, source.getClass());
     }
+
+    public static void main(String[] args) {
+        String json = toJson(Converter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+        System.out.println("json-io supported conversions between data types:");
+        System.out.println(json);
+    }
 }
