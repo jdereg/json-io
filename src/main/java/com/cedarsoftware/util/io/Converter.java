@@ -250,7 +250,7 @@ public final class Converter {
         toInteger.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(BigInteger.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
+        toInteger.put(LocalDate.class, fromInstance -> (int)((LocalDate)fromInstance).toEpochDay());
         toInteger.put(String.class, fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -330,7 +330,7 @@ public final class Converter {
         toDouble.put(Float.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
-        toDouble.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
+        toDouble.put(LocalDate.class, fromInstance -> (double)((LocalDate) fromInstance).toEpochDay());
         toDouble.put(GregorianCalendar.class, fromInstance -> (double)((Calendar)fromInstance).getTime().getTime());
         toDouble.put(Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
         toDouble.put(java.sql.Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
