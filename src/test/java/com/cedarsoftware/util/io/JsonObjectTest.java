@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -12,13 +9,15 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.cedarsoftware.util.DeepEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

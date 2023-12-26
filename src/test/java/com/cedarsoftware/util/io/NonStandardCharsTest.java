@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

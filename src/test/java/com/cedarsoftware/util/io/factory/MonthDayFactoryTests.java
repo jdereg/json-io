@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.MonthDay;
 import java.time.ZoneId;
 
 import com.cedarsoftware.util.io.JsonReader;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class MonthDayFactoryTests extends HandWrittenDateFactoryTests<MonthDay> {
     @Override

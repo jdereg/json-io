@@ -1,17 +1,10 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import com.cedarsoftware.util.io.WriteOptionsBuilder;
 import com.cedarsoftware.util.reflect.Accessor;
@@ -22,6 +15,12 @@ import com.cedarsoftware.util.reflect.filters.models.GetMethodTestObject;
 import com.cedarsoftware.util.reflect.filters.models.ObjectWithBooleanObjects;
 import com.cedarsoftware.util.reflect.filters.models.ObjectWithBooleanValues;
 import com.cedarsoftware.util.reflect.filters.models.PrivateFinalObject;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
 

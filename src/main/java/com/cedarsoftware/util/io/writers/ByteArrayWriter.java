@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io.writers;
 
-import com.cedarsoftware.util.io.WriterContext;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Base64;
+
+import com.cedarsoftware.util.io.WriterContext;
 
 import static com.cedarsoftware.util.io.JsonWriter.JsonClassWriter;
 import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;

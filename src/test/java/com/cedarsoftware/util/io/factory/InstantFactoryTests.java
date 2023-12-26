@@ -1,17 +1,16 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import com.cedarsoftware.util.io.DateUtilities;
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 

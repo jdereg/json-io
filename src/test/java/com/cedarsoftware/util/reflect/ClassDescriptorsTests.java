@@ -1,11 +1,7 @@
 package com.cedarsoftware.util.reflect;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Date;
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.TestUtil;
@@ -15,6 +11,9 @@ import com.cedarsoftware.util.reflect.filters.models.Car;
 import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
 import com.cedarsoftware.util.reflect.filters.models.Entity;
 import com.cedarsoftware.util.reflect.filters.models.Part;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ClassDescriptorsTests {
     @Test

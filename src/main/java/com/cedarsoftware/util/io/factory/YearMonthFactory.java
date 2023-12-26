@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
-import static java.time.temporal.ChronoField.YEAR;
-
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -12,6 +9,9 @@ import java.time.format.SignStyle;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.ReaderContext;
+
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.YEAR;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)

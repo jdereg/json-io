@@ -1,13 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.models.FoodType;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,11 +17,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.models.FoodType;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

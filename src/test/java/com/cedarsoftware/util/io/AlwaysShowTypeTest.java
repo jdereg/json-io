@@ -1,10 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.DeepEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

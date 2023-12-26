@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.LinkedList;
+
+import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static org.junit.jupiter.api.Assertions.assertFalse;

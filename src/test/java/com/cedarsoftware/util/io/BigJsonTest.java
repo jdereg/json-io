@@ -1,13 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.util.Map;
 
+import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.RepeatedTest;
 
-import com.cedarsoftware.util.ReturnType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 /**
  * Test cases for JsonReader / JsonWriter
  *

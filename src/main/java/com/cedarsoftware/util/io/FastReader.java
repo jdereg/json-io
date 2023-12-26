@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import lombok.Getter;
-
 import java.io.IOException;
 import java.io.Reader;
+
+import lombok.Getter;
 
 public class FastReader extends Reader {
     private Reader in;

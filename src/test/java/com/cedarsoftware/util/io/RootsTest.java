@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import java.util.Calendar;
+
 import com.cedarsoftware.util.DeepEquals;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
-
-import java.util.Calendar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

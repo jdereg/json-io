@@ -3,9 +3,8 @@ package com.cedarsoftware.util.io;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test cases for JsonReader / JsonWriter

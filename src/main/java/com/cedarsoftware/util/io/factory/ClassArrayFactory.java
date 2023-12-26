@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.lang.reflect.Array;
-
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReaderContext;
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>

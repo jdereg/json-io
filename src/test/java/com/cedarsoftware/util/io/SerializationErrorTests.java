@@ -1,13 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.Arrays;
 import java.util.HashSet;
-
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.FoodType;
@@ -15,6 +9,11 @@ import com.cedarsoftware.util.io.models.MismatchedGetter;
 import com.cedarsoftware.util.io.models.ObjectSerializationIssue;
 import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SerializationErrorTests {
 

@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.Serializable;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
+
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

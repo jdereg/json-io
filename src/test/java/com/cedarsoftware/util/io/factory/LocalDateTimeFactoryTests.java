@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -11,15 +9,16 @@ import java.util.Date;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.util.io.DateUtilities;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.TestUtil;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTime> {
     private static Stream<Arguments> nonValueVariants() {

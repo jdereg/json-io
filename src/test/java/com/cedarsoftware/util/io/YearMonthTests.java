@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.time.YearMonth;
+
+import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.TestUtil.toObjects;
 import static org.assertj.core.api.Assertions.assertThat;

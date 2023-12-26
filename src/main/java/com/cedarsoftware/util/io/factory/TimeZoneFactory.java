@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.TimeZone;
+
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import java.util.TimeZone;
 
 /**
  * Abstract class to help create temporal items.

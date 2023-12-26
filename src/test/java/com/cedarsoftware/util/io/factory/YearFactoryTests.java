@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Year;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import com.cedarsoftware.util.io.JsonReader;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class YearFactoryTests extends HandWrittenDateFactoryTests<Year> {
     @Override

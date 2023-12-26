@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import static java.time.format.DateTimeFormatter.ISO_INSTANT;
-
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -12,6 +10,8 @@ import com.cedarsoftware.util.io.DateUtilities;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.ReaderContext;
+
+import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)

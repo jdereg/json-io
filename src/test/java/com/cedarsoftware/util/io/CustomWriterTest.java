@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
@@ -11,10 +9,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

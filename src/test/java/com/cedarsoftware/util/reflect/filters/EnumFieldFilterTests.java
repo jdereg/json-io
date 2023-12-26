@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.reflect.filters;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.lang.reflect.Field;
-
-import org.junit.jupiter.api.Test;
 
 import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.util.reflect.filters.models.CarEnumWithCustomFields;
 import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class EnumFieldFilterTests {
 

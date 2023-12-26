@@ -185,6 +185,7 @@ public final class Converter {
         toByte.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
         toByte.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
         toByte.put(Integer.class, fromInstance -> ((Number) fromInstance).byteValue());
+        toByte.put(Long.class, fromInstance -> ((Number) fromInstance).byteValue());
         toByte.put(Float.class, fromInstance -> ((Number) fromInstance).byteValue());
         toByte.put(Double.class, fromInstance -> ((Number) fromInstance).byteValue());
         toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
@@ -214,6 +215,7 @@ public final class Converter {
         toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
         toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
         toShort.put(Integer.class, fromInstance ->  ((Number) fromInstance).shortValue());
+        toShort.put(Long.class, fromInstance ->  ((Number) fromInstance).shortValue());
         toShort.put(Float.class, fromInstance ->  ((Number) fromInstance).shortValue());
         toShort.put(Double.class, fromInstance ->  ((Number) fromInstance).shortValue());
         toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
@@ -241,6 +243,7 @@ public final class Converter {
         // ? to Integer/int
         toInteger.put(Integer.class, fromInstance -> fromInstance);
         toInteger.put(Byte.class, fromInstance -> ((Number) fromInstance).intValue());
+        toInteger.put(Long.class, fromInstance -> ((Number) fromInstance).intValue());
         toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
         toInteger.put(Float.class, fromInstance ->  ((Number) fromInstance).intValue());
         toInteger.put(Double.class, fromInstance ->  ((Number) fromInstance).intValue());
@@ -302,6 +305,7 @@ public final class Converter {
         toFloat.put(Float.class, fromInstance -> fromInstance);
         toFloat.put(Byte.class, fromInstance -> ((Number) fromInstance).floatValue());
         toFloat.put(Integer.class, fromInstance -> ((Number) fromInstance).floatValue());
+        toFloat.put(Long.class, fromInstance -> ((Number) fromInstance).floatValue());
         toFloat.put(Double.class, fromInstance ->  ((Number) fromInstance).floatValue());
         toFloat.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
@@ -327,10 +331,12 @@ public final class Converter {
         toDouble.put(Double.class, fromInstance -> fromInstance);
         toDouble.put(Byte.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(Integer.class, fromInstance -> ((Number) fromInstance).doubleValue());
+        toDouble.put(Long.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(Float.class, fromInstance -> ((Number) fromInstance).doubleValue());
         toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
         toDouble.put(LocalDate.class, fromInstance -> (double)((LocalDate) fromInstance).toEpochDay());
+        toDouble.put(LocalDateTime.class, fromInstance ->  (double)localDateTimeToMillis((LocalDateTime) fromInstance));
         toDouble.put(GregorianCalendar.class, fromInstance -> (double)((Calendar)fromInstance).getTime().getTime());
         toDouble.put(Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
         toDouble.put(java.sql.Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
@@ -354,8 +360,9 @@ public final class Converter {
         // ? to Boolean/boolean
         toBoolean.put(Boolean.class, fromInstance -> fromInstance);
         toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0);
-        toBoolean.put(Integer.class, fromInstance -> ((Number) fromInstance).byteValue() != 0);
-        toBoolean.put(Float.class, fromInstance -> ((Number) fromInstance).floatValue() != 0.0d);
+        toBoolean.put(Integer.class, fromInstance -> ((Number) fromInstance).intValue() != 0);
+        toBoolean.put(Long.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
+        toBoolean.put(Float.class, fromInstance -> ((Number) fromInstance).floatValue() != 0.0f);
         toBoolean.put(Double.class, fromInstance -> ((Number) fromInstance).doubleValue() != 0.0d);
         toBoolean.put(Character.class, fromInstance -> ((char) fromInstance) > 0);
         toBoolean.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get());
@@ -381,6 +388,7 @@ public final class Converter {
         toCharacter.put(Character.class, fromInstance -> fromInstance);
         toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0 ? '1' : '0');
         toCharacter.put(Integer.class, fromInstance -> numberToCharacter((Number)fromInstance));
+        toCharacter.put(Long.class, fromInstance -> numberToCharacter((Number)fromInstance));
         toCharacter.put(Float.class, fromInstance -> numberToCharacter((Number)fromInstance));
         toCharacter.put(Double.class, fromInstance -> numberToCharacter((Number)fromInstance));
         toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
@@ -414,8 +422,9 @@ public final class Converter {
 
         // ? to BigInteger
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
-        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).byteValue()));
+        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf((byte) fromInstance));
         toBigInteger.put(Integer.class, fromInstance -> BigInteger.valueOf((int)fromInstance));
+        toBigInteger.put(Long.class, fromInstance -> BigInteger.valueOf((long)fromInstance));
         toBigInteger.put(Float.class, fromInstance -> new BigInteger(String.format("%.0f", (float)fromInstance)));
         toBigInteger.put(Double.class, fromInstance -> new BigInteger(String.format("%.0f", (double)fromInstance)));
         toBigInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
@@ -455,6 +464,7 @@ public final class Converter {
         toBigDecimal.put(AtomicLong.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Byte.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Integer.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
+        toBigDecimal.put(Long.class, fromInstance -> BigDecimal.valueOf(((Number) fromInstance).longValue()));
         toBigDecimal.put(Float.class, fromInstance -> BigDecimal.valueOf((Float)fromInstance));
         toBigDecimal.put(Double.class, fromInstance -> BigDecimal.valueOf((Double)fromInstance));
         toBigDecimal.put(Date.class, fromInstance -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
@@ -635,6 +645,7 @@ public final class Converter {
         toAtomicBoolean.put(AtomicLong.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(BigInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(BigDecimal.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        toAtomicBoolean.put(Long.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Integer.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Float.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         toAtomicBoolean.put(Double.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
@@ -655,6 +666,7 @@ public final class Converter {
         toAtomicInteger.put(AtomicLong.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(BigInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(BigDecimal.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        toAtomicInteger.put(Long.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(Integer.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(Float.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
         toAtomicInteger.put(Double.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
@@ -677,6 +689,7 @@ public final class Converter {
         toAtomicLong.put(BigInteger.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(BigDecimal.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(Integer.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        toAtomicLong.put(Long.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(Float.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(Double.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
         toAtomicLong.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));

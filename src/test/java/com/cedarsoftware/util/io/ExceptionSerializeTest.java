@@ -1,24 +1,21 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.KnownFilteredFields;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

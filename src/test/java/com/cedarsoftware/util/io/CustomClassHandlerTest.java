@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.text.ParseException;
@@ -12,6 +10,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

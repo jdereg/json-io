@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
-import org.junit.jupiter.api.Test;
-
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

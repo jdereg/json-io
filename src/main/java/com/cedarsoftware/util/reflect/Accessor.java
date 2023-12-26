@@ -8,7 +8,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.util.io.MetaUtils;
-
 import lombok.Getter;
 
 /**

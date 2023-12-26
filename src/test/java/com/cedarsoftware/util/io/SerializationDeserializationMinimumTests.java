@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import java.util.List;
+import java.util.Map;
+
 import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

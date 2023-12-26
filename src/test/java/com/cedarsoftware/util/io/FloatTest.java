@@ -1,5 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+
+import com.cedarsoftware.util.ReturnType;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,14 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-
-import org.junit.jupiter.api.Test;
-
-import com.cedarsoftware.util.ReturnType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

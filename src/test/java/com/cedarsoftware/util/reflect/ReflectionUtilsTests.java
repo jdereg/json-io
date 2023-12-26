@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.reflect;
 
-import org.junit.jupiter.params.provider.Arguments;
-
 import java.util.stream.Stream;
+
+import org.junit.jupiter.params.provider.Arguments;
 
 class ReflectionUtilsTests {
     private static Stream<Arguments> createIsAccessor() {

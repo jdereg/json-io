@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -11,11 +9,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import com.cedarsoftware.util.io.DateUtilities;
-import org.junit.jupiter.api.Test;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 

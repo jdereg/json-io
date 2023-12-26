@@ -1,18 +1,17 @@
 package com.cedarsoftware.util.io.factory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
     private static Stream<Arguments> nonValueVariants() {

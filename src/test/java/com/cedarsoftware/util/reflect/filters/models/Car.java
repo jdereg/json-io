@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.reflect.filters.models;
 
+import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.List;
 
 @Getter
 @Setter

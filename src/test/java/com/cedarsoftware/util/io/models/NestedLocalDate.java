@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io.models;
 
-import lombok.Getter;
-
 import java.time.LocalDate;
+
+import lombok.Getter;
 
 @Getter
 public class NestedLocalDate {
