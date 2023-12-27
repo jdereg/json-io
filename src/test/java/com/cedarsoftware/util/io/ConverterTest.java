@@ -56,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class ConverterTest
+class ConverterTest
 {
     enum fubar
     {
@@ -64,7 +64,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testConstructorIsPrivateAndClassIsFinal() throws Exception
+    void testConstructorIsPrivateAndClassIsFinal() throws Exception
     {
         Class<?> c = Converter.class;
         assertEquals(Modifier.FINAL, c.getModifiers() & Modifier.FINAL);
@@ -77,7 +77,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testByte()
+    void testByte()
     {
         Byte x = convert("-25", byte.class);
         assert -25 == x;
@@ -136,7 +136,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testShort()
+    void testShort()
     {
         Short x = convert("-25000", short.class);
         assert -25000 == x;
@@ -194,7 +194,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testInt()
+    void testInt()
     {
         Integer x = convert("-450000", int.class);
         assertEquals((Object) (-450000), x);
@@ -251,7 +251,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLong()
+    void testLong()
     {
         Long x = convert("-450000", long.class);
         assertEquals((Object)(-450000L), x);
@@ -313,7 +313,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testAtomicLong()
+    void testAtomicLong()
     {
         AtomicLong x = convert("-450000", AtomicLong.class);
         assertEquals(-450000L, x.get());
@@ -376,7 +376,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testString()
+    void testString()
     {
         assertEquals("Hello", convert("Hello", String.class));
         assertEquals("25", convert(25.0d, String.class));
@@ -435,7 +435,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBigDecimal()
+    void testBigDecimal()
     {
         BigDecimal x = convert("-450000", BigDecimal.class);
         assertEquals(new BigDecimal("-450000"), x);
@@ -483,7 +483,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBigInteger()
+    void testBigInteger()
     {
         BigInteger x = convert("-450000", BigInteger.class);
         assertEquals(new BigInteger("-450000"), x);
@@ -531,7 +531,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testAtomicInteger()
+    void testAtomicInteger()
     {
         AtomicInteger x =  convert("-450000", AtomicInteger.class);
         assertEquals(-450000, x.get());
@@ -569,7 +569,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testDate()
+    void testDate()
     {
         // Date to Date
         Date utilNow = new Date();
@@ -735,7 +735,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testCalendar()
+    void testCalendar()
     {
         // Date to Calendar
         Date now = new Date();
@@ -815,7 +815,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLocalDateToOthers()
+    void testLocalDateToOthers()
     {
         // Date to LocalDate
         Calendar calendar = Calendar.getInstance();
@@ -1012,7 +1012,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLocalDateTimeToOthers()
+    void testLocalDateTimeToOthers()
     {
         // Date to LocalDateTime
         Calendar calendar = Calendar.getInstance();
@@ -1126,7 +1126,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testZonedDateTimeToOthers()
+    void testZonedDateTimeToOthers()
     {
         // Date to ZonedDateTime
         Calendar calendar = Calendar.getInstance();
@@ -1243,7 +1243,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testDateErrorHandlingBadInput()
+    void testDateErrorHandlingBadInput()
     {
         assertNull(convert(" ", java.util.Date.class));
         assertNull(convert("", java.util.Date.class));
@@ -1271,7 +1271,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testTimestamp()
+    void testTimestamp()
     {
         Timestamp now = new Timestamp(System.currentTimeMillis());
         assertEquals(now, convert(now, Timestamp.class));
@@ -1316,7 +1316,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testFloat()
+    void testFloat()
     {
         assert -3.14f == convert(-3.14f, float.class);
         assert -3.14f == convert(-3.14f, Float.class);
@@ -1356,7 +1356,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testDouble()
+    void testDouble()
     {
         assert -3.14d == convert(-3.14d, double.class);
         assert -3.14d == convert(-3.14d, Double.class);
@@ -1396,7 +1396,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBoolean()
+    void testBoolean()
     {
         assertEquals(true, convert(-3.14d, boolean.class));
         assertEquals(false, convert(0.0d, boolean.class));
@@ -1431,7 +1431,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testAtomicBoolean()
+    void testAtomicBoolean()
     {
         assert (convert(-3.14d, AtomicBoolean.class)).get();
         assert !(convert(0.0d, AtomicBoolean.class)).get();
@@ -1732,7 +1732,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testUnsupportedType()
+    void testUnsupportedType()
     {
         try
         {
@@ -1746,7 +1746,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testNullInstance()
+    void testNullInstance()
     {
         assert false == convert(null, boolean.class);
         assert null == convert(null, Boolean.class);
@@ -1808,7 +1808,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testConvert2()
+    void testConvert2()
     {
         assert convert("true", boolean.class);
         assert convert("true", Boolean.class);
@@ -1834,7 +1834,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testNullType()
+    void testNullType()
     {
         try
         {
@@ -1848,7 +1848,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testEmptyString()
+    void testEmptyString()
     {
         assertEquals(false, convert("", boolean.class));
         assertEquals(false, convert("", boolean.class));
@@ -1866,14 +1866,14 @@ public class ConverterTest
     }
 
     @Test
-    public void testEnumSupport()
+    void testEnumSupport()
     {
         assertEquals("foo", convert(foo, String.class));
         assertEquals("bar", convert(bar, String.class));
     }
 
     @Test
-    public void testCharacterSupport()
+    void testCharacterSupport()
     {
         assert 65 == convert('A', Short.class);
         assert 65 == convert('A', short.class);
@@ -1913,7 +1913,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testConvertUnknown()
+    void testConvertUnknown()
     {
         try
         {
@@ -1924,7 +1924,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLongToBigDecimal()
+    void testLongToBigDecimal()
     {
         BigDecimal big = convert(7L, BigDecimal.class);
         assert big instanceof BigDecimal;
@@ -1935,7 +1935,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLocalDate()
+    void testLocalDate()
     {
         Calendar cal = Calendar.getInstance();
         cal.clear();
@@ -1975,7 +1975,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLocalDateTimeToBig()
+    void testLocalDateTimeToBig()
     {
         Calendar cal = Calendar.getInstance();
         cal.clear();
@@ -2004,7 +2004,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testLocalZonedDateTimeToBig()
+    void testLocalZonedDateTimeToBig()
     {
         Calendar cal = Calendar.getInstance();
         cal.clear();
@@ -2027,7 +2027,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testStringToClass()
+    void testStringToClass()
     {
         Class<?> clazz = convert("java.math.BigInteger", Class.class);
         assert clazz.getName().equals("java.math.BigInteger");
@@ -2051,7 +2051,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testStringToUUID()
+    void testStringToUUID()
     {
         UUID uuid = Converter.convert("00000000-0000-0000-0000-000000000064", UUID.class);
         BigInteger bigInt = Converter.convert(uuid, BigInteger.class);
@@ -2063,7 +2063,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testUUIDToUUID()
+    void testUUIDToUUID()
     {
         UUID uuid = Converter.convert("00000007-0000-0000-0000-000000000064", UUID.class);
         UUID uuid2 = Converter.convert(uuid, UUID.class);
@@ -2071,7 +2071,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBogusToUUID()
+    void testBogusToUUID()
     {
         assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -2079,7 +2079,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBigIntegerToUUID()
+    void testBigIntegerToUUID()
     {
         UUID uuid = convert(new BigInteger("100"), UUID.class);
         BigInteger hundred = convert(uuid, BigInteger.class);
@@ -2087,7 +2087,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBigDecimalToUUID()
+    void testBigDecimalToUUID()
     {
         UUID uuid = convert(new BigDecimal("100"), UUID.class);
         BigDecimal hundred = convert(uuid, BigDecimal.class);
@@ -2099,7 +2099,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testUUIDToBigInteger()
+    void testUUIDToBigInteger()
     {
         BigInteger bigInt = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000064"), BigInteger.class);
         assert bigInt.intValue() == 100;
@@ -2116,7 +2116,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testUUIDToBigDecimal()
+    void testUUIDToBigDecimal()
     {
         BigDecimal bigDec = Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000064"), BigDecimal.class);
         assert bigDec.intValue() == 100;
@@ -2129,7 +2129,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testMapToUUID()
+    void testMapToUUID()
     {
         UUID uuid = convert(new BigInteger("100"), UUID.class);
         Map<String, Object> map = new HashMap<>();
@@ -2140,7 +2140,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testBadMapToUUID()
+    void testBadMapToUUID()
     {
         UUID uuid = convert(new BigInteger("100"), UUID.class);
         Map<String, Object> map = new HashMap<>();
@@ -2151,7 +2151,7 @@ public class ConverterTest
     }
 
     @Test
-    public void testClassToString()
+    void testClassToString()
     {
         String str = Converter.convert(BigInteger.class, String.class);
         assert str.equals("java.math.BigInteger");
@@ -2181,6 +2181,184 @@ public class ConverterTest
         Date x = Converter.convert(strDate, Date.class);
         String str2Date = Converter.convert(x, String.class);
         assertEquals(str2Date, strDate);
+    }
+
+    @Test
+    void testByteToMap()
+    {
+        byte b1 = (byte) 16;
+        Map<?, ?> map = Converter.convert(b1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), (byte)16);
+        assert map.get(Converter.VALUE).getClass().equals(Byte.class);
+
+        Byte b2 = (byte) 16;
+        map = Converter.convert(b2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), (byte)16);
+        assert map.get(Converter.VALUE).getClass().equals(Byte.class);
+    }
+
+    @Test
+    void testShortToMap()
+    {
+        short s1 = (short) 1600;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), (short)1600);
+        assert map.get(Converter.VALUE).getClass().equals(Short.class);
+
+        Short s2 = (short) 1600;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), (short)1600);
+        assert map.get(Converter.VALUE).getClass().equals(Short.class);
+    }
+
+    @Test
+    void testIntegerToMap()
+    {
+        int s1 = 1234567;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 1234567);
+        assert map.get(Converter.VALUE).getClass().equals(Integer.class);
+
+        Integer s2 = 1234567;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 1234567);
+        assert map.get(Converter.VALUE).getClass().equals(Integer.class);
+    }    
+    
+    @Test
+    void testLongToMap()
+    {
+        long s1 = 123456789012345L;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 123456789012345L);
+        assert map.get(Converter.VALUE).getClass().equals(Long.class);
+
+        Long s2 = 123456789012345L;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 123456789012345L);
+        assert map.get(Converter.VALUE).getClass().equals(Long.class);
+    }
+
+    @Test
+    void testFloatToMap()
+    {
+        float s1 = 3.141592f;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 3.141592f);
+        assert map.get(Converter.VALUE).getClass().equals(Float.class);
+
+        Float s2 = 3.141592f;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 3.141592f);
+        assert map.get(Converter.VALUE).getClass().equals(Float.class);
+    }    
+    
+    @Test
+    void testDoubleToMap()
+    {
+        double s1 = 3.14159265358979d;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 3.14159265358979d);
+        assert map.get(Converter.VALUE).getClass().equals(Double.class);
+
+        Double s2 = 3.14159265358979d;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 3.14159265358979d);
+        assert map.get(Converter.VALUE).getClass().equals(Double.class);
+    }
+
+    @Test
+    void testBooleanToMap()
+    {
+        boolean s1 = true;
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), true);
+        assert map.get(Converter.VALUE).getClass().equals(Boolean.class);
+
+        Boolean s2 = true;
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), true);
+        assert map.get(Converter.VALUE).getClass().equals(Boolean.class);
+    }
+
+    @Test
+    void testCharacterToMap()
+    {
+        char s1 = 'e';
+        Map<?, ?> map = Converter.convert(s1, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 'e');
+        assert map.get(Converter.VALUE).getClass().equals(Character.class);
+
+        Character s2 = 'e';
+        map = Converter.convert(s2, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), 'e');
+        assert map.get(Converter.VALUE).getClass().equals(Character.class);
+    }
+    
+    @Test
+    void testBigIntegerToMap()
+    {
+        BigInteger bi = BigInteger.valueOf(1234567890123456L);
+        Map<?, ?> map = Converter.convert(bi, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), bi);
+        assert map.get(Converter.VALUE).getClass().equals(BigInteger.class);
+    }
+
+    @Test
+    void testBigDecimalToMap()
+    {
+        BigDecimal bd = new BigDecimal("3.1415926535897932384626433");
+        Map<?, ?> map = Converter.convert(bd, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), bd);
+        assert map.get(Converter.VALUE).getClass().equals(BigDecimal.class);
+    }
+
+    @Test
+    void testAtomicBooleanToMap()
+    {
+        AtomicBoolean ab = new AtomicBoolean(true);
+        Map<?, ?> map = Converter.convert(ab, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), ab);
+        assert map.get(Converter.VALUE).getClass().equals(AtomicBoolean.class);
+    }
+
+    @Test
+    void testAtomicIntegerToMap()
+    {
+        AtomicInteger ai = new AtomicInteger(123456789);
+        Map<?, ?> map = Converter.convert(ai, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), ai);
+        assert map.get(Converter.VALUE).getClass().equals(AtomicInteger.class);
+    }
+
+    @Test
+    void testAtomicLongToMap()
+    {
+        AtomicLong al = new AtomicLong(12345678901234567L);
+        Map<?, ?> map = Converter.convert(al, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), al);
+        assert map.get(Converter.VALUE).getClass().equals(AtomicLong.class);
     }
 
     @Test

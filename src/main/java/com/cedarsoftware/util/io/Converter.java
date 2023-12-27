@@ -59,8 +59,8 @@ import java.util.regex.Pattern;
  */
 
 public final class Converter {
-    private static final String NOPE = "~nope!";
-    private static final String VALUE1 = "_v";
+    public static final String NOPE = "~nope!";
+    public static final String VALUE = "_v";
     private static final String VALUE2 = "value";
     private static final Byte BYTE_ZERO = (byte) 0;
     private static final Byte BYTE_ONE = (byte) 1;
@@ -80,8 +80,10 @@ public final class Converter {
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> supportedTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
 
-    // These are for speed. 'supportedTypes' contains both bounded and unbounded list (these remove 1 map lookup for bounded types)
+    // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
+    // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toShort = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
@@ -145,6 +147,7 @@ public final class Converter {
         fromNull.put(LocalDateTime.class, null);
         fromNull.put(ZonedDateTime.class, null);
         fromNull.put(UUID.class, null);
+        fromNull.put(Map.class, null);
 
         // Convertable types
         converters.put(byte.class, Converter::convertToByte);
@@ -179,6 +182,7 @@ public final class Converter {
         converters.put(LocalDateTime.class, Converter::convertToLocalDateTime);
         converters.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         converters.put(UUID.class, Converter::convertToUUID);
+        converters.put(Map.class, Converter::convertToMap);
 
         if (fromNull.size() != converters.size()) {
             new Throwable("Mismatch in size of 'fromNull' versus 'converters' in Converters.java").printStackTrace();
@@ -855,6 +859,23 @@ public final class Converter {
             return zonedDateTime.format(formatter);
         });
         supportedTypes.put(String.class, toStr);
+
+        // ? to Map
+        toMap.put(Map.class, null); // Can't have Map instance
+        toMap.put(Byte.class, Converter::initMap);
+        toMap.put(Short.class, Converter::initMap);
+        toMap.put(Integer.class, Converter::initMap);
+        toMap.put(Long.class, Converter::initMap);
+        toMap.put(Float.class, Converter::initMap);
+        toMap.put(Double.class, Converter::initMap);
+        toMap.put(Boolean.class, Converter::initMap);
+        toMap.put(Character.class, Converter::initMap);
+        toMap.put(BigInteger.class, Converter::initMap);
+        toMap.put(BigDecimal.class, Converter::initMap);
+        toMap.put(AtomicBoolean.class, Converter::initMap);
+        toMap.put(AtomicInteger.class, Converter::initMap);
+        toMap.put(AtomicLong.class, Converter::initMap);
+        supportedTypes.put(Map.class, toMap);
     }
 
     /**
@@ -923,6 +944,28 @@ public final class Converter {
     private static Object convertToString(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toStr.get(fromType);
+
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
+
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
+            return fromValueMap((Map<?, ?>) fromInstance, String.class, null);
+        } else if (fromInstance instanceof Enum) {
+            return ((Enum<?>) fromInstance).name();
+        } else if (fromInstance instanceof Number) {
+            return fromInstance.toString();
+        } else if (fromInstance instanceof Calendar) {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
+        }
+        return NOPE;
+    }
+
+    private static Object convertToMap(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toMap.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1410,8 +1453,15 @@ public final class Converter {
         return cal;
     }
 
+    private static Map<String, ?> initMap(Object fromInstance)
+    {
+        Map<String, Object> map = new HashMap<>();
+        map.put(VALUE, fromInstance);
+        return map;
+    }
+
     private static Object fromValueMap(Map<?, ?> map, Class<?> type, Set<String> set) {
-        Object ret = fromMap(map, VALUE1, type);
+        Object ret = fromMap(map, VALUE, type);
         if (ret != NOPE) {
             return ret;
         }
@@ -1441,6 +1491,7 @@ public final class Converter {
 
         for (Map.Entry<Class<?>, Map<Class<?>, Convert<?>>> entry : supportedTypes.entrySet()) {
             Map<Class<?>, Convert<?>> fromMap = entry.getValue();
+            
             for (Class<?> srcClass : fromMap.keySet()) {
                 fromTo.computeIfAbsent(getShortName(entry.getKey()), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(srcClass));
             }
