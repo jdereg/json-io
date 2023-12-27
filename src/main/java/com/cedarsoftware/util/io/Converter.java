@@ -28,7 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Handy conversion utilities.  Convert from primitive to other primitives, plus support for Number, Date,
+ * Instance conversion utility.  Convert from primitive to other primitives, plus support for Number, Date,
  * TimeStamp, SQL Date, LocalDate, LocalDateTime, ZonedDateTime, Calendar, Big*, Atomic*, Class, UUID,
  * String, ...<br/>
  * <br/>
@@ -839,8 +839,8 @@ public final class Converter {
      *     String date = convert(calendar, String.class)
      *     Short t = convert(true, short.class);     // returns (short) 1 or  (short) 0
      *     Long date = convert(calendar, long.class); // get calendar's time into long
-     *     Map containing ["value": "75.0"]
-     *     convert(map, double.class)   // Converter will extract the value associated to the "value" key and convert it.
+     *     Map containing ["_v": "75.0"]
+     *     convert(map, double.class)   // Converter will extract the value associated to the "_v" (or "value") key and convert it.
      * </pre>
      *
      * @param fromInstance A value used to create the targetType, even though it may
