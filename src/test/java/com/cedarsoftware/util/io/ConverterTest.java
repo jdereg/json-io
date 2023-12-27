@@ -1471,21 +1471,20 @@ public class ConverterTest
     @Test
     void testMapToAtomicBoolean()
     {
-        Map map = new HashMap();
+        final Map map = new HashMap();
         map.put("value", 57);
         AtomicBoolean ab = convert(map, AtomicBoolean.class);
         assert ab.get();
 
-        map = new HashMap();
+        map.clear();
         map.put("value", "");
         ab = convert(map, AtomicBoolean.class);
         assert null == ab;
 
-        map = new HashMap();
+        map.clear();
         map.put("value", null);
         assert null == convert(map, AtomicBoolean.class);
 
-        map = new HashMap();
         map.clear();
         assert null == convert(map, AtomicBoolean.class);
     }
@@ -1493,21 +1492,20 @@ public class ConverterTest
     @Test
     void testMapToAtomicInteger()
     {
-        Map map = new HashMap();
+        final Map map = new HashMap();
         map.put("value", 58);
         AtomicInteger ai = convert(map, AtomicInteger.class);
         assert 58 == ai.get();
 
-        map = new HashMap();
+        map.clear();
         map.put("value", "");
         ai = convert(map, AtomicInteger.class);
         assert null == ai;
 
-        map = new HashMap();
+        map.clear();
         map.put("value", null);
         assert null == convert(map, AtomicInteger.class);
 
-        map = new HashMap();
         map.clear();
         assert null == convert(map, AtomicInteger.class);
     }
@@ -1515,21 +1513,20 @@ public class ConverterTest
     @Test
     void testMapToAtomicLong()
     {
-        Map map = new HashMap();
+        final Map map = new HashMap();
         map.put("value", 58);
         AtomicLong al = convert(map, AtomicLong.class);
         assert 58 == al.get();
 
-        map = new HashMap();
+        map.clear();
         map.put("value", "");
         al = convert(map, AtomicLong.class);
         assert null == al;
 
-        map = new HashMap();
+        map.clear();
         map.put("value", null);
         assert null == convert(map, AtomicLong.class);
 
-        map = new HashMap();
         map.clear();
         assert null == convert(map, AtomicLong.class);
     }
@@ -1552,9 +1549,7 @@ public class ConverterTest
         assert null == convert(map, Calendar.class);
 
         map.clear();
-        assertThatThrownBy(() -> convert(map, Calendar.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Calendar'");
+        assert null == convert(map, Calendar.class);
     }
 
     @Test
@@ -1610,14 +1605,11 @@ public class ConverterTest
         assert null == convert(map, GregorianCalendar.class);
 
         map.clear();
-        assertThatThrownBy(() -> convert(map, GregorianCalendar.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'GregorianCalendar'");
+        assert null == convert(map, GregorianCalendar.class);
     }
 
     @Test
-    void testMapToDate()
-    {
+    void testMapToDate() {
         long now = System.currentTimeMillis();
         final Map map = new HashMap();
         map.put("value", now);
@@ -1631,11 +1623,9 @@ public class ConverterTest
         map.clear();
         map.put("value", null);
         assert null == convert(map, Date.class);
-        
+
         map.clear();
-        assertThatThrownBy(() -> convert(map, Date.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Date'");
+        assert null == convert(map, Date.class);
     }
 
     @Test
@@ -1656,9 +1646,7 @@ public class ConverterTest
         assert null == convert(map, java.sql.Date.class);
 
         map.clear();
-        assertThatThrownBy(() -> convert(map, java.sql.Date.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'java.sql.Date'");
+        assert null == convert(map, java.sql.Date.class);
     }
 
     @Test
@@ -1679,9 +1667,7 @@ public class ConverterTest
         assert null == convert(map, Timestamp.class);
 
         map.clear();
-        assertThatThrownBy(() -> convert(map, Timestamp.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'Timestamp'");
+        assert null == convert(map, Timestamp.class);
     }
 
     @Test
@@ -1703,10 +1689,7 @@ public class ConverterTest
         assert null == convert(map, LocalDate.class);
 
         map.clear();
-
-        assertThatThrownBy(() -> convert(map, LocalDate.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({})] could not be converted to a 'LocalDate'");
+        assert null == convert(map, LocalDate.class);
     }
 
     @Test
@@ -1743,9 +1726,6 @@ public class ConverterTest
         map.put("value", "");
         assert null == convert(map, ZonedDateTime.class);
 
-        map.clear();
-        map.put("value", null);
-        assert null == convert(map, ZonedDateTime.class);
 
         map.clear();
         assert null == convert(map, ZonedDateTime.class);

@@ -80,42 +80,35 @@ public class PrimitivesTest
     {
         String json = "{\"@type\":\"byte\"}";
         Byte b = TestUtil.toObjects(json, null);
-        assertEquals(b.getClass(), Byte.class);
-        assertEquals(0, (byte) b);
+        assertNull(b);
 
         json = "{\"@type\":\"short\"}";
         Short s = TestUtil.toObjects(json, null);
-        assertEquals(s.getClass(), Short.class);
-        assertEquals(0, (short) s);
+        assertNull(s);
 
         json = "{\"@type\":\"int\"}";
         Integer i = TestUtil.toObjects(json, null);
-        assertEquals(i.getClass(), Integer.class);
-        assertEquals(0, (int) i);
+        assertNull(i);
 
         json = "{\"@type\":\"long\"}";
         Long l = TestUtil.toObjects(json, null);
-        assertEquals(l.getClass(), Long.class);
-        assertEquals(0, (long) l);
+        assertNull(l);
 
         json = "{\"@type\":\"float\"}";
         Float f = TestUtil.toObjects(json, null);
-        assertEquals(f.getClass(), Float.class);
-        assertEquals(0.0f, f);
+        assertNull(f);
 
         json = "{\"@type\":\"double\"}";
         Double d = TestUtil.toObjects(json, null);
-        assertEquals(d.getClass(), Double.class);
-        assertEquals(0.0d, d);
+        assertNull(d);
 
         json = "{\"@type\":\"char\"}";
         Character c = TestUtil.toObjects(json, null);
-        assertEquals(c.getClass(), Character.class);
-        assert c.equals('\u0000');
+        assertNull(c);
 
         json = "{\"@type\":\"boolean\"}";
         Boolean bool = TestUtil.toObjects(json, null);
-        assertEquals(bool, Boolean.FALSE);
+        assertNull(bool);
 
         json = "{\"@type\":\"string\"}";
         String str = null;

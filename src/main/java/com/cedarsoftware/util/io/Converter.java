@@ -60,7 +60,8 @@ import java.util.regex.Pattern;
 
 public final class Converter {
     private static final String NOPE = "~nope!";
-    private static final String VALUE = "value";
+    private static final String VALUE1 = "_v";
+    private static final String VALUE2 = "value";
     private static final Byte BYTE_ZERO = (byte) 0;
     private static final Byte BYTE_ONE = (byte) 1;
     private static final Short SHORT_ZERO = (short) 0;
@@ -854,7 +855,7 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        if (fromInstance == null && fromNull.containsKey(toType)) {
+        if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
             return (T) fromNull.get(toType);
         }
 
@@ -871,12 +872,15 @@ public final class Converter {
         } else {
             throw new IllegalArgumentException("Unsupported destination type '" + getShortName(toType) + "' requested for conversion");
         }
-        
+
         throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], not convertable to a '" + getShortName(toType) + "'");
     }
 
-    private static String getShortName(Class<?> type)
-    {
+    private static boolean isEmptyMap(Object fromInstance) {
+        return fromInstance instanceof Map && ((Map)fromInstance).isEmpty();
+    }
+
+    private static String getShortName(Class<?> type) {
         return java.sql.Date.class.equals(type) ? type.getName() : type.getSimpleName();
     }
 
@@ -884,22 +888,20 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toStr.get(fromType);
 
-        // Handle straight Class to Class case
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Calendar) {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
+            return fromValueMap((Map<?, ?>) fromInstance, String.class, null);
         } else if (fromInstance instanceof Enum) {
             return ((Enum<?>) fromInstance).name();
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), String.class);
         } else if (fromInstance instanceof Number) {
             return fromInstance.toString();
+        } else if (fromInstance instanceof Calendar) {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
         }
         return NOPE;
     }
@@ -908,15 +910,13 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toClass.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), Class.class);
+            return fromValueMap((Map<?, ?>) fromInstance, Class.class, null);
         }
         return NOPE;
     }
@@ -925,21 +925,22 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toUUID.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("mostSigBits") && map.containsKey("leastSigBits")) {
-                long mostSigBits = convert(map.get("mostSigBits"), long.class);
-                long leastSigBits = convert(map.get("leastSigBits"), long.class);
-                return new UUID(mostSigBits, leastSigBits);
-            } else {
-                throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
+            Object ret = fromMap(map, "mostSigBits", long.class);
+            if (ret != NOPE)
+            {
+                Object ret2 = fromMap(map, "leastSigBits", long.class);
+                if (ret2 != NOPE) {
+                    return new UUID((Long)ret, (Long)ret2);
+                }
             }
+            throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
         }
         return NOPE;
     }
@@ -948,17 +949,15 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toBigDecimal.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
+            return fromValueMap((Map<?, ?>) fromInstance, BigDecimal.class, null);
+        } else if (fromInstance instanceof Number) {
             return BigDecimal.valueOf(((Number) fromInstance).longValue());
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), BigDecimal.class);
         } else if (fromInstance instanceof Calendar) {
             return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -969,17 +968,15 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toBigInteger.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
+            return fromValueMap((Map<?, ?>)fromInstance, BigInteger.class, null);
+        } else if (fromInstance instanceof Number) {
             return BigInteger.valueOf(((Number) fromInstance).longValue());
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), BigInteger.class);
         } else if (fromInstance instanceof Calendar) {
             return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -990,23 +987,23 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toSqlDate.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Calendar) {
-            return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
                 return convert(map.get("time"), java.sql.Date.class);
-            } else if (map.containsKey(VALUE)) {
-                return convert(map.get(VALUE), java.sql.Date.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to java.sql.Date, the Map must contain a 'time' or a 'value' key");
+                return fromValueMap((Map<?,?>) fromInstance, java.sql.Date.class, MetaUtils.setOf("time"));
             }
+        } else if (fromInstance instanceof Number) {
+            return new java.sql.Date(((Number)fromInstance).longValue());
+        }
+        else if (fromInstance instanceof Calendar) {
+            return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
         }
         return NOPE;
     }
@@ -1015,15 +1012,12 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toTimestamp.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Calendar) {
-            return new Timestamp(((Calendar) fromInstance).getTime().getTime());
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
                 long time = convert(map.get("time"), long.class);
@@ -1031,11 +1025,15 @@ public final class Converter {
                 Timestamp timeStamp = new Timestamp(time);
                 timeStamp.setNanos(ns);
                 return timeStamp;
-            } else if (map.containsKey(VALUE)) {
-                return convert(map.get(VALUE), Timestamp.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to Timestamp, the Map must contain a 'time' and optional 'nanos' key or a 'value' key");
+                return fromValueMap(map, Timestamp.class, MetaUtils.setOf("time", "nanos"));
             }
+        }
+        else if (fromInstance instanceof Number) {
+            return new Timestamp(((Number)fromInstance).longValue());
+        }
+        else if (fromInstance instanceof Calendar) {
+            return new Timestamp(((Calendar) fromInstance).getTime().getTime());
         }
         return NOPE;
     }
@@ -1044,22 +1042,19 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toDate.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).getTime();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
                 return convert(map.get("time"), Date.class);
-            } else if (map.containsKey(VALUE)) {
-                return convert(map.get(VALUE), Date.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to a Date, the Map must contain a 'time' or a 'value' key");
+                return fromValueMap(map, Date.class, MetaUtils.setOf("time"));
             }
         }
         return NOPE;
@@ -1069,12 +1064,11 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLocalDate.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         } else if (fromInstance instanceof Map) {
@@ -1084,10 +1078,8 @@ public final class Converter {
                 int day = convert(map.get("day"), int.class);
                 int year = convert(map.get("year"), int.class);
                 return LocalDate.of(year, month, day);
-            } else if (map.containsKey(VALUE)) {
-                return convert(map.get(VALUE), LocalDate.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to a LocalDate, the Map must contain  'year,' 'month,' and 'day' keys or a 'value' key");
+                return fromValueMap(map, LocalDate.class, MetaUtils.setOf("year", "month", "day"));
             }
         }
         return NOPE;
@@ -1097,17 +1089,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLocalDateTime.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), LocalDateTime.class);
+            return fromValueMap(map, LocalDateTime.class, null);
         }
         return NOPE;
     }
@@ -1116,17 +1107,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toZonedDateTime.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault());
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), ZonedDateTime.class);
+            return fromValueMap(map, ZonedDateTime.class, null);
         }
         return NOPE;
     }
@@ -1135,12 +1125,11 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toCalendar.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
+        // Handle inherited types
         if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             if (map.containsKey("time")) {
@@ -1157,10 +1146,8 @@ public final class Converter {
                 Date epochInMillis = convert(map.get("time"), Date.class);
                 cal.setTimeInMillis(epochInMillis.getTime());
                 return cal;
-            } else if (map.containsKey(VALUE)) {
-                return convert(map.get(VALUE), Calendar.class);
             } else {
-                throw new IllegalArgumentException("To convert Map to a Calendar, the Map must contain a 'time' and optional 'zone' key, or a 'value' key");
+                return fromValueMap(map, Calendar.class, MetaUtils.setOf("time", "zone"));
             }
         }
         return NOPE;
@@ -1170,22 +1157,21 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toCharacter.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return fromValueMap(map, char.class, null);
+        } else if (fromInstance instanceof Number) {
             Number number = (Number) fromInstance;
             long value = number.longValue();
             if (value >= 0 && value <= Character.MAX_VALUE) {
                 return (char)value;
             }
             throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), char.class);
         }
         return NOPE;
     }
@@ -1194,17 +1180,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toByte.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).byteValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), byte.class);
+            return fromValueMap(map, byte.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).byteValue();
         }
         return NOPE;
     }
@@ -1213,17 +1198,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toShort.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).shortValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), short.class);
+            return fromValueMap(map, short.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).shortValue();
         }
         return NOPE;
     }
@@ -1232,17 +1216,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toInteger.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).intValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), int.class);
+            return fromValueMap(map, int.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).intValue();
         }
         return NOPE;
     }
@@ -1251,17 +1234,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLong.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).longValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), long.class);
+            return fromValueMap(map, long.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).longValue();
         } else if (fromInstance instanceof Calendar) {
             return ((Calendar) fromInstance).getTime().getTime();
         }
@@ -1272,17 +1254,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toFloat.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).floatValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), float.class);
+            return fromValueMap(map, float.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).floatValue();
         }
         return NOPE;
     }
@@ -1291,17 +1272,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toDouble.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).doubleValue();
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), double.class);
+            return fromValueMap(map, double.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).doubleValue();
         }
         return NOPE;
     }
@@ -1310,17 +1290,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toBoolean.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).longValue() != 0;
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), boolean.class);
+            return fromValueMap(map, boolean.class, null);
+        } else if (fromInstance instanceof Number) {
+            return ((Number) fromInstance).longValue() != 0;
         }
         return NOPE;
     }
@@ -1329,17 +1308,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toAtomicBoolean.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), AtomicBoolean.class);
+            return fromValueMap(map, AtomicBoolean.class, null);
+        } else if (fromInstance instanceof Number) {
+            return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
         }
         return NOPE;
     }
@@ -1348,17 +1326,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toAtomicInteger.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return new AtomicInteger(((Number) fromInstance).intValue());
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), AtomicInteger.class);
+            return fromValueMap(map, AtomicInteger.class, null);
+        } else if (fromInstance instanceof Number) {
+            return new AtomicInteger(((Number) fromInstance).intValue());
         }
         return NOPE;
     }
@@ -1367,17 +1344,16 @@ public final class Converter {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toAtomicLong.get(fromType);
 
-        // Handle the Class equals Class (double dispatch)
         if (converter != null) {
             return converter.convert(fromInstance);
         }
 
-        // Handle "is" assignable
-        if (fromInstance instanceof Number) {
-            return new AtomicLong(((Number) fromInstance).longValue());
-        } else if (fromInstance instanceof Map) {
+        // Handle inherited types
+        if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return convert(map.get(VALUE), AtomicLong.class);
+            return fromValueMap(map, AtomicLong.class, null);
+        } else if (fromInstance instanceof Number) {
+            return new AtomicLong(((Number) fromInstance).longValue());
         } else if (fromInstance instanceof Calendar) {
             return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
         }
@@ -1396,6 +1372,32 @@ public final class Converter {
         cal.clear();
         cal.setTimeInMillis(ms);
         return cal;
+    }
+
+    private static Object fromValueMap(Map<?, ?> map, Class<?> type, Set<String> set) {
+        Object ret = fromMap(map, VALUE1, type);
+        if (ret != NOPE) {
+            return ret;
+        }
+
+        ret = fromMap(map, VALUE2, type);
+        if (ret == NOPE)
+        {
+            if (set == null || set.isEmpty()) {
+                throw new IllegalArgumentException("To convert from Map to " + getShortName(type) + ", the map must include keys: '_v' or 'value' an associated value to convert from.");
+            }
+            else {
+                throw new IllegalArgumentException("To convert from Map to " + getShortName(type) + ", the map must include keys: " + set + ", or '_v' or 'value' an associated value to convert from.");
+            }
+        }
+        return ret;
+    }
+    
+    private static Object fromMap(Map<?, ?> map, String key, Class<?> type) {
+        if (map.containsKey(key)) {
+            return convert(map.get(key), type);
+        }
+        return NOPE;
     }
 
     public static Map<String, Set<String>> getSupportedConversions() {
