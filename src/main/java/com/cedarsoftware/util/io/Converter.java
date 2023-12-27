@@ -79,7 +79,33 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> supportedTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
-    
+
+    // These are for speed. 'supportedTypes' contains both bounded and unbounded list (these remove 1 map lookup for bounded types)
+    private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toShort = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLong = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toBoolean = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toClass = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toAtomicBoolean = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toAtomicInteger = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toAtomicLong = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
+
+
     protected interface Convert<T> {
         T convert(Object fromInstance);
     }
@@ -137,7 +163,6 @@ public final class Converter {
         converters.put(Boolean.class, Converter::convertToBoolean);
         converters.put(char.class, Converter::convertToCharacter);
         converters.put(Character.class, Converter::convertToCharacter);
-
         converters.put(String.class, Converter::convertToString);
         converters.put(Class.class, Converter::convertToClass);
         converters.put(BigDecimal.class, Converter::convertToBigDecimal);
@@ -160,7 +185,6 @@ public final class Converter {
         }
 
         // ? to Byte/byte
-        Map<Class<?>, Convert<?>> toByte = new HashMap<>();
         toByte.put(Map.class, null);
         toByte.put(Byte.class, fromInstance -> fromInstance);
         toByte.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
@@ -194,7 +218,6 @@ public final class Converter {
         supportedTypes.put(Byte.class, toByte);
 
         // ? to Short/short
-        Map<Class<?>, Convert<?>> toShort = new HashMap<>();
         toShort.put(Map.class, null);
         toShort.put(Short.class, fromInstance -> fromInstance);
         toShort.put(Byte.class, fromInstance -> ((Number) fromInstance).shortValue());
@@ -229,7 +252,6 @@ public final class Converter {
         supportedTypes.put(Short.class, toShort);
 
         // ? to Integer/int
-        Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
         toInteger.put(Map.class, null);
         toInteger.put(Integer.class, fromInstance -> fromInstance);
         toInteger.put(Byte.class, fromInstance -> ((Number) fromInstance).intValue());
@@ -264,7 +286,6 @@ public final class Converter {
         supportedTypes.put(Integer.class, toInteger);
 
         // ? to Long/long
-        Map<Class<?>, Convert<?>> toLong = new HashMap<>();
         toLong.put(Map.class, null);
         toLong.put(Long.class, fromInstance -> fromInstance);
         toLong.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue());
@@ -302,7 +323,6 @@ public final class Converter {
 
 
         // ? to Float/float
-        Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
         toFloat.put(Map.class, null);
         toFloat.put(Float.class, fromInstance -> fromInstance);
         toFloat.put(Byte.class, fromInstance -> ((Number) fromInstance).floatValue());
@@ -333,7 +353,6 @@ public final class Converter {
         supportedTypes.put(Float.class, toFloat);
 
         // ? to Double/double
-        Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
         toDouble.put(Map.class, null);
         toDouble.put(Double.class, fromInstance -> fromInstance);
         toDouble.put(Byte.class, fromInstance -> ((Number) fromInstance).doubleValue());
@@ -370,7 +389,6 @@ public final class Converter {
         supportedTypes.put(Double.class, toDouble);
 
         // ? to Boolean/boolean
-        Map<Class<?>, Convert<?>> toBoolean = new HashMap<>();
         toBoolean.put(Map.class, null);
         toBoolean.put(Boolean.class, fromInstance -> fromInstance);
         toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0);
@@ -402,7 +420,6 @@ public final class Converter {
         supportedTypes.put(Boolean.class, toBoolean);
 
         // ? to Character/char
-        Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
         toCharacter.put(Map.class, null);
         toCharacter.put(Character.class, fromInstance -> fromInstance);
         toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0 ? '1' : '0');
@@ -432,7 +449,6 @@ public final class Converter {
         supportedTypes.put(Character.class, toCharacter);
 
         // ? to Class
-        Map<Class<?>, Convert<?>> toClass = new HashMap<>();
         toClass.put(Map.class, null);
         toClass.put(Class.class, fromInstance -> fromInstance);
         toClass.put(String.class, fromInstance -> {
@@ -446,7 +462,6 @@ public final class Converter {
         supportedTypes.put(Class.class, toClass);
 
         // ? to BigInteger
-        Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
         toBigInteger.put(Map.class, null);
         toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
         toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf((byte) fromInstance));
@@ -485,7 +500,6 @@ public final class Converter {
         supportedTypes.put(BigInteger.class, toBigInteger);
 
         // ? to BigDecimal
-        Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
         toBigDecimal.put(Map.class, null);
         toBigDecimal.put(BigDecimal.class, fromInstance -> fromInstance);
         toBigDecimal.put(BigInteger.class, fromInstance -> new BigDecimal((BigInteger) fromInstance));
@@ -524,7 +538,6 @@ public final class Converter {
         supportedTypes.put(BigDecimal.class, toBigDecimal);
         
         // ? to Date
-        Map<Class<?>, Convert<?>> toDate = new HashMap<>();
         toDate.put(Map.class, null);
         toDate.put(Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));  // Date is mutable
         toDate.put(java.sql.Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));
@@ -542,7 +555,6 @@ public final class Converter {
         supportedTypes.put(Date.class, toDate);
 
         // ? to java.sql.Date
-        Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
         toSqlDate.put(Map.class, null);
         toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
         toSqlDate.put(Date.class, fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
@@ -567,7 +579,6 @@ public final class Converter {
         supportedTypes.put(java.sql.Date.class, toSqlDate);
 
         // ? to Timestamp
-        Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
         toTimestamp.put(Map.class, null);
         toTimestamp.put(Timestamp.class, fromInstance -> new Timestamp(((Timestamp)fromInstance).getTime()));  // Timestamp is mutable
         toTimestamp.put(java.sql.Date.class, fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
@@ -592,7 +603,6 @@ public final class Converter {
         supportedTypes.put(Timestamp.class, toTimestamp);
 
         // ? to Calendar
-        Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
         toCalendar.put(Map.class, null);
         toCalendar.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).clone());
         toCalendar.put(Date.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
@@ -618,7 +628,6 @@ public final class Converter {
         supportedTypes.put(GregorianCalendar.class, toCalendar);
 
         // ? to LocalDate
-        Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
         toLocalDate.put(Map.class, null);
         toLocalDate.put(LocalDate.class, fromInstance -> fromInstance);
         toLocalDate.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
@@ -647,7 +656,6 @@ public final class Converter {
         supportedTypes.put(LocalDate.class, toLocalDate);
 
         // ? to LocalDateTime
-        Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
         toLocalDateTime.put(Map.class, null);
         toLocalDateTime.put(LocalDateTime.class, fromInstance -> fromInstance);
         toLocalDateTime.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).atStartOfDay());
@@ -672,7 +680,6 @@ public final class Converter {
         supportedTypes.put(LocalDateTime.class, toLocalDateTime);
 
         // ? to ZonedDateTime
-        Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
         toZonedDateTime.put(Map.class, null);
         toZonedDateTime.put(ZonedDateTime.class, fromInstance -> fromInstance);
         toZonedDateTime.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).atZone(ZoneId.systemDefault()));
@@ -697,7 +704,6 @@ public final class Converter {
         supportedTypes.put(ZonedDateTime.class, toZonedDateTime);
         
         // ? to AtomicBoolean
-        Map<Class<?>, Convert<?>> toAtomicBoolean = new HashMap<>();
         toAtomicBoolean.put(Map.class, null);
         toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
         toAtomicBoolean.put(AtomicInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).intValue() != 0));
@@ -722,7 +728,6 @@ public final class Converter {
         supportedTypes.put(AtomicBoolean.class, toAtomicBoolean);
 
         // ? to AtomicInteger
-        Map<Class<?>, Convert<?>> toAtomicInteger = new HashMap<>();
         toAtomicInteger.put(Map.class, null);
         toAtomicInteger.put(AtomicInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue())); // mutable, so dupe
         toAtomicInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
@@ -748,7 +753,6 @@ public final class Converter {
         supportedTypes.put(AtomicInteger.class, toAtomicInteger);
 
         // ? to AtomicLong
-        Map<Class<?>, Convert<?>> toAtomicLong = new HashMap<>();
         toAtomicLong.put(Map.class, null);
         toAtomicLong.put(AtomicLong.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));   // mutable, so dupe
         toAtomicLong.put(AtomicInteger.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
@@ -785,7 +789,6 @@ public final class Converter {
         supportedTypes.put(AtomicLong.class, toAtomicLong);
 
         // ? to UUID
-        Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
         toUUID.put(Map.class, null);
         toUUID.put(UUID.class, fromInstance -> fromInstance);
         toUUID.put(String.class, fromInstance -> UUID.fromString(((String)fromInstance).trim()));
@@ -805,7 +808,6 @@ public final class Converter {
         supportedTypes.put(UUID.class, toUUID);
 
         // ? to String
-        Map<Class<?>, Convert<?>> toStr = new HashMap<>();
         toStr.put(Map.class, null);
         toStr.put(String.class, fromInstance -> fromInstance);
         toStr.put(Boolean.class, Object::toString);
@@ -889,12 +891,12 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
-            return (T) fromNull.get(toType);
-        }
-
         Convert<?> converter = converters.get(toType);
         if (converter != null) {
+            if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
+                return (T) fromNull.get(toType);
+            }
+            
             try {
                 Object value = converter.convert(fromInstance);
                 if (value != NOPE) {
@@ -904,10 +906,10 @@ public final class Converter {
                 throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
             }
         } else {
-            throw new IllegalArgumentException("Unsupported destination type '" + getShortName(toType) + "' requested for conversion");
+            throw new IllegalArgumentException("Unsupported target type '" + getShortName(toType) + "' requested for conversion from [" + name(fromInstance) + "]");
         }
 
-        throw new IllegalArgumentException("Unsupported value type [" + name(fromInstance) + "], not convertable to a '" + getShortName(toType) + "'");
+        throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
     }
 
     private static boolean isEmptyMap(Object fromInstance) {
@@ -920,7 +922,7 @@ public final class Converter {
 
     private static Object convertToString(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(String.class).get(fromType);
+        Convert<?> converter = toStr.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -942,7 +944,7 @@ public final class Converter {
 
     private static Object convertToClass(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(Class.class).get(fromType);
+        Convert<?> converter = toClass.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -957,7 +959,7 @@ public final class Converter {
     
     private static Object convertToUUID(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(UUID.class).get(fromType);
+        Convert<?> converter = toUUID.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -981,7 +983,7 @@ public final class Converter {
 
     private static Object convertToBigDecimal(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(BigDecimal.class).get(fromType);
+        Convert<?> converter = toBigDecimal.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1000,7 +1002,7 @@ public final class Converter {
 
     private static Object convertToBigInteger(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(BigInteger.class).get(fromType);
+        Convert<?> converter = toBigInteger.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1019,7 +1021,7 @@ public final class Converter {
 
     private static Object convertToSqlDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(java.sql.Date.class).get(fromType);
+        Convert<?> converter = toSqlDate.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1044,7 +1046,7 @@ public final class Converter {
 
     private static Object convertToTimestamp(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(Timestamp.class).get(fromType);
+        Convert<?> converter = toTimestamp.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1074,7 +1076,7 @@ public final class Converter {
     
     private static Object convertToDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(Date.class).get(fromType);
+        Convert<?> converter = toDate.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1096,7 +1098,7 @@ public final class Converter {
 
     private static Object convertToLocalDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(LocalDate.class).get(fromType);
+        Convert<?> converter = toLocalDate.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1121,7 +1123,7 @@ public final class Converter {
 
     private static Object convertToLocalDateTime(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(LocalDateTime.class).get(fromType);
+        Convert<?> converter = toLocalDateTime.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1139,7 +1141,7 @@ public final class Converter {
     
     private static Object convertToZonedDateTime(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(ZonedDateTime.class).get(fromType);
+        Convert<?> converter = toZonedDateTime.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1157,7 +1159,7 @@ public final class Converter {
 
     private static Object convertToCalendar(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(Calendar.class).get(fromType);
+        Convert<?> converter = toCalendar.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1189,7 +1191,7 @@ public final class Converter {
 
     private static Object convertToCharacter(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(char.class).get(fromType);
+        Convert<?> converter = toCharacter.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1212,7 +1214,7 @@ public final class Converter {
 
     private static Object convertToByte(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(byte.class).get(fromType);
+        Convert<?> converter = toByte.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1230,7 +1232,7 @@ public final class Converter {
 
     private static Object convertToShort(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(short.class).get(fromType);
+        Convert<?> converter = toShort.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1248,7 +1250,7 @@ public final class Converter {
 
     private static Object convertToInteger(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(int.class).get(fromType);
+        Convert<?> converter = toInteger.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1266,7 +1268,7 @@ public final class Converter {
 
     private static Object convertToLong(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(long.class).get(fromType);
+        Convert<?> converter = toLong.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1286,7 +1288,7 @@ public final class Converter {
 
     private static Object convertToFloat(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(float.class).get(fromType);
+        Convert<?> converter = toFloat.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1304,7 +1306,7 @@ public final class Converter {
 
     private static Object convertToDouble(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(double.class).get(fromType);
+        Convert<?> converter = toDouble.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1322,7 +1324,7 @@ public final class Converter {
 
     private static Object convertToBoolean(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(boolean.class).get(fromType);
+        Convert<?> converter = toBoolean.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1340,7 +1342,7 @@ public final class Converter {
 
     private static Object convertToAtomicBoolean(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(AtomicBoolean.class).get(fromType);
+        Convert<?> converter = toAtomicBoolean.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1358,7 +1360,7 @@ public final class Converter {
 
     private static Object convertToAtomicInteger(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(AtomicInteger.class).get(fromType);
+        Convert<?> converter = toAtomicInteger.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1376,7 +1378,7 @@ public final class Converter {
 
     private static Object convertToAtomicLong(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = supportedTypes.get(AtomicLong.class).get(fromType);
+        Convert<?> converter = toAtomicLong.get(fromType);
 
         if (converter != null) {
             return converter.convert(fromInstance);
@@ -1450,7 +1452,7 @@ public final class Converter {
      * @param localDate A Java LocalDate
      * @return a long representing the localDate as the number of millis since the epoch, Jan 1, 1970
      */
-    public static long localDateToMillis(LocalDate localDate) {
+    static long localDateToMillis(LocalDate localDate) {
         return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
@@ -1459,7 +1461,7 @@ public final class Converter {
      * @return a long representing the localDateTime as the number of milliseconds since the
      * number of milliseconds since Jan 1, 1970
      */
-    public static long localDateTimeToMillis(LocalDateTime localDateTime) {
+    static long localDateTimeToMillis(LocalDateTime localDateTime) {
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
@@ -1468,7 +1470,7 @@ public final class Converter {
      * @return a long representing the zonedDateTime as the number of milliseconds since the
      * number of milliseconds since Jan 1, 1970
      */
-    public static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
+    static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
         return zonedDateTime.toInstant().toEpochMilli();
     }
 
@@ -1477,7 +1479,7 @@ public final class Converter {
      * @return char that best represents the Number.  The result will always be a value between
      * 0 and Character.MAX_VALUE.
      */
-    public static char numberToCharacter(Number number) {
+    private static char numberToCharacter(Number number) {
         long value = number.longValue();
         if (value >= 0 && value <= Character.MAX_VALUE) {
             return (char)value;

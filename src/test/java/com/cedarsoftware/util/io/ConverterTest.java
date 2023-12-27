@@ -114,7 +114,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -171,7 +171,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -229,7 +229,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -298,7 +298,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -361,7 +361,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -410,7 +410,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -420,7 +420,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported destination type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type"));
         }
 
         try
@@ -430,7 +430,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported value type");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported conversion, source type");
         }
     }
 
@@ -468,7 +468,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -516,7 +516,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -554,7 +554,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -689,7 +689,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         // Invalid source type for java.sql.Date
@@ -700,7 +700,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         // Invalid source date for Date
@@ -731,7 +731,7 @@ public class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Boolean (true)], not convertable to a 'java.sql.Date'");
+                .hasMessageContaining("Unsupported conversion, source type [Boolean (true)] target type 'java.sql.Date'");
     }
 
     @Test
@@ -1301,7 +1301,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("unsupported value type");
+            assert e.getMessage().toLowerCase().contains("unsupported conversion, source type");
         }
 
         try
@@ -1341,7 +1341,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -1381,7 +1381,7 @@ public class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
 
         try
@@ -1426,7 +1426,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
     }
 
@@ -1464,7 +1464,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported value type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
         }
     }
 
@@ -1741,7 +1741,7 @@ public class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported destination type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type"));
         }
     }
 
@@ -2040,7 +2040,7 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Double (16.0)], not convertable to a 'Class'");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
@@ -2075,7 +2075,7 @@ public class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Short (77)], not convertable to a 'UUID'");
+                .hasMessageContaining("Unsupported conversion, source type [Short (77)] target type 'UUID'");
     }
 
     @Test
@@ -2112,7 +2112,7 @@ public class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported value type [Double (16.0)], not convertable to a 'Class'");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
@@ -2161,11 +2161,34 @@ public class ConverterTest
     }
 
     @Test
+    void testSqlDateToString()
+    {
+        long now = System.currentTimeMillis();
+        java.sql.Date date = new java.sql.Date(now);
+        String strDate = Converter.convert(date, String.class);
+        Date x = Converter.convert(strDate, Date.class);
+        LocalDate l1 = Converter.convert(date, LocalDate.class);
+        LocalDate l2 = Converter.convert(x, LocalDate.class);
+        assertEquals(l1, l2);
+    }
+
+    @Test
+    void tesTimestampToString()
+    {
+        long now = System.currentTimeMillis();
+        Timestamp date = new Timestamp(now);
+        String strDate = Converter.convert(date, String.class);
+        Date x = Converter.convert(strDate, Date.class);
+        String str2Date = Converter.convert(x, String.class);
+        assertEquals(str2Date, strDate);
+    }
+
+    @Test
     void testUnknownType()
     {
         assertThatThrownBy(() -> convert(null, Collection.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported destination type 'Collection' requested for conversion");
+                .hasMessageContaining("Unsupported target type 'Collection' requested for conversion");
 
     }
 
