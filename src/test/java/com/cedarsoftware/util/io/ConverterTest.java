@@ -2720,6 +2720,7 @@ class ConverterTest
         normie = Converter.convert(weirdo, Normie.class);
         assertEquals(normie.name, "Jacob");
 
-        JsonIo.main(null);
+        assert Converter.isConversionSupportedFor(Normie.class, Weirdo.class);
+        assert Converter.isConversionSupportedFor(Weirdo.class, Normie.class);
     }
 }

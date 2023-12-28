@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.AbstractMap;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -76,6 +77,7 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toTypes = new HashMap<>();
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
+    private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> userDefined = new HashMap<>();
 
     // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
     // These remove 1 map lookup for bounded (known) types.
@@ -103,7 +105,6 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toUserDefined = new HashMap<>();
 
     public interface Convert<T> {
         T convert(Object fromInstance);
@@ -934,7 +935,7 @@ public final class Converter {
                 throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
             }
         } else {
-            throw new IllegalArgumentException("Unsupported target type '" + getShortName(toType) + "' requested for conversion from [" + name(fromInstance) + "]");
+            return (T) convertUsingUserDefined(fromInstance, toType);
         }
 
         throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
@@ -1445,32 +1446,7 @@ public final class Converter {
         }
         return NOPE;
     }
-
-//    private static Object convertToUserDefined(Object fromInstance, Class<?> toType) {
-    private static Object convertToUserDefined(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toUserDefined.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-        return NOPE;
-
-//        Map<Class<?>, Convert<?>> convertMap = targetTypes.get(toType);
-//
-//        if (convertMap == null) {
-//            throw new IllegalArgumentException("Unsupported type '" + toType.getName() + "' for conversion");
-//        }
-//
-//        Convert<?> convert = convertMap.get(fromInstance.getClass());
-//
-//        if (convert != null) {
-//            return convert.convert(fromInstance);
-//        }
-//
-//        throw new JsonIoException("Unsupported type '" + toType.getName() + "' for conversion");
-    }
-
+    
     private static String name(Object fromInstance) {
         if (fromInstance == null) {
             return "null";
@@ -1533,6 +1509,11 @@ public final class Converter {
             target = toPrimitiveWrapperClass(target);
         }
 
+        Map.Entry<Class<?>, Class<?>> key = new AbstractMap.SimpleImmutableEntry<>(source, target);
+        if (userDefined.containsKey(key)) {
+            return true;
+        }
+
         if (!toTypes.containsKey(target)) {
             return false;
         }
@@ -1554,6 +1535,19 @@ public final class Converter {
             fromSet.addAll(map.keySet());
             toFrom.put(targetClass, fromSet);
         }
+
+        // Add in user-defined
+        for (Map.Entry<Class<?>, Class<?>> srcTargetPair : userDefined.keySet()) {
+            if (toFrom.containsKey(srcTargetPair.getKey())) {
+                Set<Class<?>> fromSet = toFrom.get(srcTargetPair.getKey());
+                fromSet.add(srcTargetPair.getValue());
+            } else {
+                Set<Class<?>> fromSet = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+                fromSet.add(srcTargetPair.getValue());
+                toFrom.put(srcTargetPair.getKey(), fromSet);
+            }
+        }
+        
         return toFrom;
     }
 
@@ -1571,20 +1565,52 @@ public final class Converter {
                 toFrom.computeIfAbsent(getShortName(targetClass), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(fromClass));
             }
         }
+
+        // Add in user-defined
+        for (Map.Entry<Class<?>, Class<?>> srcTargetPair : userDefined.keySet()) {
+            String srcTypeName = getShortName(srcTargetPair.getKey());
+            String targetTypeName = getShortName(srcTargetPair.getValue());
+
+            if (toFrom.containsKey(srcTypeName)) {
+                Set<String> fromSet = toFrom.get(srcTypeName);
+                fromSet.add(targetTypeName);
+            } else {
+                Set<String> fromSet = new TreeSet<>(String::compareToIgnoreCase);
+                fromSet.add(targetTypeName);
+                toFrom.put(srcTypeName, fromSet);
+            }
+        }
+
         return toFrom;
     }
 
-    public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction)
-    {
-        // TODO: Should we let them overwrite an existing conversion?
+    public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         if (toTypes.containsKey(target)) {
             Map<Class<?>, Convert<?>> map = targetTypes.get(target);
+            if (map.containsKey(source)) {
+                // Can't override built-in conversions.
+                throw new IllegalArgumentException("A conversion for: " + getShortName(source) + " to: " + getShortName(target) + " already exists");
+            }
             map.put(source, conversionFunction);
         } else {
-            toTypes.put(target, Converter::convertToUserDefined);
-            toUserDefined.put(source, conversionFunction);
-            targetTypes.put(target, toUserDefined);
+            userDefined.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
         }
+    }
+
+    private static Object convertUsingUserDefined(Object fromInstance, Class<?> toType) {
+        Class<?> sourceType;
+        if (fromInstance == null) {
+            sourceType = Void.class;
+        } else {
+            sourceType = fromInstance.getClass();
+        }
+
+        Map.Entry<Class<?>, Class<?>> key = new AbstractMap.SimpleImmutableEntry<>(sourceType, toType);
+        Convert<?> converter = userDefined.get(key);
+        if (converter == null) {
+            throw new IllegalArgumentException("Unsupported target type '" + getShortName(toType) + "' requested for conversion from [" + name(fromInstance) + "]");
+        }
+        return converter.convert(fromInstance);
     }
 
     /**
