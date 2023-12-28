@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io;
 import java.util.Random;
 
 import com.cedarsoftware.util.io.models.NestedByteArray;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@Disabled
 class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
 {
     @Test
