@@ -73,7 +73,7 @@ public final class Converter {
     private static final Double DOUBLE_ZERO = 0.0d;
     private static final Double DOUBLE_ONE = 1.0d;
 
-    private static final Map<Class<?>, Convert<?>> sourceTypes = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toTypes = new HashMap<>();
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
 
@@ -103,9 +103,9 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> toUserDefined = new HashMap<>();
 
-
-    protected interface Convert<T> {
+    public interface Convert<T> {
         T convert(Object fromInstance);
     }
 
@@ -147,41 +147,41 @@ public final class Converter {
         fromNull.put(Map.class, null);
 
         // Convertable types
-        sourceTypes.put(byte.class, Converter::convertToByte);
-        sourceTypes.put(Byte.class, Converter::convertToByte);
-        sourceTypes.put(short.class, Converter::convertToShort);
-        sourceTypes.put(Short.class, Converter::convertToShort);
-        sourceTypes.put(int.class, Converter::convertToInteger);
-        sourceTypes.put(Integer.class, Converter::convertToInteger);
-        sourceTypes.put(long.class, Converter::convertToLong);
-        sourceTypes.put(Long.class, Converter::convertToLong);
-        sourceTypes.put(float.class, Converter::convertToFloat);
-        sourceTypes.put(Float.class, Converter::convertToFloat);
-        sourceTypes.put(double.class, Converter::convertToDouble);
-        sourceTypes.put(Double.class, Converter::convertToDouble);
-        sourceTypes.put(boolean.class, Converter::convertToBoolean);
-        sourceTypes.put(Boolean.class, Converter::convertToBoolean);
-        sourceTypes.put(char.class, Converter::convertToCharacter);
-        sourceTypes.put(Character.class, Converter::convertToCharacter);
-        sourceTypes.put(String.class, Converter::convertToString);
-        sourceTypes.put(Class.class, Converter::convertToClass);
-        sourceTypes.put(BigDecimal.class, Converter::convertToBigDecimal);
-        sourceTypes.put(BigInteger.class, Converter::convertToBigInteger);
-        sourceTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
-        sourceTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
-        sourceTypes.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
-        sourceTypes.put(Date.class, Converter::convertToDate);
-        sourceTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
-        sourceTypes.put(Timestamp.class, Converter::convertToTimestamp);
-        sourceTypes.put(Calendar.class, Converter::convertToCalendar);
-        sourceTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
-        sourceTypes.put(LocalDate.class, Converter::convertToLocalDate);
-        sourceTypes.put(LocalDateTime.class, Converter::convertToLocalDateTime);
-        sourceTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
-        sourceTypes.put(UUID.class, Converter::convertToUUID);
-        sourceTypes.put(Map.class, Converter::convertToMap);
+        toTypes.put(byte.class, Converter::convertToByte);
+        toTypes.put(Byte.class, Converter::convertToByte);
+        toTypes.put(short.class, Converter::convertToShort);
+        toTypes.put(Short.class, Converter::convertToShort);
+        toTypes.put(int.class, Converter::convertToInteger);
+        toTypes.put(Integer.class, Converter::convertToInteger);
+        toTypes.put(long.class, Converter::convertToLong);
+        toTypes.put(Long.class, Converter::convertToLong);
+        toTypes.put(float.class, Converter::convertToFloat);
+        toTypes.put(Float.class, Converter::convertToFloat);
+        toTypes.put(double.class, Converter::convertToDouble);
+        toTypes.put(Double.class, Converter::convertToDouble);
+        toTypes.put(boolean.class, Converter::convertToBoolean);
+        toTypes.put(Boolean.class, Converter::convertToBoolean);
+        toTypes.put(char.class, Converter::convertToCharacter);
+        toTypes.put(Character.class, Converter::convertToCharacter);
+        toTypes.put(String.class, Converter::convertToString);
+        toTypes.put(Class.class, Converter::convertToClass);
+        toTypes.put(BigDecimal.class, Converter::convertToBigDecimal);
+        toTypes.put(BigInteger.class, Converter::convertToBigInteger);
+        toTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
+        toTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
+        toTypes.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
+        toTypes.put(Date.class, Converter::convertToDate);
+        toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
+        toTypes.put(Timestamp.class, Converter::convertToTimestamp);
+        toTypes.put(Calendar.class, Converter::convertToCalendar);
+        toTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
+        toTypes.put(LocalDate.class, Converter::convertToLocalDate);
+        toTypes.put(LocalDateTime.class, Converter::convertToLocalDateTime);
+        toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
+        toTypes.put(UUID.class, Converter::convertToUUID);
+        toTypes.put(Map.class, Converter::convertToMap);
 
-        if (fromNull.size() != sourceTypes.size()) {
+        if (fromNull.size() != toTypes.size()) {
             new Throwable("Mismatch in size of 'fromNull' versus 'converters' in Converters.java").printStackTrace();
         }
 
@@ -882,7 +882,6 @@ public final class Converter {
         toMap.put(LocalDate.class, Converter::initMap);
         toMap.put(LocalDateTime.class, Converter::initMap);
         toMap.put(ZonedDateTime.class, Converter::initMap);
-
         targetTypes.put(Map.class, toMap);
     }
 
@@ -920,7 +919,7 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        Convert<?> converter = sourceTypes.get(toType);
+        Convert<?> converter = toTypes.get(toType);
         if (converter != null) {
             if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
                 return (T) fromNull.get(toType);
@@ -1044,7 +1043,7 @@ public final class Converter {
         if (fromInstance instanceof Map) {
             return fromValueMap((Map<?, ?>) fromInstance, BigDecimal.class, null);
         } else if (fromInstance instanceof Number) {
-            return BigDecimal.valueOf(((Number) fromInstance).longValue());
+            return new BigDecimal(fromInstance.toString());
         } else if (fromInstance instanceof Calendar) {
             return BigDecimal.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -1063,7 +1062,7 @@ public final class Converter {
         if (fromInstance instanceof Map) {
             return fromValueMap((Map<?, ?>)fromInstance, BigInteger.class, null);
         } else if (fromInstance instanceof Number) {
-            return BigInteger.valueOf(((Number) fromInstance).longValue());
+            return new BigInteger(fromInstance.toString());
         } else if (fromInstance instanceof Calendar) {
             return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
         }
@@ -1447,6 +1446,31 @@ public final class Converter {
         return NOPE;
     }
 
+//    private static Object convertToUserDefined(Object fromInstance, Class<?> toType) {
+    private static Object convertToUserDefined(Object fromInstance) {
+        Class<?> fromType = fromInstance.getClass();
+        Convert<?> converter = toUserDefined.get(fromType);
+
+        if (converter != null) {
+            return converter.convert(fromInstance);
+        }
+        return NOPE;
+
+//        Map<Class<?>, Convert<?>> convertMap = targetTypes.get(toType);
+//
+//        if (convertMap == null) {
+//            throw new IllegalArgumentException("Unsupported type '" + toType.getName() + "' for conversion");
+//        }
+//
+//        Convert<?> convert = convertMap.get(fromInstance.getClass());
+//
+//        if (convert != null) {
+//            return convert.convert(fromInstance);
+//        }
+//
+//        throw new JsonIoException("Unsupported type '" + toType.getName() + "' for conversion");
+    }
+
     private static String name(Object fromInstance) {
         if (fromInstance == null) {
             return "null";
@@ -1500,18 +1524,21 @@ public final class Converter {
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
      */
     public static boolean isConversionSupportedFor(Class<?> source, Class<?> target) {
+        // Conversion from the source instance passes through an Object parameter convert(fromInstance, target) and
+        // therefore we do not need to define int.class, Integer.class in the Map for the targets.
         if (source.isPrimitive()) {
-            // Conversion from the source instance passes through an Object parameter convert(fromInstance, target) and
-            // therefore we do not need to define int.class, Integer.class in the Map for the targets.
             source = toPrimitiveWrapperClass(source);
         }
+        if (target.isPrimitive()) {
+            target = toPrimitiveWrapperClass(target);
+        }
 
-        if (!sourceTypes.containsKey(source)) {
+        if (!toTypes.containsKey(target)) {
             return false;
         }
         
-        Map<Class<?>, Convert<?>> targetTypes = Converter.targetTypes.get(target);
-        return targetTypes.containsKey(source);
+        Map<Class<?>, Convert<?>> targets = Converter.targetTypes.get(target);
+        return targets.containsKey(source);
     }
 
     /**
@@ -1519,15 +1546,15 @@ public final class Converter {
      * and the Set contains all the target types (classes) that the source can be converted to.
      */
     public static Map<Class<?>, Set<Class<?>>> allSupportedConversions() {
-        Map<Class<?>, Set<Class<?>>> fromTo = new TreeMap<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+        Map<Class<?>, Set<Class<?>>> toFrom = new TreeMap<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
 
-        for (Class<?> sourceClass : sourceTypes.keySet()) {
-            Map<Class<?>, Convert<?>> map = targetTypes.get(sourceClass);
-            Set<Class<?>> set = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
-            set.addAll(map.keySet());
-            fromTo.put(sourceClass, set);
+        for (Class<?> targetClass : toTypes.keySet()) {
+            Map<Class<?>, Convert<?>> map = targetTypes.get(targetClass);
+            Set<Class<?>> fromSet = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+            fromSet.addAll(map.keySet());
+            toFrom.put(targetClass, fromSet);
         }
-        return fromTo;
+        return toFrom;
     }
 
     /**
@@ -1535,16 +1562,29 @@ public final class Converter {
      * name, and the Set contains all the target class names that the source can be converted to.
      */
     public static Map<String, Set<String>> getSupportedConversions() {
-        Map<String, Set<String>> fromTo = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, Set<String>> toFrom = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-        for (Class<?> sourceClass : sourceTypes.keySet()) {
-            Map<Class<?>, Convert<?>> map = targetTypes.get(sourceClass);
+        for (Class<?> targetClass : toTypes.keySet()) {
+            Map<Class<?>, Convert<?>> fromMap = targetTypes.get(targetClass);
 
-            for (Class<?> targetClass : map.keySet()) {
-                fromTo.computeIfAbsent(getShortName(sourceClass), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(targetClass));
+            for (Class<?> fromClass : fromMap.keySet()) {
+                toFrom.computeIfAbsent(getShortName(targetClass), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(fromClass));
             }
         }
-        return fromTo;
+        return toFrom;
+    }
+
+    public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction)
+    {
+        // TODO: Should we let them overwrite an existing conversion?
+        if (toTypes.containsKey(target)) {
+            Map<Class<?>, Convert<?>> map = targetTypes.get(target);
+            map.put(source, conversionFunction);
+        } else {
+            toTypes.put(target, Converter::convertToUserDefined);
+            toUserDefined.put(source, conversionFunction);
+            targetTypes.put(target, toUserDefined);
+        }
     }
 
     /**

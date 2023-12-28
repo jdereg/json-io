@@ -252,8 +252,8 @@ public class JsonIo {
      * @param args
      */
     public static void main(String[] args) {
-        String json = toJson(Converter.allSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
-        System.out.println("json-io supported conversions between data types:");
+        String json = toJson(Converter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+        System.out.println("json-io supported conversions between data types (targets by sources):");
         System.out.println(json);
     }
 }

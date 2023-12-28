@@ -2498,4 +2498,228 @@ class ConverterTest
         assert Converter.isConversionSupportedFor(BigDecimal.class, UUID.class);
         assert Converter.isConversionSupportedFor(BigInteger.class, UUID.class);
     }
+
+    static class DumbNumber extends BigInteger
+    {
+        DumbNumber(String val) {
+            super(val);
+        }
+
+        public String toString() {
+            return super.toString();
+        }
+    }
+
+    @Test
+    void testDumbNumberToByte()
+    {
+        DumbNumber dn = new DumbNumber("25");
+        byte x = Converter.convert(dn, byte.class);
+        assert x == 25;
+    }
+
+    @Test
+    void testDumbNumberToShort()
+    {
+        DumbNumber dn = new DumbNumber("25");
+        short x = Converter.convert(dn, short.class);
+        assert x == 25;
+    }
+
+    @Test
+    void testDumbNumberToShort2()
+    {
+        DumbNumber dn = new DumbNumber("25");
+        Short x = Converter.convert(dn, Short.class);
+        assert x == 25;
+    }
+
+    @Test
+    void testDumbNumberToInt()
+    {
+        DumbNumber dn = new DumbNumber("25");
+        int x = Converter.convert(dn, int.class);
+        assert x == 25;
+    }
+
+    @Test
+    void testDumbNumberToLong()
+    {
+        DumbNumber dn = new DumbNumber("25");
+        long x = Converter.convert(dn, long.class);
+        assert x == 25;
+    }
+
+    @Test
+    void testDumbNumberToFloat()
+    {
+        DumbNumber dn = new DumbNumber("3");
+        float x = Converter.convert(dn, float.class);
+        assert x == 3;
+    }
+
+    @Test
+    void testDumbNumberToDouble()
+    {
+        DumbNumber dn = new DumbNumber("3");
+        double x = Converter.convert(dn, double.class);
+        assert x == 3;
+    }
+
+    @Test
+    void testDumbNumberToBoolean()
+    {
+        DumbNumber dn = new DumbNumber("3");
+        boolean x = Converter.convert(dn, boolean.class);
+        assert x;
+    }
+
+    @Test
+    void testDumbNumberToCharacter()
+    {
+        DumbNumber dn = new DumbNumber("3");
+        char x = Converter.convert(dn, char.class);
+        assert x == '\u0003';
+    }
+
+    @Test
+    void testDumbNumberToBigInteger()
+    {
+        DumbNumber dn = new DumbNumber("12345678901234567890");
+        BigInteger x = Converter.convert(dn, BigInteger.class);
+        assert x.toString().equals(dn.toString());
+    }
+
+    @Test
+    void testDumbNumberToBigDecimal()
+    {
+        DumbNumber dn = new DumbNumber("12345678901234567890");
+        BigDecimal x = Converter.convert(dn, BigDecimal.class);
+        assert x.toString().equals(dn.toString());
+    }
+
+    @Test
+    void testDumbNumberToString()
+    {
+        DumbNumber dn = new DumbNumber("12345678901234567890");
+        String x = Converter.convert(dn, String.class);
+        assert x.toString().equals("12345678901234567890");
+    }
+
+    @Test
+    void testDumbNumberToUUID()
+    {
+        DumbNumber dn = new DumbNumber("1000");
+
+        // Fails to convert
+        assertThatThrownBy(() -> Converter.convert(dn, UUID.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported conversion, source type [DumbNumber (1000)] target type 'UUID'");
+
+        // Add in conversion
+        Converter.addConversion(DumbNumber.class, UUID.class, fromInstance -> {
+            DumbNumber bigDummy = (DumbNumber) fromInstance;
+            BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
+            long mostSignificantBits = bigDummy.shiftRight(64).and(mask).longValue();
+            long leastSignificantBits = bigDummy.and(mask).longValue();
+            return new UUID(mostSignificantBits, leastSignificantBits);
+        });
+
+        // Converts!
+        UUID uuid = Converter.convert(dn, UUID.class);
+        assert uuid.toString().equals("00000000-0000-0000-0000-0000000003e8");
+
+        assert Converter.isConversionSupportedFor(DumbNumber.class, UUID.class);
+    }
+
+    @Test
+    void testUUIDtoDumbNumber()
+    {
+        UUID uuid = UUID.fromString("00000000-0000-0000-0000-0000000003e8");
+
+        // Fails to convert
+        assertThatThrownBy(() -> Converter.convert(uuid, DumbNumber.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported target type 'DumbNumber' requested for conversion from [UUID (00000000-0000-0000-0000-0000000003e8)]");
+
+        // Add in conversion
+        Converter.addConversion(UUID.class, DumbNumber.class, fromInstance -> {
+            UUID uuid1 = (UUID) fromInstance;
+            BigInteger mostSignificant = BigInteger.valueOf(uuid1.getMostSignificantBits());
+            BigInteger leastSignificant = BigInteger.valueOf(uuid1.getLeastSignificantBits());
+            // Shift the most significant bits to the left and add the least significant bits
+            return new DumbNumber(mostSignificant.shiftLeft(64).add(leastSignificant).toString());
+        });
+
+        // Converts!
+        DumbNumber dn = Converter.convert(uuid, DumbNumber.class);
+        assert dn.toString().equals("1000");
+
+        assert Converter.isConversionSupportedFor(UUID.class, DumbNumber.class);
+    }
+
+    static class Normie
+    {
+        String name;
+
+        Normie(String name) {
+            this.name = name;
+        }
+
+        void setName(String name)
+        {
+            this.name = name;
+        }
+    }
+
+    static class Weirdo
+    {
+        String name;
+
+        Weirdo(String name)
+        {
+            this.name = reverseString(name);
+        }
+
+        void setName(String name)
+        {
+            this.name = reverseString(name);
+        }
+    }
+
+    static String reverseString(String in)
+    {
+        StringBuilder reversed = new StringBuilder();
+        for (int i = in.length() - 1; i >= 0; i--) {
+            reversed.append(in.charAt(i));
+        }
+        return reversed.toString();
+    }
+
+    @Test
+    void testNormieToWeirdoAndBack()
+    {
+        Converter.addConversion(Normie.class, Weirdo.class, fromInstance -> {
+            Normie normie = (Normie) fromInstance;
+            Weirdo weirdo = new Weirdo(normie.name);
+            return weirdo;
+        });
+
+        Converter.addConversion(Weirdo.class, Normie.class, fromInstance -> {
+            Weirdo weirdo = (Weirdo) fromInstance;
+            Normie normie = new Normie(reverseString(weirdo.name));
+            return normie;
+        });
+        
+        Normie normie = new Normie("Joe");
+        Weirdo weirdo = Converter.convert(normie, Weirdo.class);
+        assertEquals(weirdo.name, "eoJ");
+
+        weirdo = new Weirdo("Jacob");
+        assertEquals(weirdo.name, "bocaJ");
+        normie = Converter.convert(weirdo, Normie.class);
+        assertEquals(normie.name, "Jacob");
+
+        JsonIo.main(null);
+    }
 }
