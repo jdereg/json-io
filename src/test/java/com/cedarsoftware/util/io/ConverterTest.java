@@ -2362,6 +2362,95 @@ class ConverterTest
     }
 
     @Test
+    void testClassToMap()
+    {
+        Class<?> clazz = ConverterTest.class;
+        Map<?, ?> map = Converter.convert(clazz, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), clazz);
+    }
+
+    @Test
+    void testUUIDToMap()
+    {
+        UUID uuid = new UUID(1L, 2L);
+        Map<?, ?> map = Converter.convert(uuid, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), uuid);
+        assert map.get(Converter.VALUE).getClass().equals(UUID.class);
+    }
+
+    @Test
+    void testCalendarToMap()
+    {
+        Calendar cal = Calendar.getInstance();
+        Map<?, ?> map = Converter.convert(cal, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), cal);
+        assert map.get(Converter.VALUE) instanceof Calendar;
+    }
+
+    @Test
+    void testDateToMap()
+    {
+        Date now = new Date();
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(Date.class);
+    }
+
+    @Test
+    void testSqlDateToMap()
+    {
+        java.sql.Date now = new java.sql.Date(System.currentTimeMillis());
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(java.sql.Date.class);
+    }
+
+    @Test
+    void testTimestampToMap()
+    {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(Timestamp.class);
+    }
+
+    @Test
+    void testLocalDateToMap()
+    {
+        LocalDate now = LocalDate.now();
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(LocalDate.class);
+    }
+
+    @Test
+    void testLocalDateTimeToMap()
+    {
+        LocalDateTime now = LocalDateTime.now();
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(LocalDateTime.class);
+    }
+
+    @Test
+    void testZonedDateTimeToMap()
+    {
+        ZonedDateTime now = ZonedDateTime.now();
+        Map<?, ?> map = Converter.convert(now, Map.class);
+        assert map.size() == 1;
+        assertEquals(map.get(Converter.VALUE), now);
+        assert map.get(Converter.VALUE).getClass().equals(ZonedDateTime.class);
+    }
+
+    @Test
     void testUnknownType()
     {
         assertThatThrownBy(() -> convert(null, Collection.class))
@@ -2371,8 +2460,42 @@ class ConverterTest
     }
 
     @Test
-    void printSupportedConversions()
+    void testGetSupportedConversions()
     {
-        Converter.getSupportedConversions();
+        Map map = Converter.getSupportedConversions();
+        assert map.size() > 10;
+    }
+
+    @Test
+    void testAllSupportedConversions()
+    {
+        Map map = Converter.allSupportedConversions();
+        assert map.size() > 10;
+    }
+
+    @Test
+    void testIsConversionSupport()
+    {
+        assert Converter.isConversionSupportedFor(int.class, LocalDate.class);
+        assert Converter.isConversionSupportedFor(Integer.class, LocalDate.class);
+        assert Converter.isConversionSupportedFor(LocalDate.class, int.class);
+        assert Converter.isConversionSupportedFor(LocalDate.class, Integer.class);
+
+        assert !Converter.isConversionSupportedFor(byte.class, LocalDate.class);
+        assert !Converter.isConversionSupportedFor(Byte.class, LocalDate.class);
+        assert !Converter.isConversionSupportedFor(LocalDate.class, byte.class);
+        assert !Converter.isConversionSupportedFor(LocalDate.class, Byte.class);
+
+        assert Converter.isConversionSupportedFor(UUID.class, String.class);
+        assert Converter.isConversionSupportedFor(UUID.class, Map.class);
+        assert Converter.isConversionSupportedFor(UUID.class, BigDecimal.class);
+        assert Converter.isConversionSupportedFor(UUID.class, BigInteger.class);
+        assert !Converter.isConversionSupportedFor(UUID.class, long.class);
+        assert !Converter.isConversionSupportedFor(UUID.class, Long.class);
+
+        assert Converter.isConversionSupportedFor(String.class, UUID.class);
+        assert Converter.isConversionSupportedFor(Map.class, UUID.class);
+        assert Converter.isConversionSupportedFor(BigDecimal.class, UUID.class);
+        assert Converter.isConversionSupportedFor(BigInteger.class, UUID.class);
     }
 }

@@ -24,8 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Instance conversion utility.  Convert from primitive to other primitives, plus support for Number, Date,
@@ -74,10 +72,9 @@ public final class Converter {
     private static final Float FLOAT_ONE = 1.0f;
     private static final Double DOUBLE_ZERO = 0.0d;
     private static final Double DOUBLE_ONE = 1.0d;
-    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
 
-    private static final Map<Class<?>, Convert<?>> converters = new HashMap<>();
-    private static final Map<Class<?>, Map<Class<?>, Convert<?>>> supportedTypes = new HashMap<>();
+    private static final Map<Class<?>, Convert<?>> sourceTypes = new HashMap<>();
+    private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
 
     // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
@@ -150,41 +147,41 @@ public final class Converter {
         fromNull.put(Map.class, null);
 
         // Convertable types
-        converters.put(byte.class, Converter::convertToByte);
-        converters.put(Byte.class, Converter::convertToByte);
-        converters.put(short.class, Converter::convertToShort);
-        converters.put(Short.class, Converter::convertToShort);
-        converters.put(int.class, Converter::convertToInteger);
-        converters.put(Integer.class, Converter::convertToInteger);
-        converters.put(long.class, Converter::convertToLong);
-        converters.put(Long.class, Converter::convertToLong);
-        converters.put(float.class, Converter::convertToFloat);
-        converters.put(Float.class, Converter::convertToFloat);
-        converters.put(double.class, Converter::convertToDouble);
-        converters.put(Double.class, Converter::convertToDouble);
-        converters.put(boolean.class, Converter::convertToBoolean);
-        converters.put(Boolean.class, Converter::convertToBoolean);
-        converters.put(char.class, Converter::convertToCharacter);
-        converters.put(Character.class, Converter::convertToCharacter);
-        converters.put(String.class, Converter::convertToString);
-        converters.put(Class.class, Converter::convertToClass);
-        converters.put(BigDecimal.class, Converter::convertToBigDecimal);
-        converters.put(BigInteger.class, Converter::convertToBigInteger);
-        converters.put(AtomicInteger.class, Converter::convertToAtomicInteger);
-        converters.put(AtomicLong.class, Converter::convertToAtomicLong);
-        converters.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
-        converters.put(Date.class, Converter::convertToDate);
-        converters.put(java.sql.Date.class, Converter::convertToSqlDate);
-        converters.put(Timestamp.class, Converter::convertToTimestamp);
-        converters.put(Calendar.class, Converter::convertToCalendar);
-        converters.put(GregorianCalendar.class, Converter::convertToCalendar);
-        converters.put(LocalDate.class, Converter::convertToLocalDate);
-        converters.put(LocalDateTime.class, Converter::convertToLocalDateTime);
-        converters.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
-        converters.put(UUID.class, Converter::convertToUUID);
-        converters.put(Map.class, Converter::convertToMap);
+        sourceTypes.put(byte.class, Converter::convertToByte);
+        sourceTypes.put(Byte.class, Converter::convertToByte);
+        sourceTypes.put(short.class, Converter::convertToShort);
+        sourceTypes.put(Short.class, Converter::convertToShort);
+        sourceTypes.put(int.class, Converter::convertToInteger);
+        sourceTypes.put(Integer.class, Converter::convertToInteger);
+        sourceTypes.put(long.class, Converter::convertToLong);
+        sourceTypes.put(Long.class, Converter::convertToLong);
+        sourceTypes.put(float.class, Converter::convertToFloat);
+        sourceTypes.put(Float.class, Converter::convertToFloat);
+        sourceTypes.put(double.class, Converter::convertToDouble);
+        sourceTypes.put(Double.class, Converter::convertToDouble);
+        sourceTypes.put(boolean.class, Converter::convertToBoolean);
+        sourceTypes.put(Boolean.class, Converter::convertToBoolean);
+        sourceTypes.put(char.class, Converter::convertToCharacter);
+        sourceTypes.put(Character.class, Converter::convertToCharacter);
+        sourceTypes.put(String.class, Converter::convertToString);
+        sourceTypes.put(Class.class, Converter::convertToClass);
+        sourceTypes.put(BigDecimal.class, Converter::convertToBigDecimal);
+        sourceTypes.put(BigInteger.class, Converter::convertToBigInteger);
+        sourceTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
+        sourceTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
+        sourceTypes.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
+        sourceTypes.put(Date.class, Converter::convertToDate);
+        sourceTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
+        sourceTypes.put(Timestamp.class, Converter::convertToTimestamp);
+        sourceTypes.put(Calendar.class, Converter::convertToCalendar);
+        sourceTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
+        sourceTypes.put(LocalDate.class, Converter::convertToLocalDate);
+        sourceTypes.put(LocalDateTime.class, Converter::convertToLocalDateTime);
+        sourceTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
+        sourceTypes.put(UUID.class, Converter::convertToUUID);
+        sourceTypes.put(Map.class, Converter::convertToMap);
 
-        if (fromNull.size() != converters.size()) {
+        if (fromNull.size() != sourceTypes.size()) {
             new Throwable("Mismatch in size of 'fromNull' versus 'converters' in Converters.java").printStackTrace();
         }
 
@@ -218,8 +215,8 @@ public final class Converter {
                 return (byte) value;
             }
         });
-        supportedTypes.put(byte.class, toByte);
-        supportedTypes.put(Byte.class, toByte);
+        targetTypes.put(byte.class, toByte);
+        targetTypes.put(Byte.class, toByte);
 
         // ? to Short/short
         toShort.put(Map.class, null);
@@ -252,8 +249,8 @@ public final class Converter {
                 return (short) value;
             }
         });
-        supportedTypes.put(short.class, toShort);
-        supportedTypes.put(Short.class, toShort);
+        targetTypes.put(short.class, toShort);
+        targetTypes.put(Short.class, toShort);
 
         // ? to Integer/int
         toInteger.put(Map.class, null);
@@ -286,8 +283,8 @@ public final class Converter {
                 return (int) value;
             }
         });
-        supportedTypes.put(int.class, toInteger);
-        supportedTypes.put(Integer.class, toInteger);
+        targetTypes.put(int.class, toInteger);
+        targetTypes.put(Integer.class, toInteger);
 
         // ? to Long/long
         toLong.put(Map.class, null);
@@ -322,8 +319,8 @@ public final class Converter {
                 return convert(fromInstance, BigDecimal.class).longValue();
             }
         });
-        supportedTypes.put(long.class, toLong);
-        supportedTypes.put(Long.class, toLong);
+        targetTypes.put(long.class, toLong);
+        targetTypes.put(Long.class, toLong);
 
 
         // ? to Float/float
@@ -353,8 +350,8 @@ public final class Converter {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
-        supportedTypes.put(float.class, toFloat);
-        supportedTypes.put(Float.class, toFloat);
+        targetTypes.put(float.class, toFloat);
+        targetTypes.put(Float.class, toFloat);
 
         // ? to Double/double
         toDouble.put(Map.class, null);
@@ -389,8 +386,8 @@ public final class Converter {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
-        supportedTypes.put(double.class, toDouble);
-        supportedTypes.put(Double.class, toDouble);
+        targetTypes.put(double.class, toDouble);
+        targetTypes.put(Double.class, toDouble);
 
         // ? to Boolean/boolean
         toBoolean.put(Map.class, null);
@@ -420,8 +417,8 @@ public final class Converter {
             }
             return "true".equalsIgnoreCase(str);
         });
-        supportedTypes.put(boolean.class, toBoolean);
-        supportedTypes.put(Boolean.class, toBoolean);
+        targetTypes.put(boolean.class, toBoolean);
+        targetTypes.put(Boolean.class, toBoolean);
 
         // ? to Character/char
         toCharacter.put(Map.class, null);
@@ -449,8 +446,8 @@ public final class Converter {
             // Treat as a String number, like "65" = 'A'
             return (char) Integer.parseInt(str.trim());
         });
-        supportedTypes.put(char.class, toCharacter);
-        supportedTypes.put(Character.class, toCharacter);
+        targetTypes.put(char.class, toCharacter);
+        targetTypes.put(Character.class, toCharacter);
 
         // ? to Class
         toClass.put(Map.class, null);
@@ -463,7 +460,7 @@ public final class Converter {
             }
             throw new IllegalArgumentException("Cannot convert String '" + str + "' to class.  Class not found.");
         });
-        supportedTypes.put(Class.class, toClass);
+        targetTypes.put(Class.class, toClass);
 
         // ? to BigInteger
         toBigInteger.put(Map.class, null);
@@ -501,7 +498,7 @@ public final class Converter {
             }
             return new BigInteger(str);
         });
-        supportedTypes.put(BigInteger.class, toBigInteger);
+        targetTypes.put(BigInteger.class, toBigInteger);
 
         // ? to BigDecimal
         toBigDecimal.put(Map.class, null);
@@ -539,7 +536,7 @@ public final class Converter {
             }
             return new BigDecimal(str);
         });
-        supportedTypes.put(BigDecimal.class, toBigDecimal);
+        targetTypes.put(BigDecimal.class, toBigDecimal);
         
         // ? to Date
         toDate.put(Map.class, null);
@@ -556,7 +553,7 @@ public final class Converter {
         toDate.put(BigDecimal.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
         toDate.put(AtomicLong.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
         toDate.put(String.class, fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
-        supportedTypes.put(Date.class, toDate);
+        targetTypes.put(Date.class, toDate);
 
         // ? to java.sql.Date
         toSqlDate.put(Map.class, null);
@@ -580,7 +577,7 @@ public final class Converter {
             }
             return new java.sql.Date(date.getTime());
         });
-        supportedTypes.put(java.sql.Date.class, toSqlDate);
+        targetTypes.put(java.sql.Date.class, toSqlDate);
 
         // ? to Timestamp
         toTimestamp.put(Map.class, null);
@@ -604,7 +601,7 @@ public final class Converter {
             }
             return new Timestamp(date.getTime());
         });
-        supportedTypes.put(Timestamp.class, toTimestamp);
+        targetTypes.put(Timestamp.class, toTimestamp);
 
         // ? to Calendar
         toCalendar.put(Map.class, null);
@@ -628,8 +625,8 @@ public final class Converter {
             }
             return initCal(date.getTime());
         });
-        supportedTypes.put(Calendar.class, toCalendar);
-        supportedTypes.put(GregorianCalendar.class, toCalendar);
+        targetTypes.put(Calendar.class, toCalendar);
+        targetTypes.put(GregorianCalendar.class, toCalendar);
 
         // ? to LocalDate
         toLocalDate.put(Map.class, null);
@@ -657,7 +654,7 @@ public final class Converter {
             }
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         });
-        supportedTypes.put(LocalDate.class, toLocalDate);
+        targetTypes.put(LocalDate.class, toLocalDate);
 
         // ? to LocalDateTime
         toLocalDateTime.put(Map.class, null);
@@ -681,7 +678,7 @@ public final class Converter {
             }
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
         });
-        supportedTypes.put(LocalDateTime.class, toLocalDateTime);
+        targetTypes.put(LocalDateTime.class, toLocalDateTime);
 
         // ? to ZonedDateTime
         toZonedDateTime.put(Map.class, null);
@@ -705,7 +702,7 @@ public final class Converter {
             }
             return date.toInstant().atZone(ZoneId.systemDefault());
         });
-        supportedTypes.put(ZonedDateTime.class, toZonedDateTime);
+        targetTypes.put(ZonedDateTime.class, toZonedDateTime);
         
         // ? to AtomicBoolean
         toAtomicBoolean.put(Map.class, null);
@@ -729,7 +726,7 @@ public final class Converter {
             }
             return new AtomicBoolean("true".equalsIgnoreCase(str));
         });
-        supportedTypes.put(AtomicBoolean.class, toAtomicBoolean);
+        targetTypes.put(AtomicBoolean.class, toAtomicBoolean);
 
         // ? to AtomicInteger
         toAtomicInteger.put(Map.class, null);
@@ -754,7 +751,7 @@ public final class Converter {
             }
             return new AtomicInteger(Integer.parseInt(str));
         });
-        supportedTypes.put(AtomicInteger.class, toAtomicInteger);
+        targetTypes.put(AtomicInteger.class, toAtomicInteger);
 
         // ? to AtomicLong
         toAtomicLong.put(Map.class, null);
@@ -790,7 +787,7 @@ public final class Converter {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
-        supportedTypes.put(AtomicLong.class, toAtomicLong);
+        targetTypes.put(AtomicLong.class, toAtomicLong);
 
         // ? to UUID
         toUUID.put(Map.class, null);
@@ -809,7 +806,7 @@ public final class Converter {
             Convert<?> converter = toUUID.get(BigInteger.class);
             return converter.convert(bigInteger);
         });
-        supportedTypes.put(UUID.class, toUUID);
+        targetTypes.put(UUID.class, toUUID);
 
         // ? to String
         toStr.put(Map.class, null);
@@ -858,7 +855,7 @@ public final class Converter {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
             return zonedDateTime.format(formatter);
         });
-        supportedTypes.put(String.class, toStr);
+        targetTypes.put(String.class, toStr);
 
         // ? to Map
         toMap.put(Map.class, null); // Can't have Map instance
@@ -875,7 +872,18 @@ public final class Converter {
         toMap.put(AtomicBoolean.class, Converter::initMap);
         toMap.put(AtomicInteger.class, Converter::initMap);
         toMap.put(AtomicLong.class, Converter::initMap);
-        supportedTypes.put(Map.class, toMap);
+        toMap.put(Class.class, Converter::initMap);
+        toMap.put(UUID.class, Converter::initMap);
+        toMap.put(Calendar.class, Converter::initMap);
+        toMap.put(GregorianCalendar.class, Converter::initMap);
+        toMap.put(Date.class, Converter::initMap);
+        toMap.put(java.sql.Date.class, Converter::initMap);
+        toMap.put(Timestamp.class, Converter::initMap);
+        toMap.put(LocalDate.class, Converter::initMap);
+        toMap.put(LocalDateTime.class, Converter::initMap);
+        toMap.put(ZonedDateTime.class, Converter::initMap);
+
+        targetTypes.put(Map.class, toMap);
     }
 
     /**
@@ -912,7 +920,7 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        Convert<?> converter = converters.get(toType);
+        Convert<?> converter = sourceTypes.get(toType);
         if (converter != null) {
             if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
                 return (T) fromNull.get(toType);
@@ -1471,8 +1479,7 @@ public final class Converter {
         {
             if (set == null || set.isEmpty()) {
                 throw new IllegalArgumentException("To convert from Map to " + getShortName(type) + ", the map must include keys: '_v' or 'value' an associated value to convert from.");
-            }
-            else {
+            } else {
                 throw new IllegalArgumentException("To convert from Map to " + getShortName(type) + ", the map must include keys: " + set + ", or '_v' or 'value' an associated value to convert from.");
             }
         }
@@ -1486,14 +1493,55 @@ public final class Converter {
         return NOPE;
     }
 
+    /**
+     * Check to see if a conversion from type to another type is supported.
+     * @param source Class of source type.
+     * @param target Class of target type.
+     * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
+     */
+    public static boolean isConversionSupportedFor(Class<?> source, Class<?> target) {
+        if (source.isPrimitive()) {
+            // Conversion from the source instance passes through an Object parameter convert(fromInstance, target) and
+            // therefore we do not need to define int.class, Integer.class in the Map for the targets.
+            source = toPrimitiveWrapperClass(source);
+        }
+
+        if (!sourceTypes.containsKey(source)) {
+            return false;
+        }
+        
+        Map<Class<?>, Convert<?>> targetTypes = Converter.targetTypes.get(target);
+        return targetTypes.containsKey(source);
+    }
+
+    /**
+     * @return Map<Class, Set<Class>> which contains all supported conversions. The key of the Map is a source class,
+     * and the Set contains all the target types (classes) that the source can be converted to.
+     */
+    public static Map<Class<?>, Set<Class<?>>> allSupportedConversions() {
+        Map<Class<?>, Set<Class<?>>> fromTo = new TreeMap<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+
+        for (Class<?> sourceClass : sourceTypes.keySet()) {
+            Map<Class<?>, Convert<?>> map = targetTypes.get(sourceClass);
+            Set<Class<?>> set = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+            set.addAll(map.keySet());
+            fromTo.put(sourceClass, set);
+        }
+        return fromTo;
+    }
+
+    /**
+     * @return Map<String, Set<String>> which contains all supported conversions. The key of the Map is a source class
+     * name, and the Set contains all the target class names that the source can be converted to.
+     */
     public static Map<String, Set<String>> getSupportedConversions() {
         Map<String, Set<String>> fromTo = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-        for (Map.Entry<Class<?>, Map<Class<?>, Convert<?>>> entry : supportedTypes.entrySet()) {
-            Map<Class<?>, Convert<?>> fromMap = entry.getValue();
-            
-            for (Class<?> srcClass : fromMap.keySet()) {
-                fromTo.computeIfAbsent(getShortName(entry.getKey()), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(srcClass));
+        for (Class<?> sourceClass : sourceTypes.keySet()) {
+            Map<Class<?>, Convert<?>> map = targetTypes.get(sourceClass);
+
+            for (Class<?> targetClass : map.keySet()) {
+                fromTo.computeIfAbsent(getShortName(sourceClass), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(targetClass));
             }
         }
         return fromTo;
@@ -1539,15 +1587,34 @@ public final class Converter {
     }
 
     /**
-     * Strip leading and trailing double quotes from the passed in String. If there are more than one
-     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
-     * this is weird.  Note that: ["""this is "really" weird""] will be: [this is "really" weird].
+     * Given a primitive class, return the Wrapper class equivalent.
      */
-    public static String removeLeadingAndTrailingQuotes(String input) {
-        Matcher m = extraQuotes.matcher(input);
-        if (m.find()) {
-            input = m.group(1);
+    public static Class<?> toPrimitiveWrapperClass(Class<?> primitiveClass)
+    {
+        if (!primitiveClass.isPrimitive()) {
+            throw new IllegalArgumentException("Passed in class: " + primitiveClass + " is not a primitive class");
         }
-        return input;
+        
+        if (primitiveClass == int.class) {
+            return Integer.class;
+        } else if (primitiveClass == long.class) {
+            return Long.class;
+        } else if (primitiveClass == double.class) {
+            return Double.class;
+        } else if (primitiveClass == float.class) {
+            return Float.class;
+        } else if (primitiveClass == boolean.class) {
+            return Boolean.class;
+        } else if (primitiveClass == char.class) {
+            return Character.class;
+        } else if (primitiveClass == byte.class) {
+            return Byte.class;
+        } else if (primitiveClass == short.class) {
+            return Short.class;
+        } else if (primitiveClass == void.class) {
+            return Void.class;
+        } else {
+            throw new IllegalArgumentException("Unknown primitive type: " + primitiveClass);
+        }
     }
 }

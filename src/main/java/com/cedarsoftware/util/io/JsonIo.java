@@ -247,8 +247,12 @@ public class JsonIo {
         return (T) toObjects(json, readOptions, source.getClass());
     }
 
+    /**
+     * Call this method to see all of the conversions offered.
+     * @param args
+     */
     public static void main(String[] args) {
-        String json = toJson(Converter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+        String json = toJson(Converter.allSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
         System.out.println("json-io supported conversions between data types:");
         System.out.println(json);
     }

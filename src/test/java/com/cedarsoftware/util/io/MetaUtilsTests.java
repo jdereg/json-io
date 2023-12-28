@@ -169,7 +169,7 @@ public class MetaUtilsTests {
     @Test
     void convertTrimQuotes() {
         String s = "\"\"\"This is \"really\" weird.\"\"\"";
-        String x = Converter.removeLeadingAndTrailingQuotes(s);
+        String x = MetaUtils.removeLeadingAndTrailingQuotes(s);
         assert "This is \"really\" weird.".equals(x);
     }
 

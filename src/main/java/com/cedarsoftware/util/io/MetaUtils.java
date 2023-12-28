@@ -52,6 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.lang.reflect.Modifier.isProtected;
@@ -95,6 +97,7 @@ public class MetaUtils
     private static Unsafe unsafe;
     private static final Map<Class<?>, Supplier<Object>> DIRECT_CLASS_MAPPING = new HashMap<>();
     private static final Map<Class<?>, Supplier<Object>> ASSIGNABLE_CLASS_MAPPING = new LinkedHashMap<>();
+    private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
 
     static {
 
@@ -1233,5 +1236,18 @@ public class MetaUtils
         }
         buffer.flush();
         return buffer.toByteArray();
+    }
+
+    /**
+     * Strip leading and trailing double quotes from the passed in String. If there are more than one
+     * set of quotes, ""this is weird"" then all leading and trailing quotes will be removed, yielding
+     * this is weird.  Note that: ["""this is "really" weird""] will be: [this is "really" weird].
+     */
+    public static String removeLeadingAndTrailingQuotes(String input) {
+        Matcher m = extraQuotes.matcher(input);
+        if (m.find()) {
+            input = m.group(1);
+        }
+        return input;
     }
 }
