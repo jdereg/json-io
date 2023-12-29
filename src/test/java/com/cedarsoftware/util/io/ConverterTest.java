@@ -229,7 +229,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'integer'"));
         }
 
         try
@@ -298,7 +298,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'long'"));
         }
 
         try
@@ -1748,7 +1748,8 @@ class ConverterTest
     @Test
     void testNullInstance()
     {
-        assert false == convert(null, boolean.class);
+        assert 0L == convert(null, long.class);
+        assert !convert(null, boolean.class);
         assert null == convert(null, Boolean.class);
         assert 0 == convert(null, byte.class);
         assert null == convert(null, Byte.class);
@@ -1756,7 +1757,6 @@ class ConverterTest
         assert null == convert(null, Short.class);
         assert 0 == convert(null, int.class);
         assert null == convert(null, Integer.class);
-        assert 0L == convert(null, long.class);
         assert null == convert(null, Long.class);
         assert 0.0f == convert(null, float.class);
         assert null == convert(null, Float.class);

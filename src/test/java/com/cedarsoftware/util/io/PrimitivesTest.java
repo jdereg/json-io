@@ -92,12 +92,14 @@ public class PrimitivesTest
                 .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json2 = "{\"@type\":\"int\"}";
-        Integer i = TestUtil.toObjects(json2, null);
-        assertNull(i);
+        assertThatThrownBy(() -> TestUtil.toObjects(json2, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json3 = "{\"@type\":\"long\"}";
-        Long l = TestUtil.toObjects(json3, null);
-        assertNull(l);
+        assertThatThrownBy(() -> TestUtil.toObjects(json3, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json4 = "{\"@type\":\"float\"}";
         Float f = TestUtil.toObjects(json4, null);

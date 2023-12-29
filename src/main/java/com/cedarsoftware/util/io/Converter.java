@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLong = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
@@ -119,18 +118,11 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(short.class, (short)0);
-        fromNull.put(int.class, 0);
-        fromNull.put(long.class, 0L);
         fromNull.put(float.class, 0.0f);
         fromNull.put(double.class, 0.0d);
         fromNull.put(boolean.class, false);
         fromNull.put(char.class, (char)0);
 
-        fromNull.put(Byte.class, null);
-        fromNull.put(Short.class, null);
-        fromNull.put(Integer.class, null);
-        fromNull.put(Long.class, null);
         fromNull.put(Float.class, null);
         fromNull.put(Double.class, null);
         fromNull.put(Boolean.class, null);
@@ -193,20 +185,21 @@ public final class Converter {
         factory.put(pair(Void.class, short.class), fromInstance -> (short)0);
         factory.put(pair(Void.class, Short.class), fromInstance -> null);
         factory.put(pair(Byte.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
-        factory.put(pair(Boolean.class, Short.class), fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
-        factory.put(pair(Character.class, Short.class), fromInstance -> (short) ((char) fromInstance));
         factory.put(pair(Short.class, Short.class), fromInstance -> fromInstance);
         factory.put(pair(Integer.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
         factory.put(pair(Long.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
         factory.put(pair(Float.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
         factory.put(pair(Double.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
+        factory.put(pair(Boolean.class, Short.class), fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
+        factory.put(pair(Character.class, Short.class), fromInstance -> (short) ((Character) fromInstance).charValue());
         factory.put(pair(AtomicBoolean.class, Short.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
         factory.put(pair(AtomicInteger.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
         factory.put(pair(AtomicLong.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
         factory.put(pair(BigInteger.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
         factory.put(pair(BigDecimal.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(Number.class, Short.class), fromInstance -> ((Number)fromInstance).shortValue());
         factory.put(pair(LocalDate.class, Short.class), fromInstance -> ((LocalDate)fromInstance).toEpochDay());
-        factory.put(pair(Map.class, Short.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, byte.class, null));
+        factory.put(pair(Map.class, Short.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, short.class, null));
         factory.put(pair(String.class, Short.class),fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -223,11 +216,79 @@ public final class Converter {
             }
         });
 
+        // Integer/int conversions supported
+        factory.put(pair(Void.class, int.class), fromInstance -> 0);
+        factory.put(pair(Void.class, Integer.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(Short.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(Integer.class, Integer.class), fromInstance -> fromInstance);
+        factory.put(pair(Long.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(Float.class, Integer.class), fromInstance ->  ((Number) fromInstance).intValue());
+        factory.put(pair(Double.class, Integer.class), fromInstance ->  ((Number) fromInstance).intValue());
+        factory.put(pair(Boolean.class, Integer.class), fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
+        factory.put(pair(Character.class, Integer.class), fromInstance -> (int) (Character) fromInstance);
+        factory.put(pair(AtomicBoolean.class, Integer.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
+        factory.put(pair(AtomicInteger.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(AtomicLong.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(BigInteger.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(BigDecimal.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(Number.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
+        factory.put(pair(LocalDate.class, Integer.class), fromInstance -> (int)((LocalDate)fromInstance).toEpochDay());
+        factory.put(pair(Map.class, Integer.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, int.class, null));
+        factory.put(pair(String.class, Integer.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return INTEGER_ZERO;
+            }
+            try {
+                return Integer.valueOf(str);
+            } catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
+                }
+                return (int) value;
+            }
+        });
+
+        // Long/long conversions supported
+        factory.put(pair(Void.class, long.class), fromInstance -> 0L);
+        factory.put(pair(Void.class, Long.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(Short.class, Long.class), fromInstance ->  ((Number) fromInstance).longValue());
+        factory.put(pair(Integer.class, Long.class), fromInstance ->  ((Number) fromInstance).longValue());
+        factory.put(pair(Long.class, Long.class), fromInstance -> fromInstance);
+        factory.put(pair(Float.class, Long.class), fromInstance ->  ((Number) fromInstance).longValue());
+        factory.put(pair(Double.class, Long.class), fromInstance ->  ((Number) fromInstance).longValue());
+        factory.put(pair(Boolean.class, Long.class), fromInstance -> (Boolean) fromInstance ? LONG_ONE : LONG_ZERO);
+        factory.put(pair(Character.class, Long.class), fromInstance -> (long) ((char) fromInstance));
+        factory.put(pair(AtomicBoolean.class, Long.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
+        factory.put(pair(AtomicInteger.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(AtomicLong.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(BigInteger.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(BigDecimal.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(Number.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
+        factory.put(pair(Date.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
+        factory.put(pair(java.sql.Date.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
+        factory.put(pair(Timestamp.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
+        factory.put(pair(LocalDate.class, Long.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
+        factory.put(pair(LocalDateTime.class, Long.class), fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
+        factory.put(pair(ZonedDateTime.class, Long.class), fromInstance -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
+        factory.put(pair(GregorianCalendar.class, Long.class), fromInstance -> ((Calendar) fromInstance).getTime().getTime());
+        factory.put(pair(Map.class, Long.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, long.class, null));
+        factory.put(pair(String.class, Long.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return LONG_ZERO;
+            }
+            try {
+                return Long.valueOf(str);
+            } catch (NumberFormatException e) {
+                return convert(fromInstance, BigDecimal.class).longValue();
+            }
+        });
+
         // Convertable types
-        toTypes.put(int.class, Converter::convertToInteger);
-        toTypes.put(Integer.class, Converter::convertToInteger);
-        toTypes.put(long.class, Converter::convertToLong);
-        toTypes.put(Long.class, Converter::convertToLong);
         toTypes.put(float.class, Converter::convertToFloat);
         toTypes.put(Float.class, Converter::convertToFloat);
         toTypes.put(double.class, Converter::convertToDouble);
@@ -253,77 +314,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Integer/int
-        toInteger.put(Map.class, null);
-        toInteger.put(Integer.class, fromInstance -> fromInstance);
-        toInteger.put(Byte.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(Short.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(Long.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? INTEGER_ONE : INTEGER_ZERO);
-        toInteger.put(Float.class, fromInstance ->  ((Number) fromInstance).intValue());
-        toInteger.put(Double.class, fromInstance ->  ((Number) fromInstance).intValue());
-        toInteger.put(Character.class, fromInstance -> (int) ((char) fromInstance));
-        toInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? INTEGER_ONE : INTEGER_ZERO);
-        toInteger.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(BigInteger.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).intValue());
-        toInteger.put(LocalDate.class, fromInstance -> (int)((LocalDate)fromInstance).toEpochDay());
-        toInteger.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return INTEGER_ZERO;
-            }
-            try {
-                return Integer.valueOf(str);
-            } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
-                }
-                return (int) value;
-            }
-        });
-        targetTypes.put(int.class, toInteger);
-        targetTypes.put(Integer.class, toInteger);
-
-        // ? to Long/long
-        toLong.put(Map.class, null);
-        toLong.put(Long.class, fromInstance -> fromInstance);
-        toLong.put(Byte.class, fromInstance -> ((Number) fromInstance).longValue());
-        toLong.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? LONG_ONE : LONG_ZERO);
-        toLong.put(Character.class, fromInstance -> (long) ((char) fromInstance));
-        toLong.put(Short.class, fromInstance ->  ((Number) fromInstance).longValue());
-        toLong.put(Integer.class, fromInstance ->  ((Number) fromInstance).longValue());
-        toLong.put(Float.class, fromInstance ->  ((Number) fromInstance).longValue());
-        toLong.put(Double.class, fromInstance ->  ((Number) fromInstance).longValue());
-        toLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? LONG_ONE : LONG_ZERO);
-        toLong.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).longValue());
-        toLong.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).longValue());
-        toLong.put(BigInteger.class, fromInstance -> ((Number) fromInstance).longValue());
-        toLong.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).longValue());
-        toLong.put(Date.class, fromInstance -> ((Date) fromInstance).getTime());
-        toLong.put(java.sql.Date.class, fromInstance -> ((Date) fromInstance).getTime());
-        toLong.put(Timestamp.class, fromInstance -> ((Date) fromInstance).getTime());
-        toLong.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
-        toLong.put(LocalDateTime.class, fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
-        toLong.put(ZonedDateTime.class, fromInstance -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-        toLong.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).getTime().getTime());
-        toLong.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return LONG_ZERO;
-            }
-            try {
-                return Long.valueOf(str);
-            } catch (NumberFormatException e) {
-                return convert(fromInstance, BigDecimal.class).longValue();
-            }
-        });
-        targetTypes.put(long.class, toLong);
-        targetTypes.put(Long.class, toLong);
-
 
         // ? to Float/float
         toFloat.put(Map.class, null);
@@ -1313,44 +1303,6 @@ public final class Converter {
                 return (char)value;
             }
             throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-        }
-        return NOPE;
-    }
-
-    private static Object convertToInteger(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toInteger.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, int.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).intValue();
-        }
-        return NOPE;
-    }
-
-    private static Object convertToLong(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toLong.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, long.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).longValue();
-        } else if (fromInstance instanceof Calendar) {
-            return ((Calendar) fromInstance).getTime().getTime();
         }
         return NOPE;
     }
