@@ -107,8 +107,9 @@ public class PrimitivesTest
                 .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json5 = "{\"@type\":\"double\"}";
-        Double d = TestUtil.toObjects(json5, null);
-        assertNull(d);
+        assertThatThrownBy(() -> TestUtil.toObjects(json5, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json6 = "{\"@type\":\"char\"}";
         Character c = TestUtil.toObjects(json6, null);

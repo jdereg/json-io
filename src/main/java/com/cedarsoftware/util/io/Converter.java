@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBoolean = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toClass = new HashMap<>();
@@ -116,13 +115,9 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(float.class, 0.0f);
-        fromNull.put(double.class, 0.0d);
         fromNull.put(boolean.class, false);
         fromNull.put(char.class, (char)0);
 
-        fromNull.put(Float.class, null);
-        fromNull.put(Double.class, null);
         fromNull.put(Boolean.class, null);
         fromNull.put(Character.class, null);
 
@@ -272,7 +267,7 @@ public final class Converter {
         factory.put(pair(LocalDate.class, Long.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         factory.put(pair(LocalDateTime.class, Long.class), fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         factory.put(pair(ZonedDateTime.class, Long.class), fromInstance -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-        factory.put(pair(GregorianCalendar.class, Long.class), fromInstance -> ((Calendar) fromInstance).getTime().getTime());
+        factory.put(pair(Calendar.class, Long.class), fromInstance -> ((Calendar) fromInstance).getTime().getTime());
         factory.put(pair(Map.class, Long.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, long.class, null));
         factory.put(pair(String.class, Long.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -295,6 +290,7 @@ public final class Converter {
         factory.put(pair(Long.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(Float.class, Float.class), fromInstance -> fromInstance);
         factory.put(pair(Double.class, Float.class), fromInstance ->  ((Number) fromInstance).floatValue());
+        factory.put(pair(Number.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(Boolean.class, Float.class), fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         factory.put(pair(Character.class, Float.class), fromInstance -> (float) ((char) fromInstance));
         factory.put(pair(LocalDate.class, Float.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
@@ -315,10 +311,45 @@ public final class Converter {
                 throw new IllegalArgumentException(e.getMessage(), e.getCause());
             }
         });
-        
+
+        // Double/double conversions supported
+        factory.put(pair(Void.class, double.class), fromInstance -> 0.0d);
+        factory.put(pair(Void.class, Double.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Short.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Integer.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Long.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Float.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Double.class, Double.class), fromInstance -> fromInstance);
+        factory.put(pair(Number.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Boolean.class, Double.class), fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
+        factory.put(pair(Character.class, Double.class), fromInstance -> (double) ((char) fromInstance));
+        factory.put(pair(LocalDate.class, Double.class), fromInstance -> (double)((LocalDate) fromInstance).toEpochDay());
+        factory.put(pair(LocalDateTime.class, Double.class), fromInstance ->  (double) localDateTimeToMillis((LocalDateTime) fromInstance));
+        factory.put(pair(ZonedDateTime.class, Double.class), fromInstance -> (double) zonedDateTimeToMillis((ZonedDateTime) fromInstance));
+        factory.put(pair(Calendar.class, Double.class), fromInstance -> (double)((Calendar) fromInstance).getTime().getTime());
+        factory.put(pair(Date.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
+        factory.put(pair(java.sql.Date.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
+        factory.put(pair(Timestamp.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
+        factory.put(pair(AtomicBoolean.class, Double.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
+        factory.put(pair(AtomicInteger.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(AtomicLong.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(BigInteger.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(BigDecimal.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Map.class, Double.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, double.class, null));
+        factory.put(pair(String.class, Double.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return DOUBLE_ZERO;
+            }
+            try {
+                return Double.valueOf(str);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+            }
+        });
+
         // Convertable types
-        toTypes.put(double.class, Converter::convertToDouble);
-        toTypes.put(Double.class, Converter::convertToDouble);
         toTypes.put(boolean.class, Converter::convertToBoolean);
         toTypes.put(Boolean.class, Converter::convertToBoolean);
         toTypes.put(char.class, Converter::convertToCharacter);
@@ -340,42 +371,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-        
-        // ? to Double/double
-        toDouble.put(Map.class, null);
-        toDouble.put(Double.class, fromInstance -> fromInstance);
-        toDouble.put(Byte.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(Short.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(Integer.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(Long.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(Float.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
-        toDouble.put(Character.class, fromInstance -> (double) ((char) fromInstance));
-        toDouble.put(LocalDate.class, fromInstance -> (double)((LocalDate) fromInstance).toEpochDay());
-        toDouble.put(LocalDateTime.class, fromInstance ->  (double) localDateTimeToMillis((LocalDateTime) fromInstance));
-        toDouble.put(ZonedDateTime.class, fromInstance -> (double) zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-        toDouble.put(GregorianCalendar.class, fromInstance -> (double)((Calendar) fromInstance).getTime().getTime());
-        toDouble.put(Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
-        toDouble.put(java.sql.Date.class, fromInstance -> (double)((Date) fromInstance).getTime());
-        toDouble.put(Timestamp.class, fromInstance -> (double)((Date) fromInstance).getTime());
-        toDouble.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? DOUBLE_ONE : DOUBLE_ZERO);
-        toDouble.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(BigInteger.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).doubleValue());
-        toDouble.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return DOUBLE_ZERO;
-            }
-            try {
-                return Double.valueOf(str);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
-            }
-        });
-        targetTypes.put(double.class, toDouble);
-        targetTypes.put(Double.class, toDouble);
 
         // ? to Boolean/boolean
         toBoolean.put(Map.class, null);
@@ -1302,25 +1297,7 @@ public final class Converter {
         }
         return NOPE;
     }
-
-    private static Object convertToDouble(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toDouble.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, double.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).doubleValue();
-        }
-        return NOPE;
-    }
-
+    
     private static Object convertToBoolean(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toBoolean.get(fromType);

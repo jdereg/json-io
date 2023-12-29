@@ -1381,7 +1381,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'double'"));
         }
 
         try
@@ -1391,7 +1391,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("45.6badnumber"));
         }
     }
 
