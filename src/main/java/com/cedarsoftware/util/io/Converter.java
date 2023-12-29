@@ -88,8 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toLong = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDouble = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBoolean = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
@@ -288,9 +286,37 @@ public final class Converter {
             }
         });
 
+        // Float/float conversions supported
+        factory.put(pair(Void.class, float.class), fromInstance -> 0.0f);
+        factory.put(pair(Void.class, Float.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Short.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Integer.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Long.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Float.class, Float.class), fromInstance -> fromInstance);
+        factory.put(pair(Double.class, Float.class), fromInstance ->  ((Number) fromInstance).floatValue());
+        factory.put(pair(Boolean.class, Float.class), fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
+        factory.put(pair(Character.class, Float.class), fromInstance -> (float) ((char) fromInstance));
+        factory.put(pair(LocalDate.class, Float.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
+        factory.put(pair(AtomicBoolean.class, Float.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
+        factory.put(pair(AtomicInteger.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(AtomicLong.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(BigInteger.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(BigDecimal.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Map.class, Float.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, float.class, null));
+        factory.put(pair(String.class, Float.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return FLOAT_ZERO;
+            }
+            try {
+                return Float.valueOf(str);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+            }
+        });
+        
         // Convertable types
-        toTypes.put(float.class, Converter::convertToFloat);
-        toTypes.put(Float.class, Converter::convertToFloat);
         toTypes.put(double.class, Converter::convertToDouble);
         toTypes.put(Double.class, Converter::convertToDouble);
         toTypes.put(boolean.class, Converter::convertToBoolean);
@@ -314,37 +340,7 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Float/float
-        toFloat.put(Map.class, null);
-        toFloat.put(Float.class, fromInstance -> fromInstance);
-        toFloat.put(Byte.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(Short.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(Integer.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(Long.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(Double.class, fromInstance ->  ((Number) fromInstance).floatValue());
-        toFloat.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
-        toFloat.put(Character.class, fromInstance -> (float) ((char) fromInstance));
-        toFloat.put(LocalDate.class, fromInstance -> ((LocalDate) fromInstance).toEpochDay());
-        toFloat.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? FLOAT_ONE : FLOAT_ZERO);
-        toFloat.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(BigInteger.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).floatValue());
-        toFloat.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return FLOAT_ZERO;
-            }
-            try {
-                return Float.valueOf(str);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
-            }
-        });
-        targetTypes.put(float.class, toFloat);
-        targetTypes.put(Float.class, toFloat);
-
+        
         // ? to Double/double
         toDouble.put(Map.class, null);
         toDouble.put(Double.class, fromInstance -> fromInstance);
@@ -1303,24 +1299,6 @@ public final class Converter {
                 return (char)value;
             }
             throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-        }
-        return NOPE;
-    }
-
-    private static Object convertToFloat(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toFloat.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, float.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).floatValue();
         }
         return NOPE;
     }
