@@ -13,6 +13,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -22,6 +23,8 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -77,7 +80,9 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toTypes = new HashMap<>();
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
+    private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> factory = new HashMap<>();
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> userDefined = new HashMap<>();
+    private static final Map<Class<?>, Set<Class<?>>> cachedParents = new ConcurrentHashMap<>();
 
     // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
     // These remove 1 map lookup for bounded (known) types.
@@ -110,8 +115,12 @@ public final class Converter {
         T convert(Object fromInstance);
     }
 
+    private static Map.Entry<Class<?>, Class<?>> pair(Class<?> source, Class<?> target)
+    {
+        return new AbstractMap.SimpleImmutableEntry<>(source, target);
+    }
+
     static {
-        fromNull.put(byte.class, (byte)0);
         fromNull.put(short.class, (short)0);
         fromNull.put(int.class, 0);
         fromNull.put(long.class, 0L);
@@ -147,6 +156,43 @@ public final class Converter {
         fromNull.put(UUID.class, null);
         fromNull.put(Map.class, null);
 
+        // Conversions supported
+        factory.put(pair(Void.class, byte.class), fromInstance -> (byte)0);
+        factory.put(pair(Void.class, Byte.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Byte.class), fromInstance -> fromInstance);
+        factory.put(pair(Short.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Integer.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Long.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Float.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Double.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Boolean.class, Byte.class), fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
+        factory.put(pair(Character.class, Byte.class), fromInstance -> (byte) ((Character) fromInstance).charValue());
+        factory.put(pair(Map.class, Byte.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, byte.class, null));
+        factory.put(pair(Number.class, Byte.class), fromInstance -> ((Number)fromInstance).byteValue());
+        factory.put(pair(Calendar.class, Byte.class), fromInstance -> ((Number)fromInstance).byteValue());
+        factory.put(pair(AtomicBoolean.class, Byte.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
+        factory.put(pair(AtomicInteger.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(AtomicLong.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(BigInteger.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(BigDecimal.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(String.class, Byte.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return BYTE_ZERO;
+            }
+            try {
+                return Byte.valueOf(str);
+            } catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
+                    throw new IllegalArgumentException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
+                }
+                return (byte) value;
+            }
+        });
+        targetTypes.put(byte.class, toByte);
+        targetTypes.put(Byte.class, toByte);
+
         // Convertable types
         toTypes.put(byte.class, Converter::convertToByte);
         toTypes.put(Byte.class, Converter::convertToByte);
@@ -181,43 +227,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        if (fromNull.size() != toTypes.size()) {
-            new Throwable("Mismatch in size of 'fromNull' versus 'converters' in Converters.java").printStackTrace();
-        }
-
-        // ? to Byte/byte
-        toByte.put(Map.class, null);
-        toByte.put(Byte.class, fromInstance -> fromInstance);
-        toByte.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
-        toByte.put(Character.class, fromInstance -> (byte) ((char) fromInstance));
-        toByte.put(Short.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(Integer.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(Long.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(Float.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(Double.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
-        toByte.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(BigInteger.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).byteValue());
-        toByte.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return BYTE_ZERO;
-            }
-            try {
-                return Byte.valueOf(str);
-            } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
-                    throw new IllegalArgumentException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
-                }
-                return (byte) value;
-            }
-        });
-        targetTypes.put(byte.class, toByte);
-        targetTypes.put(Byte.class, toByte);
 
         // ? to Short/short
         toShort.put(Map.class, null);
@@ -892,6 +901,31 @@ public final class Converter {
     private Converter() {
     }
 
+    public static Set<Class<?>> getSuperClassesAndInterfaces(Class<?> clazz) {
+        if (cachedParents.containsKey(clazz)) {
+            return cachedParents.get(clazz);
+        }
+        Set<Class<?>> result = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
+        addSuperClassesAndInterfaces(clazz, result);
+        cachedParents.put(clazz, result);
+        return result;
+    }
+
+    private static void addSuperClassesAndInterfaces(Class<?> clazz, Set<Class<?>> result) {
+        // Add all superinterfaces
+        for (Class<?> iface : clazz.getInterfaces()) {
+            result.add(iface);
+            addSuperClassesAndInterfaces(iface, result);
+        }
+
+        // Add superclass
+        Class<?> superClass = clazz.getSuperclass();
+        if (superClass != null && superClass != Object.class) {
+            result.add(superClass);
+            addSuperClassesAndInterfaces(superClass, result);
+        }
+    }
+
     /**
      * Turn the passed in value to the class indicated.  This will allow, for
      * example, a String to be passed in and be converted to a Long.
@@ -920,7 +954,35 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
-        Convert<?> converter = toTypes.get(toType);
+        Class<?> sourceType;
+        if (fromInstance == null) {
+            // Do not promote primitive to primitive wrapper - allows for different 'from NULL' type for each.
+            sourceType = Void.class;
+        } else {
+            // Promote primitive to primitive wrapper so we don't have to define so many duplicates in the factory map.
+            sourceType = fromInstance.getClass();
+            if (toType.isPrimitive()) {
+                toType = (Class<T>) toPrimitiveWrapperClass(toType);
+            }
+        }
+
+        // Direct Mapping
+        Convert<?> converter = factory.get(pair(sourceType, toType));
+        if (converter != null) {
+            return (T) converter.convert(fromInstance);
+        }
+
+        // Try inheritance
+        Set<Class<?>> parentTypes = getSuperClassesAndInterfaces(sourceType);
+        for (Class<?> clazz : parentTypes) {
+            converter = factory.get(pair(clazz, toType));
+            if (converter != null) {
+                return (T) converter.convert(fromInstance);
+            }
+        }
+
+        // Will be removing this code.
+        converter = toTypes.get(toType);
         if (converter != null) {
             if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
                 return (T) fromNull.get(toType);
@@ -1657,10 +1719,6 @@ public final class Converter {
      */
     public static Class<?> toPrimitiveWrapperClass(Class<?> primitiveClass)
     {
-        if (!primitiveClass.isPrimitive()) {
-            throw new IllegalArgumentException("Passed in class: " + primitiveClass + " is not a primitive class");
-        }
-        
         if (primitiveClass == int.class) {
             return Integer.class;
         } else if (primitiveClass == long.class) {
@@ -1680,7 +1738,7 @@ public final class Converter {
         } else if (primitiveClass == void.class) {
             return Void.class;
         } else {
-            throw new IllegalArgumentException("Unknown primitive type: " + primitiveClass);
+            throw new IllegalArgumentException("Passed in class: " + primitiveClass + " is not a primitive class");
         }
     }
 }

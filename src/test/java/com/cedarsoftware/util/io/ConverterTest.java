@@ -1810,13 +1810,13 @@ class ConverterTest
     @Test
     void testConvert2()
     {
+        assert !convert(null, boolean.class);
         assert convert("true", boolean.class);
         assert convert("true", Boolean.class);
         assert !convert("false", boolean.class);
         assert !convert("false", Boolean.class);
         assert !convert("", boolean.class);
         assert !convert("", Boolean.class);
-        assert !convert(null, boolean.class);
         assert null == convert(null, Boolean.class);
         assert -8 == convert("-8", byte.class);
         assert -8 == convert("-8", int.class);
@@ -1875,6 +1875,8 @@ class ConverterTest
     @Test
     void testCharacterSupport()
     {
+        assert 65 == convert('A', Byte.class);
+        assert 65 == convert('A', byte.class);
         assert 65 == convert('A', Short.class);
         assert 65 == convert('A', short.class);
         assert 65 == convert('A', Integer.class);
@@ -1908,8 +1910,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert(Long.MAX_VALUE, char.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [Long (9223372036854775807)] could not be converted to a 'char'");
-
+                .hasMessageContaining("Value [Long (9223372036854775807)] could not be converted to a 'Character'");
     }
 
     @Test
@@ -2456,7 +2457,6 @@ class ConverterTest
         assertThatThrownBy(() -> convert(null, Collection.class))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unsupported target type 'Collection' requested for conversion");
-
     }
 
     @Test

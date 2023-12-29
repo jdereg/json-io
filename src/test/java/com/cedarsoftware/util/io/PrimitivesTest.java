@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -78,41 +79,43 @@ public class PrimitivesTest
     @Test
     public void testEmptyPrimitives()
     {
-        String json = "{\"@type\":\"byte\"}";
-        Byte b = TestUtil.toObjects(json, null);
-        assertNull(b);
+        final String json = "{\"@type\":\"byte\"}";
 
-        json = "{\"@type\":\"short\"}";
-        Short s = TestUtil.toObjects(json, null);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
+        
+        final String json1 = "{\"@type\":\"short\"}";
+        Short s = TestUtil.toObjects(json1, null);
         assertNull(s);
 
-        json = "{\"@type\":\"int\"}";
-        Integer i = TestUtil.toObjects(json, null);
+        final String json2 = "{\"@type\":\"int\"}";
+        Integer i = TestUtil.toObjects(json2, null);
         assertNull(i);
 
-        json = "{\"@type\":\"long\"}";
-        Long l = TestUtil.toObjects(json, null);
+        final String json3 = "{\"@type\":\"long\"}";
+        Long l = TestUtil.toObjects(json3, null);
         assertNull(l);
 
-        json = "{\"@type\":\"float\"}";
-        Float f = TestUtil.toObjects(json, null);
+        final String json4 = "{\"@type\":\"float\"}";
+        Float f = TestUtil.toObjects(json4, null);
         assertNull(f);
 
-        json = "{\"@type\":\"double\"}";
-        Double d = TestUtil.toObjects(json, null);
+        final String json5 = "{\"@type\":\"double\"}";
+        Double d = TestUtil.toObjects(json5, null);
         assertNull(d);
 
-        json = "{\"@type\":\"char\"}";
-        Character c = TestUtil.toObjects(json, null);
+        final String json6 = "{\"@type\":\"char\"}";
+        Character c = TestUtil.toObjects(json6, null);
         assertNull(c);
 
-        json = "{\"@type\":\"boolean\"}";
-        Boolean bool = TestUtil.toObjects(json, null);
+        final String json7 = "{\"@type\":\"boolean\"}";
+        Boolean bool = TestUtil.toObjects(json7, null);
         assertNull(bool);
 
-        json = "{\"@type\":\"string\"}";
+        final String json8 = "{\"@type\":\"string\"}";
         String str = null;
-        str = TestUtil.toObjects(json, null);
+        str = TestUtil.toObjects(json8, null);
         assertNull(str);
     }
 
