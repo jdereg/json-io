@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -25,9 +27,8 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 import com.cedarsoftware.util.reflect.Accessor;
-import lombok.Getter;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import lombok.Getter;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -619,29 +620,25 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         {
             showType = false;
         }
-        if (obj instanceof Character) {
-            writeJsonUtf8String(out, String.valueOf(obj));
-        } else {
-            if (obj instanceof Long && getWriteOptions().isWriteLongsAsStrings()) {
-                if (showType) {
-                    out.write('{');
-                    writeType("long", out);
-                    out.write(',');
-                }
-
-                JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
-                writer.write(obj, showType, out, this);
-
-                if (showType) {
-                    out.write('}');
-                }
-            } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
-                out.write("null");
-            } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
-                out.write("null");
-            } else {
-                out.write(obj.toString());
+        if (obj instanceof Long && getWriteOptions().isWriteLongsAsStrings()) {
+            if (showType) {
+                out.write('{');
+                writeType("long", out);
+                out.write(',');
             }
+
+            JsonClassWriter writer = getWriteOptions().getCustomWriter(Long.class);
+            writer.write(obj, showType, out, this);
+
+            if (showType) {
+                out.write('}');
+            }
+        } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Double && (Double.isNaN((Double) obj) || Double.isInfinite((Double) obj))) {
+            out.write("null");
+        } else if (!writeOptions.isAllowNanAndInfinity() && obj instanceof Float && (Float.isNaN((Float) obj) || Float.isInfinite((Float) obj))) {
+            out.write("null");
+        } else {
+            out.write(obj.toString());
         }
     }
 
@@ -741,7 +738,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         else
         {
             final Class<?> componentClass = array.getClass().getComponentType();
-            final boolean isPrimitiveArray = Primitives.isPrimitive(componentClass);
             for (int i = 0; i < len; i++)
             {
                 final Object value = Array.get(array, i);
@@ -750,10 +746,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                     output.write("null");
                 } else {
                     final boolean forceType = isForceType(value.getClass(), componentClass);
-                    if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
-                    } else if (isPrimitiveArray || value instanceof Boolean || value instanceof Long || value instanceof Double) {
-                        writePrimitive(value, value.getClass() != componentClass);
-                    } else {   // When neverShowType specified, do not allow primitives to show up as {"value":6} for example.
+                    if (!writeArrayElementIfMatching(componentClass, value, forceType, output)) {
                         writeImpl(value, forceType);
                     }
                 }
@@ -1022,15 +1015,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
                 output.write("null");
             } else {
                 final boolean forceType = isForceType(value.getClass(), componentClass);
-                if (Character.class == componentClass || char.class == componentClass) {
+                if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                } else if (Character.class == componentClass || char.class == componentClass) {
+                    writeJsonUtf8String(output, (String) value);
+                } else if (value instanceof String) {
                     writeJsonUtf8String(output, (String) value);
                 } else if (value instanceof Boolean || value instanceof Long || value instanceof Double) {
-                    writePrimitive(value, value.getClass() != componentClass);
-                } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
-                    writePrimitive(value, false);
-                } else if (value instanceof String) {   // Have to specially treat String because it could be referenced, but we still want inline (no @type, value:)
-                    writeJsonUtf8String(output, (String) value);
-                } else if (writeArrayElementIfMatching(componentClass, value, forceType, output)) {
+                    writePrimitive(value, forceType);
                 } else {   // Specific Class-type arrays - only force type when
                     // the instance is derived from array base class.
                     writeImpl(value, forceType);
@@ -1277,8 +1268,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             if (value == null)
             {
                 output.write("null");
-            } else if (getWriteOptions().isNeverShowingType() && MetaUtils.isPrimitive(value.getClass())) {
-                writePrimitive(value, false);
             }
             else if (value instanceof BigDecimal || value instanceof BigInteger)
             {
@@ -1705,15 +1694,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         final boolean objectClassIsLongWrittenAsString = (objectClass == Long.class || objectClass == long.class) && writeLongsAsStrings;
         final boolean declaredClassIsLongWrittenAsString = (declaredType == Long.class || objectClass == long.class) && writeLongsAsStrings;
 
-        final boolean isNativeJson = Primitives.isNativeJsonType(objectClass) && !objectClassIsLongWrittenAsString;
-        final boolean isPrimitiveDeclaredType = Primitives.isPrimitive(declaredType) && !declaredClassIsLongWrittenAsString;
-        final boolean isPrimitiveObjectClass = writeOptions.isNeverShowingType() && Primitives.isPrimitive(objectClass) && !objectClassIsLongWrittenAsString;
+        if (Primitives.isNativeJsonType(objectClass) && !objectClassIsLongWrittenAsString) {
+            return false;
+        }
 
-        final boolean primitiveCondition = isNativeJson ||
-                isPrimitiveDeclaredType ||
-                isPrimitiveObjectClass;
+        if (Primitives.isPrimitive(declaredType) && !declaredClassIsLongWrittenAsString) {
+            return false;
+        }
 
-        if (primitiveCondition) {
+        if (writeOptions.isNeverShowingType() && Primitives.isPrimitive(objectClass) && !objectClassIsLongWrittenAsString) {
             return false;
         }
 
