@@ -86,8 +86,10 @@ public class PrimitivesTest
                 .hasMessageContaining("include keys: '_v' or 'value'");
         
         final String json1 = "{\"@type\":\"short\"}";
-        Short s = TestUtil.toObjects(json1, null);
-        assertNull(s);
+
+        assertThatThrownBy(() -> TestUtil.toObjects(json1, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json2 = "{\"@type\":\"int\"}";
         Integer i = TestUtil.toObjects(json2, null);

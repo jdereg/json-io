@@ -88,8 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toByte = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toShort = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLong = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toFloat = new HashMap<>();
@@ -156,7 +154,7 @@ public final class Converter {
         fromNull.put(UUID.class, null);
         fromNull.put(Map.class, null);
 
-        // Conversions supported
+        // Byte/byte Conversions supported
         factory.put(pair(Void.class, byte.class), fromInstance -> (byte)0);
         factory.put(pair(Void.class, Byte.class), fromInstance -> null);
         factory.put(pair(Byte.class, Byte.class), fromInstance -> fromInstance);
@@ -190,14 +188,42 @@ public final class Converter {
                 return (byte) value;
             }
         });
-        targetTypes.put(byte.class, toByte);
-        targetTypes.put(Byte.class, toByte);
+
+        // Short/short conversions supported
+        factory.put(pair(Void.class, short.class), fromInstance -> (short)0);
+        factory.put(pair(Void.class, Short.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(Boolean.class, Short.class), fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
+        factory.put(pair(Character.class, Short.class), fromInstance -> (short) ((char) fromInstance));
+        factory.put(pair(Short.class, Short.class), fromInstance -> fromInstance);
+        factory.put(pair(Integer.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
+        factory.put(pair(Long.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
+        factory.put(pair(Float.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
+        factory.put(pair(Double.class, Short.class), fromInstance ->  ((Number) fromInstance).shortValue());
+        factory.put(pair(AtomicBoolean.class, Short.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
+        factory.put(pair(AtomicInteger.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(AtomicLong.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(BigInteger.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(BigDecimal.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
+        factory.put(pair(LocalDate.class, Short.class), fromInstance -> ((LocalDate)fromInstance).toEpochDay());
+        factory.put(pair(Map.class, Short.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, byte.class, null));
+        factory.put(pair(String.class, Short.class),fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return SHORT_ZERO;
+            }
+            try {
+                return Short.valueOf(str);
+            } catch (NumberFormatException e) {
+                long value = convert(fromInstance, long.class);
+                if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
+                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
+                }
+                return (short) value;
+            }
+        });
 
         // Convertable types
-        toTypes.put(byte.class, Converter::convertToByte);
-        toTypes.put(Byte.class, Converter::convertToByte);
-        toTypes.put(short.class, Converter::convertToShort);
-        toTypes.put(Short.class, Converter::convertToShort);
         toTypes.put(int.class, Converter::convertToInteger);
         toTypes.put(Integer.class, Converter::convertToInteger);
         toTypes.put(long.class, Converter::convertToLong);
@@ -227,40 +253,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Short/short
-        toShort.put(Map.class, null);
-        toShort.put(Short.class, fromInstance -> fromInstance);
-        toShort.put(Byte.class, fromInstance -> ((Number) fromInstance).shortValue());
-        toShort.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? SHORT_ONE : SHORT_ZERO);
-        toShort.put(Character.class, fromInstance -> (short) ((char) fromInstance));
-        toShort.put(Integer.class, fromInstance ->  ((Number) fromInstance).shortValue());
-        toShort.put(Long.class, fromInstance ->  ((Number) fromInstance).shortValue());
-        toShort.put(Float.class, fromInstance ->  ((Number) fromInstance).shortValue());
-        toShort.put(Double.class, fromInstance ->  ((Number) fromInstance).shortValue());
-        toShort.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? SHORT_ONE : SHORT_ZERO);
-        toShort.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).shortValue());
-        toShort.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).shortValue());
-        toShort.put(BigInteger.class, fromInstance -> ((Number) fromInstance).shortValue());
-        toShort.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).shortValue());
-        toShort.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).toEpochDay());
-        toShort.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return SHORT_ZERO;
-            }
-            try {
-                return Short.valueOf(str);
-            } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
-                }
-                return (short) value;
-            }
-        });
-        targetTypes.put(short.class, toShort);
-        targetTypes.put(Short.class, toShort);
 
         // ? to Integer/int
         toInteger.put(Map.class, null);
@@ -1321,42 +1313,6 @@ public final class Converter {
                 return (char)value;
             }
             throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-        }
-        return NOPE;
-    }
-
-    private static Object convertToByte(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toByte.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, byte.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).byteValue();
-        }
-        return NOPE;
-    }
-
-    private static Object convertToShort(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toShort.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, short.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).shortValue();
         }
         return NOPE;
     }

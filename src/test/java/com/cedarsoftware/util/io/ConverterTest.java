@@ -114,7 +114,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'byte'"));
         }
 
         try
@@ -171,7 +171,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'short'"));
         }
 
         try
