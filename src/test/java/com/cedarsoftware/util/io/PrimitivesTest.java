@@ -116,8 +116,9 @@ public class PrimitivesTest
         assertNull(c);
 
         final String json7 = "{\"@type\":\"boolean\"}";
-        Boolean bool = TestUtil.toObjects(json7, null);
-        assertNull(bool);
+        assertThatThrownBy(() -> TestUtil.toObjects(json7, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("include keys: '_v' or 'value'");
 
         final String json8 = "{\"@type\":\"string\"}";
         String str = null;

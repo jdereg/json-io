@@ -57,7 +57,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
- *         limitations under the License.*
+ *         limitations under the License.
  */
 
 public final class Converter {
@@ -115,10 +115,8 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(boolean.class, false);
         fromNull.put(char.class, (char)0);
 
-        fromNull.put(Boolean.class, null);
         fromNull.put(Character.class, null);
 
         fromNull.put(String.class, null);
@@ -150,14 +148,14 @@ public final class Converter {
         factory.put(pair(Double.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
         factory.put(pair(Boolean.class, Byte.class), fromInstance -> (Boolean) fromInstance ? BYTE_ONE : BYTE_ZERO);
         factory.put(pair(Character.class, Byte.class), fromInstance -> (byte) ((Character) fromInstance).charValue());
-        factory.put(pair(Map.class, Byte.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, byte.class, null));
-        factory.put(pair(Number.class, Byte.class), fromInstance -> ((Number)fromInstance).byteValue());
         factory.put(pair(Calendar.class, Byte.class), fromInstance -> ((Number)fromInstance).byteValue());
         factory.put(pair(AtomicBoolean.class, Byte.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? BYTE_ONE : BYTE_ZERO);
         factory.put(pair(AtomicInteger.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
         factory.put(pair(AtomicLong.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
         factory.put(pair(BigInteger.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
         factory.put(pair(BigDecimal.class, Byte.class), fromInstance -> ((Number) fromInstance).byteValue());
+        factory.put(pair(Number.class, Byte.class), fromInstance -> ((Number)fromInstance).byteValue());
+        factory.put(pair(Map.class, Byte.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, byte.class, null));
         factory.put(pair(String.class, Byte.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
             if (str.isEmpty()) {
@@ -190,8 +188,8 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
         factory.put(pair(BigInteger.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
         factory.put(pair(BigDecimal.class, Short.class), fromInstance -> ((Number) fromInstance).shortValue());
-        factory.put(pair(Number.class, Short.class), fromInstance -> ((Number)fromInstance).shortValue());
         factory.put(pair(LocalDate.class, Short.class), fromInstance -> ((LocalDate)fromInstance).toEpochDay());
+        factory.put(pair(Number.class, Short.class), fromInstance -> ((Number)fromInstance).shortValue());
         factory.put(pair(Map.class, Short.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, short.class, null));
         factory.put(pair(String.class, Short.class),fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -225,8 +223,8 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
         factory.put(pair(BigInteger.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
         factory.put(pair(BigDecimal.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
-        factory.put(pair(Number.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
         factory.put(pair(LocalDate.class, Integer.class), fromInstance -> (int)((LocalDate)fromInstance).toEpochDay());
+        factory.put(pair(Number.class, Integer.class), fromInstance -> ((Number) fromInstance).intValue());
         factory.put(pair(Map.class, Integer.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, int.class, null));
         factory.put(pair(String.class, Integer.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -260,13 +258,13 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(BigInteger.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(BigDecimal.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
-        factory.put(pair(Number.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(Date.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
         factory.put(pair(java.sql.Date.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
         factory.put(pair(Timestamp.class, Long.class), fromInstance -> ((Date) fromInstance).getTime());
         factory.put(pair(LocalDate.class, Long.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         factory.put(pair(LocalDateTime.class, Long.class), fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         factory.put(pair(ZonedDateTime.class, Long.class), fromInstance -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
+        factory.put(pair(Number.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(Calendar.class, Long.class), fromInstance -> ((Calendar) fromInstance).getTime().getTime());
         factory.put(pair(Map.class, Long.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, long.class, null));
         factory.put(pair(String.class, Long.class), fromInstance -> {
@@ -349,9 +347,39 @@ public final class Converter {
             }
         });
 
+        // Boolean/boolean conversions supported
+        factory.put(pair(Void.class, boolean.class), fromInstance -> false);
+        factory.put(pair(Void.class, Boolean.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Boolean.class), fromInstance -> ((Number) fromInstance).byteValue() != 0);
+        factory.put(pair(Short.class, Boolean.class), fromInstance -> ((Number) fromInstance).shortValue() != 0);
+        factory.put(pair(Integer.class, Boolean.class), fromInstance -> ((Number) fromInstance).intValue() != 0);
+        factory.put(pair(Long.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(Float.class, Boolean.class), fromInstance -> ((Number) fromInstance).floatValue() != 0.0f);
+        factory.put(pair(Double.class, Boolean.class), fromInstance -> ((Number) fromInstance).doubleValue() != 0.0d);
+        factory.put(pair(Number.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(Boolean.class, Boolean.class), fromInstance -> fromInstance);
+        factory.put(pair(Character.class, Boolean.class), fromInstance -> ((char) fromInstance) > 0);
+        factory.put(pair(AtomicBoolean.class, Boolean.class), fromInstance -> ((AtomicBoolean) fromInstance).get());
+        factory.put(pair(AtomicInteger.class, Boolean.class), fromInstance -> ((Number) fromInstance).intValue() != 0);
+        factory.put(pair(AtomicLong.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(BigInteger.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(BigDecimal.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(Map.class, Boolean.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, boolean.class, null));
+        factory.put(pair(String.class, Boolean.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return false;
+            }
+            // faster equals check "true" and "false"
+            if ("true".equals(str)) {
+                return true;
+            } else if ("false".equals(str)) {
+                return false;
+            }
+            return "true".equalsIgnoreCase(str);
+        });
+
         // Convertable types
-        toTypes.put(boolean.class, Converter::convertToBoolean);
-        toTypes.put(Boolean.class, Converter::convertToBoolean);
         toTypes.put(char.class, Converter::convertToCharacter);
         toTypes.put(Character.class, Converter::convertToCharacter);
         toTypes.put(String.class, Converter::convertToString);
@@ -371,38 +399,7 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Boolean/boolean
-        toBoolean.put(Map.class, null);
-        toBoolean.put(Boolean.class, fromInstance -> fromInstance);
-        toBoolean.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0);
-        toBoolean.put(Short.class, fromInstance -> ((Number) fromInstance).shortValue() != 0);
-        toBoolean.put(Integer.class, fromInstance -> ((Number) fromInstance).intValue() != 0);
-        toBoolean.put(Long.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
-        toBoolean.put(Float.class, fromInstance -> ((Number) fromInstance).floatValue() != 0.0f);
-        toBoolean.put(Double.class, fromInstance -> ((Number) fromInstance).doubleValue() != 0.0d);
-        toBoolean.put(Character.class, fromInstance -> ((char) fromInstance) > 0);
-        toBoolean.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get());
-        toBoolean.put(AtomicInteger.class, fromInstance -> ((Number) fromInstance).intValue() != 0);
-        toBoolean.put(AtomicLong.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
-        toBoolean.put(BigInteger.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
-        toBoolean.put(BigDecimal.class, fromInstance -> ((Number) fromInstance).longValue() != 0);
-        toBoolean.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return false;
-            }
-            // faster equals check "true" and "false"
-            if ("true".equals(str)) {
-                return true;
-            } else if ("false".equals(str)) {
-                return false;
-            }
-            return "true".equalsIgnoreCase(str);
-        });
-        targetTypes.put(boolean.class, toBoolean);
-        targetTypes.put(Boolean.class, toBoolean);
-
+        
         // ? to Character/char
         toCharacter.put(Map.class, null);
         toCharacter.put(Character.class, fromInstance -> fromInstance);
@@ -1298,24 +1295,6 @@ public final class Converter {
         return NOPE;
     }
     
-    private static Object convertToBoolean(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toBoolean.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, boolean.class, null);
-        } else if (fromInstance instanceof Number) {
-            return ((Number) fromInstance).longValue() != 0;
-        }
-        return NOPE;
-    }
-
     private static Object convertToAtomicBoolean(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toAtomicBoolean.get(fromType);

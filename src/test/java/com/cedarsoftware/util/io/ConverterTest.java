@@ -1426,7 +1426,7 @@ class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'boolean'"));
         }
     }
 
