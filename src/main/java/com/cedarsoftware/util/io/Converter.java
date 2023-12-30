@@ -917,6 +917,9 @@ public final class Converter {
      */
     @SuppressWarnings("unchecked")
     public static <T> T convert(Object fromInstance, Class<T> toType) {
+        if (toType == null) {
+            throw new IllegalArgumentException("toType cannot be null");
+        }
         Class<?> sourceType;
         if (fromInstance == null) {
             // Do not promote primitive to primitive wrapper - allows for different 'from NULL' type for each.

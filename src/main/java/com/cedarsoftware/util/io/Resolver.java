@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 

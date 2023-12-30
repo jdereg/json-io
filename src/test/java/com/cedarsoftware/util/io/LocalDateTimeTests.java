@@ -1,5 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.Arguments;
+
 import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
@@ -31,31 +36,33 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
     }
 
     @Override
+    protected Class<LocalDateTime> getTestClass() {
+        return LocalDateTime.class;
+    }
+
+    @Override
     protected boolean isReferenceable() {
         return false;
     }
 
+    @Override
+    protected LocalDateTime[] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedLocalDateTime date = (NestedLocalDateTime) o;
+        return new LocalDateTime[]{date.dateTime1, date.dateTime2};
+    }
+
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedLocalDateTime(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected LocalDateTime[] extractNestedInObject(Object o) {
-        LocalDateTimeTests.NestedLocalDateTime nested = (LocalDateTimeTests.NestedLocalDateTime) o;
-
-        return new LocalDateTime[]{
-                nested.dateTime1,
-                nested.dateTime2
-        };
-    }
-
-    @Override
-    protected Object provideNestedInObject_withDuplicates() {
-        return new NestedLocalDateTime(provideT1());
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
+        LocalDateTime date = provideT1();
+        return new NestedLocalDateTime(date, date);
     }
 
     @Override
@@ -121,21 +128,10 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
         return MetaUtils.loadResourceAsString("localdatetime/" + fileName);
     }
 
+    @Getter
+    @AllArgsConstructor
     private static class NestedLocalDateTime {
         public LocalDateTime dateTime1;
         public LocalDateTime dateTime2;
-        public String holiday;
-        public Long value;
-
-        public NestedLocalDateTime(LocalDateTime dateTime1, LocalDateTime dateTime2) {
-            this.holiday = "Festivus";
-            this.value = 999L;
-            this.dateTime1 = dateTime1;
-            this.dateTime2 = dateTime2;
-        }
-
-        public NestedLocalDateTime(LocalDateTime date) {
-            this(date, date);
-        }
     }
 }

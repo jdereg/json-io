@@ -1,5 +1,22 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import static com.cedarsoftware.util.io.Converter.convert;
+import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
+import static com.cedarsoftware.util.io.Converter.localDateToMillis;
+import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
+import static com.cedarsoftware.util.io.ConverterTest.fubar.bar;
+import static com.cedarsoftware.util.io.ConverterTest.fubar.foo;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
@@ -21,23 +38,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.Converter.convert;
-import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
-import static com.cedarsoftware.util.io.Converter.localDateToMillis;
-import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
-import static com.cedarsoftware.util.io.ConverterTest.fubar.bar;
-import static com.cedarsoftware.util.io.ConverterTest.fubar.foo;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com) & Ken Partlow
@@ -1836,15 +1839,9 @@ class ConverterTest
     @Test
     void testNullType()
     {
-        try
-        {
-            convert("123", null);
-            fail();
-        }
-        catch (Exception e)
-        {
-            e.getMessage().toLowerCase().contains("type cannot be null");
-        }
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> convert("123", null))
+                // No Message was coming through here and receiving NullPointerException -- changed to convention over in convert -- hopefully that's what you had in mind.
+                .withMessageContaining("toType cannot be null");
     }
 
     @Test

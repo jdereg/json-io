@@ -1,15 +1,13 @@
 {
   "@type": "com.cedarsoftware.util.io.LocalTimeTests$NestedLocalTime",
-  "time1": {
+  "one": {
     "@id": 1,
     "hour": 9,
     "minute": 12,
     "second": 15,
     "nano": 999999
   },
-  "time2": {
+  "two": {
     "@ref": 1
-  },
-  "holiday": "Festivus",
-  "value": 999
+  }
 }

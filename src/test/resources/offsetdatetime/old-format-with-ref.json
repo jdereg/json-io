@@ -1,6 +1,6 @@
 {
-  "@type": "com.cedarsoftware.util.io.models.NestedOffsetDateTime",
-  "date1": {
+  "@type": "com.cedarsoftware.util.io.OffsetDateTimeTests$NestedOffsetDateTime",
+  "one": {
     "dateTime": {
       "@id": 1,
       "value": "2019-12-15T09:07:16.000002"
@@ -10,14 +10,12 @@
       "value": "Z"
     }
   },
-  "date2": {
+  "two": {
     "dateTime": {
       "@ref": 1
     },
     "offset": {
       "@ref": 2
     }
-  },
-  "holiday": "Festivus",
-  "value": 999
+  }
 }

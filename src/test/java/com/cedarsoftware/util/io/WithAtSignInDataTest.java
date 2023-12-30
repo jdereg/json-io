@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io;
 
 import java.util.Map;
 
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 /**

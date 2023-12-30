@@ -2,8 +2,8 @@ package com.cedarsoftware.util.reflect;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
@@ -47,42 +47,46 @@ public class Accessor {
      */
     @Getter
     private final String displayName;
-    private MethodHandle methodHandle;
+    private final MethodHandle methodHandle;
 
     /**
      * This will be the modifiers of the field or method that defines this MethodHandle
      * (or Field) itself if we had to fall back to field access.
      */
     @Getter
-    private final int modifiers;
+    private final boolean isPublic;
 
-    public Accessor(Field field, String uniqueFieldName) throws Throwable {
+    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String displayName, boolean isPublic) {
         this.field = field;
+        this.methodHandle = methodHandle;
         this.uniqueFieldName = uniqueFieldName;
+        this.displayName = displayName;
+        this.isPublic = isPublic;
+    }
 
-        this.displayName = field.getName();
-        this.modifiers = field.getModifiers();
+
+    public static Accessor create(Field field, String uniqueFieldName) {
+        if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
+            MetaUtils.trySetAccessible(field);
+        }
 
         try {
-            this.methodHandle = MethodHandles.lookup().unreflectGetter(field);
-        } catch (ThreadDeath td) {
-            throw td;
-        } catch (Throwable t) {
-            if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
-                MetaUtils.trySetAccessible(field);
-            }
-            this.methodHandle = null;
+            MethodHandle handle = MethodHandles.lookup().unreflectGetter(field);
+            return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()));
+        } catch (IllegalAccessException ex) {
+            return null;
         }
     }
 
-    public Accessor(Field field, Method method, String uniqueFieldName) throws Throwable {
-        this.uniqueFieldName = uniqueFieldName;
-        this.field = field;
-
-        this.displayName = method.getName();
-        this.modifiers = method.getModifiers();
-
-        this.methodHandle = MethodHandles.lookup().unreflect(method);
+    public static Accessor create(Field field, String method, String uniqueFieldName) {
+        try {
+            MethodType type = MethodType.methodType(field.getType());
+            MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), method, type);
+            return new Accessor(field, handle, uniqueFieldName, method, true);
+        } catch (NoSuchMethodException | IllegalAccessException ex) {
+            // ignore
+            return null;
+        }
     }
 
     public Object retrieve(Object o) {
@@ -115,7 +119,7 @@ public class Accessor {
         return field.getName();
     }
 
-    public boolean isPublic() {
-        return Modifier.isPublic(this.modifiers);
+    public boolean isMethodHandlePresent() {
+        return methodHandle != null;
     }
 }

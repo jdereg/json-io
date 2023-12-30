@@ -1,19 +1,23 @@
 package com.cedarsoftware.util.io.factory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import static com.cedarsoftware.util.io.Converter.convert;
+
 import java.time.LocalDate;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.TestUtil;
-import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.util.io.Converter.convert;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.TestUtil;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 class LocalDateFactoryTests {
     private static Stream<Arguments> nonValueVariants() {
@@ -70,15 +74,15 @@ class LocalDateFactoryTests {
     @Test
     void testOldFormat_nestedLevel() {
 
-        String json = loadJsonForTest("old-format-nested-level.json");
+        String json = loadJsonForTest("old-format-nested-factory.json");
         NestedLocalDate nested = TestUtil.toObjects(json, null);
 
-        assertThat(nested.getDate1())
+        assertThat(nested.one)
                 .hasYear(2014)
                 .hasMonthValue(6)
                 .hasDayOfMonth(13);
 
-        assertThat(nested.getDate2())
+        assertThat(nested.two)
                 .hasYear(2024)
                 .hasMonthValue(9)
                 .hasDayOfMonth(12);
@@ -95,5 +99,12 @@ class LocalDateFactoryTests {
         object.put("month", month);
         object.put("day", day);
         return object;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class NestedLocalDate {
+        private final LocalDate one;
+        private final LocalDate two;
     }
 }

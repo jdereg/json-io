@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;

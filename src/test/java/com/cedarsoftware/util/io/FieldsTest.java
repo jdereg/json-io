@@ -1,5 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -13,20 +19,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.models.Human;
-import com.cedarsoftware.util.io.models.OuterObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.Human;
+import com.cedarsoftware.util.io.models.OuterObject;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

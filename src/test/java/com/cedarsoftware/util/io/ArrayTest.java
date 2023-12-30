@@ -1,5 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -16,22 +27,12 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.cedarsoftware.util.DeepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -582,12 +583,25 @@ public class ArrayTest
         testReconstituteArrayHelper(strings);
         String[] Strings = new String[]{s, s};
         testReconstituteArrayHelper(Strings);
+    }
 
+    @Test
+    void testReconstitute_withCalendars_whenArrayTypeisObject() {
         GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
         Object[] calendars = new Object[]{cal, cal};
         testReconstituteArrayHelper(calendars);
+    }
+
+    @Test
+    void testReconsitutute_withCalendars_whenArrayTypeIsCalendar() {
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
         Calendar[] Calendars = new Calendar[]{cal, cal};
         testReconstituteArrayHelper(Calendars);
+    }
+
+    @Test
+    void testReconstitute_withGregorianCalendars_whenArrayTypeIsCalendar() {
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
         GregorianCalendar[] calendarz = new GregorianCalendar[]{cal, cal};
         testReconstituteArrayHelper(calendarz);
     }
@@ -605,7 +619,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testReconstituteEmptyArray()
+    void testReconstituteEmptyArray()
     {
         Object[] empty = new Object[0];
         String json0 = TestUtil.toJson(empty);

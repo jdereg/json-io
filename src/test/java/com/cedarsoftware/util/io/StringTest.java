@@ -3,7 +3,6 @@ package com.cedarsoftware.util.io;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
