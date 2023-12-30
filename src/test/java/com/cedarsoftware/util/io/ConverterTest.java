@@ -1910,7 +1910,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert(Long.MAX_VALUE, char.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [Long (9223372036854775807)] could not be converted to a 'Character'");
+                .hasMessageContaining("Value: 9223372036854775807 out of range to be converted to character");
     }
 
     @Test

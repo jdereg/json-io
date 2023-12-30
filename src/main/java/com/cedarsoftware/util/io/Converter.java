@@ -88,8 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toBoolean = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toCharacter = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toClass = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
@@ -115,10 +113,6 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(char.class, (char)0);
-
-        fromNull.put(Character.class, null);
-
         fromNull.put(String.class, null);
         fromNull.put(Class.class, null);
         fromNull.put(BigInteger.class, null);
@@ -288,7 +282,6 @@ public final class Converter {
         factory.put(pair(Long.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(Float.class, Float.class), fromInstance -> fromInstance);
         factory.put(pair(Double.class, Float.class), fromInstance ->  ((Number) fromInstance).floatValue());
-        factory.put(pair(Number.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(Boolean.class, Float.class), fromInstance -> (Boolean) fromInstance ? FLOAT_ONE : FLOAT_ZERO);
         factory.put(pair(Character.class, Float.class), fromInstance -> (float) ((char) fromInstance));
         factory.put(pair(LocalDate.class, Float.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
@@ -297,6 +290,7 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(BigInteger.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(BigDecimal.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
+        factory.put(pair(Number.class, Float.class), fromInstance -> ((Number) fromInstance).floatValue());
         factory.put(pair(Map.class, Float.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, float.class, null));
         factory.put(pair(String.class, Float.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -319,13 +313,11 @@ public final class Converter {
         factory.put(pair(Long.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(Float.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(Double.class, Double.class), fromInstance -> fromInstance);
-        factory.put(pair(Number.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(Boolean.class, Double.class), fromInstance -> (Boolean) fromInstance ? DOUBLE_ONE : DOUBLE_ZERO);
         factory.put(pair(Character.class, Double.class), fromInstance -> (double) ((char) fromInstance));
         factory.put(pair(LocalDate.class, Double.class), fromInstance -> (double)((LocalDate) fromInstance).toEpochDay());
         factory.put(pair(LocalDateTime.class, Double.class), fromInstance ->  (double) localDateTimeToMillis((LocalDateTime) fromInstance));
         factory.put(pair(ZonedDateTime.class, Double.class), fromInstance -> (double) zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-        factory.put(pair(Calendar.class, Double.class), fromInstance -> (double)((Calendar) fromInstance).getTime().getTime());
         factory.put(pair(Date.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
         factory.put(pair(java.sql.Date.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
         factory.put(pair(Timestamp.class, Double.class), fromInstance -> (double)((Date) fromInstance).getTime());
@@ -334,6 +326,8 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(BigInteger.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(BigDecimal.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
+        factory.put(pair(Calendar.class, Double.class), fromInstance -> (double)((Calendar) fromInstance).getTime().getTime());
+        factory.put(pair(Number.class, Double.class), fromInstance -> ((Number) fromInstance).doubleValue());
         factory.put(pair(Map.class, Double.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, double.class, null));
         factory.put(pair(String.class, Double.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -356,7 +350,6 @@ public final class Converter {
         factory.put(pair(Long.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
         factory.put(pair(Float.class, Boolean.class), fromInstance -> ((Number) fromInstance).floatValue() != 0.0f);
         factory.put(pair(Double.class, Boolean.class), fromInstance -> ((Number) fromInstance).doubleValue() != 0.0d);
-        factory.put(pair(Number.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
         factory.put(pair(Boolean.class, Boolean.class), fromInstance -> fromInstance);
         factory.put(pair(Character.class, Boolean.class), fromInstance -> ((char) fromInstance) > 0);
         factory.put(pair(AtomicBoolean.class, Boolean.class), fromInstance -> ((AtomicBoolean) fromInstance).get());
@@ -364,6 +357,7 @@ public final class Converter {
         factory.put(pair(AtomicLong.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
         factory.put(pair(BigInteger.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
         factory.put(pair(BigDecimal.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
+        factory.put(pair(Number.class, Boolean.class), fromInstance -> ((Number) fromInstance).longValue() != 0);
         factory.put(pair(Map.class, Boolean.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, boolean.class, null));
         factory.put(pair(String.class, Boolean.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -379,9 +373,37 @@ public final class Converter {
             return "true".equalsIgnoreCase(str);
         });
 
+        // Character/chat conversions supported
+        factory.put(pair(Void.class, char.class), fromInstance -> (char)0);
+        factory.put(pair(Void.class, Character.class), fromInstance -> null);
+        factory.put(pair(Byte.class, Character.class), fromInstance -> ((Number) fromInstance).byteValue() != 0 ? '1' : '0');
+        factory.put(pair(Short.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Integer.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Long.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Float.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Double.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Boolean.class, Character.class), fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
+        factory.put(pair(Character.class, Character.class), fromInstance -> fromInstance);
+        factory.put(pair(AtomicBoolean.class, Character.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
+        factory.put(pair(AtomicInteger.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(AtomicLong.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(BigInteger.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(BigDecimal.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Number.class, Character.class), fromInstance -> numberToCharacter((Number)fromInstance));
+        factory.put(pair(Map.class, Character.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, char.class, null));
+        factory.put(pair(String.class, Character.class), fromInstance -> {
+            String str = ((String) fromInstance);
+            if (str.isEmpty()) {
+                return (char)0;
+            }
+            if (str.length() == 1) {
+                return str.charAt(0);
+            }
+            // Treat as a String number, like "65" = 'A'
+            return (char) Integer.parseInt(str.trim());
+        });
+
         // Convertable types
-        toTypes.put(char.class, Converter::convertToCharacter);
-        toTypes.put(Character.class, Converter::convertToCharacter);
         toTypes.put(String.class, Converter::convertToString);
         toTypes.put(Class.class, Converter::convertToClass);
         toTypes.put(BigDecimal.class, Converter::convertToBigDecimal);
@@ -400,35 +422,6 @@ public final class Converter {
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
         
-        // ? to Character/char
-        toCharacter.put(Map.class, null);
-        toCharacter.put(Character.class, fromInstance -> fromInstance);
-        toCharacter.put(Byte.class, fromInstance -> ((Number) fromInstance).byteValue() != 0 ? '1' : '0');
-        toCharacter.put(Short.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(Integer.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(Long.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(Float.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(Double.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(Boolean.class, fromInstance -> ((Boolean)fromInstance) ? '1' : '0');
-        toCharacter.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? '1' : '0');
-        toCharacter.put(AtomicInteger.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(AtomicLong.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(BigInteger.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(BigDecimal.class, fromInstance -> numberToCharacter((Number)fromInstance));
-        toCharacter.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance);
-            if (str.isEmpty()) {
-                return (char)0;
-            }
-            if (str.length() == 1) {
-                return str.charAt(0);
-            }
-            // Treat as a String number, like "65" = 'A'
-            return (char) Integer.parseInt(str.trim());
-        });
-        targetTypes.put(char.class, toCharacter);
-        targetTypes.put(Character.class, toCharacter);
-
         // ? to Class
         toClass.put(Map.class, null);
         toClass.put(Class.class, fromInstance -> fromInstance);
@@ -1272,29 +1265,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToCharacter(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toCharacter.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, char.class, null);
-        } else if (fromInstance instanceof Number) {
-            Number number = (Number) fromInstance;
-            long value = number.longValue();
-            if (value >= 0 && value <= Character.MAX_VALUE) {
-                return (char)value;
-            }
-            throw new IllegalArgumentException("value: " + value + " out of range to be converted to character.");
-        }
-        return NOPE;
-    }
-    
     private static Object convertToAtomicBoolean(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toAtomicBoolean.get(fromType);
