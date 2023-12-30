@@ -20,9 +20,14 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.ReturnType;
 import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
+ * @Author Kenny Partlow (kpartlow@gmail.com)
  * <br>
  * Copyright (c) Cedar Software LLC
  * <br><br>
@@ -51,8 +57,55 @@ import static org.junit.jupiter.api.Assertions.fail;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class MapsTest
+class MapsTest
 {
+    public static WriteOptions showTypeNever = new WriteOptionsBuilder().showTypeInfoNever().build();
+    public static WriteOptions showTypeAlways = new WriteOptionsBuilder().showTypeInfoNever().build();
+    public static WriteOptions showTypeMinimal = new WriteOptionsBuilder().showTypeInfoNever().build();
+
+    private static Stream<Arguments> showTypeInfoVariants() {
+        return Stream.of(
+                Arguments.of(showTypeNever),
+                Arguments.of(showTypeMinimal),
+                Arguments.of(showTypeAlways)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("showTypeInfoVariants")
+    void testEmptyMap_whenMapIsDefaultMapType_doesNotShowType_noMatterTheWriteOptions(WriteOptions options) {
+        Map<Object, Object> map = new JsonObject();
+        String json = TestUtil.toJson(map, options);
+        assertThat(json).isEqualTo("{}");
+    }
+
+    private static Stream<Arguments> nonDefaultMapTypes() {
+        return Stream.of(
+                Arguments.of(LinkedHashMap.class),
+                Arguments.of(HashMap.class),
+                Arguments.of(TreeMap.class)
+        );
+    }
+
+    @SuppressWarnings("rawtypes")
+    @ParameterizedTest
+    @MethodSource("nonDefaultMapTypes")
+    void testEmptyMap_whenMapIsNotDefaultMap_includesType(Class<? extends Map> c) throws Exception {
+        Map map = c.newInstance();
+        String json = TestUtil.toJson(map);
+        assertThat(json).isEqualTo("{\"@type\":\"" + c.getName() + "\"}");
+    }
+
+    @SuppressWarnings("rawtypes")
+    @ParameterizedTest
+    @MethodSource("nonDefaultMapTypes")
+    void testEmptyMap_whenMapIsNotDefaultMap_and_neverShowTypes_doesNotShowType(Class<? extends Map> c) throws Exception {
+        WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
+        Map map = c.newInstance();
+        String json = TestUtil.toJson(map, options);
+        assertThat(json).isEqualTo("{}");
+    }
+
     @Test
     public void testMap()
     {

@@ -87,33 +87,29 @@ class MappedMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @MethodSource("checkFailedToCreateSituations")
     void create_whenBooleanIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
         Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
-        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(cls);
-        Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), nonStandardMethodNames, methodMap, fieldName);
+        Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), nonStandardMethodNames, fieldName);
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenMethodDoesNotExist_cannotCreateAccessor() throws Throwable {
         Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
-        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(ObjectWithBooleanObjects.class);
-        Accessor accessor = this.factory.createAccessor(PrivateFinalObject.class.getDeclaredField("x"), nonStandardMethodNames, methodMap, "x");
+        Accessor accessor = this.factory.createAccessor(PrivateFinalObject.class.getDeclaredField("x"), nonStandardMethodNames, "x");
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenIsEnumClass_canCreateAccessor_ifNameMappingIsPresent() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(Enum.class);
         Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
-        Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, methodMap, "name");
+        Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, "name");
         assertThat(accessor).isNull();
     }
 
     @Test
     void create_whenIsEnumClass_andHasNameMapping_canCreateAccessor() throws Throwable {
-        Map<String, Method> methodMap = new WriteOptionsBuilder().build().buildDeepMethods(Enum.class);
         Map<Class<?>, Map<String, String>> nonStandardMethodNames = new LinkedHashMap<>();
         nonStandardMethodNames.computeIfAbsent(Enum.class, k -> new LinkedHashMap<>()).put("name", "name");
-        Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, methodMap, "name");
+        Accessor accessor = factory.createAccessor(Enum.class.getDeclaredField("name"), nonStandardMethodNames, "name");
         assertThat(accessor).isNotNull();
     }
 

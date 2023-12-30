@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.util.ReturnType;
 import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;

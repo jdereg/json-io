@@ -1,13 +1,18 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.cedarsoftware.util.DeepEquals;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 public abstract class SerializationDeserializationMinimumTests<T> {
 
@@ -18,6 +23,12 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     protected abstract T provideT3();
 
     protected abstract T provideT4();
+
+    protected abstract Class<T> getTestClass();
+
+    protected List<String> getPossibleClassNamesForType() {
+        return MetaUtils.listOf(getTestClass().getName());
+    }
 
     protected boolean isReferenceable() {
         return true;
@@ -43,24 +54,25 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     //  nested object
     @Test
-    protected void testNestedInObject_withNoDuplicates() {
+    protected void testNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         // arrange
-        Object expected = provideNestedInObject_withNoDuplicates();
+        Object expected = provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType();
 
         // act
         String json = TestUtil.toJson(expected);
 
         // should be no references
         assertNoReferencesInString(json);
+        assertNoTypeInString(json);
 
         Object actual = TestUtil.toObjects(json, null);
 
-        assertNestedInObject_withNoDuplicates(expected, actual);
+        assertNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
 
-    protected void assertNestedInObject_withNoDuplicates(Object nestedExpected, Object nestedActual) {
-        T[] expected = extractNestedInObject(nestedExpected);
-        T[] actual = extractNestedInObject(nestedActual);
+    protected void assertNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType(Object nestedExpected, Object nestedActual) {
+        T[] expected = extractNestedInObject_withMatchingFieldTypes(nestedExpected);
+        T[] actual = extractNestedInObject_withMatchingFieldTypes(nestedActual);
 
         // Uncomment if we remove java.util.LocalDate/Time from nonRefs.txt
         assertThat(actual[0])
@@ -70,34 +82,35 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertThat(actual[1]).isEqualTo(expected[1]);
     }
 
-    protected abstract T[] extractNestedInObject(Object o);
+    protected abstract T[] extractNestedInObject_withMatchingFieldTypes(Object o);
 
     /**
      * @return Just needs to have two objects of type T nested in it and be unique objects
      */
-    protected abstract Object provideNestedInObject_withNoDuplicates();
+    protected abstract Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType();
 
     // nested object with duplicate reference
     // we are really only testing the isReferenceable() and that the referential integrity
     // matches the flag isReferenceable() here for class T
     @Test
-    protected void testNestedInObject_withDuplicates() {
+    protected void testNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         // arrange
-        Object expected = provideNestedInObject_withDuplicates();
+        Object expected = provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType();
 
         // act
         String json = TestUtil.toJson(expected);
 
         assertReferentialityInString(json);
+        assertNoTypeInString(json);
 
         Object actual = TestUtil.toObjects(json, null);
 
-        assertNestedInObject_withDuplicates(expected, actual);
+        assertNestedInObject_withDuplicates_andFieldTypeMatchesObjectType(expected, actual);
     }
 
-    protected void assertNestedInObject_withDuplicates(Object nestedExpected, Object nestedActual) {
-        T[] expected = extractNestedInObject(nestedExpected);
-        T[] actual = extractNestedInObject(nestedActual);
+    protected void assertNestedInObject_withDuplicates_andFieldTypeMatchesObjectType(Object nestedExpected, Object nestedActual) {
+        T[] expected = extractNestedInObject_withMatchingFieldTypes(nestedExpected);
+        T[] actual = extractNestedInObject_withMatchingFieldTypes(nestedActual);
 
         // make sure test is setup correctly
         assertThat(expected[0]).isSameAs(expected[1]);
@@ -115,8 +128,62 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     /**
      * @return Just needs to have two objects of type T nested and they both need to be same reference
      */
-    protected abstract Object provideNestedInObject_withDuplicates();
+    protected abstract Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType();
 
+
+    @Test
+    protected void testNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType() {
+        // arrange
+        NestedWithObjectFields expected = provideNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType();
+
+        // act
+        String json = TestUtil.toJson(expected);
+
+        assertNoReferencesInString(json);
+        assertOneOfTheseTypesInString(json);
+
+        NestedWithObjectFields actual = TestUtil.toObjects(json, null);
+
+        assertNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType(expected, actual);
+    }
+
+    protected void assertNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType(NestedWithObjectFields expected, NestedWithObjectFields actual) {
+        // make sure test is setup correctly
+        assertThat(expected.one).isNotSameAs(expected.two);
+
+        // asserts.
+        assertThat(actual.one)
+                .isEqualTo(expected.one);
+
+        assertThat(actual.two)
+                .isEqualTo(expected.two);
+
+        assertThat(actual.one).isNotSameAs(actual.two);
+    }
+
+    protected NestedWithObjectFields provideNestedInObject_withNoDuplicates_andFieldTypeDoesNotMatchObjectType() {
+        return new NestedWithObjectFields(provideT1(), provideT2());
+    }
+
+    protected void assertNestedInObject_withDuplicates_andFieldTypeDoesNotMatchObjectType(NestedWithObjectFields expected, NestedWithObjectFields actual) {
+        // make sure test is setup correctly
+        assertThat(expected.one).isSameAs(expected.two);
+
+        // asserts.
+        assertThat(actual.one)
+                .isEqualTo(expected.one);
+
+        assertThat(actual.two)
+                .isEqualTo(expected.two);
+
+        assertReferentialIdentity(actual.one, actual.two);
+    }
+
+    protected NestedWithObjectFields provideNestedInObject_withDuplicates_andFieldTypeDoesNotMatchObjectType() {
+        T duplicate = provideT1();
+        return new NestedWithObjectFields(duplicate, duplicate);
+
+    }
 
     // object array unique
     @Test
@@ -141,6 +208,38 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertThat(actual[0]).isNotSameAs(actual[3]);
 
         assertThat(DeepEquals.deepEquals(expected, actual)).isTrue();
+    }
+
+    @Test
+    protected void testNestedInObject_withNoDuplicates_andFieldTypeIsGeneric() {
+        // arrange
+        Nested<T> expected = provideNestedInObject_withNoDuplicates_andFieldTypeIsGeneric();
+
+        // act
+        String json = TestUtil.toJson(expected);
+
+        // should be no references
+        assertNoReferencesInString(json);
+        assertOneOfTheseTypesInString(json);
+
+        Nested<T> actual = TestUtil.toObjects(json, null);
+
+        assertNestedInObject_withNoDuplicates_andFieldTypeIsGeneric(expected, actual);
+    }
+
+    protected void assertNestedInObject_withNoDuplicates_andFieldTypeIsGeneric(Nested<T> expected, Nested<T> actual) {
+        assertThat(actual.one)
+                .isEqualTo(expected.one)
+                .isNotSameAs(actual.two);
+
+        assertThat(actual.two).isEqualTo(expected.two);
+    }
+
+    /**
+     * @return Just needs to have two objects of type T nested in it and be unique objects
+     */
+    protected Nested<T> provideNestedInObject_withNoDuplicates_andFieldTypeIsGeneric() {
+        return new Nested(provideT1(), provideT2());
     }
 
 
@@ -365,4 +464,44 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     private static void assertNoReferencesInString(String json) {
         assertThat(json).doesNotContain("\"@id\"").doesNotContain("\"@ref\"");
     }
+
+    protected void assertNoTypeInString(String json) {
+        assertThat(json).doesNotContain(buildPossibleClassNamesArray());
+    }
+
+    private void assertOneOfTheseTypesInString(String json) {
+        assertThat(json).containsAnyOf(buildPossibleClassNamesArray());
+    }
+
+    protected String[] buildPossibleClassNamesArray() {
+        return getPossibleClassNamesForType().stream()
+                .map(this::buildTypeNameSearch)
+                .collect(Collectors.toList())
+                .toArray(new String[]{});
+    }
+
+    private String buildTypeNameSearch(String name) {
+        return "\"@type\":\"" + name + "\"";
+    }
+
+    private void assertTypeIfReferenceable(String json) {
+        if (isReferenceable()) {
+            assertThat(json).contains("\"@type\"");
+        }
+    }
+
+    @AllArgsConstructor
+    @Getter
+    private static class Nested<T> {
+        private final T one;
+        private final T two;
+    }
+
+    @AllArgsConstructor
+    @Getter
+    private static class NestedWithObjectFields {
+        private final Object one;
+        private final Object two;
+    }
+
 }

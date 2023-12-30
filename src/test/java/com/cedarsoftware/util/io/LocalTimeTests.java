@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.LocalTime;
 import java.util.stream.Stream;
 
@@ -8,7 +10,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime> {
 
@@ -33,30 +36,30 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
     }
 
     @Override
+    protected Class<LocalTime> getTestClass() {
+        return LocalTime.class;
+    }
+
+    @Override
     protected boolean isReferenceable() {
         return false;
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
-        return new NestedLocalTime(
-                provideT1(),
-                provideT2());
+    protected LocalTime[] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedLocalTime time = (NestedLocalTime) o;
+        return new LocalTime[]{time.one, time.two};
     }
 
     @Override
-    protected LocalTime[] extractNestedInObject(Object o) {
-        NestedLocalTime nested = (NestedLocalTime) o;
-
-        return new LocalTime[]{
-                nested.time1,
-                nested.time2
-        };
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
+        return new NestedLocalTime(provideT1(), provideT2());
     }
 
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
-        return new NestedLocalTime(provideT1());
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
+        LocalTime now = LocalTime.now();
+        return new NestedLocalTime(now, now);
     }
 
     @Override
@@ -86,7 +89,7 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
         String json = loadJsonForTest("old-format-nested-in-object.json");
         NestedLocalTime nested = TestUtil.toObjects(json, null);
 
-        assertLocalTime(nested.time1, 9, 12, 15, 999999);
+        assertLocalTime(nested.one, 9, 12, 15, 999999);
     }
 
     private void assertLocalTime(LocalTime time, int hour, int minute, int second, int nano) {
@@ -100,21 +103,10 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
         return MetaUtils.loadResourceAsString("localtime/" + fileName);
     }
 
-    private static class NestedLocalTime {
-        public LocalTime time1;
-        public LocalTime time2;
-        public String holiday;
-        public Long value;
-
-        public NestedLocalTime(LocalTime time1, LocalTime time2) {
-            this.holiday = "Festivus";
-            this.value = 999L;
-            this.time1 = time1;
-            this.time2 = time2;
-        }
-
-        public NestedLocalTime(LocalTime time1) {
-            this(time1, time1);
-        }
+    @AllArgsConstructor
+    @Getter
+    public static class NestedLocalTime {
+        public LocalTime one;
+        public LocalTime two;
     }
 }

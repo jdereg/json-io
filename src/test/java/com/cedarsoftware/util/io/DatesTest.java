@@ -1,5 +1,12 @@
 package com.cedarsoftware.util.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -7,17 +14,9 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import com.cedarsoftware.util.ReturnType;
-import com.cedarsoftware.util.io.factory.DateFactory;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.io.factory.DateFactory;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -453,8 +452,7 @@ class DatesTest
     }
 
     @Test
-    @Disabled // This should not be DISABLED - the writer is not outputting the types where the are not == to the array component type.
-    public void testSqlDate()
+    void testSqlDate()
     {
         long now = System.currentTimeMillis();
         Date[] dates = new Date[]{new Date(now), new java.sql.Date(now), new Timestamp(now)};
@@ -470,7 +468,7 @@ class DatesTest
     }
 
     @Test
-    public void testSqlDate2()
+    void testSqlDate2()
     {
         long now = 1703043551033L;
         Date[] dates = new Date[]{new Date(now), new java.sql.Date(now), new Timestamp(now)};

@@ -113,7 +113,12 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Override
-    protected NestedZonedDateTime provideNestedInObject_withNoDuplicates() {
+    protected Class<ZonedDateTime> getTestClass() {
+        return ZonedDateTime.class;
+    }
+
+    @Override
+    protected NestedZonedDateTime provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         LocalDateTime localDateTime2 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
@@ -122,7 +127,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Override
-    protected ZonedDateTime[] extractNestedInObject(Object o) {
+    protected ZonedDateTime[] extractNestedInObject_withMatchingFieldTypes(Object o) {
         NestedZonedDateTime nested = (NestedZonedDateTime) o;
 
         return new ZonedDateTime[]{
@@ -132,7 +137,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
     }
 
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         LocalDateTime localDateTime1 = LocalDateTime.of(2027, 12, 23, 6, 7, 16, 2000);
         return new NestedZonedDateTime(
                 ZonedDateTime.of(localDateTime1, Z1));

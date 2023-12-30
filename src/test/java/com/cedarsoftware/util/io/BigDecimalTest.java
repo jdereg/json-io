@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.cedarsoftware.util.ReturnType;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.JsonObject.REF;

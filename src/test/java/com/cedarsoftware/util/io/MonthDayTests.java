@@ -1,11 +1,15 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import static com.cedarsoftware.util.io.TestUtil.toObjects;
+
 import java.time.MonthDay;
 
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.io.TestUtil.toObjects;
-import static org.assertj.core.api.Assertions.assertThat;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
 
@@ -29,6 +33,11 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
         return MonthDay.of(9, 1);
     }
 
+    @Override
+    protected Class<MonthDay> getTestClass() {
+        return MonthDay.class;
+    }
+
 
     @Override
     protected boolean isReferenceable() {
@@ -36,27 +45,23 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected MonthDay[] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedMonthDay date = (NestedMonthDay) o;
+        return new MonthDay[]{date.one, date.two};
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedMonthDay(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected MonthDay[] extractNestedInObject(Object o) {
-        NestedMonthDay nested = (NestedMonthDay) o;
-
-        return new MonthDay[]{
-                nested.one,
-                nested.two
-        };
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
+        MonthDay date = provideT1();
+        return new NestedMonthDay(date, date);
     }
-
-    @Override
-    protected Object provideNestedInObject_withDuplicates() {
-        return new NestedMonthDay(provideT1());
-    }
-
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(MonthDay expected, Object actual) {
@@ -100,17 +105,10 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
         assertThat(actual).isEqualTo(initial);
     }
 
+    @AllArgsConstructor
+    @Getter
     private static class NestedMonthDay {
-        public MonthDay one;
-        public MonthDay two;
-
-        public NestedMonthDay(MonthDay one, MonthDay two) {
-            this.one = one;
-            this.two = two;
-        }
-
-        public NestedMonthDay(MonthDay date) {
-            this(date, date);
-        }
+        private final MonthDay one;
+        private final MonthDay two;
     }
 }

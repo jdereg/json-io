@@ -1,18 +1,21 @@
 package com.cedarsoftware.util.io;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.NestedLocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.cedarsoftware.util.DeepEquals;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -37,32 +40,33 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
 
     @Override
+    protected Class<LocalDate> getTestClass() {
+        return LocalDate.class;
+    }
+
+    @Override
     protected boolean isReferenceable() {
         return false;
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected LocalDate[] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedLocalDate date = (NestedLocalDate) o;
+        return new LocalDate[]{date.one, date.two};
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedLocalDate(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected LocalDate[] extractNestedInObject(Object o) {
-        NestedLocalDate nested = (NestedLocalDate) o;
-
-        return new LocalDate[]{
-                nested.getDate1(),
-                nested.getDate2()
-        };
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
+        LocalDate now = LocalDate.now();
+        return new NestedLocalDate(now, now);
     }
-
-    @Override
-    protected Object provideNestedInObject_withDuplicates() {
-        return new NestedLocalDate(provideT1());
-    }
-
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(LocalDate expected, Object actual) {
@@ -102,12 +106,12 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         String json = loadJsonForTest("old-format-nested-level.json");
         NestedLocalDate nested = TestUtil.toObjects(json, null);
 
-        assertThat(nested.getDate1())
+        assertThat(nested.getOne())
                 .hasYear(2014)
                 .hasMonthValue(6)
                 .hasDayOfMonth(13);
 
-        assertThat(nested.getDate2())
+        assertThat(nested.getTwo())
                 .hasYear(2024)
                 .hasMonthValue(9)
                 .hasDayOfMonth(12);
@@ -157,5 +161,13 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
 
     private String loadJsonForTest(String fileName) {
         return MetaUtils.loadResourceAsString("localdate/" + fileName);
+    }
+
+
+    @Getter
+    @AllArgsConstructor
+    public static class NestedLocalDate {
+        private final LocalDate one;
+        private final LocalDate two;
     }
 }

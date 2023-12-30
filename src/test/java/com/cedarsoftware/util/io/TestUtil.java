@@ -3,7 +3,9 @@ package com.cedarsoftware.util.io;
 import java.io.InputStream;
 import java.util.Map;
 
-import com.cedarsoftware.util.ReturnType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import lombok.Getter;

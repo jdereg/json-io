@@ -1,12 +1,13 @@
 package com.cedarsoftware.util.io;
 
-import java.time.Instant;
-import java.util.stream.Stream;
-
-import com.cedarsoftware.util.io.models.NestedInstant;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.Instant;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,6 +16,12 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     @Override
     protected boolean isReferenceable() {
         return false;
+    }
+
+    @Override
+    protected Instant[] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedInstant instant = (NestedInstant) o;
+        return new Instant[]{instant.instant1, instant.instant2};
     }
 
     @Override
@@ -40,22 +47,17 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Class<Instant> getTestClass() {
+        return Instant.class;
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedInstant(provideT1(), provideT4());
     }
 
     @Override
-    protected Instant[] extractNestedInObject(Object o) {
-        NestedInstant nested = (NestedInstant) o;
-
-        return new Instant[]{
-                nested.getInstant1(),
-                nested.getInstant2()
-        };
-    }
-
-    @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         Instant instant = Instant.now();
         return new NestedInstant(instant, instant);
     }
@@ -105,5 +107,13 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
 
     private String loadJson(String fileName) {
         return MetaUtils.loadResourceAsString("instant/" + fileName);
+    }
+
+
+    @Getter
+    @AllArgsConstructor
+    public static class NestedInstant {
+        private final Instant instant1;
+        private final Instant instant2;
     }
 }

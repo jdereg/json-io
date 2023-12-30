@@ -33,6 +33,11 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
         return ZoneOffset.of("-04:25:33");
     }
 
+    @Override
+    protected Class<ZoneOffset> getTestClass() {
+        return ZoneOffset.class;
+    }
+
 
     @Override
     protected boolean isReferenceable() {
@@ -40,14 +45,14 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedZoneOffset(
                 provideT1(),
                 provideT2());
     }
 
     @Override
-    protected ZoneOffset[] extractNestedInObject(Object o) {
+    protected ZoneOffset[] extractNestedInObject_withMatchingFieldTypes(Object o) {
         NestedZoneOffset nested = (NestedZoneOffset) o;
 
         return new ZoneOffset[]{
@@ -56,12 +61,10 @@ class ZoneOffsetTests extends SerializationDeserializationMinimumTests<ZoneOffse
         };
     }
 
-
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedZoneOffset(provideT1());
     }
-
 
     @Override
     protected void assertT1_serializedWithoutType_parsedAsJsonTypes(ZoneOffset expected, Object actual) {

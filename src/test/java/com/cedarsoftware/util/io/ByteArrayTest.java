@@ -1,12 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Random;
-
-import com.cedarsoftware.util.io.models.NestedByteArray;
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Random;
+
+import org.junit.jupiter.api.Test;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -96,23 +98,25 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
     }
 
     @Override
-    protected Object provideNestedInObject_withNoDuplicates() {
+    protected Class<byte[]> getTestClass() {
+        return byte[].class;
+    }
+
+    @Override
+    protected byte[][] extractNestedInObject_withMatchingFieldTypes(Object o) {
+        NestedByteArray array = (NestedByteArray) o;
+        return new byte[][]{array.one, array.two};
+    }
+
+    @Override
+    protected Object provideNestedInObject_withNoDuplicates_andFieldTypeMatchesObjectType() {
         return new NestedByteArray(provideT1(), provideT2());
     }
 
     @Override
-    protected Object provideNestedInObject_withDuplicates() {
+    protected Object provideNestedInObject_withDuplicates_andFieldTypeMatchesObjectType() {
         byte[] t1 = provideT1();
         return new NestedByteArray(t1, t1);
-    }
-
-    @Override
-    protected byte[][] extractNestedInObject(Object o) {
-        NestedByteArray nested = (NestedByteArray) o;
-        return new byte[][]{
-                nested.getOne(),
-                nested.getTwo()
-        };
     }
 
     @Override
@@ -123,5 +127,12 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
             longs[i] = (long) expected[i];
         }
         assertThat(actual).isEqualTo(longs);
+    }
+
+    @AllArgsConstructor
+    @Getter
+    public static class NestedByteArray {
+        private final byte[] one;
+        private final byte[] two;
     }
 }
