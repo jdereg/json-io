@@ -82,7 +82,7 @@ public final class Converter {
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> factory = new HashMap<>();
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> userDefined = new HashMap<>();
-    private static final Map<Class<?>, Set<Class<?>>> cachedParents = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Set<Class<?>>> cacheParentTypes = new ConcurrentHashMap<>();
 
     // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
     // These remove 1 map lookup for bounded (known) types.
@@ -114,8 +114,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(Class.class, null);
-        fromNull.put(BigInteger.class, null);
         fromNull.put(BigDecimal.class, null);
         fromNull.put(AtomicInteger.class, null);
         fromNull.put(AtomicLong.class, null);
@@ -403,11 +401,62 @@ public final class Converter {
             return (char) Integer.parseInt(str.trim());
         });
 
+        // BigInteger versions supported
+        factory.put(pair(Void.class, BigInteger.class), fromInstance -> null);
+        factory.put(pair(BigInteger.class, BigInteger.class), fromInstance -> fromInstance);
+        factory.put(pair(Byte.class, BigInteger.class), fromInstance -> BigInteger.valueOf((byte) fromInstance));
+        factory.put(pair(Short.class, BigInteger.class), fromInstance -> BigInteger.valueOf((short)fromInstance));
+        factory.put(pair(Integer.class, BigInteger.class), fromInstance -> BigInteger.valueOf((int)fromInstance));
+        factory.put(pair(Long.class, BigInteger.class), fromInstance -> BigInteger.valueOf((long)fromInstance));
+        factory.put(pair(Float.class, BigInteger.class), fromInstance -> new BigInteger(String.format("%.0f", (float)fromInstance)));
+        factory.put(pair(Double.class, BigInteger.class), fromInstance -> new BigInteger(String.format("%.0f", (double)fromInstance)));
+        factory.put(pair(Boolean.class, BigInteger.class), fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
+        factory.put(pair(Character.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((char) fromInstance)));
+        factory.put(pair(AtomicBoolean.class, BigInteger.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO);
+        factory.put(pair(AtomicInteger.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Number) fromInstance).intValue()));
+        factory.put(pair(AtomicLong.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Number) fromInstance).longValue()));
+        factory.put(pair(Date.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
+        factory.put(pair(java.sql.Date.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
+        factory.put(pair(Timestamp.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((LocalDate) fromInstance).toEpochDay()));
+        factory.put(pair(LocalDateTime.class, BigInteger.class), fromInstance -> BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, BigInteger.class), fromInstance -> BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(GregorianCalendar.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Calendar)fromInstance).getTime().getTime()));
+        factory.put(pair(BigDecimal.class, BigInteger.class), fromInstance -> ((BigDecimal)fromInstance).toBigInteger());
+        factory.put(pair(UUID.class, BigInteger.class), fromInstance -> {
+            UUID uuid = (UUID) fromInstance;
+            BigInteger mostSignificant = BigInteger.valueOf(uuid.getMostSignificantBits());
+            BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
+            // Shift the most significant bits to the left and add the least significant bits
+            return mostSignificant.shiftLeft(64).add(leastSignificant);
+        });
+        factory.put(pair(Calendar.class, BigInteger.class), fromInstance -> BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime()));
+        factory.put(pair(Number.class, BigInteger.class), fromInstance -> new BigInteger(fromInstance.toString()));
+        factory.put(pair(Map.class, BigInteger.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, BigInteger.class, null));
+        factory.put(pair(String.class, BigInteger.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return null;
+            }
+            return new BigInteger(str);
+        });
+
+        // Class conversions supported
+        factory.put(pair(Void.class, Class.class), fromInstance -> null);
+        factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
+        factory.put(pair(Map.class, Class.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, Class.class, null));
+        factory.put(pair(String.class, Class.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Class<?> clazz = MetaUtils.classForName(str, Converter.class.getClassLoader());
+            if (clazz != null) {
+                return clazz;
+            }
+            throw new IllegalArgumentException("Cannot convert String '" + str + "' to class.  Class not found.");
+        });
+
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(Class.class, Converter::convertToClass);
         toTypes.put(BigDecimal.class, Converter::convertToBigDecimal);
-        toTypes.put(BigInteger.class, Converter::convertToBigInteger);
         toTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
         toTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
         toTypes.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
@@ -421,57 +470,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-        
-        // ? to Class
-        toClass.put(Map.class, null);
-        toClass.put(Class.class, fromInstance -> fromInstance);
-        toClass.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Class<?> clazz = MetaUtils.classForName(str, Converter.class.getClassLoader());
-            if (clazz != null) {
-                return clazz;
-            }
-            throw new IllegalArgumentException("Cannot convert String '" + str + "' to class.  Class not found.");
-        });
-        targetTypes.put(Class.class, toClass);
-
-        // ? to BigInteger
-        toBigInteger.put(Map.class, null);
-        toBigInteger.put(BigInteger.class, fromInstance -> fromInstance);
-        toBigInteger.put(Byte.class, fromInstance -> BigInteger.valueOf((byte) fromInstance));
-        toBigInteger.put(Short.class, fromInstance -> BigInteger.valueOf((short)fromInstance));
-        toBigInteger.put(Integer.class, fromInstance -> BigInteger.valueOf((int)fromInstance));
-        toBigInteger.put(Long.class, fromInstance -> BigInteger.valueOf((long)fromInstance));
-        toBigInteger.put(Float.class, fromInstance -> new BigInteger(String.format("%.0f", (float)fromInstance)));
-        toBigInteger.put(Double.class, fromInstance -> new BigInteger(String.format("%.0f", (double)fromInstance)));
-        toBigInteger.put(Boolean.class, fromInstance -> (Boolean) fromInstance ? BigInteger.ONE : BigInteger.ZERO);
-        toBigInteger.put(Character.class, fromInstance -> BigInteger.valueOf(((char) fromInstance)));
-        toBigInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? BigInteger.ONE : BigInteger.ZERO);
-        toBigInteger.put(AtomicInteger.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).intValue()));
-        toBigInteger.put(AtomicLong.class, fromInstance -> BigInteger.valueOf(((Number) fromInstance).longValue()));
-        toBigInteger.put(Date.class, fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
-        toBigInteger.put(java.sql.Date.class, fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
-        toBigInteger.put(Timestamp.class, fromInstance -> BigInteger.valueOf(((Date) fromInstance).getTime()));
-        toBigInteger.put(LocalDate.class, fromInstance -> BigInteger.valueOf(((LocalDate) fromInstance).toEpochDay()));
-        toBigInteger.put(LocalDateTime.class, fromInstance -> BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toBigInteger.put(ZonedDateTime.class, fromInstance -> BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toBigInteger.put(GregorianCalendar.class, fromInstance -> BigInteger.valueOf(((Calendar)fromInstance).getTime().getTime()));
-        toBigInteger.put(BigDecimal.class, fromInstance -> ((BigDecimal)fromInstance).toBigInteger());
-        toBigInteger.put(UUID.class, fromInstance -> {
-            UUID uuid = (UUID) fromInstance;
-            BigInteger mostSignificant = BigInteger.valueOf(uuid.getMostSignificantBits());
-            BigInteger leastSignificant = BigInteger.valueOf(uuid.getLeastSignificantBits());
-            // Shift the most significant bits to the left and add the least significant bits
-            return mostSignificant.shiftLeft(64).add(leastSignificant);
-        });
-        toBigInteger.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return null;
-            }
-            return new BigInteger(str);
-        });
-        targetTypes.put(BigInteger.class, toBigInteger);
 
         // ? to BigDecimal
         toBigDecimal.put(Map.class, null);
@@ -864,14 +862,15 @@ public final class Converter {
     private Converter() {
     }
 
-    public static Set<Class<?>> getSuperClassesAndInterfaces(Class<?> clazz) {
-        if (cachedParents.containsKey(clazz)) {
-            return cachedParents.get(clazz);
+    private static Set<Class<?>> getSuperClassesAndInterfaces(Class<?> clazz) {
+        Set<Class<?>> parentTypes = cacheParentTypes.get(clazz);
+        if (parentTypes != null) {
+            return parentTypes;
         }
-        Set<Class<?>> result = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
-        addSuperClassesAndInterfaces(clazz, result);
-        cachedParents.put(clazz, result);
-        return result;
+        parentTypes = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
+        addSuperClassesAndInterfaces(clazz, parentTypes);
+        cacheParentTypes.put(clazz, parentTypes);
+        return parentTypes;
     }
 
     private static void addSuperClassesAndInterfaces(Class<?> clazz, Set<Class<?>> result) {
@@ -1021,21 +1020,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToClass(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toClass.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            return fromValueMap((Map<?, ?>) fromInstance, Class.class, null);
-        }
-        return NOPE;
-    }
-    
     private static Object convertToUUID(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toUUID.get(fromType);
@@ -1078,26 +1062,7 @@ public final class Converter {
         }
         return NOPE;
     }
-
-    private static Object convertToBigInteger(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toBigInteger.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            return fromValueMap((Map<?, ?>)fromInstance, BigInteger.class, null);
-        } else if (fromInstance instanceof Number) {
-            return new BigInteger(fromInstance.toString());
-        } else if (fromInstance instanceof Calendar) {
-            return BigInteger.valueOf(((Calendar) fromInstance).getTime().getTime());
-        }
-        return NOPE;
-    }
-
+    
     private static Object convertToSqlDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toSqlDate.get(fromType);

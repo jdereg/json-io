@@ -59,7 +59,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":\"foo.bar.baz.Qux\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Value [String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
+                .hasMessageContaining("Cannot convert String 'foo.bar.baz.Qux' to class.  Class not found");
     }
 
     @Test
@@ -68,14 +68,17 @@ public class ClassTest
         String json = "\"foo.bar.baz.Qux\"";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Value [String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
+                .hasMessageContaining("Cannot convert String 'foo.bar.baz.Qux' to class.  Class not found");
     }
 
     @Test
     void testNoClassNameValue()
     {
         String json = "{\"@type\":\"class\"}";
-        assert null == TestUtil.toObjects(json, null);
+        assertThatThrownBy(() -> TestUtil.toObjects(json, null))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("To convert from Map to Class, the map must include keys: '_v' or 'value' an associated value to convert from");
+
     }
 
     @Test
@@ -84,7 +87,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":16.0}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
+                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
     }
 
     @Test
@@ -101,7 +104,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
+                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
     }
 
     @Test

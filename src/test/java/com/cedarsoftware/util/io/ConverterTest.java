@@ -511,24 +511,18 @@ class ConverterTest
         assertEquals(BigInteger.ONE, convert(new AtomicBoolean(true), BigInteger.class));
         assertEquals(BigInteger.ZERO, convert(new AtomicBoolean(false), BigInteger.class));
 
-        try
-        {
+        try {
             convert(TimeZone.getDefault(), BigInteger.class);
             fail();
-        }
-        catch (IllegalArgumentException e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'biginteger'"));
         }
 
-        try
-        {
+        try {
             convert("45badNumber", BigInteger.class);
             fail();
-        }
-        catch (IllegalArgumentException e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().toLowerCase().contains("for input string: \"badnumber\""));
         }
     }
 
@@ -566,7 +560,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getCause().getMessage().toLowerCase().contains("input string: \"45bad"));
+            assertTrue(e.getCause().getMessage().toLowerCase().contains("45badnumber"));
         }
     }
 
@@ -2031,13 +2025,13 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert("foo.bar.baz.Qux", Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [String (foo.bar.baz.Qux)] could not be converted to a 'Class'");
+                .hasMessageContaining("Cannot convert String 'foo.bar.baz.Qux' to class.  Class not found");
 
-        assert null == convert(null, Class.class);
+        assertNull(convert(null, Class.class));
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
+                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
     }
 
     @Test
@@ -2109,7 +2103,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
+                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
     }
 
     @Test
