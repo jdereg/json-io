@@ -93,7 +93,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
 
@@ -108,7 +107,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(LocalDateTime.class, null);
         fromNull.put(ZonedDateTime.class, null);
         fromNull.put(UUID.class, null);
         fromNull.put(Map.class, null);
@@ -726,6 +724,34 @@ public final class Converter {
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         });
 
+        // LocalDateTime conversions supported
+        factory.put(pair(Void.class, LocalDateTime.class), fromInstance -> null);
+        factory.put(pair(Long.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(Double.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(BigInteger.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(BigDecimal.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(AtomicLong.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(LocalDateTime.class, LocalDateTime.class), fromInstance -> fromInstance);
+        factory.put(pair(LocalDate.class, LocalDateTime.class), fromInstance -> ((LocalDate)fromInstance).atStartOfDay());
+        factory.put(pair(ZonedDateTime.class, LocalDateTime.class), fromInstance -> ((ZonedDateTime) fromInstance).toLocalDateTime());
+        factory.put(pair(Timestamp.class, LocalDateTime.class), fromInstance -> ((Timestamp) fromInstance).toLocalDateTime());
+        factory.put(pair(Date.class, LocalDateTime.class), fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(java.sql.Date.class, LocalDateTime.class), fromInstance -> ((java.sql.Date)fromInstance).toLocalDate().atStartOfDay());
+        factory.put(pair(Calendar.class, LocalDateTime.class), fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(Number.class, LocalDateTime.class), fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        factory.put(pair(Map.class, LocalDateTime.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            return fromValueMap(map, LocalDateTime.class, null);
+        });
+        factory.put(pair(String.class, LocalDateTime.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
+            if (date == null) {
+                return null;
+            }
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -741,35 +767,10 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(LocalDateTime.class, Converter::convertToLocalDateTime);
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
         
-        // ? to LocalDateTime
-        toLocalDateTime.put(Map.class, null);
-        toLocalDateTime.put(LocalDateTime.class, fromInstance -> fromInstance);
-        toLocalDateTime.put(LocalDate.class, fromInstance -> ((LocalDate)fromInstance).atStartOfDay());
-        toLocalDateTime.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDateTime());
-        toLocalDateTime.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime());
-        toLocalDateTime.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(Long.class, fromInstance -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(AtomicLong.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(Double.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(BigInteger.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(BigDecimal.class, fromInstance -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        toLocalDateTime.put(java.sql.Date.class, fromInstance -> ((java.sql.Date)fromInstance).toLocalDate().atStartOfDay());
-        toLocalDateTime.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(str);
-            if (date == null) {
-                return null;
-            }
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        });
-        targetTypes.put(LocalDateTime.class, toLocalDateTime);
-
         // ? to ZonedDateTime
         toZonedDateTime.put(Map.class, null);
         toZonedDateTime.put(ZonedDateTime.class, fromInstance -> fromInstance);
@@ -1114,24 +1115,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToLocalDateTime(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toLocalDateTime.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Calendar) {
-            return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, LocalDateTime.class, null);
-        }
-        return NOPE;
-    }
-    
     private static Object convertToZonedDateTime(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toZonedDateTime.get(fromType);

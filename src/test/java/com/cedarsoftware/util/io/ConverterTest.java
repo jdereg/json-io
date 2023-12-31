@@ -1118,7 +1118,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convert(null, LocalDateTime.class) == null;
@@ -1724,7 +1724,9 @@ class ConverterTest
         assert null == convert(map, LocalDateTime.class);
 
         map.clear();
-        assert null == convert(map, LocalDateTime.class);
+        assertThatThrownBy(() -> convert(map, LocalDateTime.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Map to LocalDateTime, the map must include keys: '_v' or 'value'");
     }
 
     @Test
