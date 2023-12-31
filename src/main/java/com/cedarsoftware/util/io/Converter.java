@@ -15,8 +15,8 @@ import java.util.AbstractMap;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -78,20 +78,11 @@ public final class Converter {
     private static final Double DOUBLE_ZERO = 0.0d;
     private static final Double DOUBLE_ONE = 1.0d;
 
-    private static final Map<Class<?>, Convert<?>> toTypes = new HashMap<>();
-    private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
-    private static final Map<Class<?>, Object> fromNull = new HashMap<>();
-
     private static final Set<Class<?>> pairKeys = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
     private static final Set<Class<?>> pairValues = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> factory = new ConcurrentHashMap<>();
-    private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> userDefined = new HashMap<>();
     private static final Map<Class<?>, Set<Class<?>>> cacheParentTypes = new ConcurrentHashMap<>();
-
-    // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
-    // These remove 1 map lookup for bounded (known) types.
-    private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-
+    
     public interface Convert<T> {
         T convert(Object fromInstance);
     }
@@ -102,8 +93,6 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(Map.class, null);
-
         // Byte/byte Conversions supported
         factory.put(pair(Void.class, byte.class), fromInstance -> (byte)0);
         factory.put(pair(Void.class, Byte.class), fromInstance -> null);
@@ -818,21 +807,20 @@ public final class Converter {
 
         // String conversions supported
         factory.put(pair(Void.class, String.class), fromInstance -> null);
-        factory.put(pair(String.class, String.class), fromInstance -> fromInstance);
-        factory.put(pair(Boolean.class, String.class), Object::toString);
-        factory.put(pair(AtomicBoolean.class, String.class), Object::toString);
         factory.put(pair(Byte.class, String.class), Object::toString);
         factory.put(pair(Short.class, String.class), Object::toString);
         factory.put(pair(Integer.class, String.class), Object::toString);
-        factory.put(pair(AtomicInteger.class, String.class), Object::toString);
-        factory.put(pair(BigInteger.class, String.class), Object::toString);
         factory.put(pair(Long.class, String.class), Object::toString);
-        factory.put(pair(AtomicLong.class, String.class), Object::toString);
-        factory.put(pair(Double.class, String.class), fromInstance -> new DecimalFormat("#.####################").format((double)fromInstance));
-        factory.put(pair(BigDecimal.class, String.class), fromInstance -> ((BigDecimal)fromInstance).stripTrailingZeros().toPlainString());
         factory.put(pair(Float.class, String.class), fromInstance -> new DecimalFormat("#.####################").format((float)fromInstance));
+        factory.put(pair(Double.class, String.class), fromInstance -> new DecimalFormat("#.####################").format((double)fromInstance));
+        factory.put(pair(Boolean.class, String.class), Object::toString);
+        factory.put(pair(Character.class, String.class), fromInstance -> "" + fromInstance);
+        factory.put(pair(BigInteger.class, String.class), Object::toString);
+        factory.put(pair(BigDecimal.class, String.class), fromInstance -> ((BigDecimal)fromInstance).stripTrailingZeros().toPlainString());
+        factory.put(pair(AtomicBoolean.class, String.class), Object::toString);
+        factory.put(pair(AtomicInteger.class, String.class), Object::toString);
+        factory.put(pair(AtomicLong.class, String.class), Object::toString);
         factory.put(pair(Class.class, String.class), fromInstance -> ((Class<?>) fromInstance).getName());
-        factory.put(pair(UUID.class, String.class), Object::toString);
         factory.put(pair(Date.class, String.class), fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance));
@@ -845,7 +833,6 @@ public final class Converter {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance));
         });
-        factory.put(pair(Character.class, String.class), fromInstance -> "" + fromInstance);
         factory.put(pair(LocalDate.class, String.class), fromInstance -> {
             LocalDate localDate = (LocalDate) fromInstance;
             return String.format("%04d-%02d-%02d", localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
@@ -859,6 +846,7 @@ public final class Converter {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
             return zonedDateTime.format(formatter);
         });
+        factory.put(pair(UUID.class, String.class), Object::toString);
         factory.put(pair(Calendar.class, String.class), fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Calendar) fromInstance).getTime());
@@ -866,37 +854,39 @@ public final class Converter {
         factory.put(pair(Number.class, String.class), Object::toString);
         factory.put(pair(Map.class, String.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, String.class, null));
         factory.put(pair(Enum.class, String.class), fromInstance -> ((Enum<?>) fromInstance).name());
+        factory.put(pair(String.class, String.class), fromInstance -> fromInstance);
 
-        // Convertable types
-        toTypes.put(Map.class, Converter::convertToMap);
+        // Map conversions supported
+        factory.put(pair(Byte.class, Map.class), Converter::initMap);
+        factory.put(pair(Short.class, Map.class), Converter::initMap);
+        factory.put(pair(Integer.class, Map.class), Converter::initMap);
+        factory.put(pair(Long.class, Map.class), Converter::initMap);
+        factory.put(pair(Float.class, Map.class), Converter::initMap);
+        factory.put(pair(Double.class, Map.class), Converter::initMap);
+        factory.put(pair(Boolean.class, Map.class), Converter::initMap);
+        factory.put(pair(Character.class, Map.class), Converter::initMap);
+        factory.put(pair(BigInteger.class, Map.class), Converter::initMap);
+        factory.put(pair(BigDecimal.class, Map.class), Converter::initMap);
+        factory.put(pair(AtomicBoolean.class, Map.class), Converter::initMap);
+        factory.put(pair(AtomicInteger.class, Map.class), Converter::initMap);
+        factory.put(pair(AtomicLong.class, Map.class), Converter::initMap);
+        factory.put(pair(Date.class, Map.class), Converter::initMap);
+        factory.put(pair(java.sql.Date.class, Map.class), Converter::initMap);
+        factory.put(pair(Timestamp.class, Map.class), Converter::initMap);
+        factory.put(pair(LocalDate.class, Map.class), Converter::initMap);
+        factory.put(pair(LocalDateTime.class, Map.class), Converter::initMap);
+        factory.put(pair(ZonedDateTime.class, Map.class), Converter::initMap);
+        factory.put(pair(Class.class, Map.class), Converter::initMap);
+        factory.put(pair(UUID.class, Map.class), Converter::initMap);
+        factory.put(pair(Calendar.class, Map.class), Converter::initMap);
+        factory.put(pair(Number.class, Map.class), Converter::initMap);
+        factory.put(pair(Map.class, Map.class), fromInstance -> {
+            Map<?, ?> source = (Map<?, ?>) fromInstance;
+            Map<?, ?> copy = new LinkedHashMap<>(source);
+            return copy;
+        });
+        factory.put(pair(Enum.class, Map.class), Converter::initMap);
         
-        // ? to Map
-        toMap.put(Map.class, null); // Can't have Map instance
-        toMap.put(Byte.class, Converter::initMap);
-        toMap.put(Short.class, Converter::initMap);
-        toMap.put(Integer.class, Converter::initMap);
-        toMap.put(Long.class, Converter::initMap);
-        toMap.put(Float.class, Converter::initMap);
-        toMap.put(Double.class, Converter::initMap);
-        toMap.put(Boolean.class, Converter::initMap);
-        toMap.put(Character.class, Converter::initMap);
-        toMap.put(BigInteger.class, Converter::initMap);
-        toMap.put(BigDecimal.class, Converter::initMap);
-        toMap.put(AtomicBoolean.class, Converter::initMap);
-        toMap.put(AtomicInteger.class, Converter::initMap);
-        toMap.put(AtomicLong.class, Converter::initMap);
-        toMap.put(Class.class, Converter::initMap);
-        toMap.put(UUID.class, Converter::initMap);
-        toMap.put(Calendar.class, Converter::initMap);
-        toMap.put(GregorianCalendar.class, Converter::initMap);
-        toMap.put(Date.class, Converter::initMap);
-        toMap.put(java.sql.Date.class, Converter::initMap);
-        toMap.put(Timestamp.class, Converter::initMap);
-        toMap.put(LocalDate.class, Converter::initMap);
-        toMap.put(LocalDateTime.class, Converter::initMap);
-        toMap.put(ZonedDateTime.class, Converter::initMap);
-        targetTypes.put(Map.class, toMap);
-
         // Split in half for fast inheritance checks
         for (Map.Entry<Class<?>, Class<?>> pair : factory.keySet()) {
             pairKeys.add(pair.getKey());
@@ -991,34 +981,10 @@ public final class Converter {
             return (T) converter.convert(fromInstance);
         }
 
-//        if (convert == null)
-//            throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
-//        }
-
-        // Will be removing this code.
-        converter = toTypes.get(toType);
-        if (converter != null) {
-            if ((fromInstance == null || isEmptyMap(fromInstance)) && fromNull.containsKey(toType)) {
-                return (T) fromNull.get(toType);
-            }
-            
-            try {
-                Object value = converter.convert(fromInstance);
-                if (value != NOPE) {
-                    return (T) value;
-                }
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Value [" + name(fromInstance) + "] could not be converted to a '" + getShortName(toType) + "'", e);
-            }
-        } else {
-            return (T) convertUsingUserDefined(fromInstance, toType);
-        }
-
         throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
     }
 
     private static <T> Convert<?> getInheritedConverter(Class<T> toType, Class<?> sourceType) {
-        Convert<?> converter;
         Set<Class<?>> sourceTypes = new LinkedHashSet<>();
         sourceTypes.add(sourceType);
         Set<Class<?>> targetTypes = new LinkedHashSet<>();
@@ -1042,40 +1008,14 @@ public final class Converter {
             }
         }
         
-        converter = factory.get(pair(sourceClass, targetClass));
+        Convert<?> converter = factory.get(pair(sourceClass, targetClass));
         return converter;
-    }
-
-    private static boolean isEmptyMap(Object fromInstance) {
-        return fromInstance instanceof Map && ((Map)fromInstance).isEmpty();
     }
 
     private static String getShortName(Class<?> type) {
         return java.sql.Date.class.equals(type) ? type.getName() : type.getSimpleName();
     }
     
-    private static Object convertToMap(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toMap.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            return fromValueMap((Map<?, ?>) fromInstance, String.class, null);
-        } else if (fromInstance instanceof Enum) {
-            return ((Enum<?>) fromInstance).name();
-        } else if (fromInstance instanceof Number) {
-            return fromInstance.toString();
-        } else if (fromInstance instanceof Calendar) {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
-        }
-        return NOPE;
-    }
-
     private static String name(Object fromInstance) {
         if (fromInstance == null) {
             return "null";
@@ -1129,6 +1069,14 @@ public final class Converter {
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
      */
     public static boolean isConversionSupportedFor(Class<?> source, Class<?> target) {
+        if (source.isPrimitive()) {
+            source = toPrimitiveWrapperClass(source);
+        }
+
+        if (target.isPrimitive()) {
+            target = toPrimitiveWrapperClass(target);
+        }
+
         if (factory.containsKey(pair(source, target))) {
             return true;
         }
@@ -1141,27 +1089,11 @@ public final class Converter {
      * and the Set contains all the target types (classes) that the source can be converted to.
      */
     public static Map<Class<?>, Set<Class<?>>> allSupportedConversions() {
-        Map<Class<?>, Set<Class<?>>> toFrom = new TreeMap<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
+        Map<Class<?>, Set<Class<?>>> toFrom = new TreeMap<>((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()));
 
-        for (Class<?> targetClass : toTypes.keySet()) {
-            Map<Class<?>, Convert<?>> map = targetTypes.get(targetClass);
-            Set<Class<?>> fromSet = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
-            fromSet.addAll(map.keySet());
-            toFrom.put(targetClass, fromSet);
+        for (Map.Entry<Class<?>, Class<?>> pairs : factory.keySet()) {
+            toFrom.computeIfAbsent(pairs.getKey(), k -> new TreeSet<>((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()))).add(pairs.getValue());
         }
-
-        // Add in user-defined
-        for (Map.Entry<Class<?>, Class<?>> srcTargetPair : userDefined.keySet()) {
-            if (toFrom.containsKey(srcTargetPair.getKey())) {
-                Set<Class<?>> fromSet = toFrom.get(srcTargetPair.getKey());
-                fromSet.add(srcTargetPair.getValue());
-            } else {
-                Set<Class<?>> fromSet = new TreeSet<>((c1, c2) -> getShortName(c1).compareToIgnoreCase(getShortName(c2)));
-                fromSet.add(srcTargetPair.getValue());
-                toFrom.put(srcTargetPair.getKey(), fromSet);
-            }
-        }
-        
         return toFrom;
     }
 
@@ -1170,56 +1102,26 @@ public final class Converter {
      * name, and the Set contains all the target class names that the source can be converted to.
      */
     public static Map<String, Set<String>> getSupportedConversions() {
-        Map<String, Set<String>> toFrom = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, Set<String>> toFrom = new TreeMap<>(String::compareToIgnoreCase);
 
-        for (Class<?> targetClass : toTypes.keySet()) {
-            Map<Class<?>, Convert<?>> fromMap = targetTypes.get(targetClass);
-
-            for (Class<?> fromClass : fromMap.keySet()) {
-                toFrom.computeIfAbsent(getShortName(targetClass), k -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)).add(getShortName(fromClass));
-            }
+        for (Map.Entry<Class<?>, Class<?>> pairs : factory.keySet()) {
+            toFrom.computeIfAbsent(getShortName(pairs.getKey()), k -> new TreeSet<>(String::compareToIgnoreCase)).add(getShortName(pairs.getValue()));
         }
-
-        // Add in user-defined
-        for (Map.Entry<Class<?>, Class<?>> srcTargetPair : userDefined.keySet()) {
-            String srcTypeName = getShortName(srcTargetPair.getKey());
-            String targetTypeName = getShortName(srcTargetPair.getValue());
-
-            if (toFrom.containsKey(srcTypeName)) {
-                Set<String> fromSet = toFrom.get(srcTypeName);
-                fromSet.add(targetTypeName);
-            } else {
-                Set<String> fromSet = new TreeSet<>(String::compareToIgnoreCase);
-                fromSet.add(targetTypeName);
-                toFrom.put(srcTypeName, fromSet);
-            }
-        }
-
         return toFrom;
     }
 
+    /**
+     * Add a new conversion.
+     * @param source Class to convert from.
+     * @param target Class to convert to.
+     * @param conversionFunction Convert function that converts from the source type to the destination type.
+     */
     public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         if (factory.containsKey(pair(source, target))) {
             throw new IllegalArgumentException("A conversion for: " + getShortName(source) + " to: " + getShortName(target) + " already exists");
         } else {
             factory.put(pair(source, target), conversionFunction);
         }
-    }
-
-    private static Object convertUsingUserDefined(Object fromInstance, Class<?> toType) {
-        Class<?> sourceType;
-        if (fromInstance == null) {
-            sourceType = Void.class;
-        } else {
-            sourceType = fromInstance.getClass();
-        }
-
-        Map.Entry<Class<?>, Class<?>> key = new AbstractMap.SimpleImmutableEntry<>(sourceType, toType);
-        Convert<?> converter = userDefined.get(key);
-        if (converter == null) {
-            throw new IllegalArgumentException("Unsupported target type '" + getShortName(toType) + "' requested for conversion from [" + name(fromInstance) + "]");
-        }
-        return converter.convert(fromInstance);
     }
 
     /**

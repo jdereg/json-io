@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
@@ -117,7 +116,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'byte'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -175,7 +174,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'short'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -233,7 +232,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'integer'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -303,7 +302,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'long'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -366,7 +365,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomiclong'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -415,18 +414,10 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'string'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
-        try
-        {
-            convert(new HashMap<>(), HashMap.class);
-            fail();
-        }
-        catch (IllegalArgumentException e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type"));
-        }
+        assert convert(new HashMap<>(), HashMap.class) instanceof Map;
 
         try
         {
@@ -435,7 +426,7 @@ class ConverterTest
         }
         catch (Exception e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported target type 'string'");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported conversion, source type [zoneregion");
         }
     }
 
@@ -473,7 +464,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'bigdecimal"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -518,7 +509,7 @@ class ConverterTest
             convert(TimeZone.getDefault(), BigInteger.class);
             fail();
         } catch (IllegalArgumentException e) {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'biginteger'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try {
@@ -553,7 +544,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomicinteger'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -688,7 +679,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'date'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         // Invalid source type for java.sql.Date
@@ -699,7 +690,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'java.sql.date"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         // Invalid source date for Date
@@ -730,7 +721,7 @@ class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'java.sql.Date' requested for conversion from [Boolean (true)]");
+                .hasMessageContaining("Unsupported conversion, source type [Boolean (true)] target type 'java.sql.Date'");
     }
 
     @Test
@@ -1300,7 +1291,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getMessage().toLowerCase().contains("unsupported target type 'timestamp'");
+            assert e.getMessage().toLowerCase().contains("unsupported conversion, source type [boolean");
         }
 
         try
@@ -1340,7 +1331,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'float'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -1380,7 +1371,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'double'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [zoneinfo"));
         }
 
         try
@@ -1425,7 +1416,7 @@ class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'boolean'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [date"));
         }
     }
 
@@ -1460,7 +1451,7 @@ class ConverterTest
             convert(new Date(), AtomicBoolean.class);
             fail();
         } catch (Exception e) {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomicboolean'"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [date"));
         }
     }
 
@@ -1759,7 +1750,7 @@ class ConverterTest
         }
         catch (Exception e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type [string"));
         }
     }
 
@@ -2053,7 +2044,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
@@ -2088,7 +2079,7 @@ class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'UUID' requested for conversion from [Short (77)]");
+                .hasMessageContaining("Unsupported conversion, source type [Short (77)] target type 'UUID'");
     }
 
     @Test
@@ -2125,7 +2116,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> convert(16.0, Class.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
@@ -2468,11 +2459,10 @@ class ConverterTest
     {
         assertThatThrownBy(() -> convert(null, Collection.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'Collection' requested for conversion");
+                .hasMessageContaining("Unsupported conversion, source type [null] target type 'Collection'");
     }
 
     @Test
-    @Disabled
     void testGetSupportedConversions()
     {
         Map map = Converter.getSupportedConversions();
@@ -2480,7 +2470,6 @@ class ConverterTest
     }
 
     @Test
-    @Disabled
     void testAllSupportedConversions()
     {
         Map map = Converter.allSupportedConversions();
@@ -2488,7 +2477,6 @@ class ConverterTest
     }
 
     @Test
-    @Disabled // will be coming back shortly
     void testIsConversionSupport()
     {
         assert Converter.isConversionSupportedFor(int.class, LocalDate.class);
@@ -2629,7 +2617,7 @@ class ConverterTest
         // Fails to convert
         assertThatThrownBy(() -> Converter.convert(dn, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'UUID' requested for conversion from [DumbNumber (1000)]");
+                .hasMessageContaining("Unsupported conversion, source type [DumbNumber (1000)] target type 'UUID'");
 
         // Add in conversion
         Converter.addConversion(DumbNumber.class, UUID.class, fromInstance -> {

@@ -180,7 +180,6 @@ public class JsonIo {
         }
     }
 
-
     /**
      * Convert a root JsonObject that represents parsed JSON, into an actual Java object.
      * @param rootType The class that represents, in Java, the root of the underlying JSON from which the JsonObject
@@ -251,7 +250,7 @@ public class JsonIo {
      */
     public static void main(String[] args) {
         String json = toJson(Converter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
-        System.out.println("json-io supported conversions between data types (targets by sources):");
+        System.out.println("json-io supported conversions (source type to target types):");
         System.out.println(json);
     }
 }

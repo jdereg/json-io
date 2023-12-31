@@ -87,7 +87,7 @@ public class ClassTest
         String json = "{\"@type\":\"class\",\"value\":16.0}";
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
@@ -104,7 +104,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unsupported target type 'Class' requested for conversion from [Double (16.0)]");
+                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
     }
 
     @Test
