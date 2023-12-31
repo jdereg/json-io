@@ -126,7 +126,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
         }
 
         try
@@ -183,7 +183,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
         }
 
         try
@@ -241,7 +241,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
         }
 
         try
@@ -310,7 +310,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
         }
     }
 
@@ -470,7 +470,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'bigdecimal"));
         }
 
         try
@@ -480,7 +480,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("could not be converted"));
+            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
         }
     }
 
