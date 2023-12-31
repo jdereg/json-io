@@ -92,7 +92,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
 
     public interface Convert<T> {
         T convert(Object fromInstance);
@@ -105,7 +104,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(UUID.class, null);
         fromNull.put(Map.class, null);
 
         // Byte/byte Conversions supported
@@ -777,6 +775,36 @@ public final class Converter {
             return date.toInstant().atZone(ZoneId.systemDefault());
         });
 
+        // UUID conversions supported
+        factory.put(pair(Void.class, UUID.class), fromInstance -> null);
+        factory.put(pair(UUID.class, UUID.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, UUID.class), fromInstance -> UUID.fromString(((String)fromInstance).trim()));
+        factory.put(pair(BigInteger.class, UUID.class), fromInstance -> {
+            BigInteger bigInteger = (BigInteger) fromInstance;
+            BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
+            long mostSignificantBits = bigInteger.shiftRight(64).and(mask).longValue();
+            long leastSignificantBits = bigInteger.and(mask).longValue();
+            return new UUID(mostSignificantBits, leastSignificantBits);
+        });
+        factory.put(pair(BigDecimal.class, UUID.class), fromInstance -> {
+            BigInteger bigInt = ((BigDecimal)fromInstance).toBigInteger();
+            long mostSigBits = bigInt.shiftRight(64).longValue();
+            long leastSigBits = bigInt.and(new BigInteger("FFFFFFFFFFFFFFFF", 16)).longValue();
+            return new UUID(mostSigBits, leastSigBits);
+        });
+        factory.put(pair(Map.class, UUID.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            Object ret = fromMap(map, "mostSigBits", long.class);
+            if (ret != NOPE)
+            {
+                Object ret2 = fromMap(map, "leastSigBits", long.class);
+                if (ret2 != NOPE) {
+                    return new UUID((Long)ret, (Long)ret2);
+                }
+            }
+            throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -792,28 +820,8 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
         
-        // ? to UUID
-        toUUID.put(Map.class, null);
-        toUUID.put(UUID.class, fromInstance -> fromInstance);
-        toUUID.put(String.class, fromInstance -> UUID.fromString(((String)fromInstance).trim()));
-        toUUID.put(BigInteger.class, fromInstance -> {
-            BigInteger bigInteger = (BigInteger) fromInstance;
-            BigInteger mask = BigInteger.valueOf(Long.MAX_VALUE);
-            long mostSignificantBits = bigInteger.shiftRight(64).and(mask).longValue();
-            long leastSignificantBits = bigInteger.and(mask).longValue();
-            return new UUID(mostSignificantBits, leastSignificantBits);
-        });
-        toUUID.put(BigDecimal.class, fromInstance -> {
-            BigDecimal bigDecimal = (BigDecimal) fromInstance;
-            BigInteger bigInteger = bigDecimal.toBigInteger();
-            Convert<?> converter = toUUID.get(BigInteger.class);
-            return converter.convert(bigInteger);
-        });
-        targetTypes.put(UUID.class, toUUID);
-
         // ? to String
         toStr.put(Map.class, null);
         toStr.put(String.class, fromInstance -> fromInstance);
@@ -1087,30 +1095,6 @@ public final class Converter {
         } else if (fromInstance instanceof Calendar) {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Calendar) fromInstance).getTime());
-        }
-        return NOPE;
-    }
-
-    private static Object convertToUUID(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toUUID.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            Object ret = fromMap(map, "mostSigBits", long.class);
-            if (ret != NOPE)
-            {
-                Object ret2 = fromMap(map, "leastSigBits", long.class);
-                if (ret2 != NOPE) {
-                    return new UUID((Long)ret, (Long)ret2);
-                }
-            }
-            throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
         }
         return NOPE;
     }

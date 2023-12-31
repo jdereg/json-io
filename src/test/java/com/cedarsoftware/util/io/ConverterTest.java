@@ -2072,7 +2072,7 @@ class ConverterTest
 
         assertThatThrownBy(() -> Converter.convert("00000000", UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [String (00000000)] could not be converted to a 'UUID'");
+                .hasMessageContaining("Invalid UUID string: 00000000");
     }
 
     @Test
@@ -2088,7 +2088,7 @@ class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert((short)77, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Short (77)] target type 'UUID'");
+                .hasMessageContaining("Unsupported target type 'UUID' requested for conversion from [Short (77)]");
     }
 
     @Test
@@ -2160,7 +2160,7 @@ class ConverterTest
         map.put("leastSigBits", uuid.getLeastSignificantBits());
         assertThatThrownBy(() -> convert(map, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Value [HashMap ({leastSigBits=100})] could not be converted to a 'UUID'");
+                .hasMessageContaining("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
     }
 
     @Test
@@ -2629,7 +2629,7 @@ class ConverterTest
         // Fails to convert
         assertThatThrownBy(() -> Converter.convert(dn, UUID.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [DumbNumber (1000)] target type 'UUID'");
+                .hasMessageContaining("Unsupported target type 'UUID' requested for conversion from [DumbNumber (1000)]");
 
         // Add in conversion
         Converter.addConversion(DumbNumber.class, UUID.class, fromInstance -> {
