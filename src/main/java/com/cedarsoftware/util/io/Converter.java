@@ -90,7 +90,6 @@ public final class Converter {
 
     // These are for speed. 'supportedTypes' contains both bounded and unbounded list.
     // These remove 1 map lookup for bounded (known) types.
-    private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
 
     public interface Convert<T> {
@@ -103,7 +102,6 @@ public final class Converter {
     }
 
     static {
-        fromNull.put(String.class, null);
         fromNull.put(Map.class, null);
 
         // Byte/byte Conversions supported
@@ -818,59 +816,60 @@ public final class Converter {
             throw new IllegalArgumentException("Cannot convert String '" + str + "' to class.  Class not found.");
         });
 
-        // Convertable types
-        toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(Map.class, Converter::convertToMap);
-        
-        // ? to String
-        toStr.put(Map.class, null);
-        toStr.put(String.class, fromInstance -> fromInstance);
-        toStr.put(Boolean.class, Object::toString);
-        toStr.put(AtomicBoolean.class, Object::toString);
-        toStr.put(Byte.class, Object::toString);
-        toStr.put(Short.class, Object::toString);
-        toStr.put(Integer.class, Object::toString);
-        toStr.put(AtomicInteger.class, Object::toString);
-        toStr.put(BigInteger.class, Object::toString);
-        toStr.put(Long.class, Object::toString);
-        toStr.put(AtomicLong.class, Object::toString);
-        toStr.put(Double.class, fromInstance -> new DecimalFormat("#.####################").format((double)fromInstance));
-        toStr.put(BigDecimal.class, fromInstance -> ((BigDecimal)fromInstance).stripTrailingZeros().toPlainString());
-        toStr.put(Float.class, fromInstance -> new DecimalFormat("#.####################").format((float)fromInstance));
-        toStr.put(Class.class, fromInstance -> ((Class<?>) fromInstance).getName());
-        toStr.put(UUID.class, Object::toString);
-        toStr.put(GregorianCalendar.class, fromInstance -> {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
-        });
-        toStr.put(Date.class, fromInstance -> {
+        // String conversions supported
+        factory.put(pair(Void.class, String.class), fromInstance -> null);
+        factory.put(pair(String.class, String.class), fromInstance -> fromInstance);
+        factory.put(pair(Boolean.class, String.class), Object::toString);
+        factory.put(pair(AtomicBoolean.class, String.class), Object::toString);
+        factory.put(pair(Byte.class, String.class), Object::toString);
+        factory.put(pair(Short.class, String.class), Object::toString);
+        factory.put(pair(Integer.class, String.class), Object::toString);
+        factory.put(pair(AtomicInteger.class, String.class), Object::toString);
+        factory.put(pair(BigInteger.class, String.class), Object::toString);
+        factory.put(pair(Long.class, String.class), Object::toString);
+        factory.put(pair(AtomicLong.class, String.class), Object::toString);
+        factory.put(pair(Double.class, String.class), fromInstance -> new DecimalFormat("#.####################").format((double)fromInstance));
+        factory.put(pair(BigDecimal.class, String.class), fromInstance -> ((BigDecimal)fromInstance).stripTrailingZeros().toPlainString());
+        factory.put(pair(Float.class, String.class), fromInstance -> new DecimalFormat("#.####################").format((float)fromInstance));
+        factory.put(pair(Class.class, String.class), fromInstance -> ((Class<?>) fromInstance).getName());
+        factory.put(pair(UUID.class, String.class), Object::toString);
+        factory.put(pair(Date.class, String.class), fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance));
         });
-        toStr.put(java.sql.Date.class, fromInstance -> {
+        factory.put(pair(java.sql.Date.class, String.class), fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance));
         });
-        toStr.put(Timestamp.class, fromInstance -> {
+        factory.put(pair(Timestamp.class, String.class), fromInstance -> {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             return simpleDateFormat.format(((Date) fromInstance));
         });
-        toStr.put(Character.class, fromInstance -> "" + fromInstance);
-        toStr.put(LocalDate.class, fromInstance -> {
+        factory.put(pair(Character.class, String.class), fromInstance -> "" + fromInstance);
+        factory.put(pair(LocalDate.class, String.class), fromInstance -> {
             LocalDate localDate = (LocalDate) fromInstance;
             return String.format("%04d-%02d-%02d", localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
         });
-        toStr.put(LocalDateTime.class, fromInstance -> {
+        factory.put(pair(LocalDateTime.class, String.class), fromInstance -> {
             LocalDateTime localDateTime = (LocalDateTime) fromInstance;
             return String.format("%04d-%02d-%02dT%02d:%02d:%02d", localDateTime.getYear(), localDateTime.getMonthValue(), localDateTime.getDayOfMonth(), localDateTime.getHour(), localDateTime.getMinute(), localDateTime.getSecond());
         });
-        toStr.put(ZonedDateTime.class, fromInstance -> {
+        factory.put(pair(ZonedDateTime.class, String.class), fromInstance -> {
             ZonedDateTime zonedDateTime = (ZonedDateTime) fromInstance;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
             return zonedDateTime.format(formatter);
         });
-        targetTypes.put(String.class, toStr);
+        factory.put(pair(Calendar.class, String.class), fromInstance -> {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
+        });
+        factory.put(pair(Number.class, String.class), Object::toString);
+        factory.put(pair(Map.class, String.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, String.class, null));
+        factory.put(pair(Enum.class, String.class), fromInstance -> ((Enum<?>) fromInstance).name());
 
+        // Convertable types
+        toTypes.put(Map.class, Converter::convertToMap);
+        
         // ? to Map
         toMap.put(Map.class, null); // Can't have Map instance
         toMap.put(Byte.class, Converter::initMap);
@@ -1054,29 +1053,7 @@ public final class Converter {
     private static String getShortName(Class<?> type) {
         return java.sql.Date.class.equals(type) ? type.getName() : type.getSimpleName();
     }
-
-    private static Object convertToString(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toStr.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            return fromValueMap((Map<?, ?>) fromInstance, String.class, null);
-        } else if (fromInstance instanceof Enum) {
-            return ((Enum<?>) fromInstance).name();
-        } else if (fromInstance instanceof Number) {
-            return fromInstance.toString();
-        } else if (fromInstance instanceof Calendar) {
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            return simpleDateFormat.format(((Calendar) fromInstance).getTime());
-        }
-        return NOPE;
-    }
-
+    
     private static Object convertToMap(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toMap.get(fromType);

@@ -415,7 +415,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'string'"));
         }
 
         try
@@ -435,7 +435,7 @@ class ConverterTest
         }
         catch (Exception e)
         {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported conversion, source type");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported target type 'string'");
         }
     }
 
