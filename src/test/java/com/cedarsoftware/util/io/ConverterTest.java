@@ -1235,7 +1235,7 @@ class ConverterTest
             fail();
         }
         catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convert(null, ZonedDateTime.class) == null;
@@ -1742,9 +1742,11 @@ class ConverterTest
         map.put("value", "");
         assert null == convert(map, ZonedDateTime.class);
 
-
         map.clear();
-        assert null == convert(map, ZonedDateTime.class);
+        assertThatThrownBy(() -> convert(map, ZonedDateTime.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Map to ZonedDateTime, the map must include keys: '_v' or 'value'");
+
     }
 
     @Test
