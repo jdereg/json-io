@@ -922,7 +922,7 @@ class ConverterTest
             fail();
         }
         catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getCause().getMessage(), "day must be between 1 and 31");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "day must be between 1 and 31");
         }
 
         assert convert(null, LocalDate.class) == null;
@@ -1551,7 +1551,9 @@ class ConverterTest
         assert null == convert(map, Calendar.class);
 
         map.clear();
-        assert null == convert(map, Calendar.class);
+        assertThatThrownBy(() -> convert(map, Calendar.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the map must include keys: [time, zone], or '_v' or 'value'");
     }
 
     @Test
@@ -1607,7 +1609,9 @@ class ConverterTest
         assert null == convert(map, GregorianCalendar.class);
 
         map.clear();
-        assert null == convert(map, GregorianCalendar.class);
+        assertThatThrownBy(() -> convert(map, GregorianCalendar.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("To convert from Map to Calendar, the map must include keys: [time, zone], or '_v' or 'value'");
     }
 
     @Test
@@ -1697,7 +1701,9 @@ class ConverterTest
         assert null == convert(map, LocalDate.class);
 
         map.clear();
-        assert null == convert(map, LocalDate.class);
+        assertThatThrownBy(() -> convert(map, LocalDate.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Map to LocalDate, the map must include keys: [year, month, day], or '_v' or 'value'");
     }
 
     @Test
@@ -2642,10 +2648,9 @@ class ConverterTest
     {
         UUID uuid = UUID.fromString("00000000-0000-0000-0000-0000000003e8");
 
-        // Fails to convert
-        assertThatThrownBy(() -> Converter.convert(uuid, DumbNumber.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported target type 'DumbNumber' requested for conversion from [UUID (00000000-0000-0000-0000-0000000003e8)]");
+        Object o = Converter.convert(uuid, DumbNumber.class);
+        assert o instanceof BigInteger;
+        assert 1000L == ((Number) o).longValue();
 
         // Add in conversion
         Converter.addConversion(UUID.class, DumbNumber.class, fromInstance -> {

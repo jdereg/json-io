@@ -17,6 +17,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -80,6 +82,9 @@ public final class Converter {
     private static final Map<Class<?>, Convert<?>> toTypes = new HashMap<>();
     private static final Map<Class<?>, Map<Class<?>, Convert<?>>> targetTypes = new HashMap<>();
     private static final Map<Class<?>, Object> fromNull = new HashMap<>();
+
+    private static final Set<Class<?>> pairKeys = new HashSet<>();
+    private static final Set<Class<?>> pairValues = new HashSet<>();
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> factory = new HashMap<>();
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> userDefined = new HashMap<>();
     private static final Map<Class<?>, Set<Class<?>>> cacheParentTypes = new ConcurrentHashMap<>();
@@ -88,8 +93,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toZonedDateTime = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toUUID = new HashMap<>();
@@ -105,9 +108,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(Calendar.class, null);
-        fromNull.put(GregorianCalendar.class, null);
-        fromNull.put(LocalDate.class, null);
         fromNull.put(LocalDateTime.class, null);
         fromNull.put(ZonedDateTime.class, null);
         fromNull.put(UUID.class, null);
@@ -643,6 +643,89 @@ public final class Converter {
             return new Timestamp(date.getTime());
         });
 
+        // Calendar conversions supported
+        factory.put(pair(Void.class, Calendar.class), fromInstance -> null);
+        factory.put(pair(Long.class, Calendar.class), fromInstance -> initCal((Long)fromInstance));
+        factory.put(pair(Double.class, Calendar.class), fromInstance -> initCal(((Number) fromInstance).longValue()));
+        factory.put(pair(BigInteger.class, Calendar.class), fromInstance -> initCal(((Number) fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, Calendar.class), fromInstance -> initCal(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicLong.class, Calendar.class), fromInstance -> initCal(((Number) fromInstance).longValue()));
+        factory.put(pair(Date.class, Calendar.class), fromInstance -> initCal(((Date) fromInstance).getTime()));
+        factory.put(pair(java.sql.Date.class, Calendar.class), fromInstance -> initCal(((Date) fromInstance).getTime()));
+        factory.put(pair(Timestamp.class, Calendar.class), fromInstance -> initCal(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, Calendar.class), fromInstance -> initCal(localDateToMillis((LocalDate)fromInstance)));
+        factory.put(pair(LocalDateTime.class, Calendar.class), fromInstance -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, Calendar.class), fromInstance -> initCal(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(Calendar.class, Calendar.class), fromInstance -> ((Calendar) fromInstance).clone());
+        factory.put(pair(Number.class, Calendar.class), fromInstance -> initCal(((Number)fromInstance).longValue()));
+        factory.put(pair(Map.class, Calendar.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                Object zoneRaw = map.get("zone");
+                TimeZone tz;
+                if (zoneRaw instanceof String) {
+                    String zone = (String) zoneRaw;
+                    tz = TimeZone.getTimeZone(zone);
+                } else {
+                    tz = TimeZone.getDefault();
+                }
+                Calendar cal = Calendar.getInstance();
+                cal.setTimeZone(tz);
+                Date epochInMillis = convert(map.get("time"), Date.class);
+                cal.setTimeInMillis(epochInMillis.getTime());
+                return cal;
+            } else {
+                return fromValueMap(map, Calendar.class, MetaUtils.setOf("time", "zone"));
+            }
+        });
+        factory.put(pair(String.class, Calendar.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
+            if (date == null) {
+                return null;
+            }
+            return initCal(date.getTime());
+        });
+
+        // LocalDate conversions supported
+        factory.put(pair(Void.class, LocalDate.class), fromInstance -> null);
+        factory.put(pair(Short.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(Integer.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(Long.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(Float.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(Double.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(BigInteger.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicInteger.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicLong.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(LocalDate.class, LocalDate.class), fromInstance -> fromInstance);
+        factory.put(pair(LocalDateTime.class, LocalDate.class), fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
+        factory.put(pair(ZonedDateTime.class, LocalDate.class), fromInstance -> ((ZonedDateTime) fromInstance).toLocalDate());
+        factory.put(pair(java.sql.Date.class, LocalDate.class), fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
+        factory.put(pair(Timestamp.class, LocalDate.class), fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
+        factory.put(pair(Date.class, LocalDate.class), fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        factory.put(pair(Calendar.class, LocalDate.class), fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        factory.put(pair(Number.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
+        factory.put(pair(Map.class, LocalDate.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("month") && map.containsKey("day") && map.containsKey("year")) {
+                int month = convert(map.get("month"), int.class);
+                int day = convert(map.get("day"), int.class);
+                int year = convert(map.get("year"), int.class);
+                return LocalDate.of(year, month, day);
+            } else {
+                return fromValueMap(map, LocalDate.class, MetaUtils.setOf("year", "month", "day"));
+            }
+        });
+        factory.put(pair(String.class, LocalDate.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
+            if (date == null) {
+                return null;
+            }
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -658,67 +741,11 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(Calendar.class, Converter::convertToCalendar);
-        toTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
-        toTypes.put(LocalDate.class, Converter::convertToLocalDate);
         toTypes.put(LocalDateTime.class, Converter::convertToLocalDateTime);
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
         
-        // ? to Calendar
-        toCalendar.put(Map.class, null);
-        toCalendar.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).clone());
-        toCalendar.put(Date.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
-        toCalendar.put(java.sql.Date.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
-        toCalendar.put(Timestamp.class, fromInstance -> initCal(((Date) fromInstance).getTime()));
-        toCalendar.put(LocalDate.class, fromInstance -> initCal(localDateToMillis((LocalDate)fromInstance)));
-        toCalendar.put(LocalDateTime.class, fromInstance -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toCalendar.put(ZonedDateTime.class, fromInstance -> initCal(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toCalendar.put(Long.class, fromInstance -> initCal((Long)fromInstance));
-        toCalendar.put(Double.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
-        toCalendar.put(BigInteger.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
-        toCalendar.put(BigDecimal.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
-        toCalendar.put(AtomicLong.class, fromInstance -> initCal(((Number) fromInstance).longValue()));
-        toCalendar.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(str);
-            if (date == null) {
-                return null;
-            }
-            return initCal(date.getTime());
-        });
-        targetTypes.put(Calendar.class, toCalendar);
-        targetTypes.put(GregorianCalendar.class, toCalendar);
-
-        // ? to LocalDate
-        toLocalDate.put(Map.class, null);
-        toLocalDate.put(LocalDate.class, fromInstance -> fromInstance);
-        toLocalDate.put(LocalDateTime.class, fromInstance -> ((LocalDateTime) fromInstance).toLocalDate());
-        toLocalDate.put(ZonedDateTime.class, fromInstance -> ((ZonedDateTime) fromInstance).toLocalDate());
-        toLocalDate.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-        toLocalDate.put(java.sql.Date.class, fromInstance -> ((java.sql.Date) fromInstance).toLocalDate());
-        toLocalDate.put(Timestamp.class, fromInstance -> ((Timestamp) fromInstance).toLocalDateTime().toLocalDate());
-        toLocalDate.put(Date.class, fromInstance -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-        toLocalDate.put(Short.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(Integer.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(Long.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(AtomicInteger.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(AtomicLong.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(Float.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(Double.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(BigInteger.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(BigDecimal.class, fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
-        toLocalDate.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(str);
-            if (date == null) {
-                return null;
-            }
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        });
-        targetTypes.put(LocalDate.class, toLocalDate);
-
         // ? to LocalDateTime
         toLocalDateTime.put(Map.class, null);
         toLocalDateTime.put(LocalDateTime.class, fromInstance -> fromInstance);
@@ -861,6 +888,12 @@ public final class Converter {
         toMap.put(LocalDateTime.class, Converter::initMap);
         toMap.put(ZonedDateTime.class, Converter::initMap);
         targetTypes.put(Map.class, toMap);
+
+        // Split in half for fast inheritance checks
+        for (Map.Entry<Class<?>, Class<?>> pair : factory.keySet()) {
+            pairKeys.add(pair.getKey());
+            pairValues.add(pair.getValue());
+        }
     }
 
     /**
@@ -945,13 +978,14 @@ public final class Converter {
         }
 
         // Try inheritance
-        Set<Class<?>> parentTypes = getSuperClassesAndInterfaces(sourceType);
-        for (Class<?> clazz : parentTypes) {
-            converter = factory.get(pair(clazz, toType));
-            if (converter != null) {
-                return (T) converter.convert(fromInstance);
-            }
+        converter = getInheritedConverter(toType, sourceType);
+        if (converter != null) {
+            return (T) converter.convert(fromInstance);
         }
+
+//        if (convert == null)
+//            throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
+//        }
 
         // Will be removing this code.
         converter = toTypes.get(toType);
@@ -973,6 +1007,35 @@ public final class Converter {
         }
 
         throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
+    }
+
+    private static <T> Convert<?> getInheritedConverter(Class<T> toType, Class<?> sourceType) {
+        Convert<?> converter;
+        Set<Class<?>> sourceTypes = new LinkedHashSet<>();
+        sourceTypes.add(sourceType);
+        Set<Class<?>> targetTypes = new LinkedHashSet<>();
+        targetTypes.add(toType);
+        sourceTypes.addAll(getSuperClassesAndInterfaces(sourceType));
+        targetTypes.addAll(getSuperClassesAndInterfaces(toType));
+
+        Class<?> sourceClass = null;
+        for (Class<?> clazz : sourceTypes) {
+            if (pairKeys.contains(clazz)) {
+                sourceClass = clazz;
+                break;
+            }
+        }
+
+        Class<?> targetClass = null;
+        for (Class<?> clazz : targetTypes) {
+            if (pairValues.contains(clazz)) {
+                targetClass = clazz;
+                break;
+            }
+        }
+        
+        converter = factory.get(pair(sourceClass, targetClass));
+        return converter;
     }
 
     private static boolean isEmptyMap(Object fromInstance) {
@@ -1051,31 +1114,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToLocalDate(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toLocalDate.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Calendar) {
-            return ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("month") && map.containsKey("day") && map.containsKey("year")) {
-                int month = convert(map.get("month"), int.class);
-                int day = convert(map.get("day"), int.class);
-                int year = convert(map.get("year"), int.class);
-                return LocalDate.of(year, month, day);
-            } else {
-                return fromValueMap(map, LocalDate.class, MetaUtils.setOf("year", "month", "day"));
-            }
-        }
-        return NOPE;
-    }
-
     private static Object convertToLocalDateTime(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLocalDateTime.get(fromType);
@@ -1108,38 +1146,6 @@ public final class Converter {
         } else if (fromInstance instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             return fromValueMap(map, ZonedDateTime.class, null);
-        }
-        return NOPE;
-    }
-
-    private static Object convertToCalendar(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toCalendar.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("time")) {
-                Object zoneRaw = map.get("zone");
-                TimeZone tz;
-                if (zoneRaw instanceof String) {
-                    String zone = (String) zoneRaw;
-                    tz = TimeZone.getTimeZone(zone);
-                } else {
-                    tz = TimeZone.getDefault();
-                }
-                Calendar cal = Calendar.getInstance();
-                cal.setTimeZone(tz);
-                Date epochInMillis = convert(map.get("time"), Date.class);
-                cal.setTimeInMillis(epochInMillis.getTime());
-                return cal;
-            } else {
-                return fromValueMap(map, Calendar.class, MetaUtils.setOf("time", "zone"));
-            }
         }
         return NOPE;
     }
@@ -1197,26 +1203,11 @@ public final class Converter {
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
      */
     public static boolean isConversionSupportedFor(Class<?> source, Class<?> target) {
-        // Conversion from the source instance passes through an Object parameter convert(fromInstance, target) and
-        // therefore we do not need to define int.class, Integer.class in the Map for the targets.
-        if (source.isPrimitive()) {
-            source = toPrimitiveWrapperClass(source);
-        }
-        if (target.isPrimitive()) {
-            target = toPrimitiveWrapperClass(target);
-        }
-
-        Map.Entry<Class<?>, Class<?>> key = new AbstractMap.SimpleImmutableEntry<>(source, target);
-        if (userDefined.containsKey(key)) {
+        if (factory.containsKey(pair(source, target))) {
             return true;
         }
 
-        if (!toTypes.containsKey(target)) {
-            return false;
-        }
-        
-        Map<Class<?>, Convert<?>> targets = Converter.targetTypes.get(target);
-        return targets.containsKey(source);
+        return getInheritedConverter(source, target) != null;
     }
 
     /**
@@ -1282,15 +1273,10 @@ public final class Converter {
     }
 
     public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
-        if (toTypes.containsKey(target)) {
-            Map<Class<?>, Convert<?>> map = targetTypes.get(target);
-            if (map.containsKey(source)) {
-                // Can't override built-in conversions.
-                throw new IllegalArgumentException("A conversion for: " + getShortName(source) + " to: " + getShortName(target) + " already exists");
-            }
-            map.put(source, conversionFunction);
+        if (factory.containsKey(pair(source, target))) {
+            throw new IllegalArgumentException("A conversion for: " + getShortName(source) + " to: " + getShortName(target) + " already exists");
         } else {
-            userDefined.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
+            factory.put(pair(source, target), conversionFunction);
         }
     }
 
