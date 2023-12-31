@@ -106,8 +106,9 @@ class ConverterTest
         assert (byte)1 == convert(new AtomicBoolean(true), byte.class);
         assert (byte)0 == convert(new AtomicBoolean(false), byte.class);
 
-        byte z = convert("11.5", byte.class);
-        assert z == 11;
+        assertThatThrownBy(() -> convert("11.5", byte.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value: 11.5 not parseable as a byte value or outside -128");
 
         try
         {
@@ -126,7 +127,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as a byte value or outside -128"));
         }
 
         try
@@ -163,8 +164,9 @@ class ConverterTest
         assert (short)1 == convert(new AtomicBoolean(true), Short.class);
         assert (short)0 == convert(new AtomicBoolean(false), Short.class);
 
-        int z = convert("11.5", short.class);
-        assert z == 11;
+        assertThatThrownBy(() -> convert("11.5", short.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value: 11.5 not parseable as a short value or outside -32768 to 32767");
 
         try
         {
@@ -183,7 +185,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as a short value or outside -32768"));
         }
 
         try
@@ -221,9 +223,9 @@ class ConverterTest
         assert 1 == convert(new AtomicBoolean(true), Integer.class);
         assert 0 == convert(new AtomicBoolean(false), Integer.class);
 
-        int z = convert("11.5", int.class);
-        assert z == 11;
-
+        assertThatThrownBy(() -> convert("11.5", int.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value: 11.5 not parseable as an integer value or outside -214");
         try
         {
             convert(TimeZone.getDefault(), int.class);
@@ -241,7 +243,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as an integer value or outside -214"));
         }
 
         try
@@ -290,8 +292,9 @@ class ConverterTest
         assert 1L == convert(new AtomicBoolean(true), Long.class);
         assert 0L == convert(new AtomicBoolean(false), Long.class);
 
-        long z = convert("11.5", int.class);
-        assert z == 11;
+        assertThatThrownBy(() -> convert("11.5", long.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Value: 11.5 not parseable as a long value or outside -922");
 
         try
         {
@@ -310,7 +313,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as a long value or outside -922"));
         }
     }
 
@@ -373,7 +376,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
+            assertTrue(e.getMessage().contains("Value: 45badNumber not parseable as a AtomicLong value or outside -922"));
         }
     }
 
@@ -480,7 +483,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("character b is neither a decimal digit"));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as a bigdecimal value"));
         }
     }
 
@@ -522,7 +525,7 @@ class ConverterTest
             convert("45badNumber", BigInteger.class);
             fail();
         } catch (IllegalArgumentException e) {
-            assertTrue(e.getMessage().toLowerCase().contains("for input string: \"badnumber\""));
+            assertTrue(e.getMessage().toLowerCase().contains("value: 45badnumber not parseable as a biginteger value"));
         }
     }
 

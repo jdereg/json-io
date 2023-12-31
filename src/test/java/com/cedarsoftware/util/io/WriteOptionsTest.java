@@ -426,7 +426,7 @@ class WriteOptionsTest {
         // ISO DateTime format does not include milliseconds.....whhhhyyyyyy?
         assertEquals(dates2[0].toString(), dates[0].toString());    // differ in millis
         assertEquals(dates2[0].toString(), now.toString());         // differ in millis
-        //this date time format does not support ms, so don't use the more accrate isEqualTo
+        //this date time format does not support ms, so don't use the more accurate isEqualTo
 //        assertThat(dates2).isEqualTo(dates);
 //        assertThat(dates2[0]).isEqualTo(now);
     }

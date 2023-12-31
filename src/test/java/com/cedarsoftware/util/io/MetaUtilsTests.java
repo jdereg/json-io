@@ -105,7 +105,7 @@ public class MetaUtilsTests {
             Converter.convert("float", Float.class);
             fail();
         } catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "for input string", "Float");
+            TestUtil.assertContainsIgnoreCase(e.getMessage(), "value: float not parseable as a float value");
         }
 
         assertThat(Converter.convert('0', Character.class)).isEqualTo(Character.valueOf('0'));

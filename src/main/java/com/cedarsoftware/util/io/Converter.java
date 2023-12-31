@@ -144,11 +144,7 @@ public final class Converter {
             try {
                 return Byte.valueOf(str);
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Byte.MIN_VALUE || value > Byte.MAX_VALUE) {
-                    throw new IllegalArgumentException("Value: " + fromInstance + " outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
-                }
-                return (byte) value;
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a byte value or outside " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
             }
         });
 
@@ -179,11 +175,7 @@ public final class Converter {
             try {
                 return Short.valueOf(str);
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Short.MIN_VALUE || value > Short.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
-                }
-                return (short) value;
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a short value or outside " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
             }
         });
 
@@ -214,11 +206,7 @@ public final class Converter {
             try {
                 return Integer.valueOf(str);
             } catch (NumberFormatException e) {
-                long value = convert(fromInstance, long.class);
-                if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
-                    throw new NumberFormatException("Value: " + fromInstance + " outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
-                }
-                return (int) value;
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as an integer value or outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
             }
         });
 
@@ -255,7 +243,7 @@ public final class Converter {
             try {
                 return Long.valueOf(str);
             } catch (NumberFormatException e) {
-                return convert(fromInstance, BigDecimal.class).longValue();
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a long value or outside " + Long.MIN_VALUE + " to " + Long.MAX_VALUE);
             }
         });
 
@@ -286,7 +274,7 @@ public final class Converter {
             try {
                 return Float.valueOf(str);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a float value");
             }
         });
 
@@ -323,7 +311,7 @@ public final class Converter {
             try {
                 return Double.valueOf(str);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a double value");
             }
         });
 
@@ -425,7 +413,11 @@ public final class Converter {
             if (str.isEmpty()) {
                 return null;
             }
-            return new BigInteger(str);
+            try {
+                return new BigInteger(str);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a BigInteger value.");
+            }
         });
 
         // BigDecimal conversions supported
@@ -464,7 +456,11 @@ public final class Converter {
             if (str.isEmpty()) {
                 return null;
             }
-            return new BigDecimal(str);
+            try {
+                return new BigDecimal(str);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a BigDecimal value.");
+            }
         });
 
         // AtomicBoolean conversions supported
@@ -515,7 +511,11 @@ public final class Converter {
             if (str.isEmpty()) {
                 return null;
             }
-            return new AtomicInteger(Integer.parseInt(str));
+            try {
+                return new AtomicInteger(Integer.parseInt(str));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as an AtomicInteger value or outside " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
+            }
         });
 
         // AtomicLong conversions supported
@@ -550,7 +550,7 @@ public final class Converter {
             try {
                 return new AtomicLong(Long.parseLong(str));
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+                throw new IllegalArgumentException("Value: " + fromInstance + " not parseable as a AtomicLong value or outside " + Long.MIN_VALUE + " to " + Long.MAX_VALUE);
             }
         });
 
