@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDateTime = new HashMap<>();
@@ -106,7 +105,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(Timestamp.class, null);
         fromNull.put(Calendar.class, null);
         fromNull.put(GregorianCalendar.class, null);
         fromNull.put(LocalDate.class, null);
@@ -609,6 +607,42 @@ public final class Converter {
             return new java.sql.Date(date.getTime());
         });
 
+        // Timestamp conversions supported
+        factory.put(pair(Void.class, Timestamp.class), fromInstance -> null);
+        factory.put(pair(Long.class, Timestamp.class), fromInstance -> new Timestamp((long) fromInstance));
+        factory.put(pair(Double.class, Timestamp.class), fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        factory.put(pair(BigInteger.class, Timestamp.class), fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, Timestamp.class), fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicLong.class, Timestamp.class), fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
+        factory.put(pair(Timestamp.class, Timestamp.class), fromInstance -> new Timestamp(((Timestamp)fromInstance).getTime()));
+        factory.put(pair(java.sql.Date.class, Timestamp.class), fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
+        factory.put(pair(Date.class, Timestamp.class), fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, Timestamp.class), fromInstance -> new Timestamp(localDateToMillis((LocalDate) fromInstance)));
+        factory.put(pair(LocalDateTime.class, Timestamp.class), fromInstance -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, Timestamp.class), fromInstance -> new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(Calendar.class, Timestamp.class), fromInstance -> new Timestamp(((Calendar)fromInstance).getTime().getTime()));
+        factory.put(pair(Number.class, Timestamp.class), fromInstance -> ((Number)fromInstance).longValue());
+        factory.put(pair(Map.class, Timestamp.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                long time = convert(map.get("time"), long.class);
+                int ns = convert(map.get("nanos"), int.class);
+                Timestamp timeStamp = new Timestamp(time);
+                timeStamp.setNanos(ns);
+                return timeStamp;
+            } else {
+                return fromValueMap(map, Timestamp.class, MetaUtils.setOf("time", "nanos"));
+            }
+        });
+        factory.put(pair(String.class, Timestamp.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
+            if (date == null) {
+                return null;
+            }
+            return new Timestamp(date.getTime());
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -624,7 +658,6 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(Timestamp.class, Converter::convertToTimestamp);
         toTypes.put(Calendar.class, Converter::convertToCalendar);
         toTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
         toTypes.put(LocalDate.class, Converter::convertToLocalDate);
@@ -632,31 +665,7 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Timestamp
-        toTimestamp.put(Map.class, null);
-        toTimestamp.put(Timestamp.class, fromInstance -> new Timestamp(((Timestamp)fromInstance).getTime()));  // Timestamp is mutable
-        toTimestamp.put(java.sql.Date.class, fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
-        toTimestamp.put(Date.class, fromInstance -> new Timestamp(((Date) fromInstance).getTime()));
-        toTimestamp.put(LocalDate.class, fromInstance -> new Timestamp(localDateToMillis((LocalDate) fromInstance)));
-        toTimestamp.put(LocalDateTime.class, fromInstance -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toTimestamp.put(ZonedDateTime.class, fromInstance -> new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toTimestamp.put(GregorianCalendar.class, fromInstance -> new Timestamp(((Calendar)fromInstance).getTime().getTime()));
-        toTimestamp.put(Long.class, fromInstance -> new Timestamp((long) fromInstance));
-        toTimestamp.put(Double.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
-        toTimestamp.put(BigInteger.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
-        toTimestamp.put(BigDecimal.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
-        toTimestamp.put(AtomicLong.class, fromInstance -> new Timestamp(((Number) fromInstance).longValue()));
-        toTimestamp.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(str);
-            if (date == null) {
-                return null;
-            }
-            return new Timestamp(date.getTime());
-        });
-        targetTypes.put(Timestamp.class, toTimestamp);
-
+        
         // ? to Calendar
         toCalendar.put(Map.class, null);
         toCalendar.put(GregorianCalendar.class, fromInstance -> ((Calendar) fromInstance).clone());
@@ -1042,36 +1051,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToTimestamp(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toTimestamp.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("time")) {
-                long time = convert(map.get("time"), long.class);
-                int ns = convert(map.get("nanos"), int.class);
-                Timestamp timeStamp = new Timestamp(time);
-                timeStamp.setNanos(ns);
-                return timeStamp;
-            } else {
-                return fromValueMap(map, Timestamp.class, MetaUtils.setOf("time", "nanos"));
-            }
-        }
-        else if (fromInstance instanceof Number) {
-            return new Timestamp(((Number)fromInstance).longValue());
-        }
-        else if (fromInstance instanceof Calendar) {
-            return new Timestamp(((Calendar) fromInstance).getTime().getTime());
-        }
-        return NOPE;
-    }
-    
     private static Object convertToLocalDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLocalDate.get(fromType);
