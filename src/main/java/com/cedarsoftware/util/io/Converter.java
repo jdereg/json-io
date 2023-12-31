@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toAtomicInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toAtomicLong = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
@@ -110,7 +109,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(AtomicInteger.class, null);
         fromNull.put(AtomicLong.class, null);
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
@@ -475,19 +473,19 @@ public final class Converter {
 
         // AtomicBoolean conversions supported
         factory.put(pair(Void.class, AtomicBoolean.class), fromInstance -> null);
+        factory.put(pair(Byte.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Short.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Integer.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Long.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Float.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Double.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Boolean.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((Boolean) fromInstance));
+        factory.put(pair(Character.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((char) fromInstance > 0));
+        factory.put(pair(BigInteger.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(BigDecimal.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         factory.put(pair(AtomicBoolean.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
         factory.put(pair(AtomicInteger.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).intValue() != 0));
         factory.put(pair(AtomicLong.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(BigInteger.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(BigDecimal.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Long.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Integer.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Short.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Float.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Double.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Byte.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        factory.put(pair(Boolean.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((Boolean) fromInstance));
-        factory.put(pair(Character.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((char) fromInstance > 0));
         factory.put(pair(Number.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
         factory.put(pair(Map.class, AtomicBoolean.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, AtomicBoolean.class, null));
         factory.put(pair(String.class, AtomicBoolean.class), fromInstance -> {
@@ -496,6 +494,32 @@ public final class Converter {
                 return null;
             }
             return new AtomicBoolean("true".equalsIgnoreCase(str));
+        });
+
+        // AtomicInteger conversions supported
+        factory.put(pair(Void.class, AtomicInteger.class), fromInstance -> null);
+        factory.put(pair(Byte.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number) fromInstance).intValue()));
+        factory.put(pair(Short.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(Integer.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(Long.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(Float.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(Double.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(Boolean.class, AtomicInteger.class), fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
+        factory.put(pair(Character.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((char) fromInstance)));
+        factory.put(pair(BigInteger.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(BigDecimal.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(AtomicInteger.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue())); // mutable, so dupe
+        factory.put(pair(AtomicBoolean.class, AtomicInteger.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
+        factory.put(pair(AtomicLong.class, AtomicInteger.class), fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
+        factory.put(pair(LocalDate.class, AtomicInteger.class), fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
+        factory.put(pair(Number.class, AtomicBoolean.class), fromInstance -> new AtomicInteger(((Number) fromInstance).intValue()));
+        factory.put(pair(Map.class, AtomicInteger.class), fromInstance -> fromValueMap((Map<?, ?>)fromInstance, AtomicInteger.class, null));
+        factory.put(pair(String.class, AtomicInteger.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return null;
+            }
+            return new AtomicInteger(Integer.parseInt(str));
         });
 
         // Class conversions supported
@@ -513,7 +537,6 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
         toTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
         toTypes.put(Date.class, Converter::convertToDate);
         toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
@@ -692,31 +715,6 @@ public final class Converter {
         });
         targetTypes.put(ZonedDateTime.class, toZonedDateTime);
         
-        // ? to AtomicInteger
-        toAtomicInteger.put(Map.class, null);
-        toAtomicInteger.put(AtomicInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue())); // mutable, so dupe
-        toAtomicInteger.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicInteger(1) : new AtomicInteger(0));
-        toAtomicInteger.put(AtomicLong.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(BigInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(BigDecimal.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(Long.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(Integer.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(Short.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(Float.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(Double.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue()));
-        toAtomicInteger.put(LocalDate.class, fromInstance -> new AtomicInteger((int)((LocalDate) fromInstance).toEpochDay()));
-        toAtomicInteger.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicInteger(1) : new AtomicInteger(0));
-        toAtomicInteger.put(Byte.class, fromInstance -> new AtomicInteger(((Number) fromInstance).intValue()));
-        toAtomicInteger.put(Character.class, fromInstance -> new AtomicInteger(((char) fromInstance)));
-        toAtomicInteger.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return null;
-            }
-            return new AtomicInteger(Integer.parseInt(str));
-        });
-        targetTypes.put(AtomicInteger.class, toAtomicInteger);
-
         // ? to AtomicLong
         toAtomicLong.put(Map.class, null);
         toAtomicLong.put(AtomicLong.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));   // mutable, so dupe
@@ -1203,24 +1201,6 @@ public final class Converter {
             } else {
                 return fromValueMap(map, Calendar.class, MetaUtils.setOf("time", "zone"));
             }
-        }
-        return NOPE;
-    }
-
-    private static Object convertToAtomicInteger(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toAtomicInteger.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, AtomicInteger.class, null);
-        } else if (fromInstance instanceof Number) {
-            return new AtomicInteger(((Number) fromInstance).intValue());
         }
         return NOPE;
     }

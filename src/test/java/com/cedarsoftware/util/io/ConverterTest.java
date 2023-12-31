@@ -550,7 +550,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomicinteger'"));
         }
 
         try
@@ -560,7 +560,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getCause().getMessage().toLowerCase().contains("45badnumber"));
+            assertTrue(e.getMessage().toLowerCase().contains("45badnumber"));
         }
     }
 
@@ -1482,7 +1482,6 @@ class ConverterTest
         assertThatThrownBy(() -> convert(map, AtomicBoolean.class))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("the map must include keys: '_v' or 'value'");
-
     }
 
     @Test
@@ -1503,7 +1502,9 @@ class ConverterTest
         assert null == convert(map, AtomicInteger.class);
 
         map.clear();
-        assert null == convert(map, AtomicInteger.class);
+        assertThatThrownBy(() -> convert(map, AtomicInteger.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the map must include keys: '_v' or 'value'");
     }
 
     @Test
