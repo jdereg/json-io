@@ -432,9 +432,9 @@ class WriteOptionsTest {
     }
 
     @Test
-    void testCustomFormat_thatIncludesMillisencs() {
+    void testCustomFormat_thatIncludesMilliseconds() {
         WriteOptions options = new WriteOptionsBuilder()
-                .addCustomWrittenClass(Date.class, new Writers.DateWriter("YYYY-MM-dd'T'HH:mm:ss.SSSZ"))
+                .addCustomWrittenClass(Date.class, new Writers.DateWriter("yyyy-MM-dd'T'HH:mm:ss.SSSZ"))
                 .build();
 
         Date now = new Date();

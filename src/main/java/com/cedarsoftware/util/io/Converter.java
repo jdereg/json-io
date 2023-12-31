@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
@@ -108,7 +107,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
         fromNull.put(Calendar.class, null);
@@ -556,6 +554,31 @@ public final class Converter {
             }
         });
 
+        // Date conversions supported
+        factory.put(pair(Void.class, Date.class), fromInstance -> null);
+        factory.put(pair(Long.class, Date.class), fromInstance -> new Date((long) fromInstance));
+        factory.put(pair(Double.class, Date.class), fromInstance -> new Date(((Number) fromInstance).longValue()));
+        factory.put(pair(BigInteger.class, Date.class), fromInstance -> new Date(((Number) fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, Date.class), fromInstance -> new Date(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicLong.class, Date.class), fromInstance -> new Date(((Number) fromInstance).longValue()));
+        factory.put(pair(Date.class, Date.class), fromInstance -> new Date(((Date) fromInstance).getTime()));
+        factory.put(pair(java.sql.Date.class, Date.class), fromInstance -> new Date(((Date) fromInstance).getTime()));
+        factory.put(pair(Timestamp.class, Date.class), fromInstance -> new Date(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, Date.class), fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
+        factory.put(pair(LocalDateTime.class, Date.class), fromInstance -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, Date.class), fromInstance -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(Calendar.class, Date.class), fromInstance -> ((Calendar) fromInstance).getTime());
+        factory.put(pair(Number.class, Date.class), fromInstance -> ((Number)fromInstance).longValue());
+        factory.put(pair(Map.class, Date.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                return convert(map.get("time"), Date.class);
+            } else {
+                return fromValueMap(map, Date.class, MetaUtils.setOf("time"));
+            }
+        });
+        factory.put(pair(String.class, Date.class), fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -571,7 +594,6 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(Date.class, Converter::convertToDate);
         toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
         toTypes.put(Timestamp.class, Converter::convertToTimestamp);
         toTypes.put(Calendar.class, Converter::convertToCalendar);
@@ -581,24 +603,7 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-
-        // ? to Date
-        toDate.put(Map.class, null);
-        toDate.put(Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));  // Date is mutable
-        toDate.put(java.sql.Date.class, fromInstance -> new Date(((Date) fromInstance).getTime()));
-        toDate.put(Timestamp.class, fromInstance -> new Date(((Date) fromInstance).getTime()));
-        toDate.put(LocalDate.class, fromInstance -> new Date(localDateToMillis((LocalDate) fromInstance)));
-        toDate.put(LocalDateTime.class, fromInstance -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toDate.put(ZonedDateTime.class, fromInstance -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toDate.put(GregorianCalendar.class, fromInstance -> new Date(((Calendar)fromInstance).getTime().getTime()));
-        toDate.put(Long.class, fromInstance -> new Date((long) fromInstance));
-        toDate.put(Double.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
-        toDate.put(BigInteger.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
-        toDate.put(BigDecimal.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
-        toDate.put(AtomicLong.class, fromInstance -> new Date(((Number) fromInstance).longValue()));
-        toDate.put(String.class, fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
-        targetTypes.put(Date.class, toDate);
-
+        
         // ? to java.sql.Date
         toSqlDate.put(Map.class, null);
         toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
@@ -1087,28 +1092,6 @@ public final class Converter {
         return NOPE;
     }
     
-    private static Object convertToDate(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toDate.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Calendar) {
-            return ((Calendar) fromInstance).getTime();
-        } else if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("time")) {
-                return convert(map.get("time"), Date.class);
-            } else {
-                return fromValueMap(map, Date.class, MetaUtils.setOf("time"));
-            }
-        }
-        return NOPE;
-    }
-
     private static Object convertToLocalDate(Object fromInstance) {
         Class<?> fromType = fromInstance.getClass();
         Convert<?> converter = toLocalDate.get(fromType);

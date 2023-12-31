@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -14,9 +7,15 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
+import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.Test;
 
-import com.cedarsoftware.util.io.factory.DateFactory;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -589,7 +588,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getCause().getMessage().toLowerCase().contains("between 1 and 12");
+            assert e.getMessage().toLowerCase().contains("between 1 and 12");
         }
     }
 
@@ -607,7 +606,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getCause().getMessage().toLowerCase().contains("between 1 and 31");
+            assert e.getMessage().toLowerCase().contains("between 1 and 31");
         }
     }
 
@@ -625,7 +624,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 23");
+            assert e.getMessage().toLowerCase().contains("between 0 and 23");
         }
 
     }
@@ -644,7 +643,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 59");
+            assert e.getMessage().toLowerCase().contains("between 0 and 59");
         }
 
     }
@@ -663,7 +662,7 @@ class DatesTest
         }
         catch (IllegalArgumentException e)
         {
-            assert e.getCause().getMessage().toLowerCase().contains("between 0 and 59");
+            assert e.getMessage().toLowerCase().contains("between 0 and 59");
         }
 
     }
