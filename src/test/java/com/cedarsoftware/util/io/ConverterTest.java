@@ -363,7 +363,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomiclong'"));
         }
 
         try
@@ -373,7 +373,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getCause().getMessage().toLowerCase().contains("input string: \"45bad"));
+            assertTrue(e.getMessage().toLowerCase().contains("input string: \"45bad"));
         }
     }
 
@@ -1525,7 +1525,9 @@ class ConverterTest
         assert null == convert(map, AtomicLong.class);
 
         map.clear();
-        assert null == convert(map, AtomicLong.class);
+        assertThatThrownBy(() -> convert(map, AtomicLong.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the map must include keys: '_v' or 'value'");
     }
 
     @Test

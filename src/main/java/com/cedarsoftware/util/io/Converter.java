@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toAtomicLong = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
@@ -109,7 +108,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(AtomicLong.class, null);
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
@@ -248,8 +246,8 @@ public final class Converter {
         factory.put(pair(LocalDate.class, Long.class), fromInstance -> ((LocalDate) fromInstance).toEpochDay());
         factory.put(pair(LocalDateTime.class, Long.class), fromInstance -> localDateTimeToMillis((LocalDateTime) fromInstance));
         factory.put(pair(ZonedDateTime.class, Long.class), fromInstance -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
-        factory.put(pair(Number.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(Calendar.class, Long.class), fromInstance -> ((Calendar) fromInstance).getTime().getTime());
+        factory.put(pair(Number.class, Long.class), fromInstance -> ((Number) fromInstance).longValue());
         factory.put(pair(Map.class, Long.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, long.class, null));
         factory.put(pair(String.class, Long.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
@@ -522,10 +520,46 @@ public final class Converter {
             return new AtomicInteger(Integer.parseInt(str));
         });
 
+        // AtomicLong conversions supported
+        factory.put(pair(Void.class, AtomicLong.class), fromInstance -> null);
+        factory.put(pair(Byte.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
+        factory.put(pair(Short.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(Integer.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(Long.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(Float.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(Double.class,  AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(Boolean.class, AtomicLong.class), fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));
+        factory.put(pair(Character.class, AtomicLong.class), fromInstance -> new AtomicLong(((char) fromInstance)));
+        factory.put(pair(BigInteger.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
+        factory.put(pair(AtomicBoolean.class, AtomicLong.class), fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1) : new AtomicLong(0));
+        factory.put(pair(AtomicLong.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));   // mutable, so dupe
+        factory.put(pair(AtomicInteger.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
+        factory.put(pair(Date.class, AtomicLong.class), fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
+        factory.put(pair(java.sql.Date.class, AtomicLong.class), fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
+        factory.put(pair(Timestamp.class, AtomicLong.class), fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, AtomicLong.class), fromInstance -> new AtomicLong(((LocalDate) fromInstance).toEpochDay()));
+        factory.put(pair(LocalDateTime.class, AtomicLong.class), fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, AtomicLong.class), fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(Calendar.class, AtomicLong.class), fromInstance -> new AtomicLong(((Calendar) fromInstance).getTime().getTime()));
+        factory.put(pair(Number.class, AtomicLong.class), fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
+        factory.put(pair(Map.class, AtomicLong.class), fromInstance -> fromValueMap((Map<?, ?>)fromInstance, AtomicLong.class, null));
+        factory.put(pair(String.class, AtomicLong.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return null;
+            }
+            try {
+                return new AtomicLong(Long.parseLong(str));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(e.getMessage(), e.getCause());
+            }
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
-        factory.put(pair(Map.class, Class.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, Class.class, null));
+        factory.put(pair(Map.class, Class.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, AtomicLong.class, null));
         factory.put(pair(String.class, Class.class), fromInstance -> {
             String str = ((String) fromInstance).trim();
             Class<?> clazz = MetaUtils.classForName(str, Converter.class.getClassLoader());
@@ -537,7 +571,6 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
         toTypes.put(Date.class, Converter::convertToDate);
         toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
         toTypes.put(Timestamp.class, Converter::convertToTimestamp);
@@ -715,42 +748,6 @@ public final class Converter {
         });
         targetTypes.put(ZonedDateTime.class, toZonedDateTime);
         
-        // ? to AtomicLong
-        toAtomicLong.put(Map.class, null);
-        toAtomicLong.put(AtomicLong.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));   // mutable, so dupe
-        toAtomicLong.put(AtomicInteger.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
-        toAtomicLong.put(AtomicBoolean.class, fromInstance -> ((AtomicBoolean) fromInstance).get() ? new AtomicLong(1) : new AtomicLong(0));
-        toAtomicLong.put(BigInteger.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(BigDecimal.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Short.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Integer.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Long.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Float.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Double.class, fromInstance -> new AtomicLong(((Number)fromInstance).longValue()));
-        toAtomicLong.put(Boolean.class, fromInstance -> ((Boolean) fromInstance) ? new AtomicLong(1) : new AtomicLong(0));
-        toAtomicLong.put(Byte.class, fromInstance -> new AtomicLong(((Number) fromInstance).longValue()));
-        toAtomicLong.put(Character.class, fromInstance -> new AtomicLong(((char) fromInstance)));
-        toAtomicLong.put(Date.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
-        toAtomicLong.put(java.sql.Date.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
-        toAtomicLong.put(Timestamp.class, fromInstance -> new AtomicLong(((Date) fromInstance).getTime()));
-        toAtomicLong.put(LocalDate.class, fromInstance -> new AtomicLong(((LocalDate) fromInstance).toEpochDay()));
-        toAtomicLong.put(LocalDateTime.class, fromInstance -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toAtomicLong.put(ZonedDateTime.class, fromInstance -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toAtomicLong.put(GregorianCalendar.class, fromInstance -> new AtomicLong(((Calendar) fromInstance).getTime().getTime()));
-        toAtomicLong.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return null;
-            }
-            try {
-                return new AtomicLong(Long.parseLong(str));
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException(e.getMessage(), e.getCause());
-            }
-        });
-        targetTypes.put(AtomicLong.class, toAtomicLong);
-
         // ? to UUID
         toUUID.put(Map.class, null);
         toUUID.put(UUID.class, fromInstance -> fromInstance);
@@ -1205,26 +1202,6 @@ public final class Converter {
         return NOPE;
     }
 
-    private static Object convertToAtomicLong(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toAtomicLong.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, AtomicLong.class, null);
-        } else if (fromInstance instanceof Number) {
-            return new AtomicLong(((Number) fromInstance).longValue());
-        } else if (fromInstance instanceof Calendar) {
-            return new AtomicLong(((Calendar) fromInstance).getTime().getTime());
-        }
-        return NOPE;
-    }
-    
     private static String name(Object fromInstance) {
         if (fromInstance == null) {
             return "null";
