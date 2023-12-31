@@ -108,7 +108,7 @@ public class MetaUtilsTests {
             TestUtil.assertContainsIgnoreCase(e.getMessage(), "for input string", "Float");
         }
 
-        assertThat((Character) Converter.convert('0', Character.class)).isEqualTo(Character.valueOf('0'));
+        assertThat(Converter.convert('0', Character.class)).isEqualTo(Character.valueOf('0'));
     }
 
     @Test

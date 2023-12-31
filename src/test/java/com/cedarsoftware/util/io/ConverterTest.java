@@ -1453,14 +1453,11 @@ class ConverterTest
         assert b1 != b2; // ensure that it returns a different but equivalent instance
         assert b1.get() == b2.get();
 
-        try
-        {
+        try {
             convert(new Date(), AtomicBoolean.class);
             fail();
-        }
-        catch (Exception e)
-        {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+        } catch (Exception e) {
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'atomicboolean'"));
         }
     }
 
@@ -1482,7 +1479,10 @@ class ConverterTest
         assert null == convert(map, AtomicBoolean.class);
 
         map.clear();
-        assert null == convert(map, AtomicBoolean.class);
+        assertThatThrownBy(() -> convert(map, AtomicBoolean.class))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("the map must include keys: '_v' or 'value'");
+
     }
 
     @Test

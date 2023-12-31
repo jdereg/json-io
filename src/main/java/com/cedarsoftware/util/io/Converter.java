@@ -88,8 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toBigDecimal = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toAtomicBoolean = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toAtomicInteger = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toAtomicLong = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toDate = new HashMap<>();
@@ -112,10 +110,8 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(BigDecimal.class, null);
         fromNull.put(AtomicInteger.class, null);
         fromNull.put(AtomicLong.class, null);
-        fromNull.put(AtomicBoolean.class, null);
         fromNull.put(Date.class, null);
         fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
@@ -477,6 +473,31 @@ public final class Converter {
             return new BigDecimal(str);
         });
 
+        // AtomicBoolean conversions supported
+        factory.put(pair(Void.class, AtomicBoolean.class), fromInstance -> null);
+        factory.put(pair(AtomicBoolean.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
+        factory.put(pair(AtomicInteger.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).intValue() != 0));
+        factory.put(pair(AtomicLong.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(BigInteger.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(BigDecimal.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Long.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Integer.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Short.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Float.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Double.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Byte.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Boolean.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((Boolean) fromInstance));
+        factory.put(pair(Character.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean((char) fromInstance > 0));
+        factory.put(pair(Number.class, AtomicBoolean.class), fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
+        factory.put(pair(Map.class, AtomicBoolean.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, AtomicBoolean.class, null));
+        factory.put(pair(String.class, AtomicBoolean.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            if (str.isEmpty()) {
+                return null;
+            }
+            return new AtomicBoolean("true".equalsIgnoreCase(str));
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -494,7 +515,6 @@ public final class Converter {
         toTypes.put(String.class, Converter::convertToString);
         toTypes.put(AtomicInteger.class, Converter::convertToAtomicInteger);
         toTypes.put(AtomicLong.class, Converter::convertToAtomicLong);
-        toTypes.put(AtomicBoolean.class, Converter::convertToAtomicBoolean);
         toTypes.put(Date.class, Converter::convertToDate);
         toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
         toTypes.put(Timestamp.class, Converter::convertToTimestamp);
@@ -672,30 +692,6 @@ public final class Converter {
         });
         targetTypes.put(ZonedDateTime.class, toZonedDateTime);
         
-        // ? to AtomicBoolean
-        toAtomicBoolean.put(Map.class, null);
-        toAtomicBoolean.put(AtomicBoolean.class, fromInstance -> new AtomicBoolean(((AtomicBoolean) fromInstance).get()));  // mutable, so dupe
-        toAtomicBoolean.put(AtomicInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).intValue() != 0));
-        toAtomicBoolean.put(AtomicLong.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(BigInteger.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(BigDecimal.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Long.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Integer.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Short.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Float.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Double.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Byte.class, fromInstance -> new AtomicBoolean(((Number) fromInstance).longValue() != 0));
-        toAtomicBoolean.put(Boolean.class, fromInstance -> new AtomicBoolean((Boolean) fromInstance));
-        toAtomicBoolean.put(Character.class, fromInstance -> new AtomicBoolean((char) fromInstance > 0));
-        toAtomicBoolean.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            if (str.isEmpty()) {
-                return null;
-            }
-            return new AtomicBoolean("true".equalsIgnoreCase(str));
-        });
-        targetTypes.put(AtomicBoolean.class, toAtomicBoolean);
-
         // ? to AtomicInteger
         toAtomicInteger.put(Map.class, null);
         toAtomicInteger.put(AtomicInteger.class, fromInstance -> new AtomicInteger(((Number)fromInstance).intValue())); // mutable, so dupe
@@ -1207,24 +1203,6 @@ public final class Converter {
             } else {
                 return fromValueMap(map, Calendar.class, MetaUtils.setOf("time", "zone"));
             }
-        }
-        return NOPE;
-    }
-
-    private static Object convertToAtomicBoolean(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toAtomicBoolean.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            return fromValueMap(map, AtomicBoolean.class, null);
-        } else if (fromInstance instanceof Number) {
-            return new AtomicBoolean(((Number) fromInstance).longValue() != 0);
         }
         return NOPE;
     }
