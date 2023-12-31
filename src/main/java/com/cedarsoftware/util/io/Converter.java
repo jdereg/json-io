@@ -88,7 +88,6 @@ public final class Converter {
     // These remove 1 map lookup for bounded (known) types.
     private static final Map<Class<?>, Convert<?>> toStr = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toMap = new HashMap<>();
-    private static final Map<Class<?>, Convert<?>> toSqlDate = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toTimestamp = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toCalendar = new HashMap<>();
     private static final Map<Class<?>, Convert<?>> toLocalDate = new HashMap<>();
@@ -107,7 +106,6 @@ public final class Converter {
 
     static {
         fromNull.put(String.class, null);
-        fromNull.put(java.sql.Date.class, null);
         fromNull.put(Timestamp.class, null);
         fromNull.put(Calendar.class, null);
         fromNull.put(GregorianCalendar.class, null);
@@ -579,6 +577,38 @@ public final class Converter {
         });
         factory.put(pair(String.class, Date.class), fromInstance -> DateUtilities.parseDate(((String) fromInstance).trim()));
 
+        // java.sql.Date conversion supported
+        factory.put(pair(Void.class, java.sql.Date.class), fromInstance -> null);
+        factory.put(pair(Long.class, java.sql.Date.class), fromInstance -> new java.sql.Date((long) fromInstance));
+        factory.put(pair(Double.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        factory.put(pair(BigInteger.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        factory.put(pair(BigDecimal.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        factory.put(pair(AtomicLong.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
+        factory.put(pair(java.sql.Date.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
+        factory.put(pair(Date.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
+        factory.put(pair(Timestamp.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
+        factory.put(pair(LocalDate.class, java.sql.Date.class), fromInstance -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
+        factory.put(pair(LocalDateTime.class, java.sql.Date.class), fromInstance -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        factory.put(pair(ZonedDateTime.class, java.sql.Date.class), fromInstance -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
+        factory.put(pair(Calendar.class, java.sql.Date.class), fromInstance -> new java.sql.Date(((Calendar)fromInstance).getTime().getTime()));
+        factory.put(pair(Number.class, java.sql.Date.class), fromInstance -> ((Number)fromInstance).longValue());
+        factory.put(pair(Map.class, java.sql.Date.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("time")) {
+                return convert(map.get("time"), java.sql.Date.class);
+            } else {
+                return fromValueMap((Map<?,?>) fromInstance, java.sql.Date.class, MetaUtils.setOf("time"));
+            }
+        });
+        factory.put(pair(String.class, java.sql.Date.class), fromInstance -> {
+            String str = ((String) fromInstance).trim();
+            Date date = DateUtilities.parseDate(str);
+            if (date == null) {
+                return null;
+            }
+            return new java.sql.Date(date.getTime());
+        });
+
         // Class conversions supported
         factory.put(pair(Void.class, Class.class), fromInstance -> null);
         factory.put(pair(Class.class, Class.class), fromInstance -> fromInstance);
@@ -594,7 +624,6 @@ public final class Converter {
 
         // Convertable types
         toTypes.put(String.class, Converter::convertToString);
-        toTypes.put(java.sql.Date.class, Converter::convertToSqlDate);
         toTypes.put(Timestamp.class, Converter::convertToTimestamp);
         toTypes.put(Calendar.class, Converter::convertToCalendar);
         toTypes.put(GregorianCalendar.class, Converter::convertToCalendar);
@@ -603,30 +632,6 @@ public final class Converter {
         toTypes.put(ZonedDateTime.class, Converter::convertToZonedDateTime);
         toTypes.put(UUID.class, Converter::convertToUUID);
         toTypes.put(Map.class, Converter::convertToMap);
-        
-        // ? to java.sql.Date
-        toSqlDate.put(Map.class, null);
-        toSqlDate.put(java.sql.Date.class, fromInstance -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
-        toSqlDate.put(Date.class, fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
-        toSqlDate.put(Timestamp.class, fromInstance -> new java.sql.Date(((Date) fromInstance).getTime()));
-        toSqlDate.put(LocalDate.class, fromInstance -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
-        toSqlDate.put(LocalDateTime.class, fromInstance -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
-        toSqlDate.put(ZonedDateTime.class, fromInstance -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
-        toSqlDate.put(GregorianCalendar.class, fromInstance -> new java.sql.Date(((Calendar)fromInstance).getTime().getTime()));
-        toSqlDate.put(Long.class, fromInstance -> new java.sql.Date((long) fromInstance));
-        toSqlDate.put(Double.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
-        toSqlDate.put(BigInteger.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
-        toSqlDate.put(BigDecimal.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
-        toSqlDate.put(AtomicLong.class, fromInstance -> new java.sql.Date(((Number) fromInstance).longValue()));
-        toSqlDate.put(String.class, fromInstance -> {
-            String str = ((String) fromInstance).trim();
-            Date date = DateUtilities.parseDate(str);
-            if (date == null) {
-                return null;
-            }
-            return new java.sql.Date(date.getTime());
-        });
-        targetTypes.put(java.sql.Date.class, toSqlDate);
 
         // ? to Timestamp
         toTimestamp.put(Map.class, null);
@@ -1033,31 +1038,6 @@ public final class Converter {
                 }
             }
             throw new IllegalArgumentException("To convert Map to UUID, the Map must contain both 'mostSigBits' and 'leastSigBits' keys");
-        }
-        return NOPE;
-    }
-
-    private static Object convertToSqlDate(Object fromInstance) {
-        Class<?> fromType = fromInstance.getClass();
-        Convert<?> converter = toSqlDate.get(fromType);
-
-        if (converter != null) {
-            return converter.convert(fromInstance);
-        }
-
-        // Handle inherited types
-        if (fromInstance instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) fromInstance;
-            if (map.containsKey("time")) {
-                return convert(map.get("time"), java.sql.Date.class);
-            } else {
-                return fromValueMap((Map<?,?>) fromInstance, java.sql.Date.class, MetaUtils.setOf("time"));
-            }
-        } else if (fromInstance instanceof Number) {
-            return new java.sql.Date(((Number)fromInstance).longValue());
-        }
-        else if (fromInstance instanceof Calendar) {
-            return new java.sql.Date(((Calendar) fromInstance).getTime().getTime());
         }
         return NOPE;
     }

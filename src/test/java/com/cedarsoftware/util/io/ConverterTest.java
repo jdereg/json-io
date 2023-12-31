@@ -699,7 +699,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getMessage().toLowerCase().contains("unsupported conversion, source type"));
+            assertTrue(e.getMessage().toLowerCase().contains("unsupported target type 'java.sql.date"));
         }
 
         // Invalid source date for Date
@@ -721,7 +721,7 @@ class ConverterTest
         }
         catch (IllegalArgumentException e)
         {
-            assertTrue(e.getCause().getMessage().toLowerCase().contains("day must be between 1 and 31"));
+            assertTrue(e.getMessage().toLowerCase().contains("day must be between 1 and 31"));
         }
     }
 
@@ -730,7 +730,7 @@ class ConverterTest
     {
         assertThatThrownBy(() -> Converter.convert(true, java.sql.Date.class))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Boolean (true)] target type 'java.sql.Date'");
+                .hasMessageContaining("Unsupported target type 'java.sql.Date' requested for conversion from [Boolean (true)]");
     }
 
     @Test
@@ -1650,7 +1650,9 @@ class ConverterTest
         assert null == convert(map, java.sql.Date.class);
 
         map.clear();
-        assert null == convert(map, java.sql.Date.class);
+        assertThatThrownBy(() -> convert(map, java.sql.Date.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("the map must include keys: [time], or '_v' or 'value'");
     }
 
     @Test
