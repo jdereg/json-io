@@ -17,7 +17,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -78,8 +77,6 @@ public final class Converter {
     private static final Double DOUBLE_ZERO = 0.0d;
     private static final Double DOUBLE_ONE = 1.0d;
 
-    private static final Set<Class<?>> pairKeys = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
-    private static final Set<Class<?>> pairValues = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
     private static final Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> factory = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<Class<?>>> cacheParentTypes = new ConcurrentHashMap<>();
     
@@ -87,12 +84,17 @@ public final class Converter {
         T convert(Object fromInstance);
     }
 
-    private static Map.Entry<Class<?>, Class<?>> pair(Class<?> source, Class<?> target)
-    {
+    private static Map.Entry<Class<?>, Class<?>> pair(Class<?> source, Class<?> target) {
         return new AbstractMap.SimpleImmutableEntry<>(source, target);
     }
 
     static {
+        buildFactoryConversions();
+    }
+
+    static void buildFactoryConversions() {
+        factory.clear();
+        
         // Byte/byte Conversions supported
         factory.put(pair(Void.class, byte.class), fromInstance -> (byte)0);
         factory.put(pair(Void.class, Byte.class), fromInstance -> null);
@@ -886,44 +888,12 @@ public final class Converter {
             return copy;
         });
         factory.put(pair(Enum.class, Map.class), Converter::initMap);
-        
-        // Split in half for fast inheritance checks
-        for (Map.Entry<Class<?>, Class<?>> pair : factory.keySet()) {
-            pairKeys.add(pair.getKey());
-            pairValues.add(pair.getValue());
-        }
     }
 
     /**
      * Static utility class.
      */
     private Converter() {
-    }
-
-    private static Set<Class<?>> getSuperClassesAndInterfaces(Class<?> clazz) {
-        Set<Class<?>> parentTypes = cacheParentTypes.get(clazz);
-        if (parentTypes != null) {
-            return parentTypes;
-        }
-        parentTypes = new ConcurrentSkipListSet<>(Comparator.comparing(Class::getName));
-        addSuperClassesAndInterfaces(clazz, parentTypes);
-        cacheParentTypes.put(clazz, parentTypes);
-        return parentTypes;
-    }
-
-    private static void addSuperClassesAndInterfaces(Class<?> clazz, Set<Class<?>> result) {
-        // Add all superinterfaces
-        for (Class<?> iface : clazz.getInterfaces()) {
-            result.add(iface);
-            addSuperClassesAndInterfaces(iface, result);
-        }
-
-        // Add superclass
-        Class<?> superClass = clazz.getSuperclass();
-        if (superClass != null && superClass != Object.class) {
-            result.add(superClass);
-            addSuperClassesAndInterfaces(superClass, result);
-        }
     }
 
     /**
@@ -976,7 +946,7 @@ public final class Converter {
         }
 
         // Try inheritance
-        converter = getInheritedConverter(toType, sourceType);
+        converter = getInheritedConverter(sourceType, toType);
         if (converter != null) {
             return (T) converter.convert(fromInstance);
         }
@@ -984,32 +954,78 @@ public final class Converter {
         throw new IllegalArgumentException("Unsupported conversion, source type [" + name(fromInstance) + "] target type '" + getShortName(toType) + "'");
     }
 
-    private static <T> Convert<?> getInheritedConverter(Class<T> toType, Class<?> sourceType) {
-        Set<Class<?>> sourceTypes = new LinkedHashSet<>();
-        sourceTypes.add(sourceType);
-        Set<Class<?>> targetTypes = new LinkedHashSet<>();
-        targetTypes.add(toType);
+    /**
+     * Expected that source and target classes, if primitive, have already been shifted to primitive wrapper classes.
+     */
+    private static <T> Convert<?> getInheritedConverter(Class<?> sourceType, Class<T> toType) {
+        Set<Class<?>> sourceTypes = new TreeSet<>(getClassComparator());
+        Set<Class<?>> targetTypes = new TreeSet<>(getClassComparator());
+
         sourceTypes.addAll(getSuperClassesAndInterfaces(sourceType));
+        sourceTypes.add(sourceType);
         targetTypes.addAll(getSuperClassesAndInterfaces(toType));
+        targetTypes.add(toType);
 
-        Class<?> sourceClass = null;
-        for (Class<?> clazz : sourceTypes) {
-            if (pairKeys.contains(clazz)) {
-                sourceClass = clazz;
+        Class<?> sourceClass = sourceType;
+        Class<?> targetClass = toType;
+
+        for (Class<?> toClass : targetTypes) {
+            sourceClass = null;
+            targetClass = null;
+
+            for (Class<?> fromClass : sourceTypes) {
+                if (factory.containsKey(pair(fromClass, toClass))) {
+                    sourceClass = fromClass;
+                    targetClass = toClass;
+                    break;
+                }
+            }
+
+            if (sourceClass != null && targetClass != null) {
                 break;
             }
         }
 
-        Class<?> targetClass = null;
-        for (Class<?> clazz : targetTypes) {
-            if (pairValues.contains(clazz)) {
-                targetClass = clazz;
-                break;
-            }
-        }
-        
         Convert<?> converter = factory.get(pair(sourceClass, targetClass));
         return converter;
+    }
+
+    private static Comparator<Class<?>> getClassComparator()
+    {
+        return (c1, c2) -> {
+            if (c1.isInterface() == c2.isInterface()) {
+                // By name
+                return c1.getName().compareToIgnoreCase(c2.getName());
+            }
+            return c1.isInterface() ? 1 : -1;
+        };
+    }
+
+    private static Set<Class<?>> getSuperClassesAndInterfaces(Class<?> clazz) {
+
+        Set<Class<?>> parentTypes = cacheParentTypes.get(clazz);
+        if (parentTypes != null) {
+            return parentTypes;
+        }
+        parentTypes = new ConcurrentSkipListSet<>(getClassComparator());
+        addSuperClassesAndInterfaces(clazz, parentTypes);
+        cacheParentTypes.put(clazz, parentTypes);
+        return parentTypes;
+    }
+
+    private static void addSuperClassesAndInterfaces(Class<?> clazz, Set<Class<?>> result) {
+        // Add all superinterfaces
+        for (Class<?> iface : clazz.getInterfaces()) {
+            result.add(iface);
+            addSuperClassesAndInterfaces(iface, result);
+        }
+
+        // Add superclass
+        Class<?> superClass = clazz.getSuperclass();
+        if (superClass != null && superClass != Object.class) {
+            result.add(superClass);
+            addSuperClassesAndInterfaces(superClass, result);
+        }
     }
 
     private static String getShortName(Class<?> type) {
@@ -1068,19 +1084,24 @@ public final class Converter {
      * @param target Class of target type.
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
      */
+    public static boolean isDirectConversionSupportedFor(Class<?> source, Class<?> target) {
+        source = toPrimitiveWrapperClass(source);
+        target = toPrimitiveWrapperClass(target);
+        return factory.containsKey(pair(source, target));
+    }
+
+    /**
+     * Check to see if a conversion from type to another type is supported.
+     * @param source Class of source type.
+     * @param target Class of target type.
+     * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
+     */
     public static boolean isConversionSupportedFor(Class<?> source, Class<?> target) {
-        if (source.isPrimitive()) {
-            source = toPrimitiveWrapperClass(source);
-        }
-
-        if (target.isPrimitive()) {
-            target = toPrimitiveWrapperClass(target);
-        }
-
+        source = toPrimitiveWrapperClass(source);
+        target = toPrimitiveWrapperClass(target);
         if (factory.containsKey(pair(source, target))) {
             return true;
         }
-
         return getInheritedConverter(source, target) != null;
     }
 
@@ -1115,37 +1136,22 @@ public final class Converter {
      * @param source Class to convert from.
      * @param target Class to convert to.
      * @param conversionFunction Convert function that converts from the source type to the destination type.
+     * @return prior conversion function is one existed.
      */
-    public static void addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
-        if (factory.containsKey(pair(source, target))) {
-            throw new IllegalArgumentException("A conversion for: " + getShortName(source) + " to: " + getShortName(target) + " already exists");
-        } else {
-            factory.put(pair(source, target), conversionFunction);
-        }
+    public static Convert<?> addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
+        source = toPrimitiveWrapperClass(source);
+        target = toPrimitiveWrapperClass(target);
+        return factory.put(pair(source, target), conversionFunction);
     }
 
-    /**
-     * @param localDate A Java LocalDate
-     * @return a long representing the localDate as the number of millis since the epoch, Jan 1, 1970
-     */
     static long localDateToMillis(LocalDate localDate) {
         return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    /**
-     * @param localDateTime A Java LocalDateTime
-     * @return a long representing the localDateTime as the number of milliseconds since the
-     * number of milliseconds since Jan 1, 1970
-     */
     static long localDateTimeToMillis(LocalDateTime localDateTime) {
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    /**
-     * @param zonedDateTime A Java ZonedDateTime
-     * @return a long representing the zonedDateTime as the number of milliseconds since the
-     * number of milliseconds since Jan 1, 1970
-     */
     static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
         return zonedDateTime.toInstant().toEpochMilli();
     }
@@ -1154,6 +1160,7 @@ public final class Converter {
      * @param number Number instance to convert to char.
      * @return char that best represents the Number.  The result will always be a value between
      * 0 and Character.MAX_VALUE.
+     * @throws IllegalArgumentException if the value exceeds the range of a char.
      */
     private static char numberToCharacter(Number number) {
         long value = number.longValue();
@@ -1166,8 +1173,12 @@ public final class Converter {
     /**
      * Given a primitive class, return the Wrapper class equivalent.
      */
-    public static Class<?> toPrimitiveWrapperClass(Class<?> primitiveClass)
+    private static Class<?> toPrimitiveWrapperClass(Class<?> primitiveClass)
     {
+        if (!primitiveClass.isPrimitive()) {
+            return primitiveClass;
+        }
+        
         if (primitiveClass == int.class) {
             return Integer.class;
         } else if (primitiveClass == long.class) {

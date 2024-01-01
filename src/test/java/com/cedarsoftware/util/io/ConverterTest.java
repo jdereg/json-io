@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.io.Converter.convert;
@@ -62,6 +63,12 @@ class ConverterTest
     enum fubar
     {
         foo, bar, baz, quz
+    }
+
+    @BeforeEach
+    void setUp()
+    {
+        Converter.buildFactoryConversions();
     }
 
     @Test
@@ -2484,8 +2491,11 @@ class ConverterTest
         assert Converter.isConversionSupportedFor(LocalDate.class, int.class);
         assert Converter.isConversionSupportedFor(LocalDate.class, Integer.class);
 
-        assert !Converter.isConversionSupportedFor(byte.class, LocalDate.class);
-        assert !Converter.isConversionSupportedFor(Byte.class, LocalDate.class);
+        assert !Converter.isDirectConversionSupportedFor(byte.class, LocalDate.class);
+        assert Converter.isConversionSupportedFor(byte.class, LocalDate.class);       // byte is upgraded to Byte, which is found as Number.
+
+        assert Converter.isConversionSupportedFor(Byte.class, LocalDate.class);       // Number is supported
+        assert !Converter.isDirectConversionSupportedFor(Byte.class, LocalDate.class);
         assert !Converter.isConversionSupportedFor(LocalDate.class, byte.class);
         assert !Converter.isConversionSupportedFor(LocalDate.class, Byte.class);
 
@@ -2610,14 +2620,16 @@ class ConverterTest
     }
 
     @Test
-    void testDumbNumberToUUID()
+    void testDumbNumberToUUIDProvesInheritance()
     {
+        assert Converter.isConversionSupportedFor(DumbNumber.class, UUID.class);
+        assert !Converter.isDirectConversionSupportedFor(DumbNumber.class, UUID.class);
+
         DumbNumber dn = new DumbNumber("1000");
 
-        // Fails to convert
-        assertThatThrownBy(() -> Converter.convert(dn, UUID.class))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unsupported conversion, source type [DumbNumber (1000)] target type 'UUID'");
+        // Converts because DumbNumber inherits from Number.
+        UUID uuid = Converter.convert(dn, UUID.class);
+        assert uuid.toString().equals("00000000-0000-0000-0000-0000000003e8");
 
         // Add in conversion
         Converter.addConversion(DumbNumber.class, UUID.class, fromInstance -> {
@@ -2628,11 +2640,12 @@ class ConverterTest
             return new UUID(mostSignificantBits, leastSignificantBits);
         });
 
-        // Converts!
-        UUID uuid = Converter.convert(dn, UUID.class);
+        // Still converts, but not using inheritance.
+        uuid = Converter.convert(dn, UUID.class);
         assert uuid.toString().equals("00000000-0000-0000-0000-0000000003e8");
 
         assert Converter.isConversionSupportedFor(DumbNumber.class, UUID.class);
+        assert Converter.isDirectConversionSupportedFor(DumbNumber.class, UUID.class);
     }
 
     @Test
@@ -2658,6 +2671,55 @@ class ConverterTest
         assert dn.toString().equals("1000");
 
         assert Converter.isConversionSupportedFor(UUID.class, DumbNumber.class);
+    }
+
+    @Test
+    void testUUIDtoBoolean()
+    {
+        assert !Converter.isConversionSupportedFor(UUID.class, boolean.class);
+        assert !Converter.isConversionSupportedFor(UUID.class, Boolean.class);
+
+        assert !Converter.isConversionSupportedFor(boolean.class, UUID.class);
+        assert !Converter.isConversionSupportedFor(Boolean.class, UUID.class);
+
+        final UUID uuid = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+        assertThatThrownBy(() -> Converter.convert(uuid, boolean.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported conversion, source type [UUID (00000000-0000-0000-0000-000000000000)] target type 'Boolean'");
+
+        // Add in conversions
+        Converter.addConversion(UUID.class, boolean.class, fromInstance -> {
+            UUID uuid1 = (UUID) fromInstance;
+            return !"00000000-0000-0000-0000-000000000000".equals(uuid1.toString());
+        });
+
+        // Add in conversions
+        Converter.addConversion(boolean.class, UUID.class, fromInstance -> {
+            boolean state = (Boolean)fromInstance;
+            if (state) {
+                return "00000000-0000-0000-0000-000000000001";
+            } else {
+                return "00000000-0000-0000-0000-000000000000";
+            }
+        });
+
+        // Converts!
+        assert !Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000000"), boolean.class);
+        assert Converter.convert(UUID.fromString("00000000-0000-0000-0000-000000000001"), boolean.class);
+        assert Converter.convert(UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff"), boolean.class);
+
+        assert Converter.isConversionSupportedFor(UUID.class, boolean.class);
+        assert Converter.isConversionSupportedFor(UUID.class, Boolean.class);
+
+        assert Converter.isConversionSupportedFor(boolean.class, UUID.class);
+        assert Converter.isConversionSupportedFor(Boolean.class, UUID.class);
+    }
+
+    @Test
+    void testBooleanToUUID()
+    {
+
     }
 
     static class Normie
