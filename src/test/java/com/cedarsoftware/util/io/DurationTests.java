@@ -1,8 +1,10 @@
 package com.cedarsoftware.util.io;
 
 import java.time.Duration;
+import java.util.Date;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -163,6 +165,27 @@ class DurationTests {
         assertEquals(2, typedDurations.length);
         assertSame(typedDurations[0], typedDurations[1]);
         assertEquals(Duration.parse(s), typedDurations[0]);
+    }
+
+    static class DurationArray
+    {
+        Duration[] durations;
+        Object[] otherDurations;
+    }
+
+    @Test
+    void testDurationArray()
+    {
+        DurationTests.DurationArray da = new DurationTests.DurationArray();
+        Duration durr = Duration.ofSeconds(121, 999);
+        da.durations = new Duration[] {durr, durr};
+        da.otherDurations = new Object[] {durr, new Date(System.currentTimeMillis()), durr};
+        String json = TestUtil.toJson(da);
+        DurationTests.DurationArray da2 = TestUtil.toObjects(json, null);
+        assert da.durations.length == 2;
+        assert da.otherDurations.length == 3;
+
+        assert DeepEquals.deepEquals(da, da2);
     }
 
     private String loadJsonForTest(String fileName) {
