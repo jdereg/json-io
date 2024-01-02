@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -857,8 +858,10 @@ public final class Converter {
         factory.put(pair(Map.class, String.class), fromInstance -> fromValueMap((Map<?, ?>) fromInstance, String.class, null));
         factory.put(pair(Enum.class, String.class), fromInstance -> ((Enum<?>) fromInstance).name());
         factory.put(pair(String.class, String.class), fromInstance -> fromInstance);
+        factory.put(pair(Duration.class, String.class), Object::toString);
 
         // Map conversions supported
+        factory.put(pair(Void.class, Map.class), fromInstance -> null);
         factory.put(pair(Byte.class, Map.class), Converter::initMap);
         factory.put(pair(Short.class, Map.class), Converter::initMap);
         factory.put(pair(Integer.class, Map.class), Converter::initMap);
@@ -878,6 +881,14 @@ public final class Converter {
         factory.put(pair(LocalDate.class, Map.class), Converter::initMap);
         factory.put(pair(LocalDateTime.class, Map.class), Converter::initMap);
         factory.put(pair(ZonedDateTime.class, Map.class), Converter::initMap);
+        factory.put(pair(Duration.class, Map.class), fromInstance -> {
+            long sec = ((Duration)fromInstance).getSeconds();
+            long nanos = ((Duration)fromInstance).getNano();
+            Map<String, Object> target = new HashMap<>();
+            target.put("seconds", sec);
+            target.put("nanos", nanos);
+            return target;
+        });
         factory.put(pair(Class.class, Map.class), Converter::initMap);
         factory.put(pair(UUID.class, Map.class), Converter::initMap);
         factory.put(pair(Calendar.class, Map.class), Converter::initMap);
@@ -888,6 +899,21 @@ public final class Converter {
             return copy;
         });
         factory.put(pair(Enum.class, Map.class), Converter::initMap);
+
+        // Duration conversions supported
+        factory.put(pair(Void.class, Duration.class), fromInstance -> null);
+        factory.put(pair(Duration.class, Duration.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, Duration.class), fromInstance -> Duration.parse((String) fromInstance));
+        factory.put(pair(Map.class, Duration.class), fromInstance -> {
+            Map<String, Object> map = (Map<String, Object>) fromInstance;
+            if (map.containsKey("seconds") && map.containsKey("nanos"))
+            {
+                long sec = convert(map.get("seconds"), long.class);
+                long nanos = convert(map.get("nanos"), long.class);
+                return Duration.ofSeconds(sec, nanos);
+            }
+            throw new IllegalArgumentException("To convert from Map to Duration, the map must include keys: 'sec' and 'nanos'.");
+        });
     }
 
     /**
@@ -1079,7 +1105,7 @@ public final class Converter {
     }
 
     /**
-     * Check to see if a conversion from type to another type is supported.
+     * Check to see if a direct-conversion from type to another type is supported.
      * @param source Class of source type.
      * @param target Class of target type.
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.
@@ -1091,7 +1117,7 @@ public final class Converter {
     }
 
     /**
-     * Check to see if a conversion from type to another type is supported.
+     * Check to see if a conversion from type to another type is supported (may use inheritance via super classes/interfaces).
      * @param source Class of source type.
      * @param target Class of target type.
      * @return boolean true if the Converter converts from the source type to the destination type, false otherwise.

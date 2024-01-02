@@ -9,6 +9,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class DurationTests {
 
@@ -141,6 +144,26 @@ class DurationTests {
                 .hasNanos(nanos);
     }
 
+    @Test
+    void testDurationInArray()
+    {
+        String s = "PT2M1.000000999S";
+        Duration duration = Duration.ofSeconds(121, 999);
+        Object[] durations = new Object[] {duration, duration};
+        Duration[] typedDurations = new Duration[] {duration, duration};
+        String json = TestUtil.toJson(durations);
+        TestUtil.printLine("json=" + json);
+
+        durations = TestUtil.toObjects(json, null);
+        assertEquals(2, durations.length);
+        assertNotSame(durations[0], durations[1]);
+        assertEquals(Duration.parse(s), durations[0]);
+        json = TestUtil.toJson(typedDurations);
+        TestUtil.printLine("json=" + json);
+        assertEquals(2, typedDurations.length);
+        assertSame(typedDurations[0], typedDurations[1]);
+        assertEquals(Duration.parse(s), typedDurations[0]);
+    }
 
     private String loadJsonForTest(String fileName) {
         return MetaUtils.loadResourceAsString("duration/" + fileName);
