@@ -1,5 +1,14 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.factories.GetMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.IsMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
+import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
+import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
+
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,14 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.cedarsoftware.util.reflect.factories.MethodAccessorFactory;
-import com.cedarsoftware.util.reflect.filters.FieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
-import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
-import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
 
 import static com.cedarsoftware.util.io.WriteOptions.nullWriter;
 
@@ -60,7 +61,7 @@ public class WriteOptionsBuilder {
         BASE_NON_REFS.addAll(loadNonRefs());
         BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
         BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt"));
-        BASE_NONSTANDARD_MAPPINGS.putAll(loadNonStandardMethodNames());
+        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("nonStandardAccessors.txt"));
     }
 
     /**
@@ -81,15 +82,16 @@ public class WriteOptionsBuilder {
 
         this.options.fieldFilters = new ArrayList<>();
         this.options.fieldFilters.add(new StaticFieldFilter());
-        this.options.fieldFilters.add(new GroovyFieldFilter());
         this.options.fieldFilters.add(new EnumFieldFilter());
+        this.options.fieldFilters.add(new GroovyFieldFilter());
 
         this.options.methodFilters = new ArrayList<>();
         this.options.methodFilters.add(new AccessorMethodFilter());
         this.options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
 
         this.options.accessorFactories = new ArrayList<>();
-        this.options.accessorFactories.add(new MethodAccessorFactory());
+        this.options.accessorFactories.add(new GetMethodAccessorFactory());
+        this.options.accessorFactories.add(new IsMethodAccessorFactory());
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)

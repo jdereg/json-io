@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.reflect;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -27,8 +27,6 @@ import java.util.stream.Collectors;
  *         limitations under the License.*
  */
 public class ReflectionUtils {
-
-    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
 
     private ReflectionUtils() {
     }
@@ -56,5 +54,17 @@ public class ReflectionUtils {
      */
     public static Method oneParameterMethodPreference(Method method1, Method method2) {
         return method1.getParameterCount() == 1 ? method1 : method2;
+    }
+
+    /**
+     * Creates an object using default constructor.
+     *
+     * @param c - class to create
+     * @return Object created using default constructor of class c
+     * @throws Exception
+     */
+    public static <T> T newInstance(Class<? extends T> c) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException {
+        Constructor<? extends T> constructor = c.getConstructor();
+        return constructor.newInstance();
     }
 }

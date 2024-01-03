@@ -1,37 +1,25 @@
 package com.cedarsoftware.util.reflect.filters.models;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+
 public class GetMethodTestObject {
+
+    @Getter(AccessLevel.PRIVATE)
     private final String test1 = "foo";
+
+    @Getter(AccessLevel.PRIVATE)
     private String test2 = "bar";
+
+    @Getter(AccessLevel.PROTECTED)
     protected String test3 = "foo";
+
+    @Getter(AccessLevel.PACKAGE)
     String test4 = "bar";
 
+    @Getter
     public String test5 = "foo";
 
+    @Getter
     public static String test6 = "bar";
-
-
-    private String getTest1() {
-        return test1;
-    }
-
-    private String getTest2() {
-        return test2;
-    }
-
-    protected String getTest3() {
-        return test3;
-    }
-
-    String getTest4() {
-        return test4;
-    }
-
-    public String getTest5() {
-        return test5;
-    }
-
-    public static String getTest6() {
-        return test6;
-    }
 }

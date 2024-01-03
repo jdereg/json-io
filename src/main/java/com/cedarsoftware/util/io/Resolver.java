@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import lombok.AccessLevel;
+import lombok.Getter;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -12,11 +16,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-
-import lombok.AccessLevel;
-import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -366,7 +365,7 @@ public abstract class Resolver implements ReaderContext
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();
-        boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
+        boolean useMaps = readOptions.isReturningJsonObjects();
         Object mate;
 
         if (c == Object.class && !useMaps) {  // JsonObject
@@ -514,7 +513,7 @@ public abstract class Resolver implements ReaderContext
             }
             else
             {    // Fix field forward reference
-                Field field = MetaUtils.getField(objToFix.getClass(), ref.field);
+                Field field = MetaUtils.getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
                 if (field != null)
                 {
                     try
@@ -545,7 +544,7 @@ public abstract class Resolver implements ReaderContext
      */
     protected void rehashMaps()
     {
-        final boolean useMapsLocal = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
+        final boolean useMapsLocal = readOptions.isReturningJsonObjects();
 
         for (Object[] mapPieces : prettyMaps)
         {

@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Stream;
-
 import com.cedarsoftware.util.io.models.FoodType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,6 +10,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -137,7 +137,7 @@ class EnumTests {
 
         assertThat(actual.age).isEqualTo(21);
         assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(9);
+        assertThat(actual.internal).isEqualTo(6);
         assertThat(actual.getFoo()).isEqualTo("bar");
     }
 
@@ -328,7 +328,7 @@ class EnumTests {
     @EnumSource(FoodType.class)
     void testEnum_valueProblems(Enum<FoodType> item) {
         String json = TestUtil.toJson(item, new WriteOptionsBuilder().writeEnumAsJsonObject(true).build());
-        FoodType actual = TestUtil.toObjects(json, new ReadOptions(), FoodType.class);
+        FoodType actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), FoodType.class);
 
         assertThat(actual).isEqualTo(item);
     }
@@ -559,6 +559,10 @@ class EnumTests {
 
     private <T> T loadObject(String fileName) {
         return (T) TestUtil.toObjects(loadJson(fileName), null);
+    }
+
+    private <T> T loadObject(String fileName, ReadOptions options) {
+        return (T) TestUtil.toObjects(loadJson(fileName), options, null);
     }
 
 

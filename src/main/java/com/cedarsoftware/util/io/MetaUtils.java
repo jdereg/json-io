@@ -84,6 +84,10 @@ public class MetaUtils
     private MetaUtils () {}
     enum Dumpty {}
 
+    public static final String META_CLASS_FIELD_NAME = "metaClass";
+
+    public static final String META_CLASS_NAME = "groovy.lang.MetaClass";
+
     private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
@@ -234,17 +238,6 @@ public class MetaUtils
     }
 
     /**
-     * Return an instance of the Java Field class corresponding to the passed in field name.
-     * @param c class containing the field / field name
-     * @param field String name of a field on the class.
-     * @return Field instance if the field with the corresponding name is found, null otherwise.
-     */
-    public static Field getField(Class<?> c, String field)
-    {
-        return getDeepDeclaredFields(c).get(field);
-    }
-
-    /**
      * @param c Class instance
      * @return ClassMeta which contains fields of class.  The results are cached internally for performance
      *         when called again with same Class.
@@ -307,7 +300,6 @@ public class MetaUtils
         classMetaCache.put(c, classFields);
         return new LinkedHashMap<>(classFields);
     }
-
     /**
      * Compare a primitive to a primitive Wrapper.
      * @return 0 if they are the same, -1 if not.  Primitive wrapper classes are consider the same as primitive classes.
@@ -980,10 +972,6 @@ public class MetaUtils
 
     public static void trySetAccessible(AccessibleObject object)
     {
-        if (object.isAccessible()) {
-            return;
-        }
-
         safelyIgnoreException(() -> {
             object.setAccessible(true);
         });
@@ -1000,7 +988,9 @@ public class MetaUtils
     public static void safelyIgnoreException(Runnable runnable) {
         try {
             runnable.run();
-        } catch (Throwable ignored) { }
+        } catch (Throwable ignored) {
+            System.out.println(ignored);
+        }
     }
     public static boolean isEmpty(final String s) {
         return trimLength(s) == 0;
@@ -1085,6 +1075,35 @@ public class MetaUtils
         return Arrays.stream(commaSeparatedString.split(","))
                 .map(String::trim)
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Load custom writer classes based on contents of resources/customWriters.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     *
+     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    public static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames(String fileName) {
+        Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
+        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String mappings = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " not defined in the JVM");
+                continue;
+            }
+
+            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
+            for (String split : mappings.split(",")) {
+                String[] parts = split.split(":");
+                mapping.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+        return nonStandardMapping;
     }
 
     /**

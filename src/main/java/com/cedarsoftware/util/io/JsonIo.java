@@ -68,7 +68,7 @@ public class JsonIo {
     /**
      * Convert the passed in Java source object to JSON.
      * @param srcObject Java instance to convert to JSON format.  Can be a JsonObject that was loaded earlier
-     *                  via .toObjects() with readOptions.returnType(ReturnType.JSON_OBJECTS).
+     *                  via .toObjects() with readOptions.returnAsNativeJsonObjects().
      * @param writeOptions Feature options settings to control the JSON output.  Can be null,
      *                     in which case, default settings will be used.
      * @return String of JSON that represents the srcObject in JSON format.
@@ -99,7 +99,7 @@ public class JsonIo {
      *            you don't want this, set writeOptions.closeStream(false).  This is useful for creating NDJSON,
      *            where multiple JSON objects are written to the stream, separated by a newline.
      * @param source Java instance to convert to JSON format.  Can be a JsonObject that was loaded earlier
-     *                  via .toObjects() with readOptions.returnType(ReturnType.JSON_OBJECTS).
+     *                  via .toObjects() with readOptions.returnAsNativeJsonObjects().
      * @param writeOptions Feature options settings to control the JSON output.  Can be null,
      *                     in which case, default settings will be used.
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
@@ -187,9 +187,11 @@ public class JsonIo {
      * @return a typed Java instance object graph.
      */
     public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
-        ReadOptions localReadOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
-        localReadOptions.returnType(ReturnType.JAVA_OBJECTS);
-        JsonReader reader = new JsonReader(localReadOptions);
+        if (readOptions == null) {
+            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
+        }
+
+        JsonReader reader = new JsonReader(readOptions);
         return reader.convertJsonValueToJava(jsonObject, rootType);
     }
 
@@ -201,18 +203,19 @@ public class JsonIo {
      * @return String JSON formatted in human readable, standard multi-line, indented format.
      */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        WriteOptionsBuilder builder = writeOptions == null ? new WriteOptionsBuilder() : new WriteOptionsBuilder(writeOptions);
-        WriteOptions newWriteOptions = builder.prettyPrint(true).build();
+        Convention.throwIfFalse(writeOptions == null || writeOptions.isPrettyPrint(), "Pretty print must be turned on to format JSON.");
+        Convention.throwIfFalse(readOptions == null || readOptions.isReturningJsonObjects(), "To format and remove type information we must be returning objects as pure JSON");
+        
+        if (writeOptions == null) {
+            writeOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        }
 
         if (readOptions == null) {
-            readOptions = new ReadOptions();
-        } else {
-            readOptions = new ReadOptions(readOptions);
+            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
         }
-        readOptions.returnType(ReturnType.JSON_OBJECTS);
-        
+
         Object object = toObjects(json, readOptions, null);
-        return toJson(object, newWriteOptions);
+        return toJson(object, writeOptions);
     }
 
     /**
@@ -222,7 +225,7 @@ public class JsonIo {
      */
     public static String formatJson(String json) {
         return formatJson(json,
-                new ReadOptions().returnType(ReturnType.JSON_OBJECTS),
+                new ReadOptionsBuilder().returnAsNativeJsonObjects().build(),
                 new WriteOptionsBuilder().prettyPrint(true).build());
     }
 

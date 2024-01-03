@@ -47,7 +47,7 @@ In this example, an`InputStream`is supplying the JSON.
 associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
     String json = // or InputStream to JSON providing source
-    ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_OBJECTS);
+    ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
     JsonObject root = JsonIo.toObjects(json, readOptions);    
 
 See the `ReadOptions` below for the feature control options.  In the example above, rather than return the objects
@@ -324,7 +324,7 @@ all those to collapse to the same value, they won't Each one would be read in as
 ## Controlling the input JSON using `ReadOptions`
 Create a new`ReadOptions`instance and turn various features on/off using the methods below. Example:
 
-    ReadOptions readOptions = new ReadOptions().
+    ReadOptions readOptions = new ReadOptionsBuilder()..build()
     JsonWriter.toJson(root, writeOptions);
 
 To pass these to`JsonRead.toJava(root, readOptions)`set up a`ReadOptions`using the feature settings below.

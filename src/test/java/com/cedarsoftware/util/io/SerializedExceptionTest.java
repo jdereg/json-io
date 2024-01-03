@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -72,7 +72,7 @@ public class SerializedExceptionTest
      */
     void testAccessToPrivateField()
     {
-        ReadOptions.addPermanentClassFactory(MyException.class, new MyExceptionCreator());
+        ReadOptionsBuilder.addPermanentClassFactory(MyException.class, new MyExceptionCreator());
         MyException exp = new MyException("foo", "bar");
         WriteOptions writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(MyException.class, new MyExceptionWriter()).build();
         String json = TestUtil.toJson(exp, writeOptions);

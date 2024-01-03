@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.reflect;
 
+import com.cedarsoftware.util.io.JsonIoException;
+import lombok.Getter;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.MetaUtils;
-import lombok.Getter;
 
 import static java.lang.reflect.Modifier.isPublic;
 
@@ -31,53 +30,60 @@ import static java.lang.reflect.Modifier.isPublic;
  */
 public class Injector {
 
-    @Getter
-    private final Class<?> type;
-
-    @Getter
-    private final Class<?> declaringClass;
-
-    @Getter
-    private final Type genericType;
-
-    @Getter
-    private final String name;
+    private final Field field;
 
     @Getter
     private final String displayName;
 
+    @Getter
+    private final String uniqueFieldName;
+
     private MethodHandle injector;
 
-    public Injector(Field field) throws Throwable {
-        this.name = field.getName();
-        this.displayName = field.getName();
-        this.type = field.getType();
-        this.declaringClass = field.getDeclaringClass();
-        this.genericType = field.getGenericType();
 
-        if (!(isPublic(field.getModifiers()) && isPublic(field.getDeclaringClass().getModifiers()))) {
-            MetaUtils.trySetAccessible(field);
+    public Injector(Field field, MethodHandle handle, String uniqueFieldName, String displayName) {
+        this.field = field;
+        this.displayName = displayName;
+        this.uniqueFieldName = uniqueFieldName;
+        this.injector = handle;
+    }
+
+    public static Injector create(Field field, String uniqueFieldName) {
+        if (!isPublic(field.getModifiers()) || !isPublic(field.getDeclaringClass().getModifiers())) {
+            try {
+                field.setAccessible(true);
+            } catch (Exception ioe) {
+                // If object could not be set accessible let's escape here instaad
+                // of continuing on with more reflection and possible exceptions being thrown.
+                // this will speed things up a bit to short circuit.
+                // Anything that shows up in System.out.println() above should either be added to ignored
+                // fields if there is no method that can access it or add a nonstandard mapping to the method.
+                System.out.println(ioe);
+                return null;
+            }
         }
 
         try {
-            this.injector = MethodHandles.lookup().unreflectSetter(field);
-        } catch (Exception e) {
-            this.injector = null;
+
+            MethodHandle handle = MethodHandles.lookup().unreflectSetter(field);
+            return new Injector(field, handle, uniqueFieldName, field.getName());
+        } catch (IllegalAccessException ex) {
+            // ignore
+            System.out.println(ex.getMessage());
+            return null;
         }
     }
 
-    public Injector(Field field, Method method) throws Throwable {
-        this.name = field.getName();
-        this.type = field.getType();
-        this.declaringClass = field.getDeclaringClass();
-        this.genericType = field.getGenericType();
-        this.displayName = method.getName();
 
-        if (!isPublic(method.getDeclaringClass().getModifiers())) {
-            MetaUtils.trySetAccessible(method);
+    public static Injector create(Field field, String methodName, String uniqueFieldName) {
+        try {
+            MethodType methodType = MethodType.methodType(Void.class, field.getType());
+            MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, methodType);
+            return new Injector(field, handle, uniqueFieldName, methodName);
+        } catch (NoSuchMethodException | IllegalAccessException ex) {
+            // ignore
+            return null;
         }
-
-        this.injector = MethodHandles.lookup().unreflect(method);
     }
 
     public void inject(Object object, Object value) {
@@ -94,5 +100,17 @@ public class Injector {
         } catch (Throwable t) {
             throw new JsonIoException("Attempting to set field: " + this.getName() + " using " + this.getDisplayName(), t);
         }
+    }
+
+    public Class<?> getType() {
+        return this.field.getType();
+    }
+
+    public String getName() {
+        return this.field.getName();
+    }
+
+    public Type getGenericType() {
+        return this.field.getGenericType();
     }
 }

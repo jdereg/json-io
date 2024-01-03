@@ -1,5 +1,17 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.filters.models.CarEnumWithCustomFields;
+import com.cedarsoftware.util.reflect.filters.models.ColorEnum;
+import com.cedarsoftware.util.reflect.filters.models.GetMethodTestObject;
+import com.cedarsoftware.util.reflect.filters.models.ObjectWithBooleanValues;
+import com.cedarsoftware.util.reflect.filters.models.PrivateFinalObject;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Duration;
@@ -17,17 +29,12 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -443,38 +450,167 @@ class WriteOptionsTest {
         assertThat(date2).isEqualTo(now);
     }
 
-//    @Test
-//    void testGetDeepAccessorMap_whereSomeFieldsHaveAccessorsAndOthersDoNot() {
-//
-//        Collection<Accessor> accessors = new WriteOptionsBuilder().build().getDeepAccessors(PrivateFinalObject.class);
-//
-//        assertThat(accessors).hasSize(4);
-//        assertThat(accessors.get("x").isPublic()).isFalse();
-//        assertThat(accessors.get("x").getDisplayName()).isEqualTo("x");
-//        assertThat(accessors.get("y").isPublic()).isFalse();
-//        assertThat(accessors.get("y").getDisplayName()).isEqualTo("y");
-//        assertThat(accessors.get("key").isPublic()).isTrue();
-//        assertThat(accessors.get("key").getDisplayName()).isEqualTo("getKey");
-//        assertThat(accessors.get("flatuated").isPublic()).isTrue();
-//        assertThat(accessors.get("flatuated").getDisplayName()).isEqualTo("isFlatuated");
-//    }
-//
-//    @Test
-//    void testGetDeepAccessorMap_onEnumDefinitionClass_findsName() {
-//        Map<String, Accessor> accessors = new WriteOptionsBuilder().getDeepAccessorMap(ColorEnum.class);
-//        assertThat(accessors).hasSize(1);
-//        assertThat(accessors.get("name").isPublic()).isTrue();
-//        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
-//    }
-//
-//    @Test
-//    void testGetDeepAccessorMap_onEnumClass() {
-//        Map<String, Accessor> accessors = new WriteOptionsBuilder().getDeepAccessorMap(Enum.class);
-//
-//        assertThat(accessors).hasSize(1);
-//        assertThat(accessors.get("name").isPublic()).isTrue();
-//        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
-//    }
+    @Test
+    void getAccessorsForClass_withMixedAccessors() {
+
+        List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(PrivateFinalObject.class);
+
+        assertThat(accessors).hasSize(4);
+
+        assertThat(accessors.get(0).isPublic()).isFalse();
+        assertThat(accessors.get(0).getDisplayName()).isEqualTo("x");
+        assertThat(accessors.get(0).getActualFieldName()).isEqualTo("x");
+        assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("x");
+        assertThat(accessors.get(0).getFieldType()).isEqualTo(int.class);
+        assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+
+        assertThat(accessors.get(1).isPublic()).isFalse();
+        assertThat(accessors.get(1).getDisplayName()).isEqualTo("y");
+        assertThat(accessors.get(1).getActualFieldName()).isEqualTo("y");
+        assertThat(accessors.get(1).getUniqueFieldName()).isEqualTo("y");
+        assertThat(accessors.get(1).getFieldType()).isEqualTo(int.class);
+        assertThat(accessors.get(1).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+
+        assertThat(accessors.get(2).isPublic()).isTrue();
+        assertThat(accessors.get(2).getDisplayName()).isEqualTo("getKey");
+        assertThat(accessors.get(2).getActualFieldName()).isEqualTo("key");
+        assertThat(accessors.get(2).getUniqueFieldName()).isEqualTo("key");
+        assertThat(accessors.get(2).getFieldType()).isEqualTo(String.class);
+        assertThat(accessors.get(2).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+
+        assertThat(accessors.get(3).isPublic()).isTrue();
+        assertThat(accessors.get(3).getDisplayName()).isEqualTo("isFlatuated");
+        assertThat(accessors.get(3).getActualFieldName()).isEqualTo("flatuated");
+        assertThat(accessors.get(3).getUniqueFieldName()).isEqualTo("flatuated");
+        assertThat(accessors.get(3).getFieldType()).isEqualTo(boolean.class);
+        assertThat(accessors.get(3).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
+    }
+
+    @Test
+    void getAccessorsForClass_onEnumDefinition_fillsOutAccessorCorrectly() {
+        List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(ColorEnum.class);
+
+        assertThat(accessors).hasSize(1);
+        assertThat(accessors.get(0).isPublic()).isTrue();
+        assertThat(accessors.get(0).getDisplayName()).isEqualTo("name");
+        assertThat(accessors.get(0).getActualFieldName()).isEqualTo("name");
+        assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("name");
+        assertThat(accessors.get(0).getFieldType()).isEqualTo(String.class);
+        assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(Enum.class);
+    }
 
 
+    @Test
+    void testGetDeepAccessorMap_onEnumDefinitionClass_findsName() {
+        List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(ColorEnum.class);
+        assertThat(accessors).hasSize(1);
+//        assertThat(accessors.get("name").isPublic()).isTrue();
+//        assertThat(accessors.get("name").getDisplayName()).isEqualTo("name");
+    }
+
+    @Test
+    void getAccessorsForClass_onEnum_fillsOutAccessorCorrectly() {
+        List<Accessor> accessors = new WriteOptionsBuilder().build().getAccessorsForClass(Enum.class);
+
+        assertThat(accessors).hasSize(1);
+        assertThat(accessors.get(0).isPublic()).isTrue();
+        assertThat(accessors.get(0).getDisplayName()).isEqualTo("name");
+        assertThat(accessors.get(0).getActualFieldName()).isEqualTo("name");
+        assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("name");
+        assertThat(accessors.get(0).getFieldType()).isEqualTo(String.class);
+        assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(Enum.class);
+    }
+
+    @Test
+    void getAccessorsForClass_whenMethodDoesNotExists_doesNotThrowException() throws Throwable {
+        List<Accessor> list = new WriteOptionsBuilder()
+                .addNonStandardMapping(PrivateFinalObject.class, "x", "getTotal")
+                .build()
+                .getAccessorsForClass(PrivateFinalObject.class);
+
+        assertThat(list)
+                .hasSize(4);
+
+        assertThat(list.get(0).getDisplayName()).isEqualTo("getTotal");
+        assertThat(list.get(1).getDisplayName()).isEqualTo("y");
+        assertThat(list.get(2).getDisplayName()).isEqualTo("getKey");
+        assertThat(list.get(3).getDisplayName()).isEqualTo("isFlatuated");
+
+    }
+
+    @Test
+    void getAccessorsForClass_findsName_whenIncludedInNonStandardMappings() {
+        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(ReturnType.class);
+
+        assertThat(list)
+                .hasSize(1);
+
+        //  non-standard mapping for Enum.name()
+        assertThat(list.get(0).getDisplayName()).isEqualTo("name");
+    }
+
+    @Test
+    void getAccessorsForClass_findsAllNonStaticFieldAccessors() {
+        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(GetMethodTestObject.class);
+
+        //  will not include
+        assertThat(list)
+                .hasSize(5);
+
+        assertThat(list.get(0).getDisplayName()).isEqualTo("test1");
+        assertThat(list.get(1).getDisplayName()).isEqualTo("test2");
+        assertThat(list.get(2).getDisplayName()).isEqualTo("test3");
+        assertThat(list.get(3).getDisplayName()).isEqualTo("test4");
+
+        //  public method for accessing test5 so we use that.
+        assertThat(list.get(4).getDisplayName()).isEqualTo("getTest5");
+    }
+
+    @Test
+    void getAccessorsForClass_bindsBooleanNonStaticFieldAccessors() throws Throwable {
+        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(ObjectWithBooleanValues.class);
+
+        assertThat(list)
+                .hasSize(5);
+
+        assertThat(list.get(0).getDisplayName()).isEqualTo("test1");
+        assertThat(list.get(1).getDisplayName()).isEqualTo("test2");
+        assertThat(list.get(2).getDisplayName()).isEqualTo("test3");
+        assertThat(list.get(3).getDisplayName()).isEqualTo("test4");
+
+        //  public method for accessing test5 so we use that.
+        assertThat(list.get(4).getDisplayName()).isEqualTo("isTest5");
+    }
+
+    @Test
+    void getAccessorsForClass_findEnumWithCustomFields_whenNotPublicFieldsOnly() {
+        List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build().getAccessorsForClass(CarEnumWithCustomFields.class);
+
+        assertThat(list)
+                .hasSize(5);
+
+
+        assertThat(list.get(0).getDisplayName()).isEqualTo("speed");
+        assertThat(list.get(1).getDisplayName()).isEqualTo("getRating");
+        assertThat(list.get(2).getDisplayName()).isEqualTo("tire");
+        assertThat(list.get(3).getDisplayName()).isEqualTo("isStick");
+
+        //  public method for accessing test5 so we use that.
+        assertThat(list.get(4).getDisplayName()).isEqualTo("name");
+    }
+
+    @Test
+    void getAccessorsForClass_findEnumAccessors_whenPublicFieldsOnly() {
+        List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build().getAccessorsForClass(CarEnumWithCustomFields.class);
+
+        assertThat(list)
+                .hasSize(3);
+
+
+        assertThat(list.get(0).getDisplayName()).isEqualTo("getRating");
+        assertThat(list.get(1).getDisplayName()).isEqualTo("isStick");
+
+        //  public method for accessing test5 so we use that.
+        assertThat(list.get(2).getDisplayName()).isEqualTo("name");
+    }
 }

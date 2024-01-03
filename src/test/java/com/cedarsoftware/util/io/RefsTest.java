@@ -1,13 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -173,7 +173,7 @@ class RefsTest
         String json = TestUtil.toJson(a);
         Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
         readers.put(TestObject.class, new TestObjectReader());
-        TestObject aa = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readers), null);
+        TestObject aa = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readers).build(), null);
     }
 
     private static class TestObjectReader implements JsonReader.JsonClassReader {
@@ -230,7 +230,7 @@ class RefsTest
     public void testRefChainAsJsonObjects()
     {
         String json = MetaUtils.loadResourceAsString("references/chainRef.json");
-        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        JsonObject jsonObj = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String christmas = (String) jsonObj.get("date");
         Object[] children =  (Object[])jsonObj.get("children");
         assert children.length == 6;

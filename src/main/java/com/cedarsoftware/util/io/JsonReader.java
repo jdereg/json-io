@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import lombok.Getter;
+
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,8 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -208,13 +208,13 @@ public class JsonReader implements Closeable, ReaderContext
     }
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
-        this.readOptions = readOptions == null ? new ReadOptions() : new ReadOptions(readOptions);
+        this.readOptions = readOptions == null ? new ReadOptionsBuilder().returnAsJavaObjects().build() : readOptions;
         this.input = getReader(inputStream);
-        if (this.readOptions.getReturnType() == ReturnType.JSON_OBJECTS) {
-            this.resolver = new MapResolver(this.readOptions, references);
-        } else {
-            this.resolver = new ObjectResolver(this.readOptions, references);
-        }
+
+        this.resolver = this.readOptions.isReturningJsonObjects() ?
+                new MapResolver(this.readOptions, references) :
+                new ObjectResolver(this.readOptions, references);
+
         parser = new JsonParser(this.input, this.resolver);
     }
 
@@ -287,8 +287,7 @@ public class JsonReader implements Closeable, ReaderContext
         }
 
         // Allow a complete 'Map' return (Javascript style)
-
-        if (getReadOptions().getReturnType() == ReturnType.JSON_OBJECTS) {
+        if (readOptions.isReturningJsonObjects()) {
             return returnValue;
         }
 

@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 public class NotLenientNanInfinityTest
 {
-    private static ReadOptions readOptions = new ReadOptions();
+    private static ReadOptions readOptions;
     @BeforeAll
     public static void init() {
-        readOptions.allowNanAndInfinity(false);
+        readOptions = new ReadOptionsBuilder().allowNanAndInfinity(false).build();
     }
     
     public class A

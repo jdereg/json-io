@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Arrays;
-import java.util.HashSet;
-
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.FoodType;
 import com.cedarsoftware.util.io.models.MismatchedGetter;
@@ -11,6 +8,9 @@ import com.cedarsoftware.util.reflect.models.Permission;
 import com.cedarsoftware.util.reflect.models.SecurityGroup;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.HashSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,7 +38,7 @@ class SerializationErrorTests {
 
         String json = TestUtil.toJson(group, writeOptions);
 
-        ReadOptions readOptions = new ReadOptions().failOnUnknownType(true);
+        ReadOptions readOptions = new ReadOptionsBuilder().failOnUnknownType(true).build();
 
         SecurityGroup actual = TestUtil.toObjects(json, readOptions, null);
 
@@ -54,7 +54,7 @@ class SerializationErrorTests {
         model.generate("foo");
 
         String json = TestUtil.toJson(model);
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptions(), MismatchedGetter.class);
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -67,7 +67,7 @@ class SerializationErrorTests {
         model.generate("foo");
 
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().showTypeInfoAlways().build());
-        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptions(), MismatchedGetter.class);
+        MismatchedGetter actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), MismatchedGetter.class);
 
         assertThat(actual.getRawValue()).isEqualTo("foo");
         assertThat(actual.getValues()).containsExactlyElementsOf(Arrays.asList(model.getValues()));
@@ -76,11 +76,12 @@ class SerializationErrorTests {
 
     @Test
     void testSerializeLongId_doesNotFillInWithZeroWhenMissing() {
-        ReadOptions options = new ReadOptions()
+        ReadOptions options = new ReadOptionsBuilder()
                 .failOnUnknownType(true)
                 .aliasTypeName(SecurityGroup.class, "sg")
                 .aliasTypeName(Permission.class, "perm")
-                .aliasTypeName(HashSet.class, "set");
+                .aliasTypeName(HashSet.class, "set")
+                .build();
 
         String json = loadJsonForTest("security-group.json");
         SecurityGroup actual = TestUtil.toObjects(json, options, null);
@@ -98,7 +99,7 @@ class SerializationErrorTests {
         ObjectSerializationIssue o = new ObjectSerializationIssue();
         o.setFoodType(FoodType.MILKS);
 
-        ObjectSerializationIssue actual = JsonIo.deepCopy(o, new ReadOptions().build(), new WriteOptionsBuilder().build());
+        ObjectSerializationIssue actual = JsonIo.deepCopy(o, new ReadOptionsBuilder().build(), new WriteOptionsBuilder().build());
 
         assertThat(actual.getFoodType()).isEqualTo(FoodType.MILKS);
     }
@@ -115,7 +116,7 @@ class SerializationErrorTests {
     @Disabled("needs Factory abd Writer for DateFormatter and maybe other Chronos types")
 //    @Test
     void testReadOptions() {
-        ReadOptions readOptions = new ReadOptions();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
         String json = TestUtil.toJson(readOptions);
         ReadOptions backFromSleep = TestUtil.toObjects(json, null);
         assertTrue(DeepEquals.deepEquals(readOptions, backFromSleep));

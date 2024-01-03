@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -36,7 +36,7 @@ public class CustomReaderObjectTest
 		String json = TestUtil.toJson(p);
 		Map<Class<?>, CustomReader> customReaders = new HashMap<>();
 		customReaders.put(CustomWriterTest.Person.class, new CustomReader());
-		CustomWriterTest.Person pRead = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReaders), null);
+		CustomWriterTest.Person pRead = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(customReaders).build(), null);
 		assert p.equals(pRead);
 		assert madeItHere;
 	}

@@ -1,5 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.reflect.ReflectionUtils;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,13 +16,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,8 +116,8 @@ class JsonObjectTest
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Map generateBatman_withCircularReference_usingObjectArray(Class<? extends Map> c) throws Exception {
-        Map map1 = c.newInstance();
-        Map map2 = c.newInstance();
+        Map map1 = ReflectionUtils.newInstance(c);
+        Map map2 = ReflectionUtils.newInstance(c);
 
         map1.put("name", "Batman");
         map1.put("partners", new Object[]{map2});
@@ -127,13 +128,13 @@ class JsonObjectTest
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Map generateBatman_withCircularReference_usingCollections(Class<? extends Map> mapClass, Class<? extends Collection> collectionClass) throws Exception {
-        Map jsonObj1 = mapClass.newInstance();
-        Map jsonObj2 = mapClass.newInstance();
+        Map jsonObj1 = ReflectionUtils.newInstance(mapClass);
+        Map jsonObj2 = ReflectionUtils.newInstance(mapClass);
 
-        Collection c1 = collectionClass.newInstance();
+        Collection c1 = ReflectionUtils.newInstance(collectionClass);
         c1.add(jsonObj2);
 
-        Collection c2 = collectionClass.newInstance();
+        Collection c2 = ReflectionUtils.newInstance(collectionClass);
         c2.add(jsonObj1);
 
         jsonObj1.put("name", "Batman");
@@ -199,8 +200,8 @@ class JsonObjectTest
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static Map generateBatman_withCircularReference_usingMaps(Class<? extends Map> c) throws Exception {
-        Map map1 = c.newInstance();
-        Map map2 = c.newInstance();
+        Map map1 = ReflectionUtils.newInstance(c);
+        Map map2 = ReflectionUtils.newInstance(c);
 
         map1.put("partner", map2);
         map2.put("partner", map1);

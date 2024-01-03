@@ -1,6 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import java.awt.*;
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
+import com.cedarsoftware.util.reflect.ReflectionUtils;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.awt.Point;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -21,15 +29,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,7 +90,7 @@ class MapsTest
     @ParameterizedTest
     @MethodSource("nonDefaultMapTypes")
     void testEmptyMap_whenMapIsNotDefaultMap_includesType(Class<? extends Map> c) throws Exception {
-        Map map = c.newInstance();
+        Map map = ReflectionUtils.newInstance(c);
         String json = TestUtil.toJson(map);
         assertThat(json).isEqualTo("{\"@type\":\"" + c.getName() + "\"}");
     }
@@ -101,7 +100,7 @@ class MapsTest
     @MethodSource("nonDefaultMapTypes")
     void testEmptyMap_whenMapIsNotDefaultMap_and_neverShowTypes_doesNotShowType(Class<? extends Map> c) throws Exception {
         WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
-        Map map = c.newInstance();
+        Map map = ReflectionUtils.newInstance(c);
         String json = TestUtil.toJson(map, options);
         assertThat(json).isEqualTo("{}");
     }
@@ -126,7 +125,7 @@ class MapsTest
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().showTypeInfoAlways().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -145,7 +144,7 @@ class MapsTest
 
         ModelHoldingSingleHashMap model = new ModelHoldingSingleHashMap(map);
         String json = TestUtil.toJson(model, new WriteOptionsBuilder().build());
-        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        ModelHoldingSingleHashMap actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         Map<String, String> deserialized = actual.getMap();
         assertThat(deserialized)
@@ -231,7 +230,7 @@ class MapsTest
         testMap.init();
         String json0 = TestUtil.toJson(testMap);
         TestUtil.printLine("json0=" + json0);
-        Map testMap2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map testMap2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testMap2);
         TestUtil.printLine("json1=" + json1);
@@ -345,9 +344,9 @@ class MapsTest
     public void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
-        Map root = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(root);
-        Map root2 = TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map root2 = TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertTrue(DeepEquals.deepEquals(root, root2));
 
         // Will be different because @keys and @items get inserted during processing
@@ -415,7 +414,7 @@ class MapsTest
         String json0 = TestUtil.toJson(map);
         TestUtil.printLine("json0=" + json0);
 
-        map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -433,7 +432,7 @@ class MapsTest
         String json0 = TestUtil.toJson(root);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -454,7 +453,7 @@ class MapsTest
         String json0 = TestUtil.toJson(smt);
         TestUtil.printLine("json0=" + json0);
 
-        Map result = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map result = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(result);
         TestUtil.printLine("json1=" + json1);
 
@@ -466,13 +465,13 @@ class MapsTest
     @Test
     public void testMapFromUnknown()
     {
-        Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptions().unknownTypeClass(ConcurrentHashMap.class), null);
+        Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentHashMap.class).build(), null);
         assert map instanceof ConcurrentHashMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
         assert map.get("b").equals("beta");
 
-        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptions().unknownTypeClass(ConcurrentSkipListMap.class), null);
+        map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentSkipListMap.class).build(), null);
         assert map instanceof ConcurrentSkipListMap;
         assert map.size() == 2;
         assert map.get("a").equals("alpha");
@@ -493,7 +492,7 @@ class MapsTest
         quoteInKeyMap.put("\"one\"", 1L);
         quoteInKeyMap.put("\"two\"", 2L);
         String json = TestUtil.toJson(quoteInKeyMap);
-        Map ret = TestUtil.toObjects(json, new ReadOptions(), null);
+        Map ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert ret.size() == 3;
 
         assert ret.get(0L).equals(0L);
@@ -505,7 +504,7 @@ class MapsTest
         stringKeys.put("\"one\"", 1L);
         stringKeys.put("\"two\"", 2L);
         json = TestUtil.toJson(stringKeys);
-        ret = TestUtil.toObjects(json, new ReadOptions(), null);
+        ret = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert ret.size() == 3;
 
         assert ret.get("\"zero\"").equals(0L);
@@ -536,7 +535,7 @@ class MapsTest
 
         TestUtil.printLine(str + "\n");
 
-        ReadOptions readOptions = new ReadOptions().returnType(ReturnType.JSON_OBJECTS);
+        ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
         final Map<String, Object> map2 = TestUtil.toObjects(str, readOptions, null);
 
         // for debugging

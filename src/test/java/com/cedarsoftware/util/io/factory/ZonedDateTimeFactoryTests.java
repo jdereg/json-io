@@ -1,20 +1,20 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.stream.Stream;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReadOptions;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.io.TestUtil;
 import com.cedarsoftware.util.io.models.NestedZonedDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -34,7 +34,7 @@ class ZonedDateTimeFactoryTests {
 
         JsonObject jsonObject = buildJsonObject(dateTime, zone, totalSeconds);
 
-        JsonReader reader = new JsonReader(new ReadOptions());
+        JsonReader reader = new JsonReader(new ReadOptionsBuilder().build());
 
 
         ZonedDateTimeFactory factory = new ZonedDateTimeFactory();

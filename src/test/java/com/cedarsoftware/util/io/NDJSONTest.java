@@ -48,7 +48,7 @@ public class NDJSONTest {
         TestUtil.assertContainsIgnoreCase(json, "TestObject", "one", "TestObject", "two");
 
         // Read NDJSON
-        ReadOptions readOptions = new ReadOptions().closeStream(false);
+        ReadOptions readOptions = new ReadOptionsBuilder().closeStream(false).build();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new FastByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
         String json1 = bufferedReader.readLine();
         TestObject ta = JsonIo.toObjects(json1, readOptions, TestObject.class);

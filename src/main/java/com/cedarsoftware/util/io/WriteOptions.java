@@ -1,10 +1,14 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.AccessorFactory;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.MethodFilter;
+import lombok.Getter;
+
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -13,11 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.AccessorFactory;
-import com.cedarsoftware.util.reflect.filters.FieldFilter;
-import com.cedarsoftware.util.reflect.filters.MethodFilter;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -53,16 +52,75 @@ import com.cedarsoftware.util.reflect.filters.MethodFilter;
  */
 public class WriteOptions {
     // Properties
-    protected boolean shortMetaKeys;
-    protected ShowType showTypeInfo;
-    protected boolean prettyPrint;
-    protected boolean writeLongsAsStrings;
-    protected boolean skipNullFields;
-    protected boolean forceMapOutputAsTwoArrays;
-    protected boolean allowNanAndInfinity;
-    protected boolean enumPublicFieldsOnly;
-    protected boolean closeStream;
+
+    /**
+     * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
+     * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
+     */
+    @Getter
+    protected boolean shortMetaKeys = false;
+
+    protected ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
+
+    /**
+     * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
+     * white-space and indentations, 'false' will output JSON in one line.  The default is false.
+     */
+    @Getter
+    protected boolean prettyPrint = false;
+
+    /**
+     * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
+     * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
+     * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
+     * them in Doubles, which cannot handle the precision of an 18-19 digit long, but a String will retain
+     * the full value into Javascript.  The default is false.
+     */
+    @Getter
+    protected boolean writeLongsAsStrings = false;
+
+    /**
+     * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
+     * false will still output the field with an associated null value.  false is the default.
+     */
+    @Getter
+    protected boolean skipNullFields = false;
+    /**
+     * @return boolean 'forceMapOutputAsTwoArrays' setting.  true indicates that two arrays will be written to
+     * represent a Java Map, one for keys, one for values.  false indicates one Java object will be used, if
+     * all the keys of the Map are Strings.  If not, then the Map will be written out with a key array, and a
+     * parallel value array. (@keys:[...], @values:[...]).  false is the default.
+     */
+    @Getter
+    protected boolean forceMapOutputAsTwoArrays = false;
+    /**
+     * @return boolean will return true if NAN and Infinity are allowed to be written out for
+     * Doubles and Floats, else null will be written out..
+     */
+    @Getter
+    protected boolean allowNanAndInfinity = false;
+
+    /**
+     * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
+     * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
+     * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
+     * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
+     * showing potentially more than one value, it will require the enum to be written as an object.
+     */
+    @Getter
+    protected boolean enumPublicFieldsOnly = false;
+
+    /**
+     * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
+     */
+    @Getter
+    protected boolean closeStream = true;
     protected JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
+
+    /**
+     * @return ClassLoader to be used when writing JSON to resolve String named classes.
+     */
+    @Getter
     protected ClassLoader classLoader = WriteOptions.class.getClassLoader();
     protected Map<Class<?>, Set<String>> includedFieldNames;
     protected Map<Class<?>, Map<String, String>> nonStandardMappings;
@@ -80,11 +138,10 @@ public class WriteOptions {
     // when one does not exist, we cache the write or a nullWriter if one does not exist.
     protected Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-    private static final Map<Class<?>, List<Method>> methodCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-
-    private final Map<Class<?>, Map<String, Field>> deepFieldCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-
+    // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
     private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+
+    private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
 
     // Enum for the 3-state property
@@ -92,31 +149,10 @@ public class WriteOptions {
         ALWAYS, NEVER, MINIMAL
     }
 
+    /**
+     * Default Constructor.  Prevent instantiation outside of package.
+     */
     WriteOptions() {
-        this.shortMetaKeys = false;
-        this.showTypeInfo = WriteOptions.ShowType.MINIMAL;
-        this.prettyPrint = false;
-        this.writeLongsAsStrings = false;
-        this.skipNullFields = false;
-        this.forceMapOutputAsTwoArrays = false;
-        this.allowNanAndInfinity = false;
-        this.enumPublicFieldsOnly = false;
-        this.closeStream = true;
-    }
-
-    /**
-     * @return ClassLoader to be used when writing JSON to resolve String named classes.
-     */
-    public ClassLoader getClassLoader() {
-        return classLoader;
-    }
-
-    /**
-     * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
-     * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
-     */
-    public boolean isShortMetaKeys() {
-        return shortMetaKeys;
     }
 
     /**
@@ -149,70 +185,6 @@ public class WriteOptions {
     public boolean isMinimalShowingType() {
         return showTypeInfo == ShowType.MINIMAL;
     }
-
-    /**
-     * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
-     * white-space and indentations, 'false' will output JSON in one line.  The default is false.
-     */
-    public boolean isPrettyPrint() {
-        return prettyPrint;
-    }
-
-    /**
-     * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
-     * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
-     * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
-     * them in Doubles, which cannot handle the precision of an 18-19 digit long, but a String will retain
-     * the full value into Javascript.  The default is false.
-     */
-    public boolean isWriteLongsAsStrings() {
-        return writeLongsAsStrings;
-    }
-
-    /**
-     * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
-     * false will still output the field with an associated null value.  false is the default.
-     */
-    public boolean isSkipNullFields() {
-        return skipNullFields;
-    }
-
-    /**
-     * @return boolean 'forceMapOutputAsTwoArrays' setting.  true indicates that two arrays will be written to
-     * represent a Java Map, one for keys, one for values.  false indicates one Java object will be used, if
-     * all the keys of the Map are Strings.  If not, then the Map will be written out with a key array, and a
-     * parallel value array. (@keys:[...], @values:[...]).  false is the default.
-     */
-    public boolean isForceMapOutputAsTwoArrays() {
-        return forceMapOutputAsTwoArrays;
-    }
-
-    /**
-     * @return boolean will return true if NAN and Infinity are allowed to be written out for
-     * Doubles and Floats, else null will be written out..
-     */
-    public boolean isAllowNanAndInfinity() {
-        return allowNanAndInfinity;
-    }
-
-    /**
-     * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
-     * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
-     * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
-     * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
-     * showing potentially more than one value, it will require the enum to be written as an object.
-     */
-    public boolean isEnumPublicFieldsOnly() {
-        return enumPublicFieldsOnly;
-    }
-
-    /**
-     * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
-     */
-    public boolean isCloseStream() {
-        return closeStream;
-    }
-
 
     /**
      * @param clazz Class to check to see if there is a custom writer associated to it.
@@ -350,26 +322,13 @@ public class WriteOptions {
     ///// ACCESSOR PULL IN ???????
 
     public void clearCaches() {
-        deepFieldCache.clear();
-        methodCache.clear();
         accessorsCache.clear();
     }
-
-    public void clearMethodCaches() {
-        methodCache.clear();
-        accessorsCache.clear();
-    }
-
-    public void clearFieldCaches() {
-        deepFieldCache.clear();
-        accessorsCache.clear();
-    }
-
 
     private List<Accessor> buildDeepAccessors(final Class<?> c) {
         final Set<String> inclusions = includedFieldNames.get(c);
         final Set<String> exclusions = new HashSet<>();
-        final Map<String, Field> deepDeclaredFields = this.getDeepDeclaredFields(c, exclusions);
+        final Map<String, Field> deepDeclaredFields = getDeepDeclaredFields(c, exclusions);
         final List<Accessor> accessors = new ArrayList<>(deepDeclaredFields.size());
 
         final List<Map.Entry<String, Field>> fields = (inclusions == null) ?
@@ -395,6 +354,60 @@ public class WriteOptions {
         return Collections.unmodifiableList(accessors);
     }
 
+    /**
+     * Gets the declared fields for the full class hierarchy of a given class
+     *
+     * @param c - given class.
+     * @return Map - map of string fieldName to Field Object.  This will have the
+     * deep list of fields for a given class.
+     */
+    public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> deepIgnoredFields) {
+        // if class factories are handled first we should never see class factory types come through here.
+        return classMetaCache.computeIfAbsent(c, cls -> buildDeepFieldMap(cls, deepIgnoredFields));
+    }
+
+    /**
+     * Gets the declared fields for the full class hierarchy of a given class
+     *
+     * @param c                 - given class.
+     * @param deepIgnoredFields - the list of fields to exclude
+     * @return Map - map of string fieldName to Field Object.  This will have the
+     * deep list of fields for a given class.
+     */
+    public Map<String, Field> buildDeepFieldMap(final Class<?> c, final Set<String> deepIgnoredFields) {
+        Convention.throwIfNull(c, "class cannot be null");
+
+        final Map<String, Field> map = new LinkedHashMap<>();
+
+        Class<?> curr = c;
+        while (curr != null) {
+            final Field[] fields = curr.getDeclaredFields();
+
+            final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
+
+            if (excludedForClass != null) {
+                deepIgnoredFields.addAll(excludedForClass);
+            }
+
+            for (Field field : fields) {
+
+                if (Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+
+                String name = field.getName();
+
+                if (map.putIfAbsent(name, field) != null) {
+                    map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
+                }
+            }
+
+            curr = curr.getSuperclass();
+        }
+
+        return Collections.unmodifiableMap(map);
+    }
+
     private Accessor findAccessor(Field field, String key) {
         for (final AccessorFactory factory : this.accessorFactories) {
             try {
@@ -403,9 +416,8 @@ public class WriteOptions {
                 if (accessor != null) {
                     return accessor;
                 }
-            } catch (Exception e) {
+            } catch (Exception ignore) {
                 // Handle the exception if needed
-                return null;
             }
         }
         return null;
@@ -415,7 +427,7 @@ public class WriteOptions {
         final List<Map.Entry<String, Field>> fields = new ArrayList<>(deepDeclaredFields.size());
 
         for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
-            if (inclusions.contains(entry.getKey()) && fieldIsNotFiltered(entry.getValue())) {
+            if (inclusions.contains(entry.getKey()) && !fieldIsFiltered(entry.getValue())) {
                 fields.add(entry);
             }
         }
@@ -427,106 +439,32 @@ public class WriteOptions {
         final List<Map.Entry<String, Field>> fields = new ArrayList<>(deepDeclaredFields.size());
 
         for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
-            Field field = entry.getValue();
+            final Field field = entry.getValue();
+            final String name = entry.getKey();
 
-            if (!Modifier.isTransient(field.getModifiers()) && !exclusions.contains(field.getName()) && fieldIsNotFiltered(field)) {
-                fields.add(entry);
+            if (Modifier.isTransient(field.getModifiers()) || exclusions.contains(name) || fieldIsFiltered(field)) {
+                continue;
             }
+
+            fields.add(entry);
         }
 
         return fields;
     }
 
-    private boolean fieldIsNotFiltered(Field field) {
+    private boolean fieldIsFiltered(Field field) {
         for (FieldFilter filter : this.fieldFilters) {
             if (filter.filter(field)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> deepExcludedFields) {
-        return deepFieldCache.computeIfAbsent(c, cls -> this.buildDeepFieldMap(cls, deepExcludedFields));
-    }
-
-
-    /**
-     * Builds a list of methods with zero parameter methods taking precedence over overrides
-     * for a given single level class.
-     *
-     * @param classToTraverse - class to get the declared methods for
-     * @return Map of name of the method to the actual emthod
-     */
-    public Map<String, Method> buildDeepMethods(Class<?> classToTraverse) {
-        Convention.throwIfNull(classToTraverse, "The classToTraverse cannot be null");
-
-        Map<String, Method> map = new LinkedHashMap<>();
-        Class<?> currentClass = classToTraverse;
-
-        while (currentClass != Object.class) {
-            for (final Method m : this.getFilteredMethods(currentClass)) {
-                map.put(m.getName(), m);
-            }
-
-            currentClass = currentClass.getSuperclass();
-        }
-
-        return Collections.synchronizedMap(map);
-    }
-
-    public List<Method> getFilteredMethods(Class<?> c) {
-        return methodCache.computeIfAbsent(c, this::buildFilteredMethods);
-    }
-
-    public List<Method> buildFilteredMethods(Class<?> c) {
-        final List<Method> methods = new ArrayList<>();
-
-        for (Method method : c.getDeclaredMethods()) {
-            if (!filteredMethodNames.contains(method.getName()) && noMethodFiltersMatch(this.methodFilters, method)) {
-                methods.add(method);
+                return true;
             }
         }
 
-        return methods;
-    }
-
-    // Helper method to check if none of the filters match
-    private static boolean noMethodFiltersMatch(List<MethodFilter> filters, Method method) {
-        for (MethodFilter filter : filters) {
-            if (filter.filter(method)) {
-                return false;
+        if (Enum.class.isAssignableFrom(field.getDeclaringClass()) && this.isEnumPublicFieldsOnly()) {
+            if (!Modifier.isPublic(field.getModifiers())) {
+                return true;
             }
         }
-        return true;
-    }
 
-    public Map<String, Field> buildDeepFieldMap(Class<?> c, final Set<String> exclusions) {
-        Convention.throwIfNull(c, "class cannot be null");
-        Convention.throwIfNull(exclusions, "exclusions cannot be null");
-
-        final Map<String, Field> map = new LinkedHashMap<>();
-
-        Class<?> curr = c;
-        while (curr != Object.class) {
-            final Field[] fields = curr.getDeclaredFields();
-
-            final Collection<String> excludedForClass = this.excludedFieldNames.get(curr);
-
-            if (excludedForClass != null) {
-                exclusions.addAll(excludedForClass);
-            }
-
-            for (Field f : fields) {
-                final String name = f.getName();
-                if (map.putIfAbsent(name, f) != null) {
-                    map.put(f.getDeclaringClass().getSimpleName() + '.' + name, f);
-                }
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        return Collections.synchronizedMap(map);
+        return false;
     }
 }

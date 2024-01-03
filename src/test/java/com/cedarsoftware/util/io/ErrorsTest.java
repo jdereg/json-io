@@ -189,57 +189,57 @@ class ErrorsTest
     void testMalformedJson()
     {
         final String json = "{\"field\"0}";  // colon expected between fields
-        assertThatThrownBy(() -> TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Expected ':' between field and value");
 
         final String json1 = "{field:0}";  // not quoted field name
-        assertThatThrownBy(() -> TestUtil.toObjects(json1, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json1, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("Expected quote");
 
         final String json2 = "{\"field\":0";  // object not terminated correctly (ending in number)
-        assertThatThrownBy(() -> TestUtil.toObjects(json2, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json2, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json3 = "{\"field\":true";  // object not terminated correctly (ending in token)
-        assertThatThrownBy(() -> TestUtil.toObjects(json3, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json3, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json4 = "{\"field\":\"test\"";  // object not terminated correctly (ending in string)
-        assertThatThrownBy(() -> TestUtil.toObjects(json4, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json4, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json5 = "{\"field\":{}";  // object not terminated correctly (ending in another object)
-        assertThatThrownBy(() -> TestUtil.toObjects(json5, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json5, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json6 = "{\"field\":[]";  // object not terminated correctly (ending in an array)
-        assertThatThrownBy(() -> TestUtil.toObjects(json6, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json6, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json7 = "{\"field\":3.14";  // object not terminated correctly (ending in double precision number)
-        assertThatThrownBy(() -> TestUtil.toObjects(json7, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json7, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json8 = "[1,2,3";
-        assertThatThrownBy(() -> TestUtil.toObjects(json8, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json8, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json9 = "[false,true,false";
-        assertThatThrownBy(() -> TestUtil.toObjects(json9, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json9, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached prematurely");
 
         final String json10 = "[\"unclosed string]";
-        assertThatThrownBy(() -> TestUtil.toObjects(json10, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null))
+        assertThatThrownBy(() -> TestUtil.toObjects(json10, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null))
                 .isInstanceOf(JsonIoException.class)
                 .hasMessageContaining("EOF reached while reading JSON string");
     }
