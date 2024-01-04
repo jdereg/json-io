@@ -391,7 +391,7 @@ public class WriteOptions {
 
             for (Field field : fields) {
 
-                if (Modifier.isStatic(field.getModifiers())) {
+                if (Modifier.isStatic(field.getModifiers()) || fieldIsFiltered(field)) {
                     continue;
                 }
 
@@ -427,7 +427,7 @@ public class WriteOptions {
         final List<Map.Entry<String, Field>> fields = new ArrayList<>(deepDeclaredFields.size());
 
         for (Map.Entry<String, Field> entry : deepDeclaredFields.entrySet()) {
-            if (inclusions.contains(entry.getKey()) && !fieldIsFiltered(entry.getValue())) {
+            if (inclusions.contains(entry.getKey())) {
                 fields.add(entry);
             }
         }
@@ -442,7 +442,7 @@ public class WriteOptions {
             final Field field = entry.getValue();
             final String name = entry.getKey();
 
-            if (Modifier.isTransient(field.getModifiers()) || exclusions.contains(name) || fieldIsFiltered(field)) {
+            if (Modifier.isTransient(field.getModifiers()) || exclusions.contains(name)) {
                 continue;
             }
 
@@ -455,12 +455,6 @@ public class WriteOptions {
     private boolean fieldIsFiltered(Field field) {
         for (FieldFilter filter : this.fieldFilters) {
             if (filter.filter(field)) {
-                return true;
-            }
-        }
-
-        if (Enum.class.isAssignableFrom(field.getDeclaringClass()) && this.isEnumPublicFieldsOnly()) {
-            if (!Modifier.isPublic(field.getModifiers())) {
                 return true;
             }
         }

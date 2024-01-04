@@ -67,9 +67,7 @@ public class Injector {
 
             MethodHandle handle = MethodHandles.lookup().unreflectSetter(field);
             return new Injector(field, handle, uniqueFieldName, field.getName());
-        } catch (IllegalAccessException ex) {
-            // ignore
-            System.out.println(ex.getMessage());
+        } catch (IllegalAccessException ignore) {
             return null;
         }
     }

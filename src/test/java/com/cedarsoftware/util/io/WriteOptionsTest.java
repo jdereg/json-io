@@ -598,19 +598,4 @@ class WriteOptionsTest {
         //  public method for accessing test5 so we use that.
         assertThat(list.get(4).getDisplayName()).isEqualTo("name");
     }
-
-    @Test
-    void getAccessorsForClass_findEnumAccessors_whenPublicFieldsOnly() {
-        List<Accessor> list = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build().getAccessorsForClass(CarEnumWithCustomFields.class);
-
-        assertThat(list)
-                .hasSize(3);
-
-
-        assertThat(list.get(0).getDisplayName()).isEqualTo("getRating");
-        assertThat(list.get(1).getDisplayName()).isEqualTo("isStick");
-
-        //  public method for accessing test5 so we use that.
-        assertThat(list.get(2).getDisplayName()).isEqualTo("name");
-    }
 }

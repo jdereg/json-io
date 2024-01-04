@@ -11,3 +11,4 @@ java.util.Set = keySet
 java.util.AbstractMap = values
 java.util.Calendar = fields,isSet,stamp,time,isTimeSet,areFieldsSet,areAllFieldsSet,lenient,zone,sharedZone,firstDayOfWeek,minimalDaysInFirstWeek,nextStamp,serialVersionOnStream
 java.util.GregorianCalendar = gregorianCutover,gregorianCutoverDate,gregorianCutoverYear,gregorianCutoverYearJulian,gdate,cdate,calsys,zoneOffsets,originalFields,cachedFixedDate
+groovy.lang.MetaClass = metaClass

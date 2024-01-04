@@ -989,7 +989,7 @@ public class MetaUtils
         try {
             runnable.run();
         } catch (Throwable ignored) {
-            System.out.println(ignored);
+            System.out.println("SAFELY IGNORING:  " + ignored);
         }
     }
     public static boolean isEmpty(final String s) {

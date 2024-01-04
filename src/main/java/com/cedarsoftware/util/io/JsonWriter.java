@@ -1641,7 +1641,19 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private boolean writeField(Object obj, boolean first, String fieldName, Accessor accessor) throws IOException
     {
-        Object o = accessor.retrieve(obj);
+        final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
+        Object o;
+
+        //  Only here for enumAsObject writing,.
+        if (Enum.class.isAssignableFrom(fieldDeclaringClass)) {
+            if (!accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
+                return first;
+            }
+
+            o = accessor.retrieve(obj);
+        } else {
+            o = accessor.retrieve(obj);
+        }
 
         if (writeOptions.isSkipNullFields() && o == null)
         {   // If skip null, skip field and return the same status on first field written indicator

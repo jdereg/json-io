@@ -4,8 +4,6 @@ import com.cedarsoftware.util.reflect.factories.GetMethodAccessorFactory;
 import com.cedarsoftware.util.reflect.factories.IsMethodAccessorFactory;
 import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.GroovyFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
 import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
 import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
 
@@ -52,7 +50,7 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = new HashSet<>();
     private static final Set<String> BASE_FILTERED_METHOD_NAMES = new HashSet<>();
-    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
+    static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
 
     static {
@@ -60,7 +58,7 @@ public class WriteOptionsBuilder {
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
         BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("excludedAccessorFields.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("ignoredFields.txt"));
         BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("nonStandardAccessors.txt"));
     }
 
@@ -81,9 +79,7 @@ public class WriteOptionsBuilder {
         this.options.filteredMethodNames = new HashSet<>();
 
         this.options.fieldFilters = new ArrayList<>();
-        this.options.fieldFilters.add(new StaticFieldFilter());
         this.options.fieldFilters.add(new EnumFieldFilter());
-        this.options.fieldFilters.add(new GroovyFieldFilter());
 
         this.options.methodFilters = new ArrayList<>();
         this.options.methodFilters.add(new AccessorMethodFilter());

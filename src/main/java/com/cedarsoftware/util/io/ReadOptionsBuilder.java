@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.reflect.ReflectionUtils;
 import com.cedarsoftware.util.reflect.factories.MethodInjectorFactory;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,7 +26,6 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
 
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-
 
     static {
         // ClassFactories
@@ -54,8 +54,12 @@ public class ReadOptionsBuilder {
 
         this.options.injectorFactories = new ArrayList<>();
         this.options.injectorFactories.add(new MethodInjectorFactory());
+
         this.options.fieldFilters = new ArrayList<>();
+        this.options.fieldFilters.add(new EnumFieldFilter());
+
         this.options.excludedFieldNames = new HashMap<>();
+        this.options.excludedInjectorFields = new HashMap<>();
         this.options.nonStandardMappings = new HashMap<>();
         this.options.coercedTypes = new HashMap<>();
 
@@ -64,7 +68,8 @@ public class ReadOptionsBuilder {
         this.options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         this.options.nonRefClasses.addAll(BASE_NON_REFS);
         this.options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
-        this.options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
+        this.options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
+        this.options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
 
     }
 

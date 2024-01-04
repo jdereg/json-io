@@ -8,6 +8,7 @@ import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import lombok.Getter;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -80,6 +81,8 @@ public class ReadOptions {
     protected Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
 
     protected Map<Class<?>, Set<String>> excludedFieldNames;
+
+    protected Map<Class<?>, Set<String>> excludedInjectorFields;
 
     protected List<FieldFilter> fieldFilters;
 
@@ -327,10 +330,6 @@ public class ReadOptions {
         for (final Map.Entry<String, Field> entry : fields.entrySet()) {
             final Field field = entry.getValue();
 
-            if (exclusions.contains(field.getName()) || fieldIsFiltered(field)) {
-                continue;
-            }
-
             final String fieldName = entry.getKey();
             Injector injector = this.findInjector(field, fieldName);
 
@@ -370,7 +369,7 @@ public class ReadOptions {
      * deep list of fields for a given class.
      */
     public Map<String, Field> getDeepDeclaredFields(final Class<?> c, final Set<String> exclusions) {
-        return classMetaCache.computeIfAbsent(c, this::buildDeepFieldMap);
+        return classMetaCache.computeIfAbsent(c, cls -> buildDeepFieldMap(c, exclusions));
     }
 
     /**
@@ -380,11 +379,10 @@ public class ReadOptions {
      * @return Map - map of string fieldName to Field Object.  This will have the
      * deep list of fields for a given class.
      */
-    public Map<String, Field> buildDeepFieldMap(final Class<?> c) {
+    public Map<String, Field> buildDeepFieldMap(final Class<?> c, final Set<String> deepIgnoredFields) {
         Convention.throwIfNull(c, "class cannot be null");
 
         final Map<String, Field> map = new LinkedHashMap<>();
-        final Set<String> ignoredFields = new HashSet<>();
 
         Class<?> curr = c;
         while (curr != null) {
@@ -393,21 +391,28 @@ public class ReadOptions {
             final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
             if (excludedForClass != null) {
-                ignoredFields.addAll(excludedForClass);
+                deepIgnoredFields.addAll(excludedForClass);
+            }
+
+            final Set<String> excludedInjectors = this.excludedInjectorFields.get(curr);
+
+            if (excludedInjectors != null) {
+                deepIgnoredFields.addAll(excludedInjectors);
             }
 
             for (Field field : fields) {
-                String name = field.getName();
 
-                if (map.containsKey(name)) {
-                    name = field.getDeclaringClass().getSimpleName() + '.' + name;
-                }
-
-                if (ignoredFields.contains(name) || fieldIsFiltered(field)) {
+                if (Modifier.isStatic(field.getModifiers()) ||
+                        deepIgnoredFields.contains(field.getName()) ||
+                        fieldIsFiltered(field)) {
                     continue;
                 }
 
-                map.put(name, field);
+                String name = field.getName();
+
+                if (map.putIfAbsent(name, field) != null) {
+                    map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
+                }
             }
 
             curr = curr.getSuperclass();

@@ -132,17 +132,20 @@ class EnumTests {
     }
 
     @Test
-    void testEnum_readOldFormatWithoutPrivates_stillWorks() throws Exception {
-        TestEnum4 actual = loadObject("default-enum-standalone-without-privates.json");
+    void testEnum_internalFieldsAreAlwaysSharedPerInstanceOfENum() throws Exception {
+        TestEnum4 initial = loadObject("default-enum-with-changed-fields.json");
 
-        assertThat(actual.age).isEqualTo(21);
-        assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(6);
-        assertThat(actual.getFoo()).isEqualTo("bar");
+        assertThat(initial.age).isEqualTo(21);
+        assertThat(initial.name()).isEqualTo("B");
+        assertThat(initial.internal).isEqualTo(6);
+        assertThat(initial.getFoo()).isEqualTo("bar");
+
+        // changed on initial, too.
+        assertThat(initial.internal).isEqualTo(6);
     }
 
     @Test
-    void testEnum_internalFieldsAreAlwaysSharedPerInstanceOfENum() throws Exception {
+    void testEnum_readOldFormatwithChangedFields_withNoPrivateField() throws Exception {
         TestEnum4 initial = loadObject("default-enum-with-changed-fields.json");
 
         assertThat(initial.age).isEqualTo(21);
@@ -152,16 +155,6 @@ class EnumTests {
 
         initial.internal = 9;
 
-        TestEnum4 actual = loadObject("default-enum-with-changed-fields.json");
-
-        assertThat(actual.age).isEqualTo(21);
-        assertThat(actual.name()).isEqualTo("B");
-        assertThat(actual.internal).isEqualTo(9);
-        assertThat(actual.getFoo()).isEqualTo("bar");
-    }
-
-    @Test
-    void testEnum_readOldFormatwithChangedFields_withNoPrivateField() throws Exception {
         TestEnum4 actual = loadObject("default-enum-with-changed-fields-no-private.json");
 
         assertThat(actual.age).isEqualTo(21);
