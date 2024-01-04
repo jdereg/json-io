@@ -513,7 +513,7 @@ public abstract class Resolver implements ReaderContext
             }
             else
             {    // Fix field forward reference
-                Field field = MetaUtils.getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
+                Field field = getReadOptions().getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
                 if (field != null)
                 {
                     try

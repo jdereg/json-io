@@ -540,7 +540,7 @@ class WriteOptionsTest {
 
     @Test
     void getAccessorsForClass_findsName_whenIncludedInNonStandardMappings() {
-        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(ReturnType.class);
+        List<Accessor> list = new WriteOptionsBuilder().build().getAccessorsForClass(WriteOptions.ShowType.class);
 
         assertThat(list)
                 .hasSize(1);

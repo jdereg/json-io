@@ -58,7 +58,6 @@ public class Injector {
                 // this will speed things up a bit to short circuit.
                 // Anything that shows up in System.out.println() above should either be added to ignored
                 // fields if there is no method that can access it or add a nonstandard mapping to the method.
-                System.out.println(ioe);
                 return null;
             }
         }

@@ -20,7 +20,6 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -1305,7 +1304,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     {
         if (type != null)
         {
-            Map<String, Field> fieldMap = writeOptions.getDeepDeclaredFields(type, new HashSet<>());
+            Map<String, Field> fieldMap = writeOptions.getDeepDeclaredFields(type);
             Field field = fieldMap.get(fieldName);
             return field != null && field.getType().equals(value.getClass());
         }
@@ -1508,7 +1507,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             }
         }
 
-        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class, new HashSet<>()).get("elementType");
+        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
 
         Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
         if ( elementType != null)
