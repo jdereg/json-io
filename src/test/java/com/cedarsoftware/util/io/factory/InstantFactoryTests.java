@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import com.cedarsoftware.util.io.DateUtilities;
@@ -14,7 +13,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
-
     @Override
     protected JsonReader.ClassFactory createFactory() {
         return new InstantFactory();
@@ -22,7 +20,13 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new InstantFactory(DateTimeFormatter.ISO_INSTANT, zoneId);
+//        return new InstantFactory(DateTimeFormatter.ISO_INSTANT, zoneId);
+        return new ConvertableFactory() {
+            @Override
+            public Class<?> getType() {
+                return Instant.class;
+            }
+        };
     }
 
     @Override

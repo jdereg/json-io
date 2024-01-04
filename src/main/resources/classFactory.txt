@@ -50,6 +50,7 @@ java.lang.Double = com.cedarsoftware.util.io.factory.DoubleFactory
 [Ljava.util.concurrent.atomic.AtomicInteger; = com.cedarsoftware.util.io.factory.AtomicIntegerArrayFactory
 [Ljava.util.concurrent.atomic.AtomicLong; = com.cedarsoftware.util.io.factory.AtomicLongArrayFactory
 [Ljava.time.Duration; = com.cedarsoftware.util.io.factory.DurationArrayFactory
+[Ljava.time.Instant; = com.cedarsoftware.util.io.factory.InstantArrayFactory
 
 java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
 java.util.Locale = com.cedarsoftware.util.io.factory.LocaleFactory

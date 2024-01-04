@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.MonthDay;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -670,6 +672,30 @@ public final class Converter {
             return initCal(date.getTime());
         });
 
+        // LocalTime conversions supported
+        factory.put(pair(Void.class, LocalTime.class), fromInstance -> null);
+        factory.put(pair(LocalTime.class, LocalTime.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, LocalTime.class), fromInstance -> {
+            String strTime = (String) fromInstance;
+            try {
+                return LocalTime.parse(strTime);
+            } catch (Exception e) {
+                return DateUtilities.parseDate(strTime).toInstant().atZone(ZoneId.systemDefault()).toLocalTime();
+            }
+        });
+        factory.put(pair(Map.class, LocalTime.class), fromInstance -> {
+            Map<?, ?> map = (Map<?, ?>) fromInstance;
+            if (map.containsKey("hour") && map.containsKey("minute")) {
+                int hour = convert(map.get("hour"), int.class);
+                int minute = convert(map.get("minute"), int.class);
+                int second = convert(map.get("second"), int.class);
+                int nano = convert(map.get("nano"), int.class);
+                return LocalTime.of(hour, minute, second, nano);
+            } else {
+                return fromValueMap(map, LocalTime.class, MetaUtils.setOf("hour", "minute", "second", "nano"));
+            }
+        });
+
         // LocalDate conversions supported
         factory.put(pair(Void.class, LocalDate.class), fromInstance -> null);
         factory.put(pair(Short.class, LocalDate.class), fromInstance -> LocalDate.ofEpochDay(((Number) fromInstance).longValue()));
@@ -859,6 +885,73 @@ public final class Converter {
         factory.put(pair(Enum.class, String.class), fromInstance -> ((Enum<?>) fromInstance).name());
         factory.put(pair(String.class, String.class), fromInstance -> fromInstance);
         factory.put(pair(Duration.class, String.class), Object::toString);
+        factory.put(pair(Instant.class, String.class), Object::toString);
+        factory.put(pair(LocalTime.class, String.class), Object::toString);
+        factory.put(pair(MonthDay.class, String.class), Object::toString);
+
+        // Duration conversions supported
+        factory.put(pair(Void.class, Duration.class), fromInstance -> null);
+        factory.put(pair(Duration.class, Duration.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, Duration.class), fromInstance -> Duration.parse((String) fromInstance));
+        factory.put(pair(Map.class, Duration.class), fromInstance -> {
+            Map<String, Object> map = (Map<String, Object>) fromInstance;
+            if (map.containsKey("seconds")) {
+                long sec = convert(map.get("seconds"), long.class);
+                long nanos = convert(map.get("nanos"), long.class);
+                return Duration.ofSeconds(sec, nanos);
+            } else {
+                return fromValueMap(map, Duration.class, MetaUtils.setOf("seconds", "nanos"));
+            }
+        });
+
+        // Instant conversions supported
+        factory.put(pair(Void.class, Instant.class), fromInstance -> null);
+        factory.put(pair(Instant.class, Instant.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, Instant.class), fromInstance -> {
+            try {
+                return Instant.parse((String) fromInstance);
+            }
+            catch (Exception e) {
+                return DateUtilities.parseDate((String) fromInstance).toInstant();
+            }
+        });
+        factory.put(pair(Map.class, Instant.class), fromInstance -> {
+            Map<String, Object> map = (Map<String, Object>) fromInstance;
+            if (map.containsKey("seconds")) {
+                long sec = convert(map.get("seconds"), long.class);
+                long nanos = convert(map.get("nanos"), long.class);
+                return Instant.ofEpochSecond(sec, nanos);
+            } else {
+                return fromValueMap(map, Instant.class, MetaUtils.setOf("seconds", "nanos"));
+            }
+        });
+
+//        java.time.OffsetDateTime = com.cedarsoftware.util.io.factory.OffsetDateTimeFactory
+//        java.time.OffsetTime = com.cedarsoftware.util.io.factory.OffsetTimeFactory
+//        java.time.Period = com.cedarsoftware.util.io.factory.PeriodFactory
+//        java.time.Year = com.cedarsoftware.util.io.factory.YearFactory
+//        java.time.YearMonth = com.cedarsoftware.util.io.factory.YearMonthFactory
+//        java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
+//        java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
+//        java.time.ZoneRegion = com.cedarsoftware.util.io.factory.ZoneIdFactory
+
+        // MonthDay conversions supported
+        factory.put(pair(Void.class, MonthDay.class), fromInstance -> null);
+        factory.put(pair(MonthDay.class, MonthDay.class), fromInstance -> fromInstance);
+        factory.put(pair(String.class, MonthDay.class), fromInstance -> {
+            String monthDay = (String) fromInstance;
+            return MonthDay.parse(monthDay);
+        });
+        factory.put(pair(Map.class, MonthDay.class), fromInstance -> {
+            Map<String, Object> map = (Map<String, Object>) fromInstance;
+            if (map.containsKey("month")) {
+                int month = convert(map.get("month"), int.class);
+                int day = convert(map.get("day"), int.class);
+                return MonthDay.of(month, day);
+            } else {
+                return fromValueMap(map, MonthDay.class, MetaUtils.setOf("month", "day"));
+            }
+        });
 
         // Map conversions supported
         factory.put(pair(Void.class, Map.class), fromInstance -> null);
@@ -884,9 +977,39 @@ public final class Converter {
         factory.put(pair(Duration.class, Map.class), fromInstance -> {
             long sec = ((Duration)fromInstance).getSeconds();
             long nanos = ((Duration)fromInstance).getNano();
-            Map<String, Object> target = new HashMap<>();
+            Map<String, Object> target = new LinkedHashMap<>();
             target.put("seconds", sec);
             target.put("nanos", nanos);
+            return target;
+        });
+        factory.put(pair(Instant.class, Map.class), fromInstance -> {
+            long sec = ((Instant)fromInstance).getEpochSecond();
+            long nanos = ((Instant)fromInstance).getNano();
+            Map<String, Object> target = new LinkedHashMap<>();
+            target.put("seconds", sec);
+            target.put("nanos", nanos);
+            return target;
+        });
+        factory.put(pair(LocalTime.class, Map.class), fromInstance -> {
+            LocalTime localTime = (LocalTime)fromInstance;
+            Map<String, Object> target = new LinkedHashMap<>();
+            target.put("hour", localTime.getHour());
+            target.put("minute", localTime.getMinute());
+            if (localTime.getNano() != 0) {  // Only output 'nano' when not 0 (and then 'second' is required).
+                target.put("nano", localTime.getNano());
+                target.put("second", localTime.getSecond());
+            } else {    // 0 nano, 'second' is optional if 0
+                if (localTime.getSecond() != 0) {
+                    target.put("second", localTime.getSecond());
+                }
+            }
+            return target;
+        });
+        factory.put(pair(MonthDay.class, Map.class), fromInstance -> {
+            MonthDay monthDay = (MonthDay) fromInstance;
+            Map<String, Object> target = new LinkedHashMap<>();
+            target.put("day", monthDay.getDayOfMonth());
+            target.put("month", monthDay.getMonthValue());
             return target;
         });
         factory.put(pair(Class.class, Map.class), Converter::initMap);
@@ -899,21 +1022,6 @@ public final class Converter {
             return copy;
         });
         factory.put(pair(Enum.class, Map.class), Converter::initMap);
-
-        // Duration conversions supported
-        factory.put(pair(Void.class, Duration.class), fromInstance -> null);
-        factory.put(pair(Duration.class, Duration.class), fromInstance -> fromInstance);
-        factory.put(pair(String.class, Duration.class), fromInstance -> Duration.parse((String) fromInstance));
-        factory.put(pair(Map.class, Duration.class), fromInstance -> {
-            Map<String, Object> map = (Map<String, Object>) fromInstance;
-            if (map.containsKey("seconds") && map.containsKey("nanos"))
-            {
-                long sec = convert(map.get("seconds"), long.class);
-                long nanos = convert(map.get("nanos"), long.class);
-                return Duration.ofSeconds(sec, nanos);
-            }
-            throw new IllegalArgumentException("To convert from Map to Duration, the map must include keys: 'sec' and 'nanos'.");
-        });
     }
 
     /**
@@ -1162,7 +1270,7 @@ public final class Converter {
      * @param source Class to convert from.
      * @param target Class to convert to.
      * @param conversionFunction Convert function that converts from the source type to the destination type.
-     * @return prior conversion function is one existed.
+     * @return prior conversion function if one existed.
      */
     public static Convert<?> addConversion(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         source = toPrimitiveWrapperClass(source);

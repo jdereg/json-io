@@ -1,15 +1,17 @@
 package com.cedarsoftware.util.io;
 
+import java.time.Instant;
+import java.util.stream.Stream;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.Instant;
-import java.util.stream.Stream;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
 
@@ -93,7 +95,6 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     private static Stream<Arguments> oldFormats() {
         return Stream.of(
                 Arguments.of("old-format-basic.json", Instant.ofEpochSecond(1700668272, 163000000)),
-                Arguments.of("old-format-missing-fields.json", Instant.ofEpochSecond(0, 0)),
                 Arguments.of("old-format-missing-nanos.json", Instant.ofEpochSecond(1700668272, 0))
         );
     }
@@ -103,6 +104,13 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     void testOldFormats(String fileName, Instant expected) {
         Instant instant = TestUtil.toObjects(loadJson(fileName), Instant.class);
         assertThat(instant).isEqualTo(expected);
+    }
+
+    @Test
+    void testOldFormatWithNothing() {
+        assertThatThrownBy(() -> TestUtil.toObjects(loadJson("old-format-missing-fields.json"), Instant.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("To convert from Map to Instant, the map must include keys: [seconds, nanos], or '_v' or 'value' an associated value to convert from");
     }
 
     private String loadJson(String fileName) {

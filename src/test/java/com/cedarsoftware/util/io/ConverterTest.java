@@ -263,6 +263,8 @@ class ConverterTest
     @Test
     void testLong()
     {
+        assert 0L == convert(null, long.class);
+
         Long x = convert("-450000", long.class);
         assertEquals((Object)(-450000L), x);
         x = convert("550000", Long.class);

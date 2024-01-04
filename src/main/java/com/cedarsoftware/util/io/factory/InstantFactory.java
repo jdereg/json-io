@@ -1,17 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
-
-import com.cedarsoftware.util.io.ArgumentHelper;
-import com.cedarsoftware.util.io.DateUtilities;
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
-
-import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -30,36 +19,8 @@ import static java.time.format.DateTimeFormatter.ISO_INSTANT;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class InstantFactory extends AbstractTemporalFactory<Instant> {
-
-    public InstantFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
-        super(dateFormatter, zoneId);
-    }
-
-    public InstantFactory() {
-        super(ISO_INSTANT, ZoneId.systemDefault());
-    }
-
-    @Override
-    protected Instant fromString(String s) {
-        try {
-            return dateTimeFormatter.parse(s, Instant::from);
-        } catch (Exception e) {   // Increase date format flexibility - JSON not written by json-io.
-            Date date = DateUtilities.parseDate(s);
-
-            if (date == null) {
-                throw new JsonIoException("Could not parse date: " + s);
-            }
-
-            return date.toInstant();
-        }
-    }
-
-    @Override
-    protected Instant fromJsonObject(JsonObject job, ReaderContext context) {
-        Number seconds = ArgumentHelper.getNumberWithDefault(job.get("seconds"), 0);
-        Number nanos = ArgumentHelper.getNumberWithDefault(job.get("nanos"), 0);
-
-        return Instant.ofEpochSecond(seconds.longValue(), nanos.longValue());
+public class InstantFactory extends ConvertableFactory {
+    public Class<?> getType() {
+        return Instant.class;
     }
 }

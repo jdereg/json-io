@@ -1,15 +1,9 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.LocalTime;
+import java.time.Instant;
 
 /**
- * Abstract class to help create temporal items.
- * <p>
- * All custom writers for json-io subclass this class.  Special writers are not needed for handling
- * user-defined classes.  However, special writers are built/supplied by json-io for many of the
- * primitive types and other JDK classes simply to allow for a more concise form.
- * <p>
- * @author Kenny Partlow (kpartlow@gmail.com)
+ * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
  *         <br><br>
@@ -23,10 +17,10 @@ import java.time.LocalTime;
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
- *         limitations under the License.
+ *         limitations under the License.*
  */
-public class LocalTimeFactory extends ConvertableFactory {
+public class InstantArrayFactory extends ArrayFactory {
     public Class<?> getType() {
-        return LocalTime.class;
+        return Instant[].class;
     }
 }
