@@ -1,0 +1,14 @@
+java.lang.Throwable = backtrace,depth,suppressedExceptions,stackTrace
+java.lang.StackTraceElement = declaringClassObject,format
+sun.util.calendar.ZoneInfo = rawOffset,rawOffsetDiff,checksum,dstSavings,transitions,offsets,simpleTimeZoneParams,willGMTOffsetChange,dirty
+java.lang.Enum = internal,ENUM$VALUES
+groovy.lang.MetaClass = metaClass
+java.util.TimeZone = ID,zoneId
+java.lang.AbstractStringBuilder = value,coder,count
+java.util.LinkedHashMap = head,tail,accessOrder
+java.util.HashMap = table,size,modCount,threshold,loadFactor,entrySet,keySet
+java.util.Set = keySet
+java.util.AbstractMap = values
+java.util.Calendar = fields,isSet,stamp,time,isTimeSet,areFieldsSet,areAllFieldsSet,lenient,zone,sharedZone,firstDayOfWeek,minimalDaysInFirstWeek,nextStamp,serialVersionOnStream
+java.util.GregorianCalendar = gregorianCutover,gregorianCutoverDate,gregorianCutoverYear,gregorianCutoverYearJulian,gdate,cdate,calsys,zoneOffsets,originalFields,cachedFixedDate
+groovy.lang.MetaClass = metaClass

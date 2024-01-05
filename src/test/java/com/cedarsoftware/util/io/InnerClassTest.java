@@ -48,7 +48,7 @@ class InnerClassTest
         leg.y = 20;
         String json0 = TestUtil.toJson(dog);
         TestUtil.printLine("json0=" + json0);
-        JsonObject job = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        JsonObject job = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         job.put("phantom", new TestObject("Eddie"));
         String json1 = TestUtil.toJson(job);
         TestUtil.printLine("json1=" + json1);

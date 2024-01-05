@@ -1,11 +1,10 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Optional;
-
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
+
+import java.lang.reflect.Field;
+import java.util.Map;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -24,33 +23,15 @@ import com.cedarsoftware.util.reflect.AccessorFactory;
  * See the License for the specific language governing permissions and
  * limitations under the License.*
  */
-public class MethodAccessorFactory implements AccessorFactory {
+public class IsMethodAccessorFactory implements AccessorFactory {
     @Override
     public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
-        String fieldName = field.getName();
-
-        Optional<String> possibleMethod = getMapping(mappings, field.getDeclaringClass(), fieldName);
-
-        String method = possibleMethod.orElse(createGetterName(fieldName));
-
-        Accessor accessor = Accessor.create(field, method, key);
-
         final Class<?> c = field.getType();
-        if (accessor == null && (c == Boolean.class || c == boolean.class)) {
-            accessor = Accessor.create(field, createIsName(fieldName), key);
+        if (c != Boolean.class && c != boolean.class) {
+            return null;
         }
 
-        return accessor;
-    }
-
-    /**
-     * Creates the common name for a get Method
-     *
-     * @param fieldName - String representing the field name
-     * @return String - returns the appropriate method name to access this fieldName.
-     */
-    private static String createGetterName(String fieldName) {
-        return "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
+        return Accessor.create(field, createIsName(field.getName()), key);
     }
 
     /**

@@ -1,8 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.io.factory.CalendarFactory;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -15,13 +18,9 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import com.cedarsoftware.util.io.factory.CalendarFactory;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -62,7 +61,7 @@ public class CalendarTest
     {
         Calendars cals = new Calendars();
         String json = TestUtil.toJson(cals);
-        Calendars calsEx = TestUtil.toObjects(json, new ReadOptions(), null);
+        Calendars calsEx = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assert calsEx.calendars1.length == 2;
         assert calsEx.calendars2.length == 2;
@@ -176,7 +175,7 @@ public class CalendarTest
         String json = TestUtil.toJson(new Object[]{now});
         TestUtil.printLine("json=" + json);
 
-        Object[] items = TestUtil.toObjects(json, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         Map item = (Map) items[0];
         Assertions.assertTrue(item.containsKey("time"));
         Assertions.assertTrue(item.containsKey("zone"));
@@ -282,9 +281,10 @@ public class CalendarTest
         TimeZone zone = TimeZone.getTimeZone(timeZone);
         CalendarFactory factory = new CalendarFactory();
 
-        return new ReadOptions()
+        return new ReadOptionsBuilder()
                 .addClassFactory(Calendar.class, factory)
-                .addClassFactory(GregorianCalendar.class, factory);
+                .addClassFactory(GregorianCalendar.class, factory)
+                .build();
     }
 
     @Test

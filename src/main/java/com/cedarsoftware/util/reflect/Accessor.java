@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.reflect;
 
+import com.cedarsoftware.util.io.MetaUtils;
+import lombok.Getter;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
-
-import com.cedarsoftware.util.io.MetaUtils;
-import lombok.Getter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -41,6 +41,8 @@ public class Accessor {
      */
     private final Field field;
 
+    private final boolean isMethod;
+
     /**
      * The display name will be either the underlying field name or the underlying
      * method name from which the method handle was created.
@@ -56,12 +58,13 @@ public class Accessor {
     @Getter
     private final boolean isPublic;
 
-    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String displayName, boolean isPublic) {
+    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String displayName, boolean isPublic, boolean isMethod) {
         this.field = field;
         this.methodHandle = methodHandle;
         this.uniqueFieldName = uniqueFieldName;
         this.displayName = displayName;
         this.isPublic = isPublic;
+        this.isMethod = isMethod;
     }
 
 
@@ -72,7 +75,7 @@ public class Accessor {
 
         try {
             MethodHandle handle = MethodHandles.lookup().unreflectGetter(field);
-            return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()));
+            return new Accessor(field, handle, uniqueFieldName, field.getName(), Modifier.isPublic(field.getModifiers()), false);
         } catch (IllegalAccessException ex) {
             return null;
         }
@@ -82,9 +85,8 @@ public class Accessor {
         try {
             MethodType type = MethodType.methodType(field.getType());
             MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), method, type);
-            return new Accessor(field, handle, uniqueFieldName, method, true);
-        } catch (NoSuchMethodException | IllegalAccessException ex) {
-            // ignore
+            return new Accessor(field, handle, uniqueFieldName, method, true, true);
+        } catch (NoSuchMethodException | IllegalAccessException ignore) {
             return null;
         }
     }

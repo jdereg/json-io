@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,7 +40,7 @@ public class SunMiscTest
         array[0] = shoe;
         String workaroundString = TestUtil.toJson(array);
 
-        ReadOptions.addPermanentClassFactory(Dog.Shoe.class, new JsonReader.ClassFactory() {
+        ReadOptionsBuilder.addPermanentClassFactory(Dog.Shoe.class, new JsonReader.ClassFactory() {
             public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
             {
                 return Dog.Shoe.construct();
@@ -55,7 +55,7 @@ public class SunMiscTest
                 return jOb;
             }
         });
-        TestUtil.toObjects(workaroundString, new ReadOptions().setCustomReaderClasses(customReader), null);
+        TestUtil.toObjects(workaroundString, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build(), null);
         // shoe can be accessed by
         // checking array type + length
         // and accessing [0]
@@ -65,7 +65,7 @@ public class SunMiscTest
         // It is expected, that this object is instantiated twice:
         // -once for analysis + Stack
         // -deserialization with Stack
-        TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(customReader), null);
+        TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(customReader).build(), null);
     }
 
     @Test

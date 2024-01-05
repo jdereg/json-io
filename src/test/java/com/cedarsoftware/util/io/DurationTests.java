@@ -10,6 +10,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.time.Duration;
+import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -21,7 +24,7 @@ class DurationTests {
     void testDuration_ofNanos() {
         Duration duration = Duration.ofNanos(500);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         
         assertThat(actual).hasNanos(500);
     }
@@ -30,7 +33,7 @@ class DurationTests {
     void testDuration_ofMillis() {
         Duration duration = Duration.ofMillis(9000);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assertThat(actual)
                 .hasMillis(9000)
@@ -41,7 +44,7 @@ class DurationTests {
     void testDuration_ofSecondsAndNanos() {
         Duration duration = Duration.ofSeconds(9000, 9000);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         
         assertThat(actual)
                 .hasSeconds(9000)
@@ -53,7 +56,7 @@ class DurationTests {
     void testDuration_ofDays() {
         Duration duration = Duration.ofDays(9);
         String json = TestUtil.toJson(duration);
-        Duration actual = TestUtil.toObjects(json, new ReadOptions(), null);
+        Duration actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assertThat(actual).hasDays(9);
     }
@@ -106,7 +109,7 @@ class DurationTests {
     @MethodSource("oldFormats")
     void oldFormatTests(String fileName, long days, long hours, long minutes, long seconds, long millis, long nanos) {
         String json = loadJsonForTest(fileName);
-        Duration d = TestUtil.toObjects(json, new ReadOptions(), null);
+        Duration d = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assertThat(d)
                 .hasDays(days)

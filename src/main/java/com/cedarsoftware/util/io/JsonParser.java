@@ -1,14 +1,13 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -158,7 +157,8 @@ class JsonParser {
         }
         in.pushback((char) c);
         ++curParseDepth;
-        Map<String, Injector> injectors = ClassDescriptors.instance().getDeepInjectorMap(suggestedClass);
+
+        Map<String, Injector> injectors = readOptions.getDeepInjectorMap(suggestedClass);
 
         while (true) {
             String field = readField();
@@ -255,7 +255,7 @@ class JsonParser {
             case '{':
                 input.pushback('{');
                 JsonObject jObj = readJsonObject(suggestedClass);
-                final boolean useMaps = readOptions.getReturnType() == ReturnType.JSON_OBJECTS;
+                final boolean useMaps = readOptions.isReturningJsonObjects();
 
                 if (jObj.isLogicalPrimitive()) {
                     if (useMaps) {

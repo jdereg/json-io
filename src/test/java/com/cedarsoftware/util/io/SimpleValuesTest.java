@@ -107,7 +107,7 @@ public class SimpleValuesTest
     void testNanAndInfinity_whenAllowingNanAndInfinity_serializeRoundTrip(Double d) {
         WriteOptions writeOptions = new WriteOptionsBuilder().allowNanAndInfinity(true).build();
         final String json = TestUtil.toJson(d, writeOptions);
-        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(true).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().allowNanAndInfinity(true).build();
         final Double newObj = TestUtil.toObjects(json, readOptions, Double.class);
 
         assertEquals(d, newObj);
@@ -120,7 +120,7 @@ public class SimpleValuesTest
         final String json = TestUtil.toJson(testObj, writeOptions);
         TestUtil.printLine("testObj = " + testObj);
         TestUtil.printLine("json = " + json);
-        ReadOptions readOptions = new ReadOptions().allowNanAndInfinity(allowNanAndInfinity).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().allowNanAndInfinity(allowNanAndInfinity).build();
         final Object newObj = TestUtil.toObjects(json, readOptions, null);
         TestUtil.printLine("newObj = " + newObj);
 

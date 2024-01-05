@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -13,9 +15,6 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -90,7 +89,7 @@ public class ObjectResolver extends Resolver
         final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
         final Class cls = javaMate.getClass();
-        final Map<String, Injector> injectorMap = ClassDescriptors.instance().getDeepInjectorMap(cls);
+        final Map<String, Injector> injectorMap = getReadOptions().getDeepInjectorMap(cls);
 
         while (i.hasNext())
         {
@@ -777,7 +776,7 @@ public class ObjectResolver extends Resolver
         final Deque<Object[]> stack = new ArrayDeque<>();
         stack.addFirst(new Object[] {type, rhs});
 
-        Map<String, Injector> classFields = ClassDescriptors.instance().getDeepInjectorMap(fieldType);
+        Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldType);
         while (!stack.isEmpty())
         {
             Object[] item = stack.removeFirst();

@@ -58,7 +58,6 @@ import java.util.stream.Collectors;
 
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
-import static java.lang.reflect.Modifier.isStatic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -84,7 +83,10 @@ public class MetaUtils
     private MetaUtils () {}
     enum Dumpty {}
 
-    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    public static final String META_CLASS_FIELD_NAME = "metaClass";
+
+    public static final String META_CLASS_NAME = "groovy.lang.MetaClass";
+
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
     private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
@@ -231,81 +233,6 @@ public class MetaUtils
         map.put(k2, v2);
         map.put(k3, v3);
         return Collections.unmodifiableMap(map);
-    }
-
-    /**
-     * Return an instance of the Java Field class corresponding to the passed in field name.
-     * @param c class containing the field / field name
-     * @param field String name of a field on the class.
-     * @return Field instance if the field with the corresponding name is found, null otherwise.
-     */
-    public static Field getField(Class<?> c, String field)
-    {
-        return getDeepDeclaredFields(c).get(field);
-    }
-
-    /**
-     * @param c Class instance
-     * @return ClassMeta which contains fields of class.  The results are cached internally for performance
-     *         when called again with same Class.
-     */
-    public static Map<String, Field> getDeepDeclaredFields(Class<?> c)
-    {
-        Map<String, Field> classFields = classMetaCache.get(c);
-        if (classFields != null)
-        {
-            return classFields;
-        }
-
-        classFields = new LinkedHashMap<>();
-        Class<?> curr = c;
-
-        while (curr != null)
-        {
-            final Field[] local = curr.getDeclaredFields();
-
-            for (Field field : local)
-            {
-                int modifiers = field.getModifiers();
-                if (isStatic(modifiers))
-                {   // skip static fields (allow transient, because  that is an option for json-io)
-                    continue;
-                }
-                String fieldName = field.getName();
-                if ("metaClass".equals(fieldName) && "groovy.lang.MetaClass".equals(field.getType().getName()))
-                {   // skip Groovy metaClass field if present (without tying this project to Groovy in any way).
-                    continue;
-                }
-
-                if (field.getDeclaringClass().isAssignableFrom(Enum.class))
-                {   // For Enum fields, do not add .hash or .ordinal fields to output
-                    // TODO:  We may want to use ClassDescriptor logic since it filters these for us already?
-                    if ("hash".equals(fieldName) || "ordinal".equals(fieldName) || "internal".equals(fieldName))
-                    {
-                        continue;
-                    }
-                }
-                if (classFields.containsKey(fieldName))
-                {   // Field name collision in inheritance hierarchy.  Use prefix of parent class name '.' field name to
-                    // disambiguate instances of the field (Each one can have it's own unique value).
-                    classFields.put(curr.getSimpleName() + '.' + fieldName, field);
-                }
-                else
-                {
-                    classFields.put(fieldName, field);
-                }
-
-                if (!isPublic(modifiers) || !isPublic(field.getDeclaringClass().getModifiers()))
-                {
-                    MetaUtils.trySetAccessible(field);
-                }
-            }
-
-            curr = curr.getSuperclass();
-        }
-
-        classMetaCache.put(c, classFields);
-        return new LinkedHashMap<>(classFields);
     }
 
     /**
@@ -980,10 +907,6 @@ public class MetaUtils
 
     public static void trySetAccessible(AccessibleObject object)
     {
-        if (object.isAccessible()) {
-            return;
-        }
-
         safelyIgnoreException(() -> {
             object.setAccessible(true);
         });
@@ -1000,7 +923,8 @@ public class MetaUtils
     public static void safelyIgnoreException(Runnable runnable) {
         try {
             runnable.run();
-        } catch (Throwable ignored) { }
+        } catch (Throwable ignored) {
+        }
     }
     public static boolean isEmpty(final String s) {
         return trimLength(s) == 0;
@@ -1085,6 +1009,35 @@ public class MetaUtils
         return Arrays.stream(commaSeparatedString.split(","))
                 .map(String::trim)
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Load custom writer classes based on contents of resources/customWriters.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     *
+     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    public static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames(String fileName) {
+        Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
+        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String mappings = entry.getValue();
+            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " not defined in the JVM");
+                continue;
+            }
+
+            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
+            for (String split : mappings.split(",")) {
+                String[] parts = split.split(":");
+                mapping.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+        return nonStandardMapping;
     }
 
     /**
@@ -1249,5 +1202,59 @@ public class MetaUtils
             input = m.group(1);
         }
         return input;
+    }
+
+    /**
+     * Fetch the closest class for the passed in Class.  This method always fetches the closest class or returns
+     * the default class, doing the complicated inheritance distance checking.  This method is only called when
+     * a cache miss has happened.  A sentinel 'defaultClass' is returned when no class is found.  This prevents
+     * future cache misses from re-attempting to find classes that do not have a custom writer.
+     *
+     * @param c             Class of object for which fetch a custom writer
+     * @param workerClasses The classes to search through
+     * @param defaultClass  the class to return when no viable class was found.
+     * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
+     */
+    public static <T> T findClosest(Class<?> c, Map<Class<?>, T> workerClasses, T defaultClass) {
+        T closestWriter = defaultClass;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (Map.Entry<Class<?>, T> entry : workerClasses.entrySet()) {
+            Class<?> clz = entry.getKey();
+            if (clz == c) {
+                return entry.getValue();
+            }
+            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            if (distance != -1 && distance < minDistance) {
+                minDistance = distance;
+                closestWriter = entry.getValue();
+            }
+        }
+        return closestWriter;
+    }
+
+
+    /**
+     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
+     *
+     * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     */
+    public static Set<Class<?>> loadNonRefs() {
+        final Set<String> set = loadSetDefinition("nonRefs.txt");
+        final ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        final Set<Class<?>> result = new HashSet<>();
+
+        for (String className : set) {
+            Class<?> loadedClass = MetaUtils.classForName(className, classLoader);
+
+            if (loadedClass != null) {
+                result.add(loadedClass);
+            } else {
+                throw new JsonIoException("Class: " + className + " is undefined.");
+            }
+        }
+
+        return result;
     }
 }

@@ -33,7 +33,7 @@
     > B. JsonIo.toJson(srcObj)
     > C. JsonIo.toJson(srcObj, null) // 2nd arg is WriteOptions instance (can be null for defaults)
     > D. return JsonIo.formatJson(json)
-    > E. ReadOptionsBuilder builder = new ReadOptionsBuilder().returnAsMaps() 
+    > E. ReadOptionsBuilder builder = new ReadOptionsBuilder().returnAsMaps().build() 
     >    Map axisConverted = JsonIo.toObjects(json, builder.build(), null)  // 3rd param can be root class
     > F. JsonWriter.writeJsonUtf8String(writer, value)
     > ```

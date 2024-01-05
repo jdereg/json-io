@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.reflect.Accessor;
+import lombok.Getter;
 
 import java.io.Closeable;
 import java.io.Flushable;
@@ -19,16 +20,13 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
-import com.cedarsoftware.util.reflect.Accessor;
-
-import lombok.Getter;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
@@ -1298,11 +1296,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         return objsReferenced.containsKey(jObj) && jObj.hasId();
     }
 
+    // Hopefully this method goes away when the converters are done.
+    // We're asking for a DeepDeclaredFields to check One Field Type
+    // Its cached, but we shouldn't have to do that here.  I would think if its a known covnerter type
+    // that we avoid this section all together.
     private boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
     {
         if (type != null)
         {
-            Map<String, Field> fieldMap = this.writeOptions.getDeepDeclaredFields(type, new HashSet());
+            Map<String, Field> fieldMap = writeOptions.getDeepDeclaredFields(type);
             Field field = fieldMap.get(fieldName);
             return field != null && field.getType().equals(value.getClass());
         }
@@ -1505,7 +1507,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             }
         }
 
-        Field elementTypeField = MetaUtils.getField(EnumSet.class, "elementType");
+        Field elementTypeField = writeOptions.getDeepDeclaredFields(EnumSet.class).get("elementType");
 
         Class<?> elementType = (Class<?>) getValueByReflect(enumSet, elementTypeField);
         if ( elementType != null)
@@ -1642,20 +1644,13 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         Object o;
 
         //  Only here for enumAsObject writing,.
-        if (Enum.class.isAssignableFrom(fieldDeclaringClass))
-        {
+        if (Enum.class.isAssignableFrom(fieldDeclaringClass)) {
             if (!accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
                 return first;
             }
 
             o = accessor.retrieve(obj);
-        }
-        else if (ObjectResolver.isBasicWrapperType(fieldDeclaringClass))
-        {
-            o = obj;
-        }
-        else
-        {
+        } else {
             o = accessor.retrieve(obj);
         }
 
@@ -1680,11 +1675,9 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return false;
         }
 
+        // check to see if type needs to be written.
         Class<?> type = accessor.getFieldType();
-        boolean forceType = isForceType(o.getClass(), type);     // If types are not exactly the same, write "@type" field
-
-        // When no type is written we can check the Object itself not the declaration
-        writeImpl(o, forceType);
+        writeImpl(o, isForceType(o.getClass(), type));
         return false;
     }
 

@@ -1,15 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
@@ -27,12 +22,15 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import com.cedarsoftware.util.DeepEquals;
+import static com.cedarsoftware.util.io.JsonObject.ITEMS;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -460,7 +458,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(two);
         TestUtil.printLine("json0=" + json0);
 
-        Object[] array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Object[] array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -494,7 +492,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(ta);
         TestUtil.printLine("json0=" + json0);
 
-        Map map = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map map = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         json1 = TestUtil.toJson(map);
         TestUtil.printLine("json1=" + json1);
 
@@ -612,7 +610,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(foo);
         TestUtil.printLine("json0=" + json0);
 
-        Object array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
         assertEquals(json0, json1);
@@ -625,7 +623,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        empty = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        empty = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertNotNull(empty);
         assertNotNull(empty);
         assertEquals(0, empty.length);
@@ -638,7 +636,7 @@ public class ArrayTest
         json0 = TestUtil.toJson(list);
         TestUtil.printLine("json0=" + json0);
 
-        list = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertNotNull(list);
         assertEquals(2, list.length);
         Map e1 = (Map) list[0];
@@ -658,7 +656,7 @@ public class ArrayTest
         Object[] objs = new Object[]{strs, "a", strs};
         String json0 = TestUtil.toJson(objs);
         TestUtil.printLine("json0=" + json0);
-        Object array = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Object array = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
@@ -684,7 +682,7 @@ public class ArrayTest
         testArray.init();
         String json0 = TestUtil.toJson(testArray);
         TestUtil.printLine("json0=" + json0);
-        Map testArray2 = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map testArray2 = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
 
         String json1 = TestUtil.toJson(testArray2);
         TestUtil.printLine("json1=" + json1);
@@ -701,7 +699,7 @@ public class ArrayTest
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
 
-        Map m = TestUtil.toObjects(json0, new ReadOptions().returnType(ReturnType.JSON_OBJECTS), null);
+        Map m = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertTrue(m.isEmpty());
 
         String json1 = TestUtil.toJson(m);
@@ -966,12 +964,12 @@ public class ArrayTest
     void testEmptyArrayAsObjectArrayAndList()
     {
         String json = "[]";
-        Object[] empty = TestUtil.toObjects(json, new ReadOptions(), Object[].class);
+        Object[] empty = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
         assertNotNull(empty);
         assertEquals(0, empty.length);
 
         // TODO: This test should work
-//        List<?> emptyList = TestUtil.toObjects(json, new ReadOptions(), ArrayList.class);
+//        List<?> emptyList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
 //        assertNotNull(emptyList);
 //        assertTrue(emptyList.isEmpty());
     }
@@ -980,7 +978,7 @@ public class ArrayTest
     void testEmptySubArray()
     {
         String json = "[[], []]";
-        Object[] outer = TestUtil.toObjects(json, new ReadOptions(), Object[].class);
+        Object[] outer = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
         assertEquals(2, outer.length);
 
         Object[] empty1 = (Object[])outer[0];
@@ -989,7 +987,7 @@ public class ArrayTest
         assertEquals(0, empty2.length);
 
         // TODO: This test should work
-//        List<List<?>> outerList = TestUtil.toObjects(json, new ReadOptions(), ArrayList.class);
+//        List<List<?>> outerList = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ArrayList.class);
 //        assertEquals(2, outerList.size());
 //
 //        List<?> emptyList1 = (List)outer[0];
@@ -1060,6 +1058,13 @@ public class ArrayTest
         assertThat(json).isEqualTo("[[],[],[]]");
     }
 
+    private static Stream<Arguments> alwaysShowAndMinimalShow() {
+        return Stream.of(
+                Arguments.of(new WriteOptionsBuilder().showTypeInfoAlways().build()),
+                Arguments.of(new WriteOptionsBuilder().build())
+        );
+    }
+
     @ParameterizedTest
     @MethodSource("alwaysShowAndMinimalShow")
     void testObjectArray_withInts_doesNotExportTypes(WriteOptions options) throws Throwable {
@@ -1090,19 +1095,19 @@ public class ArrayTest
         assertThat(json).isEqualTo("[10,20,30]");
     }
 
-    private static Stream<Arguments> alwaysShowAndMinimalShow() {
+    private static Stream<Arguments> alwaysShowAndMinimalShowWithLongAsStrings() {
         return Stream.of(
-                Arguments.of(new WriteOptionsBuilder().showTypeInfoAlways().build()),
-                Arguments.of(new WriteOptionsBuilder().build())
+                Arguments.of(new WriteOptionsBuilder().showTypeInfoAlways().writeLongsAsStrings(true).build()),
+                Arguments.of(new WriteOptionsBuilder().writeLongsAsStrings(true).build())
         );
     }
 
     @ParameterizedTest
-    @MethodSource("alwaysShowAndMinimalShow")
+    @MethodSource("alwaysShowAndMinimalShowWithLongAsStrings")
     void testObjectArray_withLongsWrittenAsStrings_andMinimalOrAlwaysShow_writesTypes(WriteOptions writeOptions) throws Throwable {
         Object[] array = {10L, 20L, 30L};
 
-        String json = TestUtil.toJson(array, new WriteOptionsBuilder(writeOptions).writeLongsAsStrings(true).build());
+        String json = TestUtil.toJson(array, writeOptions);
         assertThat(json).isEqualTo("[{\"@type\":\"long\",\"value\":\"10\"},{\"@type\":\"long\",\"value\":\"20\"},{\"@type\":\"long\",\"value\":\"30\"}]");
     }
 

@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.reflect;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -27,8 +27,14 @@ public interface InjectorFactory {
      * Creates accessors for accessing data from an object.
      *
      * @param field           The field we're trying to access
-     * @param possibleMethods a map of possible methods from the class itself
+     * @param nonStandardNames a map of possible methods from the class itself
+     * @param uniqueName a uniqueName to use as a key in map if the class has two methods with same name.
      * @return The accessor if one fits for this field, otherwise null.
      */
-    Injector createInjector(Field field, Map<String, Method> possibleMethods);
+    Injector createInjector(Field field, Map<Class<?>, Map<String, String>> nonStandardNames, String uniqueName);
+
+    default Optional<String> getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
+        Map<String, String> mapping = classToMapping.get(c);
+        return mapping == null ? Optional.empty() : Optional.ofNullable(mapping.get(fieldName));
+    }
 }

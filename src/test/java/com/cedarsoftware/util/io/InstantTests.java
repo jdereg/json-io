@@ -88,7 +88,7 @@ class InstantTests extends SerializationDeserializationMinimumTests<Instant> {
     void roundTripTests(Instant expected) {
         String json = TestUtil.toJson(expected, new WriteOptionsBuilder().build());
 
-        Instant actual = TestUtil.toObjects(json, new ReadOptions(), Instant.class);
+        Instant actual = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Instant.class);
         assertThat(expected).isEqualTo(actual);
     }
 

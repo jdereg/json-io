@@ -1,12 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import java.time.Period;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.Period;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,7 +71,7 @@ class PeriodTests {
     @MethodSource("oldFormats")
     void oldFormatTests(String fileName, int years, int months, int days) {
         String json = loadJsonForTest(fileName);
-        Period d = TestUtil.toObjects(json, new ReadOptions(), null);
+        Period d = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
 
         assertThat(d)
                 .hasYears(years)

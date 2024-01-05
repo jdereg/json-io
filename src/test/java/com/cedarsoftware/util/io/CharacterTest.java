@@ -1,8 +1,8 @@
 package com.cedarsoftware.util.io;
 
-import java.io.Serializable;
-
 import org.junit.jupiter.api.Test;
+
+import java.io.Serializable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -82,7 +82,7 @@ public class CharacterTest
     void testQuoteAsCharacterValue()
     {   // { "@type": "char", "value": "\\"" }
         String json = "{\"@type\":\"char\",\"value\": \"\\\"\"}";
-        Character ch = TestUtil.toObjects(json, new ReadOptions(), char.class);
+        Character ch = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), char.class);
         assert ch == '"';
 
     }

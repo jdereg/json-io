@@ -1,0 +1,8 @@
+java.lang.Enum = name,internal,ENUM$VALUES
+java.lang.Throwable = detailMessage,cause
+java.lang.NullPointerException = extendedMessage,extendedMessageState
+java.lang.Byte = value
+java.lang.Double = value
+java.util.EnumSet = elementType,universe
+java.time.Instant = seconds,nanos
+#java.lang.Process = outputWriter,inputreader,outputCharset,inputCharset,errorReader,errorCharset

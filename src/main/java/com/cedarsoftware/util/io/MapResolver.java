@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -7,9 +9,6 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-
-import com.cedarsoftware.util.reflect.ClassDescriptors;
-import com.cedarsoftware.util.reflect.Injector;
 
 /**
  * <p>The MapResolver converts the raw Maps created from the JsonParser to higher
@@ -73,7 +72,7 @@ public class MapResolver extends Resolver
     public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final Object target = jsonObj.getTarget();
-        final Map<String, Injector> injectorMap = (target == null) ? null : ClassDescriptors.instance().getDeepInjectorMap(target.getClass());
+        final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
 
         for (Map.Entry<Object, Object> e : jsonObj.entrySet())
         {

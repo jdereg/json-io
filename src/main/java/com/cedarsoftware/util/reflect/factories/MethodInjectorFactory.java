@@ -1,41 +1,21 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Map;
-import java.util.Optional;
-
 import com.cedarsoftware.util.reflect.Injector;
 import com.cedarsoftware.util.reflect.InjectorFactory;
 
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Optional;
+
 public class MethodInjectorFactory implements InjectorFactory {
-    private static final int METHOD_MODIFIERS = Modifier.PUBLIC | Modifier.STATIC;
-
     @Override
-    public Injector createInjector(Field field, Map<String, Method> possibleInjectors) {
-        String fieldName = field.getName();
+    public Injector createInjector(Field field, Map<Class<?>, Map<String, String>> nonStandardNames, String uniqueName) {
 
-        Optional<String> possibleMethod = NonStandardInjectorNames.instance()
-                .getMapping(field.getDeclaringClass(), fieldName);
+        final String fieldName = field.getName();
+        final Optional<String> possibleMethod = getMapping(nonStandardNames, field.getDeclaringClass(), fieldName);
+        final String method = possibleMethod.orElse(createSetterName(fieldName));
 
-        Method method = possibleInjectors.get(possibleMethod.orElse(createSetterName(fieldName)));
-
-        if (method == null || (method.getModifiers() & METHOD_MODIFIERS) != Modifier.PUBLIC) {
-            return null;
-        }
-
-        Class<?> type = method.getParameters()[0].getType();
-
-        if (!type.isAssignableFrom(field.getType())) {
-            return null;
-        }
-
-        try {
-            return new Injector(field, method);
-        } catch (Throwable t) {
-            return null;
-        }
+        return Injector.create(field, method, uniqueName);
     }
 
     /**

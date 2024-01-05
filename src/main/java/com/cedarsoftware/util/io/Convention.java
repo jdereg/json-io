@@ -54,4 +54,16 @@ public class Convention {
             throw new JsonIoException(message);
         }
     }
+
+    /**
+     * Throws an exception if the logic is false.
+     *
+     * @param logic   test to see if we need to throw the exception.
+     * @param message to include in the exception explaining why the the assertion failed
+     */
+    public static void throwIfFalse(boolean logic, String message) {
+        if (!logic) {
+            throw new JsonIoException(message);
+        }
+    }
 }

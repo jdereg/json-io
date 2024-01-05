@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -11,9 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import com.cedarsoftware.util.DeepEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -62,7 +61,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions0 = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
-        ReadOptions readOptions0 = new ReadOptions().returnType(ReturnType.JSON_OBJECTS).setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
+        ReadOptions readOptions0 = new ReadOptionsBuilder().returnAsNativeJsonObjects().replaceCustomReaderClasses(customReaders).replaceNotCustomReaderClasses(new ArrayList<>()).build();
         String jsonCustom = TestUtil.toJson(p, writeOptions0);
         Map obj = TestUtil.toObjects(jsonCustom, readOptions0, null);
         assert "Michael".equals(obj.get("f"));
@@ -79,7 +78,7 @@ public class CustomWriterTest
         assert "Chi hua hua".equals(bella.get("t"));
         assert 3L == (long) bella.get("a");
 
-        ReadOptions readOptions = new ReadOptions().addCustomReaderClass(Person.class, new CustomPersonReader());
+        ReadOptions readOptions = new ReadOptionsBuilder().addCustomReaderClass(Person.class, new CustomPersonReader()).build();
         Person personCustom = TestUtil.toObjects(jsonCustom, readOptions, null);
 
         assert personCustom.getFirstName().equals("Michael");
@@ -106,9 +105,10 @@ public class CustomWriterTest
 
         Map<Class<Person>, CustomPersonReader> customPersonReaderMap = new HashMap<>();
         customPersonReaderMap.put(Person.class, new CustomPersonReader());
-        Person personOrig = TestUtil.toObjects(jsonOrig, new ReadOptions()
-                .setCustomReaderClasses(customPersonReaderMap)
-                .setNotCustomReaderClasses(MetaUtils.listOf(Person.class)), null);
+        Person personOrig = TestUtil.toObjects(jsonOrig, new ReadOptionsBuilder()
+                .replaceCustomReaderClasses(customPersonReaderMap)
+                .replaceNotCustomReaderClasses(MetaUtils.listOf(Person.class))
+                .build(), null);
         assert personOrig.equals(personCustom);
 
         p = TestUtil.toObjects(jsonCustom, null);
@@ -146,7 +146,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
-        ReadOptions readOptions = new ReadOptions();
+        ReadOptions readOptions = new ReadOptionsBuilder().build();
 
         // Object[] { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
         // Works - not using custom writer/reader
@@ -159,14 +159,14 @@ public class CustomWriterTest
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
         writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
-        readOptions = new ReadOptions().setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
+        readOptions = new ReadOptionsBuilder().replaceCustomReaderClasses(customReaders).replaceNotCustomReaderClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
         assert ((Object[])people)[0] == ((Object[])people)[1];
 
         writeOptions = new WriteOptionsBuilder().build();
-        readOptions = new ReadOptions();
+        readOptions = new ReadOptionsBuilder().build();
 
         // List of { person, person }  (same instance twice - 2nd instance if simply @ref to 1st)
         // Works - not using custom writer/reader
@@ -181,7 +181,7 @@ public class CustomWriterTest
         // Failed - (until fixed in ObjectResolver.readWithCustomReaderIfOneExists() near the bottom
         // JsonObject needs to be updated to point to the newly created actual instance
         writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
-        readOptions = new ReadOptions().setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
+        readOptions = new ReadOptionsBuilder().replaceCustomReaderClasses(customReaders).replaceNotCustomReaderClasses(new ArrayList<>()).build();
         json = TestUtil.toJson(people, writeOptions);
         obj = TestUtil.toObjects(json, readOptions, null);
         assert DeepEquals.deepEquals(people, obj);
@@ -197,7 +197,7 @@ public class CustomWriterTest
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
-        ReadOptions readOptions = new ReadOptions().setCustomReaderClasses(customReaders).setNotCustomReaderClasses(new ArrayList<>());
+        ReadOptions readOptions = new ReadOptionsBuilder().replaceCustomReaderClasses(customReaders).replaceNotCustomReaderClasses(new ArrayList<>()).build();
         
         People people = new People(new Object[]{p, p});
         String json = TestUtil.toJson(people, writeOptions);    // Massive @ref JSON

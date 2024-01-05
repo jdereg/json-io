@@ -1,9 +1,16 @@
 package com.cedarsoftware.util.reflect;
 
+import com.cedarsoftware.util.io.Convention;
+
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -28,7 +35,7 @@ import java.util.stream.Collectors;
  */
 public class ReflectionUtils {
 
-    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, List<Field>> fieldMetaCache = new ConcurrentHashMap<>();
 
     private ReflectionUtils() {
     }
@@ -56,5 +63,40 @@ public class ReflectionUtils {
      */
     public static Method oneParameterMethodPreference(Method method1, Method method2) {
         return method1.getParameterCount() == 1 ? method1 : method2;
+    }
+
+    /**
+     * Creates an object using default constructor.
+     *
+     * @param c - class to create
+     * @return Object created using default constructor of class c
+     * @throws Exception
+     */
+    public static <T> T newInstance(Class<? extends T> c) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException {
+        Constructor<? extends T> constructor = c.getConstructor();
+        return constructor.newInstance();
+    }
+
+    public static List<Field> getDeclaredFields(final Class<?> c) {
+        return fieldMetaCache.computeIfAbsent(c, ReflectionUtils::buildDeclaredFields);
+    }
+
+    public static List<Field> buildDeclaredFields(final Class<?> c) {
+        Convention.throwIfNull(c, "class cannot be null");
+
+        Field[] fields = c.getDeclaredFields();
+        List<Field> list = new ArrayList(fields.length);
+
+        for (Field field : fields) {
+            if (Modifier.isStatic(field.getModifiers()) ||
+                    (field.getDeclaringClass().isEnum() && ("internal".equals(field.getName()) || "ENUM$VALUES".equals(field.getName()))) ||
+                    (field.getDeclaringClass().isAssignableFrom(Enum.class) && ("hash".equals(field.getName()) || "ordinal".equals(field.getName())))) {
+                continue;
+            }
+
+            list.add(field);
+        }
+
+        return list;
     }
 }

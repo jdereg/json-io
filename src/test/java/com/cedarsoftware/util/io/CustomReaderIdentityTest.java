@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,8 +9,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.junit.jupiter.api.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -47,7 +47,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		Object obj = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readerMap), null);
+        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) == list.get(1);
@@ -71,7 +71,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		Object obj = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readerMap), null);
+        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
 		assert obj instanceof List;
 		List list = (List) obj;
 		assert list.get(0) == list.get(1);
@@ -98,7 +98,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		Object obj = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readerMap), null);
+        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
 		assert obj instanceof Set;
 		set = (Set) obj;
 		assert set.size() == 2;
@@ -118,7 +118,7 @@ public class CustomReaderIdentityTest
 
 		Map<Class<CustomDataClass>, CustomDataReader> readerMap = new HashMap<>(1);
 		readerMap.put(CustomDataClass.class, new CustomDataReader());
-		Object obj = TestUtil.toObjects(json, new ReadOptions().setCustomReaderClasses(readerMap), null);
+        Object obj = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(readerMap).build(), null);
 		assert obj instanceof CustomDataClass[];
 		array = (CustomDataClass[]) obj;
 		assert array.length == 2;

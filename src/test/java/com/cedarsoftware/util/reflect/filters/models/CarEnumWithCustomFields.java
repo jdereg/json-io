@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.reflect.filters.models;
 
+import lombok.Getter;
+
 public enum CarEnumWithCustomFields {
 
     MUSTANG(167.9, 8.9f, "Michelin", true),
@@ -15,10 +17,13 @@ public enum CarEnumWithCustomFields {
     }
 
     private final double speed;
-    private final float rating;
+
+    @Getter
+    public final float rating;
 
     private final String tire;
 
+    @Getter
     private final boolean stick;
 }
 
