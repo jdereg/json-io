@@ -1,7 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -12,6 +10,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
+import com.cedarsoftware.util.FastByteArrayInputStream;
+import com.cedarsoftware.util.FastByteArrayOutputStream;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

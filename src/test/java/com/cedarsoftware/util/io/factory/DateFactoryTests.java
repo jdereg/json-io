@@ -3,7 +3,7 @@ package com.cedarsoftware.util.io.factory;
 import java.time.ZoneId;
 import java.util.Date;
 
-import com.cedarsoftware.util.io.DateUtilities;
+import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.io.JsonReader;
 
 import static org.assertj.core.api.Assertions.assertThat;

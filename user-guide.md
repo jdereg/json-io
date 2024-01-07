@@ -324,7 +324,7 @@ all those to collapse to the same value, they won't Each one would be read in as
 ## Controlling the input JSON using `ReadOptions`
 Create a new`ReadOptions`instance and turn various features on/off using the methods below. Example:
 
-    ReadOptions readOptions = new ReadOptionsBuilder()..build()
+    ReadOptions readOptions = new ReadOptionsBuilder().build()
     JsonWriter.toJson(root, writeOptions);
 
 To pass these to`JsonRead.toJava(root, readOptions)`set up a`ReadOptions`using the feature settings below.

@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import java.io.IOException;
 
+import com.cedarsoftware.util.FastByteArrayInputStream;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

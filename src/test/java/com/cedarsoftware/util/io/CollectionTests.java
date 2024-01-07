@@ -21,6 +21,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

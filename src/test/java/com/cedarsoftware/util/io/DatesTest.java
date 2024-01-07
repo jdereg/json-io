@@ -262,7 +262,7 @@ class DatesTest
         compareTimePortion(exp, act);
 
         // Nov 15, 2013 format
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("MMM dd, yyyy HH:mm.ss").build());
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("MMM dd, yyyy HH:mm:ss").build());
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 
@@ -282,7 +282,7 @@ class DatesTest
         compareTimePortion(exp, act);
 
         // 15 Nov 2013 format
-        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("dd MMM yyyy HH:mm.ss").build());
+        json = TestUtil.toJson(dt, new WriteOptionsBuilder().dateTimeFormat("dd MMM yyyy HH:mm:ss").build());
         TestUtil.printLine("json = " + json);
         readDt = TestUtil.toObjects(json, null);
 

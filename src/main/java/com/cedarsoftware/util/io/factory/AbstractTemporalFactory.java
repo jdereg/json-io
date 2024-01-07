@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 
-import com.cedarsoftware.util.io.DateUtilities;
+import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.io.JsonIoException;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;

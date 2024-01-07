@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.OutputStream;
 import java.util.Map;
 
+import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;

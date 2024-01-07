@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import lombok.Getter;
-
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -25,6 +22,10 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+
+import com.cedarsoftware.util.FastWriter;
+import com.cedarsoftware.util.reflect.Accessor;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 

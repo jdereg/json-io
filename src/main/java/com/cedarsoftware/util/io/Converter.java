@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.DateUtilities;
+
 /**
  * Instance conversion utility.  Convert from primitive to other primitives, plus support for Number, Date,
  * TimeStamp, SQL Date, LocalDate, LocalDateTime, ZonedDateTime, Calendar, Big*, Atomic*, Class, UUID,

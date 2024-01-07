@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Date;
 
-import com.cedarsoftware.util.io.DateUtilities;
+import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;

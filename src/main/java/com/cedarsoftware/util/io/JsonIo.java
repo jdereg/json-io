@@ -4,6 +4,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import com.cedarsoftware.util.FastByteArrayInputStream;
+import com.cedarsoftware.util.FastByteArrayOutputStream;
+
 /**
  * This is the main API for json-io.  Use these methods to convert:<br/>
  * <ul>
