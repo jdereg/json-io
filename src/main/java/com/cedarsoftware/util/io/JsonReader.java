@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.convert.Converter;
+import lombok.Getter;
+
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -67,6 +71,10 @@ public class JsonReader implements Closeable, ReaderContext
 
     @Getter
     private final ReadOptions readOptions;
+
+    @Getter
+    private final Converter converter;
+
     private final JsonParser parser;
 
     /**
@@ -89,7 +97,7 @@ public class JsonReader implements Closeable, ReaderContext
          * override the isObjectFinal() method below and return true.
          */
         default Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-            return this.newInstance(c, jObj);
+            return MetaUtils.newInstance(context.getConverter(), c, null);
         }
 
         /**
@@ -104,7 +112,7 @@ public class JsonReader implements Closeable, ReaderContext
          */
         default Object newInstance(Class<?> c, JsonObject jObj)
         {
-            return MetaUtils.newInstance(c, null);  // can add constructor arg values (pull from jObj)
+            return MetaUtils.newInstance(null, c, null);  // can add constructor arg values (pull from jObj)
         }
 
         /**
@@ -211,13 +219,14 @@ public class JsonReader implements Closeable, ReaderContext
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? new ReadOptionsBuilder().returnAsJavaObjects().build() : readOptions;
+        this.converter = new Converter(new ConverterReadOptionsAdapter(this.readOptions));
         this.input = getReader(inputStream);
 
         this.resolver = this.readOptions.isReturningJsonObjects() ?
-                new MapResolver(this.readOptions, references) :
-                new ObjectResolver(this.readOptions, references);
+                new MapResolver(this.readOptions, references, this.converter) :
+                new ObjectResolver(this.readOptions, references, this.converter);
 
-        parser = new JsonParser(this.input, this.resolver);
+        this.parser = new JsonParser(this.input, this.resolver);
     }
 
     /**

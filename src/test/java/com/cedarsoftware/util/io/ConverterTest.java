@@ -1,5 +1,8 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.DeepEquals;
+import org.junit.jupiter.api.Test;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
@@ -21,14 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
+import static com.cedarsoftware.util.convert.Converter.localDateTimeToMillis;
+import static com.cedarsoftware.util.convert.Converter.localDateToMillis;
+import static com.cedarsoftware.util.convert.Converter.zonedDateTimeToMillis;
 import static com.cedarsoftware.util.io.Converter.convert;
-import static com.cedarsoftware.util.io.Converter.localDateTimeToMillis;
-import static com.cedarsoftware.util.io.Converter.localDateToMillis;
-import static com.cedarsoftware.util.io.Converter.zonedDateTimeToMillis;
 import static com.cedarsoftware.util.io.ConverterTest.fubar.bar;
 import static com.cedarsoftware.util.io.ConverterTest.fubar.foo;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -63,12 +62,6 @@ class ConverterTest
     enum fubar
     {
         foo, bar, baz, quz
-    }
-
-    @BeforeEach
-    void setUp()
-    {
-        Converter.buildFactoryConversions();
     }
 
     @Test

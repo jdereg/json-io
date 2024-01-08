@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -61,6 +62,9 @@ public abstract class Resolver implements ReaderContext
 
     @Getter(AccessLevel.PUBLIC)
     private final ReferenceTracker references;
+
+    @Getter(AccessLevel.PUBLIC)
+    private final Converter converter;
     
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -107,9 +111,10 @@ public abstract class Resolver implements ReaderContext
         }
     }
 
-    protected Resolver(ReadOptions readOptions, ReferenceTracker references) {
+    protected Resolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
         this.readOptions = readOptions;
         this.references = references;
+        this.converter = converter;
     }
 
     /**
@@ -375,13 +380,13 @@ public abstract class Resolver implements ReaderContext
                 jsonObject.setJavaType(Map.class);
                 mate = jsonObject;
             } else {
-                mate = MetaUtils.newInstance(unknownClass, null);   // can add constructor arg values
+                mate = MetaUtils.newInstance(getConverter(), unknownClass, null);   // can add constructor arg values
             }
         } else {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = MetaUtils.newInstance(c, null);  // can add constructor arg values
+            mate = MetaUtils.newInstance(getConverter(), c, null);  // can add constructor arg values
         }
         jsonObj.setTarget(mate);
         return mate;

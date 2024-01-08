@@ -3,6 +3,9 @@ package com.cedarsoftware.util.io;
 import com.cedarsoftware.util.reflect.Injector;
 
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
+import java.time.ZoneId;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -165,4 +168,18 @@ public interface ReadOptions {
      * deep list of fields for a given class.
      */
     Map<String, Field> getDeepDeclaredFields(final Class<?> c);
+
+    ZoneId getSourceZoneId();
+
+    ZoneId getTargetZoneId();
+
+    Locale getSourceLocale();
+
+    Locale getTargetLocale();
+
+    Charset getSourceCharset();
+
+    Charset getTargetCharset();
+
+    Object getCustomOption(String name);
 }

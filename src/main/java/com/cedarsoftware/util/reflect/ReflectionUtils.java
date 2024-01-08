@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.reflect;
 
-import com.cedarsoftware.util.io.Convention;
+import com.cedarsoftware.util.Convention;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;

@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.reflect.Injector;
 
 import java.lang.reflect.Array;
@@ -64,17 +65,14 @@ import static com.cedarsoftware.util.io.JsonObject.KEYS;
 public class ObjectResolver extends Resolver
 {
     private final ClassLoader classLoader;
-    protected final JsonReader.MissingFieldHandler missingFieldHandler;
-
     /**
      * Constructor
      * @param readOptions Options to use while reading.
      */
-    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references)
+    protected ObjectResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
     {
-        super(readOptions, references);
+        super(readOptions, references, converter);
         this.classLoader = readOptions.getClassLoader();
-        this.missingFieldHandler = readOptions.getMissingFieldHandler();
     }
 
     /**
@@ -100,8 +98,7 @@ public class ObjectResolver extends Resolver
             if (injector != null)
             {
                 assignField(stack, jsonObj, injector, rhs);
-            }
-            else if (missingFieldHandler != null)
+            } else if (getReadOptions().getMissingFieldHandler() != null)
             {
                 handleMissingField(stack, jsonObj, rhs, key);
             }//else no handler so ignore.
@@ -136,11 +133,11 @@ public class ObjectResolver extends Resolver
                 {
                     if (isBasicWrapperType(targetClass))
                     {
-                        jsonObj.setTarget(Converter.convert("0", fieldType));
+                        jsonObj.setTarget(this.getConverter().convert("0", fieldType));
                     }
                     else
                     {
-                        injector.inject(target, Converter.convert("0", fieldType));
+                        injector.inject(target, this.getConverter().convert("0", fieldType));
                     }
                 }
                 else
@@ -569,7 +566,7 @@ public class ObjectResolver extends Resolver
             }
             else if (isPrimitive)
             {   // Primitive component type array
-                Array.set(array, i, Converter.convert(element, compType));
+                Array.set(array, i, this.getConverter().convert(element, compType));
             }
             else if (element.getClass().isArray())
             {   // Array of arrays

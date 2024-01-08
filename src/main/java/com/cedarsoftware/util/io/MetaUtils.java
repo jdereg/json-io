@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -102,8 +104,6 @@ public class MetaUtils
     private static final Pattern extraQuotes = Pattern.compile("^\"*(.*?)\"*$");
 
     static {
-
-        //  TODO: These might need to go into ReadOptions to allow people to customize?  JD: Agreed.
         DIRECT_CLASS_MAPPING.put(Date.class, Date::new);
         DIRECT_CLASS_MAPPING.put(StringBuilder.class, StringBuilder::new);
         DIRECT_CLASS_MAPPING.put(StringBuffer.class, StringBuffer::new);
@@ -380,9 +380,9 @@ public class MetaUtils
         }
     }
 
-    static Object getArgForType(Class<?> argType) {
+    static Object getArgForType(Converter converter, Class<?> argType) {
         if (Primitives.isPrimitive(argType)) {
-            return Converter.convert(null, argType);  // Get the defaults (false, 0, 0.0d, etc.)
+            return converter.convert(null, argType);  // Get the defaults (false, 0, 0.0d, etc.)
         }
 
         Supplier<Object> directClassMapping = DIRECT_CLASS_MAPPING.get(argType);
@@ -413,7 +413,7 @@ public class MetaUtils
      * @return List of values that are best ordered to match the passed in parameter types.  This
      * list will be the same length as the passed in parameterTypes list.
      */
-    public static List<Object> matchArgumentsToParameters(Collection<Object> values, Parameter[] parameterTypes, boolean useNull) {
+    public static List<Object> matchArgumentsToParameters(Converter converter, Collection<Object> values, Parameter[] parameterTypes, boolean useNull) {
         List<Object> answer = new ArrayList<>();
         if (parameterTypes == null || parameterTypes.length == 0) {
             return answer;
@@ -425,9 +425,9 @@ public class MetaUtils
             Object value = pickBestValue(paramType, copyValues);
             if (value == null) {
                 if (useNull) {
-                    value = paramType.isPrimitive() ? Converter.convert(null, paramType) : null;  // don't send null to a primitive parameter
+                    value = paramType.isPrimitive() ? converter.convert(null, paramType) : null;  // don't send null to a primitive parameter
                 } else {
-                    value = getArgForType(paramType);
+                    value = getArgForType(converter, paramType);
                 }
             }
             answer.add(value);
@@ -633,7 +633,7 @@ public class MetaUtils
      * If you do that, and no further sub-objects exist, or you load the sub-objects in your ClassFactory,
      * make sure to return 'true' for isObjectFinal().
      */
-    public static Object newInstance(Class<?> c, Collection<?> argumentValues) {
+    public static Object newInstance(Converter converter, Class<?> c, Collection<?> argumentValues) {
         throwIfSecurityConcern(ProcessBuilder.class, c);
         throwIfSecurityConcern(Process.class, c);
         throwIfSecurityConcern(ClassLoader.class, c);
@@ -683,8 +683,8 @@ public class MetaUtils
             // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
             for (Constructor<?> constructor : declaredConstructors) {
                 Parameter[] parameters = constructor.getParameters();
-                List<Object> argumentsNull = matchArgumentsToParameters(argValues, parameters, true);
-                List<Object> argumentsNonNull = matchArgumentsToParameters(argValues, parameters, false);
+                List<Object> argumentsNull = matchArgumentsToParameters(converter, argValues, parameters, true);
+                List<Object> argumentsNonNull = matchArgumentsToParameters(converter, argValues, parameters, false);
                 constructorOrder.add(new ConstructorWithValues(constructor, argumentsNull.toArray(), argumentsNonNull.toArray()));
             }
 
@@ -718,7 +718,7 @@ public class MetaUtils
         } else {
             List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
             Parameter[] parameters = cachedConstructor.constructor.getParameters();
-            List<Object> arguments = matchArgumentsToParameters(argValues, parameters, cachedConstructor.useNullSetting);
+            List<Object> arguments = matchArgumentsToParameters(converter, argValues, parameters, cachedConstructor.useNullSetting);
 
             try {
                 // Be nice to person debugging

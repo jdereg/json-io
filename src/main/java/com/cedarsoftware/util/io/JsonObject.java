@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
+
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -83,7 +85,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
     }
 
-    public Object getPrimitiveValue() {
+    public Object getPrimitiveValue(Converter converter) {
         final Object value = getValue();
         String type = getJavaTypeName();
         if ("class".equals(type) || "java.lang.Class".equals(type)) {
@@ -93,7 +95,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (clazz == null) {
             throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }
-        return Converter.convert(value, clazz);
+        return converter.convert(value, clazz);
     }
     
     // Map APIs

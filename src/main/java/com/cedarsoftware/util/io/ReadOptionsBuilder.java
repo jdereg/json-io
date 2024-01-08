@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.Injector;
@@ -13,6 +14,9 @@ import lombok.Getter;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -22,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -86,6 +91,12 @@ public class ReadOptionsBuilder {
         this.options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         this.options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
 
+        this.options.sourceZoneId = ZoneId.systemDefault();
+        this.options.targetZoneId = ZoneId.systemDefault();
+        this.options.sourceLocale = Locale.getDefault();
+        this.options.targetLocale = Locale.getDefault();
+        this.options.sourceCharset = StandardCharsets.UTF_8;
+        this.options.targetCharset = StandardCharsets.UTF_8;
     }
 
     /**
@@ -353,6 +364,61 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * @param locale source locale for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setSourceLocale(Locale locale) {
+        this.options.sourceLocale = locale;
+        return this;
+    }
+
+    /**
+     * @param locale target locale for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setTargetLocale(Locale locale) {
+        this.options.targetLocale = locale;
+        return this;
+    }
+
+    /**
+     * @param charset source charset for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setSourceCharset(Charset charset) {
+        this.options.sourceCharset = charset;
+        return this;
+    }
+
+    /**
+     * @param charset target charset for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setTargetCharset(Charset charset) {
+        this.options.targetCharset = charset;
+        return this;
+    }
+
+
+    /**
+     * @param zoneId source charset for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setSourceZoneId(ZoneId zoneId) {
+        this.options.sourceZoneId = zoneId;
+        return this;
+    }
+
+    /**
+     * @param zoneId target charset for conversions
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setTargetCharset(ZoneId zoneId) {
+        this.options.targetZoneId = zoneId;
+        return this;
+    }
+
+    /**
      * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
      *
      * @param type  String fully qualified class name.
@@ -502,45 +568,65 @@ public class ReadOptionsBuilder {
 
     public static class DefaultReadOptions implements ReadOptions {
 
-        protected ClassLoader classLoader = DefaultReadOptions.class.getClassLoader();
-        protected Class<?> unknownTypeClass = null;
-        protected boolean failOnUnknownType = false;
-        protected boolean closeStream = true;
-        protected int maxDepth = 1000;
-        protected JsonReader.MissingFieldHandler missingFieldHandler = null;
+        private ClassLoader classLoader = DefaultReadOptions.class.getClassLoader();
+        private Class<?> unknownTypeClass = null;
+        private boolean failOnUnknownType = false;
+        private boolean closeStream = true;
+        private int maxDepth = 1000;
+        private JsonReader.MissingFieldHandler missingFieldHandler = null;
 
         /**
          * @return ReconstructionType which is how you will receive the parsed JSON objects.  This will be either
          * JAVA_OBJECTS (default) or JSON_VALUE's (useful for large, more simplistic objects within the JSON data sets).
          */
-        protected ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
+        private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
 
         /**
          * @return boolean will return true if NAN and Infinity are allowed to be read in as Doubles and Floats,
          * else a JsonIoException will be thrown if these are encountered.  default is false per JSON standard.
          */
         @Getter
-        protected boolean allowNanAndInfinity = false;
+        private boolean allowNanAndInfinity = false;
 
-        protected Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
-        protected Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMap<>();
-        protected Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
-        protected Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
-        protected Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-        protected Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+        private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
+        private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMap<>();
+        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
+        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
+        private Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
+        private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
 
-        protected Map<Class<?>, Set<String>> excludedFieldNames;
+        private Map<Class<?>, Set<String>> excludedFieldNames;
 
-        protected Map<Class<?>, Set<String>> excludedInjectorFields;
+        private Map<Class<?>, Set<String>> excludedInjectorFields;
 
-        protected List<FieldFilter> fieldFilters;
+        private List<FieldFilter> fieldFilters;
 
-        protected List<InjectorFactory> injectorFactories;
+        private List<InjectorFactory> injectorFactories;
+
+        @Getter
+        private ZoneId sourceZoneId;
+
+        @Getter
+        private ZoneId targetZoneId;
+
+        @Getter
+        private Locale sourceLocale;
+
+        @Getter
+        private Locale targetLocale;
+
+        @Getter
+        private Charset sourceCharset;
+
+        @Getter
+        private Charset targetCharset;
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-        protected Map<Class<?>, Map<String, String>> nonStandardMappings;
+        private Map<Class<?>, Map<String, String>> nonStandardMappings;
+
+        private Map<Class<?>, Map<String, String>> customOptions = new ConcurrentHashMap<>();
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -793,6 +879,11 @@ public class ReadOptionsBuilder {
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
             return classMetaCache.computeIfAbsent(c, this::buildDeepFieldMap);
+        }
+
+        @Override
+        public Object getCustomOption(String name) {
+            return this.customOptions.get(name);
         }
 
 

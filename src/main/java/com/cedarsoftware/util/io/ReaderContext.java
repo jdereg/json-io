@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
+
 import java.util.Deque;
 
 public interface ReaderContext {
@@ -31,4 +33,6 @@ public interface ReaderContext {
     void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj);
 
     ReadOptions getReadOptions();
+
+    Converter getConverter();
 }

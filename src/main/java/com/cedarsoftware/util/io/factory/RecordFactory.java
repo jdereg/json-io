@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Deque;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.MetaUtils;
 import com.cedarsoftware.util.io.ReaderContext;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Deque;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -56,7 +56,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     parameterValueJsonObj.setValue(jsonObj.get(parameterName));
 
                     if (parameterValueJsonObj.isLogicalPrimitive()) {
-                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue());
+                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue(context.getConverter()));
                     }  else {
                         lParameterValues.add(parameterValueJsonObj.getValue());
                     }

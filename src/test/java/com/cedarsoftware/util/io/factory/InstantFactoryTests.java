@@ -7,7 +7,13 @@ import java.util.Date;
 import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
 import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -82,7 +88,8 @@ public class InstantFactoryTests extends HandWrittenDateFactoryTests<Instant> {
         jsonObject.put("seconds", 1700668272);
         jsonObject.put("nanos", 163000000);
 
-        Instant actual = (Instant) createFactory().newInstance(Instant.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        Instant actual = (Instant) createFactory().newInstance(Instant.class, jsonObject, context);
 
         assertThat(actual).isEqualTo(Instant.ofEpochSecond(1700668272, 163000000));
     }
