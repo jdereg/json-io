@@ -37,8 +37,9 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
 public final class Converter {
 
-    private static final ConverterOptions defaults = new DefaultConverterOptions();
-    private static final com.cedarsoftware.util.convert.Converter instance =
+    private static ConverterOptions defaults = new DefaultConverterOptions();
+
+    public static com.cedarsoftware.util.convert.Converter instance =
             new com.cedarsoftware.util.convert.Converter(defaults);
 
     @SuppressWarnings("unchecked")

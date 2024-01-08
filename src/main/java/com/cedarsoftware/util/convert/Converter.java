@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.convert;
 
+
+import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.io.MetaUtils;
 
 import java.math.BigDecimal;
@@ -215,7 +217,7 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, Long.class), (fromInstance, converter, options) -> ((Date) fromInstance).getTime());
         DEFAULT_FACTORY.put(pair(Timestamp.class, Long.class), (fromInstance, converter, options) -> ((Date) fromInstance).getTime());
         DEFAULT_FACTORY.put(pair(LocalDate.class, Long.class), (fromInstance, converter, options) -> ((LocalDate) fromInstance).toEpochDay());
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Long.class), (fromInstance, converter, options) -> localDateTimeToMillis((LocalDateTime) fromInstance));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Long.class), (fromInstance, converter, options) -> localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId()));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, Long.class), (fromInstance, converter, options) -> zonedDateTimeToMillis((ZonedDateTime) fromInstance));
         DEFAULT_FACTORY.put(pair(Calendar.class, Long.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).getTime().getTime());
         DEFAULT_FACTORY.put(pair(Number.class, Long.class), NumberConversion::toLong);
@@ -275,7 +277,7 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(Boolean.class, Double.class), BooleanConversion::toDouble);
         DEFAULT_FACTORY.put(pair(Character.class, Double.class), (fromInstance, converter, options) -> (double) ((char) fromInstance));
         DEFAULT_FACTORY.put(pair(LocalDate.class, Double.class), (fromInstance, converter, options) -> (double) ((LocalDate) fromInstance).toEpochDay());
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Double.class), (fromInstance, converter, options) -> (double) localDateTimeToMillis((LocalDateTime) fromInstance));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Double.class), (fromInstance, converter, options) -> (double) localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId()));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, Double.class), (fromInstance, converter, options) -> (double) zonedDateTimeToMillis((ZonedDateTime) fromInstance));
         DEFAULT_FACTORY.put(pair(Date.class, Double.class), (fromInstance, converter, options) -> (double) ((Date) fromInstance).getTime());
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, Double.class), (fromInstance, converter, options) -> (double) ((Date) fromInstance).getTime());
@@ -381,7 +383,7 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(LocalDate.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(((LocalDate) fromInstance).toEpochDay()));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, BigInteger.class), (fromInstance, converter, options) -> BigInteger.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(UUID.class, BigInteger.class), (fromInstance, converter, options) -> {
             UUID uuid = (UUID) fromInstance;
@@ -424,7 +426,7 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(LocalDate.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(((LocalDate) fromInstance).toEpochDay()));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, BigDecimal.class), (fromInstance, converter, options) -> BigDecimal.valueOf(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(UUID.class, BigDecimal.class), (fromInstance, converter, options) -> {
             UUID uuid = (UUID) fromInstance;
@@ -522,7 +524,7 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(LocalDate.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(((LocalDate) fromInstance).toEpochDay()));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(Calendar.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(((Calendar) fromInstance).getTime().getTime()));
         DEFAULT_FACTORY.put(pair(Number.class, AtomicLong.class), (fromInstance, converter, options) -> new AtomicLong(((Number) fromInstance).longValue()));
@@ -549,8 +551,8 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(Date.class, Date.class), (fromInstance, converter, options) -> new Date(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, Date.class), (fromInstance, converter, options) -> new Date(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, Date.class), (fromInstance, converter, options) -> new Date(((Date) fromInstance).getTime()));
-        DEFAULT_FACTORY.put(pair(LocalDate.class, Date.class), (fromInstance, converter, options) -> new Date(localDateToMillis((LocalDate) fromInstance)));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Date.class), (fromInstance, converter, options) -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDate.class, Date.class), (fromInstance, converter, options) -> new Date(localDateToMillis((LocalDate) fromInstance, options.getSourceZoneId())));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Date.class), (fromInstance, converter, options) -> new Date(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, Date.class), (fromInstance, converter, options) -> new Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(Calendar.class, Date.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).getTime());
         DEFAULT_FACTORY.put(pair(Number.class, Date.class), NumberConversion::toLong);
@@ -574,8 +576,8 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(((java.sql.Date) fromInstance).getTime()));  // java.sql.Date is mutable
         DEFAULT_FACTORY.put(pair(Date.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(((Date) fromInstance).getTime()));
-        DEFAULT_FACTORY.put(pair(LocalDate.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance)));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDate.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(localDateToMillis((LocalDate) fromInstance, options.getSourceZoneId())));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(Calendar.class, java.sql.Date.class), (fromInstance, converter, options) -> new java.sql.Date(((Calendar) fromInstance).getTime().getTime()));
         DEFAULT_FACTORY.put(pair(Number.class, java.sql.Date.class), NumberConversion::toLong);
@@ -606,8 +608,8 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(Timestamp.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(((Timestamp) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Date.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(((Date) fromInstance).getTime()));
-        DEFAULT_FACTORY.put(pair(LocalDate.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(localDateToMillis((LocalDate) fromInstance)));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDate.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(localDateToMillis((LocalDate) fromInstance, options.getSourceZoneId())));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(Calendar.class, Timestamp.class), (fromInstance, converter, options) -> new Timestamp(((Calendar) fromInstance).getTime().getTime()));
         DEFAULT_FACTORY.put(pair(Number.class, Timestamp.class), NumberConversion::toLong);
@@ -642,8 +644,8 @@ public final class Converter {
         DEFAULT_FACTORY.put(pair(Date.class, Calendar.class), (fromInstance, converter, options) -> initCal(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, Calendar.class), (fromInstance, converter, options) -> initCal(((Date) fromInstance).getTime()));
         DEFAULT_FACTORY.put(pair(Timestamp.class, Calendar.class), (fromInstance, converter, options) -> initCal(((Date) fromInstance).getTime()));
-        DEFAULT_FACTORY.put(pair(LocalDate.class, Calendar.class), (fromInstance, converter, options) -> initCal(localDateToMillis((LocalDate) fromInstance)));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Calendar.class), (fromInstance, converter, options) -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance)));
+        DEFAULT_FACTORY.put(pair(LocalDate.class, Calendar.class), (fromInstance, converter, options) -> initCal(localDateToMillis((LocalDate) fromInstance, options.getSourceZoneId())));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, Calendar.class), (fromInstance, converter, options) -> initCal(localDateTimeToMillis((LocalDateTime) fromInstance, options.getSourceZoneId())));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, Calendar.class), (fromInstance, converter, options) -> initCal(zonedDateTimeToMillis((ZonedDateTime) fromInstance)));
         DEFAULT_FACTORY.put(pair(Calendar.class, Calendar.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).clone());
         DEFAULT_FACTORY.put(pair(Number.class, Calendar.class), (fromInstance, converter, options) -> initCal(((Number) fromInstance).longValue()));
@@ -656,7 +658,7 @@ public final class Converter {
                     String zone = (String) zoneRaw;
                     tz = TimeZone.getTimeZone(zone);
                 } else {
-                    tz = TimeZone.getDefault();
+                    tz = TimeZone.getTimeZone(options.getTargetZoneId());
                 }
                 Calendar cal = Calendar.getInstance();
                 cal.setTimeZone(tz);
@@ -736,24 +738,24 @@ public final class Converter {
             if (date == null) {
                 return null;
             }
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            return date.toInstant().atZone(options.getTargetZoneId()).toLocalDate();
         });
 
         // LocalDateTime conversions supported
         DEFAULT_FACTORY.put(pair(Void.class, LocalDateTime.class), VoidConversion::toNull);
-        DEFAULT_FACTORY.put(pair(Long.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(Double.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(BigInteger.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(BigDecimal.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(AtomicLong.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(Long.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli((Long) fromInstance).atZone(options.getSourceZoneId()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(Double.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(BigInteger.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(BigDecimal.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(AtomicLong.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()).toLocalDateTime());
         DEFAULT_FACTORY.put(pair(java.sql.Date.class, LocalDateTime.class), (fromInstance, converter, options) -> ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay());
         DEFAULT_FACTORY.put(pair(Timestamp.class, LocalDateTime.class), (fromInstance, converter, options) -> ((Timestamp) fromInstance).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(Date.class, LocalDateTime.class), (fromInstance, converter, options) -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(Date.class, LocalDateTime.class), (fromInstance, converter, options) -> ((Date) fromInstance).toInstant().atZone(options.getSourceZoneId()).toLocalDateTime());
         DEFAULT_FACTORY.put(pair(LocalDateTime.class, LocalDateTime.class), Converter::identity);
         DEFAULT_FACTORY.put(pair(LocalDate.class, LocalDateTime.class), (fromInstance, converter, options) -> ((LocalDate) fromInstance).atStartOfDay());
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, LocalDateTime.class), (fromInstance, converter, options) -> ((ZonedDateTime) fromInstance).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(Calendar.class, LocalDateTime.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
-        DEFAULT_FACTORY.put(pair(Number.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(Calendar.class, LocalDateTime.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).toInstant().atZone(options.getSourceZoneId()).toLocalDateTime());
+        DEFAULT_FACTORY.put(pair(Number.class, LocalDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()).toLocalDateTime());
         DEFAULT_FACTORY.put(pair(Map.class, LocalDateTime.class), (fromInstance, converter, options) -> {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             return converter.fromValueMap(map, LocalDateTime.class, null, options);
@@ -764,24 +766,24 @@ public final class Converter {
             if (date == null) {
                 return null;
             }
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            return date.toInstant().atZone(options.getSourceZoneId()).toLocalDateTime();
         });
 
         // ZonedDateTime conversions supported
         DEFAULT_FACTORY.put(pair(Void.class, ZonedDateTime.class), VoidConversion::toNull);
-        DEFAULT_FACTORY.put(pair(Long.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli((Long) fromInstance).atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(Double.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(BigInteger.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(BigDecimal.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(AtomicLong.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(java.sql.Date.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(Timestamp.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Timestamp) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(Date.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Date) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(LocalDate.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((LocalDate) fromInstance).atStartOfDay(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(LocalDateTime.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((LocalDateTime) fromInstance).atZone(ZoneId.systemDefault()));
+        DEFAULT_FACTORY.put(pair(Long.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli((Long) fromInstance).atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(Double.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(BigInteger.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(BigDecimal.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(AtomicLong.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(java.sql.Date.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((java.sql.Date) fromInstance).toLocalDate().atStartOfDay(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(Timestamp.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Timestamp) fromInstance).toInstant().atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(Date.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Date) fromInstance).toInstant().atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(LocalDate.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((LocalDate) fromInstance).atStartOfDay(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(LocalDateTime.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((LocalDateTime) fromInstance).atZone(options.getSourceZoneId()));
         DEFAULT_FACTORY.put(pair(ZonedDateTime.class, ZonedDateTime.class), Converter::identity);
-        DEFAULT_FACTORY.put(pair(Calendar.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).toInstant().atZone(ZoneId.systemDefault()));
-        DEFAULT_FACTORY.put(pair(Number.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(ZoneId.systemDefault()));
+        DEFAULT_FACTORY.put(pair(Calendar.class, ZonedDateTime.class), (fromInstance, converter, options) -> ((Calendar) fromInstance).toInstant().atZone(options.getSourceZoneId()));
+        DEFAULT_FACTORY.put(pair(Number.class, ZonedDateTime.class), (fromInstance, converter, options) -> Instant.ofEpochMilli(((Number) fromInstance).longValue()).atZone(options.getSourceZoneId()));
         DEFAULT_FACTORY.put(pair(Map.class, ZonedDateTime.class), (fromInstance, converter, options) -> {
             Map<?, ?> map = (Map<?, ?>) fromInstance;
             return converter.fromValueMap(map, ZonedDateTime.class, null, options);
@@ -792,7 +794,7 @@ public final class Converter {
             if (date == null) {
                 return null;
             }
-            return date.toInstant().atZone(ZoneId.systemDefault());
+            return date.toInstant().atZone(options.getSourceZoneId());
         });
 
         // UUID conversions supported
@@ -1312,12 +1314,12 @@ public final class Converter {
         return DEFAULT_FACTORY.put(pair(source, target), conversionFunction);
     }
 
-    public static long localDateToMillis(LocalDate localDate) {
-        return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    public static long localDateToMillis(LocalDate localDate, ZoneId zoneId) {
+        return localDate.atStartOfDay(zoneId).toInstant().toEpochMilli();
     }
 
-    public static long localDateTimeToMillis(LocalDateTime localDateTime) {
-        return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    public static long localDateTimeToMillis(LocalDateTime localDateTime, ZoneId zoneId) {
+        return localDateTime.atZone(zoneId).toInstant().toEpochMilli();
     }
 
     public static long zonedDateTimeToMillis(ZonedDateTime zonedDateTime) {
