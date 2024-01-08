@@ -3,6 +3,7 @@ package com.cedarsoftware.util.io;
 import java.io.OutputStream;
 import java.util.Map;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
@@ -31,8 +32,8 @@ public class InternalAPIsTest
     public void testDistanceToInterface()
     {
         // The values below can differ depending on the JDK versions, so be careful the classes chosen
-        assert MetaUtils.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
-        assert MetaUtils.computeInheritanceDistance(ObjectResolver.class, Resolver.class) > 0;
+        assert ClassUtilities.computeInheritanceDistance(Resolver.class, ObjectResolver.class) == -1;
+        assert ClassUtilities.computeInheritanceDistance(ObjectResolver.class, Resolver.class) > 0;
     }
 
     @Test

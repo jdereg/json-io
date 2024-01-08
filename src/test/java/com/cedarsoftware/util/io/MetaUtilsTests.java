@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -113,10 +114,10 @@ public class MetaUtilsTests {
 
     @Test
     public void testGetDistance() {
-        int x = MetaUtils.computeInheritanceDistance(Serializable.class, Externalizable.class);
+        int x = ClassUtilities.computeInheritanceDistance(Serializable.class, Externalizable.class);
         assert x == -1;
 
-        x = MetaUtils.computeInheritanceDistance(Externalizable.class, Serializable.class);
+        x = ClassUtilities.computeInheritanceDistance(Externalizable.class, Serializable.class);
         assert x == 1;
     }
 

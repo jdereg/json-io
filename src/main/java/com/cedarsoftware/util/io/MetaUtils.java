@@ -32,12 +32,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.SortedMap;
@@ -55,6 +53,8 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import com.cedarsoftware.util.ClassUtilities;
 
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
@@ -234,93 +234,7 @@ public class MetaUtils
         map.put(k3, v3);
         return Collections.unmodifiableMap(map);
     }
-
-    /**
-     * Compare a primitive to a primitive Wrapper.
-     * @return 0 if they are the same, -1 if not.  Primitive wrapper classes are consider the same as primitive classes.
-     */
-    public static int comparePrimitiveToWrapper(Class<?> source, Class<?> destination) {
-        try {
-            return source.getField("TYPE").get(null).equals(destination) ? 0 : -1;
-        }
-        catch (Exception e) {
-            throw new JsonIoException("Error while attempting comparison of primitive types: " + source.getName() + " vs " + destination.getName(), e);
-        }
-    }
-
-    /**
-     * Computes the inheritance distance between two classes/interfaces/primitive types.
-     * @param source      The source class, interface, or primitive type.
-     * @param destination The destination class, interface, or primitive type.
-     * @return The number of steps from the source to the destination, or -1 if no path exists.
-     */
-    public static int computeInheritanceDistance(Class<?> source, Class<?> destination) {
-        if (source == null || destination == null) {
-            return -1;
-        }
-        if (source.equals(destination)) {
-            return 0;
-        }
-
-        // Check for primitive types
-        if (source.isPrimitive()) {
-            if (destination.isPrimitive()) {
-                // Not equal because source.equals(destination) already checked.
-                return -1;
-            }
-            if (!Primitives.isPrimitive(destination)) {
-                return -1;
-            }
-            return comparePrimitiveToWrapper(destination, source);
-        }
-
-        if (destination.isPrimitive()) {
-            if (!Primitives.isPrimitive(source)) {
-                return -1;
-            }
-            return comparePrimitiveToWrapper(source, destination);
-        }
-
-        Queue<Class<?>> queue = new LinkedList<>();
-        Set<Class<?>> visited = new HashSet<>();
-        queue.add(source);
-        visited.add(source);
-        int distance = 0;
-
-        while (!queue.isEmpty()) {
-            int levelSize = queue.size();
-            distance++;
-
-            for (int i = 0; i < levelSize; i++) {
-                Class<?> current = queue.poll();
-
-                // Check superclass
-                if (current.getSuperclass() != null) {
-                    if (current.getSuperclass().equals(destination)) {
-                        return distance;
-                    }
-                    if (!visited.contains(current.getSuperclass())) {
-                        queue.add(current.getSuperclass());
-                        visited.add(current.getSuperclass());
-                    }
-                }
-
-                // Check interfaces
-                for (Class<?> interfaceClass : current.getInterfaces()) {
-                    if (interfaceClass.equals(destination)) {
-                        return distance;
-                    }
-                    if (!visited.contains(interfaceClass)) {
-                        queue.add(interfaceClass);
-                        visited.add(interfaceClass);
-                    }
-                }
-            }
-        }
-
-        return -1; // No path found
-    }
-
+    
     public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
         if (c.isEnum()) {
             return Optional.of(c);
@@ -350,8 +264,7 @@ public class MetaUtils
             return internalClassForName(name, classLoader);
         } catch(SecurityException e) {
             throw new JsonIoException("Security exception, classForName() call on: " + name, e);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return null;
         }
     }
@@ -537,7 +450,7 @@ public class MetaUtils
         int i=0;
 
         for (Object value : values) {
-            distances[i++] = value == null ? -1 : computeInheritanceDistance(value.getClass(), param);
+            distances[i++] = value == null ? -1 : ClassUtilities.computeInheritanceDistance(value.getClass(), param);
         }
 
         int index = indexOfSmallestValue(distances);
@@ -834,9 +747,7 @@ public class MetaUtils
             try {
                 Object o = unsafe.allocateInstance(c);
                 return o;
-            }
-            catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
         return null;
     }
@@ -871,11 +782,7 @@ public class MetaUtils
         }
         return arg;
     }
-
-    public static <K, V> V getValue(Map map, K key) {
-        return (V) map.get(key);
-    }
-
+    
     public static <K, V> V getValueWithDefaultForNull(Map map, K key, V defaultValue) {
         V value = (V) map.get(key);
         return (value == null) ? defaultValue : value;
@@ -889,18 +796,13 @@ public class MetaUtils
         return (V) map.get(key);
     }
 
-    public static void setFieldValue(Field field, Object instance, Object value)
-    {
-        try
-        {
-            if (instance == null)
-            {
+    public static void setFieldValue(Field field, Object instance, Object value) {
+        try {
+            if (instance == null) {
                 throw new JsonIoException("Attempting to set field: " + field.getName() + " on null object.");
             }
             field.set(instance, value);
-        }
-        catch (IllegalAccessException e)
-        {
+        } catch (IllegalAccessException e) {
             throw new JsonIoException("Cannot set field: " + field.getName() + " on class: " + instance.getClass().getName() + " as field is not accessible.  Add a ClassFactory implementation to create the needed class, and use JsonReader.assignInstantiator() to associate your ClassFactory to the class: " + instance.getClass().getName(), e);
         }
     }
@@ -926,23 +828,7 @@ public class MetaUtils
         } catch (Throwable ignored) {
         }
     }
-    public static boolean isEmpty(final String s) {
-        return trimLength(s) == 0;
-    }
-
-    public static boolean isEmpty(final Collection<?> s) {
-        return s == null || s.isEmpty();
-    }
-
-    public static boolean hasContent(final String s) {
-        return trimLength(s) != 0;    // faster than returning !isEmpty()
-    }
-
-    public static <T> boolean doesNotContain(final Collection<T> c, T object) {
-        return c == null || !c.contains(object);
-    }
-
-
+    
     /**
      * Use this method when you don't want a length check to
      * throw a NullPointerException when
@@ -1097,66 +983,7 @@ public class MetaUtils
         byte[] resourceBytes = loadResourceAsBytes(resourceName);
         return new String(resourceBytes, StandardCharsets.UTF_8);
     }
-
-    /**
-     * Duplicate a map, possibly as unmodifiable
-     *
-     * @param other        map to duplicate
-     * @param unmodifiable will the result be unmodifiable
-     * @return duplicated map
-     */
-    public static <T> Map<Class<?>, Set<T>> dupe(Map<Class<?>, Set<T>> other, boolean unmodifiable) {
-        final Map<Class<?>, Set<T>> newItemsAssocToClass = new LinkedHashMap<>();
-        for (Map.Entry<Class<?>, Set<T>> entry : other.entrySet()) {
-            final Set<T> itemsAssocToClass = new LinkedHashSet<>(entry.getValue());
-            if (unmodifiable) {
-                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> Collections.unmodifiableSet(itemsAssocToClass));
-            } else {
-                newItemsAssocToClass.computeIfAbsent(entry.getKey(), k -> itemsAssocToClass);
-            }
-        }
-        if (unmodifiable) {
-            return Collections.unmodifiableMap(newItemsAssocToClass);
-        } else {
-            return newItemsAssocToClass;
-        }
-    }
-
-    //  Keeping next two methods in case we need to make certains sets unmodifiable still.
-    public static <T, V> Map<T, Set<V>> cloneMapOfSets(final Map<T, Set<V>> original, final boolean immutable) {
-        final Map<T, Set<V>> result = new HashMap<>();
-
-        for (Map.Entry<T, Set<V>> entry : original.entrySet()) {
-            final T key = entry.getKey();
-            final Set<V> value = entry.getValue();
-
-            final Set<V> clonedSet = immutable
-                    ? Collections.unmodifiableSet(value)
-                    : new HashSet<>(value);
-
-            result.put(key, clonedSet);
-        }
-
-        return immutable ? Collections.unmodifiableMap(result) : result;
-    }
-
-    public static <T, U, V> Map<T, Map<U, V>> cloneMapOfMaps(final Map<T, Map<U, V>> original, final boolean immutable) {
-        final Map<T, Map<U, V>> result = new LinkedHashMap<>();
-
-        for (Map.Entry<T, Map<U, V>> entry : original.entrySet()) {
-            final T key = entry.getKey();
-            final Map<U, V> value = entry.getValue();
-
-            final Map<U, V> clonedMap = immutable
-                    ? Collections.unmodifiableMap(value)
-                    : new LinkedHashMap<>(value);
-
-            result.put(key, clonedMap);
-        }
-
-        return immutable ? Collections.unmodifiableMap(result) : result;
-    }
-
+    
     /**
      * Loads resource content as a byte[].
      * @param resourceName Name of the resource file.
@@ -1224,7 +1051,7 @@ public class MetaUtils
             if (clz == c) {
                 return entry.getValue();
             }
-            int distance = MetaUtils.computeInheritanceDistance(c, clz);
+            int distance = ClassUtilities.computeInheritanceDistance(c, clz);
             if (distance != -1 && distance < minDistance) {
                 minDistance = distance;
                 closestWriter = entry.getValue();
@@ -1232,8 +1059,7 @@ public class MetaUtils
         }
         return closestWriter;
     }
-
-
+    
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      *
