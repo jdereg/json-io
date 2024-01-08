@@ -1299,7 +1299,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     // Hopefully this method goes away when the converters are done.
     // We're asking for a DeepDeclaredFields to check One Field Type
-    // Its cached, but we shouldn't have to do that here.  I would think if its a known covnerter type
+    // Its cached, but we shouldn't have to do that here.  I would think if its a known converter type
     // that we avoid this section all together.
     private boolean doesValueTypeMatchFieldType(Class<?> type, String fieldName, Object value)
     {
