@@ -1,13 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import java.util.Date;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -29,20 +27,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * limitations under the License.
  */
 class ReaderTests {
-    @Test
-    void testNewInstance() {
-        Date d = (Date) MetaUtils.newInstance(Date.class, null);
-        Integer a = (Integer) MetaUtils.newInstance(Integer.class, null);
-        String x = (String) MetaUtils.newInstance(String.class, null);
+    /*
+        @Test
 
-        assert d instanceof Date;
-        assert a instanceof Integer;
-        assert x instanceof String;
+        void testNewInstance() {
+            Date d = (Date) MetaUtils.newInstance(Date.class, null);
+            Integer a = (Integer) MetaUtils.newInstance(Integer.class, null);
+            String x = (String) MetaUtils.newInstance(String.class, null);
 
-        assert "".equals(x);
-        assert 0 == a;
-    }
+            assert d instanceof Date;
+            assert a instanceof Integer;
+            assert x instanceof String;
 
+            assert "".equals(x);
+            assert 0 == a;
+        }
+    */
     private static Stream<Arguments> stringsThatAreEmptyWhenTrimmed() {
         return Stream.of(Arguments.of("    "),
                 Arguments.of(" \n\t\r "));

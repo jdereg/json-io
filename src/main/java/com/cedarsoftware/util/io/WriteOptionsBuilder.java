@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
 import com.cedarsoftware.util.reflect.ReflectionUtils;
@@ -649,7 +650,7 @@ public class WriteOptionsBuilder {
                 throw new JsonIoException("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
             }
             try {
-                JsonWriter.JsonClassWriter writer = (JsonWriter.JsonClassWriter) MetaUtils.newInstance(customWriter, null);
+                JsonWriter.JsonClassWriter writer = customWriter.newInstance();
                 writers.put(clazz, writer);
             } catch (Exception e) {
                 throw new JsonIoException("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);

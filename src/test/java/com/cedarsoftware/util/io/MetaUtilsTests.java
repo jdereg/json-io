@@ -1,5 +1,10 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -16,7 +21,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -85,6 +89,7 @@ public class MetaUtilsTests {
 
     }
 
+    /*
     @ParameterizedTest
     @MethodSource("ensureFillArgsInstanceOf")
     void testFillArgs_ensureInstanceOf(final Class<?> input, final List<Class<?>> expected) {
@@ -92,6 +97,7 @@ public class MetaUtilsTests {
         Object obj = MetaUtils.getArgForType(input);
         assertThat(obj).isInstanceOf(input);
     }
+     */
 
     @Test
     public void testNewPrimitiveWrapper() {

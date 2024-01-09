@@ -1,12 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.ZoneId;
-
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.time.ZoneId;
 
 public abstract class HandWrittenDateFactoryTests<T> {
 
@@ -19,6 +22,13 @@ public abstract class HandWrittenDateFactoryTests<T> {
     protected abstract Class<T> getClassForFactory();
 
 
+    private ReaderContext context;
+
+    @BeforeEach
+    public void beforeEach() {
+        this.context = new JsonReader(new ReadOptionsBuilder().build());
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     void newInstance_handWrittenDate_withNoZone() {
@@ -27,7 +37,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, this.context);
 
         assert_handWrittenDate_withNoZone(dt);
     }
@@ -59,7 +69,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, this.context);
 
         assert_handWrittenDate_withNoTime(dt);
     }
@@ -85,7 +95,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, this.context);
 
         assert_handWrittenDate_withTime(dt);
     }
@@ -100,7 +110,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
         JsonReader.ClassFactory factory = createFactory();
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, this.context);
 
         assert_handWrittenDate_withMilliseconds(dt);
     }
@@ -127,7 +137,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
 
         JsonReader.ClassFactory factory = createFactory(SAIGON_ZONE_ID);
 
-        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, null);
+        T dt = (T) factory.newInstance(getClassForFactory(), jsonObject, this.context);
 
 //        assert_handWrittenDate_inSaigon(dt);
     }

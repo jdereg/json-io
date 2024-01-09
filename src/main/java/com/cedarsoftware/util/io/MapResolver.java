@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.reflect.Injector;
 
 import java.math.BigDecimal;
@@ -49,9 +50,9 @@ import java.util.Map;
 public class MapResolver extends Resolver
 {
 
-    protected MapResolver(ReadOptions readOptions, ReferenceTracker references)
+    protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
     {
-        super(readOptions, references);
+        super(readOptions, references, converter);
     }
 
     protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
@@ -102,7 +103,7 @@ public class MapResolver extends Resolver
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(injector.getType());
                     if (isNonRefClass) {
                         // This will be JsonPrimitive.setValue() in the future (clean)
-                        jObj.setValue(Converter.convert(jObj.getValue(), injector.getType()));
+                        jObj.setValue(this.getConverter().convert(jObj.getValue(), injector.getType()));
                         continue;
                     }
                 }
@@ -127,7 +128,7 @@ public class MapResolver extends Resolver
                 final Class<?> fieldType = injector.getType();
                 if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
-                    Object convert = Converter.convert(rhs, fieldType);
+                    Object convert = this.getConverter().convert(rhs, fieldType);
                     jsonObj.put(fieldName, convert);
                 }
                 else if (rhs instanceof String)

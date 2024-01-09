@@ -262,7 +262,7 @@ class JsonParser {
                 if (jObj.isLogicalPrimitive()) {
                     if (useMaps) {
                         jObj.isFinished = true;
-                        return jObj.getPrimitiveValue();
+                        return jObj.getPrimitiveValue(this.resolver.getConverter());
                     }
                 }
                 

@@ -1,5 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.convert.DefaultConverterOptions;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -255,7 +259,7 @@ public class JsonIo {
      * @param args
      */
     public static void main(String[] args) {
-        String json = toJson(Converter.getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
+        String json = toJson(new Converter(new DefaultConverterOptions()).getSupportedConversions(), new WriteOptionsBuilder().prettyPrint(true).showTypeInfoNever().build());
         System.out.println("json-io supported conversions (source type to target types):");
         System.out.println(json);
     }

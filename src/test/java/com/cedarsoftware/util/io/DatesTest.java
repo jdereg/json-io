@@ -1,14 +1,15 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.io.factory.DateFactory;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
-
-import com.cedarsoftware.util.io.factory.DateFactory;
-import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,6 +50,13 @@ class DatesTest
         assertEquals(exp.get(Calendar.YEAR), act.get(Calendar.YEAR));
         assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
         assertEquals(exp.get(Calendar.DAY_OF_MONTH), act.get(Calendar.DAY_OF_MONTH));
+    }
+
+    private ReaderContext context;
+
+    @BeforeEach
+    public void beforeEach() {
+        this.context = new JsonReader(new ReadOptionsBuilder().build());
     }
 
     @Test
@@ -509,7 +517,7 @@ class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(null);
-        assert null == factory.newInstance(Date.class, object, null);
+        assert null == factory.newInstance(Date.class, object, this.context);
     }
 
     @Test
@@ -520,7 +528,7 @@ class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(nowStr);
-        Date now2 = (Date) factory.newInstance(Date.class, object, null);
+        Date now2 = (Date) factory.newInstance(Date.class, object, this.context);
         assert nowStr.equals(now2.toString());
     }
 
@@ -532,7 +540,7 @@ class DatesTest
         JsonObject object = new JsonObject();
         object.setValue(date);
 
-        Date then = (Date) factory.newInstance(Date.class, object, null);
+        Date then = (Date) factory.newInstance(Date.class, object, this.context);
 
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         cal.clear();
@@ -547,7 +555,7 @@ class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(date);
-        Date date1 = (Date) factory.newInstance(Date.class, object, null);
+        Date date1 = (Date) factory.newInstance(Date.class, object, this.context);
 
         Calendar c = Calendar.getInstance();
         c.setTime(date1);
@@ -565,7 +573,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -583,7 +591,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -601,7 +609,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -619,7 +627,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -638,7 +646,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -657,7 +665,7 @@ class DatesTest
         {
             JsonObject object = new JsonObject();
             object.setValue(date);
-            factory.newInstance(Date.class, object, null);
+            factory.newInstance(Date.class, object, this.context);
            fail();
         }
         catch (IllegalArgumentException e)
@@ -674,7 +682,7 @@ class DatesTest
         DateFactory factory = new DateFactory();
         JsonObject object = new JsonObject();
         object.setValue(date);
-        Date date1 = (Date) factory.newInstance(Date.class, object, null);
+        Date date1 = (Date) factory.newInstance(Date.class, object, this.context);
         assertNotNull(date1);
     }
 

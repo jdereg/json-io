@@ -1,12 +1,15 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.Duration;
-import java.util.stream.Stream;
-
 import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.time.Duration;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,8 +34,9 @@ class DurationFactoryTests {
         JsonObject jObject = new JsonObject();
         jObject.setValue(pattern);
 
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
         DurationFactory factory = new DurationFactory();
-        Duration d = (Duration) factory.newInstance(Duration.class, jObject, null);
+        Duration d = (Duration) factory.newInstance(Duration.class, jObject, context);
 
         assertThat(d)
                 .hasDays(days)
