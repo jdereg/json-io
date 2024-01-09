@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Converter;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

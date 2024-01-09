@@ -1,15 +1,14 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.FastByteArrayInputStream;
+import com.cedarsoftware.util.FastByteArrayOutputStream;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.convert.DefaultConverterOptions;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-
-import com.cedarsoftware.util.FastByteArrayInputStream;
-import com.cedarsoftware.util.FastByteArrayOutputStream;
 
 /**
  * This is the main API for json-io.  Use these methods to convert:<br/>

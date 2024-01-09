@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
@@ -640,12 +641,12 @@ public class WriteOptionsBuilder {
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
             String writerClassName = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
                 System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
                 continue;
             }
-            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) MetaUtils.classForName(writerClassName, classLoader);
+            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
             if (customWriter == null) {
                 throw new JsonIoException("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
             }
@@ -673,7 +674,7 @@ public class WriteOptionsBuilder {
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
             String mappings = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
                 System.out.println("Class: " + className + " not defined in the JVM");
                 continue;
@@ -698,7 +699,7 @@ public class WriteOptionsBuilder {
         Set<Class<?>> nonRefs = new LinkedHashSet<>();
         Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
         set.forEach((className) -> {
-            Class<?> clazz = MetaUtils.classForName(className, WriteOptions.class.getClassLoader());
+            Class<?> clazz = ClassUtilities.forName(className, WriteOptions.class.getClassLoader());
             if (clazz == null) {
                 throw new JsonIoException("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
             }

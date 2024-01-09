@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 import java.io.ByteArrayOutputStream;
@@ -55,8 +56,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.cedarsoftware.util.ClassUtilities;
 
 import static java.lang.reflect.Modifier.isProtected;
 import static java.lang.reflect.Modifier.isPublic;
@@ -246,131 +245,6 @@ public class MetaUtils
 
         Class<?> enclosingClass = c.getEnclosingClass();
         return enclosingClass != null && enclosingClass.isEnum() ? Optional.of(enclosingClass) : Optional.empty();
-    }
-
-    /**
-     * Given the passed in String class name, return the named JVM class.
-     * @param name String name of a JVM class.
-     * @param classLoader ClassLoader to use when searching for JVM classes.
-     * @return Class instance of the named JVM class or null if not found.
-     */
-    public static Class<?> classForName(String name, ClassLoader classLoader)
-    {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-
-        try {
-            return internalClassForName(name, classLoader);
-        } catch(SecurityException e) {
-            throw new JsonIoException("Security exception, classForName() call on: " + name, e);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
-     * Used internally to load a class by name, and takes care of caching name mappings for speed.
-     *
-     * @param name        String name of a JVM class.
-     * @param classLoader ClassLoader to use when searching for JVM classes.
-     * @return Class instance of the named JVM class
-     * @throws JsonIoException if the class could not be loaded.
-     */
-    public static Class<?> internalClassForName(String name, ClassLoader classLoader) throws ClassNotFoundException {
-        Class<?> c = nameToClass.get(name);
-        if (c != null) {
-            return c;
-        }
-        c = loadClass(name, classLoader);
-        
-        if (ClassLoader.class.isAssignableFrom(c) ||
-                ProcessBuilder.class.isAssignableFrom(c) ||
-                Process.class.isAssignableFrom(c) ||
-                Constructor.class.isAssignableFrom(c) ||
-                Method.class.isAssignableFrom(c) ||
-                Field.class.isAssignableFrom(c)) {
-            throw new SecurityException("For security reasons, cannot instantiate: " + c.getName() + " when loading JSON.");
-        }
-        
-        nameToClass.put(name, c);
-        return c;
-    }
-
-    /**
-     * loadClass() provided by: Thomas Margreiter
-     */
-    private static Class<?> loadClass(String name, ClassLoader classLoader) throws ClassNotFoundException
-    {
-        String className = name;
-        boolean arrayType = false;
-        Class<?> primitiveArray = null;
-
-        while (className.startsWith("["))
-        {
-            arrayType = true;
-            if (className.endsWith(";"))
-            {
-                className = className.substring(0, className.length() - 1);
-            }
-            if (className.equals("[B"))
-            {
-                primitiveArray = byte[].class;
-            }
-            else if (className.equals("[S"))
-            {
-                primitiveArray = short[].class;
-            }
-            else if (className.equals("[I"))
-            {
-                primitiveArray = int[].class;
-            }
-            else if (className.equals("[J"))
-            {
-                primitiveArray = long[].class;
-            }
-            else if (className.equals("[F"))
-            {
-                primitiveArray = float[].class;
-            }
-            else if (className.equals("[D"))
-            {
-                primitiveArray = double[].class;
-            }
-            else if (className.equals("[Z"))
-            {
-                primitiveArray = boolean[].class;
-            }
-            else if (className.equals("[C"))
-            {
-                primitiveArray = char[].class;
-            }
-            int startpos = className.startsWith("[L") ? 2 : 1;
-            className = className.substring(startpos);
-        }
-        Class<?> currentClass = null;
-        if (null == primitiveArray)
-        {
-            try
-            {
-                currentClass = classLoader.loadClass(className);
-            }
-            catch (ClassNotFoundException e)
-            {
-                currentClass = Thread.currentThread().getContextClassLoader().loadClass(className);
-            }
-        }
-
-        if (arrayType)
-        {
-            currentClass = (null != primitiveArray) ? primitiveArray : Array.newInstance(currentClass, 0).getClass();
-            while (name.startsWith("[["))
-            {
-                currentClass = Array.newInstance(currentClass, 0).getClass();
-                name = name.substring(1);
-            }
-        }
-        return currentClass;
     }
 
     static void throwIfSecurityConcern(Class<?> securityConcern, Class<?> c)
@@ -880,7 +754,7 @@ public class MetaUtils
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
                 continue;
             }
@@ -911,7 +785,7 @@ public class MetaUtils
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
             String mappings = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
                 System.out.println("Class: " + className + " not defined in the JVM");
                 continue;
@@ -1072,7 +946,7 @@ public class MetaUtils
         final Set<Class<?>> result = new HashSet<>();
 
         for (String className : set) {
-            Class<?> loadedClass = MetaUtils.classForName(className, classLoader);
+            Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
 
             if (loadedClass != null) {
                 result.add(loadedClass);

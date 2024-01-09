@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.io.factory.DateFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

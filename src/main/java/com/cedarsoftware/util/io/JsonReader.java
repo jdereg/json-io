@@ -1,6 +1,8 @@
 package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.FastByteArrayInputStream;
+import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.convert.Converter;
 import lombok.Getter;
 
@@ -13,10 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.cedarsoftware.util.FastByteArrayInputStream;
-import com.cedarsoftware.util.FastReader;
-import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
