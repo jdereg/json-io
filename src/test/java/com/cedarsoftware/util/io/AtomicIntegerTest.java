@@ -48,7 +48,7 @@ class AtomicIntegerTest
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
         assert atom2.strValue.get() == 50;
-        assert atom2.emptyStrValue == null;
+        assert atom2.emptyStrValue.get() == 0;
         assert atom2.objValue.get() == -9;
         assert atom2.values.length == 4;
         assert atom2.values[0].get() == -5;
@@ -57,7 +57,7 @@ class AtomicIntegerTest
         assert atom2.values[3].get() == 45;
 
         json = TestUtil.toJson(atom2);
-        assert json.equals("{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":null,\"objValue\":-9,\"values\":[-5,null,5,45]}");
+        assert json.equals("{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16,\"nullValue\":null,\"strValue\":50,\"emptyStrValue\":0,\"objValue\":-9,\"values\":[-5,null,5,45]}");
         
         json = "{\"@type\":\"com.cedarsoftware.util.io.AtomicIntegerTest$TestAtomicIntegerField\",\"value\":16.5}";
         TestAtomicIntegerField aif = TestUtil.toObjects(json, null);

@@ -41,7 +41,7 @@ class AtomicLong2Test
         assert atom2.value.get() == 16;
         assert atom2.nullValue == null;
         assert atom2.strValue.get() == 50;
-        assert atom2.emptyStrValue == null;
+        assert atom2.emptyStrValue.get() == 0;
         assert atom2.objValue.get() == -9;
         assert atom2.values.length == 4;
         assert atom2.values[0].get() == -5;

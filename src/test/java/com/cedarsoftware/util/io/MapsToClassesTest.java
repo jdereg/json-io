@@ -69,9 +69,9 @@ public class MapsToClassesTest
         assert types.getaLongWrap() == (long) 0;
         assert types.getaFloatWrap() == 0.0f;
         assert types.getaDoubleWrap() == 0.0d;
-        assert types.atomicBoolean == null;
-        assert types.atomicInteger == null;
-        assert types.atomicLong == null;
+        assert types.atomicBoolean.get() == false;
+        assert types.atomicInteger.get() == 0;
+        assert types.atomicLong.get() == 0;
     }
 
     @Test

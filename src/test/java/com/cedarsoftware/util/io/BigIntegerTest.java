@@ -1,14 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.Converter;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.Converter;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -92,7 +92,7 @@ class BigIntegerTest
 
         json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
         tbi = TestUtil.toObjects(json, null);
-        assertNull(tbi.fromString);
+        assert tbi.fromString.longValue() == 0;
     }
 
     @Test
@@ -100,7 +100,9 @@ class BigIntegerTest
     {
         String json = "{\"@type\":\"" + TestBigIntegerField.class.getName() + "\",\"fromString\":\"\"}";
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        assertNull(map.get("fromString"));      // allowing "" to null out non-primitive fields in map-of-map mode
+        assert map.get("fromString") instanceof BigInteger;
+        BigInteger bigInt = (BigInteger) map.get("fromString");
+        assert bigInt.longValue() == 0;
     }
 
     @Test
