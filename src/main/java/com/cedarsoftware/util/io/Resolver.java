@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
 import lombok.AccessLevel;
@@ -299,7 +300,7 @@ public abstract class Resolver implements ReaderContext
             }
             String saveType = jObj.getJavaTypeName();
             jObj.clear();
-            jObj.setJavaType(MetaUtils.classForName(saveType, Resolver.class.getClassLoader()));
+            jObj.setJavaType(ClassUtilities.forName(saveType, Resolver.class.getClassLoader()));
             jObj.put(KEYS, keys);
             jObj.put(ITEMS, values);
         }
@@ -340,7 +341,7 @@ public abstract class Resolver implements ReaderContext
         Object mayEnumSpecial = jsonObj.get("@enum");
         if (mayEnumSpecial instanceof String) {
             // TODO: This should move to EnumSetFactory - Both creating the enum and extracting the enumSet.
-            Class<?> clazz = MetaUtils.classForName((String)mayEnumSpecial, Resolver.class.getClassLoader());
+            Class<?> clazz = ClassUtilities.forName((String) mayEnumSpecial, Resolver.class.getClassLoader());
             mate = extractEnumSet(clazz, jsonObj);
             jsonObj.setTarget(mate);
             jsonObj.isFinished = true;
@@ -437,7 +438,7 @@ public abstract class Resolver implements ReaderContext
     {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
-                : MetaUtils.classForName(enumClassName, readOptions.getClassLoader());
+                : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0) {
             if (enumClass != null) {

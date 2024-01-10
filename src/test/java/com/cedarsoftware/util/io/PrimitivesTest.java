@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -170,7 +171,7 @@ public class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteValueAtRoot(String stringType)
     {
-        Class<?> type = MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
         Object x = TestUtil.toObjects("120.1", type);
         assertInstanceOf(Byte.class, x);
         assertEquals(x, (byte)120);
@@ -196,7 +197,7 @@ public class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte"})
     void testByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
         Object x = TestUtil.toObjects("{\"value\":120.1}", type);
         assertInstanceOf(Byte.class, x);
         assertEquals(x, (byte)120);
@@ -222,7 +223,7 @@ public class PrimitivesTest
     @ValueSource(strings = {"null"})
     void testByteObjectValueAtNullRoot(String stringType)
     {
-//        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+//        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
 //        Object x = TestUtil.toObjects("{\"value\":120.1}", type);
 //        assertInstanceOf(Double.class, x);
 //        assertEquals(x, 120d);
@@ -248,7 +249,7 @@ public class PrimitivesTest
     @ValueSource(strings = {"java.lang.Byte", "byte", "null"})
     void testTypedByteObjectValueAtRoot(String stringType)
     {
-        Class<?> type = stringType.equals("null") ? null : MetaUtils.classForName(stringType, Primitives.class.getClassLoader());
+        Class<?> type = stringType.equals("null") ? null : ClassUtilities.forName(stringType, Primitives.class.getClassLoader());
         Object x = TestUtil.toObjects("{\"@type\":\"byte\",\"value\":120.1}", type);
         assertInstanceOf(Byte.class, x);
         assertEquals(x, (byte)120);

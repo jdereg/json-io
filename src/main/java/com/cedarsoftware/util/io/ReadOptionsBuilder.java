@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
@@ -425,7 +426,7 @@ public class ReadOptionsBuilder {
      * @param alias String shorter alias name.
      */
     private void addUniqueAlias(String type, String alias) {
-        Class<?> clazz = MetaUtils.classForName(type, this.options.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(type, this.options.getClassLoader());
         if (clazz == null) {
             throw new JsonIoException("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
         }
@@ -445,7 +446,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder coerceClass(String sourceClassName, Class<?> destClass) {
-        Class<?> clazz = MetaUtils.classForName(sourceClassName, this.options.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(sourceClassName, this.options.getClassLoader());
         if (clazz != null) {
             this.options.coercedTypes.put(clazz, destClass);
         }
@@ -488,12 +489,12 @@ public class ReadOptionsBuilder {
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
             String factoryClassName = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz == null) {
                 System.out.println("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
                 continue;
             }
-            Class<JsonReader.ClassFactory> factoryClass = (Class<JsonReader.ClassFactory>) MetaUtils.classForName(factoryClassName, classLoader);
+            Class<JsonReader.ClassFactory> factoryClass = (Class<JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
             if (factoryClass == null) {
                 System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                 continue;
@@ -521,9 +522,9 @@ public class ReadOptionsBuilder {
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String className = entry.getKey();
             String readerClassName = entry.getValue();
-            Class<?> clazz = MetaUtils.classForName(className, classLoader);
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
             if (clazz != null) {
-                Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) MetaUtils.classForName(readerClassName, classLoader);
+                Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
                     readers.put(clazz, ReflectionUtils.newInstance(customReaderClass));
@@ -551,12 +552,12 @@ public class ReadOptionsBuilder {
         for (Map.Entry<String, String> entry : map.entrySet()) {
             String srcClassName = entry.getKey();
             String destClassName = entry.getValue();
-            Class<?> srcType = MetaUtils.classForName(srcClassName, classLoader);
+            Class<?> srcType = ClassUtilities.forName(srcClassName, classLoader);
             if (srcType == null) {
                 System.out.println("Skipping class coercion for source class: " + srcClassName + " (not found) to: " + destClassName + ", listed in resources/coercedTypes.txt");
                 continue;
             }
-            Class<?> destType = MetaUtils.classForName(destClassName, classLoader);
+            Class<?> destType = ClassUtilities.forName(destClassName, classLoader);
             if (destType == null) {
                 System.out.println("Skipping class coercion for source class: " + srcClassName + " cannot be mapped to: " + destClassName + " (not found), listed in resources/coercedTypes.txt");
                 continue;

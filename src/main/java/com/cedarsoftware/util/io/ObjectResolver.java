@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 import com.cedarsoftware.util.reflect.Injector;
 
@@ -397,7 +398,7 @@ public class ObjectResolver extends Resolver
         String mayEnumClasName = (String)jsonObj.get("@enum");
         if (mayEnumClasName != null)
         {
-            mayEnumClass = MetaUtils.classForName(mayEnumClasName, classLoader);
+            mayEnumClass = ClassUtilities.forName(mayEnumClasName, classLoader);
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
@@ -693,7 +694,7 @@ public class ObjectResolver extends Resolver
                     if (type != null)
                     {
                         typeStr = type;
-                        c = MetaUtils.classForName(type, classLoader);
+                        c = ClassUtilities.forName(type, classLoader);
                     }
                     else
                     {

@@ -223,7 +223,7 @@ class WriteOptionsTest {
     @MethodSource("aliasExceptions")
     void testAliasTypeNames_exceptionCases(String fqName, String shortName) {
         WriteOptions options = new WriteOptionsBuilder().withExtendedAliases().build();
-        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() ->
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 new WriteOptionsBuilder().aliasTypeName(fqName, shortName));
     }
 
@@ -245,7 +245,7 @@ class WriteOptionsTest {
         Map<String, String> map = MetaUtils.mapOf("java.lang.Integer", "properInt");
 
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
-        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() -> builder.aliasTypeNames(map));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> builder.aliasTypeNames(map));
     }
 
     @Test
@@ -262,7 +262,7 @@ class WriteOptionsTest {
     @Test
     void testAliasTypeNames_addedByNameValue_whenAlreadyExists_throwsException() {
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
-        assertThatExceptionOfType(JsonIoException.class).isThrownBy(() -> builder.aliasTypeName("java.lang.Integer", "properInt"));
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> builder.aliasTypeName("java.lang.Integer", "properInt"));
     }
 
     @Test

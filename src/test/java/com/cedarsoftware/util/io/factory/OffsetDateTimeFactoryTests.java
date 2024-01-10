@@ -1,5 +1,11 @@
 package com.cedarsoftware.util.io.factory;
 
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.DateUtilities;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import org.junit.jupiter.api.Test;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -7,12 +13,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-
-import com.cedarsoftware.util.DateUtilities;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -67,7 +67,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
     @Test
     void newInstance_oldFormats_simpleCase() {
         JsonObject jsonObject = new JsonObject();
-        jsonObject.setJavaType(MetaUtils.classForName("java.time.OffsetDateTime", this.getClass().getClassLoader()));
+        jsonObject.setJavaType(ClassUtilities.forName("java.time.OffsetDateTime", this.getClass().getClassLoader()));
         jsonObject.put("dateTime", "2019-12-15T09:07:16.000002");
         jsonObject.put("offset", "Z");
         OffsetDateTime actual = new OffsetDateTimeFactory().newInstance(OffsetDateTime.class, jsonObject, null);

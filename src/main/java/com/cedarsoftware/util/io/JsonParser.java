@@ -1,15 +1,16 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.LRUCache;
+import com.cedarsoftware.util.reflect.Injector;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.LRUCache;
-import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ID;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
@@ -593,7 +594,7 @@ class JsonParser {
         }
 
         // Resolve class during parsing
-        Class<?> clazz = MetaUtils.classForName(javaType, readOptions.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(javaType, readOptions.getClassLoader());
         if (clazz == null) {
             if (readOptions.isFailOnUnknownType()) {
                 error("Class: " + javaType + " not defined.");

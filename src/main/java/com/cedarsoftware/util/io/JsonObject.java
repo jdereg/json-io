@@ -1,5 +1,6 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 import java.lang.reflect.Array;
@@ -89,9 +90,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         final Object value = getValue();
         String type = getJavaTypeName();
         if ("class".equals(type) || "java.lang.Class".equals(type)) {
-            return MetaUtils.classForName((String) value, JsonObject.class.getClassLoader());
+            return ClassUtilities.forName((String) value, JsonObject.class.getClassLoader());
         }
-        Class<?> clazz = MetaUtils.classForName(type, JsonObject.class.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(type, JsonObject.class.getClassLoader());
         if (clazz == null) {
             throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }

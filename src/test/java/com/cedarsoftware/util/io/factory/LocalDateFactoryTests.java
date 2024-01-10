@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.time.LocalDate;
 import java.util.stream.Stream;
 
-import static com.cedarsoftware.util.io.Converter.convert;
+import static com.cedarsoftware.util.Converter.convert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LocalDateFactoryTests {
