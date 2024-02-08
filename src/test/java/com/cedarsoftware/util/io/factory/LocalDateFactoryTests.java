@@ -2,6 +2,8 @@ package com.cedarsoftware.util.io.factory;
 
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReadOptions;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.io.TestUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,6 +13,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.stream.Stream;
 
 import static com.cedarsoftware.util.Converter.convert;
@@ -60,8 +63,9 @@ class LocalDateFactoryTests {
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
         String json = loadJsonForTest(fileName);
-        LocalDate localDate = TestUtil.toObjects(json, null);
-
+        ReadOptions readOptions = new ReadOptionsBuilder().setSourceZoneId(ZoneId.of("GMT")).build();
+        LocalDate localDate = TestUtil.toObjects(json, readOptions, null);
+        // With LocalDate, the all-digits (number) version is number of epoch millis
         assertThat(localDate)
                 .hasYear(year)
                 .hasMonthValue(month)

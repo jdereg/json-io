@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -252,7 +254,14 @@ public class Writers
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
             LocalDate localDate = (LocalDate) o;
-            output.write(Long.toString(localDate.toEpochDay()));
+            LocalDateTime localDateTime = localDate.atStartOfDay();
+
+            // Convert LocalDateTime to Instant using UTC offset
+            Instant instant = localDateTime.toInstant(ZoneOffset.UTC);
+
+            // Get epoch milliseconds from the Instant
+            long epochMilli = instant.toEpochMilli();
+            output.write(Long.toString(epochMilli));
         }
     }
 

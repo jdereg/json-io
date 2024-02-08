@@ -575,7 +575,7 @@ class DatesTest
             JsonObject object = new JsonObject();
             object.setValue(date);
             factory.newInstance(Date.class, object, this.context);
-           fail();
+            fail();
         }
         catch (IllegalArgumentException e)
         {

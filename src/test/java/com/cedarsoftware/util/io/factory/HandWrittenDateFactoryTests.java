@@ -122,7 +122,7 @@ public abstract class HandWrittenDateFactoryTests<T> {
     @ParameterizedTest
     @ValueSource(strings = {
             "2011-2-3 20:09:03",
-            "FEB 03, 2011 20:09.03",
+            "FEB 03, 2011 20:09:03",
             "02/03/2011 20:09:03",
             "2/3/2011T20:09:03",
             "2011/2/3 20:09:03",

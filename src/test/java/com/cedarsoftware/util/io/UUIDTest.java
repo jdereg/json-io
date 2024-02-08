@@ -48,11 +48,11 @@ public class UUIDTest
 
         String json2 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"leastSigBits\":-7929886640328317609}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json2, null); });
-        assert thrown.getCause().getMessage().contains("must contain both 'mostSigBits' and 'leastSigBits'");
+        assert thrown.getCause().getMessage().contains("convert from Map to UUID the map must include one of the following: [mostSigBits, leastSigBits], [_v], or [value]");
 
         String json3 = "{\"@type\":\"" + TestUUIDFields.class.getName() + "\", \"internals\": {\"@type\": \"java.util.UUID\", \"mostSigBits\":7280309849777586861}}";
         thrown = assertThrows(JsonIoException.class, () -> { TestUtil.toObjects(json3, null); });
-        assert thrown.getCause().getMessage().contains("must contain both 'mostSigBits' and 'leastSigBits'");
+        assert thrown.getCause().getMessage().contains("convert from Map to UUID the map must include one of the following: [mostSigBits, leastSigBits], [_v], or [value]");
     }
 
     @Test

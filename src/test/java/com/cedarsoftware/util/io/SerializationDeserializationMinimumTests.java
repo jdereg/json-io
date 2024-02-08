@@ -429,7 +429,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertReferentialIdentity(actual.get("foo"), actual.get("bar"));
     }
 
-    @Test
+    @Test                                  
     protected void testT1_serializedWithoutType_parsedAsJsonTypes() {
         // arrange
         T expected = provideT4();

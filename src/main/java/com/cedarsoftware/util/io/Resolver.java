@@ -328,7 +328,19 @@ public abstract class Resolver implements ReaderContext
             // TODO: traverse at the end of parsing, we will not need this "if" check here.
             return target;
         }
-        jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+        Class targetType = jsonObj.getJavaType();
+        jsonObj.setJavaType(coerceClassIfNeeded(targetType));
+        targetType = jsonObj.getJavaType();
+
+        // Does a built-in conversion exist?
+        if (jsonObj.hasValue() && jsonObj.getValue() != null)
+        {
+            if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType))
+            {
+//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
+                return converter.convert(jsonObj.getValue(), targetType);
+            }
+        }
 
         // ClassFactory defined
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
@@ -406,6 +418,7 @@ public abstract class Resolver implements ReaderContext
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
+
         JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
 
         if (classFactory == null) {
@@ -415,9 +428,9 @@ public abstract class Resolver implements ReaderContext
         Object target = classFactory.newInstance(c, jsonObj, this);
 
         // don't pass in classFactory.isObjectFinal, only set it to true if classFactory says its so.
-        // it allows the factory iteself to set final on the jsonObj internally where it depends
+        // it allows the factory itself to set final on the jsonObj internally where it depends
         // on how the data comes back, but that value can be a hard true if the factory knows
-        // its always true.
+        // it's always true.
         if (classFactory.isObjectFinal()) {
             return jsonObj.setFinishedTarget(target, true);
         }

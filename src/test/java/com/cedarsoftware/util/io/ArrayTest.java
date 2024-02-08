@@ -746,7 +746,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testCharArray()
+    void testCharArray()
     {
         CharArrayTest cat = new CharArrayTest();
         cat.chars_a = new Character[] {'a', '\t', '\u0005'};

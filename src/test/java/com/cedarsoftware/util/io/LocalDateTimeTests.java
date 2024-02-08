@@ -1,15 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
-
 import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,12 +76,11 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
         );
     }
 
-    /*
     @ParameterizedTest
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
         String json = loadJsonForTest(fileName);
-        LocalDateTime localDate = TestUtil.readJsonObject(json);
+        LocalDateTime localDate = TestUtil.toObjects(json, LocalDateTime.class);
 
         assertLocalDateTime(localDate, year, month, day);
     }
@@ -91,12 +89,10 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
     void testOldFormat_nestedLevel() {
 
         String json = loadJsonForTest("old-format-nested-level.json");
-        NestedLocalDateTime nested = TestUtil.readJsonObject(json);
+        NestedLocalDateTime nested = TestUtil.toObjects(json, NestedLocalDateTime.class);
 
         assertLocalDateTime(nested.dateTime1, 2014, 6, 13);
     }
-    */
-
 
     @Test
     void testTopLevel_serializesAsISODate() {

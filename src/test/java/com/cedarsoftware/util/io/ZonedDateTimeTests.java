@@ -158,9 +158,9 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
                 Arguments.of(ZonedDateTime.ofInstant(Instant.parse("2023-11-22T15:56:12.1Z"), ZoneId.of("Asia/Saigon"))),
                 Arguments.of(ZonedDateTime.ofInstant(Instant.parse("9999-12-31T23:59:59.999999999Z"), ZoneId.of("Etc/GMT"))),
                 Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochMilli(1700668272163L), ZoneId.of("America/Los_Angeles"))),
-                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L), ZoneId.of("UTC"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L/ 1000), ZoneId.of("UTC"))),   // Year is beyond YYYY format (> 4 digit year) if we don't divide by 1000
                 Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(((146097L * 5L) - (30L * 365L + 7L)) * 86400L, 999999999L), ZoneId.of("UTC"))),
-                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L, 99999999999999L), ZoneId.of("GMT"))),
+                Arguments.of(ZonedDateTime.ofInstant(Instant.ofEpochSecond(1700668272163L / 1000, 99999999999999L), ZoneId.of("GMT"))), // Year is beyond YYYY (> 4 digit year) if we don't divide by 1000
                 Arguments.of(ZonedDateTime.of(LocalDateTime.of(2011, 12, 11, 9, 5, 7, 999999999), ZoneId.of("Z"))),
                 Arguments.of(ZonedDateTime.of(LocalDate.of(2011, 12, 11), LocalTime.of(9, 5, 7, 999999999), ZoneId.of("America/New_York")))
         );
