@@ -63,7 +63,7 @@ class LocalDateFactoryTests {
     @MethodSource("checkDifferentFormatsByFile")
     void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
         String json = loadJsonForTest(fileName);
-        ReadOptions readOptions = new ReadOptionsBuilder().setSourceZoneId(ZoneId.of("GMT")).build();
+        ReadOptions readOptions = new ReadOptionsBuilder().setZoneId(ZoneId.of("GMT")).build();
         LocalDate localDate = TestUtil.toObjects(json, readOptions, null);
         // With LocalDate, the all-digits (number) version is number of epoch millis
         assertThat(localDate)
