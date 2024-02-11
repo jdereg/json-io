@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-import lombok.AccessLevel;
-import lombok.Getter;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -18,6 +12,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import lombok.AccessLevel;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -339,6 +339,8 @@ public abstract class Resolver implements ReaderContext
             {
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
                 return converter.convert(jsonObj.getValue(), targetType);
+                // TOOD:  If we do a conversion here isn't the object considered done?
+                //return jsonObj.setFinishedTarget(converter.convert(jsonObj.getValue(), targetType), true);
             }
         }
 

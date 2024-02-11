@@ -1,12 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.Converter;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -36,8 +29,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.Converter;
+
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -96,21 +97,21 @@ public class MetaUtilsTests {
      */
 
     @Test
-    public void testNewPrimitiveWrapper() {
-        try {
-            Converter.convert("", TimeZone.class);
-            fail();
-        } catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "unsupported conversion, source type [string");
-        }
-        
-        try {
-            Converter.convert("float", Float.class);
-            fail();
-        } catch (IllegalArgumentException e) {
-            TestUtil.assertContainsIgnoreCase(e.getMessage(), "value: float not parseable as a float value");
-        }
+    void testNewPrimitiveWrapper() {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Converter.convert("", TimeZone.class))
+                .withMessageContaining("Unsupported conversion, source type [String");
+    }
 
+    @Test
+    void testNewPrimitive() {
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> Converter.convert("float", Float.class))
+                .withMessageContaining("not parseable as a float");
+    }
+
+    @Test
+    void testCharacterZero() {
         assertThat(Converter.convert('0', Character.class)).isEqualTo(Character.valueOf('0'));
     }
 

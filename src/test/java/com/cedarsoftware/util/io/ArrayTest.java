@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -21,6 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.DeepEquals;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -708,7 +709,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testAlwaysShowType()
+    void testAlwaysShowType()
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
@@ -724,7 +725,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testArraysAsList()
+    void testArraysAsList()
     {
         List<String> strs = new ArrayList<>(Arrays.asList("alpha", "bravo", "charlie"));
         String json = TestUtil.toJson(strs);
@@ -744,6 +745,43 @@ public class ArrayTest
         assertEquals(array[1], 10L);
         assertEquals(array[2], 100L);
     }
+
+
+    private static Stream<Arguments> charArrayParams() {
+        return Stream.of(
+                Arguments.of(new char[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0005\"]}"),
+                Arguments.of(new char[] { 'Z', '1', '\0' }, "{\"@type\":\"[C\",\"@items\":[\"Z1\\u0000\"]}")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("charArrayParams")
+    void testCharArray_toJsonString(char[] test, String expected) {
+        String json = TestUtil.toJson(test);
+        assertThat(json).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @MethodSource("charArrayParams")
+    void testJsonString_toCharArray(char[] expected, String test) {
+        char[] chars = TestUtil.toObjects(test, char[].class);
+        assertThat(chars).isEqualTo(expected);
+    }
+
+    private static Stream<Arguments> charObjectArrayParams() {
+        return Stream.of(
+                Arguments.of(new Character[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"a\",\"\\t\",\"\\u0005\"]}"),
+                Arguments.of(new Character[] { 'Z', '1', '\0' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"Z\",\"1\",\"\\u0000\"]}")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("charObjectArrayParams")
+    void testCharArray_toJsonString(Character[] test, String expected) {
+        String json = TestUtil.toJson(test);
+        assertThat(json).isEqualTo(expected);
+    }
+
 
     @Test
     void testCharArray()

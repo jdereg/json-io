@@ -1,11 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import com.cedarsoftware.util.convert.ConverterOptions;
 import com.cedarsoftware.util.reflect.Injector;
 
 import java.lang.reflect.Field;
-import java.nio.charset.Charset;
-import java.time.ZoneId;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -40,7 +38,7 @@ import java.util.Map;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public interface ReadOptions {
+public interface ReadOptions extends ConverterOptions {
 
     enum ReturnType {
         JSON_OBJECTS,
@@ -168,18 +166,4 @@ public interface ReadOptions {
      * deep list of fields for a given class.
      */
     Map<String, Field> getDeepDeclaredFields(final Class<?> c);
-
-    ZoneId getSourceZoneId();
-
-    ZoneId getTargetZoneId();
-
-    Locale getSourceLocale();
-
-    Locale getTargetLocale();
-
-    Charset getSourceCharset();
-
-    Charset getTargetCharset();
-
-    Object getCustomOption(String name);
 }

@@ -1,21 +1,17 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import com.cedarsoftware.util.DeepEquals;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate> {
 
@@ -81,23 +77,15 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         assertThat(result).isEqualTo(date);
     }
 
-    private static Stream<Arguments> checkDifferentFormatsByFile() {
-        return Stream.of(
-                Arguments.of("old-format-top-level.json", 2023, 4, 5),
-                Arguments.of("old-format-long.json", 2023, 4, 5)
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("checkDifferentFormatsByFile")
-    void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
-        String json = loadJsonForTest(fileName);
+    @Test
+    void testOldFormat_topLevel_withType() {
+        String json = "{ \"@type\" : \"java.time.LocalDate\", \"year\" : 2023, \"month\": 4, \"day\": 5 }";
         LocalDate localDate = TestUtil.toObjects(json, null);
 
         assertThat(localDate)
-                .hasYear(year)
-                .hasMonthValue(month)
-                .hasDayOfMonth(day);
+                .hasYear(2023)
+                .hasMonthValue(4)
+                .hasDayOfMonth(5);
     }
 
     @Test
@@ -151,11 +139,25 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
 
     @Test
-    public void testLocalDateAsTimeStamp()
+    void testLocalDateAsTimeStamp_withAsia()
     {
         LocalDate ld = LocalDate.of(2023, 12, 25);
-        String json = TestUtil.toJson(ld, new WriteOptionsBuilder().addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
-        LocalDate ld2 = TestUtil.toObjects(json, null);
+        String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
+                .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
+        System.out.println(json);
+        ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("Asia/Saigon")).build();
+        LocalDate ld2 = TestUtil.toObjects(json, options, null);
+        assert ld.equals(ld2);
+    }
+
+    @Test
+    void testLocalDateAsTimeStamp_withNewYork() {
+        LocalDate ld = LocalDate.of(2023, 12, 25);
+        String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
+                .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
+        System.out.println(json);
+        ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("America/New_York")).build();
+        LocalDate ld2 = TestUtil.toObjects(json, options, null);
         assert ld.equals(ld2);
     }
 

@@ -688,6 +688,21 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             return;
         }
 
+
+//        if (Converter.isConversionSupportedFor(arrayType, String.class)) {
+//            if (typeWritten || referenced) {
+//                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":" : "\"@items\":");
+//            }
+//
+//            writeJsonUtf8String(output, Converter.convert(arrayType, String.class));
+//
+//            if (typeWritten || referenced) {
+//                output.write("}");
+//            }
+//            return;
+//        }
+
+
         if (typeWritten || referenced)
         {
             output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");
@@ -703,6 +718,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         // Intentionally processing each primitive array type in separate
         // custom loop for speed. All of them could be handled using
         // reflective Array.get() but it is slower.  I chose speed over code length.
+
 
         if (byte[].class == arrayType)
         {

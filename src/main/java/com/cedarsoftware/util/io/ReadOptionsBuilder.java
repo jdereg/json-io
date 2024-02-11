@@ -2,6 +2,7 @@ package com.cedarsoftware.util.io;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.Injector;
@@ -92,12 +93,14 @@ public class ReadOptionsBuilder {
         this.options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         this.options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
 
-        this.options.sourceZoneId = ZoneId.systemDefault();
-        this.options.targetZoneId = ZoneId.systemDefault();
-        this.options.sourceLocale = Locale.getDefault();
-        this.options.targetLocale = Locale.getDefault();
-        this.options.sourceCharset = StandardCharsets.UTF_8;
-        this.options.targetCharset = StandardCharsets.UTF_8;
+
+        //  converter options
+        this.options.trueChar = CommonValues.CHARACTER_ONE;
+        this.options.falseChar = CommonValues.CHARACTER_ZERO;
+        this.options.zoneId = ZoneId.systemDefault();
+        this.options.locale = Locale.getDefault();
+        this.options.charset = StandardCharsets.UTF_8;
+        this.options.customOptions = new ConcurrentHashMap<>();
     }
 
     /**
@@ -365,20 +368,11 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param locale source locale for conversions
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder setSourceLocale(Locale locale) {
-        this.options.sourceLocale = locale;
-        return this;
-    }
-
-    /**
      * @param locale target locale for conversions
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder setTargetLocale(Locale locale) {
-        this.options.targetLocale = locale;
+    public ReadOptionsBuilder setLocale(Locale locale) {
+        this.options.locale = locale;
         return this;
     }
 
@@ -386,36 +380,35 @@ public class ReadOptionsBuilder {
      * @param charset source charset for conversions
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder setSourceCharset(Charset charset) {
-        this.options.sourceCharset = charset;
+    public ReadOptionsBuilder setCharset(Charset charset) {
+        this.options.charset = charset;
         return this;
     }
-
-    /**
-     * @param charset target charset for conversions
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder setTargetCharset(Charset charset) {
-        this.options.targetCharset = charset;
-        return this;
-    }
-
 
     /**
      * @param zoneId source charset for conversions
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder setSourceZoneId(ZoneId zoneId) {
-        this.options.sourceZoneId = zoneId;
+    public ReadOptionsBuilder setZoneId(ZoneId zoneId) {
+        this.options.zoneId = zoneId;
         return this;
     }
 
     /**
-     * @param zoneId target charset for conversions
+     * @param ch Character used when converting true -> char
      * @return ReadOptionsBuilder for chained access.
      */
-    public ReadOptionsBuilder setTargetCharset(ZoneId zoneId) {
-        this.options.targetZoneId = zoneId;
+    public ReadOptionsBuilder setTrueCharacter(Character ch) {
+        this.options.trueChar = ch;
+        return this;
+    }
+
+    /**
+     * @param ch Character used when converting false -> char
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder setFalseCharacter(Character ch) {
+        this.options.falseChar = ch;
         return this;
     }
 
@@ -605,22 +598,19 @@ public class ReadOptionsBuilder {
         private List<InjectorFactory> injectorFactories;
 
         @Getter
-        private ZoneId sourceZoneId;
+        private ZoneId zoneId = ZoneId.systemDefault();
 
         @Getter
-        private ZoneId targetZoneId;
+        private Locale locale = Locale.getDefault();
 
         @Getter
-        private Locale sourceLocale;
+        private Charset charset = StandardCharsets.UTF_8;
 
         @Getter
-        private Locale targetLocale;
+        private Character trueChar = CommonValues.CHARACTER_ONE;
 
         @Getter
-        private Charset sourceCharset;
-
-        @Getter
-        private Charset targetCharset;
+        private Character falseChar = CommonValues.CHARACTER_ZERO;
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
@@ -886,7 +876,6 @@ public class ReadOptionsBuilder {
         public Object getCustomOption(String name) {
             return this.customOptions.get(name);
         }
-
 
         /**
          * Gets the declared fields for the full class hierarchy of a given class

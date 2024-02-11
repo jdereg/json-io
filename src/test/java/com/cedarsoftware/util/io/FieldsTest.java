@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -27,6 +21,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.io.models.Human;
 import com.cedarsoftware.util.io.models.OuterObject;
+import lombok.Getter;
+import lombok.Setter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -69,6 +71,18 @@ public class FieldsTest
 
         ManyFields root = TestUtil.toObjects(jsonOut, null);
         assertFields(root);
+    }
+
+    @Test
+    void testNestedChar() {
+        NestedChar initial = new NestedChar();
+        initial.ch = '\t';
+
+        String jsonOut = TestUtil.toJson(initial);
+        TestUtil.printLine(jsonOut);
+
+        NestedChar actual = TestUtil.toObjects(jsonOut, null);
+        assertThat(initial.ch).isEqualTo(actual.ch);
     }
 
     private static void assertFields(ManyFields root)
@@ -500,6 +514,12 @@ public class FieldsTest
     public static class TestLocale implements Serializable
     {
         private Locale _loc;
+    }
+
+    @Getter
+    @Setter
+    private static class NestedChar implements Serializable {
+        private char ch;
     }
 
     /**
