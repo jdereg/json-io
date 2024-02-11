@@ -1,8 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.MonthDayFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -17,7 +14,7 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -26,6 +23,9 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import com.cedarsoftware.util.io.factory.MonthDayFactory;
+import com.cedarsoftware.util.io.factory.YearMonthFactory;
 
 import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
 
@@ -251,13 +251,26 @@ public class Writers
     }
 
     public static class LocalDateAsLong extends PrimitiveTypeWriter {
+        private final ZoneId zoneId;
+
+        public LocalDateAsLong(ZoneId zoneId) {
+            this.zoneId = zoneId;
+        }
+
+        public LocalDateAsLong() {
+            this(ZoneId.systemDefault());
+        }
+
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
+
+            //TODO:  Change to using converter and having the writeOptions provide a zoneId;
+            //TODO:  If we're going to provide a LocalDateAsLong we should also provide a LocalDateTimeAsLong
             LocalDate localDate = (LocalDate) o;
-            LocalDateTime localDateTime = localDate.atStartOfDay();
+            ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
 
             // Convert LocalDateTime to Instant using UTC offset
-            Instant instant = localDateTime.toInstant(ZoneOffset.UTC);
+            Instant instant = zonedDateTime.toInstant();
 
             // Get epoch milliseconds from the Instant
             long epochMilli = instant.toEpochMilli();

@@ -1,13 +1,14 @@
 package com.cedarsoftware.util.io;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-import lombok.Getter;
+import java.io.InputStream;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import lombok.Getter;
 
 /**
  * Useful utilities for use in unit testing.
@@ -349,7 +350,7 @@ public class TestUtil
     private static long totalReads;
     private static long totalWrites;
     @Getter
-    private static final boolean debug = false;
+    private static final boolean debug = true;
 
     /**
      * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND

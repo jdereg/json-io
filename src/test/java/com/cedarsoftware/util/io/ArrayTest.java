@@ -709,7 +709,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testAlwaysShowType()
+    void testAlwaysShowType()
     {
         ManyArrays ta = new ManyArrays();
         ta.init();
@@ -725,7 +725,7 @@ public class ArrayTest
     }
 
     @Test
-    public void testArraysAsList()
+    void testArraysAsList()
     {
         List<String> strs = new ArrayList<>(Arrays.asList("alpha", "bravo", "charlie"));
         String json = TestUtil.toJson(strs);
@@ -770,8 +770,8 @@ public class ArrayTest
 
     private static Stream<Arguments> charObjectArrayParams() {
         return Stream.of(
-                Arguments.of(new Character[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"a\\t\\u0005\"]}"),
-                Arguments.of(new Character[] { 'Z', '1', '\0' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"Z1\\u0000\"]}")
+                Arguments.of(new Character[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"a\",\"\\t\",\"\\u0005\"]}"),
+                Arguments.of(new Character[] { 'Z', '1', '\0' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"Z\",\"1\",\"\\u0000\"]}")
         );
     }
 

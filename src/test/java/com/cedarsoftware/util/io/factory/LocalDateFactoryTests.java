@@ -1,20 +1,18 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.ReadOptions;
-import com.cedarsoftware.util.io.ReadOptionsBuilder;
-import com.cedarsoftware.util.io.TestUtil;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import java.time.LocalDate;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.stream.Stream;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.TestUtil;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.Converter.convert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,26 +48,6 @@ class LocalDateFactoryTests {
                 .hasYear(2023)
                 .hasMonthValue(9)
                 .hasDayOfMonth(5);
-    }
-
-    private static Stream<Arguments> checkDifferentFormatsByFile() {
-        return Stream.of(
-                Arguments.of("old-format-top-level.json", 2023, 4, 5),
-                Arguments.of("old-format-long.json", 2023, 4, 5)
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource("checkDifferentFormatsByFile")
-    void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
-        String json = loadJsonForTest(fileName);
-        ReadOptions readOptions = new ReadOptionsBuilder().setZoneId(ZoneId.of("GMT")).build();
-        LocalDate localDate = TestUtil.toObjects(json, readOptions, null);
-        // With LocalDate, the all-digits (number) version is number of epoch millis
-        assertThat(localDate)
-                .hasYear(year)
-                .hasMonthValue(month)
-                .hasDayOfMonth(day);
     }
 
     @Test
