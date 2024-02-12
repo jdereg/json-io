@@ -689,20 +689,6 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
 
 
-//        if (Converter.isConversionSupportedFor(arrayType, String.class)) {
-//            if (typeWritten || referenced) {
-//                output.write(writeOptions.isShortMetaKeys() ? "\"@e\":" : "\"@items\":");
-//            }
-//
-//            writeJsonUtf8String(output, Converter.convert(arrayType, String.class));
-//
-//            if (typeWritten || referenced) {
-//                output.write("}");
-//            }
-//            return;
-//        }
-
-
         if (typeWritten || referenced)
         {
             output.write(writeOptions.isShortMetaKeys() ? "\"@e\":[" : "\"@items\":[");

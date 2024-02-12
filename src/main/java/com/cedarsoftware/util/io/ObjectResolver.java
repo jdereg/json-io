@@ -750,10 +750,7 @@ public class ObjectResolver extends Resolver
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
                 Object target = this.getConverter().convert(jsonObj.getValue(), c);
 
-                jsonObj.setFinishedTarget(target, true);
-                return target;
-                // TOOD:  If we do a conversion here isn't the object considered done?
-                //return jsonObj.setFinishedTarget(converter.convert(jsonObj.getValue(), targetType), true);
+                return jsonObj.setFinishedTarget(target, true);
             }
         }
 
