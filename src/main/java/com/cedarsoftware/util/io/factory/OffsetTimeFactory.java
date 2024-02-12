@@ -1,15 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.Instant;
-import java.time.LocalTime;
 import java.time.OffsetTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * Abstract class to help create temporal items.
@@ -35,68 +26,10 @@ import com.cedarsoftware.util.io.ReaderContext;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class OffsetTimeFactory extends AbstractTemporalFactory<OffsetTime> {
-
-    /**
-     * Specify zone if you don't want system default
-     */
-    public OffsetTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
-        super(dateFormatter, zoneId);
-    }
-
-    public OffsetTimeFactory() {
-        this(DateTimeFormatter.ISO_OFFSET_TIME, ZoneId.systemDefault());
-    }
+public class OffsetTimeFactory extends ConvertableFactory {
 
     @Override
-    protected OffsetTime fromNumber(Number l) {
-        return OffsetTime.from(Instant.ofEpochMilli(l.longValue()));
-    }
-
-    @Override
-    protected OffsetTime fromString(String s) {
-        try {
-            return OffsetTime.parse(s, dateTimeFormatter);
-        } catch (Exception e) {   // Increase date-time format flexibility - JSON not written by json-io.
-            return convertToZonedDateTime(s).toOffsetDateTime().toOffsetTime();
-        }
-    }
-
-    @Override
-    protected OffsetTime fromJsonObject(JsonObject job, ReaderContext context) {
-
-        LocalTime time = parseLocalTime(job.get("time"), context);
-        ZoneOffset zoneOffset = parseOffset(job.get("offset"), context);
-
-        if (time == null || zoneOffset == null) {
-            throw new JsonIoException("Invalid json for OffsetDateTime");
-        }
-
-        return OffsetTime.of(time, zoneOffset);
-    }
-
-
-    private LocalTime parseLocalTime(Object o, ReaderContext context) {
-        if (o instanceof String) {
-            return LocalTime.parse((String) o, dateTimeFormatter);
-        }
-
-        if (o instanceof JsonObject) {
-            return context.reentrantConvertJsonValueToJava((JsonObject) o, LocalTime.class);
-        }
-
-        return null;
-    }
-
-    private ZoneOffset parseOffset(Object o, ReaderContext context) {
-        if (o instanceof String) {
-            return ZoneOffset.of((String) o);
-        }
-
-        if (o instanceof JsonObject) {
-            return context.reentrantConvertJsonValueToJava((JsonObject) o, ZoneOffset.class);
-        }
-
-        return null;
+    public Class<?> getType() {
+        return OffsetTime.class;
     }
 }

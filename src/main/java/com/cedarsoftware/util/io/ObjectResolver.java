@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.reflect.Injector;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -17,6 +13,10 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -744,7 +744,20 @@ public class ObjectResolver extends Resolver
             // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
-        
+
+        if (jsonObj.getTarget() == null && jsonObj.hasValue() && jsonObj.getValue() != null) {
+            if (this.getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
+//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
+                Object target = this.getConverter().convert(jsonObj.getValue(), c);
+
+                jsonObj.setFinishedTarget(target, true);
+                return target;
+                // TOOD:  If we do a conversion here isn't the object considered done?
+                //return jsonObj.setFinishedTarget(converter.convert(jsonObj.getValue(), targetType), true);
+            }
+        }
+
+
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);

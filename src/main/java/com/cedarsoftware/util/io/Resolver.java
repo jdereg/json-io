@@ -338,9 +338,9 @@ public abstract class Resolver implements ReaderContext
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType))
             {
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
-                return converter.convert(jsonObj.getValue(), targetType);
+                //return converter.convert(jsonObj.getValue(), targetType);
                 // TOOD:  If we do a conversion here isn't the object considered done?
-                //return jsonObj.setFinishedTarget(converter.convert(jsonObj.getValue(), targetType), true);
+                return jsonObj.setFinishedTarget(converter.convert(jsonObj.getValue(), targetType), true);
             }
         }
 

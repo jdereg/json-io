@@ -8,15 +8,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DateUtilities;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import com.cedarsoftware.util.io.TestUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.DateUtilities;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
+import com.cedarsoftware.util.io.TestUtil;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,7 +38,8 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
         LocalDateTimeFactory factory = new LocalDateTimeFactory();
         JsonObject jsonObject = buildJsonObject(year, month, day, hour, minute, second, nano);
 
-        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        LocalDateTime time = (LocalDateTime) factory.newInstance(LocalDateTime.class, jsonObject, context);
 
         assertThat(time).hasYear(year)
                 .hasMonthValue(month)
@@ -52,7 +56,8 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue("2011-12-03T10:15:30");
 
-        LocalDateTime time = factory.newInstance(LocalDateTime.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        LocalDateTime time = (LocalDateTime) factory.newInstance(LocalDateTime.class, jsonObject, context);
 
         assertThat(time)
                 .hasYear(2011)
@@ -94,7 +99,7 @@ class LocalDateTimeFactoryTests extends HandWrittenDateFactoryTests<LocalDateTim
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new LocalDateTimeFactory(DateTimeFormatter.ISO_LOCAL_DATE_TIME, zoneId);
+        return new LocalDateTimeFactory();
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import java.time.Year;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 
 import com.cedarsoftware.util.io.JsonReader;
 
@@ -16,7 +15,7 @@ public class YearFactoryTests extends HandWrittenDateFactoryTests<Year> {
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new YearFactory(DateTimeFormatter.ISO_INSTANT, zoneId);
+        return new YearFactory();
     }
 
     @Override

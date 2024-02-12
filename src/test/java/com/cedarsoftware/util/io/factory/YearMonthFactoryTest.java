@@ -4,12 +4,15 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,7 +30,8 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
         YearMonthFactory factory = new YearMonthFactory();
         JsonObject jsonObject = buildJsonObject(year, month);
 
-        YearMonth time = factory.newInstance(YearMonth.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        YearMonth time = (YearMonth) factory.newInstance(YearMonth.class, jsonObject, context);
 
         assertThat(time.getYear()).isEqualTo(year);
         assertThat(time.getMonthValue()).isEqualTo(month.intValue());
@@ -39,7 +43,8 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue("2023-09");
 
-        YearMonth time = factory.newInstance(YearMonth.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        YearMonth time = (YearMonth) factory.newInstance(YearMonth.class, jsonObject, context);
 
         assertThat(time.getYear()).isEqualTo(2023);
         assertThat(time.getMonthValue()).isEqualTo(9L);
@@ -59,7 +64,7 @@ class YearMonthFactoryTest extends HandWrittenDateFactoryTests<YearMonth> {
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new YearMonthFactory(YearMonthFactory.FORMATTER, zoneId);
+        return new YearMonthFactory();
     }
 
     @Override

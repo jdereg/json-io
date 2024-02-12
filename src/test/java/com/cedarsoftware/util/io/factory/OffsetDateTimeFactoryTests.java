@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.DateUtilities;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -14,13 +8,22 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.DateUtilities;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.ReadOptionsBuilder;
+import com.cedarsoftware.util.io.ReaderContext;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateTime> {
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, zoneId);
+        return new OffsetDateTimeFactory();
     }
 
 
@@ -30,27 +33,29 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue("2011-12-03T10:15:30+01:00");
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        OffsetDateTime dt = (OffsetDateTime) factory.newInstance(OffsetDateTime.class, jsonObject, context);
 
         assertOffsetDateTime(dt);
     }
 
     @Test
     void newInstant_testMillisecondsFormat() {
-        OffsetDateTimeFactory factory = new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.of("UTC"));
+        OffsetDateTimeFactory factory = new OffsetDateTimeFactory();
         JsonObject jsonObject = new JsonObject();
         jsonObject.setValue(1699334240156L);
 
-        OffsetDateTime dt = factory.newInstance(OffsetDateTime.class, jsonObject, null);
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().setZoneId(ZoneId.of("America/New_York")).build());
+        OffsetDateTime dt = (OffsetDateTime) factory.newInstance(OffsetDateTime.class, jsonObject, context);
 
         assertThat(dt.getYear()).isEqualTo(2023);
         assertThat(dt.getMonthValue()).isEqualTo(11);
         assertThat(dt.getDayOfMonth()).isEqualTo(7);
-        assertThat(dt.getHour()).isEqualTo(5);
+        assertThat(dt.getHour()).isEqualTo(0);
         assertThat(dt.getMinute()).isEqualTo(17);
         assertThat(dt.getSecond()).isEqualTo(20);
         assertThat(dt.getNano()).isEqualTo(156000000);
-        assertThat(dt.getOffset()).isEqualTo(ZoneOffset.of("Z"));
+        assertThat(dt.getOffset()).isEqualTo(ZoneId.of("America/New_York").getRules().getOffset(dt.toLocalDateTime()));
     }
 
     private static void assertOffsetDateTime(OffsetDateTime dt) {
@@ -70,7 +75,9 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
         jsonObject.setJavaType(ClassUtilities.forName("java.time.OffsetDateTime", this.getClass().getClassLoader()));
         jsonObject.put("dateTime", "2019-12-15T09:07:16.000002");
         jsonObject.put("offset", "Z");
-        OffsetDateTime actual = new OffsetDateTimeFactory().newInstance(OffsetDateTime.class, jsonObject, null);
+
+        ReaderContext context = new JsonReader(new ReadOptionsBuilder().build());
+        OffsetDateTime actual = (OffsetDateTime) new OffsetDateTimeFactory().newInstance(OffsetDateTime.class, jsonObject, context);
 
         OffsetDateTime original = OffsetDateTime.of(LocalDateTime.parse("2019-12-15T09:07:16.000002", DateTimeFormatter.ISO_LOCAL_DATE_TIME), ZoneOffset.of("Z"));
         assertThat(actual).isEqualTo(original);
@@ -78,7 +85,7 @@ class OffsetDateTimeFactoryTests extends HandWrittenDateFactoryTests<OffsetDateT
 
     @Override
     protected JsonReader.ClassFactory createFactory() {
-        return new OffsetDateTimeFactory(DateTimeFormatter.ISO_OFFSET_DATE_TIME, ZoneId.systemDefault());
+        return new OffsetDateTimeFactory();
     }
 
     @Override
