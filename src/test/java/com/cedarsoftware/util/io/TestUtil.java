@@ -350,7 +350,7 @@ public class TestUtil
     private static long totalReads;
     private static long totalWrites;
     @Getter
-    private static final boolean debug = true;
+    private static final boolean debug = false;
 
     /**
      * Ensure that the passed in source contains all the Strings passed in the 'contains' parameter AND
