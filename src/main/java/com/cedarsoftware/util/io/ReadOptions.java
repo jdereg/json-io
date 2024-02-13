@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.convert.ConverterOptions;
-import com.cedarsoftware.util.reflect.Injector;
-
 import java.lang.reflect.Field;
 import java.util.Map;
+
+import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.reflect.Injector;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -38,7 +38,7 @@ import java.util.Map;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public interface ReadOptions extends ConverterOptions {
+public interface ReadOptions {
 
     enum ReturnType {
         JSON_OBJECTS,
@@ -166,4 +166,6 @@ public interface ReadOptions extends ConverterOptions {
      * deep list of fields for a given class.
      */
     Map<String, Field> getDeepDeclaredFields(final Class<?> c);
+
+    ConverterOptions getConverterOptions();
 }

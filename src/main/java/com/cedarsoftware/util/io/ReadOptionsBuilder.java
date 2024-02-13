@@ -1,24 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.convert.CommonValues;
-import com.cedarsoftware.util.io.factory.EnumClassFactory;
-import com.cedarsoftware.util.io.factory.ThrowableFactory;
-import com.cedarsoftware.util.reflect.Injector;
-import com.cedarsoftware.util.reflect.InjectorFactory;
-import com.cedarsoftware.util.reflect.ReflectionUtils;
-import com.cedarsoftware.util.reflect.factories.MethodInjectorFactory;
-import com.cedarsoftware.util.reflect.filters.FieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
-import lombok.Getter;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +20,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.convert.CommonValues;
+import com.cedarsoftware.util.convert.Convert;
+import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.io.factory.EnumClassFactory;
+import com.cedarsoftware.util.io.factory.ThrowableFactory;
+import com.cedarsoftware.util.reflect.Injector;
+import com.cedarsoftware.util.reflect.InjectorFactory;
+import com.cedarsoftware.util.reflect.ReflectionUtils;
+import com.cedarsoftware.util.reflect.factories.MethodInjectorFactory;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
+import lombok.AccessLevel;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.io.MetaUtils.loadMapDefinition;
 
@@ -92,15 +96,6 @@ public class ReadOptionsBuilder {
         this.options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
         this.options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         this.options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
-
-
-        //  converter options
-        this.options.trueChar = CommonValues.CHARACTER_ONE;
-        this.options.falseChar = CommonValues.CHARACTER_ZERO;
-        this.options.zoneId = ZoneId.systemDefault();
-        this.options.locale = Locale.getDefault();
-        this.options.charset = StandardCharsets.UTF_8;
-        this.options.customOptions = new ConcurrentHashMap<>();
     }
 
     /**
@@ -177,6 +172,8 @@ public class ReadOptionsBuilder {
         this.options.customReaderClasses = Collections.unmodifiableMap(this.options.customReaderClasses);
         this.options.classFactoryMap = Collections.unmodifiableMap(this.options.classFactoryMap);
         this.options.nonRefClasses = Collections.unmodifiableSet(this.options.nonRefClasses);
+        this.options.converterOptions.converterOverrides = Collections.unmodifiableMap(this.options.converterOptions.converterOverrides);
+        this.options.converterOptions.customOptions = Collections.unmodifiableMap(this.options.converterOptions.customOptions);
 
         return this.options;
     }
@@ -201,6 +198,20 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder replaceNotCustomReaderClasses(Collection<Class<?>> notCustomClasses) {
         this.options.notCustomReadClasses.clear();
         this.options.notCustomReadClasses.addAll(notCustomClasses);
+        return this;
+    }
+
+    /**
+     * @param source             source class.
+     * @param target             target class.
+     * @param conversionFunction functional interface to run Conversion.
+     * @return ReadOptionsBuilder for chained access.
+     */
+
+    public ReadOptionsBuilder addConverterOverride(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
+        source = ClassUtilities.toPrimitiveWrapperClass(source);
+        target = ClassUtilities.toPrimitiveWrapperClass(target);
+        this.options.converterOptions.converterOverrides.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
         return this;
     }
 
@@ -277,7 +288,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder classLoader(ClassLoader classLoader) {
-        this.options.classLoader = classLoader;
+        Convention.throwIfNull(classLoader, "classloader cannot be null");
+        this.options.converterOptions.classloader = classLoader;
         return this;
     }
 
@@ -372,7 +384,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setLocale(Locale locale) {
-        this.options.locale = locale;
+        this.options.converterOptions.locale = locale;
         return this;
     }
 
@@ -381,7 +393,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setCharset(Charset charset) {
-        this.options.charset = charset;
+        this.options.converterOptions.charset = charset;
         return this;
     }
 
@@ -390,7 +402,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setZoneId(ZoneId zoneId) {
-        this.options.zoneId = zoneId;
+        this.options.converterOptions.zoneId = zoneId;
         return this;
     }
 
@@ -399,7 +411,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setTrueCharacter(Character ch) {
-        this.options.trueChar = ch;
+        this.options.converterOptions.trueChar = ch;
         return this;
     }
 
@@ -408,7 +420,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setFalseCharacter(Character ch) {
-        this.options.falseChar = ch;
+        this.options.converterOptions.falseChar = ch;
         return this;
     }
 
@@ -560,14 +572,45 @@ public class ReadOptionsBuilder {
         return coerced;
     }
 
+    public static class DefaultConverterOptions implements ConverterOptions {
+
+        @Getter(AccessLevel.PUBLIC)
+        private ZoneId zoneId = ZoneId.systemDefault();
+
+        @Getter(AccessLevel.PUBLIC)
+        private Locale locale = Locale.getDefault();
+
+        @Getter(AccessLevel.PUBLIC)
+        private Charset charset = StandardCharsets.UTF_8;
+
+        @Getter(AccessLevel.PUBLIC)
+        private ClassLoader classloader = DefaultConverterOptions.class.getClassLoader();
+
+        @Getter(AccessLevel.PUBLIC)
+        private Character trueChar = CommonValues.CHARACTER_ONE;
+
+        @Getter(AccessLevel.PUBLIC)
+        private Character falseChar = CommonValues.CHARACTER_ZERO;
+
+        private Map<String, Object> customOptions = new ConcurrentHashMap<>();
+
+        @Getter
+        private Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+
+        public <T> T getCustomOption(String name) {
+            return (T) customOptions.get(name);
+        }
+    }
+
     public static class DefaultReadOptions implements ReadOptions {
 
-        private ClassLoader classLoader = DefaultReadOptions.class.getClassLoader();
         private Class<?> unknownTypeClass = null;
         private boolean failOnUnknownType = false;
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
+
+        private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
 
         /**
          * @return ReconstructionType which is how you will receive the parsed JSON objects.  This will be either
@@ -597,27 +640,10 @@ public class ReadOptionsBuilder {
 
         private List<InjectorFactory> injectorFactories;
 
-        @Getter
-        private ZoneId zoneId = ZoneId.systemDefault();
-
-        @Getter
-        private Locale locale = Locale.getDefault();
-
-        @Getter
-        private Charset charset = StandardCharsets.UTF_8;
-
-        @Getter
-        private Character trueChar = CommonValues.CHARACTER_ONE;
-
-        @Getter
-        private Character falseChar = CommonValues.CHARACTER_ZERO;
-
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
         private Map<Class<?>, Map<String, String>> nonStandardMappings;
-
-        private Map<Class<?>, Map<String, String>> customOptions = new ConcurrentHashMap<>();
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -638,7 +664,7 @@ public class ReadOptionsBuilder {
          * @return ClassLoader to be used when reading JSON to resolve String named classes.
          */
         public ClassLoader getClassLoader() {
-            return classLoader;
+            return this.converterOptions.getClassLoader();
         }
 
         /**
@@ -873,8 +899,8 @@ public class ReadOptionsBuilder {
         }
 
         @Override
-        public Object getCustomOption(String name) {
-            return this.customOptions.get(name);
+        public ConverterOptions getConverterOptions() {
+            return this.converterOptions;
         }
 
         /**

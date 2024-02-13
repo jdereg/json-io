@@ -745,11 +745,20 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        if (jsonObj.getTarget() == null && jsonObj.hasValue() && jsonObj.getValue() != null) {
-            if (this.getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
+        // we could maybe just do the map conversion (JsonObject) if they were all defined out.
+        if (jsonObj.getTarget() == null) {
+            if (jsonObj.hasValue() && jsonObj.getValue() != null) {
+                if (this.getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
-                Object target = this.getConverter().convert(jsonObj.getValue(), c);
+                    Object target = this.getConverter().convert(jsonObj.getValue(), c);
 
+                    return jsonObj.setFinishedTarget(target, true);
+                }
+                //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
+                //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
+                //  TODO: going to the converter and I'm still thinking of a way to handle that.
+            } else if (MetaUtils.isLogicalPrimitive(c) && this.getConverter().isConversionSupportedFor(Map.class, c)) {
+                Object target = this.getConverter().convert(jsonObj, c);
                 return jsonObj.setFinishedTarget(target, true);
             }
         }
