@@ -1,15 +1,15 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.Writer;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Deque;
-import java.util.LinkedHashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import com.cedarsoftware.util.DateUtilities;
+import com.cedarsoftware.util.convert.Converter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -30,24 +30,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class CustomClassHandlerTest
+class CustomClassHandlerTest
 {
     @Test
-    public void testCustomClassReaderWriter()
+    void testCustomClassReaderWriter()
     {
         WeirdDate now = new WeirdDate(System.currentTimeMillis());
         String json = TestUtil.toJson(now, new WriteOptionsBuilder()
-                .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter()).build());
+                .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter())
+                .build());
+
         TestUtil.printLine("json=" + json);
 
-        Map<Class<WeirdDate>, WeirdDateReader> map3 = new LinkedHashMap<>(1);
-        map3.put(WeirdDate.class, new WeirdDateReader());
-        WeirdDate date = TestUtil.toObjects(json, new ReadOptionsBuilder().replaceCustomReaderClasses(map3).build(), null);
+        WeirdDate date = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .addConverterOverride(Map.class, WeirdDate.class, WeirdDate::fromMapToWeirdDate)
+                .addConverterOverride(String.class, WeirdDate.class, WeirdDate::fromStringToWeirdDate)
+                .build(), null);
         assertEquals(now, date);
 
         json = TestUtil.toJson(now, new WriteOptionsBuilder()
                 .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter())
-                .setNotCustomWrittenClasses(MetaUtils.listOf(WeirdDate.class)).build());
+                .setNotCustomWrittenClasses(MetaUtils.listOf(WeirdDate.class))
+                .build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);
     }
@@ -63,16 +67,34 @@ public class CustomClassHandlerTest
         {
             super(millis);
         }
+
+        public static WeirdDate fromMapToWeirdDate(Object from, Converter converter) {
+            Map<?, ?> map = (Map<?, ?>) from;
+
+            if (map.containsKey("stuff")) {
+                Date date = converter.convert(map.get("stuff"), Date.class);
+                return new WeirdDate(date);
+            }
+
+            throw new IllegalArgumentException("stuff wasn't defined");
+        }
+
+        public static WeirdDate fromStringToWeirdDate(Object from, Converter converter) {
+            String s = (String) from;
+
+            return new WeirdDate(DateUtilities.parseDate(s));
+        }
     }
 
-    public static class WeirdDateWriter implements JsonWriter.JsonClassWriter
+    public static class WeirdDateWriter extends Writers.PrimitiveTypeWriter
     {
+
         public void write(Object o, boolean showType, Writer out) throws IOException
         {
-            String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
-            out.write("\"stuff\":\"");
-            out.write(value);
-            out.write("\"");
+            if (showType) {
+                out.write("\"stuff\":");
+            }
+            writePrimitiveForm(o, out);
         }
 
         public boolean hasPrimitiveForm()
@@ -86,43 +108,6 @@ public class CustomClassHandlerTest
             out.write("\"");
             out.write(value);
             out.write("\"");
-        }
-    }
-
-    public static class WeirdDateReader implements JsonReader.JsonClassReader
-    {
-
-        @Override
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
-        {
-            if (o instanceof String)
-            {
-                try
-                {
-                    return new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) o));
-                }
-                catch (ParseException e)
-                {
-                    throw new JsonIoException("Date format incorrect");
-                }
-            }
-
-
-            JsonObject jObj = (JsonObject) o;
-            if (jObj.containsKey("stuff"))
-            {
-                try
-                {
-                    jObj.setTarget(new WeirdDate(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").parse((String) jObj.get("stuff"))));
-                    return jObj.getTarget();
-                }
-                catch (ParseException e)
-                {
-                    throw new JsonIoException("Date format incorrect");
-                }
-            }
-
-            throw new JsonIoException("Date missing 'stuff' field");
         }
     }
 }

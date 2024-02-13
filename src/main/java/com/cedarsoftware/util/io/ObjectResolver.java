@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.reflect.Injector;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -17,6 +13,10 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.reflect.Injector;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -744,7 +744,26 @@ public class ObjectResolver extends Resolver
             // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
-        
+
+        // we could maybe just do the map conversion (JsonObject) if they were all defined out.
+        if (jsonObj.getTarget() == null) {
+            if (jsonObj.hasValue() && jsonObj.getValue() != null) {
+                if (this.getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
+//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
+                    Object target = this.getConverter().convert(jsonObj.getValue(), c);
+
+                    return jsonObj.setFinishedTarget(target, true);
+                }
+                //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
+                //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
+                //  TODO: going to the converter and I'm still thinking of a way to handle that.
+            } else if (MetaUtils.isLogicalPrimitive(c) && this.getConverter().isConversionSupportedFor(Map.class, c)) {
+                Object target = this.getConverter().convert(jsonObj, c);
+                return jsonObj.setFinishedTarget(target, true);
+            }
+        }
+
+
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);

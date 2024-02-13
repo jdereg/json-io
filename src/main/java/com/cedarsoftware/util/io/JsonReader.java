@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.FastByteArrayInputStream;
-import com.cedarsoftware.util.FastReader;
-import com.cedarsoftware.util.convert.Converter;
-import lombok.Getter;
-
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,6 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.FastByteArrayInputStream;
+import com.cedarsoftware.util.FastReader;
+import com.cedarsoftware.util.convert.Converter;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 
@@ -217,7 +217,8 @@ public class JsonReader implements Closeable, ReaderContext
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? new ReadOptionsBuilder().returnAsJavaObjects().build() : readOptions;
-        this.converter = new Converter(this.readOptions);
+        this.converter = new Converter(this.readOptions.getConverterOptions());
+
         this.input = getReader(inputStream);
 
         this.resolver = this.readOptions.isReturningJsonObjects() ?

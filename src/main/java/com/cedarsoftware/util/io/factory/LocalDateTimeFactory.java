@@ -1,14 +1,6 @@
 package com.cedarsoftware.util.io.factory;
 
-import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.ReaderContext;
 
 /**
  * Abstract class to help create temporal items.
@@ -33,42 +25,10 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class LocalDateTimeFactory extends AbstractTemporalFactory<LocalDateTime> {
-
-    public LocalDateTimeFactory(DateTimeFormatter dateFormatter, ZoneId zoneId) {
-        super(dateFormatter, zoneId);
-    }
-
-    public LocalDateTimeFactory() {
-        super(DateTimeFormatter.ISO_LOCAL_DATE_TIME, ZoneId.systemDefault());
-    }
+public class LocalDateTimeFactory extends ConvertableFactory {
 
     @Override
-    protected LocalDateTime fromString(String s)
-    {
-        try {
-            return LocalDateTime.parse(s, dateTimeFormatter);
-        } catch (Exception e) {
-            return convertToZonedDateTime(s).toLocalDateTime();
-        }
-    }
-
-    @Override
-    protected LocalDateTime fromNumber(Number l) {
-        return LocalDateTime.from(Instant.ofEpochMilli(l.longValue()));
-    }
-
-    @Override
-    protected LocalDateTime fromJsonObject(JsonObject job, ReaderContext context) {
-        String date = (String) job.get("date");
-        String time = (String) job.get("time");
-
-        if (date == null || time == null) {
-            throw new IllegalArgumentException("'date' and 'time' or 'value' are required fields when parsing object using LocalDateTimeFactory");
-        }
-
-        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE);
-        LocalTime localTime = LocalTime.parse(time, DateTimeFormatter.ISO_LOCAL_TIME);
-        return LocalDateTime.of(localDate, localTime);
+    public Class<?> getType() {
+        return LocalDateTime.class;
     }
 }

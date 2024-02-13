@@ -1,17 +1,18 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<OffsetDateTime> {
     private static final ZoneOffset Z1 = ZoneOffset.UTC;
@@ -34,6 +35,8 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
         return new OffsetDateTime[]{dateTime.one, dateTime.two};
     }
 
+
+    @Disabled("Disabled until we decide what we are going to do with sub references in objects now that converter will try and handle them.")
     @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");

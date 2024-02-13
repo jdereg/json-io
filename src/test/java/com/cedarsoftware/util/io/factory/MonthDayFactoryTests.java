@@ -15,7 +15,7 @@ public class MonthDayFactoryTests extends HandWrittenDateFactoryTests<MonthDay> 
 
     @Override
     protected JsonReader.ClassFactory createFactory(ZoneId zoneId) {
-        return new MonthDayFactory(MonthDayFactory.FORMATTER, zoneId);
+        return new MonthDayFactory();
     }
 
     @Override
