@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.Map;
+
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
@@ -28,23 +30,30 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
             // TODO: surprised we are seeing any entries come through here since we check these in the resolver
             // TODO:  turns out this was factory tests and invalid conversions.
             // TODO:  probably need to leave for invalid conversios (or check for invalid and throw our own exception).
-            return context.getConverter().convert(jObj.getValue(), getType());
+            Object converted = context.getConverter().convert(jObj.getValue(), getType());
+            return jObj.setFinishedTarget(converted, true);
         }
 
-        Class<?> type;
-        value = jObj;
-        do {
-            // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-            type = jObj.getJavaType();
-            if (!jObj.hasValue()) {
-                break;
-            }
-            value = jObj.getValue();
-        } while (value instanceof JsonObject);
+        resolveReferences(context, jObj);
+
+        Class<?> type = jObj.getJavaType();
+
         if (type == null) {
             type = getType();
         }
-        return context.getConverter().convert(value, type);
+        Object converted = context.getConverter().convert(jObj, type);
+        return jObj.setFinishedTarget(converted, true);
+    }
+
+    private void resolveReferences(ReaderContext context, JsonObject jObj) {
+        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
+            if (entry.getValue() instanceof JsonObject) {
+                JsonObject child = (JsonObject) entry.getValue();
+                if (child.isReference()) {
+                    entry.setValue(context.getReferences().get(child));
+                }
+            }
+        }
     }
 
     public abstract Class<?> getType();

@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import lombok.AllArgsConstructor;
@@ -36,7 +35,6 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
     }
 
 
-    @Disabled("Disabled until we decide what we are going to do with sub references in objects now that converter will try and handle them.")
     @Test
     void testOldFormat_nested_withRef() {
         String json = loadJsonForTest("old-format-with-ref.json");
