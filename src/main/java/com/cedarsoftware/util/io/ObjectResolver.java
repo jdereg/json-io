@@ -758,8 +758,9 @@ public class ObjectResolver extends Resolver
                 //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
                 //  TODO: going to the converter and I'm still thinking of a way to handle that.
             } else if (MetaUtils.isLogicalPrimitive(c) && this.getConverter().isConversionSupportedFor(Map.class, c)) {
-                Object target = this.getConverter().convert(jsonObj, c);
-                return jsonObj.setFinishedTarget(target, true);
+                Object source = resolveRefs(jsonObj);
+                Object value = this.getConverter().convert(source, c);
+                return jsonObj.setFinishedTarget(value, true);
             }
         }
 

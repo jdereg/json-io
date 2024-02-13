@@ -384,19 +384,26 @@ public class Writers
 
     public static class JsonStringWriter extends PrimitiveUtf8StringWriter {}
 
-    public static class LocaleWriter implements JsonWriter.JsonClassWriter
+    public static class LocaleWriter extends PrimitiveValueWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
-        {
-            Locale locale = (Locale) obj;
+//        public void write(Object obj, boolean showType, Writer output) throws IOException
+//        {
+//            Locale locale = (Locale) obj;
+//
+//            output.write("\"language\":\"");
+//            output.write(locale.getLanguage());
+//            output.write("\",\"country\":\"");
+//            output.write(locale.getCountry());
+//            output.write("\",\"variant\":\"");
+//            output.write(locale.getVariant());
+//            output.write('"');
+//        }
 
-            output.write("\"language\":\"");
-            output.write(locale.getLanguage());
-            output.write("\",\"country\":\"");
-            output.write(locale.getCountry());
-            output.write("\",\"variant\":\"");
-            output.write(locale.getVariant());
-            output.write('"');
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
+        {
+            Locale locale = (Locale) o;
+            writeBasicString(output, locale.toLanguageTag());
         }
     }
 

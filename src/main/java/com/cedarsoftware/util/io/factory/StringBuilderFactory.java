@@ -1,10 +1,5 @@
 package com.cedarsoftware.util.io.factory;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.ReaderContext;
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -22,15 +17,9 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class StringBuilderFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        if (jObj.hasValue()) {
-            return new StringBuilder((String) jObj.getValue());
-        }
-        throw new JsonIoException("StringBuilder missing 'value' field");
-    }
-
-    public boolean isObjectFinal() {
-        return true;
+public class StringBuilderFactory extends ConvertableFactory {
+    @Override
+    public Class<?> getType() {
+        return StringBuilder.class;
     }
 }

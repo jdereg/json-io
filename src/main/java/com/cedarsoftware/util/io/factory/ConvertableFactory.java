@@ -25,27 +25,30 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object value;
         if (jObj.hasValue()) {
+            // TODO: surprised we are seeing any entries come through here since we check these in the resolver
+            // TODO:  turns out this was factory tests and invalid conversions.
+            // TODO:  probably need to leave for invalid conversios (or check for invalid and throw our own exception).
             return context.getConverter().convert(jObj.getValue(), getType());
-        } else {
-            Class<?> type;
-            value = jObj;
-            do {
-                // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-                type = jObj.getJavaType();
-                if (!jObj.hasValue()) {
-                    break;
-                }
-                value = jObj.getValue();
-            } while (value instanceof JsonObject);
-            if (type == null) {
-                type = getType();
-            }
-            return context.getConverter().convert(value, type);
         }
+
+        Class<?> type;
+        value = jObj;
+        do {
+            // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
+            type = jObj.getJavaType();
+            if (!jObj.hasValue()) {
+                break;
+            }
+            value = jObj.getValue();
+        } while (value instanceof JsonObject);
+        if (type == null) {
+            type = getType();
+        }
+        return context.getConverter().convert(value, type);
     }
 
     public abstract Class<?> getType();
-    
+
     /**
      * @return true.  Strings are always immutable, final.
      */

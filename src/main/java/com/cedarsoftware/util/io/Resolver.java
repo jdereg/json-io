@@ -342,11 +342,11 @@ public abstract class Resolver implements ReaderContext
             //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
             //  TODO: I'd like to have all types that have mpa conversion supported here, but we have an issue with refs
             //  TODO: going to the converter and I'm still thinking of a way to handle that.
-        } else if (MetaUtils.isLogicalPrimitive(targetType) && converter.isConversionSupportedFor(Map.class, targetType)) {
-            Object value = this.getConverter().convert(jsonObj, targetType);
+        } else if (MetaUtils.isLogicalPrimitive(targetType) && this.getConverter().isConversionSupportedFor(Map.class, targetType)) {
+            Object source = resolveRefs(jsonObj);
+            Object value = this.getConverter().convert(source, targetType);
             return jsonObj.setFinishedTarget(value, true);
         }
-
 
         // ClassFactory defined
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
@@ -599,5 +599,13 @@ public abstract class Resolver implements ReaderContext
                 j++;
             }
         }
+    }
+
+    protected JsonObject resolveRefs(JsonObject jsonObject) {
+
+        JsonObject object = references.get(jsonObject);
+
+
+        return object;
     }
 }
