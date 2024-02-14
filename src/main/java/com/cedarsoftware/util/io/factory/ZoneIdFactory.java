@@ -2,10 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import java.time.ZoneId;
 
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.ReaderContext;
-
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  * <br>
@@ -23,29 +19,10 @@ import com.cedarsoftware.util.io.ReaderContext;
  * See the License for the specific language governing permissions and
  * limitations under the License.*
  */
-public class ZoneIdFactory implements JsonReader.ClassFactory {
-    @Override
-    public ZoneId newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value = jObj.getValue();
-
-        if (value instanceof String) {
-            return fromString((String) value);
-        }
-
-        return fromJsonObject(jObj);
-    }
-
-    protected ZoneId fromString(String id) {
-        return ZoneId.of(id);
-    }
-
-    protected ZoneId fromJsonObject(JsonObject job) {
-        String value = (String) job.get("id");
-        return value == null ? null : fromString(value);
-    }
+public class ZoneIdFactory extends ConvertableFactory {
 
     @Override
-    public boolean isObjectFinal() {
-        return true;
+    public Class<?> getType() {
+        return ZoneId.class;
     }
 }

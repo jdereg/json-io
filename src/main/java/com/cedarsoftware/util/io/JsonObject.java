@@ -1,13 +1,16 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.convert.Converter;
-
 import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.convert.Converter;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -37,6 +40,33 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private boolean isMap = false;
     private Integer hash = null;
 
+    private static final Set<String> logicalPrimitives = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "boolean",
+            "java.lang.Boolean",
+            "double",
+            "java.lang.Double",
+            "long",
+            "java.lang.Long",
+            "byte",
+            "java.lang.Byte",
+            "char",
+            "java.lang.Character",
+            "float",
+            "java.lang.Float",
+            "int",
+            "java.lang.Integer",
+            "short",
+            "java.lang.Short",
+            "date",
+            "java.util.Date",
+            "BigInt",
+            "java.math.BigInteger",
+            "BigDec",
+            "java.math.BigDecimal",
+            "class",
+            "java.lang.Class"
+    )));
+
     public String toString() {
         String jType = javaType == null ? "not set" : javaType.getName();
         String targetInfo = getTarget() == null ? "null" : jType;
@@ -54,45 +84,17 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         if (getJavaType() == null) {
             return false;
         }
-        switch (getJavaTypeName()) {
-            case "boolean":
-            case "java.lang.Boolean":
-            case "double":
-            case "java.lang.Double":
-            case "long":
-            case "java.lang.Long":
-            case "byte":
-            case "java.lang.Byte":
-            case "char":
-            case "java.lang.Character":
-            case "float":
-            case "java.lang.Float":
-            case "int":
-            case "java.lang.Integer":
-            case "short":
-            case "java.lang.Short":
-            case "date":
-            case "java.util.Date":
-            case "BigInt":
-            case "java.math.BigInteger":
-            case "BigDec":
-            case "java.math.BigDecimal":
-                return true;
-            case "class":
-            case "java.lang.Class":
-                return true;
-            default:
-                return false;
-        }
+
+        return logicalPrimitives.contains(getJavaTypeName());
     }
 
-    public Object getPrimitiveValue(Converter converter) {
+    public Object getPrimitiveValue(Converter converter, ClassLoader classloader) {
         final Object value = getValue();
         String type = getJavaTypeName();
         if ("class".equals(type) || "java.lang.Class".equals(type)) {
-            return ClassUtilities.forName((String) value, JsonObject.class.getClassLoader());
+            return ClassUtilities.forName((String) value, classloader);
         }
-        Class<?> clazz = ClassUtilities.forName(type, JsonObject.class.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(type, classloader);
         if (clazz == null) {
             throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
         }

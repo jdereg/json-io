@@ -144,7 +144,6 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         LocalDate ld = LocalDate.of(2023, 12, 25);
         String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
                 .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
-        System.out.println(json);
         ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("Asia/Saigon")).build();
         LocalDate ld2 = TestUtil.toObjects(json, options, null);
         assert ld.equals(ld2);
@@ -155,7 +154,6 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
         LocalDate ld = LocalDate.of(2023, 12, 25);
         String json = TestUtil.toJson(ld, new WriteOptionsBuilder()
                 .addCustomWrittenClass(LocalDate.class, new Writers.LocalDateAsLong()).build());
-        System.out.println(json);
         ReadOptions options = new ReadOptionsBuilder().setZoneId(ZoneId.of("America/New_York")).build();
         LocalDate ld2 = TestUtil.toObjects(json, options, null);
         assert ld.equals(ld2);

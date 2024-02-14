@@ -2,11 +2,6 @@ package com.cedarsoftware.util.io.factory;
 
 import java.util.Locale;
 
-import com.cedarsoftware.util.io.JsonIoException;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.ReaderContext;
-
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -24,28 +19,9 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class LocaleFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object language = jObj.get("language");
-        if (language == null) {
-            throw new JsonIoException("java.util.Locale must specify 'language' field");
-        }
-        Object country = jObj.get("country");
-        Object variant = jObj.get("variant");
-        if (country == null) {
-            return new Locale((String) language);
-        }
-        if (variant == null) {
-            return new Locale((String) language, (String) country);
-        }
-
-        return new Locale((String) language, (String) country, (String) variant);
-    }
-
-    /**
-     * @return true.  Strings are always immutable, final.
-     */
-    public boolean isObjectFinal() {
-        return true;
+public class LocaleFactory extends ConvertableFactory {
+    @Override
+    public Class<?> getType() {
+        return Locale.class;
     }
 }

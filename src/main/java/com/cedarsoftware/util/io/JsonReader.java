@@ -128,20 +128,18 @@ public class JsonReader implements Closeable, ReaderContext
             Convention.throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-                if (!excludedFields.contains(entry.getKey().toString())) {
-                    Object o = entry.getValue();
 
-                    if (o instanceof JsonObject) {
-                        JsonObject sub = (JsonObject) o;
-                        Object value = context.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
 
-                        if (value != null) {
-                            if (sub.getJavaType() != null) {
-                                arguments.add(value);
-                            }
-                        }
-                    } else if (o != null) {
-                        arguments.add(o);
+                if (excludedFields.contains(entry.getKey().toString()) || entry.getValue() == null) {
+                    continue;
+                }
+
+                if (entry.getValue() instanceof JsonObject) {
+                    JsonObject sub = (JsonObject) entry.getValue();
+                    Object value = context.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
+
+                    if (value != null && sub.getJavaType() != null) {
+                        arguments.add(value);
                     }
                 }
             }

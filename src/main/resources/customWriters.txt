@@ -26,6 +26,7 @@ java.math.BigDecimal = com.cedarsoftware.util.io.Writers$BigDecimalWriter
 java.math.BigInteger = com.cedarsoftware.util.io.Writers$BigIntegerWriter
 
 java.net.URL = com.cedarsoftware.util.io.Writers$PrimitiveUtf8StringWriter
+java.net.URI = com.cedarsoftware.util.io.Writers$PrimitiveUtf8StringWriter
 
 java.sql.Date = com.cedarsoftware.util.io.Writers$DateAsLongWriter
 java.sql.Timestamp = com.cedarsoftware.util.io.Writers$TimestampWriter
