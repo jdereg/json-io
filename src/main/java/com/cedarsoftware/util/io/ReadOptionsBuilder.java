@@ -26,6 +26,7 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.io.factory.ArrayFactory;
 import com.cedarsoftware.util.io.factory.ConvertableFactory;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
@@ -503,6 +504,8 @@ public class ReadOptionsBuilder {
             try {
                 if (factoryClassName.equalsIgnoreCase("Convertable")) {
                     factories.put(clazz, new ConvertableFactory<>(clazz));
+                } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
+                    factories.put(clazz, new ArrayFactory<>(clazz));
                 } else {
                     Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
                     if (factoryClass == null) {

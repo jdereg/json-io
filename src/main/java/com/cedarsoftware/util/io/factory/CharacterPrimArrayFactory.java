@@ -21,8 +21,13 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class CharacterPrimArrayFactory extends ArrayFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
+
+    public CharacterPrimArrayFactory() {
+        super(char[].class);
+    }
+
+    public char[] newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object[] items = jObj.getArray();
         Object value;
         
@@ -37,10 +42,6 @@ public class CharacterPrimArrayFactory extends ArrayFactory {
             throw new JsonIoException("char[] should only have one String in the [], found " + items.length + ", line " + jObj.getLine() + ", col " + jObj.getCol());
         }
         jObj.setTarget(value);
-        return jObj.getTarget();
-    }
-
-    public Class<?> getType() {
-        return char[].class;
+        return (char[]) jObj.getTarget();
     }
 }
