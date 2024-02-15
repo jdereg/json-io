@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.CalendarFactory;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -17,6 +11,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.cedarsoftware.util.io.factory.ConvertableFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -279,11 +281,10 @@ public class CalendarTest
 
     private ReadOptions createOldOptionsFormat(String timeZone) {
         TimeZone zone = TimeZone.getTimeZone(timeZone);
-        CalendarFactory factory = new CalendarFactory();
 
         return new ReadOptionsBuilder()
-                .addClassFactory(Calendar.class, factory)
-                .addClassFactory(GregorianCalendar.class, factory)
+                .addClassFactory(Calendar.class, new ConvertableFactory<>(Calendar.class))
+                .addClassFactory(GregorianCalendar.class, new ConvertableFactory<>(GregorianCalendar.class))
                 .build();
     }
 

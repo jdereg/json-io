@@ -23,26 +23,33 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public abstract class ConvertableFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value;
+public class ConvertableFactory<T> implements JsonReader.ClassFactory {
+
+    private final Class<? extends T> type;
+
+    public ConvertableFactory(Class<? extends T> c) {
+        this.type = c;
+    }
+
+    @Override
+    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         if (jObj.hasValue()) {
             // TODO: surprised we are seeing any entries come through here since we check these in the resolver
             // TODO:  turns out this was factory tests and invalid conversions.
             // TODO:  probably need to leave for invalid conversios (or check for invalid and throw our own exception).
             Object converted = context.getConverter().convert(jObj.getValue(), getType());
-            return jObj.setFinishedTarget(converted, true);
+            return (T) jObj.setFinishedTarget(converted, true);
         }
 
         resolveReferences(context, jObj);
 
-        Class<?> type = jObj.getJavaType();
+        Class<?> javaType = jObj.getJavaType();
 
-        if (type == null) {
-            type = getType();
+        if (javaType == null) {
+            javaType = getType();
         }
-        Object converted = context.getConverter().convert(jObj, type);
-        return jObj.setFinishedTarget(converted, true);
+        Object converted = context.getConverter().convert(jObj, javaType);
+        return (T) jObj.setFinishedTarget(converted, true);
     }
 
     private void resolveReferences(ReaderContext context, JsonObject jObj) {
@@ -56,11 +63,14 @@ public abstract class ConvertableFactory implements JsonReader.ClassFactory {
         }
     }
 
-    public abstract Class<?> getType();
+    public Class<? extends T> getType() {
+        return type;
+    }
 
     /**
      * @return true.  Strings are always immutable, final.
      */
+    @Override
     public boolean isObjectFinal() {
         return true;
     }
