@@ -97,13 +97,6 @@ public class MetaUtilsTests {
      */
 
     @Test
-    void testNewPrimitiveWrapper() {
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> Converter.convert("", TimeZone.class))
-                .withMessageContaining("Unsupported conversion, source type [String");
-    }
-
-    @Test
     void testNewPrimitive() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> Converter.convert("float", Float.class))

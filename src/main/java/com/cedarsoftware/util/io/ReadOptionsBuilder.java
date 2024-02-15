@@ -26,6 +26,8 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.io.factory.ArrayFactory;
+import com.cedarsoftware.util.io.factory.ConvertableFactory;
 import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.Injector;
@@ -499,13 +501,19 @@ public class ReadOptionsBuilder {
                 System.out.println("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
                 continue;
             }
-            Class<JsonReader.ClassFactory> factoryClass = (Class<JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
-            if (factoryClass == null) {
-                System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
-                continue;
-            }
             try {
-                factories.put(clazz, ReflectionUtils.newInstance(factoryClass));
+                if (factoryClassName.equalsIgnoreCase("Convertable")) {
+                    factories.put(clazz, new ConvertableFactory<>(clazz));
+                } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
+                    factories.put(clazz, new ArrayFactory<>(clazz));
+                } else {
+                    Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
+                    if (factoryClass == null) {
+                        System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
+                        continue;
+                    }
+                    factories.put(clazz, ReflectionUtils.newInstance(factoryClass));
+                }
             } catch (Exception e) {
                 throw new JsonIoException("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
             }

@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.lang.reflect.Array;
+
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
-
-import java.lang.reflect.Array;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,8 +23,15 @@ import java.lang.reflect.Array;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public abstract class ArrayFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+public class ArrayFactory<T> implements JsonReader.ClassFactory {
+
+    private final Class<T> type;
+
+    public ArrayFactory(Class<T> c) {
+        this.type = c;
+    }
+
+    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         Object[] items = jObj.getArray();
 
         if (items == null) {
@@ -63,10 +70,12 @@ public abstract class ArrayFactory implements JsonReader.ClassFactory {
 
             jObj.setTarget(array);
         }
-        return jObj.getTarget();
+        return (T) jObj.getTarget();
     }
 
-    public abstract Class<?> getType();
+    public Class<?> getType() {
+        return type;
+    }
 
     /**
      * @return true.  Strings are always immutable, final.

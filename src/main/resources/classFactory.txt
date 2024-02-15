@@ -1,77 +1,104 @@
 #
 # JsonReader.ClassFactory mappings
 #
+char = Convertable
+boolean = Convertable
+byte = Convertable
+short = Convertable
+int = Convertable
+long = Convertable
+float = Convertable
+double = Convertable
+
+java.lang.Character = Convertable
+java.lang.Boolean = Convertable
+java.lang.Byte = Convertable
+java.lang.Short = Convertable
+java.lang.Integer = Convertable
+java.lang.Long = Convertable
+java.lang.Float = Convertable
+java.lang.Double = Convertable
+
 [C = com.cedarsoftware.util.io.factory.CharacterPrimArrayFactory
-[Z = com.cedarsoftware.util.io.factory.BooleanPrimArrayFactory
-[B = com.cedarsoftware.util.io.factory.BytePrimArrayFactory
-[S = com.cedarsoftware.util.io.factory.ShortPrimArrayFactory
-[I = com.cedarsoftware.util.io.factory.IntegerPrimArrayFactory
-[J = com.cedarsoftware.util.io.factory.LongPrimArrayFactory
-[F = com.cedarsoftware.util.io.factory.FloatPrimArrayFactory
-[D = com.cedarsoftware.util.io.factory.DoublePrimArrayFactory
+[Z = ArrayFactory
+[B = ArrayFactory
+[S = ArrayFactory
+[I = ArrayFactory
+[J = ArrayFactory
+[F = ArrayFactory
+[D = ArrayFactory
 
-[Ljava.lang.Character; = com.cedarsoftware.util.io.factory.CharacterArrayFactory
-[Ljava.lang.Boolean; = com.cedarsoftware.util.io.factory.BooleanArrayFactory
-[Ljava.lang.Byte; = com.cedarsoftware.util.io.factory.ByteArrayFactory
-[Ljava.lang.Short; = com.cedarsoftware.util.io.factory.ShortArrayFactory
-[Ljava.lang.Integer; = com.cedarsoftware.util.io.factory.IntegerArrayFactory
-[Ljava.lang.Long; = com.cedarsoftware.util.io.factory.LongArrayFactory
-[Ljava.lang.Float; = com.cedarsoftware.util.io.factory.FloatArrayFactory
-[Ljava.lang.Double; = com.cedarsoftware.util.io.factory.DoubleArrayFactory
+[Ljava.lang.Character; = ArrayFactory
+[Ljava.lang.Boolean; =ArrayFactory
+[Ljava.lang.Byte; = ArrayFactory
+[Ljava.lang.Short; = ArrayFactory
+[Ljava.lang.Integer; = ArrayFactory
+[Ljava.lang.Long; = ArrayFactory
+[Ljava.lang.Float; = ArrayFactory
+[Ljava.lang.Double; = ArrayFactory
 
-[Ljava.lang.Class; = com.cedarsoftware.util.io.factory.ClassArrayFactory
-[Ljava.lang.String; = com.cedarsoftware.util.io.factory.StringArrayFactory
-[Ljava.util.Calendar; = com.cedarsoftware.util.io.factory.CalendarArrayFactory
-[Ljava.util.Date; = com.cedarsoftware.util.io.factory.DateArrayFactory
-[Ljava.sql.Date; = com.cedarsoftware.util.io.factory.SqlDateArrayFactory
-[Ljava.sql.Timestamp; = com.cedarsoftware.util.io.factory.TimestampArrayFactory
-[Ljava.time.LocalDate; = com.cedarsoftware.util.io.factory.LocalDateArrayFactory
-[Ljava.math.BigDecimal; = com.cedarsoftware.util.io.factory.BigDecimalArrayFactory
-[Ljava.math.BigInteger; = com.cedarsoftware.util.io.factory.BigIntegerArrayFactory
-[Ljava.util.concurrent.atomic.AtomicBoolean; = com.cedarsoftware.util.io.factory.AtomicBooleanArrayFactory
-[Ljava.util.concurrent.atomic.AtomicInteger; = com.cedarsoftware.util.io.factory.AtomicIntegerArrayFactory
-[Ljava.util.concurrent.atomic.AtomicLong; = com.cedarsoftware.util.io.factory.AtomicLongArrayFactory
-[Ljava.time.Duration; = com.cedarsoftware.util.io.factory.DurationArrayFactory
-[Ljava.time.Instant; = com.cedarsoftware.util.io.factory.InstantArrayFactory
+[Ljava.lang.Class; = ArrayFactory
+[Ljava.lang.String; = ArrayFactory
+[Ljava.util.Calendar; =ArrayFactory
+[Ljava.util.Date; = ArrayFactory
+[Ljava.sql.Date; = ArrayFactory
+[Ljava.sql.Timestamp; = ArrayFactory
+[Ljava.time.LocalDate; = ArrayFactory
+[Ljava.math.BigDecimal; = ArrayFactory
+[Ljava.math.BigInteger; = ArrayFactory
+[Ljava.util.concurrent.atomic.AtomicBoolean; = ArrayFactory
+[Ljava.util.concurrent.atomic.AtomicInteger; = ArrayFactory
+[Ljava.util.concurrent.atomic.AtomicLong; = ArrayFactory
+[Ljava.time.Duration; = ArrayFactory
+[Ljava.time.Instant; = ArrayFactory
 
-java.lang.Class = com.cedarsoftware.util.io.factory.ClassClassFactory
-java.util.Locale = com.cedarsoftware.util.io.factory.LocaleFactory
+java.lang.Class = Convertable
+java.util.Locale = Convertable
+java.lang.String = Convertable
 java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
-java.lang.StringBuilder = com.cedarsoftware.util.io.factory.StringBuilderFactory
+java.lang.StringBuffer = Convertable
+java.lang.StringBuilder = Convertable
 
-java.math.BigDecimal = com.cedarsoftware.util.io.factory.BigDecimalFactory
+java.math.BigDecimal = Convertable
+java.math.BigInteger = Convertable
 
-java.net.URL = com.cedarsoftware.util.io.factory.URLFactory
+java.net.URL = Convertable
+java.net.URI = Convertable
 
-java.sql.Date = com.cedarsoftware.util.io.factory.SqlDateFactory
-java.sql.Timestamp = com.cedarsoftware.util.io.factory.TimestampFactory
+java.sql.Date = Convertable
+java.sql.Timestamp = Convertable
 
-java.time.Duration = com.cedarsoftware.util.io.factory.DurationFactory
-java.time.Instant = com.cedarsoftware.util.io.factory.InstantFactory
-java.time.LocalDate = com.cedarsoftware.util.io.factory.LocalDateFactory
-java.time.LocalDateTime = com.cedarsoftware.util.io.factory.LocalDateTimeFactory
-java.time.LocalTime = com.cedarsoftware.util.io.factory.LocalTimeFactory
-java.time.MonthDay = com.cedarsoftware.util.io.factory.MonthDayFactory
-java.time.OffsetDateTime = com.cedarsoftware.util.io.factory.OffsetDateTimeFactory
-java.time.OffsetTime = com.cedarsoftware.util.io.factory.OffsetTimeFactory
-java.time.Period = com.cedarsoftware.util.io.factory.PeriodFactory
-java.time.Year = com.cedarsoftware.util.io.factory.YearFactory
-java.time.YearMonth = com.cedarsoftware.util.io.factory.YearMonthFactory
-java.time.ZonedDateTime = com.cedarsoftware.util.io.factory.ZonedDateTimeFactory
-java.time.ZoneId = com.cedarsoftware.util.io.factory.ZoneIdFactory
-java.time.ZoneOffset = com.cedarsoftware.util.io.factory.ZoneOffsetFactory
-java.time.ZoneRegion = com.cedarsoftware.util.io.factory.ZoneIdFactory
 
-java.util.UUID = com.cedarsoftware.util.io.factory.UUIDFactory
-java.util.Calendar = com.cedarsoftware.util.io.factory.CalendarFactory
+java.time.Duration = Convertable
+java.time.Instant = Convertable
+java.time.LocalDate = Convertable
+java.time.LocalDateTime = Convertable
+java.time.LocalTime = Convertable
+java.time.MonthDay = Convertable
+java.time.OffsetDateTime = Convertable
+java.time.OffsetTime = Convertable
+java.time.Period = Convertable
+java.time.Year = Convertable
+java.time.YearMonth = Convertable
+java.time.ZonedDateTime = Convertable
+java.time.ZoneId = Convertable
+java.time.ZoneOffset = Convertable
+java.time.ZoneRegion = Convertable
+
+java.util.concurrent.atomic.AtomicBoolean = Convertable
+java.util.concurrent.atomic.AtomicInteger = Convertable
+java.util.concurrent.atomic.AtomicLong = Convertable
+
+java.util.UUID = Convertable
+java.util.Calendar = Convertable
 java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory
-java.util.Date = com.cedarsoftware.util.io.factory.DateFactory
-java.util.GregorianCalendar = com.cedarsoftware.util.io.factory.CalendarFactory
+java.util.Date = Convertable
+java.util.GregorianCalendar = Convertable
 java.util.List = com.cedarsoftware.util.io.factory.CollectionFactory
 java.util.Map = com.cedarsoftware.util.io.factory.MapFactory
 java.util.Set = com.cedarsoftware.util.io.factory.CollectionFactory
 java.util.SortedMap = com.cedarsoftware.util.io.factory.MapFactory
 java.util.SortedSet = com.cedarsoftware.util.io.factory.CollectionFactory
-java.util.TimeZone = com.cedarsoftware.util.io.factory.TimeZoneFactory
 
-sun.util.calendar.ZoneInfo = com.cedarsoftware.util.io.factory.TimeZoneFactory
+java.util.TimeZone = Convertable
+sun.util.calendar.ZoneInfo = Convertable
