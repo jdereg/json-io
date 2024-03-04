@@ -1,12 +1,10 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.reflect.Injector;
-
 import java.lang.reflect.Field;
-import java.nio.charset.Charset;
-import java.time.ZoneId;
-import java.util.Locale;
 import java.util.Map;
+
+import com.cedarsoftware.util.convert.ConverterOptions;
+import com.cedarsoftware.util.reflect.Injector;
 
 /**
  * This class contains all the "feature" control (options) for controlling json-io's
@@ -169,17 +167,5 @@ public interface ReadOptions {
      */
     Map<String, Field> getDeepDeclaredFields(final Class<?> c);
 
-    ZoneId getSourceZoneId();
-
-    ZoneId getTargetZoneId();
-
-    Locale getSourceLocale();
-
-    Locale getTargetLocale();
-
-    Charset getSourceCharset();
-
-    Charset getTargetCharset();
-
-    Object getCustomOption(String name);
+    ConverterOptions getConverterOptions();
 }

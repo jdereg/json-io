@@ -6,10 +6,11 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import com.cedarsoftware.util.DeepEquals;
-
 import org.junit.jupiter.api.Test;
 
+import com.cedarsoftware.util.DeepEquals;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,8 +93,10 @@ public class LocaleTest
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json=" + json);
         map = TestUtil.toObjects(json, null);
-        assertEquals(1, map.size());
-        assertEquals(map.get("us"), locale);
+
+        assertThat(map)
+                .hasSize(1)
+                .containsEntry("us", locale);
     }
 
     @Test
@@ -105,20 +108,26 @@ public class LocaleTest
         String json = TestUtil.toJson(map);
         TestUtil.printLine("json=" + json);
         map = TestUtil.toObjects(json, null);
+
+        assertThat(map)
+                .containsKey(locale);
+
         assertEquals(1, map.size());
         Iterator i = map.keySet().iterator();
         assertEquals(i.next(), locale);
     }
 
     @Test
-    public void testLocaleInMapOfMaps()
+    void testLocaleInMapOfMaps()
     {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         String json = TestUtil.toJson(locale);
         TestUtil.printLine("json=" + json);
         Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        assertEquals("en", map.get("language"));
-        assertEquals("US", map.get("country"));
+
+        assertThat(map)
+                .hasSize(1)
+                .containsEntry("value", "en-US");
     }
 
     @Test

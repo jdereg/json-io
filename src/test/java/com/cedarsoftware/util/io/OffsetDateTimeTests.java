@@ -1,9 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -12,6 +8,10 @@ import org.junit.jupiter.api.Test;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<OffsetDateTime> {
     private static final ZoneOffset Z1 = ZoneOffset.UTC;
@@ -33,6 +33,7 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
         NestedOffsetDateTime dateTime = (NestedOffsetDateTime) o;
         return new OffsetDateTime[]{dateTime.one, dateTime.two};
     }
+
 
     @Test
     void testOldFormat_nested_withRef() {

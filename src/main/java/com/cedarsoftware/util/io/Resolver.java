@@ -1,11 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.convert.Converter;
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-import lombok.AccessLevel;
-import lombok.Getter;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -18,6 +12,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.convert.Converter;
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+import lombok.AccessLevel;
+import lombok.Getter;
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
@@ -328,7 +328,25 @@ public abstract class Resolver implements ReaderContext
             // TODO: traverse at the end of parsing, we will not need this "if" check here.
             return target;
         }
-        jsonObj.setJavaType(coerceClassIfNeeded(jsonObj.getJavaType()));
+        Class targetType = jsonObj.getJavaType();
+        jsonObj.setJavaType(coerceClassIfNeeded(targetType));
+        targetType = jsonObj.getJavaType();
+
+        // Does a built-in conversion exist?
+        if (jsonObj.hasValue() && jsonObj.getValue() != null) {
+            if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
+//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
+                Object value = this.getConverter().convert(jsonObj.getValue(), targetType);
+                return jsonObj.setFinishedTarget(value, true);
+            }
+            //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
+            //  TODO: I'd like to have all types that have mpa conversion supported here, but we have an issue with refs
+            //  TODO: going to the converter and I'm still thinking of a way to handle that.
+        } else if (MetaUtils.isLogicalPrimitive(targetType) && this.getConverter().isConversionSupportedFor(Map.class, targetType)) {
+            Object source = resolveRefs(jsonObj);
+            Object value = this.getConverter().convert(source, targetType);
+            return jsonObj.setFinishedTarget(value, true);
+        }
 
         // ClassFactory defined
         Object mate = createInstanceUsingClassFactory(jsonObj.getJavaType(), jsonObj);
@@ -406,6 +424,7 @@ public abstract class Resolver implements ReaderContext
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
+
         JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
 
         if (classFactory == null) {
@@ -415,9 +434,9 @@ public abstract class Resolver implements ReaderContext
         Object target = classFactory.newInstance(c, jsonObj, this);
 
         // don't pass in classFactory.isObjectFinal, only set it to true if classFactory says its so.
-        // it allows the factory iteself to set final on the jsonObj internally where it depends
+        // it allows the factory itself to set final on the jsonObj internally where it depends
         // on how the data comes back, but that value can be a hard true if the factory knows
-        // its always true.
+        // it's always true.
         if (classFactory.isObjectFinal()) {
             return jsonObj.setFinishedTarget(target, true);
         }
@@ -580,5 +599,13 @@ public abstract class Resolver implements ReaderContext
                 j++;
             }
         }
+    }
+
+    protected JsonObject resolveRefs(JsonObject jsonObject) {
+
+        JsonObject object = references.get(jsonObject);
+
+
+        return object;
     }
 }

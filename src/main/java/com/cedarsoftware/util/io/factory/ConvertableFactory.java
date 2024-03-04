@@ -1,5 +1,7 @@
 package com.cedarsoftware.util.io.factory;
 
+import java.util.Map;
+
 import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.ReaderContext;
@@ -21,34 +23,54 @@ import com.cedarsoftware.util.io.ReaderContext;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public abstract class ConvertableFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-        Object value;
+public class ConvertableFactory<T> implements JsonReader.ClassFactory {
+
+    private final Class<? extends T> type;
+
+    public ConvertableFactory(Class<? extends T> c) {
+        this.type = c;
+    }
+
+    @Override
+    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
         if (jObj.hasValue()) {
-            return context.getConverter().convert(jObj.getValue(), getType());
-        } else {
-            Class<?> type;
-            value = jObj;
-            do {
-                // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-                type = jObj.getJavaType();
-                if (!jObj.hasValue()) {
-                    break;
+            // TODO: surprised we are seeing any entries come through here since we check these in the resolver
+            // TODO:  turns out this was factory tests and invalid conversions.
+            // TODO:  probably need to leave for invalid conversios (or check for invalid and throw our own exception).
+            Object converted = context.getConverter().convert(jObj.getValue(), getType());
+            return (T) jObj.setFinishedTarget(converted, true);
+        }
+
+        resolveReferences(context, jObj);
+
+        Class<?> javaType = jObj.getJavaType();
+
+        if (javaType == null) {
+            javaType = getType();
+        }
+        Object converted = context.getConverter().convert(jObj, javaType);
+        return (T) jObj.setFinishedTarget(converted, true);
+    }
+
+    private void resolveReferences(ReaderContext context, JsonObject jObj) {
+        for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
+            if (entry.getValue() instanceof JsonObject) {
+                JsonObject child = (JsonObject) entry.getValue();
+                if (child.isReference()) {
+                    entry.setValue(context.getReferences().get(child));
                 }
-                value = jObj.getValue();
-            } while (value instanceof JsonObject);
-            if (type == null) {
-                type = getType();
             }
-            return context.getConverter().convert(value, type);
         }
     }
 
-    public abstract Class<?> getType();
-    
+    public Class<? extends T> getType() {
+        return type;
+    }
+
     /**
      * @return true.  Strings are always immutable, final.
      */
+    @Override
     public boolean isObjectFinal() {
         return true;
     }

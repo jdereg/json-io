@@ -254,7 +254,7 @@ public class JsonIo {
     }
 
     /**
-     * Call this method to see all of the conversions offered.
+     * Call this method to see all the conversions offered.
      * @param args
      */
     public static void main(String[] args) {

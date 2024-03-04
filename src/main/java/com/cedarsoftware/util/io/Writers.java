@@ -1,14 +1,12 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.factory.MonthDayFactory;
-import com.cedarsoftware.util.io.factory.YearMonthFactory;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -16,8 +14,11 @@ import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.SignStyle;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
@@ -26,6 +27,9 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import static com.cedarsoftware.util.io.JsonWriter.writeBasicString;
+import static java.time.temporal.ChronoField.DAY_OF_MONTH;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.YEAR;
 
 /**
  * All custom writers for json-io subclass this class.  Special writers are not needed for handling
@@ -59,6 +63,7 @@ public class Writers
     public static class PrimitiveTypeWriter implements JsonWriter.JsonClassWriter
     {
         protected String getKey() { return "value"; }
+
 
         @Override
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
@@ -249,10 +254,30 @@ public class Writers
     }
 
     public static class LocalDateAsLong extends PrimitiveTypeWriter {
+        private final ZoneId zoneId;
+
+        public LocalDateAsLong(ZoneId zoneId) {
+            this.zoneId = zoneId;
+        }
+
+        public LocalDateAsLong() {
+            this(ZoneId.systemDefault());
+        }
+
         @Override
         public void writePrimitiveForm(Object o, Writer output) throws IOException {
+
+            //TODO:  Change to using converter and having the writeOptions provide a zoneId;
+            //TODO:  If we're going to provide a LocalDateAsLong we should also provide a LocalDateTimeAsLong
             LocalDate localDate = (LocalDate) o;
-            output.write(Long.toString(localDate.toEpochDay()));
+            ZonedDateTime zonedDateTime = localDate.atStartOfDay(zoneId);
+
+            // Convert LocalDateTime to Instant using UTC offset
+            Instant instant = zonedDateTime.toInstant();
+
+            // Get epoch milliseconds from the Instant
+            long epochMilli = instant.toEpochMilli();
+            output.write(Long.toString(epochMilli));
         }
     }
 
@@ -299,14 +324,28 @@ public class Writers
     }
 
     public static class YearMonthWriter extends TemporalWriter<YearMonth> {
+
+        public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .appendValue(YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+                .appendLiteral('-')
+                .appendValue(MONTH_OF_YEAR, 2)
+                .toFormatter();
+
         public YearMonthWriter() {
-            setFormatter(YearMonthFactory.FORMATTER);
+            setFormatter(FORMATTER);
         }
     }
 
     public static class MonthDayWriter extends TemporalWriter<YearMonth> {
+
+        public static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder()
+                .appendValue(MONTH_OF_YEAR, 2)
+                .appendLiteral('-')
+                .appendValue(DAY_OF_MONTH, 2)
+                .toFormatter();
+
         public MonthDayWriter() {
-            setFormatter(MonthDayFactory.FORMATTER);
+            setFormatter(FORMATTER);
         }
     }
 
@@ -345,19 +384,26 @@ public class Writers
 
     public static class JsonStringWriter extends PrimitiveUtf8StringWriter {}
 
-    public static class LocaleWriter implements JsonWriter.JsonClassWriter
+    public static class LocaleWriter extends PrimitiveValueWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
-        {
-            Locale locale = (Locale) obj;
+//        public void write(Object obj, boolean showType, Writer output) throws IOException
+//        {
+//            Locale locale = (Locale) obj;
+//
+//            output.write("\"language\":\"");
+//            output.write(locale.getLanguage());
+//            output.write("\",\"country\":\"");
+//            output.write(locale.getCountry());
+//            output.write("\",\"variant\":\"");
+//            output.write(locale.getVariant());
+//            output.write('"');
+//        }
 
-            output.write("\"language\":\"");
-            output.write(locale.getLanguage());
-            output.write("\",\"country\":\"");
-            output.write(locale.getCountry());
-            output.write("\",\"variant\":\"");
-            output.write(locale.getVariant());
-            output.write('"');
+        @Override
+        public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
+        {
+            Locale locale = (Locale) o;
+            writeBasicString(output, locale.toLanguageTag());
         }
     }
 

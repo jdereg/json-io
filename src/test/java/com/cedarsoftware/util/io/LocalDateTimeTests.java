@@ -1,15 +1,11 @@
 package com.cedarsoftware.util.io;
 
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.Test;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
-
-import java.time.LocalDateTime;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,33 +66,18 @@ class LocalDateTimeTests extends SerializationDeserializationMinimumTests<LocalD
         assertThat(actual).isEqualTo("1950-01-27T11:11:11.999999999");
     }
 
-    private static Stream<Arguments> checkDifferentFormatsByFile() {
-        return Stream.of(
-                Arguments.of("old-format-top-level.json", 2023, 4, 5),
-                Arguments.of("old-format-long.json", 2023, 4, 5)
-        );
-    }
-
-    /*
-    @ParameterizedTest
-    @MethodSource("checkDifferentFormatsByFile")
-    void testOldFormat_topLevel_withType(String fileName, int year, int month, int day) {
-        String json = loadJsonForTest(fileName);
-        LocalDateTime localDate = TestUtil.readJsonObject(json);
-
-        assertLocalDateTime(localDate, year, month, day);
-    }
-
     @Test
-    void testOldFormat_nestedLevel() {
-
-        String json = loadJsonForTest("old-format-nested-level.json");
-        NestedLocalDateTime nested = TestUtil.readJsonObject(json);
-
-        assertLocalDateTime(nested.dateTime1, 2014, 6, 13);
+    void testOldFormat_topLevel_withType() {
+        String json = "{ \"@type\": \"java.time.LocalDateTime\", \"date\": \"2014-10-17\", \"time\": \"09:15:16\" }";
+        LocalDateTime localDate = TestUtil.toObjects(json, LocalDateTime.class);
+        assertThat(localDate).hasYear(2014);
+        assertThat(localDate).hasMonthValue(10);
+        assertThat(localDate).hasDayOfMonth(17);
+        assertThat(localDate).hasHour(9);
+        assertThat(localDate).hasMinute(15);
+        assertThat(localDate).hasSecond(16);
+        assertThat(localDate).hasNano(0);
     }
-    */
-
 
     @Test
     void testTopLevel_serializesAsISODate() {
