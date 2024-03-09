@@ -1,5 +1,5 @@
 ### Revision History
-* 4.20.0-SNAPSHOT
+* 4.19.2
   * Moved more settings/properties from source code to resource files. 
     > Example changes required due to this update:
     <br><b>Before</b>
