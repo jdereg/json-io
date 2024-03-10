@@ -1,14 +1,6 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.DeepEquals;
-import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
-import com.cedarsoftware.util.reflect.ReflectionUtils;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-
-import java.awt.Point;
+import java.awt.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -30,6 +22,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Stream;
 
+import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.io.models.ModelHoldingSingleHashMap;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -40,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
- * @Author Kenny Partlow (kpartlow@gmail.com)
+ *         Kenny Partlow (kpartlow@gmail.com)
  * <br>
  * Copyright (c) Cedar Software LLC
  * <br><br>
@@ -90,7 +89,7 @@ class MapsTest
     @ParameterizedTest
     @MethodSource("nonDefaultMapTypes")
     void testEmptyMap_whenMapIsNotDefaultMap_includesType(Class<? extends Map> c) throws Exception {
-        Map map = ReflectionUtils.newInstance(c);
+        Map map = c.getConstructor().newInstance();
         String json = TestUtil.toJson(map);
         assertThat(json).isEqualTo("{\"@type\":\"" + c.getName() + "\"}");
     }
@@ -100,7 +99,7 @@ class MapsTest
     @MethodSource("nonDefaultMapTypes")
     void testEmptyMap_whenMapIsNotDefaultMap_and_neverShowTypes_doesNotShowType(Class<? extends Map> c) throws Exception {
         WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
-        Map map = ReflectionUtils.newInstance(c);
+        Map map = c.getConstructor().newInstance();
         String json = TestUtil.toJson(map, options);
         assertThat(json).isEqualTo("{}");
     }

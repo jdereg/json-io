@@ -1,20 +1,5 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.ClassUtilities;
-import com.cedarsoftware.util.Convention;
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.AccessorFactory;
-import com.cedarsoftware.util.reflect.ReflectionUtils;
-import com.cedarsoftware.util.reflect.factories.GetMethodAccessorFactory;
-import com.cedarsoftware.util.reflect.factories.IsMethodAccessorFactory;
-import com.cedarsoftware.util.reflect.filters.FieldFilter;
-import com.cedarsoftware.util.reflect.filters.MethodFilter;
-import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
-import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
-import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
-import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
-import lombok.Getter;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -29,6 +14,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.cedarsoftware.util.ClassUtilities;
+import com.cedarsoftware.util.Convention;
+import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.AccessorFactory;
+import com.cedarsoftware.util.reflect.factories.GetMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.factories.IsMethodAccessorFactory;
+import com.cedarsoftware.util.reflect.filters.FieldFilter;
+import com.cedarsoftware.util.reflect.filters.MethodFilter;
+import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
+import com.cedarsoftware.util.reflect.filters.field.StaticFieldFilter;
+import com.cedarsoftware.util.reflect.filters.method.AccessorMethodFilter;
+import com.cedarsoftware.util.reflect.filters.method.ModifierMethodFilter;
+import lombok.Getter;
 
 /**
  * Builder class for building the writeOptions.

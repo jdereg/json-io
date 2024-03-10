@@ -1,5 +1,8 @@
 ### Revision History
-* 4.20.0-SNAPSHOT
+* 4.19.3
+  * Remove `ReflectionUtils` from json-io as it is part of java-util.
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.4.4` to `2.4.5`.
+* 4.19.2
   * Moved more settings/properties from source code to resource files. 
     > Example changes required due to this update:
     <br><b>Before</b>

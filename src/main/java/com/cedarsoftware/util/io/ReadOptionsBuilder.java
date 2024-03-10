@@ -32,7 +32,6 @@ import com.cedarsoftware.util.io.factory.EnumClassFactory;
 import com.cedarsoftware.util.io.factory.ThrowableFactory;
 import com.cedarsoftware.util.reflect.Injector;
 import com.cedarsoftware.util.reflect.InjectorFactory;
-import com.cedarsoftware.util.reflect.ReflectionUtils;
 import com.cedarsoftware.util.reflect.factories.MethodInjectorFactory;
 import com.cedarsoftware.util.reflect.filters.FieldFilter;
 import com.cedarsoftware.util.reflect.filters.field.EnumFieldFilter;
@@ -512,7 +511,7 @@ public class ReadOptionsBuilder {
                         System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
-                    factories.put(clazz, ReflectionUtils.newInstance(factoryClass));
+                    factories.put(clazz, factoryClass.getConstructor().newInstance());
                 }
             } catch (Exception e) {
                 throw new JsonIoException("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
@@ -540,7 +539,7 @@ public class ReadOptionsBuilder {
                 Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
-                    readers.put(clazz, ReflectionUtils.newInstance(customReaderClass));
+                    readers.put(clazz, customReaderClass.getConstructor().newInstance());
                 } catch (Exception e) {
                     throw new JsonIoException("Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
                 }
