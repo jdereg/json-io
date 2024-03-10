@@ -515,7 +515,7 @@ public class ReadOptionsBuilder {
                     }
                     factories.put(clazz, factoryClass.getConstructor().newInstance());
                 } catch (Exception e) {
-                    throw new JsonIoException("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
+                    System.out.println("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt");
                 }
             }
         }
