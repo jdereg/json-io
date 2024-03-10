@@ -1,4 +1,6 @@
 ### Revision History
+* 4.19.4
+  * In `ReadOptionsBuilder` and `WriteOptionsBuilder`, when loading dynamic items (class names, aliases, etc.) from resources, output warnings as opposed to throwing exceptions.
 * 4.19.3
   * Remove `ReflectionUtils` from json-io as it is part of java-util.
   * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.4.4` to `2.4.5`.

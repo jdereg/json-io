@@ -434,11 +434,11 @@ public class ReadOptionsBuilder {
     private void addUniqueAlias(String type, String alias) {
         Class<?> clazz = ClassUtilities.forName(type, this.options.getClassLoader());
         if (clazz == null) {
-            throw new JsonIoException("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
+            System.out.println("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
         }
         String existType = this.options.aliasTypeNames.get(alias);
         if (existType != null) {
-            throw new JsonIoException("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
+            System.out.println("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
         }
         this.options.aliasTypeNames.put(alias, type);
     }
@@ -496,25 +496,27 @@ public class ReadOptionsBuilder {
             String className = entry.getKey();
             String factoryClassName = entry.getValue();
             Class<?> clazz = ClassUtilities.forName(className, classLoader);
+
             if (clazz == null) {
                 System.out.println("Skipping class: " + className + " not defined in JVM, but listed in resources/classFactories.txt");
                 continue;
             }
-            try {
-                if (factoryClassName.equalsIgnoreCase("Convertable")) {
-                    factories.put(clazz, new ConvertableFactory<>(clazz));
-                } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
-                    factories.put(clazz, new ArrayFactory<>(clazz));
-                } else {
+
+            if (factoryClassName.equalsIgnoreCase("Convertable")) {
+                factories.put(clazz, new ConvertableFactory<>(clazz));
+            } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
+                factories.put(clazz, new ArrayFactory<>(clazz));
+            } else {
+                try {
                     Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
                     if (factoryClass == null) {
                         System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
                     factories.put(clazz, factoryClass.getConstructor().newInstance());
+                } catch (Exception e) {
+                    System.out.println("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt");
                 }
-            } catch (Exception e) {
-                throw new JsonIoException("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt", e);
             }
         }
         return factories;
@@ -541,7 +543,7 @@ public class ReadOptionsBuilder {
                 try {
                     readers.put(clazz, customReaderClass.getConstructor().newInstance());
                 } catch (Exception e) {
-                    throw new JsonIoException("Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
+                    System.out.println("Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
                 }
             } else {
                 System.out.println("Class: " + className + " not defined in JVM, but listed in resources/customReaders.txt");
