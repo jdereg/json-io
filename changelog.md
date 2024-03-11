@@ -1,4 +1,6 @@
 ### Revision History
+* 4.19.5
+  * Updated `JsonReader` for backwards compatibility by adding `jsonToJava(), jsonToMaps(), jsonObjectsToJava()` static APIs. 
 * 4.19.4
   * In `ReadOptionsBuilder` and `WriteOptionsBuilder`, when loading dynamic items (class names, aliases, etc.) from resources, output warnings as opposed to throwing exceptions.
 * 4.19.3
