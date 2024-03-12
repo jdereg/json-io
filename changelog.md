@@ -1,4 +1,7 @@
 ### Revision History
+* 4.19.6
+  * Added additional build properties to manifest.mf
+  * Renamed method on AccessorFactory that changed signature, due to conflicts running inside container that also uses this library. 
 * 4.19.5
   * Updated `JsonReader` for backwards compatibility by adding `jsonToJava(), jsonToMaps(), jsonObjectsToJava()` static APIs. 
 * 4.19.4

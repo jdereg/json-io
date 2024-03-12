@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.AccessorFactory;
-
 import java.lang.reflect.Field;
 import java.util.Map;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.AccessorFactory;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -24,8 +24,7 @@ import java.util.Map;
  * limitations under the License.*
  */
 public class IsMethodAccessorFactory implements AccessorFactory {
-    @Override
-    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
+    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
         final Class<?> c = field.getType();
         if (c != Boolean.class && c != boolean.class) {
             return null;

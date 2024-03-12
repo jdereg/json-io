@@ -1,5 +1,11 @@
 package com.cedarsoftware.util.reflect.factories;
 
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Stream;
+
 import com.cedarsoftware.util.reflect.Accessor;
 import com.cedarsoftware.util.reflect.AccessorFactory;
 import com.cedarsoftware.util.reflect.filters.models.CarEnumWithCustomFields;
@@ -9,12 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,7 +30,7 @@ class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     void create_whenMethodIsPublicAndNotStatic_canCreateAccessor() throws Throwable {
         Field field = GetMethodTestObject.class.getDeclaredField("test5");
 
-        Accessor accessor = this.factory.createAccessor(field, new HashMap<>(), "test5");
+        Accessor accessor = this.factory.buildAccessor(field, new HashMap<>(), "test5");
         assertThat(accessor).isNotNull();
     }
 
@@ -50,7 +50,7 @@ class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
         Field field = cls.getDeclaredField(fieldName);
         Map<Class<?>, Map<String, String>> mapping = new HashMap();
 
-        Accessor accessor = this.factory.createAccessor(field, mapping, fieldName);
+        Accessor accessor = this.factory.buildAccessor(field, mapping, fieldName);
         assertThat(accessor).isNull();
     }
 
@@ -58,7 +58,7 @@ class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
     @MethodSource("checkFailedToCreateSituations")
     void create_whenBooleanIsStaticOrNotPublic_cannotCreateAccessor(Class<?> cls, String fieldName) throws Throwable {
         Map<Class<?>, Map<String, String>> nonStandardMethodNames = Collections.emptyMap();
-        Accessor accessor = this.factory.createAccessor(cls.getDeclaredField(fieldName), nonStandardMethodNames, fieldName);
+        Accessor accessor = this.factory.buildAccessor(cls.getDeclaredField(fieldName), nonStandardMethodNames, fieldName);
         assertThat(accessor).isNull();
     }
 
@@ -78,7 +78,7 @@ class GetMethodAccessorFactoryTests extends AbstractAccessFactoryTest {
         mappings.put("name", "name");
         mapping.put(Enum.class, mappings);
 
-        Accessor accessor = this.factory.createAccessor(field, mapping, fieldName);
+        Accessor accessor = this.factory.buildAccessor(field, mapping, fieldName);
         assertThat(accessor).isNotNull();
     }
 }

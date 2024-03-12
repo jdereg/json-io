@@ -28,8 +28,11 @@ public interface AccessorFactory {
      * @param field           The field we're trying to access
      * @param key             The uniqueName to use as a key in the cache map.
      * @return The accessor if one fits for this field, otherwise null.
+     *
+     * NOTE: Renamed due to conflict with container environment usage of json-io.
+     * NOTE: Do not change method signature, rename method if signature change is needed
      */
-    Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, String key);
+    Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardMethodNames, String key);
 
     default Optional<String> getMapping(Map<Class<?>, Map<String, String>> classToMapping, Class<?> c, String fieldName) {
         Map<String, String> mapping = classToMapping.get(c);

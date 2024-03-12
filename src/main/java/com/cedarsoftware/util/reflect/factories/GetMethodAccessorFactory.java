@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.reflect.factories;
 
-import com.cedarsoftware.util.reflect.Accessor;
-import com.cedarsoftware.util.reflect.AccessorFactory;
-
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Optional;
+
+import com.cedarsoftware.util.reflect.Accessor;
+import com.cedarsoftware.util.reflect.AccessorFactory;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -26,7 +26,7 @@ import java.util.Optional;
  */
 public class GetMethodAccessorFactory implements AccessorFactory {
     @Override
-    public Accessor createAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
+    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
         final String fieldName = field.getName();
 
         Optional<String> possibleMethod = getMapping(mappings, field.getDeclaringClass(), fieldName);

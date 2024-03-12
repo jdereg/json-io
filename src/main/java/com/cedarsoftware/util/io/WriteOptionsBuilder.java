@@ -972,7 +972,7 @@ public class WriteOptionsBuilder {
         private Accessor findAccessor(Field field, String key) {
             for (final AccessorFactory factory : this.accessorFactories) {
                 try {
-                    final Accessor accessor = factory.createAccessor(field, this.nonStandardMappings, key);
+                    final Accessor accessor = factory.buildAccessor(field, this.nonStandardMappings, key);
 
                     if (accessor != null) {
                         return accessor;
