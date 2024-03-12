@@ -1,4 +1,6 @@
 ### Revision History
+* 4.19.7
+  * Handle NoSuchMethodError() quietly, for shaded accessFactories that were added by containing platform, that no logner exist.
 * 4.19.6
   * Added additional build properties to manifest.mf
   * Renamed method on AccessorFactory that changed signature, due to conflicts running inside container that also uses this library. 
