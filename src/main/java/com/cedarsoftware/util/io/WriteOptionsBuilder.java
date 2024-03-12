@@ -61,7 +61,8 @@ public class WriteOptionsBuilder {
     private static final Set<String> BASE_FILTERED_METHOD_NAMES = new HashSet<>();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
-
+    private static int exceptionCount = 0;
+    
     static {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
@@ -977,8 +978,11 @@ public class WriteOptionsBuilder {
                     if (accessor != null) {
                         return accessor;
                     }
-                } catch (Exception ignore) {
-                    // Handle the exception if needed
+                } catch (Throwable ignore) {
+                    if (exceptionCount == 0) {
+                        System.out.println(ignore.getClass() + ": " + ignore.getMessage());
+                        exceptionCount++;
+                    }
                 }
             }
             return null;
@@ -1000,12 +1004,10 @@ public class WriteOptionsBuilder {
                     if (map.containsKey(name)) {
                         name = field.getDeclaringClass().getSimpleName() + '.' + name;
                     }
-
-
+                    
                     if (inclusions.contains(name) && !fieldIsFiltered(field)) {
                         map.put(name, field);
                     }
-
                 }
 
                 curr = curr.getSuperclass();
