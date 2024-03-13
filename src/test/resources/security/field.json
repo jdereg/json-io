@@ -1,6 +1,6 @@
 {
   "@type": "java.lang.reflect.Field",
-  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "clazz": "com.cedarsoftware.io.SecurityTest",
   "slot": 0,
   "name": "testName",
   "type": "java.lang.String",
@@ -9,7 +9,7 @@
   "fieldAccessor": null,
   "overrideFieldAccessor": null,
   "root": {
-    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "clazz": "com.cedarsoftware.io.SecurityTest",
     "slot": 0,
     "name": "testName",
     "type": "java.lang.String",

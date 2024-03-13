@@ -1,4 +1,8 @@
 ### Revision History
+* 4.19.8
+  * **NOTE**: Repackaged com.cedarsoftware.util.io to com.cedarsoftware.io
+  * **NOTE**: Repackaged com.cedarsoftware.util.reflect to com.cedarsoftware.io.reflect
+  * You will need to adjust the import statements for any consuming classes.
 * 4.19.7
   * Handle NoSuchMethodError() quietly, for shaded accessFactories that were added by containing platform, that no logner exist.
 * 4.19.6

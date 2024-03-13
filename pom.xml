@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.19.7</version>
+    <version>4.19.8</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -175,7 +175,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Export-Package>com.cedarsoftware.util.io</Export-Package>
+                        <Export-Package>com.cedarsoftware.io</Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>

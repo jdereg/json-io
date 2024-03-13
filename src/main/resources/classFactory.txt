@@ -19,7 +19,7 @@ java.lang.Long = Convertable
 java.lang.Float = Convertable
 java.lang.Double = Convertable
 
-[C = com.cedarsoftware.util.io.factory.CharacterPrimArrayFactory
+[C = com.cedarsoftware.io.factory.CharacterPrimArrayFactory
 [Z = ArrayFactory
 [B = ArrayFactory
 [S = ArrayFactory
@@ -55,7 +55,7 @@ java.lang.Double = Convertable
 java.lang.Class = Convertable
 java.util.Locale = Convertable
 java.lang.String = Convertable
-java.lang.StackTraceElement = com.cedarsoftware.util.io.factory.StackTraceElementFactory
+java.lang.StackTraceElement = com.cedarsoftware.io.factory.StackTraceElementFactory
 java.lang.StringBuffer = Convertable
 java.lang.StringBuilder = Convertable
 
@@ -91,14 +91,14 @@ java.util.concurrent.atomic.AtomicLong = Convertable
 
 java.util.UUID = Convertable
 java.util.Calendar = Convertable
-java.util.Collection = com.cedarsoftware.util.io.factory.CollectionFactory
+java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Date = Convertable
 java.util.GregorianCalendar = Convertable
-java.util.List = com.cedarsoftware.util.io.factory.CollectionFactory
-java.util.Map = com.cedarsoftware.util.io.factory.MapFactory
-java.util.Set = com.cedarsoftware.util.io.factory.CollectionFactory
-java.util.SortedMap = com.cedarsoftware.util.io.factory.MapFactory
-java.util.SortedSet = com.cedarsoftware.util.io.factory.CollectionFactory
+java.util.List = com.cedarsoftware.io.factory.CollectionFactory
+java.util.Map = com.cedarsoftware.io.factory.MapFactory
+java.util.Set = com.cedarsoftware.io.factory.CollectionFactory
+java.util.SortedMap = com.cedarsoftware.io.factory.MapFactory
+java.util.SortedSet = com.cedarsoftware.io.factory.CollectionFactory
 
 java.util.TimeZone = Convertable
 sun.util.calendar.ZoneInfo = Convertable

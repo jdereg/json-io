@@ -1,6 +1,6 @@
 {
   "@id": 1,
-  "@type": "com.cedarsoftware.util.io.RefsTest$DateWithChildren",
+  "@type": "com.cedarsoftware.io.RefsTest$DateWithChildren",
   "date": "2023/12/25",
   "children": [
     {"@id": 2, "@ref": 1},

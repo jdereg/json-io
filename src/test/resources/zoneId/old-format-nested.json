@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.ZoneIdTests$NestedZoneId",
+  "@type": "com.cedarsoftware.io.ZoneIdTests$NestedZoneId",
   "one": {
     "@type": "java.time.ZoneRegion",
     "id": "Asia/Aden"

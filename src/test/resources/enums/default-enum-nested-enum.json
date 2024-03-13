@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.EnumTests$NestedEnum",
+  "@type": "com.cedarsoftware.io.EnumTests$NestedEnum",
   "testEnum3": {
     "val": "Foo",
     "name": "A"

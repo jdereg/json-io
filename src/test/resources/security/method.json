@@ -1,6 +1,6 @@
 {
   "@type": "java.lang.reflect.Method",
-  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "clazz": "com.cedarsoftware.io.SecurityTest",
   "slot": 2,
   "name": "testSecureWrites",
   "returnType": "void",
@@ -30,7 +30,7 @@
   "annotationDefault": null,
   "methodAccessor": null,
   "root": {
-    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "clazz": "com.cedarsoftware.io.SecurityTest",
     "slot": 2,
     "name": "testSecureWrites",
     "returnType": "void",

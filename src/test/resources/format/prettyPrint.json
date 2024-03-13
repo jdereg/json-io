@@ -1,5 +1,5 @@
 {
-  "@type":"com.cedarsoftware.util.io.PrettyPrintTest$Nice",
+  "@type":"com.cedarsoftware.io.PrettyPrintTest$Nice",
   "name":"Louie",
   "items":{
     "@type":"java.util.ArrayList",

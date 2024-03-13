@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.CalendarTest$TestCalendar",
+  "@type": "com.cedarsoftware.io.CalendarTest$TestCalendar",
   "_cal": {
     "time": "2023-11-19T17:31:09.257-0500",
     "zone": "America/New_York"

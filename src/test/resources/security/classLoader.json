@@ -642,7 +642,7 @@
       "com.intellij.rt.execution.application.AppMainV2$Agent": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$StringBufferWriter": {
+      "com.cedarsoftware.io.Writers$StringBufferWriter": {
         "@type": "java.lang.Object"
       },
       "groovy.util.BufferedIterator": {
@@ -651,7 +651,7 @@
       "org.junit.platform.launcher.LauncherSession": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$LocalDateWriter": {
+      "com.cedarsoftware.io.Writers$LocalDateWriter": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.runtime.metaclass.MetaMethodIndex$Entry": {
@@ -669,7 +669,7 @@
       "org.junit.platform.launcher.core.DefaultLauncher": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$EnumsAsStringWriter": {
+      "com.cedarsoftware.io.Writers$EnumsAsStringWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.EngineDiscoveryListener$1": {
@@ -693,7 +693,7 @@
       "org.junit.jupiter.api.condition.EnabledOnJre": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$AtomicLongWriter": {
+      "com.cedarsoftware.io.Writers$AtomicLongWriter": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.util.ManagedConcurrentLinkedQueue": {
@@ -798,7 +798,7 @@
       "org.junit.jupiter.engine.descriptor.ClassExtensionContext": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.TestUtilBeanInfo": {
+      "com.cedarsoftware.io.TestUtilBeanInfo": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.reflection.GeneratedMetaMethod": {
@@ -891,7 +891,7 @@
       "groovy.lang.TrampolineClosure": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$TimestampWriter": {
+      "com.cedarsoftware.io.Writers$TimestampWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.DisplayNameGenerator$IndicativeSentences": {
@@ -900,7 +900,7 @@
       "groovy.lang.GroovyObjectSupport": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$LocalTimeWriter": {
+      "com.cedarsoftware.io.Writers$LocalTimeWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.condition.EnabledIfCondition": {
@@ -936,7 +936,7 @@
       "org.codehaus.groovy.runtime.DefaultGroovyMethods": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriter$NullClass": {
+      "com.cedarsoftware.io.JsonWriter$NullClass": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.engine.support.OpenTest4JAndJUnit4AwareThrowableCollector": {
@@ -975,7 +975,7 @@
       "org.codehaus.groovy.runtime.dgmimpl.NumberNumberMinus": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$JsonStringWriter": {
+      "com.cedarsoftware.io.Writers$JsonStringWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.core.EngineExecutionOrchestrator": {
@@ -1056,7 +1056,7 @@
       "org.junit.platform.launcher.core.LauncherConfigurationParameters$Builder": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$PrimitiveValueWriter": {
+      "com.cedarsoftware.io.Writers$PrimitiveValueWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.support.descriptor.FileSource": {
@@ -1089,7 +1089,7 @@
       "org.codehaus.groovy.reflection.CachedConstructor": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$DateWriter": {
+      "com.cedarsoftware.io.Writers$DateWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.engine.execution.ExtensionValuesStore$StoredValue": {
@@ -1257,7 +1257,7 @@
       "org.codehaus.groovy.util.ReferenceType$HardRef": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$PrimitiveUtf8StringWriter": {
+      "com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.DisplayNameGenerator": {
@@ -1269,7 +1269,7 @@
       "groovy.lang.Tuple": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriter": {
+      "com.cedarsoftware.io.JsonWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.discovery.ClassSelector": {
@@ -1281,13 +1281,13 @@
       "org.junit.jupiter.engine.extension.TimeoutExtension$TimeoutProvider": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$AtomicIntegerWriter": {
+      "com.cedarsoftware.io.Writers$AtomicIntegerWriter": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.util.ComplexKeyHashMap$EntryIterator": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$TemporalWriter": {
+      "com.cedarsoftware.io.Writers$TemporalWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.engine.discovery.MethodSelectorResolver$MethodType": {
@@ -1296,7 +1296,7 @@
       "org.junit.jupiter.api.condition.EnabledIfEnvironmentVariableCondition": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Resolver$NullClass": {
+      "com.cedarsoftware.io.Resolver$NullClass": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.support.descriptor.ClassSource": {
@@ -1416,7 +1416,7 @@
       "org.codehaus.groovy.runtime.dgmimpl.arrays.FloatArrayPutAtMetaMethod": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Resolver": {
+      "com.cedarsoftware.io.Resolver": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.discovery.ClasspathRootSelector": {
@@ -1452,7 +1452,7 @@
       "org.codehaus.groovy.runtime.dgmimpl.arrays.ShortArrayPutAtMetaMethod": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$ZonedDateTimeWriter": {
+      "com.cedarsoftware.io.Writers$ZonedDateTimeWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.commons.util.CollectionUtils": {
@@ -1482,10 +1482,10 @@
       "org.codehaus.groovy.GroovyBugError": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonReader$JsonClassReader": {
+      "com.cedarsoftware.io.JsonReader$JsonClassReader": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$UUIDWriter": {
+      "com.cedarsoftware.io.Writers$UUIDWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.LauncherSessionListener$1": {
@@ -1494,7 +1494,7 @@
       "org.codehaus.groovy.reflection.stdclasses.BigDecimalCachedClass": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$URLWriter": {
+      "com.cedarsoftware.io.Writers$URLWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.condition.AbstractOsBasedExecutionCondition": {
@@ -1521,7 +1521,7 @@
       "org.codehaus.groovy.ast.stmt.Statement": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriterBeanInfo": {
+      "com.cedarsoftware.io.JsonWriterBeanInfo": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.DisplayNameGenerator$Standard": {
@@ -1563,7 +1563,7 @@
       "org.junit.jupiter.api.DisplayNameGenerator$ReplaceUnderscores": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.TestUtil": {
+      "com.cedarsoftware.io.TestUtil": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor": {
@@ -1626,10 +1626,10 @@
       "org.junit.platform.launcher.core.LauncherConfigurationParameters$ParameterProvider$3": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.ObjectResolver": {
+      "com.cedarsoftware.io.ObjectResolver": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$LocaleWriter": {
+      "com.cedarsoftware.io.Writers$LocaleWriter": {
         "@type": "java.lang.Object"
       },
       "com.intellij.rt.junit.IdeaTestRunner$Repeater$1": {
@@ -1656,7 +1656,7 @@
       "groovy.io.FileType": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$AtomicBooleanWriter": {
+      "com.cedarsoftware.io.Writers$AtomicBooleanWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.core.DefaultLauncherSession": {
@@ -1686,7 +1686,7 @@
       "groovy.lang.MetaClassImpl$3": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.ArgumentHelper": {
+      "com.cedarsoftware.io.ArgumentHelper": {
         "@type": "java.lang.Object"
       },
       "groovy.lang.MetaClassImpl": {
@@ -1746,7 +1746,7 @@
       "org.codehaus.groovy.ast.expr.PropertyExpression": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonIoException": {
+      "com.cedarsoftware.io.JsonIoException": {
         "@type": "java.lang.Object"
       },
       "groovy.lang.ExpandoMetaClass": {
@@ -1779,7 +1779,7 @@
       "org.codehaus.groovy.runtime.dgmimpl.arrays.LongArrayGetAtMetaMethod": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers": {
+      "com.cedarsoftware.io.Writers": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.condition.DisabledIfEnvironmentVariables": {
@@ -1878,13 +1878,13 @@
       "org.junit.platform.engine.ExecutionRequest": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$BigIntegerWriter": {
+      "com.cedarsoftware.io.Writers$BigIntegerWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.core.LauncherConfig$Builder": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonObject": {
+      "com.cedarsoftware.io.JsonObject": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.listeners.discovery.LauncherDiscoveryListeners": {
@@ -1956,7 +1956,7 @@
       "org.junit.platform.engine.support.hierarchical.NodeUtils": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriterCustomizer": {
+      "com.cedarsoftware.io.JsonWriterCustomizer": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.condition.DisabledOnJre": {
@@ -2040,13 +2040,13 @@
       "org.codehaus.groovy.runtime.dgmimpl.arrays.ShortArrayGetAtMetaMethod": {
         "@type": "java.lang.Object"
       },
-      "groovy.runtime.metaclass.com.cedarsoftware.util.io.JsonWriterMetaClass": {
+      "groovy.runtime.metaclass.com.cedarsoftware.io.JsonWriterMetaClass": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver$DefaultInitializationContext": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriter$JsonClassWriter": {
+      "com.cedarsoftware.io.JsonWriter$JsonClassWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.condition.BooleanExecutionCondition": {
@@ -2106,7 +2106,7 @@
       "org.apache.groovy.plugin.GroovyRunnerRegistry": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$CalendarWriter": {
+      "com.cedarsoftware.io.Writers$CalendarWriter": {
         "@type": "java.lang.Object"
       },
       "groovy.lang.StringWriterIOException": {
@@ -2115,7 +2115,7 @@
       "groovy.lang.ClosureInvokingMethod": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$PrimitiveTypeWriter": {
+      "com.cedarsoftware.io.Writers$PrimitiveTypeWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.extension.InvocationInterceptor": {
@@ -2136,7 +2136,7 @@
       "org.junit.jupiter.api.extension.TestInstanceFactory": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$TimeZoneWriter": {
+      "com.cedarsoftware.io.Writers$TimeZoneWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.UniqueId": {
@@ -2163,7 +2163,7 @@
       "org.codehaus.groovy.runtime.metaclass.TransformMetaMethod": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.TestUtilCustomizer": {
+      "com.cedarsoftware.io.TestUtilCustomizer": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.extension.ConditionEvaluationResult": {
@@ -2253,7 +2253,7 @@
       "org.codehaus.groovy.runtime.InvokerInvocationException": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$StringBuilderWriter": {
+      "com.cedarsoftware.io.Writers$StringBuilderWriter": {
         "@type": "java.lang.Object"
       },
       "com.intellij.rt.execution.junit.MapSerializerUtil": {
@@ -2289,7 +2289,7 @@
       "org.codehaus.groovy.vmplugin.VMPlugin": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.MetaUtils": {
+      "com.cedarsoftware.io.MetaUtils": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.core.CompositeTestExecutionListener$EagerTestExecutionListener": {
@@ -2310,7 +2310,7 @@
       "org.junit.jupiter.api.extension.BeforeTestExecutionCallback": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$ClassWriter": {
+      "com.cedarsoftware.io.Writers$ClassWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.api.extension.ReflectiveInvocationContext": {
@@ -2427,7 +2427,7 @@
       "org.codehaus.groovy.util.ManagedConcurrentLinkedQueue$Element": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.SecurityTest": {
+      "com.cedarsoftware.io.SecurityTest": {
         "@type": "java.lang.Object"
       },
       "org.junit.jupiter.engine.execution.ExtensionValuesStore": {
@@ -2436,7 +2436,7 @@
       "org.codehaus.groovy.vmplugin.v8.Java8": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonWriter$JsonClassWriterBase": {
+      "com.cedarsoftware.io.JsonWriter$JsonClassWriterBase": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.runtime.metaclass.MissingMethodExceptionNoStack": {
@@ -2523,7 +2523,7 @@
       "org.junit.jupiter.api.condition.DisabledIfSystemPropertyCondition": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$BigDecimalWriter": {
+      "com.cedarsoftware.io.Writers$BigDecimalWriter": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.reflection.CacheAccessControlException": {
@@ -2646,7 +2646,7 @@
       "org.junit.platform.engine.support.hierarchical.ThrowableCollector$Executable": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.JsonReader$JsonClassReaderBase": {
+      "com.cedarsoftware.io.JsonReader$JsonClassReaderBase": {
         "@type": "java.lang.Object"
       },
       "org.codehaus.groovy.runtime.metaclass.MetaMethodIndex$EntryIterator": {
@@ -2655,7 +2655,7 @@
       "groovy.lang.IntRange": {
         "@type": "java.lang.Object"
       },
-      "com.cedarsoftware.util.io.Writers$LocalDateTimeWriter": {
+      "com.cedarsoftware.io.Writers$LocalDateTimeWriter": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.launcher.core.LauncherConfigurationParameters$ParameterProvider": {
@@ -2697,7 +2697,7 @@
       "org.codehaus.groovy.runtime.m12n.ExtensionModuleScanner$ExtensionModuleListener": {
         "@type": "java.lang.Object"
       },
-      "groovy.runtime.metaclass.com.cedarsoftware.util.io.TestUtilMetaClass": {
+      "groovy.runtime.metaclass.com.cedarsoftware.io.TestUtilMetaClass": {
         "@type": "java.lang.Object"
       },
       "org.junit.platform.engine.discovery.ClasspathResourceSelector": {
@@ -9639,7 +9639,7 @@
     "java.util.function.ToDoubleFunction": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$EnumsAsStringWriter": {
+    "com.cedarsoftware.io.Writers$EnumsAsStringWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.engine.EngineDiscoveryListener$1": {
@@ -9744,7 +9744,7 @@
     "org.codehaus.groovy.ast.stmt.ReturnStatement": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.TestUtilBeanInfo": {
+    "com.cedarsoftware.io.TestUtilBeanInfo": {
       "@type": "java.lang.Object"
     },
     "org.codehaus.groovy.reflection.GeneratedMetaMethod": {
@@ -9843,7 +9843,7 @@
     "org.codehaus.groovy.runtime.DefaultGroovyMethods": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriter$NullClass": {
+    "com.cedarsoftware.io.JsonWriter$NullClass": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.engine.support.OpenTest4JAndJUnit4AwareThrowableCollector": {
@@ -9876,7 +9876,7 @@
     "org.codehaus.groovy.runtime.dgmimpl.NumberNumberMinus": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$JsonStringWriter": {
+    "com.cedarsoftware.io.Writers$JsonStringWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.core.EngineExecutionOrchestrator": {
@@ -9978,7 +9978,7 @@
     "org.junit.platform.launcher.core.LauncherConfigurationParameters$Builder": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$PrimitiveValueWriter": {
+    "com.cedarsoftware.io.Writers$PrimitiveValueWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.engine.extension.TempDirectory$Scope": {
@@ -10125,7 +10125,7 @@
     "org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriter": {
+    "com.cedarsoftware.io.JsonWriter": {
       "@type": "java.lang.Object"
     },
     "groovy.runtime.metaclass.java.lang.SystemMetaClass": {
@@ -10137,7 +10137,7 @@
     "java.lang.Error": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$TemporalWriter": {
+    "com.cedarsoftware.io.Writers$TemporalWriter": {
       "@type": "java.lang.Object"
     },
     "java.lang.AssertionError": {
@@ -10149,7 +10149,7 @@
     "java.util.TreeSet": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Resolver$NullClass": {
+    "com.cedarsoftware.io.Resolver$NullClass": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.engine.support.descriptor.ClassSource": {
@@ -10254,7 +10254,7 @@
     "java.lang.IllegalCallerException": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Resolver": {
+    "com.cedarsoftware.io.Resolver": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.TestInstance": {
@@ -10305,7 +10305,7 @@
     "java.util.List": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonReader$JsonClassReader": {
+    "com.cedarsoftware.io.JsonReader$JsonClassReader": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.LauncherSessionListener$1": {
@@ -10320,7 +10320,7 @@
     "java.util.SortedMap": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriterBeanInfo": {
+    "com.cedarsoftware.io.JsonWriterBeanInfo": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.DisplayNameGenerator$Standard": {
@@ -10407,7 +10407,7 @@
     "org.junit.platform.engine.support.discovery.ClassContainerSelectorResolver": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.ObjectResolver": {
+    "com.cedarsoftware.io.ObjectResolver": {
       "@type": "java.lang.Object"
     },
     "java.io.OutputStreamCustomizer": {
@@ -10434,7 +10434,7 @@
     "java.util.EnumSet": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$AtomicBooleanWriter": {
+    "com.cedarsoftware.io.Writers$AtomicBooleanWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.core.DefaultLauncherSession": {
@@ -10464,7 +10464,7 @@
     "groovy.lang.MetaClassImpl$3": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.ArgumentHelper": {
+    "com.cedarsoftware.io.ArgumentHelper": {
       "@type": "java.lang.Object"
     },
     "groovy.lang.MetaClassImpl$4": {
@@ -10506,7 +10506,7 @@
     "org.junit.jupiter.engine.discovery.predicates.IsTestClassWithTests": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonIoException": {
+    "com.cedarsoftware.io.JsonIoException": {
       "@type": "java.lang.Object"
     },
     "groovy.lang.ExpandoMetaClass": {
@@ -10593,7 +10593,7 @@
     "org.codehaus.groovy.runtime.dgmimpl.NumberNumberMetaMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonObject": {
+    "com.cedarsoftware.io.JsonObject": {
       "@type": "java.lang.Object"
     },
     "groovy.lang.MetaClassRegistryChangeEvent": {
@@ -10659,7 +10659,7 @@
     "java.lang.InstantiationException": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriterCustomizer": {
+    "com.cedarsoftware.io.JsonWriterCustomizer": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.condition.DisabledOnJre": {
@@ -10701,7 +10701,7 @@
     "org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable": {
       "@type": "java.lang.Object"
     },
-    "groovy.runtime.metaclass.com.cedarsoftware.util.io.JsonWriterMetaClass": {
+    "groovy.runtime.metaclass.com.cedarsoftware.io.JsonWriterMetaClass": {
       "@type": "java.lang.Object"
     },
     "java.lang.module.ModuleDescriptor": {
@@ -10758,13 +10758,13 @@
     "groovy.lang.ClosureInvokingMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$PrimitiveTypeWriter": {
+    "com.cedarsoftware.io.Writers$PrimitiveTypeWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.extension.TestInstantiationException": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$TimeZoneWriter": {
+    "com.cedarsoftware.io.Writers$TimeZoneWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.commons.util.ReflectionUtils": {
@@ -10851,7 +10851,7 @@
     "java.lang.reflect.Executable": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$StringBuilderWriter": {
+    "com.cedarsoftware.io.Writers$StringBuilderWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.Tag": {
@@ -10887,7 +10887,7 @@
     "org.codehaus.groovy.ast.PackageNode": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.MetaUtils": {
+    "com.cedarsoftware.io.MetaUtils": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.core.CompositeTestExecutionListener$EagerTestExecutionListener": {
@@ -11058,7 +11058,7 @@
     "java.lang.Cloneable": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$BigDecimalWriter": {
+    "com.cedarsoftware.io.Writers$BigDecimalWriter": {
       "@type": "java.lang.Object"
     },
     "java.util.IdentityHashMap": {
@@ -11169,7 +11169,7 @@
     "org.codehaus.groovy.runtime.dgmimpl.arrays.ObjectArrayGetAtMetaMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonReader$JsonClassReaderBase": {
+    "com.cedarsoftware.io.JsonReader$JsonClassReaderBase": {
       "@type": "java.lang.Object"
     },
     "java.util.concurrent.locks.ReentrantLock": {
@@ -11211,7 +11211,7 @@
     "java.lang.ObjectBeanInfo": {
       "@type": "java.lang.Object"
     },
-    "groovy.runtime.metaclass.com.cedarsoftware.util.io.TestUtilMetaClass": {
+    "groovy.runtime.metaclass.com.cedarsoftware.io.TestUtilMetaClass": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.engine.discovery.ClasspathResourceSelector": {
@@ -11256,10 +11256,10 @@
     "com.intellij.rt.execution.application.AppMainV2$Agent": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$StringBufferWriter": {
+    "com.cedarsoftware.io.Writers$StringBufferWriter": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$LocalDateWriter": {
+    "com.cedarsoftware.io.Writers$LocalDateWriter": {
       "@type": "java.lang.Object"
     },
     "groovy.lang.EmptyRange": {
@@ -11274,7 +11274,7 @@
     "org.junit.jupiter.api.condition.EnabledOnJre": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$AtomicLongWriter": {
+    "com.cedarsoftware.io.Writers$AtomicLongWriter": {
       "@type": "java.lang.Object"
     },
     "org.codehaus.groovy.util.ManagedConcurrentLinkedQueue": {
@@ -11409,10 +11409,10 @@
     "org.codehaus.groovy.reflection.stdclasses.LongCachedClass": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$TimestampWriter": {
+    "com.cedarsoftware.io.Writers$TimestampWriter": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$LocalTimeWriter": {
+    "com.cedarsoftware.io.Writers$LocalTimeWriter": {
       "@type": "java.lang.Object"
     },
     "java.lang.SecurityException": {
@@ -11514,7 +11514,7 @@
     "org.codehaus.groovy.reflection.CachedConstructor": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$DateWriter": {
+    "com.cedarsoftware.io.Writers$DateWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.engine.execution.ExtensionValuesStore$StoredValue": {
@@ -11607,7 +11607,7 @@
     "org.codehaus.groovy.util.ReferenceType$HardRef": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$PrimitiveUtf8StringWriter": {
+    "com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.DisplayNameGenerator": {
@@ -11625,7 +11625,7 @@
     "org.junit.platform.engine.discovery.ClassSelector": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$AtomicIntegerWriter": {
+    "com.cedarsoftware.io.Writers$AtomicIntegerWriter": {
       "@type": "java.lang.Object"
     },
     "java.util.concurrent.Callable": {
@@ -11739,7 +11739,7 @@
     "org.codehaus.groovy.runtime.dgmimpl.arrays.ShortArrayPutAtMetaMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$ZonedDateTimeWriter": {
+    "com.cedarsoftware.io.Writers$ZonedDateTimeWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.engine.support.hierarchical.ExclusiveResource$LockMode": {
@@ -11748,10 +11748,10 @@
     "org.codehaus.groovy.runtime.metaclass.MetaMethodIndex$CacheEntry": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$UUIDWriter": {
+    "com.cedarsoftware.io.Writers$UUIDWriter": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$URLWriter": {
+    "com.cedarsoftware.io.Writers$URLWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.condition.AbstractOsBasedExecutionCondition": {
@@ -11805,7 +11805,7 @@
     "org.junit.jupiter.engine.extension.TempDirectory": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.TestUtil": {
+    "com.cedarsoftware.io.TestUtil": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.commons.util.ClassNamePatternFilterUtils": {
@@ -11853,7 +11853,7 @@
     "java.time.ZonedDateTime": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$LocaleWriter": {
+    "com.cedarsoftware.io.Writers$LocaleWriter": {
       "@type": "java.lang.Object"
     },
     "java.lang.ObjectCustomizer": {
@@ -11937,7 +11937,7 @@
     "org.codehaus.groovy.runtime.dgmimpl.arrays.LongArrayGetAtMetaMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers": {
+    "com.cedarsoftware.io.Writers": {
       "@type": "java.lang.Object"
     },
     "java.util.stream.StreamSupport": {
@@ -12012,7 +12012,7 @@
     "org.junit.platform.engine.ExecutionRequest": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$BigIntegerWriter": {
+    "com.cedarsoftware.io.Writers$BigIntegerWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.core.LauncherConfig$Builder": {
@@ -12126,7 +12126,7 @@
     "org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver$DefaultInitializationContext": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriter$JsonClassWriter": {
+    "com.cedarsoftware.io.JsonWriter$JsonClassWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.condition.BooleanExecutionCondition": {
@@ -12165,7 +12165,7 @@
     "java.util.LinkedList": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$CalendarWriter": {
+    "com.cedarsoftware.io.Writers$CalendarWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.jupiter.api.extension.InvocationInterceptor": {
@@ -12201,7 +12201,7 @@
     "org.codehaus.groovy.runtime.metaclass.TransformMetaMethod": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.TestUtilCustomizer": {
+    "com.cedarsoftware.io.TestUtilCustomizer": {
       "@type": "java.lang.Object"
     },
     "org.codehaus.groovy.runtime.NullObject": {
@@ -12288,7 +12288,7 @@
     "org.junit.platform.launcher.core.LauncherConfig": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$ClassWriter": {
+    "com.cedarsoftware.io.Writers$ClassWriter": {
       "@type": "java.lang.Object"
     },
     "groovy.lang.MetaMethod": {
@@ -12363,10 +12363,10 @@
     "java.lang.NumberFormatException": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.SecurityTest": {
+    "com.cedarsoftware.io.SecurityTest": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.JsonWriter$JsonClassWriterBase": {
+    "com.cedarsoftware.io.JsonWriter$JsonClassWriterBase": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.listeners.session.LauncherSessionListeners": {
@@ -12495,7 +12495,7 @@
     "groovy.lang.IntRange": {
       "@type": "java.lang.Object"
     },
-    "com.cedarsoftware.util.io.Writers$LocalDateTimeWriter": {
+    "com.cedarsoftware.io.Writers$LocalDateTimeWriter": {
       "@type": "java.lang.Object"
     },
     "org.junit.platform.launcher.core.LauncherConfigurationParameters$ParameterProvider": {
@@ -12729,7 +12729,7 @@
     "org.codehaus.groovy.control": {
       "@ref": 87
     },
-    "com.cedarsoftware.util.io": {
+    "com.cedarsoftware.utils.io": {
       "@ref": 87
     },
     "org.junit.platform.commons": {
@@ -13055,7 +13055,7 @@
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.SecurityTest"
+      "value": "com.cedarsoftware.io.SecurityTest"
     },
     {
       "@type": "class",
@@ -13207,7 +13207,7 @@
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonIoException"
+      "value": "com.cedarsoftware.io.JsonIoException"
     },
     {
       "@type": "class",
@@ -14207,7 +14207,7 @@
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.TestUtil"
+      "value": "com.cedarsoftware.io.TestUtil"
     },
     {
       "@type": "class",
@@ -15371,127 +15371,127 @@
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonWriter"
+      "value": "com.cedarsoftware.io.JsonWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonWriter$JsonClassWriterBase"
+      "value": "com.cedarsoftware.io.JsonWriter$JsonClassWriterBase"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonWriter$JsonClassWriter"
+      "value": "com.cedarsoftware.io.JsonWriter$JsonClassWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonObject"
+      "value": "com.cedarsoftware.io.JsonObject"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonWriter$NullClass"
+      "value": "com.cedarsoftware.io.JsonWriter$NullClass"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$PrimitiveTypeWriter"
+      "value": "com.cedarsoftware.io.Writers$PrimitiveTypeWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$PrimitiveUtf8StringWriter"
+      "value": "com.cedarsoftware.io.Writers$PrimitiveUtf8StringWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$EnumsAsStringWriter"
+      "value": "com.cedarsoftware.io.Writers$EnumsAsStringWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$JsonStringWriter"
+      "value": "com.cedarsoftware.io.Writers$JsonStringWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$DateWriter"
+      "value": "com.cedarsoftware.io.Writers$DateWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$PrimitiveValueWriter"
+      "value": "com.cedarsoftware.io.Writers$PrimitiveValueWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$AtomicBooleanWriter"
+      "value": "com.cedarsoftware.io.Writers$AtomicBooleanWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$AtomicIntegerWriter"
+      "value": "com.cedarsoftware.io.Writers$AtomicIntegerWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$AtomicLongWriter"
+      "value": "com.cedarsoftware.io.Writers$AtomicLongWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$BigIntegerWriter"
+      "value": "com.cedarsoftware.io.Writers$BigIntegerWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$BigDecimalWriter"
+      "value": "com.cedarsoftware.io.Writers$BigDecimalWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$TimestampWriter"
+      "value": "com.cedarsoftware.io.Writers$TimestampWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$CalendarWriter"
+      "value": "com.cedarsoftware.io.Writers$CalendarWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$TimeZoneWriter"
+      "value": "com.cedarsoftware.io.Writers$TimeZoneWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$LocaleWriter"
+      "value": "com.cedarsoftware.io.Writers$LocaleWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$ClassWriter"
+      "value": "com.cedarsoftware.io.Writers$ClassWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$StringBuilderWriter"
+      "value": "com.cedarsoftware.io.Writers$StringBuilderWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$StringBufferWriter"
+      "value": "com.cedarsoftware.io.Writers$StringBufferWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$UUIDWriter"
+      "value": "com.cedarsoftware.io.Writers$UUIDWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$URLWriter"
+      "value": "com.cedarsoftware.io.Writers$URLWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$TemporalWriter"
+      "value": "com.cedarsoftware.io.Writers$TemporalWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$LocalDateWriter"
+      "value": "com.cedarsoftware.io.Writers$LocalDateWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$LocalTimeWriter"
+      "value": "com.cedarsoftware.io.Writers$LocalTimeWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$LocalDateTimeWriter"
+      "value": "com.cedarsoftware.io.Writers$LocalDateTimeWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers$ZonedDateTimeWriter"
+      "value": "com.cedarsoftware.io.Writers$ZonedDateTimeWriter"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.ArgumentHelper"
+      "value": "com.cedarsoftware.io.ArgumentHelper"
     },
     {
       "@type": "class",
@@ -15499,31 +15499,31 @@
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.MetaUtils"
+      "value": "com.cedarsoftware.io.MetaUtils"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Resolver"
+      "value": "com.cedarsoftware.io.Resolver"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.ObjectResolver"
+      "value": "com.cedarsoftware.io.ObjectResolver"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonReader$JsonClassReaderBase"
+      "value": "com.cedarsoftware.io.JsonReader$JsonClassReaderBase"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.JsonReader$JsonClassReader"
+      "value": "com.cedarsoftware.io.JsonReader$JsonClassReader"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Resolver$NullClass"
+      "value": "com.cedarsoftware.io.Resolver$NullClass"
     },
     {
       "@type": "class",
-      "value": "com.cedarsoftware.util.io.Writers"
+      "value": "com.cedarsoftware.io.Writers"
     }
   ],
   "defaultDomain": {
@@ -16684,13 +16684,13 @@
         "@ref": 84
       }
     },
-    "com.cedarsoftware.util.io": {
+    "com.cedarsoftware.utils.io": {
       "@type": "java.lang.Package",
       "versionInfo": {
         "@ref": 85
       },
       "packageInfo": null,
-      "name": "com.cedarsoftware.util.io",
+      "name": "com.cedarsoftware.utils.io",
       "module": {
         "@ref": 84
       }

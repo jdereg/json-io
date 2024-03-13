@@ -1,6 +1,6 @@
 {
   "@type": "java.lang.reflect.Constructor",
-  "clazz": "com.cedarsoftware.util.io.SecurityTest",
+  "clazz": "com.cedarsoftware.io.SecurityTest",
   "slot": 4,
   "parameterTypes": {
     "@id": 2,
@@ -15,7 +15,7 @@
   "parameterAnnotations": null,
   "constructorAccessor": null,
   "root": {
-    "clazz": "com.cedarsoftware.util.io.SecurityTest",
+    "clazz": "com.cedarsoftware.io.SecurityTest",
     "slot": 4,
     "parameterTypes": {
       "@ref": 2

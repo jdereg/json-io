@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.OffsetDateTimeTests$NestedOffsetDateTime",
+  "@type": "com.cedarsoftware.io.OffsetDateTimeTests$NestedOffsetDateTime",
   "one": {
     "dateTime": {
       "@id": 1,

@@ -1,5 +1,5 @@
 {
-  "@type": "com.cedarsoftware.util.io.LocalTimeTests$NestedLocalTime",
+  "@type": "com.cedarsoftware.io.LocalTimeTests$NestedLocalTime",
   "one": {
     "@id": 1,
     "hour": 9,
