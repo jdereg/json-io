@@ -63,12 +63,12 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
     
     static {
-        BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("aliases.txt"));
+        BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("excludedAccessorMethods.txt"));
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("ignoredFields.txt"));
-        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("nonStandardAccessors.txt"));
+        BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("config/excludedAccessorMethods.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/ignoredFields.txt"));
+        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
 
     /**
@@ -231,7 +231,7 @@ public class WriteOptionsBuilder {
      * @return boolean true if set to always show type (@type)
      */
     public WriteOptionsBuilder withExtendedAliases() {
-        Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("extendedAliases.txt");
+        Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
         extendedAliases.forEach((key, value) -> this.options.aliasTypeNames.putIfAbsent(key, value));
         return this;
     }
@@ -634,7 +634,7 @@ public class WriteOptionsBuilder {
      * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("customWriters.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
         Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
         ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
@@ -667,7 +667,7 @@ public class WriteOptionsBuilder {
      * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("nonStandardAccessors.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/nonStandardAccessors.txt");
         Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
         ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
@@ -697,7 +697,7 @@ public class WriteOptionsBuilder {
      */
     static Set<Class<?>> loadNonRefs() {
         Set<Class<?>> nonRefs = new LinkedHashSet<>();
-        Set<String> set = MetaUtils.loadSetDefinition("nonRefs.txt");
+        Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
         set.forEach((className) -> {
             Class<?> clazz = ClassUtilities.forName(className, WriteOptions.class.getClassLoader());
             if (clazz == null) {

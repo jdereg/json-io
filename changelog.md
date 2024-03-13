@@ -1,4 +1,6 @@
 ### Revision History
+* 4.19.9
+  * **NOTE**: Repackaged resources into config/resources
 * 4.19.8
   * **NOTE**: Repackaged com.cedarsoftware.util.io to com.cedarsoftware.io
   * **NOTE**: Repackaged com.cedarsoftware.util.reflect to com.cedarsoftware.io.reflect

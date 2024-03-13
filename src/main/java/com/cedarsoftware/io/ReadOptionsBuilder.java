@@ -57,11 +57,11 @@ public class ReadOptionsBuilder {
         // ClassFactories
         BASE_CLASS_FACTORIES.putAll(loadClassFactory());
         BASE_READERS.putAll(loadReaders());
-        BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("aliases.txt"));
+        BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("config/aliases.txt"));
         BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
         BASE_NON_REFS.addAll(MetaUtils.loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("excludedInjectorFields.txt"));
-        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("nonStandardInjectors.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
+        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardInjectors.txt"));
     }
 
     private DefaultReadOptions options;
@@ -488,7 +488,7 @@ public class ReadOptionsBuilder {
      * @return Map<Class < ?>, JsonReader.ClassFactory> containing the resolved Class -> JsonClassFactory instance.
      */
     private static Map<Class<?>, JsonReader.ClassFactory> loadClassFactory() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("classFactory.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/classFactory.txt");
         Map<Class<?>, JsonReader.ClassFactory> factories = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
@@ -529,7 +529,7 @@ public class ReadOptionsBuilder {
      * @return Map<Class < ?>, JsonReader.JsonClassReader> containing the resolved Class -> JsonClassReader instance.
      */
     private static Map<Class<?>, JsonReader.JsonClassReader> loadReaders() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("customReaders.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/customReaders.txt");
         Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
@@ -559,7 +559,7 @@ public class ReadOptionsBuilder {
      * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
     private static Map<Class<?>, Class<?>> loadCoercedTypes() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("coercedTypes.txt");
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/coercedTypes.txt");
         Map<Class<?>, Class<?>> coerced = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 

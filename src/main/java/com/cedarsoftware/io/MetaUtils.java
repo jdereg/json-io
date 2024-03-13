@@ -940,7 +940,7 @@ public class MetaUtils
      * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
     public static Set<Class<?>> loadNonRefs() {
-        final Set<String> set = loadSetDefinition("nonRefs.txt");
+        final Set<String> set = loadSetDefinition("config/nonRefs.txt");
         final ClassLoader classLoader = WriteOptions.class.getClassLoader();
 
         final Set<Class<?>> result = new HashSet<>();
