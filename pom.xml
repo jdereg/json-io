@@ -4,9 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
     <name>json-io</name>
     <groupId>com.cedarsoftware</groupId>
-    <artifactId>json-io</artifactId>
+    <artifactId>json-io-legacy</artifactId>
     <packaging>bundle</packaging>
-    <version>4.13.0</version>
+    <!-- json-io-legacy 1.0.0 branched from 4.13.0 -->
+    <version>1.0.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -69,21 +70,21 @@
     </developers>
 
     <properties>
-        <version.java-util>1.37.0</version.java-util>           <!-- only test dependency -->
-        <version.junit>4.13.1</version.junit>                     <!-- only test dependency -->
-        <version.groovy>2.4.17</version.groovy>                  <!-- only test dependency -->
-        <version.gson>2.6.2</version.gson>                      <!-- only test dependency -->
-        <version.jmh>1.21</version.jmh>                       <!-- only test dependency -->
-        <version.plugin.compiler>3.8.1</version.plugin.compiler>
-        <version.plugin.nexus>1.6.8</version.plugin.nexus>
-        <version.plugin.source>3.1.0</version.plugin.source>
-        <version.plugin.javadoc>3.1.1</version.plugin.javadoc>
-        <version.plugin.gpg>1.6</version.plugin.gpg>
-        <version.plugin.surefire>2.22.2</version.plugin.surefire>
+        <version.java-util>2.4.5</version.java-util>           <!-- only test dependency -->
+        <version.junit>4.13.2</version.junit>                     <!-- only test dependency -->
+        <version.groovy>4.0.20</version.groovy>                  <!-- only test dependency -->
+        <version.gson>2.10.1</version.gson>                      <!-- only test dependency -->
+        <version.jmh>1.37</version.jmh>                       <!-- only test dependency -->
+        <version.plugin.compiler>3.12.1</version.plugin.compiler>
+        <version.plugin.nexus>1.6.13</version.plugin.nexus>
+        <version.plugin.source>3.3.0</version.plugin.source>
+        <version.plugin.javadoc>3.6.3</version.plugin.javadoc>
+        <version.plugin.gpg>3.1.0</version.plugin.gpg>
+        <version.plugin.surefire>3.2.5</version.plugin.surefire>
         <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
         <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
-        <version.plugin.felix.scr>1.26.2</version.plugin.felix.scr>
-        <version.plugin.felix.bundle>4.2.1</version.plugin.felix.bundle>
+        <version.plugin.felix.scr>1.26.4</version.plugin.felix.scr>
+        <version.plugin.felix.bundle>5.1.9</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!--
             Name of the benchmark Uber-JAR to generate.
@@ -288,8 +289,8 @@
         </dependency>
 
         <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
             <version>${version.groovy}</version>
             <scope>test</scope>
         </dependency>
