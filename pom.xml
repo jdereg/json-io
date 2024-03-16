@@ -81,8 +81,8 @@
         <version.plugin.javadoc>3.6.3</version.plugin.javadoc>
         <version.plugin.gpg>3.1.0</version.plugin.gpg>
         <version.plugin.surefire>3.2.5</version.plugin.surefire>
-        <version.plugin.groovy.eclipse.compiler>3.5.0-01</version.plugin.groovy.eclipse.compiler>
-        <version.plugin.groovy.eclipse.batch>2.5.8-02</version.plugin.groovy.eclipse.batch>
+        <version.plugin.groovy.eclipse.compiler>3.7.0</version.plugin.groovy.eclipse.compiler>
+        <version.plugin.groovy.eclipse.batch>3.0.8-01</version.plugin.groovy.eclipse.batch>
         <version.plugin.felix.scr>1.26.4</version.plugin.felix.scr>
         <version.plugin.felix.bundle>5.1.9</version.plugin.felix.bundle>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -153,7 +153,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${version.plugin.compiler}</version>
                 <configuration>
-                    <release>7</release>
+                    <release>8</release>
                     <compilerId>groovy-eclipse-compiler</compilerId>
                     <!-- <verbose>true</verbose> -->
                 </configuration>
