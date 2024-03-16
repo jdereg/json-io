@@ -1,6 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.io.InputStream;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -36,7 +37,8 @@ public class JsonReader {
     static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
     /** Default maximum parsing depth */
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
-    
+    private final Map<String, Object> args = new HashMap<>();
+
     /**
      * "Jumper" APIs to support past API usage.
      */
@@ -85,9 +87,18 @@ public class JsonReader {
 
     @Deprecated
     public static Map jsonToMaps(String json, Map<String, Object> optionalArgs, int maxDepth) {
-        optionalArgs.put("USE_MAPS", true);
+        optionalArgs.put(USE_MAPS, true);
         ReadOptionsBuilder builder = getReadOptionsBuilder(optionalArgs, maxDepth);
         return JsonIo.toObjects(json, builder.build(), null);
+    }
+
+    /**
+     * @return The arguments used to configure the JsonReader.  These are thread local.
+     */
+    @Deprecated
+    public Map<String, Object> getArgs()
+    {
+        return args;
     }
 
     private static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs, int maxDepth) {
@@ -156,4 +167,54 @@ public class JsonReader {
         return builder;
     }
 
+    /**
+     * Common ancestor for JsonClassReader and JsonClassReaderEx.
+     */
+    @Deprecated
+    public interface JsonClassReaderBase  { }
+
+    /**
+     * Implement this interface to add a custom JSON reader.
+     */
+    @Deprecated
+    public interface JsonClassReader extends JsonClassReaderBase
+    {
+        /**
+         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @return Object you wish to convert the jOb value into.
+         */
+        Object read(Object jOb, Deque<JsonObject> stack);
+    }
+
+    /**
+     * Implement this interface to add a custom JSON reader.
+     */
+    @Deprecated
+    public interface JsonClassReaderEx extends JsonClassReaderBase
+    {
+        /**
+         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @param args Map of argument settings that were passed to JsonReader when instantiated.
+         * @return Java Object you wish to convert the the passed in jOb into.
+         */
+        Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args);
+
+        /**
+         * Allow custom readers to have access to the JsonReader
+         */
+        class Support
+        {
+            /**
+             * Call this method to get an instance of the JsonReader (if needed) inside your custom reader.
+             * @param args Map that was passed to your read(jOb, stack, args) method.
+             * @return JsonReader instance
+             */
+            public static JsonReader getReader(Map<String, Object> args)
+            {
+                return (JsonReader) args.get(JSON_READER);
+            }
+        }
+    }
 }
