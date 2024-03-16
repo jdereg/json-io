@@ -12,6 +12,31 @@ import com.cedarsoftware.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.ClassUtilities;
 
 public class JsonReader {
+    /** If set, this maps class ==> CustomReader */
+    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
+    /** If set, this indicates that no custom reader should be used for the specified class ==> CustomReader */
+    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";
+    /** If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation */
+    public static final String USE_MAPS = "USE_MAPS";
+    /** What to do when an object is found and 'type' cannot be determined. */
+    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";
+    /** Will fail JSON parsing if 'type' class defined but is not on classpath. */
+    public static final String FAIL_ON_UNKNOWN_TYPE = "FAIL_ON_UNKNOWN_TYPE";
+    /** Pointer to 'this' (automatically placed in the Map) */
+    public static final String JSON_READER = "JSON_READER";
+    /** Pointer to the current ObjectResolver (automatically placed in the Map) */
+    public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";
+    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
+    /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
+    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
+    /** If set, use the specified ClassLoader */
+    public static final String CLASSLOADER = "CLASSLOADER";
+    /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
+    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
+    /** Default maximum parsing depth */
+    static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
+    
     /**
      * "Jumper" APIs to support past API usage.
      */
@@ -22,7 +47,7 @@ public class JsonReader {
 
     @Deprecated
     public static <T> T jsonToJava(String json, Map<String, Object> optionalArgs) {
-        return (T)jsonToJava(json, optionalArgs, 1000);
+        return (T)jsonToJava(json, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     @Deprecated
@@ -33,7 +58,7 @@ public class JsonReader {
 
     @Deprecated
     public static <T> T jsonToJava(InputStream inputStream, Map<String, Object> optionalArgs) {
-        return jsonToJava(inputStream, optionalArgs, 1000);
+        return jsonToJava(inputStream, optionalArgs, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     @Deprecated
@@ -50,7 +75,7 @@ public class JsonReader {
 
     @Deprecated
     public static Map jsonToMaps(String json) {
-        return jsonToMaps(json, 1000);
+        return jsonToMaps(json, DEFAULT_MAX_PARSE_DEPTH);
     }
 
     @Deprecated
