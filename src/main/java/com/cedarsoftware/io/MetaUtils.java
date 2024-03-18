@@ -775,7 +775,7 @@ public class MetaUtils
      * Load custom writer classes based on contents of resources/customWriters.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
      *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     * @return {@code Map<Class < ?>, JsonWriter.JsonClassWriter>} containing the resolved Class -> JsonClassWriter instance.
      */
     public static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames(String fileName) {
         Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
@@ -937,7 +937,7 @@ public class MetaUtils
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      *
-     * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     * @return {@code Set<Class < ?>>} which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
     public static Set<Class<?>> loadNonRefs() {
         final Set<String> set = loadSetDefinition("config/nonRefs.txt");

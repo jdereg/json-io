@@ -1,4 +1,8 @@
 ### Revision History
+* 4.19.10
+  * Updated transition class `com.cedarsoftware.util.io.JsonReader`.
+  * Added transition class `com.cedarsoftware.util.io.JsonWriter`.
+  * Added the ability to put custom options (key/value pairs) on `WriteOptions` and `ReadOptions`.
 * 4.19.9
   * **NOTE**: Repackaged resources into config/resources
 * 4.19.8

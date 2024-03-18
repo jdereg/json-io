@@ -617,6 +617,17 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Add a custom option, which may be useful when writing custom writers.
+     * @param key String name of the custom option
+     * @param value Object value of the custom option
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder addCustomOption(String key, Object value) {
+        this.options.customOptions.put(key, value);
+        return this;
+    }
+
+    /**
      * Seal the instance of this class so that no more changes can be made to it.
      *
      * @return WriteOptionsBuilder for chained access.
@@ -801,6 +812,7 @@ public class WriteOptionsBuilder {
         private List<AccessorFactory> accessorFactories;
         private Set<String> filteredMethodNames;
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
+        private final Map<String, Object> customOptions = new ConcurrentHashMap<>();
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the write or a nullWriter if one does not exist.
@@ -922,6 +934,11 @@ public class WriteOptionsBuilder {
         public JsonWriter.JsonClassWriter findCustomWriter(Class<?> c) {
             JsonWriter.JsonClassWriter writer = MetaUtils.findClosest(c, customWrittenClasses, nullWriter);
             return writer != nullWriter ? writer : MetaUtils.getClassIfEnum(c).isPresent() ? enumWriter : nullWriter;
+        }
+
+        public Object getCustomOption(String key)
+        {
+            return customOptions.get(key);
         }
 
         ///// ACCESSOR PULL IN ???????

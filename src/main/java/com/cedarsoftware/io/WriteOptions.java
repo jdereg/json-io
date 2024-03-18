@@ -183,4 +183,11 @@ public interface WriteOptions {
      * deep list of fields for a given class.
      */
     Map<String, Field> getDeepDeclaredFields(final Class<?> c);
+
+    /**
+     * Get a custom option
+     * @param key String name of the custom option
+     * @return Object value of the custom option
+     */
+    Object getCustomOption(String key);
 }
