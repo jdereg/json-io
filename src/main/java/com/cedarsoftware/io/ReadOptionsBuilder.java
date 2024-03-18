@@ -426,6 +426,24 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * Add a custom option, which may be useful when writing custom readers.
+     * @param key String name of the custom option
+     * @param value Object value of the custom option
+     * @return ReadOptionsBuilder for chained access.
+     */
+    public ReadOptionsBuilder addCustomOption(String key, Object value) {
+        if (key == null) {
+            throw new JsonIoException("Custom option key must not be null.");
+        }
+        if (value == null) {
+            this.options.customOptions.remove(key);
+        } else {
+            this.options.customOptions.put(key, value);
+        }
+        return this;
+    }
+
+    /**
      * Since we are swapping keys/values, we must check for duplicate values (which are now keys).
      *
      * @param type  String fully qualified class name.
@@ -620,6 +638,7 @@ public class ReadOptionsBuilder {
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
 
         private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
+        private final Map<String, Object> customOptions = new ConcurrentHashMap<>();
 
         /**
          * @return ReconstructionType which is how you will receive the parsed JSON objects.  This will be either
@@ -907,9 +926,13 @@ public class ReadOptionsBuilder {
             return classMetaCache.computeIfAbsent(c, this::buildDeepFieldMap);
         }
 
-        @Override
         public ConverterOptions getConverterOptions() {
             return this.converterOptions;
+        }
+
+        public Object getCustomOption(String key)
+        {
+            return customOptions.get(key);
         }
 
         /**

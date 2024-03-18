@@ -1,10 +1,7 @@
 package com.cedarsoftware.util.io;
 
 import java.io.InputStream;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 import com.cedarsoftware.io.JsonIo;
 import com.cedarsoftware.io.JsonIoException;
@@ -12,6 +9,7 @@ import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.ClassUtilities;
 
+@Deprecated
 public class JsonReader {
     /** If set, this maps class ==> CustomReader */
     public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
@@ -25,19 +23,18 @@ public class JsonReader {
     public static final String FAIL_ON_UNKNOWN_TYPE = "FAIL_ON_UNKNOWN_TYPE";
     /** Pointer to 'this' (automatically placed in the Map) */
     public static final String JSON_READER = "JSON_READER";
-    /** Pointer to the current ObjectResolver (automatically placed in the Map) */
-    public static final String OBJECT_RESOLVER = "OBJECT_RESOLVER";
     /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
     public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
     /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
     public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
     /** If set, use the specified ClassLoader */
     public static final String CLASSLOADER = "CLASSLOADER";
-    /** This map is the reverse of the TYPE_NAME_MAP (value ==> key) */
-    static final String TYPE_NAME_MAP_REVERSE = "TYPE_NAME_MAP_REVERSE";
     /** Default maximum parsing depth */
-    static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
+    private static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
     private final Map<String, Object> args = new HashMap<>();
+    private static final Set<String> OPTIONAL_KEYS = new HashSet<>(Arrays.asList(
+            CUSTOM_READER_MAP, NOT_CUSTOM_READER_MAP, USE_MAPS, UNKNOWN_OBJECT, "UNKNOWN_TYPE", FAIL_ON_UNKNOWN_TYPE,
+            TYPE_NAME_MAP, MISSING_FIELD_HANDLER, CLASSLOADER));
 
     /**
      * "Jumper" APIs to support past API usage.
@@ -107,7 +104,7 @@ public class JsonReader {
         }
 
         ReadOptionsBuilder builder = new ReadOptionsBuilder().maxDepth(maxDepth);
-        boolean useMaps = com.cedarsoftware.util.Converter.convert(optionalArgs.get("USE_MAPS"), boolean.class);
+        boolean useMaps = com.cedarsoftware.util.Converter.convert(optionalArgs.get(USE_MAPS), boolean.class);
 
         if (useMaps) {
             builder.returnAsNativeJsonObjects();
@@ -115,19 +112,22 @@ public class JsonReader {
             builder.returnAsJavaObjects();
         }
 
-        boolean failOnUnknownType = com.cedarsoftware.util.Converter.convert(optionalArgs.get("FAIL_ON_UNKNOWN_TYPE"), boolean.class);
+        boolean failOnUnknownType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(FAIL_ON_UNKNOWN_TYPE), boolean.class);
         builder.failOnUnknownType(failOnUnknownType);
 
-        Object loader = optionalArgs.get("CLASSLOADER");
+        Object loader = optionalArgs.get(CLASSLOADER);
         ClassLoader classLoader;
         if (loader instanceof ClassLoader) {
             classLoader = (ClassLoader) loader;
-            builder.classLoader(classLoader);
         } else {
             classLoader = com.cedarsoftware.io.JsonReader.class.getClassLoader();
         }
+        builder.classLoader(classLoader);
 
         Object type = optionalArgs.get("UNKNOWN_TYPE");
+        if (type == null) {
+            type = optionalArgs.get(UNKNOWN_OBJECT);
+        }
         if (type instanceof Boolean) {
             builder.failOnUnknownType(true);
         } else if (type instanceof String) {
@@ -136,32 +136,51 @@ public class JsonReader {
             builder.failOnUnknownType(false);
         }
 
-        Object aliasMap = optionalArgs.get("TYPE_NAME_MAP");
+        Object aliasMap = optionalArgs.get(TYPE_NAME_MAP);
         if (aliasMap instanceof Map) {
-            Map<String, String> aliases = new LinkedHashMap<>();
+            Map<String, String> aliases = (Map<String, String>) aliasMap;
             for (Map.Entry<String, String> entry : aliases.entrySet()) {
                 builder.aliasTypeName(entry.getKey(), entry.getValue());
             }
         }
 
-        // TODO
-        Object customReaderMap = optionalArgs.get("CUSTOM_READER_MAP");
-        if (customReaderMap instanceof Map) {
-//            Map<Class<?>, JsonClassReader> customReaders = new LinkedHashMap<>();
-//            for (Map.Entry<Class<?>, JsonClassReader> entry : customReaders.entrySet()) {
-//                builder.aliasTypeName(entry.getKey(), entry.getValue());
-//            }
-            throw new JsonIoException("CUSTOM_READER option not supported in this version of json-io");
+        Object missingFieldHandler = optionalArgs.get(MISSING_FIELD_HANDLER);
+        if (missingFieldHandler instanceof com.cedarsoftware.io.JsonReader.MissingFieldHandler)
+        {
+            builder.missingFieldHandler((com.cedarsoftware.io.JsonReader.MissingFieldHandler) missingFieldHandler);
         }
 
-        // TODO
-        Object notCustomReaderMap = optionalArgs.get("NOT_CUSTOM_READER_MAP");
-        if (notCustomReaderMap instanceof Map) {
-//            Map<Class<?>, JsonClassReader> customReaders = new LinkedHashMap<>();
-//            for (Map.Entry<Class<?>, JsonClassReader> entry : customReaders.entrySet()) {
-//                builder.aliasTypeName(entry.getKey(), entry.getValue());
-//            }
-            throw new JsonIoException("NOT_CUSTOM_READER option not supported in this version of json-io");
+        Object customReaderMap = optionalArgs.get(CUSTOM_READER_MAP);
+        if (customReaderMap instanceof Map) {
+            Map<String, Object> customReaders = (Map<String, Object>) customReaderMap;
+            for (Map.Entry<String, Object> entry : customReaders.entrySet()) {
+                try {
+                    Class<?> clazz = Class.forName(entry.getKey());
+                    builder.addCustomReaderClass(clazz, (com.cedarsoftware.io.JsonReader.JsonClassReader) entry.getValue());
+                } catch (ClassNotFoundException e) {
+                    String message = "Custom json-io reader class: " + entry.getKey() + " not found.";
+                    throw new JsonIoException(message, e);
+                } catch (ClassCastException e) {
+                    String message = "Custom json-io reader for: " + entry.getKey() + " must be an instance of com.cedarsoftware.io.JsonReader.JsonClassReader.";
+                    throw new JsonIoException(message, e);
+                }
+            }
+        }
+
+        Object notCustomReadersObject = optionalArgs.get(NOT_CUSTOM_READER_MAP);
+        if (notCustomReadersObject instanceof Iterable) {
+            Iterable<Class<?>> notCustomReaders = (Iterable<Class<?>>) notCustomReadersObject;
+            for (Class<?> notCustomReader : notCustomReaders)
+            {
+                builder.addNotCustomReaderClass(notCustomReader);
+            }
+        }
+
+        for (Map.Entry<String, Object> entry : optionalArgs.entrySet()) {
+            if (OPTIONAL_KEYS.contains(entry.getKey())) {
+                continue;
+            }
+            builder.addCustomOption(entry.getKey(), entry.getValue());
         }
 
         return builder;
@@ -200,21 +219,5 @@ public class JsonReader {
          * @return Java Object you wish to convert the the passed in jOb into.
          */
         Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args);
-
-        /**
-         * Allow custom readers to have access to the JsonReader
-         */
-        class Support
-        {
-            /**
-             * Call this method to get an instance of the JsonReader (if needed) inside your custom reader.
-             * @param args Map that was passed to your read(jOb, stack, args) method.
-             * @return JsonReader instance
-             */
-            public static JsonReader getReader(Map<String, Object> args)
-            {
-                return (JsonReader) args.get(JSON_READER);
-            }
-        }
     }
 }
