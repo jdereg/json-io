@@ -432,7 +432,14 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addCustomOption(String key, Object value) {
-        this.options.customOptions.put(key, value);
+        if (key == null) {
+            throw new JsonIoException("Custom option key must not be null.");
+        }
+        if (value == null) {
+            this.options.customOptions.remove(key);
+        } else {
+            this.options.customOptions.put(key, value);
+        }
         return this;
     }
 
