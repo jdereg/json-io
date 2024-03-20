@@ -784,6 +784,9 @@ public class ObjectResolver extends Resolver
         }
 
         Object read = closestReader.read(o, stack, this);
+        if (read == null) {
+            return null;
+        }
         // Fixes Issue #17 from GitHub.  Make sure to place a pointer to the custom read object on the JsonObject.
         // This way, references to it will be pointed back to the correct instance.
         return jsonObj.setFinishedTarget(read, true);
