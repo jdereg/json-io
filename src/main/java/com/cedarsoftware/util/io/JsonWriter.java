@@ -1,13 +1,18 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.io.JsonIo;
-import com.cedarsoftware.io.JsonIoException;
-import com.cedarsoftware.io.WriteOptionsBuilder;
-
 import java.io.IOException;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.cedarsoftware.io.JsonIo;
+import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.io.WriteOptionsBuilder;
 
 @Deprecated
 public class JsonWriter
@@ -196,23 +201,6 @@ public class JsonWriter
         }
 
         return builder;
-    }
-
-    /**
-     * Main entry point (mostly used internally, but may be called from a Custom JSON writer).
-     * This method will write out whatever object type it is given, including JsonObject's.
-     * It will handle null, detecting if a custom writer should be called, array, array of
-     * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
-     * object, or a JsonObject representing a regular object.
-     * @param obj Object to be written
-     * @param showType if set to true, the @type tag will be output.  If false, it will be
-     * dropped.
-     * @throws IOException if one occurs on the underlying output stream.
-     */
-    @Deprecated
-    public void writeImpl(Object obj, boolean showType) throws IOException
-    {
-//        TODO
     }
 
     /**

@@ -1,7 +1,8 @@
 ### Revision History
 * 4.19.10
-  * Updated transition class `com.cedarsoftware.util.io.JsonReader`.
-  * Added transition class `com.cedarsoftware.util.io.JsonWriter`.
+  * Updated transition class `com.cedarsoftware.util.io.JsonReader`. This API is for temporary transition to JsonIo class static APIs.
+  * Added transition class `com.cedarsoftware.util.io.JsonWriter`.  This API is for temporary transition to JsonIo class static APIs.
+  * The entire packaging of JsonIo has been moved from com.cedarsoftware.util.io to com.cedarsoftware.io, except for the transition APIs.
   * Added the ability to put custom options (key/value pairs) on `WriteOptions` and `ReadOptions`.
 * 4.19.9
   * **NOTE**: Repackaged resources into config/resources

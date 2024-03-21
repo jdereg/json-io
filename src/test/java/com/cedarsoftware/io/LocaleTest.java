@@ -49,7 +49,7 @@ public class LocaleTest
         assertEquals(locale, us);
         
         Throwable e = assertThrows(Exception.class, () -> { TestUtil.toObjects("{\"@type\":\"java.util.Locale\"}", null); });
-        assertTrue(e.getMessage().toLowerCase().contains("must specify 'language'"));
+        assertTrue(e.getMessage().toLowerCase().contains("must include one of the following"));
 
         json = "{\"@type\":\"java.util.Locale\",\"language\":\"en\"}";
         locale = TestUtil.toObjects(json, null);
