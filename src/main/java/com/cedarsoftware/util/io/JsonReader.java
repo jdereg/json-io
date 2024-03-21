@@ -1,11 +1,14 @@
 package com.cedarsoftware.util.io;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.io.JsonIo;
-import com.cedarsoftware.io.JsonIoException;
-import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.ReadOptionsBuilder;
 import com.cedarsoftware.util.ClassUtilities;
 
@@ -65,13 +68,7 @@ public class JsonReader {
         ReadOptionsBuilder builder = getReadOptionsBuilder(optionalArgs, maxDepth);
         return JsonIo.toObjects(inputStream, builder.build(), null);
     }
-
-    @Deprecated
-    public Object jsonObjectsToJava(JsonObject root) {
-        ReadOptionsBuilder builder = new ReadOptionsBuilder().returnAsJavaObjects();
-        return JsonIo.toObjects(root, builder.build(), null);
-    }
-
+    
     @Deprecated
     public static Map jsonToMaps(String json) {
         return jsonToMaps(json, DEFAULT_MAX_PARSE_DEPTH);
@@ -98,7 +95,8 @@ public class JsonReader {
         return args;
     }
 
-    private static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs, int maxDepth) {
+    @Deprecated
+    public static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs, int maxDepth) {
         if (optionalArgs == null) {
             optionalArgs = new HashMap<>();
         }
@@ -200,10 +198,10 @@ public class JsonReader {
     {
         /**
          * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @param stack Deque of objects that have been read (Map of Maps view).  These are json-io JsonObjects, which are Maps.
          * @return Object you wish to convert the jOb value into.
          */
-        Object read(Object jOb, Deque<JsonObject> stack);
+        Object read(Object jOb, Deque stack);
     }
 
     /**
@@ -214,10 +212,10 @@ public class JsonReader {
     {
         /**
          * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack Deque of objects that have been read (Map of Maps view).
+         * @param stack Deque of objects that have been read (Map of Maps view).  These are json-io JsonObjects, which are Maps.
          * @param args Map of argument settings that were passed to JsonReader when instantiated.
          * @return Java Object you wish to convert the the passed in jOb into.
          */
-        Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args);
+        Object read(Object jOb, Deque stack, Map<String, Object> args);
     }
 }

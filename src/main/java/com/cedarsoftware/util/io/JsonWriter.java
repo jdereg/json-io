@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.JsonIo;
-import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.WriteOptionsBuilder;
 
 @Deprecated
@@ -86,7 +85,8 @@ public class JsonWriter
         return JsonIo.toJson(item, builder.build());
     }
 
-    private static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
+    @Deprecated
+    public static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
         if (optionalArgs == null) {
             optionalArgs = new HashMap<>();
         }
@@ -97,8 +97,7 @@ public class JsonWriter
         if (dateFormat instanceof String)
         {
             builder.dateTimeFormat((String) dateFormat);
-        } else if (dateFormat instanceof SimpleDateFormat)
-        {
+        } else if (dateFormat instanceof SimpleDateFormat) {
             builder.dateTimeFormat(((SimpleDateFormat) dateFormat).toPattern());
         }
 

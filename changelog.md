@@ -1,4 +1,6 @@
 ### Revision History
+* 4.19.11
+  * Removed references to JsonObject from transition classes com.cedarsoftware.util.io.JsonReader.
 * 4.19.10
   * Updated transition class `com.cedarsoftware.util.io.JsonReader`. This API is for temporary transition to JsonIo class static APIs.
   * Added transition class `com.cedarsoftware.util.io.JsonWriter`.  This API is for temporary transition to JsonIo class static APIs.

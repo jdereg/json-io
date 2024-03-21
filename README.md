@@ -7,14 +7,14 @@ json-io
 Excellent Java serialization to and from JSON format.
 Available on [Maven Central](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware).
 This library has <b>no external dependencies</b> on other libraries for runtime other than our own `java-util.`
-The `json-io.jar`file is only`185K` and combined with `java-util` totals `242K.` 
+The `json-io.jar`file is only`185K` and combined with `java-util` totals `250K.` 
 Works with`JDK 1.8`through`JDK 21`.
 The classes in the`.jar`file are version 52 (`JDK 1.8`).
 ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.19.10'
+implementation 'com.cedarsoftware:json-io:4.19.11'
 ```
 
 ##### Maven
@@ -22,7 +22,7 @@ implementation 'com.cedarsoftware:json-io:4.19.10'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.19.10</version>
+      <version>4.19.11</version>
     </dependency>
 ```
 ___
