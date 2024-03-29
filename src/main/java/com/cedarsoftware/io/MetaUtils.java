@@ -508,6 +508,22 @@ public class MetaUtils
      * make sure to return 'true' for isObjectFinal().
      */
     public static Object newInstance(Converter converter, Class<?> c, Collection<?> argumentValues) {
+        throwIfSecurityConcerns(c);
+
+        if (argumentValues == null) {
+            argumentValues = new ArrayList<>();
+        }
+
+        final String cacheKey = createCacheKey(c, argumentValues);
+        CachedConstructor cachedConstructor = constructors.get(cacheKey);
+        if (cachedConstructor == null) {
+            return instantiateNewInstance(converter, c, argumentValues, cacheKey);
+        } else {
+            return instantiateWithCachedConstructor(converter, c, argumentValues, cachedConstructor);
+        }
+    }
+
+    private static void throwIfSecurityConcerns(Class<?> c) {
         throwIfSecurityConcern(ProcessBuilder.class, c);
         throwIfSecurityConcern(Process.class, c);
         throwIfSecurityConcern(ClassLoader.class, c);
@@ -518,96 +534,96 @@ public class MetaUtils
         if (c.getName().equals("java.lang.ProcessImpl")) {
             throw new IllegalArgumentException("For security reasons, json-io does not allow instantiation of: java.lang.ProcessImpl");
         }
+    }
 
-        if (argumentValues == null) {
-            argumentValues = new ArrayList<>();
+    private static Object instantiateNewInstance(Converter converter, Class<?> c, Collection<?> argumentValues, String cacheKey) {
+        // Handle various types of collections and interfaces
+        if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
+            return new TreeMap<>();
+        }
+        if (unmodifiableMap.getClass().isAssignableFrom(c)) {
+            return new LinkedHashMap<>();
+        }
+        if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
+            return new TreeSet<>();
+        }
+        if (unmodifiableSet.getClass().isAssignableFrom(c)) {
+            return new LinkedHashSet<>();
+        }
+        if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
+            return new ArrayList<>();
+        }
+        if (Collections.EMPTY_LIST.getClass().equals(c)) {
+            return Collections.emptyList();
+        }
+        if (c.isInterface()) {
+            throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
         }
 
-        final String cacheKey = createCacheKey(c, argumentValues);
-        CachedConstructor cachedConstructor = constructors.get(cacheKey);
-        if (cachedConstructor == null)
-        {
-            if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
-                return new TreeMap<>();
-            }
-            if (unmodifiableMap.getClass().isAssignableFrom(c)) {
-                return new LinkedHashMap<>();
-            }
-            if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
-                return new TreeSet<>();
-            }
-            if (unmodifiableSet.getClass().isAssignableFrom(c)) {
-                return new LinkedHashSet<>();
-            }
-            if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
-                return new ArrayList<>();
-            }
-            if (Collections.EMPTY_LIST.getClass().equals(c)) {
-                return Collections.emptyList();
-            }
-            if (c.isInterface()) {
-                throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
-            }
+        final Constructor<?>[] declaredConstructors = c.getDeclaredConstructors();
+        Set<ConstructorWithValues> constructorOrder = getOrderedConstructors(converter, argumentValues, declaredConstructors);
+        return instantiateWithOrderedConstructors(c, cacheKey, constructorOrder);
+    }
 
-            final Constructor<?>[] declaredConstructors = c.getDeclaredConstructors();
-            Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
-            List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
+    private static Set<ConstructorWithValues> getOrderedConstructors(Converter converter, Collection<?> argumentValues, Constructor<?>[] declaredConstructors) {
+        Set<ConstructorWithValues> constructorOrder = new TreeSet<>();
+        List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
 
-            // Spin through all constructors, adding the constructor and the best match of arguments for it, as an
-            // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
-            for (Constructor<?> constructor : declaredConstructors) {
-                Parameter[] parameters = constructor.getParameters();
-                List<Object> argumentsNull = matchArgumentsToParameters(converter, argValues, parameters, true);
-                List<Object> argumentsNonNull = matchArgumentsToParameters(converter, argValues, parameters, false);
-                constructorOrder.add(new ConstructorWithValues(constructor, argumentsNull.toArray(), argumentsNonNull.toArray()));
-            }
+        // Spin through all constructors, adding the constructor and the best match of arguments for it, as an
+        // Object to a Set.  The Set is ordered by ConstructorWithValues.compareTo().
+        for (Constructor<?> constructor : declaredConstructors) {
+            Parameter[] parameters = constructor.getParameters();
+            List<Object> argumentsNull = matchArgumentsToParameters(converter, argValues, parameters, true);
+            List<Object> argumentsNonNull = matchArgumentsToParameters(converter, argValues, parameters, false);
+            constructorOrder.add(new ConstructorWithValues(constructor, argumentsNull.toArray(), argumentsNonNull.toArray()));
+        }
+        return constructorOrder;
+    }
 
-            for (ConstructorWithValues constructorWithValues : constructorOrder) {
-                Constructor<?> constructor = constructorWithValues.constructor;
+    private static Object instantiateWithOrderedConstructors(Class<?> c, String cacheKey, Set<ConstructorWithValues> constructorOrder) {
+        for (ConstructorWithValues constructorWithValues : constructorOrder) {
+            Constructor<?> constructor = constructorWithValues.constructor;
+            try {
+                MetaUtils.trySetAccessible(constructor);
+                Object o = constructor.newInstance(constructorWithValues.argsNull);
+                // cache constructor search effort (null used for parameters of common types not matched to arguments)
+                constructors.put(cacheKey, new CachedConstructor(constructor, true));
+                return o;
+            } catch (Exception ignore) {
                 try {
-                    MetaUtils.trySetAccessible(constructor);
-                    Object o = constructor.newInstance(constructorWithValues.argsNull);
-                    // cache constructor search effort (null used for parameters of common types not matched to arguments)
-                    constructors.put(cacheKey, new CachedConstructor(constructor, true));
-                    return o;
-                } catch (Exception ignore) {
-                    try {
-                        if (constructor.getParameterCount() > 0) {
-                            // The no-arg constructor should only be tried one time.
-                            Object o = constructor.newInstance(constructorWithValues.argsNonNull);
-                            // cache constructor search effort (non-null used for parameters of common types not matched to arguments)
-                            constructors.put(cacheKey, new CachedConstructor(constructor, false));
-                            return o;
-                        }
+                    if (constructor.getParameterCount() > 0) {
+                        // The no-arg constructor should only be tried one time.
+                        Object o = constructor.newInstance(constructorWithValues.argsNonNull);
+                        // cache constructor search effort (non-null used for parameters of common types not matched to arguments)
+                        constructors.put(cacheKey, new CachedConstructor(constructor, false));
+                        return o;
                     }
-                    catch (Exception ignored) {
-                    }
+                } catch (Exception ignored) {
                 }
             }
+        }
+        Object o = tryUnsafeInstantiation(c);
+        if (o != null) {
+            return o;
+        }
+        throw new JsonIoException("Unable to instantiate: " + c.getName());
+    }
 
-            Object o = tryUnsafeInstantiation(c);
-            if (o != null) {
-                return o;
-            }
-        } else {
-            List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
-            Parameter[] parameters = cachedConstructor.constructor.getParameters();
-            List<Object> arguments = matchArgumentsToParameters(converter, argValues, parameters, cachedConstructor.useNullSetting);
+    private static Object instantiateWithCachedConstructor(Converter converter, Class<?> c, Collection<?> argumentValues, CachedConstructor cachedConstructor) {
+        List<Object> argValues = new ArrayList<>(argumentValues);   // Copy to allow destruction
+        Parameter[] parameters = cachedConstructor.constructor.getParameters();
+        List<Object> arguments = matchArgumentsToParameters(converter, argValues, parameters, cachedConstructor.useNullSetting);
 
-            try {
-                // Be nice to person debugging
-                Object o = cachedConstructor.constructor.newInstance(arguments.toArray());
-                return o;
-            }
-            catch (Exception ignored) {
-            }
-
-            Object o = tryUnsafeInstantiation(c);
-            if (o != null) {
-                return o;
-            }
+        try {
+            // Be nice to person debugging
+            return cachedConstructor.constructor.newInstance(arguments.toArray());
+        } catch (Exception ignored) {
         }
 
+        Object o = tryUnsafeInstantiation(c);
+        if (o != null) {
+            return o;
+        }
         throw new JsonIoException("Unable to instantiate: " + c.getName());
     }
 

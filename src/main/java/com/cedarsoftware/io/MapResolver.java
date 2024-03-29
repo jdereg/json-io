@@ -126,14 +126,14 @@ public class MapResolver extends Resolver
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
+                if (isConvertibleType(fieldType))
                 {
                     Object convert = this.getConverter().convert(rhs, fieldType);
                     jsonObj.put(fieldName, convert);
                 }
                 else if (rhs instanceof String)
                 {
-                    if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class)
+                    if (isEmptyStringAssignable(fieldType))
                     {
                         if ("".equals(((String)rhs).trim()))
                         {   // Allow "" to null out a non-String field on the inbound JSON
@@ -145,6 +145,15 @@ public class MapResolver extends Resolver
         }
         jsonObj.setTarget(null);  // don't waste space (used for typed return, not for Map return)
     }
+
+    private boolean isConvertibleType(Class<?> type) {
+        return Primitives.isPrimitive(type) || BigDecimal.class.equals(type) || BigInteger.class.equals(type) || Date.class.equals(type);
+    }
+
+    private boolean isEmptyStringAssignable(Class<?> type) {
+        return type != String.class && type != StringBuilder.class && type != StringBuffer.class;
+    }
+
 
     /**
      * Process java.util.Collection and it's derivatives.  Collections are written specially

@@ -523,7 +523,10 @@ public abstract class Resolver implements ReaderContext
                     Collection col = (Collection) objToFix;
                     if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
                     {
-                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.getJavaTypeName() + "', @ref = " + ref.refId);
+                        String typeName = ref.referencingObj.getJavaTypeName();
+                        long refId = ref.refId;
+                        String errorMessage = "Error setting set entry of ImmutableSet '" + typeName + "', @ref = " + refId;
+                        throw new JsonIoException(errorMessage);
                     }
                     else
                     {
@@ -547,7 +550,10 @@ public abstract class Resolver implements ReaderContext
                     }
                     catch (Exception e)
                     {
-                        throw new JsonIoException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
+                        String fieldName = field.getName();
+                        long refId = ref.refId;
+                        String errorMessage = "Error setting field while resolving references '" + fieldName + "', @ref = " + refId;
+                        throw new JsonIoException(errorMessage, e);
                     }
                 }
             }
