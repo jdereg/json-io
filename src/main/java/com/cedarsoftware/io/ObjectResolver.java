@@ -340,9 +340,11 @@ public class ObjectResolver extends Resolver
      * stores the missing field and their values to call back the handler at the end of the resolution, cause some
      * reference may need to be resolved later.
      */
+
+
     private void storeMissingField(Object target, String missingField, Object value)
     {
-        missingFields.add(new Missingfields(target, missingField, value));
+        missingFields.add(new Object[]{target, missingField, value});
     }
     
     /**

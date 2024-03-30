@@ -55,8 +55,6 @@ public abstract class Resolver implements ReaderContext
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
 
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
-    // store the missing field found during deserialization to notify any client after the complete resolution is done
-    protected final Collection<Missingfields> missingFields = new ArrayList<>();
 
     @Getter(AccessLevel.PUBLIC)
     private final ReadOptions readOptions;
@@ -97,19 +95,14 @@ public abstract class Resolver implements ReaderContext
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
-    @SuppressWarnings("FieldMayBeFinal")
-    protected static class Missingfields
-    {
-        private Object target;
-        private String fieldName;
-        private Object value;
 
-        public Missingfields(Object target, String fieldName, Object value)
-        {
-            this.target = target;
-            this.fieldName = fieldName;
-            this.value = value;
-        }
+    protected Object target;
+    protected String fieldName;
+    protected Object value;
+
+    protected final Collection<Object[]> missingFields = new ArrayList<>();
+    public void addMissingField(Object target, String missingField, Object value) {
+        missingFields.add(new Object[]{target, missingField, value});
     }
 
     protected Resolver(ReadOptions readOptions, ReferenceTracker references, Converter converter) {
@@ -224,9 +217,9 @@ public abstract class Resolver implements ReaderContext
         MissingFieldHandler missingFieldHandler = this.readOptions.getMissingFieldHandler();
         if (missingFieldHandler != null)
         {
-            for (Missingfields mf : missingFields)
+            for (Object[] mf : missingFields)
             {
-                missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
+                missingFieldHandler.fieldMissing(mf[0], (String) mf[1], mf[2]);
             }
         }//else no handler so ignore.
     }
@@ -388,27 +381,8 @@ public abstract class Resolver implements ReaderContext
      * TODO: factories will shrink this to just unknown generic classes, Object[]'s, and Collections of such.
      */
     protected Object createInstanceUsingType(JsonObject jsonObj) {
-        Class<?> c = jsonObj.getJavaType();
-        boolean useMaps = readOptions.isReturningJsonObjects();
-        Object mate;
-
-        if (c == Object.class && !useMaps) {  // JsonObject
-            Class<?> unknownClass = readOptions.getUnknownTypeClass();
-            if (unknownClass == null) {
-                JsonObject jsonObject = new JsonObject();
-                jsonObject.setJavaType(Map.class);
-                mate = jsonObject;
-            } else {
-                mate = MetaUtils.newInstance(getConverter(), unknownClass, null);   // can add constructor arg values
-            }
-        } else {
-            // Handle regular field.object reference
-            // ClassFactory already consulted above, likely regular business/data classes.
-            // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = MetaUtils.newInstance(getConverter(), c, null);  // can add constructor arg values
-        }
-        jsonObj.setTarget(mate);
-        return mate;
+        InstanceCreator instanceCreator = new InstanceCreator(readOptions);
+        return instanceCreator.createInstanceUsingType(jsonObj);
     }
 
     /**
