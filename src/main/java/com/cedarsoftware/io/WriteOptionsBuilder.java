@@ -71,6 +71,10 @@ public class WriteOptionsBuilder {
         BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
 
+    enum ShowType {
+        ALWAYS, NEVER, MINIMAL
+    }
+
     /**
      * Start with default options
      */
@@ -242,7 +246,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoAlways() {
-        this.options.showTypeInfo = WriteOptions.ShowType.ALWAYS;
+        this.options.showTypeInfo = ShowType.ALWAYS;
         return this;
     }
 
@@ -252,7 +256,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoNever() {
-        this.options.showTypeInfo = WriteOptions.ShowType.NEVER;
+        this.options.showTypeInfo = ShowType.NEVER;
         return this;
     }
 
@@ -265,7 +269,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoMinimal() {
-        this.options.showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        this.options.showTypeInfo = ShowType.MINIMAL;
         return this;
     }
 
@@ -746,7 +750,7 @@ public class WriteOptionsBuilder {
         @Getter
         private boolean shortMetaKeys = false;
 
-        private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        private ShowType showTypeInfo = ShowType.MINIMAL;
 
         /**
          * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical

@@ -297,12 +297,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param output Writer to write the JSON to (if there is a custom writer for o's Class).
      * @return true if the array element was written, false otherwise.
      */
-    protected boolean writeCustom(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) throws IOException
-    {
-        if (writeOptions.isNeverShowingType())
-        {
+    protected boolean writeCustom(Class<?> arrayComponentClass, Object o, boolean showType, Writer output) throws IOException {
+        if (writeOptions.isNeverShowingType()) {
             showType = false;
         }
+
         JsonClassWriter closestWriter = writeOptions.getCustomWriter(o.getClass());
 
         if (closestWriter == null)
@@ -318,41 +317,54 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         boolean referenced = objsReferenced.containsKey(o);
 
         if (closestWriter.hasPrimitiveForm(this)) {
-            if ((!referenced && !showType) || closestWriter instanceof Writers.JsonStringWriter) {
+            if (shouldWritePrimitiveForm(referenced, showType, closestWriter)) {
                 closestWriter.writePrimitiveForm(o, output, this);
                 return true;
             }
         }
 
+        writeObjectStart(output, referenced, showType, o);
+
+        closestWriter.write(o, showType || referenced, output, this);
+
+        writeObjectEnd(output);
+
+        return true;
+    }
+
+    private boolean shouldWritePrimitiveForm(boolean referenced, boolean showType, JsonClassWriter closestWriter) {
+        if (!referenced && !showType) {
+            return true;
+        }
+        if (closestWriter instanceof Writers.JsonStringWriter) {
+            return true;
+        }
+        return false;
+    }
+
+    private void writeObjectStart(Writer output, boolean referenced, boolean showType, Object o) throws IOException {
         output.write('{');
         tabIn();
-        if (referenced)
-        {
+        if (referenced) {
             writeId(getId(o));
-            if (showType)
-            {
+            if (showType) {
                 output.write(',');
                 newLine();
             }
         }
 
-        if (showType)
-        {
+        if (showType && (referenced || showType)) {
             writeType(o.getClass().getName(), output);
-        }
-
-        if (referenced || showType)
-        {
             output.write(',');
             newLine();
         }
+    }
 
-        closestWriter.write(o, showType || referenced, output, this);
-
+    private void writeObjectEnd(Writer output) throws IOException {
         tabOut();
         output.write('}');
-        return true;
     }
+
 
     /**
      * Write the passed in Java object in JSON format.

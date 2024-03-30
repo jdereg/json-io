@@ -41,11 +41,6 @@ import com.cedarsoftware.io.reflect.Accessor;
 public interface WriteOptions {
     // Properties
 
-    // Enum for the 3-state property
-    enum ShowType {
-        ALWAYS, NEVER, MINIMAL
-    }
-
     /**
      * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
      * white-space and indentations, 'false' will output JSON in one line.  The default is false.
