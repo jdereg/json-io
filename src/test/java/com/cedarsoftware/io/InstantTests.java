@@ -131,7 +131,7 @@ class InstantTests {
     void testOldFormatWithNothing() {
         assertThatThrownBy(() -> TestUtil.toObjects(loadJson("old-format-missing-fields.json"), Instant.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Instant the map must include one of the following: [seconds, nanos], [_v], or [value] with associated values");
+                .hasMessageContaining("Map to 'Instant' the map must include: [seconds, nanos (optional)], [value], or [_v] as keys with associated values");
     }
 
     private String loadJson(String fileName) {

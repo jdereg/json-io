@@ -82,8 +82,8 @@
   * The public API on `JsonReader` and `JsonWriter` has been simplified to fewer options and many of the prior APIs have been deprecated.  The 5.0.0+ release will remove these deprecated APIs.
 * 4.15.0
   * Supports `JDK1.8, JDK11, 17, 21.` Tested with these versions, and compiled in class file version 52 (`JDK1.8 `) format.
-  * `ClassFactory` added `isFinalObject() { return true/false }` to prevent addtional processing from happening if the `ClassFactory` creates the object AND assigns all values.
-  * Fixed an issue with classes that used custom reader/writes being loaded when inside an array or collection. If there were circular references, they were not resolved correctly.
+  * `ClassFactory` added `isFinalObject() { return true/false }` to prevent additional processing from happening if the `ClassFactory` creates the object AND assigns all values.
+  * Fixed an issue with classes that used custom reader/writers being loaded when inside an array or collection. If there were circular references, they were not resolved correctly.
   * This version writes `Enums` in a more compact way with the field name associated to a JSON String name of the enum.  However, the prior versions of `json-io` wrote `Enums` out as JSON objects.  The JSON reader will read `Enums` either way.  If you want the output to continue to write `Enums` as a JSON Object, use the `.writeEnumsAsObjects()` on the `WriteOptionsBuilder`, and it will output enums as it used to.
   * Minor change: `JsonObject` was `JsonObject<K, V>` and is now `JsonObject` (no generics).  If you used `JsonObject` in your code, make sure to remove the generics.
   * Minor change: `JsonReader.ClassFactory::newInstance(Class c, Object)` has been changed to `JsonReader.ClassFactory::newInstance(Class<?>, JsonObject)`.  If you have written a `CustomClassFactory,` update the method signature to `newInstance(Class<?>, JsonObject).` 

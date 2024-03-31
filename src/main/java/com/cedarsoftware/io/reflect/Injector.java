@@ -53,7 +53,7 @@ public class Injector {
             try {
                 field.setAccessible(true);
             } catch (Exception ioe) {
-                // If object could not be set accessible let's escape here instaad
+                // If object could not be set accessible let's escape here instead
                 // of continuing on with more reflection and possible exceptions being thrown.
                 // this will speed things up a bit to short circuit.
                 // Anything that shows up in System.out.println() above should either be added to ignored
@@ -63,7 +63,6 @@ public class Injector {
         }
 
         try {
-
             MethodHandle handle = MethodHandles.lookup().unreflectSetter(field);
             return new Injector(field, handle, uniqueFieldName, field.getName());
         } catch (IllegalAccessException ignore) {

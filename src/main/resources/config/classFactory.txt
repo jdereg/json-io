@@ -68,7 +68,6 @@ java.net.URI = Convertable
 java.sql.Date = Convertable
 java.sql.Timestamp = Convertable
 
-
 java.time.Duration = Convertable
 java.time.Instant = Convertable
 java.time.LocalDate = Convertable

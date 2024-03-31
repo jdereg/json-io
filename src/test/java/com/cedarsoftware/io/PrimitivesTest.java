@@ -84,48 +84,48 @@ public class PrimitivesTest
 
         assertThatThrownBy(() -> TestUtil.toObjects(json, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Byte the map must include one of the following: [_v], or [value] with associated values");
+                .hasMessageContaining("To convert from Map to 'Byte' the map must include: [value], or [_v] as keys with associated values");
         
         final String json1 = "{\"@type\":\"short\"}";
 
         assertThatThrownBy(() -> TestUtil.toObjects(json1, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Short the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Short' the map must include: [value], or [_v] as keys with associated values");
 
         final String json2 = "{\"@type\":\"int\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json2, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Integer the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Integer' the map must include: [value], or [_v] as keys with associated values");
 
         final String json3 = "{\"@type\":\"long\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json3, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Long the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Long' the map must include: [value], or [_v] as keys with associated values");
 
         final String json4 = "{\"@type\":\"float\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json4, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Float the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Float' the map must include: [value], or [_v] as keys with associated values");
 
         final String json5 = "{\"@type\":\"double\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json5, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Double the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Double' the map must include: [value], or [_v] as keys with associated values");
 
         final String json6 = "{\"@type\":\"char\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json6, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to char the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'char' the map must include: [value], or [_v] as keys with associated values");
 
         final String json7 = "{\"@type\":\"boolean\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json7, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Boolean the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'Boolean' the map must include: [value], or [_v] as keys with associated values");
 
         final String json8 = "{\"@type\":\"string\"}";
         assertThatThrownBy(() -> TestUtil.toObjects(json8, null))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to String the map must include one of the following: [_v], or [value]");
+                .hasMessageContaining("convert from Map to 'String' the map must include: [value], or [_v] as keys with associated values");
     }
 
     @Test
