@@ -2,8 +2,6 @@ package com.cedarsoftware.io;
 
 import java.util.Random;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -128,10 +126,21 @@ class ByteArrayTest extends SerializationDeserializationMinimumTests<byte[]>
         assertThat(actual).isEqualTo(longs);
     }
 
-    @AllArgsConstructor
-    @Getter
     public static class NestedByteArray {
         private final byte[] one;
         private final byte[] two;
+
+        public NestedByteArray(byte[] one, byte[] two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public byte[] getOne() {
+            return this.one;
+        }
+
+        public byte[] getTwo() {
+            return this.two;
+        }
     }
 }

@@ -269,7 +269,7 @@ class JsonParser {
                 
                 return jObj;
             case '[':
-                Object[] array = readArray(suggestedClass);
+                Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
                 return array;
             case ']':   // empty array
                 input.pushback(']');

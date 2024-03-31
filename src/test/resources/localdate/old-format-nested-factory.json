@@ -1,13 +1,9 @@
 {
   "@type": "com.cedarsoftware.io.factory.LocalDateFactoryTests$NestedLocalDate",
   "one": {
-    "year": 2014,
-    "month": 6,
-    "day": 13
+    "date": "2014-06-13"
   },
   "two": {
-    "year": 2024,
-    "month": 9,
-    "day": 12
+    "year": "2024-09-12"
   }
 }

@@ -25,7 +25,6 @@ import java.util.Optional;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.FastWriter;
-import lombok.Getter;
 
 import static com.cedarsoftware.io.JsonObject.ITEMS;
 
@@ -72,26 +71,12 @@ import static com.cedarsoftware.io.JsonObject.ITEMS;
 public class JsonWriter implements WriterContext, Closeable, Flushable
 {
     private static final Object[] byteStrings = new Object[256];
-    private static final String NEW_LINE = System.getProperty("line.separator");
+    private static final String NEW_LINE = System.lineSeparator();
     private static final Long ZERO = 0L;
-
-    @Getter
     private final WriteOptions writeOptions;
-
-    /**
-     * Map containing all objects that were visited within input object graph
-     */
-    @Getter
     private final Map<Object, Long> objVisited = new IdentityHashMap<>();
-
-    /**
-     *  Map containing all objects that were referenced within input object graph.
-     */
-    @Getter
     private final Map<Object, Long> objsReferenced = new IdentityHashMap<>();
-
     private final Writer out;
-
     private long identity = 1;
     private int depth = 0;
 
@@ -189,6 +174,24 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
     public JsonWriter(OutputStream out, WriteOptions writeOptions) {
         this.out = new FastWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
         this.writeOptions = writeOptions == null ? new WriteOptionsBuilder().build() : writeOptions;
+    }
+
+    public WriteOptions getWriteOptions() {
+        return writeOptions;
+    }
+
+    /**
+     * Map containing all objects that were visited within input object graph
+     */
+    protected Map<Object, Long> getObjVisited() {
+        return objVisited;
+    }
+
+    /**
+     *  Map containing all objects that were referenced within input object graph.
+     */
+    protected Map<Object, Long> getObjsReferenced() {
+        return objsReferenced;
     }
 
     /**

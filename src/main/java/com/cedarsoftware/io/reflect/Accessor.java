@@ -8,7 +8,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.MetaUtils;
-import lombok.Getter;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -28,34 +27,15 @@ import lombok.Getter;
  *         limitations under the License.*
  */
 public class Accessor {
-
-    /**
-     * The unique field name if two fields have the same name in the same class structure,
-     * the more parent field will be qualified with the ShortName of the Declaring class
-     */
-    @Getter
     private final String uniqueFieldName;
 
     /**
      * The field we are trying to access with this method handle
      */
     private final Field field;
-
     private final boolean isMethod;
-
-    /**
-     * The display name will be either the underlying field name or the underlying
-     * method name from which the method handle was created.
-     */
-    @Getter
     private final String displayName;
     private final MethodHandle methodHandle;
-
-    /**
-     * This will be the modifiers of the field or method that defines this MethodHandle
-     * (or Field) itself if we had to fall back to field access.
-     */
-    @Getter
     private final boolean isPublic;
 
     private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String displayName, boolean isPublic, boolean isMethod) {
@@ -66,7 +46,6 @@ public class Accessor {
         this.isPublic = isPublic;
         this.isMethod = isMethod;
     }
-
 
     public static Accessor create(Field field, String uniqueFieldName) {
         if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
@@ -123,5 +102,29 @@ public class Accessor {
 
     public boolean isMethodHandlePresent() {
         return methodHandle != null;
+    }
+
+    /**
+     * The unique field name if two fields have the same name in the same class structure,
+     * the more parent field will be qualified with the ShortName of the Declaring class
+     */
+    public String getUniqueFieldName() {
+        return uniqueFieldName;
+    }
+
+    /**
+     * The display name will be either the underlying field name or the underlying
+     * method name from which the method handle was created.
+     */
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    /**
+     * This will be the modifiers of the field or method that defines this MethodHandle
+     * (or Field) itself if we had to fall back to field access.
+     */
+    public boolean isPublic() {
+        return isPublic;
     }
 }

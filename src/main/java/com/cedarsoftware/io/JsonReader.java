@@ -14,7 +14,6 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.convert.Converter;
-import lombok.Getter;
 
 import static com.cedarsoftware.io.JsonObject.ITEMS;
 
@@ -63,16 +62,9 @@ import static com.cedarsoftware.io.JsonObject.ITEMS;
 public class JsonReader implements Closeable, ReaderContext
 {
     private final FastReader input;
-
-    @Getter
     private final Resolver resolver;
-
-    @Getter
     private final ReadOptions readOptions;
-
-    @Getter
     private final Converter converter;
-
     private final JsonParser parser;
 
     /**
@@ -197,11 +189,11 @@ public class JsonReader implements Closeable, ReaderContext
 //            return null;
 //        }
     }
-    
+
     /**
      * Allow others to try potentially faster Readers.
      * @param inputStream InputStream that will be offering JSON.
-     * @return
+     * @return FastReader wrapped around the passed in inputStream, translating from InputStream to InputStreamReader.
      */
     protected FastReader getReader(InputStream inputStream)
     {
@@ -305,6 +297,18 @@ public class JsonReader implements Closeable, ReaderContext
         }
 
         return graph;
+    }
+
+    public Resolver getResolver() {
+        return resolver;
+    }
+
+    public ReadOptions getReadOptions() {
+        return readOptions;
+    }
+
+    public Converter getConverter() {
+        return converter;
     }
 
     /**

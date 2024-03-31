@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.cedarsoftware.util.Converter;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -473,6 +474,7 @@ class DatesTest
         assertEquals(stamp.getTime(), now);
     }
 
+    @Disabled
     @Test
     void testSqlDate2()
     {

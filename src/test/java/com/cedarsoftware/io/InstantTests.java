@@ -8,8 +8,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.util.DeepEquals;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -131,7 +129,7 @@ class InstantTests {
     void testOldFormatWithNothing() {
         assertThatThrownBy(() -> TestUtil.toObjects(loadJson("old-format-missing-fields.json"), Instant.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("convert from Map to Instant the map must include one of the following: [seconds, nanos], [_v], or [value] with associated values");
+                .hasMessageContaining("Map to 'Instant' the map must include: [seconds, nanos (optional)], [value], or [_v] as keys with associated values");
     }
 
     private String loadJson(String fileName) {
@@ -497,10 +495,21 @@ class InstantTests {
         }
     }
 
-    @Getter
-    @AllArgsConstructor
     public static class NestedInstant {
         private final Instant instant1;
         private final Instant instant2;
+
+        public NestedInstant(Instant instant1, Instant instant2) {
+            this.instant1 = instant1;
+            this.instant2 = instant2;
+        }
+
+        public Instant getInstant1() {
+            return this.instant1;
+        }
+
+        public Instant getInstant2() {
+            return this.instant2;
+        }
     }
 }

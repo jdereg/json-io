@@ -8,9 +8,6 @@ import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.FoodType;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,23 +19,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
- * <br>
- * Copyright (c) Cedar Software LLC
- * <br><br>
- * Licensed under the Apache License, Version 2.0 (the "License")
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <br><br>
- * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- * <br><br>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.*
  */
 class EnumTests {
-
     private static final WriteOptions basicWriteOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
     private static final WriteOptions enumAsPrimitiveOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build();
 
@@ -461,23 +457,54 @@ class EnumTests {
         private int internal = 6;
         protected long age = 21;
 
-        @Getter
-        @Setter
         private String foo = "bar";
+
+        public String getFoo() {
+            return this.foo;
+        }
+
+        public void setFoo(String foo) {
+            this.foo = foo;
+        }
     }
 
-    @Getter
-    @Setter
     private static class NestedEnum {
         private TestEnum3 testEnum3;
         private TestEnum4 testEnum4;
+
+        public TestEnum3 getTestEnum3() {
+            return this.testEnum3;
+        }
+
+        public TestEnum4 getTestEnum4() {
+            return this.testEnum4;
+        }
+
+        public void setTestEnum3(TestEnum3 testEnum3) {
+            this.testEnum3 = testEnum3;
+        }
+
+        public void setTestEnum4(TestEnum4 testEnum4) {
+            this.testEnum4 = testEnum4;
+        }
     }
 
-    @AllArgsConstructor
-    @Getter
     public class DuplicateRefEnum {
         private final TestEnum3 enum1;
         private final TestEnum3 enum2;
+
+        public DuplicateRefEnum(TestEnum3 enum1, TestEnum3 enum2) {
+            this.enum1 = enum1;
+            this.enum2 = enum2;
+        }
+
+        public TestEnum3 getEnum1() {
+            return this.enum1;
+        }
+
+        public TestEnum3 getEnum2() {
+            return this.enum2;
+        }
     }
 
     private enum FederationStrategy {
@@ -511,40 +538,65 @@ class EnumTests {
         ONE, TWO;
     }
 
-    @Getter
-    @Setter
-    @AllArgsConstructor
     private class SimpleClass {
         private final String name;
         private final SimpleEnum myEnum;
+
+        public SimpleClass(String name, SimpleEnum myEnum) {
+            this.name = name;
+            this.myEnum = myEnum;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public SimpleEnum getMyEnum() {
+            return this.myEnum;
+        }
     }
 
 
     private enum EnumNestedWithinEnum {
         ONE, TWO, THREE;
 
-        @Getter
-        @Setter
         private SimpleEnum simpleEnum;
+
+        public SimpleEnum getSimpleEnum() {
+            return this.simpleEnum;
+        }
+
+        public void setSimpleEnum(SimpleEnum simpleEnum) {
+            this.simpleEnum = simpleEnum;
+        }
     }
 
     private enum PrivateEnumWithNameOverride {
         X("little x"), Y("little y"), Z("little z");
 
-        @Getter
         private final String name;
 
         PrivateEnumWithNameOverride(String name) {
             this.name = name;
+        }
+
+        public String getName() {
+            return this.name;
         }
     }
 
     public enum PublicEnumWithNestedName {
         X, Y, Z;
 
-        @Getter
-        @Setter
         private String name;
+
+        public String getName() {
+            return this.name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 
     private String loadJson(String fileName) {
@@ -579,11 +631,14 @@ class EnumTests {
     public enum EnumWithValueField {
         FOO("foo.com"), BAR("bar.gov");
 
-        @Getter
         private String value;
 
         EnumWithValueField(String domain) {
             this.value = domain;
+        }
+
+        public String getValue() {
+            return this.value;
         }
     }
 }
