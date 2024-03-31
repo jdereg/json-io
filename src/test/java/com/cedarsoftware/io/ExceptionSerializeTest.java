@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Objects;
 
 import com.cedarsoftware.io.factory.ThrowableFactory;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.io.JsonWriter.writeBasicString;
@@ -34,17 +31,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ExceptionSerializeTest
 {
-    @Getter
-    @Setter
-    public static class MyException extends RuntimeException
-    {
-        MyException(String message, Throwable cause, long val)
-        {
+    public static class MyException extends RuntimeException {
+        MyException(String message, Throwable cause, long val) {
             super(message, cause);
             recordNumber = val;
         }
 
         private Long recordNumber;
+
+        public Long getRecordNumber() {
+            return this.recordNumber;
+        }
+
+        public void setRecordNumber(Long recordNumber) {
+            this.recordNumber = recordNumber;
+        }
     }
 
     public static class ExceptionWithThrowableConstructor extends RuntimeException {
@@ -414,7 +415,6 @@ class ExceptionSerializeTest
         }
     }
 
-    @Getter
     public static class ExceptionWithAThousandCuts extends RuntimeException {
         List<StupidEmojis> emojis;
 
@@ -437,12 +437,18 @@ class ExceptionSerializeTest
             super(cause);
             this.emojis = emojis;
         }
+
+        public List<StupidEmojis> getEmojis() {
+            return this.emojis;
+        }
     }
 
-    @AllArgsConstructor
-    @Getter
     public static class StupidEmojis {
         String emoji;
+
+        public StupidEmojis(String emoji) {
+            this.emoji = emoji;
+        }
 
         @Override
         public String toString() {
@@ -451,8 +457,12 @@ class ExceptionSerializeTest
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof StupidEmojis)) return false;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof StupidEmojis)) {
+                return false;
+            }
             StupidEmojis that = (StupidEmojis) o;
             return Objects.equals(getEmoji(), that.getEmoji());
         }
@@ -461,11 +471,13 @@ class ExceptionSerializeTest
         public int hashCode() {
             return Objects.hash(getEmoji());
         }
+
+        public String getEmoji() {
+            return this.emoji;
+        }
     }
 
 
-    @AllArgsConstructor
-    @Getter
     public static class MultipleParameterConstructor extends RuntimeException {
 
         private List<StupidEmojis> emojis;
@@ -478,6 +490,24 @@ class ExceptionSerializeTest
             this.randomThoughts = randomThoughts;
             this.errorCount = errorCount;
             this.emojis = emojis;
+        }
+
+        public MultipleParameterConstructor(List<StupidEmojis> emojis, Long errorCount, String randomThoughts) {
+            this.emojis = emojis;
+            this.errorCount = errorCount;
+            this.randomThoughts = randomThoughts;
+        }
+
+        public List<StupidEmojis> getEmojis() {
+            return this.emojis;
+        }
+
+        public Long getErrorCount() {
+            return this.errorCount;
+        }
+
+        public String getRandomThoughts() {
+            return this.randomThoughts;
         }
     }
 }

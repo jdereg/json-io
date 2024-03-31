@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.19.11</version>
+    <version>4.19.12</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -24,10 +24,9 @@
         <!-- testing only -->
         <version.junit-jupiter-engine>5.10.1</version.junit-jupiter-engine>
         <version.assertj-core>3.24.2</version.assertj-core>
-        <version.java-util>2.4.7</version.java-util>
+        <version.java-util>2.4.8</version.java-util>
         <version.gson>2.10.1</version.gson>
         <version.jackson-core>2.16.2</version.jackson-core>
-        <version.lombok>1.18.30</version.lombok>
         <version.slf4j-api>2.0.12</version.slf4j-api>
         <version.logback-classic>1.3.12</version.logback-classic>
 
@@ -294,13 +293,7 @@
     </build>
 
     <dependencies>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${version.lombok}</version>
-            <scope>provided</scope>
-        </dependency>
-        
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>

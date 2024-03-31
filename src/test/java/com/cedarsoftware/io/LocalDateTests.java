@@ -5,8 +5,6 @@ import java.time.ZoneId;
 import java.util.Date;
 
 import com.cedarsoftware.util.DeepEquals;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -163,10 +161,21 @@ class LocalDateTests extends SerializationDeserializationMinimumTests<LocalDate>
     }
 
 
-    @Getter
-    @AllArgsConstructor
     public static class NestedLocalDate {
         private final LocalDate one;
         private final LocalDate two;
+
+        public NestedLocalDate(LocalDate one, LocalDate two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public LocalDate getOne() {
+            return this.one;
+        }
+
+        public LocalDate getTwo() {
+            return this.two;
+        }
     }
 }

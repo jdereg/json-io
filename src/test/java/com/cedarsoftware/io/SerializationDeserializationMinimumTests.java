@@ -5,13 +5,28 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.DeepEquals;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * @author Kenny Partlow (kpartlow@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.*
+ */
 public abstract class SerializationDeserializationMinimumTests<T> {
 
     protected abstract T provideT1();
@@ -488,18 +503,40 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         }
     }
 
-    @AllArgsConstructor
-    @Getter
     private static class Nested<T> {
         private final T one;
         private final T two;
+
+        public Nested(T one, T two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public T getOne() {
+            return this.one;
+        }
+
+        public T getTwo() {
+            return this.two;
+        }
     }
 
-    @AllArgsConstructor
-    @Getter
     private static class NestedWithObjectFields {
         private final Object one;
         private final Object two;
+
+        public NestedWithObjectFields(Object one, Object two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public Object getOne() {
+            return this.one;
+        }
+
+        public Object getTwo() {
+            return this.two;
+        }
     }
 
 }

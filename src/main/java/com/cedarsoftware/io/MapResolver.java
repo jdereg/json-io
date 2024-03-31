@@ -64,8 +64,8 @@ public class MapResolver extends Resolver
     /**
      * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
      * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
-     * an @id of an object which can have more than one @ref to it, this code will make sure that each
-     * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
+     * an '@id' of an object which can have more than one @ref to it, this code will make sure that each
+     * '@ref' (value side of the Map associated to a given field name) will be pointer to the appropriate Map
      * instance.
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).

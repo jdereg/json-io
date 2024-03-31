@@ -36,8 +36,6 @@ import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.convert.CommonValues;
 import com.cedarsoftware.util.convert.Convert;
 import com.cedarsoftware.util.convert.ConverterOptions;
-import lombok.AccessLevel;
-import lombok.Getter;
 
 import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
 
@@ -600,29 +598,42 @@ public class ReadOptionsBuilder {
     }
 
     public static class DefaultConverterOptions implements ConverterOptions {
-
-        @Getter(AccessLevel.PUBLIC)
         private ZoneId zoneId = ZoneId.systemDefault();
-
-        @Getter(AccessLevel.PUBLIC)
         private Locale locale = Locale.getDefault();
-
-        @Getter(AccessLevel.PUBLIC)
         private Charset charset = StandardCharsets.UTF_8;
-
-        @Getter(AccessLevel.PUBLIC)
         private ClassLoader classloader = DefaultConverterOptions.class.getClassLoader();
-
-        @Getter(AccessLevel.PUBLIC)
         private Character trueChar = CommonValues.CHARACTER_ONE;
-
-        @Getter(AccessLevel.PUBLIC)
         private Character falseChar = CommonValues.CHARACTER_ZERO;
-
         private Map<String, Object> customOptions = new ConcurrentHashMap<>();
-
-        @Getter
         private Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> converterOverrides = new ConcurrentHashMap<>(100, .8f);
+
+        public ZoneId getZoneId() {
+            return zoneId;
+        }
+
+        public Locale getLocale() {
+            return locale;
+        }
+
+        public Charset getCharset() {
+            return charset;
+        }
+
+        public ClassLoader getClassLoader() {
+            return classloader;
+        }
+
+        public Character trueChar() {
+            return trueChar;
+        }
+
+        public Character falseChar() {
+            return falseChar;
+        }
+
+        public Map<Map.Entry<Class<?>, Class<?>>, Convert<?>> getConverterOverrides() {
+            return converterOverrides;
+        }
 
         public <T> T getCustomOption(String name) {
             return (T) customOptions.get(name);
@@ -630,47 +641,28 @@ public class ReadOptionsBuilder {
     }
 
     public static class DefaultReadOptions implements ReadOptions {
-
         private Class<?> unknownTypeClass = null;
         private boolean failOnUnknownType = false;
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
-
         private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
         private final Map<String, Object> customOptions = new ConcurrentHashMap<>();
-
-        /**
-         * @return ReconstructionType which is how you will receive the parsed JSON objects.  This will be either
-         * JAVA_OBJECTS (default) or JSON_VALUE's (useful for large, more simplistic objects within the JSON data sets).
-         */
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
-
-        /**
-         * @return boolean will return true if NAN and Infinity are allowed to be read in as Doubles and Floats,
-         * else a JsonIoException will be thrown if these are encountered.  default is false per JSON standard.
-         */
-        @Getter
         private boolean allowNanAndInfinity = false;
-
         private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
         private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMap<>();
         private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
         private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
         private Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
         private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-
         private Map<Class<?>, Set<String>> excludedFieldNames;
-
         private Map<Class<?>, Set<String>> excludedInjectorFields;
-
         private List<FieldFilter> fieldFilters;
-
         private List<InjectorFactory> injectorFactories;
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-
         private Map<Class<?>, Map<String, String>> nonStandardMappings;
 
         // Runtime cache (not feature options)
@@ -680,12 +672,19 @@ public class ReadOptionsBuilder {
 
         //  Cache of fields used for accessors.  controlled by ignoredFields
         private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap(200, 0.8f, Runtime.getRuntime().availableProcessors());
-
-
+        
         /**
          * Default constructor.  Prevent instantiation outside of package.
          */
         private DefaultReadOptions() {
+        }
+
+        /**
+         * @return boolean will return true if NAN and Infinity are allowed to be read in as Doubles and Floats,
+         * else a JsonIoException will be thrown if these are encountered.  default is false per JSON standard.
+         */
+        public boolean isAllowNanAndInfinity() {
+            return allowNanAndInfinity;
         }
 
         /**

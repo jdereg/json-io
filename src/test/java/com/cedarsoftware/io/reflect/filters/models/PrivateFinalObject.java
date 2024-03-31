@@ -1,21 +1,30 @@
 package com.cedarsoftware.io.reflect.filters.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
 public class PrivateFinalObject {
 
     private final int x;
     private final int y;
 
+    public PrivateFinalObject(int x, int y, String key, boolean flatuated) {
+        this.x = x;
+        this.y = y;
+        this.key = key;
+        this.flatuated = flatuated;
+    }
+
     public int getTotal() {
         return x + y;
     }
 
-    @Getter
     private final String key;
 
-    @Getter
     private final boolean flatuated;
+
+    public String getKey() {
+        return this.key;
+    }
+
+    public boolean isFlatuated() {
+        return this.flatuated;
+    }
 }

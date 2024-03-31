@@ -4,8 +4,6 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,10 +118,21 @@ class OffsetDateTimeTests extends SerializationDeserializationMinimumTests<Offse
         assertThat(value).isEqualTo("2027-12-23T06:07:16.999999999+07:00");
     }
 
-    @Getter
-    @AllArgsConstructor
     public static class NestedOffsetDateTime {
         public OffsetDateTime one;
         public OffsetDateTime two;
+
+        public NestedOffsetDateTime(OffsetDateTime one, OffsetDateTime two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public OffsetDateTime getOne() {
+            return this.one;
+        }
+
+        public OffsetDateTime getTwo() {
+            return this.two;
+        }
     }
 }

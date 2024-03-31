@@ -28,7 +28,6 @@ import com.cedarsoftware.io.reflect.filters.method.ModifierMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
-import lombok.Getter;
 
 /**
  * Builder class for building the writeOptions.
@@ -737,76 +736,16 @@ public class WriteOptionsBuilder {
 
 
     public static class DefaultWriteOptions implements WriteOptions {
-        // Properties
-
-        /**
-         * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
-         * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
-         */
-        @Getter
         private boolean shortMetaKeys = false;
-
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
-
-        /**
-         * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
-         * white-space and indentations, 'false' will output JSON in one line.  The default is false.
-         */
-        @Getter
         private boolean prettyPrint = false;
-
-        /**
-         * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
-         * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
-         * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
-         * them in Doubles, which cannot handle the precision of an 18-19 digit long, but a String will retain
-         * the full value into Javascript.  The default is false.
-         */
-        @Getter
         private boolean writeLongsAsStrings = false;
-
-        /**
-         * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
-         * false will still output the field with an associated null value.  false is the default.
-         */
-        @Getter
         private boolean skipNullFields = false;
-        /**
-         * @return boolean 'forceMapOutputAsTwoArrays' setting.  true indicates that two arrays will be written to
-         * represent a Java Map, one for keys, one for values.  false indicates one Java object will be used, if
-         * all the keys of the Map are Strings.  If not, then the Map will be written out with a key array, and a
-         * parallel value array. (@keys:[...], @values:[...]).  false is the default.
-         */
-        @Getter
         private boolean forceMapOutputAsTwoArrays = false;
-        /**
-         * @return boolean will return true if NAN and Infinity are allowed to be written out for
-         * Doubles and Floats, else null will be written out..
-         */
-        @Getter
         private boolean allowNanAndInfinity = false;
-
-        /**
-         * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
-         * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
-         * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
-         * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
-         * showing potentially more than one value, it will require the enum to be written as an object.
-         */
-        @Getter
         private boolean enumPublicFieldsOnly = false;
-
-        /**
-         * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
-         */
-        @Getter
         private boolean closeStream = true;
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
-
-        /**
-         * @return ClassLoader to be used when writing JSON to resolve String named classes.
-         */
-        @Getter
         private ClassLoader classLoader = WriteOptions.class.getClassLoader();
         private Map<Class<?>, Set<String>> includedFieldNames;
         private Map<Class<?>, Map<String, String>> nonStandardMappings;
@@ -913,6 +852,84 @@ public class WriteOptionsBuilder {
                     Number.class.isAssignableFrom(clazz) ||
                     Date.class.isAssignableFrom(clazz) ||
                     clazz.isEnum();
+        }
+
+        /**
+         * @return boolean true if showing short meta-keys (@i instead of @id, @ instead of @ref, @t
+         * instead of @type, @k instead of @keys, @v instead of @values), false for full size. 'false' is the default.
+         */
+        public boolean isShortMetaKeys() {
+            return shortMetaKeys;
+        }
+
+        /**
+         * @return boolean 'prettyPrint' setting, true being yes, pretty-print mode using lots of vertical
+         * white-space and indentations, 'false' will output JSON in one line.  The default is false.
+         */
+        public boolean isPrettyPrint() {
+            return prettyPrint;
+        }
+
+        /**
+         * @return boolean 'writeLongsAsStrings' setting, true indicating longs will be written as Strings,
+         * false to write them out as native JSON longs.  Writing Strings as Longs to the JSON, will fix errors
+         * in Javascript when an 18-19 digit long value is sent to Javascript.  This is because Javascript stores
+         * them in Doubles, which cannot handle the precision of an 18-19 digit long, but a String will retain
+         * the full value into Javascript.  The default is false.
+         */
+        public boolean isWriteLongsAsStrings() {
+            return writeLongsAsStrings;
+        }
+
+        /**
+         * @return boolean skipNullFields setting, true indicates fields with null values will not be written,
+         * false will still output the field with an associated null value.  false is the default.
+         */
+        public boolean isSkipNullFields() {
+            return skipNullFields;
+        }
+
+        /**
+         * @return boolean 'forceMapOutputAsTwoArrays' setting.  true indicates that two arrays will be written to
+         * represent a Java Map, one for keys, one for values.  false indicates one Java object will be used, if
+         * all the keys of the Map are Strings.  If not, then the Map will be written out with a key array, and a
+         * parallel value array. (@keys:[...], @values:[...]).  false is the default.
+         */
+        public boolean isForceMapOutputAsTwoArrays() {
+            return forceMapOutputAsTwoArrays;
+        }
+
+        /**
+         * @return boolean will return true if NAN and Infinity are allowed to be written out for
+         * Doubles and Floats, else null will be written out..
+         */
+        public boolean isAllowNanAndInfinity() {
+            return allowNanAndInfinity;
+        }
+
+        /**
+         * true indicates that only public fields will be output on an Enum.  Enums don't often have fields added to them
+         * but if so, then only the public fields will be written.  The Enum will be written out in JSON object { } format.
+         * If there are not added fields to an Enum, it will be written out as a single line value.  The default value
+         * is true.  If you set this to false, it will change the 'enumFieldsAsObject' to true - because you will be
+         * showing potentially more than one value, it will require the enum to be written as an object.
+         */
+        public boolean isEnumPublicFieldsOnly() {
+            return enumPublicFieldsOnly;
+        }
+
+        /**
+         * @return boolean 'true' if the OutputStream should be closed when the reading is finished.  The default is 'true.'
+         */
+        public boolean isCloseStream() {
+            return closeStream;
+        }
+
+        /**
+         * @return ClassLoader to be used when writing JSON to resolve String named classes.
+         */
+        public ClassLoader getClassLoader() {
+            return classLoader;
         }
 
         /**

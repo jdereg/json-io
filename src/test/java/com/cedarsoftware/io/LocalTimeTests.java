@@ -3,8 +3,6 @@ package com.cedarsoftware.io;
 import java.time.LocalTime;
 import java.util.stream.Stream;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -102,10 +100,21 @@ class LocalTimeTests extends SerializationDeserializationMinimumTests<LocalTime>
         return MetaUtils.loadResourceAsString("localtime/" + fileName);
     }
 
-    @AllArgsConstructor
-    @Getter
     public static class NestedLocalTime {
         public LocalTime one;
         public LocalTime two;
+
+        public NestedLocalTime(LocalTime one, LocalTime two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public LocalTime getOne() {
+            return this.one;
+        }
+
+        public LocalTime getTwo() {
+            return this.two;
+        }
     }
 }

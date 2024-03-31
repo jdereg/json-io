@@ -4,8 +4,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.stream.Stream;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -125,13 +123,18 @@ class URLTest
     }
 
 
-    @Getter
-    @AllArgsConstructor
     private static class NestedUrl {
         private final URL url;
+
+        public NestedUrl(URL url) {
+            this.url = url;
+        }
+
+        public URL getUrl() {
+            return this.url;
+        }
     }
 
-    @Getter
     private static class NestedTwice {
         private final URL url1;
 
@@ -140,6 +143,14 @@ class URLTest
         public NestedTwice(URL url) {
             this.url1 = url;
             this.url2 = url;
+        }
+
+        public URL getUrl1() {
+            return this.url1;
+        }
+
+        public URL getUrl2() {
+            return this.url2;
         }
     }
 }

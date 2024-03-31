@@ -16,8 +16,6 @@ import java.util.stream.Stream;
 import com.cedarsoftware.io.models.Human;
 import com.cedarsoftware.io.models.OuterObject;
 import com.cedarsoftware.util.DeepEquals;
-import lombok.Getter;
-import lombok.Setter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -515,10 +513,16 @@ public class FieldsTest
         private Locale _loc;
     }
 
-    @Getter
-    @Setter
     private static class NestedChar implements Serializable {
         private char ch;
+
+        public char getCh() {
+            return this.ch;
+        }
+
+        public void setCh(char ch) {
+            this.ch = ch;
+        }
     }
 
     /**

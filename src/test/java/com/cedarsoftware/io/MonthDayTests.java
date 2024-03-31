@@ -2,8 +2,6 @@ package com.cedarsoftware.io;
 
 import java.time.MonthDay;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.io.TestUtil.toObjects;
@@ -103,10 +101,21 @@ class MonthDayTests extends SerializationDeserializationMinimumTests<MonthDay> {
         assertThat(actual).isEqualTo(initial);
     }
 
-    @AllArgsConstructor
-    @Getter
     private static class NestedMonthDay {
         private final MonthDay one;
         private final MonthDay two;
+
+        public NestedMonthDay(MonthDay one, MonthDay two) {
+            this.one = one;
+            this.two = two;
+        }
+
+        public MonthDay getOne() {
+            return this.one;
+        }
+
+        public MonthDay getTwo() {
+            return this.two;
+        }
     }
 }

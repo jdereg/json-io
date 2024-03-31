@@ -1,7 +1,5 @@
 package com.cedarsoftware.io;
 
-import lombok.Getter;
-
 /**
  * This class is the parent class for all parsed JSON objects, arrays, or primitive values.
  *
@@ -39,9 +37,16 @@ public abstract class JsonValue {
     protected boolean isFinished = false;
     protected long id = -1L;
     protected Long refId = null;
-    @Getter
     protected int line;
-    @Getter
+
+    public int getLine() {
+        return line;
+    }
+
+    public int getCol() {
+        return col;
+    }
+
     protected int col;
 
     public boolean isReference() {

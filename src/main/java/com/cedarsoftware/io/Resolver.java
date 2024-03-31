@@ -16,8 +16,6 @@ import java.util.Optional;
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
-import lombok.AccessLevel;
-import lombok.Getter;
 
 import static com.cedarsoftware.io.JsonObject.ITEMS;
 import static com.cedarsoftware.io.JsonObject.KEYS;
@@ -26,68 +24,73 @@ import static com.cedarsoftware.io.JsonObject.KEYS;
  * This class is used to convert a source of Java Maps that were created from
  * the JsonParser.  These are in 'raw' form with no 'pointers'.  This code will
  * reconstruct the 'shape' of the graph by connecting @ref's to @ids.
- *
+ * <p>
  * The subclasses that override this class can build an object graph using Java
  * classes or a Map-of-Map representation.  In both cases, the @ref value will
  * be replaced with the Object (or Map) that had the corresponding @id.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- *         <br>
- *         Copyright (c) Cedar Software LLC
- *         <br><br>
- *         Licensed under the Apache License, Version 2.0 (the "License");
- *         you may not use this file except in compliance with the License.
- *         You may obtain a copy of the License at
- *         <br><br>
- *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- *         <br><br>
- *         Unless required by applicable law or agreed to in writing, software
- *         distributed under the License is distributed on an "AS IS" BASIS,
- *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *         See the License for the specific language governing permissions and
- *         limitations under the License.*
+ * <br>
+ * Copyright (c) Cedar Software LLC
+ * <br><br>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <br><br>
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ * <br><br>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.*
  */
-@SuppressWarnings({ "rawtypes", "unchecked" })
-public abstract class Resolver implements ReaderContext
-{
+@SuppressWarnings({"rawtypes", "unchecked"})
+public abstract class Resolver implements ReaderContext {
     private static final String NO_FACTORY = "_︿_ψ_☼";
-    final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
+    final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
 
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
 
-    @Getter(AccessLevel.PUBLIC)
     private final ReadOptions readOptions;
 
-    @Getter(AccessLevel.PUBLIC)
     private final ReferenceTracker references;
 
-    @Getter(AccessLevel.PUBLIC)
     private final Converter converter;
-    
+
+    public ReadOptions getReadOptions() {
+        return this.readOptions;
+    }
+
+    public ReferenceTracker getReferences() {
+        return this.references;
+    }
+
+    public Converter getConverter() {
+        return this.converter;
+    }
+
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
      * definition.  This can point to a field reference or an array/Collection element reference.
      */
-    static final class UnresolvedReference
-    {
+    static final class UnresolvedReference {
         private final JsonObject referencingObj;
         private String field;
         private final long refId;
         private int index = -1;
 
-        UnresolvedReference(JsonObject referrer, String fld, long id)
-        {
+        UnresolvedReference(JsonObject referrer, String fld, long id) {
             referencingObj = referrer;
             field = fld;
             refId = id;
         }
 
-        UnresolvedReference(JsonObject referrer, int idx, long id)
-        {
+        UnresolvedReference(JsonObject referrer, int idx, long id) {
             referencingObj = referrer;
             index = idx;
             refId = id;
@@ -98,14 +101,12 @@ public abstract class Resolver implements ReaderContext
      * stores missing fields information to notify client after the complete deserialization resolution
      */
     @SuppressWarnings("FieldMayBeFinal")
-    protected static class Missingfields
-    {
+    protected static class Missingfields {
         private Object target;
         private String fieldName;
         private Object value;
 
-        public Missingfields(Object target, String fieldName, Object value)
-        {
+        public Missingfields(Object target, String fieldName, Object value) {
             this.target = target;
             this.fieldName = fieldName;
             this.value = value;
@@ -124,9 +125,10 @@ public abstract class Resolver implements ReaderContext
      * object instance.  The rootObj map came from using the JsonReader
      * to parse a JSON graph (using the API that puts the graph
      * into Maps, not the typed representation).
+     *
      * @param rootObj JsonObject instance that was the rootObj object from the
-     * @param root When you know the type you will be returning.  Can be null (effectively Map.class)
-     * JSON input that was parsed in an earlier call to JsonReader.
+     * @param root    When you know the type you will be returning.  Can be null (effectively Map.class)
+     *                JSON input that was parsed in an earlier call to JsonReader.
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
@@ -165,8 +167,7 @@ public abstract class Resolver implements ReaderContext
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    protected <T> T convertJsonValuesToJava(final JsonObject root)
-    {
+    protected <T> T convertJsonValuesToJava(final JsonObject root) {
         if (root.isFinished) {
             return (T) root.getTarget();
         }
@@ -205,8 +206,7 @@ public abstract class Resolver implements ReaderContext
 
     protected abstract void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj);
 
-    protected void cleanup()
-    {
+    protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
         if (references != null) {
@@ -219,13 +219,10 @@ public abstract class Resolver implements ReaderContext
     }
 
     // calls the missing field handler if any for each recorded missing field.
-    private void handleMissingFields()
-    {
+    private void handleMissingFields() {
         MissingFieldHandler missingFieldHandler = this.readOptions.getMissingFieldHandler();
-        if (missingFieldHandler != null)
-        {
-            for (Missingfields mf : missingFields)
-            {
+        if (missingFieldHandler != null) {
+            for (Missingfields mf : missingFields) {
                 missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
             }
         }//else no handler so ignore.
@@ -239,25 +236,21 @@ public abstract class Resolver implements ReaderContext
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseMap(Deque<JsonObject> stack, JsonObject jsonObj)
-    {
+    protected void traverseMap(Deque<JsonObject> stack, JsonObject jsonObj) {
         // Convert @keys to a Collection of Java objects.
         convertMapToKeysItems(jsonObj);
         final Object[] keys = (Object[]) jsonObj.get(KEYS);
         final Object[] items = jsonObj.getArray();
 
-        if (keys == null || items == null)
-        {
-            if (keys != items)
-            {
+        if (keys == null || items == null) {
+            if (keys != items) {
                 throw new JsonIoException("Unbalanced Object in JSON, it has " + KEYS + " or " + ITEMS + " empty");
             }
             return;
         }
 
         final int size = keys.length;
-        if (size != items.length)
-        {
+        if (size != items.length) {
             throw new JsonIoException("Map written with " + KEYS + " and " + ITEMS + "s entries of different sizes");
         }
 
@@ -269,8 +262,7 @@ public abstract class Resolver implements ReaderContext
         prettyMaps.add(new Object[]{jsonObj, keys, items});
     }
 
-    private static void buildCollection(Deque<JsonObject> stack, Object[] arrayContent)
-    {
+    private static void buildCollection(Deque<JsonObject> stack, Object[] arrayContent) {
         final JsonObject collection = new JsonObject();
         collection.put(ITEMS, arrayContent);
         collection.setTarget(arrayContent);
@@ -283,16 +275,13 @@ public abstract class Resolver implements ReaderContext
      *
      * @param jObj Map to convert
      */
-    protected static void convertMapToKeysItems(final JsonObject jObj)
-    {
-        if (!jObj.containsKey(KEYS) && !jObj.isReference())
-        {
+    protected static void convertMapToKeysItems(final JsonObject jObj) {
+        if (!jObj.containsKey(KEYS) && !jObj.isReference()) {
             final Object[] keys = new Object[jObj.size()];
             final Object[] values = new Object[jObj.size()];
             int i = 0;
 
-            for (Object e : jObj.entrySet())
-            {
+            for (Object e : jObj.entrySet()) {
                 final Map.Entry entry = (Map.Entry) e;
                 keys[i] = entry.getKey();
                 values[i] = entry.getValue();
@@ -332,6 +321,10 @@ public abstract class Resolver implements ReaderContext
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
 
+        if (targetType == null) {
+            System.out.println("targetType = " + targetType);
+        }
+
         // Does a built-in conversion exist?
         if (jsonObj.hasValue() && jsonObj.getValue() != null) {
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
@@ -342,7 +335,7 @@ public abstract class Resolver implements ReaderContext
             //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
             //  TODO: I'd like to have all types that have mpa conversion supported here, but we have an issue with refs
             //  TODO: going to the converter and I'm still thinking of a way to handle that.
-        } else if (MetaUtils.isLogicalPrimitive(targetType) && this.getConverter().isConversionSupportedFor(Map.class, targetType)) {
+        } else if (targetType != null && MetaUtils.isLogicalPrimitive(targetType) && this.getConverter().isConversionSupportedFor(Map.class, targetType)) {
             Object source = resolveRefs(jsonObj);
             Object value = this.getConverter().convert(source, targetType);
             return jsonObj.setFinishedTarget(value, true);
@@ -376,7 +369,7 @@ public abstract class Resolver implements ReaderContext
             jsonObj.setTarget(mate);
             return mate;
         }
-        
+
         return createInstanceUsingType(jsonObj);
     }
 
@@ -419,8 +412,7 @@ public abstract class Resolver implements ReaderContext
      * by the isObjectFinal() method returning true.  Therefore, the JsonObject instance that is
      * loaded, is marked with 'isFinished=true' so that no more process is needed for this instance.
      */
-    Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj)
-    {
+    Object createInstanceUsingClassFactory(Class c, JsonObject jsonObj) {
         // If a ClassFactory exists for a class, use it to instantiate the class.  The ClassFactory
         // may optionally load the newly created instance, in which case, the JsonObject is marked finished, and
         // return.
@@ -453,8 +445,7 @@ public abstract class Resolver implements ReaderContext
         return clazz == null ? type : clazz;
     }
 
-    protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj)
-    {
+    protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj) {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
@@ -492,61 +483,42 @@ public abstract class Resolver implements ReaderContext
      * For all fields where the value was "@ref":"n" where 'n' was the id of an object
      * that had not yet been encountered in the stream, make the final substitution.
      */
-    protected void patchUnresolvedReferences()
-    {
+    protected void patchUnresolvedReferences() {
         Iterator i = unresolvedRefs.iterator();
-        while (i.hasNext())
-        {
+        while (i.hasNext()) {
             UnresolvedReference ref = (UnresolvedReference) i.next();
             Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.get(ref.refId);
 
-            if (ref.index >= 0)
-            {    // Fix []'s and Collections containing a forward reference.
-                if (objToFix instanceof List)
-                {   // Patch up Indexable Collections
+            if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
+                if (objToFix instanceof List) {   // Patch up Indexable Collections
                     List list = (List) objToFix;
                     list.set(ref.index, objReferenced.getTarget());
                     String containingTypeName = ref.referencingObj.getJavaTypeName();
-                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List"))
-                    {
-                        if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
-                        {
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List")) {
+                        if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject)) {
                             list = MetaUtils.listOf(list.toArray());
                             ref.referencingObj.setTarget(list);
                         }
                     }
-                }
-                else if (objToFix instanceof Collection)
-                {
+                } else if (objToFix instanceof Collection) {
                     String containingTypeName = ref.referencingObj.getJavaTypeName();
                     Collection col = (Collection) objToFix;
-                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set"))
-                    {
+                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set")) {
                         throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.getJavaTypeName() + "', @ref = " + ref.refId);
-                    }
-                    else
-                    {
+                    } else {
                         // Add element (since it was not indexable, add it to collection)
                         col.add(objReferenced.getTarget());
                     }
-                }
-                else
-                {
+                } else {
                     Array.set(objToFix, ref.index, objReferenced.getTarget());        // patch array element here
                 }
-            }
-            else
-            {    // Fix field forward reference
+            } else {    // Fix field forward reference
                 Field field = getReadOptions().getDeepDeclaredFields(objToFix.getClass()).get(ref.field);
-                if (field != null)
-                {
-                    try
-                    {
+                if (field != null) {
+                    try {
                         MetaUtils.setFieldValue(field, objToFix, objReferenced.getTarget());    // patch field here
-                    }
-                    catch (Exception e)
-                    {
+                    } catch (Exception e) {
                         throw new JsonIoException("Error setting field while resolving references '" + field.getName() + "', @ref = " + ref.refId, e);
                     }
                 }
@@ -567,24 +539,19 @@ public abstract class Resolver implements ReaderContext
      * as Maps.  If you have a custom built Set, this would not 'treat' it
      * and you would need to provide a custom reader for that set.
      */
-    protected void rehashMaps()
-    {
+    protected void rehashMaps() {
         final boolean useMapsLocal = readOptions.isReturningJsonObjects();
 
-        for (Object[] mapPieces : prettyMaps)
-        {
+        for (Object[] mapPieces : prettyMaps) {
             JsonObject jObj = (JsonObject) mapPieces[0];
             Object[] javaKeys, javaValues;
             Map map;
 
-            if (useMapsLocal)
-            {   // Make the @keys be the actual keys of the map.
+            if (useMapsLocal) {   // Make the @keys be the actual keys of the map.
                 map = jObj;
                 javaKeys = (Object[]) jObj.remove(KEYS);
                 javaValues = (Object[]) jObj.remove(ITEMS);
-            }
-            else
-            {
+            } else {
                 map = (Map) jObj.getTarget();
                 javaKeys = (Object[]) mapPieces[1];
                 javaValues = (Object[]) mapPieces[2];
@@ -593,8 +560,7 @@ public abstract class Resolver implements ReaderContext
 
             int j = 0;
 
-            while (javaKeys != null && j < javaKeys.length)
-            {
+            while (javaKeys != null && j < javaKeys.length) {
                 map.put(javaKeys[j], javaValues[j]);
                 j++;
             }
