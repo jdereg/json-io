@@ -3,7 +3,15 @@ package com.cedarsoftware.io;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
@@ -206,7 +214,7 @@ public class JsonIo {
      * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
      * @param writeOptions WriteOptions to control the feature options. Can be null to take the defaults.
      * @param json String JSON content.
-     * @return String JSON formatted in human readable, standard multi-line, indented format.
+     * @return String JSON formatted in human-readable, standard multi-line, indented format.
      */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
         Convention.throwIfFalse(writeOptions == null || writeOptions.isPrettyPrint(), "Pretty print must be turned on to format JSON.");
@@ -262,4 +270,284 @@ public class JsonIo {
         System.out.println("json-io supported conversions (source type to target types):");
         System.out.println(json);
     }
+
+    /**
+     * Convert an old-style Map of options to a ReadOptionsBuilder. It is not recommended to use this API long term,
+     * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
+     * @param optionalArgs Map of old json-io options
+     * @return ReadOptionsBuilder
+     */
+    public static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs) {
+        if (optionalArgs == null) {
+            optionalArgs = new HashMap<>();
+        }
+        ReadOptionsBuilder builder = new ReadOptionsBuilder();
+
+        int maxParseDepth = 1000;
+        if (optionalArgs.containsKey(MAX_PARSE_DEPTH)) {
+            maxParseDepth = com.cedarsoftware.util.Converter.convert(optionalArgs.get(MAX_PARSE_DEPTH), int.class);
+        }
+        builder.maxDepth(maxParseDepth);
+        boolean useMaps = com.cedarsoftware.util.Converter.convert(optionalArgs.get(USE_MAPS), boolean.class);
+
+        if (useMaps) {
+            builder.returnAsNativeJsonObjects();
+        } else {
+            builder.returnAsJavaObjects();
+        }
+
+        boolean failOnUnknownType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(FAIL_ON_UNKNOWN_TYPE), boolean.class);
+        builder.failOnUnknownType(failOnUnknownType);
+
+        Object loader = optionalArgs.get(CLASSLOADER);
+        ClassLoader classLoader;
+        if (loader instanceof ClassLoader) {
+            classLoader = (ClassLoader) loader;
+        } else {
+            classLoader = com.cedarsoftware.io.JsonReader.class.getClassLoader();
+        }
+        builder.classLoader(classLoader);
+
+        Object type = optionalArgs.get("UNKNOWN_TYPE");
+        if (type == null) {
+            type = optionalArgs.get(UNKNOWN_OBJECT);
+        }
+        if (type instanceof Boolean) {
+            builder.failOnUnknownType(true);
+        } else if (type instanceof String) {
+            Class<?> unknownType = ClassUtilities.forName((String) type, classLoader);
+            builder.unknownTypeClass(unknownType);
+            builder.failOnUnknownType(false);
+        }
+
+        Object aliasMap = optionalArgs.get(TYPE_NAME_MAP);
+        if (aliasMap instanceof Map) {
+            Map<String, String> aliases = (Map<String, String>) aliasMap;
+            for (Map.Entry<String, String> entry : aliases.entrySet()) {
+                builder.aliasTypeName(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Object missingFieldHandler = optionalArgs.get(MISSING_FIELD_HANDLER);
+        if (missingFieldHandler instanceof com.cedarsoftware.io.JsonReader.MissingFieldHandler) {
+            builder.missingFieldHandler((com.cedarsoftware.io.JsonReader.MissingFieldHandler) missingFieldHandler);
+        }
+
+        Object customReaderMap = optionalArgs.get(CUSTOM_READER_MAP);
+        if (customReaderMap instanceof Map) {
+            Map<String, Object> customReaders = (Map<String, Object>) customReaderMap;
+            for (Map.Entry<String, Object> entry : customReaders.entrySet()) {
+                try {
+                    Class<?> clazz = Class.forName(entry.getKey());
+                    builder.addCustomReaderClass(clazz, (com.cedarsoftware.io.JsonReader.JsonClassReader) entry.getValue());
+                } catch (ClassNotFoundException e) {
+                    String message = "Custom json-io reader class: " + entry.getKey() + " not found.";
+                    throw new com.cedarsoftware.io.JsonIoException(message, e);
+                } catch (ClassCastException e) {
+                    String message = "Custom json-io reader for: " + entry.getKey() + " must be an instance of com.cedarsoftware.io.JsonReader.JsonClassReader.";
+                    throw new com.cedarsoftware.io.JsonIoException(message, e);
+                }
+            }
+        }
+
+        Object notCustomReadersObject = optionalArgs.get(NOT_CUSTOM_READER_MAP);
+        if (notCustomReadersObject instanceof Iterable) {
+            Iterable<Class<?>> notCustomReaders = (Iterable<Class<?>>) notCustomReadersObject;
+            for (Class<?> notCustomReader : notCustomReaders)
+            {
+                builder.addNotCustomReaderClass(notCustomReader);
+            }
+        }
+
+        for (Map.Entry<String, Object> entry : optionalArgs.entrySet()) {
+            if (OPTIONAL_READ_KEYS.contains(entry.getKey())) {
+                continue;
+            }
+            builder.addCustomOption(entry.getKey(), entry.getValue());
+        }
+
+        return builder;
+    }
+
+    /**
+     * Convert an old-style Map of options to a WriteOptionsBuilder. It is not recommended to use this API long term,
+     * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
+     * @param optionalArgs Map of old json-io options
+     * @return WriteOptionsBuilder
+     */
+    public static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
+        if (optionalArgs == null) {
+            optionalArgs = new HashMap<>();
+        }
+
+        WriteOptionsBuilder builder = new WriteOptionsBuilder();
+
+        Object dateFormat = optionalArgs.get(DATE_FORMAT);
+        if (dateFormat instanceof String)
+        {
+            builder.dateTimeFormat((String) dateFormat);
+        } else if (dateFormat instanceof SimpleDateFormat) {
+            builder.dateTimeFormat(((SimpleDateFormat) dateFormat).toPattern());
+        }
+
+        Boolean showType = com.cedarsoftware.util.Converter.convert(optionalArgs.get(TYPE), Boolean.class);
+        if (showType == null) {
+            builder.showTypeInfoMinimal();
+        } else if (showType) {
+            builder.showTypeInfoAlways();
+        } else {
+            builder.showTypeInfoNever();
+        }
+
+        boolean prettyPrint = com.cedarsoftware.util.Converter.convert(optionalArgs.get(PRETTY_PRINT), boolean.class);
+        builder.prettyPrint(prettyPrint);
+
+        boolean writeLongsAsStrings = com.cedarsoftware.util.Converter.convert(optionalArgs.get(WRITE_LONGS_AS_STRINGS), boolean.class);
+        builder.writeLongsAsStrings(writeLongsAsStrings);
+
+        boolean shortMetaKeys = com.cedarsoftware.util.Converter.convert(optionalArgs.get(SHORT_META_KEYS), boolean.class);
+        builder.shortMetaKeys(shortMetaKeys);
+
+        boolean skipNullFields = com.cedarsoftware.util.Converter.convert(optionalArgs.get(SKIP_NULL_FIELDS), boolean.class);
+        builder.skipNullFields(skipNullFields);
+
+        boolean forceMapOutputAsTwoArrays = com.cedarsoftware.util.Converter.convert(optionalArgs.get(FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS), boolean.class);
+        builder.forceMapOutputAsTwoArrays(forceMapOutputAsTwoArrays);
+
+        boolean writeEnumsAsJsonObject = com.cedarsoftware.util.Converter.convert(optionalArgs.get(ENUM_PUBLIC_ONLY), boolean.class);
+        builder.writeEnumAsJsonObject(writeEnumsAsJsonObject);
+
+        Object loader = optionalArgs.get(CLASSLOADER);
+        ClassLoader classLoader;
+        if (loader instanceof ClassLoader) {
+            classLoader = (ClassLoader) loader;
+        } else {
+            classLoader = com.cedarsoftware.io.JsonReader.class.getClassLoader();
+        }
+        builder.classLoader(classLoader);
+
+        Object aliasMap = optionalArgs.get(TYPE_NAME_MAP);
+        if (aliasMap instanceof Map) {
+            Map<String, String> aliases = (Map<String, String>) aliasMap;
+            for (Map.Entry<String, String> entry : aliases.entrySet()) {
+                builder.aliasTypeName(entry.getKey(), entry.getValue());
+            }
+        }
+
+        Object customWriterMap = optionalArgs.get(CUSTOM_WRITER_MAP);
+        if (customWriterMap instanceof Map) {
+            Map<String, Object> customWriters = (Map<String, Object>) customWriterMap;
+            for (Map.Entry<String, Object> entry : customWriters.entrySet()) {
+                try {
+                    Class<?> clazz = Class.forName(entry.getKey());
+                    builder.addCustomWrittenClass(clazz, (com.cedarsoftware.io.JsonWriter.JsonClassWriter) entry.getValue());
+                } catch (ClassNotFoundException e) {
+                    String message = "Custom json-io writer class: " + entry.getKey() + " not found.";
+                    throw new com.cedarsoftware.io.JsonIoException(message, e);
+                } catch (ClassCastException e) {
+                    String message = "Custom json-io writer for: " + entry.getKey() + " must be an instance of com.cedarsoftware.io.JsonWriter.JsonClassWriter.";
+                    throw new com.cedarsoftware.io.JsonIoException(message, e);
+                }
+            }
+        }
+
+        Object notCustomWritersObject = optionalArgs.get(NOT_CUSTOM_WRITER_MAP);
+        if (notCustomWritersObject instanceof Iterable) {
+            Iterable<Class<?>> notCustomWriters = (Iterable<Class<?>>) notCustomWritersObject;
+            for (Class<?> notCustomWriter : notCustomWriters)
+            {
+                builder.addNotCustomWrittenClass(notCustomWriter);
+            }
+        }
+
+        Object fieldSpecifiers = optionalArgs.get(FIELD_SPECIFIERS);
+        if (fieldSpecifiers instanceof Map) {
+            Map<Class<?>, Collection<String>> includedFields = (Map<Class<?>, Collection<String>>) fieldSpecifiers;
+            for (Map.Entry<Class<?>, Collection<String>> entry : includedFields.entrySet()) {
+                for (String fieldName : entry.getValue()) {
+                    builder.addIncludedField(entry.getKey(), fieldName);
+                }
+            }
+        }
+
+        Object fieldBlackList = optionalArgs.get(FIELD_NAME_BLACK_LIST);
+        if (fieldBlackList instanceof Map) {
+            Map<Class<?>, Collection<String>> excludedFields = (Map<Class<?>, Collection<String>>) fieldBlackList;
+            for (Map.Entry<Class<?>, Collection<String>> entry : excludedFields.entrySet()) {
+                for (String fieldName : entry.getValue()) {
+                    builder.addExcludedField(entry.getKey(), fieldName);
+                }
+            }
+        }
+
+        for (Map.Entry<String, Object> entry : optionalArgs.entrySet())
+        {
+            if (OPTIONAL_WRITE_KEYS.contains(entry.getKey())) {
+                continue;
+            }
+            builder.addCustomOption(entry.getKey(), entry.getValue());
+        }
+
+        return builder;
+    }
+
+    //
+    // READ Option Keys (older method of specifying options) -----------------------------------------------------------
+    //
+    /** If set, this maps class ==> CustomReader */
+    public static final String CUSTOM_READER_MAP = "CUSTOM_READERS";
+    /** If set, this indicates that no custom reader should be used for the specified class ==> CustomReader */
+    public static final String NOT_CUSTOM_READER_MAP = "NOT_CUSTOM_READERS";
+    /** If set, the read-in JSON will be turned into a Map of Maps (JsonObject) representation */
+    public static final String USE_MAPS = "USE_MAPS";
+    /** What to do when an object is found and 'type' cannot be determined. */
+    public static final String UNKNOWN_OBJECT = "UNKNOWN_OBJECT";
+    /** Will fail JSON parsing if 'type' class defined but is not on classpath. */
+    public static final String FAIL_ON_UNKNOWN_TYPE = "FAIL_ON_UNKNOWN_TYPE";
+    /** If set, this map will be used when writing @type values - allows short-hand abbreviations type names */
+    public static final String TYPE_NAME_MAP = "TYPE_NAME_MAP";
+    /** If set, this object will be called when a field is present in the JSON but missing from the corresponding class */
+    public static final String MISSING_FIELD_HANDLER = "MISSING_FIELD_HANDLER";
+    /** If set, use the specified ClassLoader */
+    public static final String CLASSLOADER = "CLASSLOADER";
+    /** Default maximum parsing depth */
+    public static final String MAX_PARSE_DEPTH = "MAX_PARSE_DEPTH";
+    private static final Set<String> OPTIONAL_READ_KEYS = new HashSet<>(Arrays.asList(
+            CUSTOM_READER_MAP, NOT_CUSTOM_READER_MAP, USE_MAPS, UNKNOWN_OBJECT, "UNKNOWN_TYPE", FAIL_ON_UNKNOWN_TYPE,
+            TYPE_NAME_MAP, MISSING_FIELD_HANDLER, CLASSLOADER));
+    
+    //
+    // WRITE Option Keys (older method of specifying options) -----------------------------------------------------------
+    //
+    /** If set, this maps class ==> CustomWriter */
+    public static final String CUSTOM_WRITER_MAP = "CUSTOM_WRITERS";
+    /** If set, this maps class ==> CustomWriter */
+    public static final String NOT_CUSTOM_WRITER_MAP = "NOT_CUSTOM_WRITERS";
+    /** Set the date format to use within the JSON output */
+    public static final String DATE_FORMAT = "DATE_FORMAT";
+    /** Constant for use as DATE_FORMAT value */
+    public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
+    /** Constant for use as DATE_FORMAT value */
+    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    /** Force @type always */
+    public static final String TYPE = "TYPE";
+    /** Force nicely formatted JSON output */
+    public static final String PRETTY_PRINT = "PRETTY_PRINT";
+    /** Set value to a {@code Map<Class, List<String>>} which will be used to control which fields on a class are output */
+    public static final String FIELD_SPECIFIERS = "FIELD_SPECIFIERS";
+    /** Set value to a {@code Map<Class, List<String>>} which will be used to control which fields on a class are not output. Black list has always priority to FIELD_SPECIFIERS */
+    public static final String FIELD_NAME_BLACK_LIST = "FIELD_NAME_BLACK_LIST";
+    /** If set, indicates that private variables of ENUMs are not to be serialized */
+    public static final String ENUM_PUBLIC_ONLY = "ENUM_PUBLIC_ONLY";
+    /** If set, longs are written in quotes (Javascript safe) */
+    public static final String WRITE_LONGS_AS_STRINGS = "WLAS";
+    /** If set, then @type -> @t, @keys -> @k, @items -> @i */
+    public static final String SHORT_META_KEYS = "SHORT_META_KEYS";
+    /** If set, null fields are not written */
+    public static final String SKIP_NULL_FIELDS = "SKIP_NULL";
+    /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
+    public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
+    private static final Set<String> OPTIONAL_WRITE_KEYS = new HashSet<>(Arrays.asList(
+            CUSTOM_WRITER_MAP, NOT_CUSTOM_WRITER_MAP, DATE_FORMAT, TYPE, PRETTY_PRINT, ENUM_PUBLIC_ONLY, WRITE_LONGS_AS_STRINGS,
+            TYPE_NAME_MAP, SHORT_META_KEYS, SKIP_NULL_FIELDS, CLASSLOADER, FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS));
 }

@@ -1,4 +1,9 @@
 ### Revision History
+* 4.19.12
+  * Added `JsonIo.getReadOptionsBuilder(Map options)` and `JsonIo.getWriteOptionsBuilder(Map options)` to facilitate porting over code that users older Map-based options.
+  * Removed classes that were packaged in the adapter layer `com.cedarsoftware.util.io.*` All classes now start at `com.cedarsoftware.io.*`  You will have to adjust your imports.
+  * Bug fix: Arrays that did not have a type specified, but the array type could be inferred, the component types was incorrectly being set as the array type, not the component type.
+  * Updated [java-util](https://github.com/jdereg/java-util/blob/master/changelog.md) from `2.4.6` to `2.4.8`.
 * 4.19.11
   * Removed references to JsonObject from transition classes com.cedarsoftware.util.io.JsonReader.
 * 4.19.10
