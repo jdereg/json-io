@@ -76,25 +76,12 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder() {
         options = new DefaultWriteOptions();
 
-        options.includedFieldNames = new HashMap<>();
-        options.nonStandardMappings = new HashMap<>();
-        options.aliasTypeNames = new HashMap<>();
-        options.excludedFieldNames = new HashMap<>();
-        options.customWrittenClasses = new HashMap<>();
-
-        options.notCustomWrittenClasses = new HashSet<>();
-        options.nonRefClasses = new HashSet<>();
-        options.filteredMethodNames = new HashSet<>();
-
-        options.fieldFilters = new ArrayList<>();
         options.fieldFilters.add(new StaticFieldFilter());
         options.fieldFilters.add(new EnumFieldFilter());
 
-        options.methodFilters = new ArrayList<>();
         options.methodFilters.add(new AccessorMethodFilter());
         options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
 
-        options.accessorFactories = new ArrayList<>();
         options.accessorFactories.add(new GetMethodAccessorFactory());
         options.accessorFactories.add(new IsMethodAccessorFactory());
 
@@ -109,43 +96,46 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Copy another WriteOptions as a starting point.
+     * Copy another WriteOptions as a starting point.  If null is passed in, then you get the default options.
      */
     public WriteOptionsBuilder(WriteOptions copy) {
         this();
-        DefaultWriteOptions other = (DefaultWriteOptions) copy;
-        options.includedFieldNames.clear();
-        options.includedFieldNames.putAll(other.includedFieldNames);
+        if (copy != null) {
+            DefaultWriteOptions other = (DefaultWriteOptions) copy;
 
-        options.nonStandardMappings.clear();
-        options.nonStandardMappings.putAll(other.nonStandardMappings);
+            options.includedFieldNames.clear();
+            options.includedFieldNames.putAll(other.includedFieldNames);
 
-        options.aliasTypeNames.clear();
-        options.aliasTypeNames.putAll(other.aliasTypeNames);
+            options.nonStandardMappings.clear();
+            options.nonStandardMappings.putAll(other.nonStandardMappings);
 
-        options.excludedFieldNames.clear();
-        options.excludedFieldNames.putAll(other.excludedFieldNames);
+            options.aliasTypeNames.clear();
+            options.aliasTypeNames.putAll(other.aliasTypeNames);
 
-        options.customWrittenClasses.clear();
-        options.customWrittenClasses.putAll(other.customWrittenClasses);
+            options.excludedFieldNames.clear();
+            options.excludedFieldNames.putAll(other.excludedFieldNames);
 
-        options.notCustomWrittenClasses.clear();
-        options.notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
+            options.customWrittenClasses.clear();
+            options.customWrittenClasses.putAll(other.customWrittenClasses);
 
-        options.nonRefClasses.clear();
-        options.nonRefClasses.addAll(other.nonRefClasses);
+            options.notCustomWrittenClasses.clear();
+            options.notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
 
-        options.filteredMethodNames.clear();
-        options.filteredMethodNames.addAll(other.filteredMethodNames);
+            options.nonRefClasses.clear();
+            options.nonRefClasses.addAll(other.nonRefClasses);
 
-        options.fieldFilters.clear();
-        options.fieldFilters.addAll(other.fieldFilters);
+            options.filteredMethodNames.clear();
+            options.filteredMethodNames.addAll(other.filteredMethodNames);
 
-        options.methodFilters.clear();
-        options.methodFilters.addAll(other.methodFilters);
+            options.fieldFilters.clear();
+            options.fieldFilters.addAll(other.fieldFilters);
 
-        options.accessorFactories.clear();
-        options.accessorFactories.addAll(other.accessorFactories);
+            options.methodFilters.clear();
+            options.methodFilters.addAll(other.methodFilters);
+
+            options.accessorFactories.clear();
+            options.accessorFactories.addAll(other.accessorFactories);
+        }
     }
 
     /**
@@ -233,7 +223,6 @@ public class WriteOptionsBuilder {
         return aliasTypeName(type.getName(), type.getSimpleName());
     }
 
-
     /**
      * @param type  Class to alias
      * @param alias String shorter name to use, typically.
@@ -267,7 +256,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @return boolean true if set to always show type (@type)
+     * Add all the aliases in the config/extendedAliases.txt to the alias list.
+     * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder withExtendedAliases() {
         Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
@@ -674,6 +664,26 @@ public class WriteOptionsBuilder {
     }
 
     /**
+     * Add FieldFilter
+     * @param filter FieldFilter
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder addFilter(FieldFilter filter) {
+        options.fieldFilters.add(filter);
+        return this;
+    }
+
+    /**
+     * Remove FieldFilter
+     * @param filter FieldFilter
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public WriteOptionsBuilder removeFilter(FieldFilter filter) {
+        options.fieldFilters.remove(filter);
+        return this;
+    }
+
+    /**
      * Seal the instance of this class so that no more changes can be made to it.
      *
      * @return WriteOptionsBuilder for chained access.
@@ -681,6 +691,18 @@ public class WriteOptionsBuilder {
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
         options.clearCaches();
+        options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
+        options.nonStandardMappings = Collections.unmodifiableMap(options.nonStandardMappings);
+        options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
+        options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
+        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
+        options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
+        options.methodFilters = Collections.unmodifiableList(options.methodFilters);
+        options.accessorFactories = Collections.unmodifiableList(options.accessorFactories);
+        options.filteredMethodNames = Collections.unmodifiableSet(options.filteredMethodNames);
+        options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
+        options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
 
@@ -746,7 +768,6 @@ public class WriteOptionsBuilder {
         return nonStandardMapping;
     }
 
-
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      *
@@ -765,16 +786,6 @@ public class WriteOptionsBuilder {
         return nonRefs;
     }
 
-
-    public boolean addFilter(FieldFilter filter) {
-        return options.fieldFilters.add(filter);
-    }
-
-    public boolean removeFilter(FieldFilter filter) {
-        return options.fieldFilters.remove(filter);
-    }
-
-
     static class DefaultWriteOptions implements WriteOptions {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
@@ -787,18 +798,18 @@ public class WriteOptionsBuilder {
         private boolean closeStream = true;
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = WriteOptions.class.getClassLoader();
-        private Map<Class<?>, Set<String>> includedFieldNames;
-        private Map<Class<?>, Map<String, String>> nonStandardMappings;
-        private Map<String, String> aliasTypeNames;
-        private Set<Class<?>> notCustomWrittenClasses;
-        private Set<Class<?>> nonRefClasses;
-        private Map<Class<?>, Set<String>> excludedFieldNames;
-        private List<FieldFilter> fieldFilters;
-        private List<MethodFilter> methodFilters;
-        private List<AccessorFactory> accessorFactories;
-        private Set<String> filteredMethodNames;
-        private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
-        private final Map<String, Object> customOptions = new HashMap<>();
+        private Map<Class<?>, Set<String>> includedFieldNames = new LinkedHashMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardMappings = new LinkedHashMap<>();
+        private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
+        private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
+        private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
+        private List<FieldFilter> fieldFilters = new ArrayList<>();
+        private List<MethodFilter> methodFilters = new ArrayList<>();
+        private List<AccessorFactory> accessorFactories = new ArrayList<>();
+        private Set<String> filteredMethodNames = new LinkedHashSet<>();
+        private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new LinkedHashMap<>();
+        private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the write or a nullWriter if one does not exist.

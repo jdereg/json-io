@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -108,41 +109,43 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Start with a copy of another ReadOptions
+     * Start with a copy of another ReadOptions.  If copy is null, then you get the default options.
      */
     public ReadOptionsBuilder(ReadOptions copy) {
         this(); // initialize to empty
+        if (copy != null) {
+            DefaultReadOptions other = (DefaultReadOptions) copy;
 
-        ReadOptionsBuilder.DefaultReadOptions other = (ReadOptionsBuilder.DefaultReadOptions) copy;
-        options.aliasTypeNames.clear();
-        options.aliasTypeNames.putAll(other.aliasTypeNames);
+            options.aliasTypeNames.clear();
+            options.aliasTypeNames.putAll(other.aliasTypeNames);
 
-        options.injectorFactories.clear();
-        options.injectorFactories.addAll(other.injectorFactories);
+            options.injectorFactories.clear();
+            options.injectorFactories.addAll(other.injectorFactories);
 
-        options.fieldFilters.clear();
-        options.fieldFilters.addAll(other.fieldFilters);
+            options.fieldFilters.clear();
+            options.fieldFilters.addAll(other.fieldFilters);
 
-        options.excludedFieldNames.clear();
-        options.excludedFieldNames.putAll(other.excludedFieldNames);
+            options.excludedFieldNames.clear();
+            options.excludedFieldNames.putAll(other.excludedFieldNames);
 
-        options.excludedInjectorFields.clear();
-        options.excludedInjectorFields.putAll(other.excludedInjectorFields);
+            options.excludedInjectorFields.clear();
+            options.excludedInjectorFields.putAll(other.excludedInjectorFields);
 
-        options.nonStandardMappings.clear();
-        options.nonStandardMappings.putAll(other.nonStandardMappings);
+            options.nonStandardMappings.clear();
+            options.nonStandardMappings.putAll(other.nonStandardMappings);
 
-        options.coercedTypes.clear();
-        options.coercedTypes.putAll(other.coercedTypes);
+            options.coercedTypes.clear();
+            options.coercedTypes.putAll(other.coercedTypes);
 
-        options.customReaderClasses.clear();
-        options.customReaderClasses.putAll(other.customReaderClasses);
+            options.customReaderClasses.clear();
+            options.customReaderClasses.putAll(other.customReaderClasses);
 
-        options.classFactoryMap.clear();
-        options.classFactoryMap.putAll(other.classFactoryMap);
+            options.classFactoryMap.clear();
+            options.classFactoryMap.putAll(other.classFactoryMap);
 
-        options.nonRefClasses.clear();
-        options.nonRefClasses.addAll(other.nonRefClasses);
+            options.nonRefClasses.clear();
+            options.nonRefClasses.addAll(other.nonRefClasses);
+        }
     }
 
     /**
@@ -226,7 +229,7 @@ public class ReadOptionsBuilder {
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
         options.nonStandardMappings = Collections.unmodifiableMap(options.nonStandardMappings);
-
+        options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
 
@@ -432,7 +435,8 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @return boolean true if set to always show type (@type)
+     * Add all the aliases in from config/extendedAliases.txt
+     * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder withExtendedAliases() {
         Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
@@ -709,19 +713,19 @@ public class ReadOptionsBuilder {
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
         private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
-        private final Map<String, Object> customOptions = new HashMap<>();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
         private boolean allowNanAndInfinity = false;
-        private Map<String, String> aliasTypeNames = new HashMap<>();
-        private Map<Class<?>, Class<?>> coercedTypes = new HashMap<>();
-        private Set<Class<?>> notCustomReadClasses = new HashSet<>();
-        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new HashMap<>();
-        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new HashMap<>();
-        private Set<Class<?>> nonRefClasses = new HashSet<>();
-        private Map<Class<?>, Set<String>> excludedFieldNames = new HashMap<>();
-        private Map<Class<?>, Set<String>> excludedInjectorFields = new HashMap<>();
+        private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
+        private Map<Class<?>, Class<?>> coercedTypes = new LinkedHashMap<>();
+        private Set<Class<?>> notCustomReadClasses = new LinkedHashSet<>();
+        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new LinkedHashMap<>();
+        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new LinkedHashMap<>();
+        private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
+        private Map<Class<?>, Set<String>> excludedInjectorFields = new LinkedHashMap<>();
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
+        private Map<String, Object> customOptions = new LinkedHashMap<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());

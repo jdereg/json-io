@@ -196,15 +196,15 @@ public class JsonIo {
 
     /**
      * Convert a root JsonObject that represents parsed JSON, into an actual Java object.
+     * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
      * @param rootType The class that represents, in Java, the root of the underlying JSON from which the JsonObject
      *                 was loaded.
      * @return a typed Java instance object graph.
      */
     public static <T> T toObjects(JsonObject jsonObject, ReadOptions readOptions, Class<T> rootType) {
-        if (readOptions == null) {
-            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
+        if (readOptions == null || !readOptions.isReturningJavaObjects()) {
+            readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
-
         JsonReader reader = new JsonReader(readOptions);
         return reader.convertJsonValueToJava(jsonObject, rootType);
     }
@@ -217,15 +217,12 @@ public class JsonIo {
      * @return String JSON formatted in human-readable, standard multi-line, indented format.
      */
     public static String formatJson(String json, ReadOptions readOptions, WriteOptions writeOptions) {
-        Convention.throwIfFalse(writeOptions == null || writeOptions.isPrettyPrint(), "Pretty print must be turned on to format JSON.");
-        Convention.throwIfFalse(readOptions == null || readOptions.isReturningJsonObjects(), "To format and remove type information we must be returning objects as pure JSON");
-        
-        if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().prettyPrint(true).build();
+        if (writeOptions == null || !writeOptions.isPrettyPrint()) {
+            writeOptions = new WriteOptionsBuilder(writeOptions).prettyPrint(true).build();
         }
 
-        if (readOptions == null) {
-            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
+        if (readOptions == null || !readOptions.isReturningJavaObjects()) {
+            readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
 
         Object object = toObjects(json, readOptions, null);
@@ -238,9 +235,7 @@ public class JsonIo {
      * @return String JSON formatted in human readable, standard multi-line, indented format.
      */
     public static String formatJson(String json) {
-        return formatJson(json,
-                new ReadOptionsBuilder().returnAsNativeJsonObjects().build(),
-                new WriteOptionsBuilder().prettyPrint(true).build());
+        return formatJson(json, null, null);
     }
 
     /**
@@ -257,20 +252,11 @@ public class JsonIo {
             return null;
         }
 
-        if (writeOptions == null) {
-            writeOptions = new WriteOptionsBuilder().build();
-        }
-        WriteOptionsBuilder writeOptionsBuilder = new WriteOptionsBuilder(writeOptions);
-        writeOptionsBuilder.showTypeInfoAlways().shortMetaKeys(true).withExtendedAliases();
+        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).withExtendedAliases().build();
+        readOptions = new ReadOptionsBuilder(readOptions).withExtendedAliases().build();
 
-        if (readOptions == null) {
-            readOptions = new ReadOptionsBuilder().build();
-        }
-        ReadOptionsBuilder readOptionsBuilder = new ReadOptionsBuilder(readOptions);
-        readOptionsBuilder.withExtendedAliases();
-
-        String json = toJson(source, writeOptionsBuilder.build());
-        return (T) toObjects(json, readOptionsBuilder.build(), source.getClass());
+        String json = toJson(source, writeOptions);
+        return (T) toObjects(json, readOptions, source.getClass());
     }
 
     /**
