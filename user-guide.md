@@ -43,30 +43,25 @@ _Example 4: `InputStream` to Java object_
 In this example, an`InputStream`is supplying the JSON.
 
 ### Untyped Usage
-**json-io** provides the choice to use the generic "Map of Maps" representation of an object, akin to a Javascript
+**json-io** provides the choice to use the generic `Map` of `Maps` representation of an object, akin to a Javascript
 associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
     String json = // or InputStream to JSON providing source
     ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
-    JsonObject root = JsonIo.toObjects(json, readOptions);    
+    Map root = JsonIo.toObjects(json, readOptions);    
 
-See the `ReadOptions` below for the feature control options.  In the example above, rather than return the objects
-converted into Java classes, you are being returned the raw JSON values being parsed.  It is a graph that consists of
-all `JsonObject` instances, arrays, and primitive types.  
+See the `ReadOptions` below for the feature control options.  In the example #4 above, rather than return the objects
+converted into Java classes, the raw JSON values being parsed is returned as `Maps`.  It is a graph that consists of
+all `Map` instances, arrays, and primitive types.  
 
-When `JsonObject` is returned, your root value will represent one of:
-* `JSON object {...}`
-  * `JsonObject` implements the `Map` interface and represents any JSON object {...}.  It will respond `true` to
-    `isObject(),` `false` to `isArray()`, and `false` to `isPrimitive().`
+When `Map` is returned, your root value will represent one of:
+* `a JSON object {...}`
+  * `Map` that represents any JSON object {...}.
 * `JSON array [...]`
-  * `JsonObject` implements the `List` interface and represents any JSON array [...].  It will respond `true` to
-      `isArray(),` `false` to `isObject(),` and `false` to is `isPrimitive().`
+  * `Map` that has a key of `@items` which represents any JSON array [...].
 * `JSON primitive (boolean true/false, null, long, double, String).`
-  * `JsonObject` implements `.getValue()` and `.setValue().`  If the root of the JSON is a `String,` `Number`
-  (`Long` or `Double`), `Boolean`, or `null,` not an object { ... } nor an array { ... }, then the value can be 
-  obtained by calling `.getValue()` on the `JsonObject.` It will respond `false` to `isObject()`, `false` to `isArray()`, and `true` to `isPrimitive().`                                  
 
-This `JsonObject` representation can be re-written to JSON String or Stream and the output JSON will match the
+This `Map` representation can be re-written to JSON String or Stream and the output JSON will match the
 original input JSON stream.  This permits you to receive JSON strings / streams that contain class references which
 do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
 and then rewrite the String/stream.
@@ -75,11 +70,11 @@ and then rewrite the String/stream.
 ## Controlling the output JSON using `WriteOptions`
 Create a new`WriteOptions`instance and turn various features on/off using the methods below. Example:
 
-   `WriteOptions`writeOptions = new WriteOptions().prettyPrint(true).writeLongsAsStrings(true);
-    JsonWriter.toJson(root, writeOptions);
+    WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).writeLongsAsStrings(true).build();
+    JsonIo.toJson(root, writeOptions);
 
 To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the feature settings below.
-You can view the Javadoc on the`WriteOptions`class for detailed information. The`WriteOptions`can be made
+You can view the Javadoc on the`WriteOptions`class for detailed information. The`WriteOptions`are created and made
 read-only by calling the`.build()`method. You can have multiple`WriteOptions`instances for different scenarios, and safely
 re-use them once built (read-only). A`WriteOptions`instance can be created from another`WriteOptions`instance
 (use "copy constructor" discussed below).
@@ -87,17 +82,17 @@ re-use them once built (read-only). A`WriteOptions`instance can be created from 
 Please note that if you write your object graph out without showing types, the shape of the graph will still be
 maintained.  What this means, is that if two different places in your object graph point to the same object, the first
 reference will write the actual object (with an id - `@id`), the 2nd and later references will write a reference (`@ref`)
-to the first instance. This will read in just fine with `JsonReader.toObjects()`, and the appropriate `Map` reference
+to the first instance. This will read in just fine with `JsonIo.toObjects()`, and the appropriate `Map` reference
 will be placed in all referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js`
 to parse the read in JSON so that it can perform the substitutions of the `@ref`'s. (See root folder for `jsonUtil.js`).
 
 ---
 ### Constructors
 Create new`WriteOptions`instances.
->#### WriteOptions()
->- [ ] Start with default options and in malleable state.
->#### WriteOptions(`WriteOptions other`)
->- [ ] Copy all the settings from the passed in 'other' `WriteOptions.`  The`WriteOptions`instance starts off in malleable state.
+>#### new WriteOptionsBuilder().feature1().feature2(args).build()
+>- [ ] Start with default options and turn on feature1 and feature2 (which requires an argument)
+>#### new WriteOptionsBuilder(`WriteOptions other`)
+>- [ ] Copy all the settings from the passed in 'other' `WriteOptions.`
 
 ### Class Loader
 The`ClassLoader`in the`WriteOptons`is used to turn`String`class names into`Class`instances.
@@ -324,21 +319,21 @@ all those to collapse to the same value, they won't Each one would be read in as
 ## Controlling the input JSON using `ReadOptions`
 Create a new`ReadOptions`instance and turn various features on/off using the methods below. Example:
 
-    ReadOptions readOptions = new ReadOptionsBuilder().build()
-    JsonWriter.toJson(root, writeOptions);
+    ReadOptions readOptions = new ReadOptionsBuilder().feature1().feature2(args).build()
+    JsonIo.toObjects(root, readOptions);
 
-To pass these to`JsonRead.toJava(root, readOptions)`set up a`ReadOptions`using the feature settings below.
-You can view the Javadoc on the`ReadOptions`class for detailed information. The`ReadOptions`can be made
+To pass these to`JsonIo.toObjects(root, readOptions)`set up a`ReadOptions`using the feature settings below.
+You can view the Javadoc on the`ReadOptions`class for detailed information. The`ReadOptions`are made
 read-only by calling the`.build()`method. You can have multiple`ReadOptions`instances for different scenarios, and safely
 re-use them once built (read-only). A`ReadOptions`instance can be created from another`ReadOptions`instance
 (use "copy constructor" discussed below).
 
 ### Constructors
 Create new instances of`ReadOptions.`
->#### ReadOptions()
->- [ ] Start with default options and in malleable state.
->#### ReadOptions(`ReadOptions other`)
->- [ ] Copy all settings from the passed in 'other'`ReadOptions.`  The`ReadOptions`instance starts off in malleable state.
+>#### new ReadOptionsBuilder().feature1().feature2(args).build()
+>- [ ] Start with default options and add in feature1 and feature2(requires argument) and make read-only.
+>#### new ReadOptionsBuilder(`ReadOptions other`)
+>- [ ] Copy all settings from the passed in 'other'`ReadOptions.`
 
 ### Class Loader
 The`ClassLoader`in the`ReadOptons`is used to turn`String`class names into`Class`instances.
@@ -507,13 +502,13 @@ call -`resolveRefs(json)`. This will substitute`@ref`tags in the JSON for the ac
 Even though **json-io** is great for Java / Javascript serialization, here are some other uses for it:
 
 #### Cloning
-Many projects use `JsonWriter` to write an object to JSON, then use the `JsonReader` to read it in, cloning the original object graph:
+Many projects use `JsonIo` to write an object to JSON, then read it in, cloning the original object graph:
 
     Employee emp;
     // emp obtained from somewhere...
-    Employee deepCopy = (Employee) Json.Io.deepCopy(emp, null, null);   // ReadOptions, WriteOptions can be null
+    Employee deepCopy = (Employee) JsonIo.deepCopy(emp, null, null);   // ReadOptions, WriteOptions can be null
 
 #### Debugging
 Instead of `System.out.println()` debugging, call `JsonIo.toJson(obj, writeOptions)` and dump the JSON
-string out. That will give you the full referenceable graph dump in JSON.  Use the pretty-print feature of `WriteOptions`
+string out. That will give you the full referenceable graph dump in JSON.  Use the prettyPrint feature of `WriteOptions`
 to make the JSON more human-readable.

@@ -14,7 +14,7 @@ ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.19.12'
+implementation 'com.cedarsoftware:json-io:4.19.13'
 ```
 
 ##### Maven
@@ -22,7 +22,7 @@ implementation 'com.cedarsoftware:json-io:4.19.12'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.19.12</version>
+      <version>4.19.13</version>
     </dependency>
 ```
 ___

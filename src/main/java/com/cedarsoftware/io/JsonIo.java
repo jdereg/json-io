@@ -27,8 +27,8 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  * <li><b>4. Input</b>: JsonObject root, <b>Output</b>: Java objects<pre>BillingInfo billInfo = JsonIo.toObjects(JsonObject, readOptions, BillingInfo.class)</pre></li>
  * Often, the goal is to get JSON to Java objects and from Java objects to JSON.  That is #1 and #3 above. <br/>
  * <br/>
- * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonObject instance) to
- * know which type of Object Graph it is serializing to JSON.<br/>
+ * For approaches #1 and #2 above, json-io will check the root object type (regular Java class or JsonObject (Map)
+ * instance) to know which type of Object Graph it is serializing to JSON.<br/>
  * <br/>
  * There are occasions where you may just want the raw JSON data, without anchoring it to a set of "DTO" Java objects.
  * For example, you may have an extreme amount of data, and you want to process it as fast as possible, and in
@@ -41,18 +41,17 @@ import com.cedarsoftware.util.convert.DefaultConverterOptions;
  * JSON array [...]<br/>
  * JSON primitive (boolean true/false, null, long, double, String).</ul>
  * <br/>
- * <b>{...} JsonObject</b> implements the Map interface and represents any JSON object {...}.  It will respond true to
- * isObject(), false to isArray(), and false to isPrimitive().<br/>
+ * <b>{...} JsonObject</b> implements the Map interface and represents any JSON object {...}.<br/>
  * <br/>
- * <b>[...] JsonObject</b> implements the List interface and represents any JSON array [...].  It will respond true to
- * isArray(), false to isObject(), and false to is isPrimitive().<br/>
+ * <b>[...] JsonObject</b> implements the Map interface and the value associated to the @items key will represent the
+ * JSON array [...].<br/>
  * <br/>
- * <b>Primitive JsonObject</b> If the root of the JSON is a String, Number (Long or Double), Boolean, or null, not an
- * object { ... } nor an array { ... }, then the value can be obtained by calling .getValue() on the JsonObject. It will
- * respond false to isObject(), false to isArray(), and true to isPrimitive().<br/>
+ * <b>Primitive or JsonObject</b> If the root of the JSON is a String, Number (Long or Double), Boolean, or null, not an
+ * object { ... } nor an array { ... }, then it will be a String, long, true, false, null, double or BigDecimal.  If
+ * the primitive value is wrapped in a JSON object {"value": 10} then it will be returned as a Map (JsonObject).<br/>
  * <br/>
- * If you have a return object graph of JsonObject and want to turn these into Java (DTO) objects, use #4.  To turn the
- * JsonObject graph back into JSON, use option #1 or #2.<br/>
+ * If you have a return object graph of JsonObject (Map-of-Maps) and want to turn these into Java (DTO) objects, use #4.
+ * To turn the JsonObject graph back into JSON, use option #1 or #2.<br/>
  * <br/>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -195,7 +194,13 @@ public class JsonIo {
     }
 
     /**
-     * Convert a root JsonObject that represents parsed JSON, into an actual Java object.
+     * Convert a root JsonObject (Map) that represents parsed JSON, into an actual Java object.  This Map-of-Map roots
+     * would have come from a prior API call to JsonIo.toObjects(String) or JsonIo.toObjects(InputStream) with the
+     * new ReadOptionBuilder().returnAsJsonObjects() option set.  This option allows you to read any JSON because it
+     * is only stuffing it into Maps, not Java objects.  This API can take this Map-of-Maps representation of JSON,
+     * and then recreate the Java objects from it.  It can do this, because the Map-of-Map's it returns are subclasses
+     * of Java's Map that contain a 'type' field, and it will use this to recreate the correct Java object when written
+     * via toJson and the Map (JsonObject) is passed as the root.
      * @param readOptions ReadOptions to control the feature options. Can be null to take the defaults.
      * @param rootType The class that represents, in Java, the root of the underlying JSON from which the JsonObject
      *                 was loaded.
