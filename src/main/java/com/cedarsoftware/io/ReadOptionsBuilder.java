@@ -13,7 +13,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,16 +38,34 @@ import com.cedarsoftware.util.convert.ConverterOptions;
 
 import static com.cedarsoftware.io.MetaUtils.loadMapDefinition;
 
+/**
+ * Builder class for building the writeOptions.
+ *
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ * @author Kenny Partlow (kpartlow@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.*
+ */
 public class ReadOptionsBuilder {
 
     private static final Map<Class<?>, JsonReader.JsonClassReader> BASE_READERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonReader.ClassFactory> BASE_CLASS_FACTORIES = new ConcurrentHashMap<>();
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = Collections.synchronizedSet(new LinkedHashSet<>());
-
+    private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
-
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
 
     static {
@@ -62,39 +79,70 @@ public class ReadOptionsBuilder {
         BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardInjectors.txt"));
     }
 
-    private DefaultReadOptions options;
+    private final DefaultReadOptions options;
 
     /**
      * Start with default options
      */
     public ReadOptionsBuilder() {
-        this.options = new DefaultReadOptions();
+        options = new DefaultReadOptions();
 
         // Direct copy (with swap) without classForName() lookups for speed.
         // (The classForName check is done with the BASE_ALIAS_MAPPINGS are loaded)
         BASE_ALIAS_MAPPINGS.forEach((srcType, alias) -> {
-            this.options.aliasTypeNames.put(alias, srcType);
+            options.aliasTypeNames.put(alias, srcType);
         });
 
-        this.options.injectorFactories = new ArrayList<>();
-        this.options.injectorFactories.add(new MethodInjectorFactory());
+        options.injectorFactories.add(new MethodInjectorFactory());
 
-        this.options.fieldFilters = new ArrayList<>();
-        this.options.fieldFilters.add(new StaticFieldFilter());
-        this.options.fieldFilters.add(new EnumFieldFilter());
+        options.fieldFilters.add(new StaticFieldFilter());
+        options.fieldFilters.add(new EnumFieldFilter());
+        
+        options.coercedTypes.putAll(BASE_COERCED_TYPES);
+        options.customReaderClasses.putAll(BASE_READERS);
+        options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
+        options.nonRefClasses.addAll(BASE_NON_REFS);
+        options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
+        options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
+        options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
+    }
 
-        this.options.excludedFieldNames = new HashMap<>();
-        this.options.excludedInjectorFields = new HashMap<>();
-        this.options.nonStandardMappings = new HashMap<>();
-        this.options.coercedTypes = new HashMap<>();
+    /**
+     * Start with a copy of another ReadOptions
+     */
+    public ReadOptionsBuilder(ReadOptions copy) {
+        this(); // initialize to empty
 
-        this.options.coercedTypes.putAll(BASE_COERCED_TYPES);
-        this.options.customReaderClasses.putAll(BASE_READERS);
-        this.options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
-        this.options.nonRefClasses.addAll(BASE_NON_REFS);
-        this.options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
-        this.options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
-        this.options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
+        ReadOptionsBuilder.DefaultReadOptions other = (ReadOptionsBuilder.DefaultReadOptions) copy;
+        options.aliasTypeNames.clear();
+        options.aliasTypeNames.putAll(other.aliasTypeNames);
+
+        options.injectorFactories.clear();
+        options.injectorFactories.addAll(other.injectorFactories);
+
+        options.fieldFilters.clear();
+        options.fieldFilters.addAll(other.fieldFilters);
+
+        options.excludedFieldNames.clear();
+        options.excludedFieldNames.putAll(other.excludedFieldNames);
+
+        options.excludedInjectorFields.clear();
+        options.excludedInjectorFields.putAll(other.excludedInjectorFields);
+
+        options.nonStandardMappings.clear();
+        options.nonStandardMappings.putAll(other.nonStandardMappings);
+
+        options.coercedTypes.clear();
+        options.coercedTypes.putAll(other.coercedTypes);
+
+        options.customReaderClasses.clear();
+        options.customReaderClasses.putAll(other.customReaderClasses);
+
+        options.classFactoryMap.clear();
+        options.classFactoryMap.putAll(other.classFactoryMap);
+
+        options.nonRefClasses.clear();
+        options.nonRefClasses.addAll(other.nonRefClasses);
     }
 
     /**
@@ -164,17 +212,22 @@ public class ReadOptionsBuilder {
      * @return ReadOptions - built options
      */
     public ReadOptions build() {
-        this.options.clearCaches();
-        this.options.aliasTypeNames = Collections.unmodifiableMap(this.options.aliasTypeNames);
-        this.options.coercedTypes = Collections.unmodifiableMap(this.options.coercedTypes);
-        this.options.notCustomReadClasses = Collections.unmodifiableSet(this.options.notCustomReadClasses);
-        this.options.customReaderClasses = Collections.unmodifiableMap(this.options.customReaderClasses);
-        this.options.classFactoryMap = Collections.unmodifiableMap(this.options.classFactoryMap);
-        this.options.nonRefClasses = Collections.unmodifiableSet(this.options.nonRefClasses);
-        this.options.converterOptions.converterOverrides = Collections.unmodifiableMap(this.options.converterOptions.converterOverrides);
-        this.options.converterOptions.customOptions = Collections.unmodifiableMap(this.options.converterOptions.customOptions);
+        options.clearCaches();
+        options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
+        options.coercedTypes = Collections.unmodifiableMap(options.coercedTypes);
+        options.notCustomReadClasses = Collections.unmodifiableSet(options.notCustomReadClasses);
+        options.customReaderClasses = Collections.unmodifiableMap(options.customReaderClasses);
+        options.classFactoryMap = Collections.unmodifiableMap(options.classFactoryMap);
+        options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
+        options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
+        options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
+        options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
+        options.excludedInjectorFields = Collections.unmodifiableMap(options.excludedInjectorFields);
+        options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
+        options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
+        options.nonStandardMappings = Collections.unmodifiableMap(options.nonStandardMappings);
 
-        return this.options;
+        return options;
     }
 
     /**
@@ -185,7 +238,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addNotCustomReaderClass(Class<?> notCustomClass) {
-        this.options.notCustomReadClasses.add(notCustomClass);
+        options.notCustomReadClasses.add(notCustomClass);
         return this;
     }
 
@@ -195,8 +248,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceNotCustomReaderClasses(Collection<Class<?>> notCustomClasses) {
-        this.options.notCustomReadClasses.clear();
-        this.options.notCustomReadClasses.addAll(notCustomClasses);
+        options.notCustomReadClasses.clear();
+        options.notCustomReadClasses.addAll(notCustomClasses);
         return this;
     }
 
@@ -210,7 +263,7 @@ public class ReadOptionsBuilder {
     public ReadOptionsBuilder addConverterOverride(Class<?> source, Class<?> target, Convert<?> conversionFunction) {
         source = ClassUtilities.toPrimitiveWrapperClass(source);
         target = ClassUtilities.toPrimitiveWrapperClass(target);
-        this.options.converterOptions.converterOverrides.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
+        options.converterOptions.converterOverrides.put(new AbstractMap.SimpleImmutableEntry<>(source, target), conversionFunction);
         return this;
     }
 
@@ -222,8 +275,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceCustomReaderClasses(Map<? extends Class<?>, ? extends JsonReader.JsonClassReader> customReaderClasses) {
-        this.options.customReaderClasses.clear();
-        this.options.customReaderClasses.putAll(customReaderClasses);
+        options.customReaderClasses.clear();
+        options.customReaderClasses.putAll(customReaderClasses);
         return this;
     }
 
@@ -235,7 +288,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addCustomReaderClass(Class<?> clazz, JsonReader.JsonClassReader customReader) {
-        this.options.customReaderClasses.put(clazz, customReader);
+        options.customReaderClasses.put(clazz, customReader);
         return this;
     }
 
@@ -247,8 +300,8 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder replaceClassFactories(Map<Class<?>, ? extends JsonReader.ClassFactory> factories) {
-        this.options.classFactoryMap.clear();
-        this.options.classFactoryMap.putAll(factories);
+        options.classFactoryMap.clear();
+        options.classFactoryMap.putAll(factories);
         return this;
     }
 
@@ -260,7 +313,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addClassFactory(Class<?> clazz, JsonReader.ClassFactory factory) {
-        this.options.classFactoryMap.put(clazz, factory);
+        options.classFactoryMap.put(clazz, factory);
         return this;
     }
 
@@ -269,7 +322,7 @@ public class ReadOptionsBuilder {
      * native json types (Map, Object[], long, double, boolean)
      */
     public ReadOptionsBuilder returnAsNativeJsonObjects() {
-        this.options.returnType = ReadOptions.ReturnType.JSON_OBJECTS;
+        options.returnType = ReadOptions.ReturnType.JSON_OBJECTS;
         return this;
     }
 
@@ -278,7 +331,7 @@ public class ReadOptionsBuilder {
      * This mode is good for cloning exact objects.
      */
     public ReadOptionsBuilder returnAsJavaObjects() {
-        this.options.returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
+        options.returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
         return this;
     }
 
@@ -288,7 +341,7 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder classLoader(ClassLoader classLoader) {
         Convention.throwIfNull(classLoader, "classloader cannot be null");
-        this.options.converterOptions.classloader = classLoader;
+        options.converterOptions.classloader = classLoader;
         return this;
     }
 
@@ -297,7 +350,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder failOnUnknownType(boolean fail) {
-        this.options.failOnUnknownType = fail;
+        options.failOnUnknownType = fail;
         return this;
     }
 
@@ -311,7 +364,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder unknownTypeClass(Class<?> c) {
-        this.options.unknownTypeClass = c;
+        options.unknownTypeClass = c;
         return this;
     }
 
@@ -323,7 +376,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder closeStream(boolean closeStream) {
-        this.options.closeStream = closeStream;
+        options.closeStream = closeStream;
         return this;
     }
 
@@ -333,7 +386,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder maxDepth(int maxDepth) {
-        this.options.maxDepth = maxDepth;
+        options.maxDepth = maxDepth;
         return this;
     }
 
@@ -344,7 +397,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder allowNanAndInfinity(boolean allowNanAndInfinity) {
-        this.options.allowNanAndInfinity = allowNanAndInfinity;
+        options.allowNanAndInfinity = allowNanAndInfinity;
         return this;
     }
 
@@ -379,11 +432,20 @@ public class ReadOptionsBuilder {
     }
 
     /**
+     * @return boolean true if set to always show type (@type)
+     */
+    public ReadOptionsBuilder withExtendedAliases() {
+        Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
+        extendedAliases.forEach((key, value) -> options.aliasTypeNames.putIfAbsent(value, key));
+        return this;
+    }
+
+    /**
      * @param locale target locale for conversions
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setLocale(Locale locale) {
-        this.options.converterOptions.locale = locale;
+        options.converterOptions.locale = locale;
         return this;
     }
 
@@ -392,7 +454,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setCharset(Charset charset) {
-        this.options.converterOptions.charset = charset;
+        options.converterOptions.charset = charset;
         return this;
     }
 
@@ -401,7 +463,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setZoneId(ZoneId zoneId) {
-        this.options.converterOptions.zoneId = zoneId;
+        options.converterOptions.zoneId = zoneId;
         return this;
     }
 
@@ -410,7 +472,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setTrueCharacter(Character ch) {
-        this.options.converterOptions.trueChar = ch;
+        options.converterOptions.trueChar = ch;
         return this;
     }
 
@@ -419,7 +481,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder setFalseCharacter(Character ch) {
-        this.options.converterOptions.falseChar = ch;
+        options.converterOptions.falseChar = ch;
         return this;
     }
 
@@ -434,9 +496,9 @@ public class ReadOptionsBuilder {
             throw new JsonIoException("Custom option key must not be null.");
         }
         if (value == null) {
-            this.options.customOptions.remove(key);
+            options.customOptions.remove(key);
         } else {
-            this.options.customOptions.put(key, value);
+            options.customOptions.put(key, value);
         }
         return this;
     }
@@ -448,15 +510,15 @@ public class ReadOptionsBuilder {
      * @param alias String shorter alias name.
      */
     private void addUniqueAlias(String type, String alias) {
-        Class<?> clazz = ClassUtilities.forName(type, this.options.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(type, options.getClassLoader());
         if (clazz == null) {
             System.out.println("Unknown class: " + type + " cannot be added to the ReadOptions alias map.");
         }
-        String existType = this.options.aliasTypeNames.get(alias);
+        String existType = options.aliasTypeNames.get(alias);
         if (existType != null) {
             System.out.println("Non-unique ReadOptions alias: " + alias + " attempted assign to: " + type + ", but is already assigned to: " + existType);
         }
-        this.options.aliasTypeNames.put(alias, type);
+        options.aliasTypeNames.put(alias, type);
     }
 
     /**
@@ -468,9 +530,9 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder coerceClass(String sourceClassName, Class<?> destClass) {
-        Class<?> clazz = ClassUtilities.forName(sourceClassName, this.options.getClassLoader());
+        Class<?> clazz = ClassUtilities.forName(sourceClassName, options.getClassLoader());
         if (clazz != null) {
-            this.options.coercedTypes.put(clazz, destClass);
+            options.coercedTypes.put(clazz, destClass);
         }
         return this;
     }
@@ -482,7 +544,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder missingFieldHandler(JsonReader.MissingFieldHandler missingFieldHandler) {
-        this.options.missingFieldHandler = missingFieldHandler;
+        options.missingFieldHandler = missingFieldHandler;
         return this;
     }
 
@@ -493,7 +555,7 @@ public class ReadOptionsBuilder {
      * @return ReadOptionsBuilder for chained access.
      */
     public ReadOptionsBuilder addNonReferenceableClass(Class<?> clazz) {
-        this.options.nonRefClasses.add(clazz);
+        options.nonRefClasses.add(clazz);
         return this;
     }
 
@@ -640,30 +702,30 @@ public class ReadOptionsBuilder {
         }
     }
 
-    public static class DefaultReadOptions implements ReadOptions {
+    static class DefaultReadOptions implements ReadOptions {
         private Class<?> unknownTypeClass = null;
         private boolean failOnUnknownType = false;
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
         private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
-        private final Map<String, Object> customOptions = new ConcurrentHashMap<>();
+        private final Map<String, Object> customOptions = new HashMap<>();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
         private boolean allowNanAndInfinity = false;
-        private Map<String, String> aliasTypeNames = new ConcurrentHashMap<>();
-        private Map<Class<?>, Class<?>> coercedTypes = new ConcurrentHashMap<>();
-        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new ConcurrentHashMap<>();
-        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new ConcurrentHashMap<>();
-        private Set<Class<?>> notCustomReadClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-        private Set<Class<?>> nonRefClasses = Collections.synchronizedSet(new LinkedHashSet<>());
-        private Map<Class<?>, Set<String>> excludedFieldNames;
-        private Map<Class<?>, Set<String>> excludedInjectorFields;
-        private List<FieldFilter> fieldFilters;
-        private List<InjectorFactory> injectorFactories;
+        private Map<String, String> aliasTypeNames = new HashMap<>();
+        private Map<Class<?>, Class<?>> coercedTypes = new HashMap<>();
+        private Set<Class<?>> notCustomReadClasses = new HashSet<>();
+        private Map<Class<?>, JsonReader.JsonClassReader> customReaderClasses = new HashMap<>();
+        private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new HashMap<>();
+        private Set<Class<?>> nonRefClasses = new HashSet<>();
+        private Map<Class<?>, Set<String>> excludedFieldNames = new HashMap<>();
+        private Map<Class<?>, Set<String>> excludedInjectorFields = new HashMap<>();
+        private List<FieldFilter> fieldFilters = new ArrayList<>();
+        private List<InjectorFactory> injectorFactories = new ArrayList<>();
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-        private Map<Class<?>, Map<String, String>> nonStandardMappings;
+        private Map<Class<?>, Map<String, String>> nonStandardMappings = new HashMap<>();
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -671,7 +733,7 @@ public class ReadOptionsBuilder {
         private final JsonReader.ClassFactory enumFactory = new EnumClassFactory();
 
         //  Cache of fields used for accessors.  controlled by ignoredFields
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
         
         /**
          * Default constructor.  Prevent instantiation outside of package.
@@ -723,8 +785,7 @@ public class ReadOptionsBuilder {
         public int getMaxDepth() {
             return maxDepth;
         }
-
-
+        
         /**
          * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
          *
@@ -767,15 +828,15 @@ public class ReadOptionsBuilder {
          *              as there will be a separate instance in memory for each occurrence. There are certain classes that
          *              json-io automatically treats as non-referenceable, like Strings, Enums, Class, and any Number
          *              instance (BigDecimal, AtomicLong, etc.)  You can add to this list. Often, non-referenceable classes
-         *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
+         *              are useful for classes that can be defined in one line as a JSON, like a ZonedDateTime, for example.
          * @return boolean true if the passed in class is considered a non-referenceable class.
          */
         public boolean isNonReferenceableClass(Class<?> clazz) {
             return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                     Number.class.isAssignableFrom(clazz) ||
                     Date.class.isAssignableFrom(clazz) ||
+                    String.class.isAssignableFrom(clazz) ||
                     clazz.isEnum();
-
         }
 
         /**
@@ -872,7 +933,6 @@ public class ReadOptionsBuilder {
             return this.injectorsCache.computeIfAbsent(classToTraverse, this::buildInjectors);
         }
 
-
         public void clearCaches() {
             injectorsCache.clear();
         }
@@ -913,7 +973,6 @@ public class ReadOptionsBuilder {
             return null;
         }
 
-
         /**
          * Gets the declared fields for the full class hierarchy of a given class
          *
@@ -950,7 +1009,6 @@ public class ReadOptionsBuilder {
             Class<?> curr = c;
             while (curr != null) {
                 final Field[] fields = curr.getDeclaredFields();
-
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
@@ -964,7 +1022,6 @@ public class ReadOptionsBuilder {
                 }
 
                 for (Field field : fields) {
-
                     if (Modifier.isStatic(field.getModifiers()) ||
                             exclusions.contains(field.getName()) ||
                             fieldIsFiltered(field)) {
@@ -977,14 +1034,11 @@ public class ReadOptionsBuilder {
                         map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
                     }
                 }
-
                 curr = curr.getSuperclass();
             }
-
             return Collections.unmodifiableMap(map);
         }
-
-
+        
         private boolean fieldIsFiltered(Field field) {
             for (FieldFilter filter : this.fieldFilters) {
                 if (filter.filter(field)) {

@@ -257,8 +257,20 @@ public class JsonIo {
             return null;
         }
 
-        String json = toJson(source, writeOptions);
-        return (T) toObjects(json, readOptions, source.getClass());
+        if (writeOptions == null) {
+            writeOptions = new WriteOptionsBuilder().build();
+        }
+        WriteOptionsBuilder writeOptionsBuilder = new WriteOptionsBuilder(writeOptions);
+        writeOptionsBuilder.showTypeInfoAlways().shortMetaKeys(true).withExtendedAliases();
+
+        if (readOptions == null) {
+            readOptions = new ReadOptionsBuilder().build();
+        }
+        ReadOptionsBuilder readOptionsBuilder = new ReadOptionsBuilder(readOptions);
+        readOptionsBuilder.withExtendedAliases();
+
+        String json = toJson(source, writeOptionsBuilder.build());
+        return (T) toObjects(json, readOptionsBuilder.build(), source.getClass());
     }
 
     /**

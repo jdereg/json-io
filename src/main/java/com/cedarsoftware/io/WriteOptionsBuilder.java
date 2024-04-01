@@ -56,8 +56,8 @@ public class WriteOptionsBuilder {
     private final DefaultWriteOptions options;
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
-    private static final Set<Class<?>> BASE_NON_REFS = new HashSet<>();
-    private static final Set<String> BASE_FILTERED_METHOD_NAMES = new HashSet<>();
+    private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
+    private static final Set<String> BASE_FILTERED_METHOD_NAMES = ConcurrentHashMap.newKeySet();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
     
@@ -74,29 +74,29 @@ public class WriteOptionsBuilder {
      * Start with default options
      */
     public WriteOptionsBuilder() {
-        this.options = new DefaultWriteOptions();
+        options = new DefaultWriteOptions();
 
-        this.options.includedFieldNames = new HashMap<>();
-        this.options.nonStandardMappings = new HashMap<>();
-        this.options.aliasTypeNames = new HashMap<>();
-        this.options.excludedFieldNames = new HashMap<>();
-        this.options.customWrittenClasses = new HashMap<>();
+        options.includedFieldNames = new HashMap<>();
+        options.nonStandardMappings = new HashMap<>();
+        options.aliasTypeNames = new HashMap<>();
+        options.excludedFieldNames = new HashMap<>();
+        options.customWrittenClasses = new HashMap<>();
 
-        this.options.notCustomWrittenClasses = new HashSet<>();
-        this.options.nonRefClasses = new HashSet<>();
-        this.options.filteredMethodNames = new HashSet<>();
+        options.notCustomWrittenClasses = new HashSet<>();
+        options.nonRefClasses = new HashSet<>();
+        options.filteredMethodNames = new HashSet<>();
 
-        this.options.fieldFilters = new ArrayList<>();
-        this.options.fieldFilters.add(new StaticFieldFilter());
-        this.options.fieldFilters.add(new EnumFieldFilter());
+        options.fieldFilters = new ArrayList<>();
+        options.fieldFilters.add(new StaticFieldFilter());
+        options.fieldFilters.add(new EnumFieldFilter());
 
-        this.options.methodFilters = new ArrayList<>();
-        this.options.methodFilters.add(new AccessorMethodFilter());
-        this.options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
+        options.methodFilters = new ArrayList<>();
+        options.methodFilters.add(new AccessorMethodFilter());
+        options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
 
-        this.options.accessorFactories = new ArrayList<>();
-        this.options.accessorFactories.add(new GetMethodAccessorFactory());
-        this.options.accessorFactories.add(new IsMethodAccessorFactory());
+        options.accessorFactories = new ArrayList<>();
+        options.accessorFactories.add(new GetMethodAccessorFactory());
+        options.accessorFactories.add(new IsMethodAccessorFactory());
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
@@ -106,6 +106,46 @@ public class WriteOptionsBuilder {
         options.nonRefClasses.addAll(BASE_NON_REFS);
         options.filteredMethodNames.addAll(BASE_FILTERED_METHOD_NAMES);
         options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
+    }
+
+    /**
+     * Copy another WriteOptions as a starting point.
+     */
+    public WriteOptionsBuilder(WriteOptions copy) {
+        this();
+        DefaultWriteOptions other = (DefaultWriteOptions) copy;
+        options.includedFieldNames.clear();
+        options.includedFieldNames.putAll(other.includedFieldNames);
+
+        options.nonStandardMappings.clear();
+        options.nonStandardMappings.putAll(other.nonStandardMappings);
+
+        options.aliasTypeNames.clear();
+        options.aliasTypeNames.putAll(other.aliasTypeNames);
+
+        options.excludedFieldNames.clear();
+        options.excludedFieldNames.putAll(other.excludedFieldNames);
+
+        options.customWrittenClasses.clear();
+        options.customWrittenClasses.putAll(other.customWrittenClasses);
+
+        options.notCustomWrittenClasses.clear();
+        options.notCustomWrittenClasses.addAll(other.notCustomWrittenClasses);
+
+        options.nonRefClasses.clear();
+        options.nonRefClasses.addAll(other.nonRefClasses);
+
+        options.filteredMethodNames.clear();
+        options.filteredMethodNames.addAll(other.filteredMethodNames);
+
+        options.fieldFilters.clear();
+        options.fieldFilters.addAll(other.fieldFilters);
+
+        options.methodFilters.clear();
+        options.methodFilters.addAll(other.methodFilters);
+
+        options.accessorFactories.clear();
+        options.accessorFactories.addAll(other.accessorFactories);
     }
 
     /**
@@ -160,7 +200,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder classLoader(ClassLoader loader) {
-        this.options.classLoader = loader;
+        options.classLoader = loader;
         return this;
     }
 
@@ -169,7 +209,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder shortMetaKeys(boolean shortMetaKeys) {
-        this.options.shortMetaKeys = shortMetaKeys;
+        options.shortMetaKeys = shortMetaKeys;
         return this;
     }
 
@@ -200,7 +240,7 @@ public class WriteOptionsBuilder {
      * @return ReadOptions for chained access.
      */
     public WriteOptionsBuilder aliasTypeName(Class<?> type, String alias) {
-        this.options.aliasTypeNames.put(type.getName(), alias);
+        options.aliasTypeNames.put(type.getName(), alias);
         return this;
     }
 
@@ -220,10 +260,10 @@ public class WriteOptionsBuilder {
      * @param alias String shorter alias name.
      */
     private void addUniqueAlias(String typeName, String alias) {
-        Convention.throwIfClassNotFound(typeName, this.options.classLoader);
-        Convention.throwIfKeyExists(this.options.aliasTypeNames, typeName, "Tried to create @type alias" + typeName + " -> " + alias + ", but it is already aliased to: " + this.options.aliasTypeNames.get(typeName));
+        Convention.throwIfClassNotFound(typeName, options.classLoader);
+        Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias" + typeName + " -> " + alias + ", but it is already aliased to: " + options.aliasTypeNames.get(typeName));
 
-        this.options.aliasTypeNames.put(typeName, alias);
+        options.aliasTypeNames.put(typeName, alias);
     }
 
     /**
@@ -231,7 +271,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder withExtendedAliases() {
         Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
-        extendedAliases.forEach((key, value) -> this.options.aliasTypeNames.putIfAbsent(key, value));
+        extendedAliases.forEach((key, value) -> options.aliasTypeNames.putIfAbsent(key, value));
         return this;
     }
 
@@ -241,7 +281,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoAlways() {
-        this.options.showTypeInfo = WriteOptions.ShowType.ALWAYS;
+        options.showTypeInfo = WriteOptions.ShowType.ALWAYS;
         return this;
     }
 
@@ -251,7 +291,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoNever() {
-        this.options.showTypeInfo = WriteOptions.ShowType.NEVER;
+        options.showTypeInfo = WriteOptions.ShowType.NEVER;
         return this;
     }
 
@@ -264,7 +304,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder showTypeInfoMinimal() {
-        this.options.showTypeInfo = WriteOptions.ShowType.MINIMAL;
+        options.showTypeInfo = WriteOptions.ShowType.MINIMAL;
         return this;
     }
 
@@ -273,7 +313,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder prettyPrint(boolean prettyPrint) {
-        this.options.prettyPrint = prettyPrint;
+        options.prettyPrint = prettyPrint;
         return this;
     }
 
@@ -283,7 +323,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder writeLongsAsStrings(boolean writeLongsAsStrings) {
-        this.options.writeLongsAsStrings = writeLongsAsStrings;
+        options.writeLongsAsStrings = writeLongsAsStrings;
         return this;
     }
 
@@ -293,7 +333,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder skipNullFields(boolean skipNullFields) {
-        this.options.skipNullFields = skipNullFields;
+        options.skipNullFields = skipNullFields;
         return this;
     }
 
@@ -305,7 +345,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder forceMapOutputAsTwoArrays(boolean forceMapOutputAsTwoArrays) {
-        this.options.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
+        options.forceMapOutputAsTwoArrays = forceMapOutputAsTwoArrays;
         return this;
     }
 
@@ -316,7 +356,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder allowNanAndInfinity(boolean allowNanAndInfinity) {
-        this.options.allowNanAndInfinity = allowNanAndInfinity;
+        options.allowNanAndInfinity = allowNanAndInfinity;
         return this;
     }
 
@@ -327,7 +367,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.per
      */
     public WriteOptionsBuilder writeEnumsAsString() {
-        this.options.enumWriter = new Writers.EnumsAsStringWriter();
+        options.enumWriter = new Writers.EnumsAsStringWriter();
         return this;
     }
 
@@ -339,8 +379,8 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder writeEnumAsJsonObject(boolean writePublicFieldsOnly) {
-        this.options.enumWriter = DefaultWriteOptions.nullWriter;
-        this.options.enumPublicFieldsOnly = writePublicFieldsOnly;
+        options.enumWriter = DefaultWriteOptions.nullWriter;
+        options.enumPublicFieldsOnly = writePublicFieldsOnly;
         return this;
     }
 
@@ -352,7 +392,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder closeStream(boolean closeStream) {
-        this.options.closeStream = closeStream;
+        options.closeStream = closeStream;
         return this;
     }
 
@@ -364,7 +404,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder setCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
-        this.options.customWrittenClasses.clear();
+        options.customWrittenClasses.clear();
         addCustomWrittenClasses(customWrittenClasses);
         return this;
     }
@@ -375,7 +415,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addCustomWrittenClasses(Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses) {
-        this.options.customWrittenClasses.putAll(customWrittenClasses);
+        options.customWrittenClasses.putAll(customWrittenClasses);
         return this;
     }
 
@@ -385,7 +425,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addCustomWrittenClass(Class<?> clazz, JsonWriter.JsonClassWriter customWriter) {
-        this.options.customWrittenClasses.put(clazz, customWriter);
+        options.customWrittenClasses.put(clazz, customWriter);
         return this;
     }
 
@@ -397,7 +437,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addNotCustomWrittenClass(Class<?> notCustomClass) {
-        this.options.notCustomWrittenClasses.add(notCustomClass);
+        options.notCustomWrittenClasses.add(notCustomClass);
         return this;
     }
 
@@ -407,8 +447,8 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder setNotCustomWrittenClasses(Collection<Class<?>> notCustomClasses) {
-        this.options.notCustomWrittenClasses.clear();
-        this.options.notCustomWrittenClasses.addAll(notCustomClasses);
+        options.notCustomWrittenClasses.clear();
+        options.notCustomWrittenClasses.addAll(notCustomClasses);
         return this;
     }
 
@@ -419,7 +459,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addIncludedField(Class<?> clazz, String includedFieldName) {
         Convention.throwIfNull(includedFieldName, "includedFieldName cannot be null");
-        this.options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(includedFieldName);
+        options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(includedFieldName);
         return this;
     }
 
@@ -429,7 +469,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addIncludedFields(Class<?> clazz, Collection<String> includedFieldNames) {
-        this.options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFieldNames);
+        options.includedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(includedFieldNames);
         return this;
     }
 
@@ -448,7 +488,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedField(Class<?> clazz, String excludedFieldName) {
-        this.options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedFieldName);
+        options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).add(excludedFieldName);
         return this;
     }
 
@@ -458,7 +498,7 @@ public class WriteOptionsBuilder {
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addExcludedFields(Class<?> clazz, Collection<String> excludedFields) {
-        this.options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
+        options.excludedFieldNames.computeIfAbsent(clazz, k -> new LinkedHashSet<>()).addAll(excludedFields);
         return this;
     }
 
@@ -521,8 +561,8 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder setFilteredMethodNames(Collection<String> methodNames) {
         Convention.throwIfNull(methodNames, "methodNames cannot be null");
-        this.options.filteredMethodNames.clear();
-        this.options.filteredMethodNames.addAll(methodNames);
+        options.filteredMethodNames.clear();
+        options.filteredMethodNames.addAll(methodNames);
         return this;
     }
 
@@ -532,7 +572,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addFilteredMethodNames(Collection<String> methodNames) {
         Convention.throwIfNull(methodNames, "methodNames cannot be null");
-        this.options.filteredMethodNames.addAll(methodNames);
+        options.filteredMethodNames.addAll(methodNames);
         return this;
     }
 
@@ -542,7 +582,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addFilteredMethodName(String methodName) {
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        this.options.filteredMethodNames.add(methodName);
+        options.filteredMethodNames.add(methodName);
         return this;
     }
 
@@ -553,8 +593,8 @@ public class WriteOptionsBuilder {
     WriteOptionsBuilder setNonStandardMappings(Map<Class<?>, Map<String, String>> nonStandardMappings) {
         Convention.throwIfNull(nonStandardMappings, "nonStandardMappings cannot be null");
 
-        this.options.nonStandardMappings.clear();
-        this.options.nonStandardMappings.putAll(nonStandardMappings);
+        options.nonStandardMappings.clear();
+        options.nonStandardMappings.putAll(nonStandardMappings);
         return this;
     }
 
@@ -564,7 +604,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addNonStandardMappings(Map<Class<?>, Map<String, String>> nonStandardMappings) {
         Convention.throwIfNull(nonStandardMappings, "nonStandardMappings cannot be null");
-        this.options.nonStandardMappings.putAll(nonStandardMappings);
+        options.nonStandardMappings.putAll(nonStandardMappings);
         return this;
     }
 
@@ -576,7 +616,7 @@ public class WriteOptionsBuilder {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        this.options.nonStandardMappings.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
+        options.nonStandardMappings.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
         return this;
     }
 
@@ -586,8 +626,8 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder setNonReferenceableClasses(Collection<Class<?>> classes) {
         Convention.throwIfNull(classes, "classes cannot be null");
-        this.options.nonRefClasses.clear();
-        this.options.nonRefClasses.addAll(classes);
+        options.nonRefClasses.clear();
+        options.nonRefClasses.addAll(classes);
         return this;
     }
 
@@ -599,7 +639,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addNonReferenceableClasses(Collection<Class<?>> classes) {
         Convention.throwIfNull(classes, "classes cannot be null");
-        this.options.nonRefClasses.addAll(classes);
+        options.nonRefClasses.addAll(classes);
         return this;
     }
 
@@ -611,7 +651,7 @@ public class WriteOptionsBuilder {
      */
     public WriteOptionsBuilder addNonReferenceableClass(Class<?> clazz) {
         Convention.throwIfNull(clazz, "clazz cannot be null");
-        this.options.nonRefClasses.add(clazz);
+        options.nonRefClasses.add(clazz);
         return this;
     }
 
@@ -626,9 +666,9 @@ public class WriteOptionsBuilder {
             throw new JsonIoException("Custom option key must not be null.");
         }
         if (value == null) {
-            this.options.customOptions.remove(key);
+            options.customOptions.remove(key);
         } else {
-            this.options.customOptions.put(key, value);
+            options.customOptions.put(key, value);
         }
         return this;
     }
@@ -640,8 +680,8 @@ public class WriteOptionsBuilder {
      */
     @SuppressWarnings("unchecked")
     public WriteOptions build() {
-        this.options.clearCaches();
-        return this.options;
+        options.clearCaches();
+        return options;
     }
 
     /**
@@ -727,15 +767,15 @@ public class WriteOptionsBuilder {
 
 
     public boolean addFilter(FieldFilter filter) {
-        return this.options.fieldFilters.add(filter);
+        return options.fieldFilters.add(filter);
     }
 
     public boolean removeFilter(FieldFilter filter) {
-        return this.options.fieldFilters.remove(filter);
+        return options.fieldFilters.remove(filter);
     }
 
 
-    public static class DefaultWriteOptions implements WriteOptions {
+    static class DefaultWriteOptions implements WriteOptions {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
         private boolean prettyPrint = false;
@@ -758,16 +798,16 @@ public class WriteOptionsBuilder {
         private List<AccessorFactory> accessorFactories;
         private Set<String> filteredMethodNames;
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses;
-        private final Map<String, Object> customOptions = new ConcurrentHashMap<>();
+        private final Map<String, Object> customOptions = new HashMap<>();
 
         // Runtime caches (not feature options), since looking up writers can be expensive
         // when one does not exist, we cache the write or a nullWriter if one does not exist.
-        private Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, JsonWriter.JsonClassWriter> writerCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, List<Accessor>> accessorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
-        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap(200, 0.8f, Runtime.getRuntime().availableProcessors());
+        private final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
 
         /**
          * Default Constructor.  Prevent instantiation outside of package.
@@ -844,13 +884,14 @@ public class WriteOptionsBuilder {
          *              as there will be a separate instance in memory for each occurrence. There are certain classes that
          *              json-io automatically treats as non-referenceable, like Strings, Enums, Class, and any Number
          *              instance (BigDecimal, AtomicLong, etc.)  You can add to this list. Often, non-referenceable classes
-         *              are useful for classes that can be defined in one line as a JSON, like a LocalDateTime, for example.
+         *              are useful for classes that can be defined in one line as a JSON, like a ZonedDateTime, for example.
          * @return boolean true if the passed in class is considered a non-referenceable class.
          */
         public boolean isNonReferenceableClass(Class<?> clazz) {
             return nonRefClasses.contains(clazz) ||     // Covers primitives, primitive wrappers, Atomic*, Big*, String
                     Number.class.isAssignableFrom(clazz) ||
                     Date.class.isAssignableFrom(clazz) ||
+                    String.class.isAssignableFrom(clazz) ||
                     clazz.isEnum();
         }
 
@@ -1026,15 +1067,13 @@ public class WriteOptionsBuilder {
 
         private Map<String, Field> buildInclusiveFields(Class<?> c, final Set<String> inclusions) {
             Convention.throwIfNull(c, "class cannot be null");
-
             final Map<String, Field> map = new LinkedHashMap<>();
-
             Class<?> curr = c;
+
             while (curr != null) {
                 List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
 
                 for (Field field : fields) {
-
                     String name = field.getName();
 
                     if (map.containsKey(name)) {
@@ -1045,25 +1084,19 @@ public class WriteOptionsBuilder {
                         map.put(name, field);
                     }
                 }
-
                 curr = curr.getSuperclass();
             }
-
             return Collections.unmodifiableMap(map);
         }
 
         private Map<String, Field> buildExclusiveFields(final Class<?> c) {
-
             Convention.throwIfNull(c, "class cannot be null");
-
             final Map<String, Field> map = new LinkedHashMap<>();
             final Set<String> exclusions = new HashSet<>();
-
             Class<?> curr = c;
+            
             while (curr != null) {
-
                 final List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
-
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
@@ -1071,7 +1104,6 @@ public class WriteOptionsBuilder {
                 }
 
                 for (Field field : fields) {
-
                     if (Modifier.isTransient(field.getModifiers()) ||
                             exclusions.contains(field.getName()) ||
                             fieldIsFiltered(field)) {
@@ -1084,10 +1116,8 @@ public class WriteOptionsBuilder {
                         map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
                     }
                 }
-
                 curr = curr.getSuperclass();
             }
-
             return Collections.unmodifiableMap(map);
         }
 
@@ -1097,7 +1127,6 @@ public class WriteOptionsBuilder {
                     return true;
                 }
             }
-
             return false;
         }
     }

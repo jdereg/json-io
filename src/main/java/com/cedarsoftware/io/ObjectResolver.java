@@ -90,17 +90,14 @@ public class ObjectResolver extends Resolver
         final Class cls = javaMate.getClass();
         final Map<String, Injector> injectorMap = getReadOptions().getDeepInjectorMap(cls);
 
-        while (i.hasNext())
-        {
+        while (i.hasNext()) {
             Map.Entry<Object, Object> e = i.next();
             String key = (String) e.getKey();
             final Injector injector = injectorMap.get(key);
             Object rhs = e.getValue();
-            if (injector != null)
-            {
+            if (injector != null) {
                 assignField(stack, jsonObj, injector, rhs);
-            } else if (getReadOptions().getMissingFieldHandler() != null)
-            {
+            } else if (getReadOptions().getMissingFieldHandler() != null) {
                 handleMissingField(stack, jsonObj, rhs, key);
             }//else no handler so ignore.
         }
