@@ -260,8 +260,6 @@ The @id/@ref maintain the shape of the object graph, however, for most simple ob
 necessary and the JSON is more human-readable if the small objects were treated as "primitives."
 >#### `boolean`isNonReferenceableClass(`Class`)
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
->#### `Collection<Class>` getNonReferenceableClasses()
->- [ ] Returns a`Collection`of all non-referenceable classes.
 
 >#### `WriteOptionsBuilder`addNonReferenceableClass(`Class`)
 >- [ ] Adds a class to be considered "non-referenceable." 
