@@ -3,13 +3,13 @@
 
 ### Typed Usage
 
-_Example 1: Java object to JSON String_
+_Example 1: Java object graph to JSON String_
 
     Employee emp;
     // Emp fetched from database
     String json = JsonIo.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
 
-This example will convert the `Employee` instance to a JSON String.  If the `JsonReader` were used on this `String`,
+This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If `JsonIo` were used on this JSON `String,`
 it would reconstitute a Java `Employee` instance.
 
 _Example 2: String to Java object_
@@ -17,7 +17,7 @@ _Example 2: String to Java object_
     String json = // String JSON representing Employee instance
     Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
 
-This will convert the JSON String to a Java Object graph.
+This will convert the JSON String back to a Java Object graph.
 
 _Example 3: Java Object to `OutputStream`_
 
