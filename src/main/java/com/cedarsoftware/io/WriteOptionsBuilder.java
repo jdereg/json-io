@@ -147,16 +147,7 @@ public class WriteOptionsBuilder {
     public static void addPermanentAlias(Class<?> clazz, String alias) {
         BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
     }
-
-    /**
-     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
-     *
-     * @param clazz Class that will be aliased from fullyQualifiedName -> simpleName
-     */
-    public static void addPermanentAlias(Class<?> clazz) {
-        BASE_ALIAS_MAPPINGS.put(clazz.getName(), clazz.getSimpleName());
-    }
-
+    
     /**
      * Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
      * when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
@@ -212,17 +203,7 @@ public class WriteOptionsBuilder {
         aliases.forEach(this::addUniqueAlias);
         return this;
     }
-
-    /**
-     * Aliases the fully qualified class name to its short name
-     *
-     * @param type Class to alias
-     * @return ReadOptions for chained access.
-     */
-    public WriteOptionsBuilder aliasTypeName(Class<?> type) {
-        return aliasTypeName(type.getName(), type.getSimpleName());
-    }
-
+    
     /**
      * @param type  Class to alias
      * @param alias String shorter name to use, typically.
@@ -835,6 +816,13 @@ public class WriteOptionsBuilder {
         public String getTypeNameAlias(String typeName) {
             String alias = aliasTypeNames.get(typeName);
             return alias == null ? typeName : alias;
+        }
+
+        /**
+         * @return Map<String, String> of all aliases.
+         */
+        public Map<String, String> aliases() {
+            return Collections.unmodifiableMap(aliasTypeNames);
         }
 
         /**
