@@ -3,6 +3,7 @@ package com.cedarsoftware.io;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.io.reflect.Accessor;
 
@@ -77,7 +78,7 @@ public interface WriteOptions {
 
     /**
      * @return boolean will return true if NAN and Infinity are allowed to be written out for
-     * Doubles and Floats, else null will be written out..
+     * Doubles and Floats, else null will be written out. Default is false.
      */
     boolean isAllowNanAndInfinity();
 
@@ -174,9 +175,7 @@ public interface WriteOptions {
      * @return JsonClassWriter for the custom class (if one exists), null otherwise.
      */
     JsonWriter.JsonClassWriter getCustomWriter(Class<?> c);
-
-    ///// ACCESSOR PULL IN ???????
-
+    
     void clearCaches();
 
     /**
@@ -194,4 +193,18 @@ public interface WriteOptions {
      * @return Object value of the custom option
      */
     Object getCustomOption(String key);
+
+    /**
+     * @param c Class to get the included fields for.
+     * @return a Set of field names that are to be "included" for the class.  This is the list of fields that were defined
+     * in the WriteOptionsBuilder, and only these fields will be output in the JSON for the given class.
+     */
+    Set<String> getIncludedFields(Class<?> c);
+
+    /**
+     * @param c Class to get the excluded fields for.
+     * @return a Set of field names that are to be "excluded" for the class.  This is the list of fields that were defined
+     * in the WriteOptionsBuilder, and these fields will be excluded in the output in the JSON for the given class.
+     */
+    Set<String> getExcludedFields(Class<?> c);
 }

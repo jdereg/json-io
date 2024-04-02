@@ -267,7 +267,7 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Set to show minimal type.  This means that when the type of an object can be inferred, a type field will not
+     * Set to show minimal type.  This means that when the type of object can be inferred, a type field will not
      * be output.  A Field that points to an instance of the same time, or a typed [] of objects don't need the type
      * info.  However, an Object[], a Collection with no generics, the reader will need to know what type the JSON
      * object is, in order to instantiate the write Java class to which the information will be copied.
@@ -335,7 +335,7 @@ public class WriteOptionsBuilder {
      * Option to write out enums as a String, it will write out the enum.name() field.
      * This is the default way enums will be written out.
      *
-     * @return WriteOptionsBuilder for chained access.per
+     * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder writeEnumsAsString() {
         options.enumWriter = new Writers.EnumsAsStringWriter();
@@ -356,7 +356,7 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * @param closeStream boolean set to 'true' to have JsonIo close the OutputStream when it is finished writinging
+     * @param closeStream boolean set to 'true' to have JsonIo close the OutputStream when it is finished writing
      *                    to it.  The default is 'true'.  If false, the OutputStream will not be closed, allowing
      *                    you to continue writing further.  Example, NDJSON that has new line eliminated JSON
      *                    objects repeated.
@@ -941,7 +941,7 @@ public class WriteOptionsBuilder {
 
         /**
          * @return boolean will return true if NAN and Infinity are allowed to be written out for
-         * Doubles and Floats, else null will be written out..
+         * Doubles and Floats, else null will be written out. The default is false.
          */
         public boolean isAllowNanAndInfinity() {
             return allowNanAndInfinity;
@@ -1005,7 +1005,13 @@ public class WriteOptionsBuilder {
             return customOptions.get(key);
         }
 
-        ///// ACCESSOR PULL IN ???????
+        public Set<String> getIncludedFields(Class<?> c) {
+            return Collections.unmodifiableSet(includedFieldNames.get(c));
+        }
+
+        public Set<String> getExcludedFields(Class<?> c) {
+            return Collections.unmodifiableSet(excludedFieldNames.get(c));
+        }
 
         public void clearCaches() {
             accessorsCache.clear();
@@ -1043,11 +1049,11 @@ public class WriteOptionsBuilder {
          * deep list of fields for a given class.
          */
         public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            final Set<String> inclusions = includedFieldNames.get(c);
+            final Set<String> included = includedFieldNames.get(c);
 
-            return (inclusions == null) ?
+            return (included == null) ?
                     classMetaCache.computeIfAbsent(c, this::buildExclusiveFields) :
-                    classMetaCache.computeIfAbsent(c, cls -> buildInclusiveFields(cls, inclusions));
+                    classMetaCache.computeIfAbsent(c, cls -> buildInclusiveFields(cls, included));
         }
 
         private Accessor findAccessor(Field field, String key) {

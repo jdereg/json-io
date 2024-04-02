@@ -28,6 +28,8 @@ implementation 'com.cedarsoftware:json-io:4.19.13'
 ___
 
 ### [User Guide](/user-guide.md)
+### [User Guide - WriteOptions reference](/user-guide-writeOptions.md)
+### [User Guide - ReadOptions reference](/user-guide-readOptions.md)
 
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
 
