@@ -51,7 +51,7 @@ associative array.  When reading from a JSON `String` or`InputStream`of JSON, us
     Map root = JsonIo.toObjects(json, readOptions);    
 
 See the `ReadOptions` below for the feature control options.  In the example #4 above, rather than return the objects
-converted into Java classes, the raw JSON values being parsed is returned as `Maps`.  It is a graph that consists of
+converted into Java classes, the raw JSON values being parsed are returned as `Maps`.  It is a graph that consists of
 all `Map` instances, arrays, and primitive types.  
 
 When `Map` is returned, your root value will represent one of:
@@ -61,7 +61,7 @@ When `Map` is returned, your root value will represent one of:
   * `Map` that has a key of `@items` which represents any JSON array [...].
 * `JSON primitive (boolean true/false, null, long, double, String).`
 
-This `Map` representation can be re-written to JSON String or Stream and the output JSON will match the
+This `Map` representation can be re-written to a JSON String or Stream and the output JSON will match the
 original input JSON stream.  This permits you to receive JSON strings / streams that contain class references which
 do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
 and then rewrite the String/stream.
