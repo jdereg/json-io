@@ -64,7 +64,7 @@ public class WriteOptionsBuilder {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/ignoredFields.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedAccessorFields.txt"));
         BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
 
