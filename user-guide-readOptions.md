@@ -21,6 +21,7 @@ Create new instances of`ReadOptions.`
 The`ClassLoader`in the`ReadOptons`is used to turn`String`class names into`Class`instances.
 >#### `ClassLoader`getClassLoader()
 >- [ ] Returns the ClassLoader to resolve String class names into Class instances.
+
 >#### `WriteOptionsBuilder`classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names when reading JSON. Returns`ReadOptions`for chained access.
 

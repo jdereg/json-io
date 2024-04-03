@@ -9,8 +9,8 @@ _Example 1: Java object graph to JSON String_
     // Emp fetched from database
     String json = JsonIo.toJson(emp, writeOptions);
 
-This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If `JsonIo` were used on this JSON `String,`
-it would reconstitute a Java `Employee` instance.  
+This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If
+`JsonIo.toObjects(json, readOptions, Employee.class)` were used on this JSON `String,` a new Java `Employee` instance would be returned.  
 
 See [WriteOptions reference](/user-guide-writeOptions.md) for list of all `WriteOptions` and instructions on how to use.
 
