@@ -4,18 +4,11 @@ Create a new`WriteOptions`instance and turn various features on/off using the me
     WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).writeLongsAsStrings(true).build();
     JsonIo.toJson(root, writeOptions);
 
-To pass these to`JsonIo.toJson(root, writeOptions)`set up a`WriteOptions`using the `WriteOptionsBuilder.`
-You can view the Javadoc on the`WriteOptionsBuilder`class for detailed information. The`WriteOptions`are created and made
-read-only by calling the`.build()`method on the `WriteOptionsBuilder.` You can have multiple`WriteOptions`instances for 
-different scenarios, and safely re-use them once built (read-only). A`WriteOptions`instance can be created from 
-another`WriteOptions`instance by using `new WriteOptionsBuilder(writeOptionsToCopyFrom).`
-
-Please note that if you write your object graph out without showing types, the shape of the graph will still be
-maintained.  What this means, is that if two different places in your object graph point to the same object, the first
-reference will write the actual object (with an id - `@id`), the 2nd and later references will write a reference (`@ref`)
-to the first instance. This will read in just fine with `JsonIo.toObjects()`, and the appropriate `Map` reference
-will be placed in all referenced locations.  If reading this in Javascript, make sure to use the included `jsonUtil.js`
-to parse the read in JSON so that it can perform the substitutions of the `@ref`'s. (See root folder for `jsonUtil.js`).
+To pass these to `JsonIo.toJson(root, writeOptions)` set up a `WriteOptions` using the `WriteOptionsBuilder.`
+You can view the Javadoc on the `WriteOptionsBuilder` class for detailed information. The `WriteOptions` are created
+and made read-only by calling the `.build()` method on the `WriteOptionsBuilder.` You can have multiple `WriteOptions`
+instances for different scenarios, and safely re-use them once built (read-only). A `WriteOptions` instance can be
+created from another `WriteOptions` instance by using `new WriteOptionsBuilder(writeOptionsToCopyFrom).`
 
 ---
 ### Constructors
@@ -69,6 +62,8 @@ entries that match values in the passed in Map. New entries in the Map are added
 >- [ ] Sets the alias for a given class name.
 >#### `WriteOptionsBuilder`aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
+>#### `WriteOptionsBuilder`withExtendedAliases()
+>- [ ] All the aliases listed in the resources folder `config/extendedAliases.txt` will be used when writing to shorten the length of the output JSON.  This is a text properties file that includes fully qualified class names mapped to shorter alias names.  To add more aliases, copy that file to your config/resources folder and add more alias to it.  Make sure your file is in the classpath ahead of the one that ships with json-io.jar.  
 
 ### @type
 Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
@@ -196,6 +191,11 @@ on the "Not" customized list takes priority over the customized list, letting th
 >#### `WriteOptionsBuilder`setNotCustomWrittenClasses(`Collection<Class> notCustomClasses`)
 >- [ ] Initializes the list of classes on the non-customized list.
 
+### Add Custom Options (String keys of your choice associated to values of your choice)
+Custom options may be useful to pass to a custom writer. Any options you add here will be available to custom writer.
+>#### `WriteOptionsBuilder`addCustomOption(`String key, Object value`)
+>- [ ] Add the custom key/value pair to your WriteOptions. These will be a available to any custom writers you add.  If you add a key with a value of null associated to it, that will remove the custom option. 
+
 ### Included Fields
 This feature allows you to indicate which fields should be output for a particular class. If fields are specified here, only
 these fields will be output for a particular class.  Think of it as a white-list approach to specifying the fields.
@@ -230,6 +230,11 @@ in a future release, and an exception will be thrown if you attempt to add the s
 >#### `WriteOptionsBuilder`addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
+### Excluding Accessor Methods by name
+This option allows you to exclude a method name (globally) from being considered an accessor. 
+>#### `WriteOptionsBuilder`setFilteredMethodNames(`Collection<String> methodNames`)
+>- [ ] Install the complete collection of method names that are not to be considered as accessors.
+
 ### java.util.Date and java.sql.Date format
 This feature allows you to control the format for`java.util.Date and java.sql.Date`fields.  The default output format
 for these fields is numeric`long`format, which is fast and small. This may work great for your application, but not all applications.
@@ -252,12 +257,12 @@ For small immutable classes, often there is no need to use @id/@ref with them, a
 primitive wrappers, BigInteger, BigDecimal, Atomic*, java.util.Date, String, Class, are automatically marked
 as non-referenceable. You can add more immutable classes of your own.  
 
-The side-effect of this is that it could change
-the "shape" of your graph, if you were counting on two different fields that point to the same String/BigDecimal/Integer
-to have the same == instance. Example, the String "hello" appears 25 times in your JSON.  Should the word "hello" be repeated
-25 times in the text, or would it be better to see @id = "n", and @ref="n" for every place that the word appeared.
-The @id/@ref maintain the shape of the object graph, however, for most simple objects, this is not
-necessary and the JSON is more human-readable if the small objects were treated as "primitives."
+A side effect of this is that it could change the "shape" of your graph, if you were counting on two different fields
+that point to the same String/BigDecimal/Integer to have the same == instance. Example, the String "hello" appears
+25 times in your JSON.  Should the word "hello" be repeated 25 times in the text, or would it be better to
+see @id = "n", and @ref="n" for every place that the word appeared. The @id/@ref maintain the shape of the object
+graph, however, for most simple objects, this is not necessary and the JSON is more human-readable if the small 
+objects were treated as "primitives."
 >#### `boolean`isNonReferenceableClass(`Class`)
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 

@@ -57,7 +57,6 @@ public class WriteOptionsBuilder {
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
-    private static final Set<String> BASE_FILTERED_METHOD_NAMES = ConcurrentHashMap.newKeySet();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
     
@@ -65,7 +64,6 @@ public class WriteOptionsBuilder {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_FILTERED_METHOD_NAMES.addAll(MetaUtils.loadSetDefinition("config/excludedAccessorMethods.txt"));
         BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/ignoredFields.txt"));
         BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
@@ -91,7 +89,6 @@ public class WriteOptionsBuilder {
         options.aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.filteredMethodNames.addAll(BASE_FILTERED_METHOD_NAMES);
         options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
     }
 
@@ -123,9 +120,6 @@ public class WriteOptionsBuilder {
 
             options.nonRefClasses.clear();
             options.nonRefClasses.addAll(other.nonRefClasses);
-
-            options.filteredMethodNames.clear();
-            options.filteredMethodNames.addAll(other.filteredMethodNames);
 
             options.fieldFilters.clear();
             options.fieldFilters.addAll(other.fieldFilters);
@@ -525,38 +519,7 @@ public class WriteOptionsBuilder {
         addCustomWrittenClass(Date.class, new Writers.DateWriter(format));
         return this;
     }
-
-    /**
-     * @param methodNames Replaces the collection of methodNames that are not to be considered as accessors.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder setFilteredMethodNames(Collection<String> methodNames) {
-        Convention.throwIfNull(methodNames, "methodNames cannot be null");
-        options.filteredMethodNames.clear();
-        options.filteredMethodNames.addAll(methodNames);
-        return this;
-    }
-
-    /**
-     * @param methodNames Adds to the collection of methodNames that are not to be considered as accessors.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder addFilteredMethodNames(Collection<String> methodNames) {
-        Convention.throwIfNull(methodNames, "methodNames cannot be null");
-        options.filteredMethodNames.addAll(methodNames);
-        return this;
-    }
-
-    /**
-     * @param methodName Adds to the collection of methodNames that are not to be considered as accessors.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder addFilteredMethodName(String methodName) {
-        Convention.throwIfNull(methodName, "methodName cannot be null");
-        options.filteredMethodNames.add(methodName);
-        return this;
-    }
-
+    
     /**
      * @param nonStandardMappings Replaces the collection of methodNames that are not to be considered as accessors.
      * @return WriteOptionsBuilder for chained access.
@@ -627,7 +590,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Add a custom option, which may be useful when writing custom writers.
+     * Add a custom option, which may be useful when writing custom writers.  To remove a custom option, add the
+     * option with the appropriate key and null as the value.
      * @param key String name of the custom option
      * @param value Object value of the custom option
      * @return WriteOptionsBuilder for chained access.
@@ -681,7 +645,6 @@ public class WriteOptionsBuilder {
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.methodFilters = Collections.unmodifiableList(options.methodFilters);
         options.accessorFactories = Collections.unmodifiableList(options.accessorFactories);
-        options.filteredMethodNames = Collections.unmodifiableSet(options.filteredMethodNames);
         options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
@@ -788,7 +751,6 @@ public class WriteOptionsBuilder {
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<MethodFilter> methodFilters = new ArrayList<>();
         private List<AccessorFactory> accessorFactories = new ArrayList<>();
-        private Set<String> filteredMethodNames = new LinkedHashSet<>();
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new LinkedHashMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
