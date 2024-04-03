@@ -58,14 +58,14 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_ACCESSORS = new ConcurrentHashMap<>();
     
     static {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
         BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedAccessorFields.txt"));
-        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
+        BASE_NONSTANDARD_ACCESSORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
 
     /**
@@ -85,7 +85,7 @@ public class WriteOptionsBuilder {
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
-        options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
+        options.nonStandardAccessors.putAll(BASE_NONSTANDARD_ACCESSORS);
         options.aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
@@ -103,8 +103,8 @@ public class WriteOptionsBuilder {
             options.includedFieldNames.clear();
             options.includedFieldNames.putAll(other.includedFieldNames);
 
-            options.nonStandardMappings.clear();
-            options.nonStandardMappings.putAll(other.nonStandardMappings);
+            options.nonStandardAccessors.clear();
+            options.nonStandardAccessors.putAll(other.nonStandardAccessors);
 
             options.aliasTypeNames.clear();
             options.aliasTypeNames.putAll(other.aliasTypeNames);
@@ -521,36 +521,19 @@ public class WriteOptionsBuilder {
     }
     
     /**
-     * @param nonStandardMappings Replaces the collection of methodNames that are not to be considered as accessors.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    WriteOptionsBuilder setNonStandardMappings(Map<Class<?>, Map<String, String>> nonStandardMappings) {
-        Convention.throwIfNull(nonStandardMappings, "nonStandardMappings cannot be null");
-
-        options.nonStandardMappings.clear();
-        options.nonStandardMappings.putAll(nonStandardMappings);
-        return this;
-    }
-
-    /**
-     * @param nonStandardMappings Adds to the collection of methodNames that are not to be considered as accessors.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder addNonStandardMappings(Map<Class<?>, Map<String, String>> nonStandardMappings) {
-        Convention.throwIfNull(nonStandardMappings, "nonStandardMappings cannot be null");
-        options.nonStandardMappings.putAll(nonStandardMappings);
-        return this;
-    }
-
-    /**
-     * @param methodName Adds to the collection of methodNames that are not to be considered as accessors.
+     * This option permits adding non-standard accessors (used when writing JSON) that access properties from objects,
+     * where the method name does not follow a standard setter/getter property name. For example, on java.time.Instance,
+     * to get the 'second' field, the accessor method is 'getEpochSecond()'.
+     * @param c Class that has the non-standard accessor.  java.time.Instance in the example above.
+     * @param fieldName String name of the class property.  'second' in the example above.
+     * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder addNonStandardMapping(Class<?> c, String fieldName, String methodName) {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        options.nonStandardMappings.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
+        options.nonStandardAccessors.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
         return this;
     }
 
@@ -637,7 +620,7 @@ public class WriteOptionsBuilder {
     public WriteOptions build() {
         options.clearCaches();
         options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
-        options.nonStandardMappings = Collections.unmodifiableMap(options.nonStandardMappings);
+        options.nonStandardAccessors = Collections.unmodifiableMap(options.nonStandardAccessors);
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
         options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
@@ -684,35 +667,6 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Load custom writer classes based on contents of resources/customWriters.txt.
-     * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class<?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
-     */
-    private static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("config/nonStandardAccessors.txt");
-        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            String mappings = entry.getValue();
-            Class<?> clazz = ClassUtilities.forName(className, classLoader);
-            if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM");
-                continue;
-            }
-
-            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
-            for (String split : mappings.split(",")) {
-                String[] parts = split.split(":");
-                mapping.put(parts[0].trim(), parts[1].trim());
-            }
-        }
-        return nonStandardMapping;
-    }
-
-    /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
      *
      * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
@@ -743,7 +697,7 @@ public class WriteOptionsBuilder {
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = WriteOptions.class.getClassLoader();
         private Map<Class<?>, Set<String>> includedFieldNames = new LinkedHashMap<>();
-        private Map<Class<?>, Map<String, String>> nonStandardMappings = new LinkedHashMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardAccessors = new LinkedHashMap<>();
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
         private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
@@ -1021,7 +975,7 @@ public class WriteOptionsBuilder {
         private Accessor findAccessor(Field field, String key) {
             for (final AccessorFactory factory : this.accessorFactories) {
                 try {
-                    final Accessor accessor = factory.buildAccessor(field, this.nonStandardMappings, key);
+                    final Accessor accessor = factory.buildAccessor(field, this.nonStandardAccessors, key);
 
                     if (accessor != null) {
                         return accessor;

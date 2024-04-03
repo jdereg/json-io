@@ -230,10 +230,12 @@ in a future release, and an exception will be thrown if you attempt to add the s
 >#### `WriteOptionsBuilder`addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
-### Excluding Accessor Methods by name
-This option allows you to exclude a method name (globally) from being considered an accessor. 
->#### `WriteOptionsBuilder`setFilteredMethodNames(`Collection<String> methodNames`)
->- [ ] Install the complete collection of method names that are not to be considered as accessors.
+### Non-Standard Accessors
+This option allows you set accessors (used when writing JSON) that access properties from objects, where the method
+name does not follow a standard setter/getter property name. For example, on `java.time.Instance`, to get the `second`
+field, the accessor method is `getEpochSecond().`
+>#### `WriteOptionsBuilder`addNonStandardMapping(`Class, String fieldName, String methodName`)
+>- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
 
 ### java.util.Date and java.sql.Date format
 This feature allows you to control the format for`java.util.Date and java.sql.Date`fields.  The default output format

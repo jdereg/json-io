@@ -772,10 +772,6 @@ public class MetaUtils
     }
 
     /**
-     * Load custom writer classes based on contents of resources/customWriters.txt.
-     * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return {@code Map<Class < ?>, JsonWriter.JsonClassWriter>} containing the resolved Class -> JsonClassWriter instance.
      */
     public static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames(String fileName) {
         Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
