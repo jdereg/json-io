@@ -28,7 +28,7 @@ The`ClassLoader`in the`WriteOptonsBuilder`is used to turn`String`class names int
 >#### `ClassLoader`getClassLoader()
 
 >- [ ] Returns the ClassLoader to resolve String class names when writing JSON.
->#### `WriteOptionsBuilder`classLoader(`ClassLoader loader`)
+>#### `WriteOptionsBuilder` classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names when writing JSON.
 
 ### MetaKeys - @id, @ref, @type
@@ -43,7 +43,7 @@ In a future release, we may be moving from using "@" to "."  Backward compatibil
 >#### `boolean`isShortMetaKeys()
 >- [ ] Returns`true`if showing short meta-keys (@i instead of @id, @r instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values),`false`for full size. `false` is the default.
  
->#### `WriteOptionsBuilder`shortMetaKeys(`boolean shortMetaKeys`)
+>#### `WriteOptionsBuilder` shortMetaKeys(`boolean shortMetaKeys`)
 >- [ ] Sets the boolean`true`to turn on short meta-keys,`false`for long.
 
 ### Aliasing - shorten class names in @type.
@@ -55,14 +55,14 @@ add additional aliases for classes in your program.
 >#### `Map<String, String>`aliases()      
 >- [ ] Returns `Map<String, String>` containing all String class names to alias names.
 
->#### `WriteOptionsBuilder`aliasTypeNames(`Map<String, String> aliasTypeNames`)
+>#### `WriteOptionsBuilder` aliasTypeNames(`Map<String, String> aliasTypeNames`)
 >- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
 entries that match values in the passed in Map. New entries in the Map are added.
->#### `WriteOptionsBuilder`aliasTypeName(`String typeName, String alias`)
+>#### `WriteOptionsBuilder` aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name.
->#### `WriteOptionsBuilder`aliasTypeName(`Class, String alias`)
+>#### `WriteOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
->#### `WriteOptionsBuilder`withExtendedAliases()
+>#### `WriteOptionsBuilder` withExtendedAliases()
 >- [ ] All the aliases listed in the resources folder `config/extendedAliases.txt` will be used when writing to shorten the length of the output JSON.  This is a text properties file that includes fully qualified class names mapped to shorter alias names.  To add more aliases, copy that file to your config/resources folder and add more alias to it.  Make sure your file is in the classpath ahead of the one that ships with json-io.jar.  
 
 ### @type
@@ -79,11 +79,11 @@ additional entry in the JSON object, @type=_typename_ to indicate the type of th
 >#### `boolean`isMinimalShowingType()
 >- [ ] Returns`true`if set to show minimal type (@type).  This is the default.
 
->#### `WriteOptionsBuilder`showTypeInfoAlways()
+>#### `WriteOptionsBuilder` showTypeInfoAlways()
 >- [ ] Sets to always show type.
->#### `WriteOptionsBuilder`showTypeInfoNever()
+>#### `WriteOptionsBuilder` showTypeInfoNever()
 >- [ ] Sets to never show type.
->#### `WriteOptionsBuilder`showTypeInfoMinimal()
+>#### `WriteOptionsBuilder` showTypeInfoMinimal()
 >- [ ] Sets to show minimal type. This means that when the type of object can be inferred, a type field will not be output.  This is the default.
 
 ### Pretty Print
@@ -91,7 +91,7 @@ In order to have Multiple line, indented JSON output, or one-line output, turn o
 >#### `boolean`isPrettyPrint()
 >- [ ] Returns the pretty-print setting,`true`being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is`false.`
 
->#### `WriteOptionsBuilder`prettyPrint(`boolean prettyPrint`)
+>#### `WriteOptionsBuilder` prettyPrint(`boolean prettyPrint`)
 >- [ ] Sets the 'prettyPrint' setting,`true`to turn on,`false`will turn off. The default setting is`false.`
 
 ### Automatically Close OutputStream (or Not)
@@ -101,7 +101,7 @@ additional JSON to the stream.  For example, NDJSON is a format of {...}\n{...}\
 >#### `boolean`isCloseStream()
 >- [ ] Returns `true` if set to automatically close stream after write (the default), or `false`to leave stream open after writing to it.
 
->#### `WriteOptionsBuilder`closeStream(`boolean closeStream`)
+>#### `WriteOptionsBuilder` closeStream(`boolean closeStream`)
 >- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`true.`
 
 ### `Long`as String
@@ -111,7 +111,7 @@ values make it to Javascript and can still be displayed correctly.  The default 
 >#### `boolean`isWriteLongsAsStrings()
 >- [ ] Returns`true`indicating longs will be written as Strings,`false` to write them out as native JSON numbers.
 
->#### `WriteOptionsBuilder`writeLongsAsStrings(`boolean writeLongsAsStrings`)
+>#### `WriteOptionsBuilder` writeLongsAsStrings(`boolean writeLongsAsStrings`)
 >- [ ] Set to boolean`true`to turn on writing longs as Strings,`false`to write them as native JSON longs. The default setting
    is`false.`This feature is important to marshal JSON with large long values (18 to 19 digits) to Javascript. Long/long values
    are represented in Javascript by storing them in a `Double` internally, which cannot represent a full`long`value. Using
@@ -124,7 +124,7 @@ applications, this can dramatically reduce the size of the JSON output.
 >#### `boolean`isSkipNullFields()
 >- [ ] Returns`true`indicating fields with null values will not be written,`false`will still output the field with an associated null value. The default is`false.`
 
->#### `WriteOptionsBuilder`skipNullFields(`boolean skipNullFields`)
+>#### `WriteOptionsBuilder` skipNullFields(`boolean skipNullFields`)
 >- [ ] Sets the boolean where`true`indicates fields with null values will not be written to the JSON,`false`will allow the field to still be written.
 
 ### `Map`output format
@@ -135,7 +135,7 @@ with @keys:[],@values:[] - no special treatment of all `String` keyed `Maps.`
 >#### `boolean`isForceMapOutputAsTwoArrays()
 >- [ ] Returns`true`if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is`false.`
 
->#### `WriteOptionsBuilder`forceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
+>#### `WriteOptionsBuilder` forceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
 >- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays.
 
 ### Floating Point Options
@@ -146,7 +146,7 @@ The default is false.
 > #### `boolean`isAllowNanAndInfinity
 >- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
 
->#### `WriteOptionsBuilder`allowNanAndInfinity(`boolean allow`)
+>#### `WriteOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
    as`null.`
 
@@ -160,9 +160,9 @@ force the Enum to be written as an object, or a single value.
 >#### `boolean`isEnumPublicFieldsOnly()
 >- [ ] Returns`true`indicating that only public fields will be output on an `enum.`The default is to only output public fields as well as to write it as a primitive (single value) instead of a JSON { } object when possible.
 
->#### `WriteOptionsBuilder`writeEnumsAsString()
+>#### `WriteOptionsBuilder` writeEnumsAsString()
 >- [ ] Sets the option to write out enums as a String. This is the default option.  If you have called `writeEnumAsJsonObject(true or false),` call `writeEnumsAsString()`to return to enum output as String.
->#### `WriteOptionsBuilder`writeEnumAsJsonObject(`boolean writePublicFieldsOnly`)
+>#### `WriteOptionsBuilder` writeEnumAsJsonObject(`boolean writePublicFieldsOnly`)
 >- [ ] Sets the option to write out all the member fields of an enum, using JSON { } format for the enum, to allow for multiple fields. Setting this option to true or false (include/exclude private fields), turns off the writeEnumsAsString() option.
 
 ### Customized JSON Writers
@@ -174,9 +174,9 @@ class out, giving you the capability to selectively choose fields, format it dif
 >#### `boolean`isCustomWrittenClass(`Class`)
 >- [ ] Checks to see if there is a custom writer associated with a given class. Returns`true`if there is,`false`otherwise.
 
->#### `WriteOptionsBuilder`setCustomWrittenClasses(`Map<Class, JsonWriter.JsonClassWriter> customWrittenClasses`)
+>#### `WriteOptionsBuilder` setCustomWrittenClasses(`Map<Class, JsonWriter.JsonClassWriter> customWrittenClasses`)
 >- [ ] Establishes the passed in`Map`as the complete list of custom writers to be used when writing JSON.
->#### `WriteOptionsBuilder`addCustomWrittenClass(`Class, JsonWriter.JsonClassWriter customWriter`)
+>#### `WriteOptionsBuilder` addCustomWrittenClass(`Class, JsonWriter.JsonClassWriter customWriter`)
 >- [ ] Adds a custom writer for a specific Class.
 
 ### "Not" Customized Class Writers
@@ -186,14 +186,14 @@ on the "Not" customized list takes priority over the customized list, letting th
 >#### `boolean`isNotCustomWrittenClass(`Class`)
 >- [ ] Checks if a class is on the not-customized list. Returns`true`if it is,`false`otherwise.
 
->#### `WriteOptionsBuilder`addNotCustomWrittenClass(`Class notCustomClass`)
+>#### `WriteOptionsBuilder` addNotCustomWrittenClass(`Class notCustomClass`)
 >- [ ] Adds a class to the not-customized list. This class will use 'default' processing when written.  This option is available as custom writers apply to the class and their derivatives.  This allows you to shut off customization for a class that is picking it up due to inheritance.
->#### `WriteOptionsBuilder`setNotCustomWrittenClasses(`Collection<Class> notCustomClasses`)
+>#### `WriteOptionsBuilder` setNotCustomWrittenClasses(`Collection<Class> notCustomClasses`)
 >- [ ] Initializes the list of classes on the non-customized list.
 
 ### Add Custom Options (String keys of your choice associated to values of your choice)
 Custom options may be useful to pass to a custom writer. Any options you add here will be available to custom writer.
->#### `WriteOptionsBuilder`addCustomOption(`String key, Object value`)
+>#### `WriteOptionsBuilder` addCustomOption(`String key, Object value`)
 >- [ ] Add the custom key/value pair to your WriteOptions. These will be a available to any custom writers you add.  If you add a key with a value of null associated to it, that will remove the custom option. 
 
 ### Included Fields
@@ -204,11 +204,11 @@ If a field is listed in both the includes and excludes list, the exclude list ta
 >#### `Set<String>` getIncludedFields(`Class`)
 >- [ ] Returns a`Set`of Strings field names associated to the passed in class to be included in the written JSON.
 
->#### `WriteOptionsBuilder`addIncludedField(`Class, String fieldName`)
+>#### `WriteOptionsBuilder` addIncludedField(`Class, String fieldName`)
 >- [ ] Adds a single field to be included in the written JSON for a specific class.
->#### `WriteOptionsBuilder`addIncludedFields(`Class, Collection<String> includedFields`)
+>#### `WriteOptionsBuilder` addIncludedFields(`Class, Collection<String> includedFields`)
 >- [ ] Adds a`Collection`of fields to be included in written JSON for a specific class.
->#### `WriteOptionsBuilder`addIncludedFields(`Map<Class, Collection<String>> includedFields`)
+>#### `WriteOptionsBuilder` addIncludedFields(`Map<Class, Collection<String>> includedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be included in the written JSON.
 
 ### Excluded Fields
@@ -221,18 +221,18 @@ field is listed in both the includes and excludes list, the exclude list takes p
 >#### `Set<String>` getExcludedFields(`Class`)
 >- [ ] Returns a`Set`of Strings field names associated to the passed in class to be excluded in the written JSON.
 
->#### `WriteOptionsBuilder`addExcludedField(`Class, String excludedField`)
+>#### `WriteOptionsBuilder` addExcludedField(`Class, String excludedField`)
 >- [ ] Adds a single field to be excluded from the written JSON for a specific class.
->#### `WriteOptionsBuilder`addExcludedFields(`Class, Collection<String> excludedFields`)
+>#### `WriteOptionsBuilder` addExcludedFields(`Class, Collection<String> excludedFields`)
 >- [ ] Adds a`Collection`of fields to be excluded in written JSON for a specific class.
->#### `WriteOptionsBuilder`addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
+>#### `WriteOptionsBuilder` addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
 ### Non-Standard Accessors
 This option allows you set accessors (used when writing JSON) that access properties from source Java objects, where 
 the method name does not follow a standard setter/getter property name. For example, on `java.time.Instance,` to get 
 the `second` field, the accessor method is `getEpochSecond().`
->#### `WriteOptionsBuilder`addNonStandardAccessor(`Class, String fieldName, String methodName`)
+>#### `WriteOptionsBuilder` addNonStandardAccessor(`Class, String fieldName, String methodName`)
 >- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
  
 ### Field Filters
@@ -240,9 +240,9 @@ These options allows you add/remove FieldFilters (your own derived implementatio
 Each filter in the filter chain is presented the reflected field and can return true to exclude a field.  This works
 well when filter a field by a characteristic of a field as opposed to its name. For example, you could exclude fields 
 by field characteristics such as transient, final, volatile, etc.  See existing EnumFieldFilter or StaticFieldFilter.
->#### `WriteOptionsBuilder`addFieldFilter(`FieldFilter filter`)
+>#### `WriteOptionsBuilder` addFieldFilter(`FieldFilter filter`)
 >- [ ] Add a field filter to the field filter chain. 
->#### `WriteOptionsBuilder`removeFieldFilter(`FieldFilter filter`)
+>#### `WriteOptionsBuilder` removeFieldFilter(`FieldFilter filter`)
 >- [ ] Remove a field filter from the field filter chain. 
 
 ### java.util.Date and java.sql.Date format
@@ -253,13 +253,13 @@ JDK formatting options are available for use here.  There are convenience method
 >#### `boolean`isLongDateFormat()
 >- [ ] Returns`true`if`java.util.Date`and`java.sql.Date` are being written in`long`(numeric) format.
 
->#### `WriteOptionsBuilder`dateTimeFormat(`String format`)
+>#### `WriteOptionsBuilder` dateTimeFormat(`String format`)
 >- [ ] Changes the date-time format to the passed in format.
->#### `WriteOptionsBuilder`isoDateFormat()
+>#### `WriteOptionsBuilder` isoDateFormat()
 >- [ ] Changes the date-time format to the ISO date format: "yyyy-MM-dd".
->#### `WriteOptionsBuilder`isoDateTimeFormat()
+>#### `WriteOptionsBuilder` isoDateTimeFormat()
 >- [ ] Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss".
->#### `WriteOptionsBuilder`longDateFormat()
+>#### `WriteOptionsBuilder` longDateFormat()
 >- [ ] Changes the`java.uti.Date`and`java.sql.Date`format output to a`long,`the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is`long.`Returns `WriteOptionsBuilder`for chained access.
 
 ### Non-Referenceable Classes (Opposite of Instance Folding)
@@ -276,5 +276,5 @@ objects were treated as "primitives."
 >#### `boolean`isNonReferenceableClass(`Class`)
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 
->#### `WriteOptionsBuilder`addNonReferenceableClass(`Class`)
+>#### `WriteOptionsBuilder` addNonReferenceableClass(`Class`)
 >- [ ] Adds a class to be considered "non-referenceable." 
