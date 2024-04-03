@@ -281,46 +281,43 @@ objects were treated as "primitives."
 
 ---
 ## Application Scoped Options (lifecycle of JVM)
-These options can be set at 'application-scope' to ensure all `WriteOptions` instances are automatically created
-with them, eliminating the need to configure each `WriteOptions` instance individually.
+These particular options can be set at 'application-scope' to ensure all `WriteOptions` instances are automatically created
+with them, so you don't have to configure each `WriteOptions` instance individually.
 
 ### addPermanentAlias
-Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.  All WriteOptions
-will automatically be created with any permanent aliases added to them.
+Call this method to add a permanent (JVM lifetime) alias of a class to a shorter, name.  All `WriteOptions`
+will automatically be created with permanent aliases added to them.
 
->#### writeOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
+>#### WriteOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
  
 ### addPermanentExcludedField
-Call this method to add a permanent (JVM lifetime) excluded field name of class.  All WriteOptions will 
-automatically be created this field field on the excluded list.
+Call this method to add a permanent (JVM lifetime) excluded field name of class.  All `WriteOptions` will 
+automatically be created with the named field on the excluded list.
 
->#### writeOptionsBuilder.addPermanentExcludedField(`Class<?> clazz, String fieldName`) 
+>#### WriteOptionsBuilder.addPermanentExcludedField(`Class<?> clazz, String fieldName`) 
 
 ### addPermanentNonRef
 
 Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
 when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is
 useful for small, immutable classes.
->#### writeOptionsBuilder.addPermanentNonRef(`Class<?> clazz`)
+>#### WriteOptionsBuilder.addPermanentNonRef(`Class<?> clazz`)
 
 ### addPermanentWriter
 
-Call this method to add a custom JSON writer to json-io.  It will
-associate the Class 'c' to the writer you pass in.  The writers are
-found with isAssignableFrom().  If this is too broad, causing too
-many classes to be associated to the custom writer, you can indicate
-that json-io should not use a custom write for a particular class,
-by calling the addNotCustomWrittenClass() method.  This method will add
-the custom writer such that it will be there permanently, for the
-life of the JVM (static).
+Call this method to add a permanent (JVM lifetime) custom JSON writer to json-io.  It will associate the
+`clazz` to the writer you pass in.  The writers are found with `isAssignableFrom().` If this is too broad, causing too
+many classes to be associated to the custom writer, you can indicate that json-io should not use a custom write for a 
+particular class, by calling the `addNotCustomWrittenClass()` method. 
 
->#### writeOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
+>#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
 
 ### addPermanentNonStandardAccessor
 
-This option permits adding non-standard accessors (used when writing JSON) that access properties from objects,
-where the method name does not follow a standard setter/getter property name. For example, on java.time.Instance,
-to get the 'second' field, the accessor method is 'getEpochSecond()'.
-Anything added here will automatically be made in all WriteOptions.
+Call this method to add a permanent (JVM lifetime) to add a non-standard accessors (used when writing JSON) that access 
+properties from objects, where the method name does not follow a standard setter/getter property name. For example, 
+on `java.time.Instance,` to get the `second` field, the accessor method is `getEpochSecond().` Since this does not follow
+standard naming conventions, and Java 17+ versions will not allow access to private member variables reflectively, use this
+to point the JsonIo at a public method that will allow the field value to be read from (accessed.)
 
->#### writeOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
+>#### WriteOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
