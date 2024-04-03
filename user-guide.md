@@ -7,17 +7,21 @@ _Example 1: Java object graph to JSON String_
 
     Employee emp;
     // Emp fetched from database
-    String json = JsonIo.toJson(emp, writeOptions);     // 'writeOptions' argument discussed in detail below
+    String json = JsonIo.toJson(emp, writeOptions);
 
 This example will convert the `Employee` instance to a JSON String, including nested sub-objects.  If `JsonIo` were used on this JSON `String,`
-it would reconstitute a Java `Employee` instance.
+it would reconstitute a Java `Employee` instance.  
+
+See [WriteOptions reference](/user-guide-writeOptions.md) for list of all `WriteOptions` and instructions on how to use.
 
 _Example 2: String to Java object_
 
     String json = // String JSON representing Employee instance
-    Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);  // 'readOptions' argument discussed below
+    Employee employee = JsonIo.toObjects(json, readOptions, Employee.class);
 
-This will convert the JSON String back to a Java Object graph.
+This will convert the JSON String back to a Java Object graph. 
+
+See [ReadOptions reference](/user-guide-readOptions.md) for a list of all `ReadOptions` and instructions on how to use. 
 
 _Example 3: Java Object to `OutputStream`_
 
