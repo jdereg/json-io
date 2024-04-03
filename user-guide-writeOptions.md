@@ -198,14 +198,13 @@ Custom options may be useful to pass to a custom writer. Any options you add her
 
 ### Included Fields
 This feature allows you to indicate which fields should be output for a particular class. If fields are specified here, only
-these fields will be output for a particular class.  Think of it as a white-list approach to specifying the fields.
-If a particular class has a large amount of fields and you only want to exclude a few, use 'Excluded' fields instead.
-If a field is listed in both the includes and excludes list, the exclude list takes precedence.  That may change
-in a future release, and an exception will be thrown if you attempt to add the same field name to both the include and exclude list.
+these fields will be output for a particular class.  Think of it as a white-list approach to specifying the fields. For example,
+if a class has a lot of fields on it, and you include only two, only those two fields will be output for that class.
+If a field is listed in both the includes and excludes list, the exclude list takes precedence.
 >#### `Set<String>` getIncludedFields(`Class`)
 >- [ ] Returns a`Set`of Strings field names associated to the passed in class to be included in the written JSON.
 
->#### `WriteOptionsBuilder`addIncludedField(`Class, String includedField`)
+>#### `WriteOptionsBuilder`addIncludedField(`Class, String fieldName`)
 >- [ ] Adds a single field to be included in the written JSON for a specific class.
 >#### `WriteOptionsBuilder`addIncludedFields(`Class, Collection<String> includedFields`)
 >- [ ] Adds a`Collection`of fields to be included in written JSON for a specific class.
@@ -218,8 +217,7 @@ specified here, then these named fields will not be output for a particular clas
 to specifying the fields. If a particular class has a large amount of fields and you only want to exclude a few, this
 is a great approach to trim off just those few fields (privacy considerations, ClassLoader fields, etc.)  You can also
 add fields to an 'include' list, in which case only those fields will be output for the particular class.  If a 
-field is listed in both the includes and excludes list, the exclude list takes precedence.  That may change
-in a future release, and an exception will be thrown if you attempt to add the same field name to both the include and exclude list.
+field is listed in both the includes and excludes list, the exclude list takes precedence.
 >#### `Set<String>` getExcludedFields(`Class`)
 >- [ ] Returns a`Set`of Strings field names associated to the passed in class to be excluded in the written JSON.
 
@@ -231,11 +229,21 @@ in a future release, and an exception will be thrown if you attempt to add the s
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
 ### Non-Standard Accessors
-This option allows you set accessors (used when writing JSON) that access properties from objects, where the method
-name does not follow a standard setter/getter property name. For example, on `java.time.Instance`, to get the `second`
-field, the accessor method is `getEpochSecond().`
->#### `WriteOptionsBuilder`addNonStandardMapping(`Class, String fieldName, String methodName`)
+This option allows you set accessors (used when writing JSON) that access properties from source Java objects, where 
+the method name does not follow a standard setter/getter property name. For example, on `java.time.Instance,` to get 
+the `second` field, the accessor method is `getEpochSecond().`
+>#### `WriteOptionsBuilder`addNonStandardAccessor(`Class, String fieldName, String methodName`)
 >- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
+ 
+### Field Filters
+These options allows you add/remove FieldFilters (your own derived implementation) to/from the field filter chain. 
+Each filter in the filter chain is presented the reflected field and can return true to exclude a field.  This works
+well when filter a field by a characteristic of a field as opposed to its name. For example, you could exclude fields 
+by field characteristics such as transient, final, volatile, etc.  See existing EnumFieldFilter or StaticFieldFilter.
+>#### `WriteOptionsBuilder`addFieldFilter(`FieldFilter filter`)
+>- [ ] Add a field filter to the field filter chain. 
+>#### `WriteOptionsBuilder`removeFieldFilter(`FieldFilter filter`)
+>- [ ] Remove a field filter from the field filter chain. 
 
 ### java.util.Date and java.sql.Date format
 This feature allows you to control the format for`java.util.Date and java.sql.Date`fields.  The default output format

@@ -64,7 +64,7 @@ public class WriteOptionsBuilder {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedAccessorFields.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
         BASE_NONSTANDARD_ACCESSORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
     }
 
@@ -74,8 +74,8 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder() {
         options = new DefaultWriteOptions();
 
-        options.fieldFilters.add(new StaticFieldFilter());
-        options.fieldFilters.add(new EnumFieldFilter());
+        addFieldFilter(new StaticFieldFilter());
+        addFieldFilter(new EnumFieldFilter());
 
         options.methodFilters.add(new AccessorMethodFilter());
         options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
@@ -168,6 +168,20 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentWriter(Class<?> clazz, JsonWriter.JsonClassWriter writer) {
         BASE_WRITERS.put(clazz, writer);
+    }
+
+    /**
+     * This option permits adding non-standard accessors (used when writing JSON) that access properties from objects,
+     * where the method name does not follow a standard setter/getter property name. For example, on java.time.Instance,
+     * to get the 'second' field, the accessor method is 'getEpochSecond()'.
+     * Anything added here will automatically be made in all WriteOptions.
+     * @param clazz Class that has the non-standard accessor.  java.time.Instance in the example above.
+     * @param field String name of the class property. 'second' in the example above.
+     * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
+     * @return WriteOptionsBuilder for chained access.
+     */
+    public static void addPermanentNonStandardAccessor(Class<?> clazz, String field, String methodName) {
+        BASE_NONSTANDARD_ACCESSORS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
     }
 
     /**
@@ -529,34 +543,11 @@ public class WriteOptionsBuilder {
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addNonStandardMapping(Class<?> c, String fieldName, String methodName) {
+    public WriteOptionsBuilder addNonStandardAccessor(Class<?> c, String fieldName, String methodName) {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
         options.nonStandardAccessors.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
-        return this;
-    }
-
-    /**
-     * @param classes Replaces the collection of classes to treat as non-referenceable with the given class.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder setNonReferenceableClasses(Collection<Class<?>> classes) {
-        Convention.throwIfNull(classes, "classes cannot be null");
-        options.nonRefClasses.clear();
-        options.nonRefClasses.addAll(classes);
-        return this;
-    }
-
-    /**
-     * @param classes classes to add to be considered a non-referenceable object.  Just like an "int" for example, any
-     *                class added here will never use an @id/@ref pair.  The downside, is that when read,
-     *                each instance, even if the same as another, will use memory.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder addNonReferenceableClasses(Collection<Class<?>> classes) {
-        Convention.throwIfNull(classes, "classes cannot be null");
-        options.nonRefClasses.addAll(classes);
         return this;
     }
 
@@ -592,21 +583,23 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Add FieldFilter
-     * @param filter FieldFilter
+     * Add FieldFilter to the filter chain. FieldFilters are presented a chance to eliminate a field by returning true
+     * from its boolean filter() method.  If any FieldFilter returns true, the field is excluded.
+     * @param filter FieldFilter to add
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addFilter(FieldFilter filter) {
+    public WriteOptionsBuilder addFieldFilter(FieldFilter filter) {
         options.fieldFilters.add(filter);
         return this;
     }
 
     /**
-     * Remove FieldFilter
-     * @param filter FieldFilter
+     * Remove FieldFilter from the filter chain. The FieldFilter is presented a chance to eliminate the field
+     * by returning true from its boolean filter() method.  If any FieldFilter returns true, the field is excluded.
+     * @param filter FieldFilter to remove
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder removeFilter(FieldFilter filter) {
+    public WriteOptionsBuilder removeFieldFilter(FieldFilter filter) {
         options.fieldFilters.remove(filter);
         return this;
     }
@@ -934,10 +927,9 @@ public class WriteOptionsBuilder {
         }
 
         private List<Accessor> buildDeepAccessors(final Class<?> c) {
-
             final Map<String, Field> fields = getDeepDeclaredFields(c);
-
             final List<Accessor> accessors = new ArrayList<>(fields.size());
+            
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
@@ -957,21 +949,6 @@ public class WriteOptionsBuilder {
             return Collections.unmodifiableList(accessors);
         }
 
-        /**
-         * Gets the declared fields for the full class hierarchy of a given class
-         *
-         * @param c - given class.
-         * @return Map - map of string fieldName to Field Object.  This will have the
-         * deep list of fields for a given class.
-         */
-        public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
-            final Set<String> included = includedFieldNames.get(c);
-
-            return (included == null) ?
-                    classMetaCache.computeIfAbsent(c, this::buildExclusiveFields) :
-                    classMetaCache.computeIfAbsent(c, cls -> buildInclusiveFields(cls, included));
-        }
-
         private Accessor findAccessor(Field field, String key) {
             for (final AccessorFactory factory : this.accessorFactories) {
                 try {
@@ -986,55 +963,54 @@ public class WriteOptionsBuilder {
             return null;
         }
 
-        private Map<String, Field> buildInclusiveFields(Class<?> c, final Set<String> inclusions) {
-            Convention.throwIfNull(c, "class cannot be null");
-            final Map<String, Field> map = new LinkedHashMap<>();
-            Class<?> curr = c;
-
-            while (curr != null) {
-                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
-
-                for (Field field : fields) {
-                    String name = field.getName();
-
-                    if (map.containsKey(name)) {
-                        name = field.getDeclaringClass().getSimpleName() + '.' + name;
-                    }
-                    
-                    if (inclusions.contains(name) && !fieldIsFiltered(field)) {
-                        map.put(name, field);
-                    }
-                }
-                curr = curr.getSuperclass();
-            }
-            return Collections.unmodifiableMap(map);
+        /**
+         * Gets the declared fields for the full class hierarchy of a given class
+         *
+         * @param c - given class.
+         * @return Map - map of string fieldName to Field Object.  This will have the
+         * deep list of fields for a given class.
+         */
+        public Map<String, Field> getDeepDeclaredFields(final Class<?> c) {
+            return classMetaCache.computeIfAbsent(c, this::buildWithIncludedMinusExcluded);
         }
 
-        private Map<String, Field> buildExclusiveFields(final Class<?> c) {
+        private Map<String, Field> buildWithIncludedMinusExcluded(Class<?> c) {
             Convention.throwIfNull(c, "class cannot be null");
             final Map<String, Field> map = new LinkedHashMap<>();
-            final Set<String> exclusions = new HashSet<>();
+            final Set<String> excluded = new HashSet<>();
+            final Set<String> includedFields = includedFieldNames.get(c);
+            final Set<String> included = includedFields == null ? new HashSet<>() : includedFields;
             Class<?> curr = c;
-            
-            while (curr != null) {
-                final List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
+
+            while (curr != Object.class) {
+                List<Field> fields = ReflectionUtils.getDeclaredFields(curr);
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
-                    exclusions.addAll(excludedForClass);
+                    excluded.addAll(excludedForClass);
                 }
 
                 for (Field field : fields) {
-                    if (Modifier.isTransient(field.getModifiers()) ||
-                            exclusions.contains(field.getName()) ||
-                            fieldIsFiltered(field)) {
+                    String fieldName = field.getName();
+                    if (map.containsKey(fieldName)) {
+                        fieldName = field.getDeclaringClass().getSimpleName() + '.' + fieldName;
+                    }
+
+                    // FieldFilter or 'Excluded listing' automatically eliminates field.
+                    if (fieldIsFiltered(field) || excluded.contains(fieldName)) {
                         continue;
                     }
 
-                    String name = field.getName();
+                    boolean isTransient = Modifier.isTransient(field.getModifiers());
+                    boolean includedExplicitly = included.contains(fieldName);
+                    
+                    if (isTransient && !includedExplicitly) {
+                        continue;
+                    }
 
-                    if (map.putIfAbsent(name, field) != null) {
-                        map.put(field.getDeclaringClass().getSimpleName() + '.' + name, field);
+                    // If included not specified, then default to ALL, otherwise only consider explicitly included fields.
+                    if (included.isEmpty() || includedExplicitly) {
+                        map.put(fieldName, field);
                     }
                 }
                 curr = curr.getSuperclass();
@@ -1052,7 +1028,3 @@ public class WriteOptionsBuilder {
         }
     }
 }
-
-
-
-

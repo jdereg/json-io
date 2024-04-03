@@ -524,7 +524,7 @@ class WriteOptionsTest {
     @Test
     void getAccessorsForClass_whenMethodDoesNotExists_doesNotThrowException() throws Throwable {
         List<Accessor> list = new WriteOptionsBuilder()
-                .addNonStandardMapping(PrivateFinalObject.class, "x", "getTotal")
+                .addNonStandardAccessor(PrivateFinalObject.class, "x", "getTotal")
                 .build()
                 .getAccessorsForClass(PrivateFinalObject.class);
 

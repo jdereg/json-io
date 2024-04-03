@@ -66,8 +66,8 @@ public class ReadOptionsBuilder {
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_MAPPINGS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_INJECTORS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_INJECTOR_FIELDS = new ConcurrentHashMap<>();
 
     static {
         // ClassFactories
@@ -76,8 +76,8 @@ public class ReadOptionsBuilder {
         BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("config/aliases.txt"));
         BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
         BASE_NON_REFS.addAll(MetaUtils.loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
-        BASE_NONSTANDARD_MAPPINGS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardInjectors.txt"));
+        BASE_EXCLUDED_INJECTOR_FIELDS.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
+        BASE_NONSTANDARD_INJECTORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardInjectors.txt"));
     }
 
     private final DefaultReadOptions options;
@@ -103,9 +103,9 @@ public class ReadOptionsBuilder {
         options.customReaderClasses.putAll(BASE_READERS);
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.nonStandardMappings.putAll(BASE_NONSTANDARD_MAPPINGS);
+        options.nonStandardInjectors.putAll(BASE_NONSTANDARD_INJECTORS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
-        options.excludedInjectorFields.putAll(BASE_EXCLUDED_FIELD_NAMES);
+        options.excludedInjectorFields.putAll(BASE_EXCLUDED_INJECTOR_FIELDS);
     }
 
     /**
@@ -131,8 +131,8 @@ public class ReadOptionsBuilder {
             options.excludedInjectorFields.clear();
             options.excludedInjectorFields.putAll(other.excludedInjectorFields);
 
-            options.nonStandardMappings.clear();
-            options.nonStandardMappings.putAll(other.nonStandardMappings);
+            options.nonStandardInjectors.clear();
+            options.nonStandardInjectors.putAll(other.nonStandardInjectors);
 
             options.coercedTypes.clear();
             options.coercedTypes.putAll(other.coercedTypes);
@@ -228,7 +228,7 @@ public class ReadOptionsBuilder {
         options.excludedInjectorFields = Collections.unmodifiableMap(options.excludedInjectorFields);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
-        options.nonStandardMappings = Collections.unmodifiableMap(options.nonStandardMappings);
+        options.nonStandardInjectors = Collections.unmodifiableMap(options.nonStandardInjectors);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -729,7 +729,7 @@ public class ReadOptionsBuilder {
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-        private Map<Class<?>, Map<String, String>> nonStandardMappings = new HashMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardInjectors = new HashMap<>();
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -966,7 +966,7 @@ public class ReadOptionsBuilder {
         private Injector findInjector(Field field, String key) {
             for (final InjectorFactory factory : this.injectorFactories) {
                 try {
-                    final Injector injector = factory.createInjector(field, this.nonStandardMappings, key);
+                    final Injector injector = factory.createInjector(field, this.nonStandardInjectors, key);
 
                     if (injector != null) {
                         return injector;
@@ -1008,7 +1008,7 @@ public class ReadOptionsBuilder {
             Convention.throwIfNull(c, "class cannot be null");
 
             final Map<String, Field> map = new LinkedHashMap<>();
-            final Set<String> exclusions = new HashSet<>();
+            final Set<String> excludedFields = new HashSet<>();
 
             Class<?> curr = c;
             while (curr != null) {
@@ -1016,18 +1016,18 @@ public class ReadOptionsBuilder {
                 final Set<String> excludedForClass = this.excludedFieldNames.get(curr);
 
                 if (excludedForClass != null) {
-                    exclusions.addAll(excludedForClass);
+                    excludedFields.addAll(excludedForClass);
                 }
 
                 final Set<String> excludedInjectors = this.excludedInjectorFields.get(curr);
 
                 if (excludedInjectors != null) {
-                    exclusions.addAll(excludedInjectors);
+                    excludedFields.addAll(excludedInjectors);
                 }
 
                 for (Field field : fields) {
                     if (Modifier.isStatic(field.getModifiers()) ||
-                            exclusions.contains(field.getName()) ||
+                            excludedFields.contains(field.getName()) ||
                             fieldIsFiltered(field)) {
                         continue;
                     }
