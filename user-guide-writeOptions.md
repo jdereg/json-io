@@ -233,9 +233,11 @@ This option allows you set accessors (used when writing JSON) that access proper
 the method name does not follow a standard setter/getter property naming convention. For example, on `java.time.Instance,`
 to get the `second` field, the accessor method is `getEpochSecond().` Since this does not follow standard naming 
 conventions, and Java 17+ versions will not allow access to private member variables reflectively, use this to point
-the JsonIo at a public method that will allow the field value to be read from (accessed.)
+the JsonIo at a public method that will allow the field value to be read from (accessed.)  Note, this accessor for 
+`Instant` has already been added in by default (the same is true for most JDK classes.)
 >#### `WriteOptionsBuilder` addNonStandardAccessor(`Class, String fieldName, String methodName`)
->- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
+>- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. 
+For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
  
 ### Field Filters
 These options allows you add/remove FieldFilters (your own derived implementation) to/from the field filter chain. 
@@ -316,10 +318,11 @@ particular class, by calling the `addNotCustomWrittenClass()` method.
 
 ### addPermanentNonStandardAccessor
 
-Call this method to add a permanent (JVM lifetime) non-standard accessors (used when writing JSON) that accesse 
-properties from Java objects where the method name does not follow a standard setter/getter property naming conventions. 
+Call this method to add permanent (JVM lifetime) non-standard accessors that access properties from Java objects where
+the method name does not follow standard setter/getter property naming conventions (used when writing JSON). 
 For example, on `java.time.Instance,` to get the `second` field, the accessor method is `getEpochSecond().` Since this
 does not follow standard naming conventions, and Java 17+ versions will not allow access to private member variables 
-reflectively, use this to point the JsonIo at a public method that will allow the field value to be read from (accessed.)
-For the `Instant` example, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
+reflectively, use this to point `JsonIo` at a public method that will allow the field value to be accessed. For the 
+`Instant` example mentioned, you would use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").` 
+Note, this accessor has already been added in by default (the same is true for most JDK classes.)
 >#### WriteOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
