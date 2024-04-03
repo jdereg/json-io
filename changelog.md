@@ -1,4 +1,7 @@
 ### Revision History
+* 4.19.13
+  * `ReadOptionsBuilder` did not have the `withExtendedAliases()` option. This adds in all the `config/extendedAliases.txt` aliases, dramatically shrinking the size of common Java class names in the JSON `@type` field.
+  * Both `ReadOptionsBuilder` and `WriteOptionsBuilder` can take an existing `ReadOptions` or `WriteOptions` as a starting point, allowing you to copy from an exist options, and then tweak it from there.
 * 4.19.12
   * Added `JsonIo.getReadOptionsBuilder(Map options)` and `JsonIo.getWriteOptionsBuilder(Map options)` to facilitate porting over code that users older Map-based options.
   * Removed classes that were packaged in the adapter layer `com.cedarsoftware.util.io.*` All classes now start at `com.cedarsoftware.io.*`  You will have to adjust your imports.

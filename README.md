@@ -14,7 +14,7 @@ ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.19.12'
+implementation 'com.cedarsoftware:json-io:4.19.13'
 ```
 
 ##### Maven
@@ -22,12 +22,15 @@ implementation 'com.cedarsoftware:json-io:4.19.12'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.19.12</version>
+      <version>4.19.13</version>
     </dependency>
 ```
 ___
 
-### [User Guide](/user-guide.md)
+## User Guide
+>#### [Usage](/user-guide.md)
+>#### [WriteOptions reference](/user-guide-writeOptions.md)
+>#### [ReadOptions reference](/user-guide-readOptions.md)
 
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
 

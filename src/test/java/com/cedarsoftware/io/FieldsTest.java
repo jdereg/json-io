@@ -402,6 +402,19 @@ public class FieldsTest
                 .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name"))
                 .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader")).build());
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        assertEquals(0, check.size());
+    }
+    @Test
+
+    public void testFieldBlackListPriorityToSpecifier2()
+    {
+        PainfulToSerialize painful = new PainfulToSerialize();
+        painful.setName("Android rocks");
+
+        String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
+                .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"))
+                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")).build());
+        Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
     }

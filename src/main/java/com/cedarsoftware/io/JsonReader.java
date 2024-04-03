@@ -120,8 +120,6 @@ public class JsonReader implements Closeable, ReaderContext
             Convention.throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
-
-
                 if (excludedFields.contains(entry.getKey().toString()) || entry.getValue() == null) {
                     continue;
                 }
