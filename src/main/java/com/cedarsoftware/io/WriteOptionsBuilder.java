@@ -147,7 +147,7 @@ public class WriteOptionsBuilder {
      * Call this method to add a permanent (JVM lifetime) excluded field name of class.  All WriteOptions will
      * automatically be created this field field on the excluded list.
      *
-     * @param clazz Class that will be aliased by a shorter name in the JSON.
+     * @param clazz Class that contains the named field.
      * @param fieldName to be excluded.
      */
     public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
