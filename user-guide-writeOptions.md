@@ -24,7 +24,7 @@ the `WriteOptions` and the APIs below it are "setter" APIs on the `WriteOptionsB
 All the `WriteOptionsBuilder`"setter" APIs return the `WriteOptionsBuilder`to permit chained access.
 
 ### ClassLoader
-The`ClassLoader`in the `WriteOptonsBuilder` is used to turn`String`class names into`Class`instances.
+The`ClassLoader`in the `WriteOptonsBuilder` is used to turn `String` class names into `Class` instances.
 >#### `ClassLoader` getClassLoader()
 
 >- [ ] Returns the ClassLoader to resolve String class names when writing JSON.
@@ -47,7 +47,7 @@ In a future release, we may be moving from using "@" to "."  Backward compatibil
 >- [ ] Sets the boolean `true` to turn on short meta-keys, `false` for long.
 
 ### Aliasing - shorten class names in @type.
-Aliasing is used to turn long java package names to simple class names, e.g.`java.util.ArrayList`becomes`ArrayList`
+Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList` 
 in the JSON.  By default, json-io has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
 >#### `String` getTypeNameAlias(`String typeName`)
@@ -105,16 +105,16 @@ additional JSON to the stream.  For example, NDJSON is a format of {...}\n{...}\
 >- [ ] Sets the 'closeStream' setting, `true` to turn on, `false` will turn off. The default setting is`true.`
 
 ### `Long`as String
-Output long values as a`String.`This is a fix for sending 17-19 digit long values to JavaScript.  Javascript stores
+Output long values as a `String.` This is a fix for sending 17-19 digit long values to JavaScript.  Javascript stores
 numbers internally as a`Double`(IEEE 754) which cannot retain all 17-19 digits.  By sending them as strings, the
 values make it to Javascript and can still be displayed correctly.  The default is off.
 >#### `boolean` isWriteLongsAsStrings()
->- [ ] Returns `true` indicating longs will be written as Strings,`false` to write them out as native JSON numbers.
+>- [ ] Returns `true` indicating longs will be written as Strings, `false` to write them out as native JSON numbers.
 
 >#### `WriteOptionsBuilder` writeLongsAsStrings(`boolean writeLongsAsStrings`)
 >- [ ] Set to boolean `true` to turn on writing longs as Strings, `false` to write them as native JSON longs. The default setting
    is`false.`This feature is important to marshal JSON with large long values (18 to 19 digits) to Javascript. Long/long values
-   are represented in Javascript by storing them in a `Double` internally, which cannot represent a full`long`value. Using
+   are represented in Javascript by storing them in a `Double` internally, which cannot represent a full `long` value. Using
    this feature allows longs to be sent to Javascript with all their precision, however, they will be Strings when received
    in the Javascript. This will let you display them correctly, for example.
 
@@ -144,10 +144,10 @@ the values be both written and read properly. This feature is off by default.  A
 your application, keep in mind, NaN, +Inf, -Inf are not necessarily going to be supported by other APIs and services.
 The default is false.
 > #### `boolean` isAllowNanAndInfinity
->- [ ] Returns `true` if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
+>- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for `doubles` and`floats.`
 
 >#### `WriteOptionsBuilder` allowNanAndInfinity(`boolean allow`)
->- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`, `false` and these values will come across
+>- [ ] true will allow `doubles` and `floats` to be output as `NaN` and `INFINITY,` `false` and these values will come across
    as`null.`
 
 ### Enum Options
@@ -169,9 +169,9 @@ force the Enum to be written as an object, or a single value.
 Want to customize JSON output for a particular class?  For any Java class, you can author a custom writer
 (`JsonClassWriter`) and associate it to the class.  Then your 'JsonClassWriter' class will be called on to write the 
 class out, giving you the capability to selectively choose fields, format it differently, etc.
->#### `JsonWriter.JsonClassWriter` getCustomWrittenClass(`Class`)
+>#### `JsonWriter.JsonClassWriter` getCustomWrittenClass( `Class` )
 >- [ ] Returns a`Map`of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
->#### `boolean` isCustomWrittenClass(`Class`)
+>#### `boolean` isCustomWrittenClass( `Class` )
 >- [ ] Checks to see if there is a custom writer associated with a given class. Returns `true` if there is, `false` otherwise.
 
 >#### `WriteOptionsBuilder` setCustomWrittenClasses(`Map<Class, JsonWriter.JsonClassWriter> customWrittenClasses`)
@@ -183,7 +183,7 @@ class out, giving you the capability to selectively choose fields, format it dif
 Customized writers are associated to a particular class AND it's derivatives.  If the inheritance model is causing a class to be custom
 written and you do not want that, you can add that class to the "Not" customized list. Being 
 on the "Not" customized list takes priority over the customized list, letting the default json-io JSON writer do its job.
->#### `boolean` isNotCustomWrittenClass(`Class`)
+>#### `boolean` isNotCustomWrittenClass( `Class` )
 >- [ ] Checks if a class is on the not-customized list. Returns `true` if it is, `false` otherwise.
 
 >#### `WriteOptionsBuilder` addNotCustomWrittenClass(`Class notCustomClass`)
@@ -201,13 +201,13 @@ This feature allows you to indicate which fields should be output for a particul
 these fields will be output for a particular class.  Think of it as a white-list approach to specifying the fields. For example,
 if a class has a lot of fields on it, and you include only two, only those two fields will be output for that class.
 If a field is listed in both the includes and excludes list, the exclude list takes precedence.
->#### `Set<String>` getIncludedFields(`Class`)
->- [ ] Returns a`Set`of Strings field names associated to the passed in class to be included in the written JSON.
+>#### `Set<String>` getIncludedFields( `Class` )
+>- [ ] Returns a `Set` of Strings field names associated to the passed in class to be included in the written JSON.
 
 >#### `WriteOptionsBuilder` addIncludedField(`Class, String fieldName`)
 >- [ ] Adds a single field to be included in the written JSON for a specific class.
 >#### `WriteOptionsBuilder` addIncludedFields(`Class, Collection<String> includedFields`)
->- [ ] Adds a`Collection`of fields to be included in written JSON for a specific class.
+>- [ ] Adds a `Collection` of fields to be included in written JSON for a specific class.
 >#### `WriteOptionsBuilder` addIncludedFields(`Map<Class, Collection<String>> includedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be included in the written JSON.
 
@@ -218,13 +218,13 @@ to specifying the fields. If a particular class has a large amount of fields and
 is a great approach to trim off just those few fields (privacy considerations, ClassLoader fields, etc.)  You can also
 add fields to an 'include' list, in which case only those fields will be output for the particular class.  If a 
 field is listed in both the includes and excludes list, the exclude list takes precedence.
->#### `Set<String>` getExcludedFields(`Class`)
->- [ ] Returns a`Set`of Strings field names associated to the passed in class to be excluded in the written JSON.
+>#### `Set<String>` getExcludedFields( `Class` )
+>- [ ] Returns a `Set` of Strings field names associated to the passed in class to be excluded in the written JSON.
 
 >#### `WriteOptionsBuilder` addExcludedField(`Class, String excludedField`)
 >- [ ] Adds a single field to be excluded from the written JSON for a specific class.
 >#### `WriteOptionsBuilder` addExcludedFields(`Class, Collection<String> excludedFields`)
->- [ ] Adds a`Collection`of fields to be excluded in written JSON for a specific class.
+>- [ ] Adds a `Collection` of fields to be excluded in written JSON for a specific class.
 >#### `WriteOptionsBuilder` addExcludedFields(`Map<Class, Collection<String>> excludedFields`)
 >- [ ] Adds multiple Classes and their associated fields to be excluded from the written JSON.
 
@@ -246,8 +246,8 @@ by field characteristics such as transient, final, volatile, etc.  See existing 
 >- [ ] Remove a field filter from the field filter chain. 
 
 ### java.util.Date and java.sql.Date format
-This feature allows you to control the format for`java.util.Date and java.sql.Date`fields.  The default output format
-for these fields is numeric`long`format, which is fast and small. This may work great for your application, but not all applications.
+This feature allows you to control the format for `java.util.Date` and `java.sql.Date` fields.  The default output format
+for these fields is numeric `long` format, which is fast and small. This may work great for your application, but not all applications.
 You can set the Date format via String format like long ISO date time format, e.g. "yyyy-MM-dd'T'HH:mm:ss". All the standard
 JDK formatting options are available for use here.  There are convenience methods for short and long ISO date formats.
 >#### `boolean` isLongDateFormat()
@@ -273,8 +273,8 @@ that point to the same String/BigDecimal/Integer to have the same == instance. E
 see @id = "n", and @ref="n" for every place that the word appeared. The @id/@ref maintain the shape of the object
 graph, however, for most simple objects, this is not necessary and the JSON is more human-readable if the small 
 objects were treated as "primitives."
->#### `boolean` isNonReferenceableClass(`Class`)
+>#### `boolean` isNonReferenceableClass( `Class` )
 >- [ ] Checks if a class is non-referenceable. Returns `true` if the passed in class is considered a non-referenceable class.
 
->#### `WriteOptionsBuilder` addNonReferenceableClass(`Class`)
+>#### `WriteOptionsBuilder` addNonReferenceableClass( `Class` )
 >- [ ] Adds a class to be considered "non-referenceable." 
