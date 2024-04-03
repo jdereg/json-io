@@ -133,7 +133,8 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.
+     * Call this method to add a permanent (JVM lifetime) alias of a class to an often shorter, name.  All WriteOptions
+     * will automatically be created with any permanent aliases added to them.
      *
      * @param clazz Class that will be aliased by a shorter name in the JSON.
      * @param alias Shorter alias name, for example, "ArrayList" as opposed to "java.util.ArrayList"
@@ -142,6 +143,17 @@ public class WriteOptionsBuilder {
         BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
     }
     
+    /**
+     * Call this method to add a permanent (JVM lifetime) excluded field name of class.  All WriteOptions will
+     * automatically be created this field field on the excluded list.
+     *
+     * @param clazz Class that will be aliased by a shorter name in the JSON.
+     * @param fieldName to be excluded.
+     */
+    public static void addPermanentExcludedField(Class<?> clazz, String fieldName) {
+        BASE_EXCLUDED_FIELD_NAMES.computeIfAbsent(clazz, cls -> ConcurrentHashMap.newKeySet()).add(fieldName);
+    }
+
     /**
      * Call this method to add a permanent (JVM lifetime) class that should not be treated as referencable
      * when being written out to JSON.  This means it will never have an @id nor @ref.  This feature is

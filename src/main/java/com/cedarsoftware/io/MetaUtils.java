@@ -759,7 +759,8 @@ public class MetaUtils
                 continue;
             }
 
-            Set<String> resultSet = commaSeparatedStringToSet(entry.getValue());
+            Set<String> resultSet = ConcurrentHashMap.newKeySet();
+            resultSet.addAll(commaSeparatedStringToSet(entry.getValue()));
             safelyIgnoreException(() -> builtMap.put(clazz, resultSet));
         }
         return builtMap;
