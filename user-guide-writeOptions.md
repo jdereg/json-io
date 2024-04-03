@@ -21,7 +21,7 @@ Create new `WriteOptions` instances.
 For all the descriptions below, the top APIs listed are the "getter" (read) APIs to retrieve the setting from
 the `WriteOptions` and the APIs below it are "setter" APIs on the `WriteOptionsBuilder` to activate the option.
 
-All the `WriteOptionsBuilder`"setter" APIs return the `WriteOptionsBuilder`to permit chained access.
+All the `WriteOptionsBuilder` "setter" APIs return the `WriteOptionsBuilder` to permit chained access.
 
 ### ClassLoader
 The`ClassLoader`in the `WriteOptonsBuilder` is used to turn `String` class names into `Class` instances.
@@ -56,7 +56,7 @@ add additional aliases for classes in your program.
 >- [ ] Returns `Map<String, String>` containing all String class names to alias names.
 
 >#### `WriteOptionsBuilder` aliasTypeNames(`Map<String, String> aliasTypeNames`)
->- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
+>- [ ] Puts the `Map` containing String class names to alias names. The passed in `Map` will be `putAll()` copied overwriting any
 entries that match values in the passed in Map. New entries in the Map are added.
 >#### `WriteOptionsBuilder` aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name.
@@ -89,10 +89,10 @@ additional entry in the JSON object, @type=_typename_ to indicate the type of th
 ### Pretty Print
 In order to have Multiple line, indented JSON output, or one-line output, turn on the pretty-print feature.
 >#### `boolean` isPrettyPrint()
->- [ ] Returns the pretty-print setting, `true` being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is`false.`
+>- [ ] Returns the pretty-print setting, `true` being on, using lots of vertical white-space and indentations, `false` will output JSON in one line. The default is `false.` 
 
 >#### `WriteOptionsBuilder` prettyPrint(`boolean prettyPrint`)
->- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is`false.`
+>- [ ] Sets the 'prettyPrint' setting, `true` to turn on, `false` will turn off. The default setting is `false.` 
 
 ### Automatically Close OutputStream (or Not)
 Sometimes you want to close the stream automatically after output, other times you may want to leave it open to write
@@ -102,7 +102,7 @@ additional JSON to the stream.  For example, NDJSON is a format of {...}\n{...}\
 >- [ ] Returns `true` if set to automatically close stream after write (the default), or `false`to leave stream open after writing to it.
 
 >#### `WriteOptionsBuilder` closeStream(`boolean closeStream`)
->- [ ] Sets the 'closeStream' setting, `true` to turn on, `false` will turn off. The default setting is`true.`
+>- [ ] Sets the 'closeStream' setting, `true` to turn on, `false` will turn off. The default setting is `true.` 
 
 ### `Long`as String
 Output long values as a `String.` This is a fix for sending 17-19 digit long values to JavaScript.  Javascript stores
@@ -113,7 +113,7 @@ values make it to Javascript and can still be displayed correctly.  The default 
 
 >#### `WriteOptionsBuilder` writeLongsAsStrings(`boolean writeLongsAsStrings`)
 >- [ ] Set to boolean `true` to turn on writing longs as Strings, `false` to write them as native JSON longs. The default setting
-   is`false.`This feature is important to marshal JSON with large long values (18 to 19 digits) to Javascript. Long/long values
+   is `false.` This feature is important to marshal JSON with large long values (18 to 19 digits) to Javascript. Long/long values
    are represented in Javascript by storing them in a `Double` internally, which cannot represent a full `long` value. Using
    this feature allows longs to be sent to Javascript with all their precision, however, they will be Strings when received
    in the Javascript. This will let you display them correctly, for example.
@@ -122,7 +122,7 @@ values make it to Javascript and can still be displayed correctly.  The default 
 You can turn on this setting (off by default) so that fields that have null values are not output to JSON.  For certain
 applications, this can dramatically reduce the size of the JSON output.
 >#### `boolean` isSkipNullFields()
->- [ ] Returns `true` indicating fields with null values will not be written, `false` will still output the field with an associated null value. The default is`false.`
+>- [ ] Returns `true` indicating fields with null values will not be written, `false` will still output the field with an associated null value. The default is `false.` 
 
 >#### `WriteOptionsBuilder` skipNullFields(`boolean skipNullFields`)
 >- [ ] Sets the boolean where `true` indicates fields with null values will not be written to the JSON, `false` will allow the field to still be written.
@@ -133,7 +133,7 @@ with the keys of the `Map` as the keys of the JSON object.  However, when the ke
 in an @keys:[] and the values are output as @values:[].  If this option is set to true, Maps will always be written 
 with @keys:[],@values:[] - no special treatment of all `String` keyed `Maps.`
 >#### `boolean` isForceMapOutputAsTwoArrays()
->- [ ] Returns `true` if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is`false.`
+>- [ ] Returns `true` if set to force Java Maps to be written out as two parallel arrays, once for keys, one array for values. The default is `false.` 
 
 >#### `WriteOptionsBuilder` forceMapOutputAsTwoArrays(`boolean forceMapOutputAsTwoArrays`)
 >- [ ] Sets the boolean 'forceMapOutputAsTwoArrays' setting. If Map's have String keys they are written as normal JSON objects. With this setting enabled, Maps are written as two parallel arrays.
@@ -144,11 +144,11 @@ the values be both written and read properly. This feature is off by default.  A
 your application, keep in mind, NaN, +Inf, -Inf are not necessarily going to be supported by other APIs and services.
 The default is false.
 > #### `boolean` isAllowNanAndInfinity
->- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for `doubles` and`floats.`
+>- [ ] Returns `true` if set to allow serialization of `NaN` and `Infinity` for `doubles` and `floats.` 
 
 >#### `WriteOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow `doubles` and `floats` to be output as `NaN` and `INFINITY,` `false` and these values will come across
-   as`null.`
+   as `null.` 
 
 ### Enum Options
 Most developers use`enums`as a discrete list of values. However, there are instances where additional fields
@@ -170,12 +170,12 @@ Want to customize JSON output for a particular class?  For any Java class, you c
 (`JsonClassWriter`) and associate it to the class.  Then your 'JsonClassWriter' class will be called on to write the 
 class out, giving you the capability to selectively choose fields, format it differently, etc.
 >#### `JsonWriter.JsonClassWriter` getCustomWrittenClass( `Class` )
->- [ ] Returns a`Map`of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
+>- [ ] Returns a `Map` of Class to custom JsonClassWriter's use to write JSON when the class is encountered during serialization.
 >#### `boolean` isCustomWrittenClass( `Class` )
 >- [ ] Checks to see if there is a custom writer associated with a given class. Returns `true` if there is, `false` otherwise.
 
 >#### `WriteOptionsBuilder` setCustomWrittenClasses(`Map<Class, JsonWriter.JsonClassWriter> customWrittenClasses`)
->- [ ] Establishes the passed in`Map`as the complete list of custom writers to be used when writing JSON.
+>- [ ] Establishes the passed in `Map` as the complete list of custom writers to be used when writing JSON.
 >#### `WriteOptionsBuilder` addCustomWrittenClass(`Class, JsonWriter.JsonClassWriter customWriter`)
 >- [ ] Adds a custom writer for a specific Class.
 
@@ -260,7 +260,7 @@ JDK formatting options are available for use here.  There are convenience method
 >#### `WriteOptionsBuilder` isoDateTimeFormat()
 >- [ ] Changes the date-time format to the ISO date-time format: "yyyy-MM-dd'T'HH:mm:ss".
 >#### `WriteOptionsBuilder` longDateFormat()
->- [ ] Changes the`java.uti.Date`and`java.sql.Date`format output to a`long,`the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is`long.`Returns `WriteOptionsBuilder`for chained access.
+>- [ ] Changes the `java.util.Date` and `java.sql.Date` format output to a `long,` the number of seconds since Jan 1, 1970 at midnight. For speed, the default format is `long.`Returns `WriteOptionsBuilder` for chained access.
 
 ### Non-Referenceable Classes (Opposite of Instance Folding)
 For small immutable classes, often there is no need to use @id/@ref with them, as they are effectively primitives.  All primitives,
