@@ -4,7 +4,7 @@ Create a new`WriteOptions`instance and turn various features on/off using the me
     WriteOptions writeOptions = new WriteOptionsBuilder().prettyPrint(true).writeLongsAsStrings(true).build();
     JsonIo.toJson(root, writeOptions);
 
-To pass these to`JsonWriter.toJson(root, writeOptions)`set up a`WriteOptions`using the `WriteOptionsBuilder.`
+To pass these to`JsonIo.toJson(root, writeOptions)`set up a`WriteOptions`using the `WriteOptionsBuilder.`
 You can view the Javadoc on the`WriteOptionsBuilder`class for detailed information. The`WriteOptions`are created and made
 read-only by calling the`.build()`method on the `WriteOptionsBuilder.` You can have multiple`WriteOptions`instances for 
 different scenarios, and safely re-use them once built (read-only). A`WriteOptions`instance can be created from 

@@ -4,11 +4,11 @@ Create a new`ReadOptions`instance and turn various features on/off using the met
     ReadOptions readOptions = new ReadOptionsBuilder().feature1().feature2(args).build()
     JsonIo.toObjects(root, readOptions);
 
-To pass these to`JsonIo.toObjects(root, readOptions)`set up a`ReadOptions`using the feature settings below.
-You can view the Javadoc on the`ReadOptions`class for detailed information. The`ReadOptions`are made
-read-only by calling the`.build()`method. You can have multiple`ReadOptions`instances for different scenarios, and safely
-re-use them once built (read-only). A`ReadOptions`instance can be created from another`ReadOptions`instance
-(use "copy constructor" discussed below).
+To pass these to JsonIo.toObjects(root, writeOptions), set up a ReadOptions using the ReadOptionsBuilder. You can view 
+the Javadoc on the ReadOptionsBuilder class for detailed information. The ReadOptions are created and made read-only 
+by calling the.build() method on the ReadOptionsBuilder. You can have multiple ReadOptions instances for different
+scenarios, and safely re-use them once built (read-only). A ReadOptions instance can be created from another
+ReadOptions instance by using new ReadOptionsBuilder(readOptionsToCopyFrom).
 
 ### Constructors
 Create new instances of`ReadOptions.`
