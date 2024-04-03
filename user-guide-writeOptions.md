@@ -21,30 +21,29 @@ Create new `WriteOptions` instances.
 For all the descriptions below, the top APIs listed are the "getter" (read) APIs to retrieve the setting from
 the `WriteOptions` and the APIs below it are "setter" APIs on the `WriteOptionsBuilder` to activate the option.
 
-All the `WriteOptionsBuilder` "setter" APIs return the `WriteOptionsBuilder` to permit chained access.
+The `WriteOptionsBuilder` "setter" APIs return the `WriteOptionsBuilder` to permit chained access.
 
 ### ClassLoader
 The`ClassLoader`in the `WriteOptonsBuilder` is used to turn `String` class names into `Class` instances.
 >#### `ClassLoader` getClassLoader()
-
 >- [ ] Returns the ClassLoader to resolve String class names when writing JSON.
+
 >#### `WriteOptionsBuilder` classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names when writing JSON.
 
-### MetaKeys - @id, @ref, @type
+### MetaKeys - @id, @ref, @type, @items, @keys, @values
 A few additional fields are sometimes added to a JSON object {...} to give `JsonIo` help in determining what
-class to instantiate and load.  In addition, if a class is referenced by more than one field, array, collection element, or
-Map key or value, then the initial occurrence of the instance will be output with an @id tag and a number _n_.  Subsequent references will
-be written as @ref:_n_.  This will significantly shorten the JSON as the object will not be written multiple times, it also
-allows for circular reference support, it saves memory when loading from JSON into Java objects, and finally retains
-the original shape of the graph that was written (serialized) to JSON.
-
-In a future release, we may be moving from using "@" to "."  Backward compatibility will be retained.
+class to instantiate and load.  For example, if a class is referenced by more than one field, array, collection element, 
+or Map key or value, then the initial occurrence of the instance will be output with an @id tag and a number _n_.
+Subsequent references will be written as @ref:_n_.  This will significantly shorten the JSON as the full object will not 
+be written multiple times, instead references to the original are written.  This permits circular reference support
+(A => B => C => A), saves memory, and retains the original shape of the graph that was written (serialized) to JSON.
 >#### `boolean` isShortMetaKeys()
->- [ ] Returns `true` if showing short meta-keys (@i instead of @id, @r instead of @ref, @t instead of @type, @k instead of @keys, @v instead of @values), `false` for full size. `false` is the default.
+>- [ ] Returns `true` if instructed to use short meta-keys (@i => @id, @r => @ref, @t => @type, @k => @keys, 
+@v => @values, @e => @items), `false` for full size. `false` is the default.
  
 >#### `WriteOptionsBuilder` shortMetaKeys(`boolean shortMetaKeys`)
->- [ ] Sets the boolean `true` to turn on short meta-keys, `false` for long.
+>- [ ] Sets to boolean `true` to turn on short meta-keys, `false` for long.
 
 ### Aliasing - shorten class names in @type.
 Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList` 
@@ -63,14 +62,20 @@ entries that match values in the passed in Map. New entries in the Map are added
 >#### `WriteOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
 >#### `WriteOptionsBuilder` withExtendedAliases()
->- [ ] All the aliases listed in the resources folder `config/extendedAliases.txt` will be used when writing to shorten the length of the output JSON.  This is a text properties file that includes fully qualified class names mapped to shorter alias names.  To add more aliases, copy that file to your config/resources folder and add more alias to it.  Make sure your file is in the classpath ahead of the one that ships with json-io.jar.  
+>- [ ] All the aliases listed in the resources folder `config/extendedAliases.txt` will be used when writing to shorten 
+the length of the output JSON. If you would like to add aliases that stay for the lifecycle of the JVM run, use 
+`WriteOptionsBuilder.addPermanentAlias(Class, String alas)` API.  All new `WriteOptions` instances will include these aliases.
+To add permanent aliases, that will be there longer than JVM lifecycle, copy the config/extendedAliases.txt file to your 
+config/resources folder and add more alias to it. Make sure your file is in the classpath ahead of the one that ships
+with json-io.jar.
 
 ### @type
 Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
-what Java type (class) an object is because of the field-type on an object, the component-type of an array, or if the root class
-is specified.  Sometimes, though the type cannot be inferred.  An example would be field on a class that is declared
-as an `Object` type but more complex, derived instances are assigned to the `Object` field.  In that case, json-io will output an
-additional entry in the JSON object, @type=_typename_ to indicate the type of the class that the reader should instantiate and load.
+what Java type (class) an object is because of the field-type on an object, the component-type of an array, or if the
+root class is specified.  Sometimes, though the type cannot be inferred.  An example would be field on a class that is 
+declared as an `Object` type but more complex, derived instances are assigned to the `Object` field.  In that case,
+json-io will output an additional entry in the JSON object, @type=_typename_ to indicate the class type the reader
+should instantiate and then load with the contents from the input JSON.
 
 >#### `boolean` isAlwaysShowingType()
 >- [ ] Returns `true` if set to always show type (@type).
