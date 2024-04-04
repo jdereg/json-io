@@ -2,13 +2,13 @@
 Create a new`ReadOptions`instance and turn various features on/off using the methods below. Example:
 
     ReadOptions readOptions = new ReadOptionsBuilder().feature1().feature2(args).build()
-    JsonIo.toObjects(root, readOptions);
+    JsonIo.toObjects(root, readOptions, rootClass);
 
-To pass these to `JsonIo.toObjects(root, readOptions),` set up a `ReadOptions` using the `ReadOptionsBuilder.`
-You can view the Javadoc on the `ReadOptionsBuilder` class for detailed information. The `ReadOptions` are created 
-and made read-only by calling the `.build()` method on the `ReadOptionsBuilder.` You can have multiple `ReadOptions`
-instances for different scenarios, and safely re-use them once built (read-only). A `ReadOptions` instance can be 
-created from another `ReadOptions` instance by using `new ReadOptionsBuilder(readOptionsToCopyFrom).`
+To pass read options to `JsonIo.toObjects(root, readOptions, rootClass),` set up a `ReadOptions` instance using the
+`ReadOptionsBuilder.` You can view the Javadoc on the `ReadOptionsBuilder` class for detailed information. The
+`ReadOptions` are created and made read-only by calling the `.build()` method on the `ReadOptionsBuilder.` You can have
+multiple `ReadOptions` instances for different scenarios, and safely re-use them once built (their stateless). A 
+`ReadOptions` instance can be created from another `ReadOptions` instance by using `new ReadOptionsBuilder(readOptionsToCopyFrom).`
 
 ### Constructors
 Create new instances of`ReadOptions.`
@@ -18,11 +18,11 @@ Create new instances of`ReadOptions.`
 >- [ ] Copy all settings from the passed in 'other'`ReadOptions.`
 
 ### Class Loader
-The`ClassLoader`in the`ReadOptons`is used to turn`String`class names into`Class`instances.
+The`ClassLoader`in the`ReadOptons`is used by json-io to turn `String` class names into`Class`instances.
 >#### `ClassLoader`getClassLoader()
 >- [ ] Returns the ClassLoader to resolve String class names into Class instances.
 
->#### `WriteOptionsBuilder`classLoader(`ClassLoader loader`)
+>#### `ReadOptionsBuilder`classLoader(`ClassLoader loader`)
 >- [ ] Sets the ClassLoader to resolve String class names when reading JSON. Returns`ReadOptions`for chained access.
 
 ### Unknown Types
@@ -34,7 +34,7 @@ instead of a`LinkedHashMap,`however, it should be noted that`Maps`are useful bec
 JSON can be`put`into a`Map.`
 >#### `boolean`isFailOnUnknownType()
 >- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set
->#### `ReadOptions`failOnUnknownType(`boolean fail`)
+>#### `ReadOptionsBuilder` failOnUnknownType(`boolean fail`)
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
    If`fail`is`false,`then the default class used will be`LinkedHashMap` for the particular JSON object encountered. You can
    set this to your own class using the`unknownTypeClass()`feature. Returns`ReadOptions`for chained access.
@@ -49,7 +49,7 @@ Set the maximum object nesting level so that no`StackOverflowExceptions`happen. 
 you know that the maximum object nesting level has been reached.
 > #### `int` getMaxDepth()
 >- [ ] Return the max nesting depth for JSON {...}
-> #### `ReadOptions`maxDepth(`int depth`)
+> #### `ReadOptionsBuilder` maxDepth(`int depth`)
 >- [ ] Set the max depth to allow for nested JSON {...}.  Set this to prevent security risk from`StackOverflow`attack
 >- vectors. Returns`ReadOptions`for chained access.
 
@@ -59,7 +59,7 @@ the values be both written and read properly. This feature is off by default.  A
 work for your application, keep in mind, NaN, +Inf, -Inf are not necessarily going to be supported by other APIs and services.
 > #### `boolean`isAllowNanAndInfinity
 >- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
->#### `ReadOptions`allowNanAndInfinity(`boolean allow`)
+>#### `ReadOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
    as`null.` Returns`ReadOptions`for chained access.
 
@@ -69,7 +69,7 @@ additional JSON from the stream.  For example, NDJSON is a format of {...}\n{...
 `JsonIo` not to close the `InputStream` after each read.  See example at the beginning of the user guide.
 >#### `boolean`isCloseStream()
 >- [ ] Returns `true` if set to automatically close stream after read (the default), or `false`to leave stream open after reading from it.
->#### `ReadOptions`closeStream(`boolean closeStream`)
+>#### `ReadOptionsBuilder` closeStream(`boolean closeStream`)
 >- [ ] Sets the 'closeStream' setting,`true`to turn on,`false`will turn off. The default setting is`false.` Returns`ReadOptions`for chained access.
 
 ### Aliasing - shorten class names in @type.
@@ -80,12 +80,12 @@ add additional aliases for classes in your program.
 >- [ ] Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
 >#### `Map<String, String>` aliasTypeNames()
 >- [ ] Returns `Map<String, String>` containing String class names to alias names. Use this API to see default aliases.
->#### `ReadOptions`aliasTypeNames(`Map<String, String> aliasTypeNames`)
+>#### `ReadOptionsBuilder` aliasTypeNames(`Map<String, String> aliasTypeNames`)
 >- [ ] Puts the`Map`containing String class names to alias names. The passed in`Map`will be `putAll()` copied overwriting any
 entries that match values in the passed in Map. New entries in the Map are added.  Returns`ReadOptions`for chained access.
->#### `ReadOptions`aliasTypeName(`String typeName, String alias`)
+>#### `ReadOptionsBuilder` aliasTypeName(`String typeName, String alias`)
 >- [ ] Sets the alias for a given class name. Returns`ReadOptions`for chained access.
->#### `ReadOptions`aliasTypeName(`Class, String alias`)
+>#### `ReadOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class. Returns`ReadOptions`for chained access.
 
 ### Class Coercion
@@ -96,7 +96,7 @@ variations.  All the common JDK substitutions are already in the coercion list. 
 >- [ ] Return`true`if the passed in Class name is being coerced to another type, `false`otherwise.
 >#### `Class` getCoercedClass(`Class`) 
 >- [ ] Fetch the coerced class for the passed in fully qualified class name.
->#### `ReadOptions`coerceClass(`String sourceClassName, Class destClass`)
+>#### `ReadOptionsBuilder` coerceClass(`String sourceClassName, Class destClass`)
 >- [ ] Coerce a class from one type (named in the JSON) to another type.  For example, converting
 `java.util.Collections$SingletonSet`to a`LinkedHashSet.class.`
 
@@ -108,7 +108,7 @@ See`JsonReader.MissingFieldHandler`for more information.
 >#### `JsonReader.MissingFieldHandler`getMissingFieldHandler()
 >- [ ]  Fetch the method that will be called when a field in the JSON is read in, yet there is no corresponding 
 field on the destination object to receive the value.
->#### `ReadOptions`missingFieldHandler(`JsonReader.MissingFieldHandler missingFieldHandler`)
+>#### `ReadOptionsBuilder` missingFieldHandler(`JsonReader.MissingFieldHandler missingFieldHandler`)
 >- [ ] Pass the`missing field handler`to be called when a field in the JSON is read in, yet there is no corresponding field on the 
 destination object to receive the value.
 
@@ -121,11 +121,11 @@ time (it is passed to the`ClassFactory`). This is the preferred method for custo
 >- [ ] Fetch`Map`of all Class's associated to`JsonReader.ClassFactory's.`
 >#### `JsonReader.ClassFactory`getClassFactory(`Class`)
 >- [ ] Get the`ClassFactory`associated to the passed in class.
->#### `ReadOptions`setClassFactories(`Map<Class, ? extends JsonReader.ClassFactory> factories`)
+>#### `ReadOptionsBuilder` setClassFactories(`Map<Class, ? extends JsonReader.ClassFactory> factories`)
 >- [ ] Associate multiple ClassFactory instances to Classes that needs help being constructed and read in. The
 `Map`of entries associate`Class`to`ClassFactory.` The`ClassFactory`class knows how to instantiate and load
 the class associated to it.
->#### `ReadOptions`addClassFactory(`Class clazz, JsonReader.ClassFactory factory`)
+>#### `ReadOptionsBuilder` addClassFactory(`Class clazz, JsonReader.ClassFactory factory`)
 >- [ ] Associate a`ClassFactory`to a`Class`that needs help being constructed and read in. If you use this method
 more than once for the same class, the last`ClassFactory`associated to the class will overwrite any prior associations.
  
@@ -140,11 +140,11 @@ then can add that class to the Not-Custom-Reader list.
  serialization to JSON.  This is the entire`Map`of Custom Readers.
 >#### `boolean`isCustomReaderClass(`Class`)
 >- [ ] Return`true`if there is a custom reader class associated to the passed in class, `false` otherwise.
->#### `ReadOptions`setCustomReaderClasses(`Map<? extends Class>, ? extends JsonReader.JsonClassReader> customReaderClasses`)
+>#### `ReadOptionsBuilder` setCustomReaderClasses(`Map<? extends Class>, ? extends JsonReader.JsonClassReader> customReaderClasses`)
 >- [ ]  Set all custom readers at once.  Pass in a`Map`of`Class`to`JsonReader.JsonClassReader.` Set the passed 
 in`Map`as the established`Map`of custom readers to be used when reading JSON. Using this method  more than once, will
 set the custom readers to only the values from the`Map`in the last call made.
->#### `ReadOptions`addCustomReaderClass(`Class, JsonReader.JsonClassReader customReader`)
+>#### `ReadOptionsBuilder` addCustomReaderClass(`Class, JsonReader.JsonClassReader customReader`)
 > - [ ] Add a single association of a class to a custom reader.  If you add another associated reader to the same class, the last one added will overwrite the prior association.
 
 ### Not Custom Reader
@@ -155,10 +155,10 @@ want to turn-off a`CustomReader`for a particular class that is inadvertently bei
 picked up through inheritance, and you don't want it to have a custom reader associated to it.
 >#### `Set<Class<?>>`getNotCustomReadClasses()
 >- [ ] Fetch the`Set`of all Classes on the not-customized list. 
->#### `ReadOptions`addNotCustomReaderClass(`Class notCustomClass`) 
+>#### `ReadOptionsBuilder` addNotCustomReaderClass(`Class notCustomClass`) 
 >- [ ] Add a class to the not-customized list - the list of classes that you do not want to be picked up by
 a custom reader (that could happen through inheritance). 
->#### `ReadOptions`setNotCustomReaderClasses(`Collection<Class> notCustomClasses`) 
+>#### `ReadOptionsBuilder` setNotCustomReaderClasses(`Collection<Class> notCustomClasses`) 
 >- [ ] Initialize the list of classes on the non-customized list.  All prior associations will be dropped and this 
 `Collection` will establish the new list.
 
@@ -173,5 +173,5 @@ all those to collapse to the same value, they won't Each one would be read in as
 >- [ ] Checks if a class is non-referenceable. Returns`true`if the passed in class is considered a non-referenceable class.
 >#### `Collection<Class>` getNonReferenceableClasses()
 >- [ ] Returns a`Collection`of all non-referenceable classes.
->#### `WriteOptionsBuilder`addNonReferenceableClass(`Class`)
+>#### `ReadOptionsBuilder` addNonReferenceableClass(`Class`)
 >- [ ] Adds a class to be considered "non-referenceable." Examples are the built-in primitives.

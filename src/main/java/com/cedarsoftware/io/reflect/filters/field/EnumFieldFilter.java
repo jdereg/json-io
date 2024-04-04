@@ -22,15 +22,14 @@ import com.cedarsoftware.io.reflect.filters.FieldFilter;
  *         limitations under the License.*
  */
 public class EnumFieldFilter implements FieldFilter {
-    @Override
     public boolean filter(Field field) {
         Class<?> declaringClass = field.getDeclaringClass();
         String fieldName = field.getName();
-        if (declaringClass.isEnum() && ("internal".equals(fieldName) || "ENUM$VALUES".equalsIgnoreCase(fieldName))) {
-            return true;
+        if (!declaringClass.isEnum()) {
+            return false;
         }
 
-        return declaringClass.isAssignableFrom(Enum.class) && ("hash".equals(fieldName) || "ordinal".equals(fieldName));
+        // Filter these fields out (return true for them)
+        return "internal".equals(fieldName) || "ENUM$VALUES".equalsIgnoreCase(fieldName) || "hash".equals(fieldName) || "ordinal".equals(fieldName);
     }
 }
-

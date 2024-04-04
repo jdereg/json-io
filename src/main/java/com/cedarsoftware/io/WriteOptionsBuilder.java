@@ -23,8 +23,8 @@ import com.cedarsoftware.io.reflect.filters.FieldFilter;
 import com.cedarsoftware.io.reflect.filters.MethodFilter;
 import com.cedarsoftware.io.reflect.filters.field.EnumFieldFilter;
 import com.cedarsoftware.io.reflect.filters.field.StaticFieldFilter;
-import com.cedarsoftware.io.reflect.filters.method.AccessorMethodFilter;
-import com.cedarsoftware.io.reflect.filters.method.ModifierMethodFilter;
+import com.cedarsoftware.io.reflect.filters.method.DefaultMethodFilter;
+import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
@@ -59,13 +59,21 @@ public class WriteOptionsBuilder {
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_ACCESSORS = new ConcurrentHashMap<>();
-    
+    private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
+    private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
+    private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
+
     static {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
         BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
         BASE_NONSTANDARD_ACCESSORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
+        BASE_FIELD_FILTERS.put("static", new StaticFieldFilter());
+        BASE_FIELD_FILTERS.put("enum", new EnumFieldFilter());
+        BASE_METHOD_FILTERS.put("default", new DefaultMethodFilter());
+        BASE_ACCESSOR_FACTORIES.put("get", new GetMethodAccessorFactory());
+        BASE_ACCESSOR_FACTORIES.put("is", new IsMethodAccessorFactory());
     }
 
     /**
@@ -74,15 +82,6 @@ public class WriteOptionsBuilder {
     public WriteOptionsBuilder() {
         options = new DefaultWriteOptions();
 
-        addFieldFilter(new StaticFieldFilter());
-        addFieldFilter(new EnumFieldFilter());
-
-        options.methodFilters.add(new AccessorMethodFilter());
-        options.methodFilters.add(new ModifierMethodFilter(Modifier.PUBLIC));
-
-        options.accessorFactories.add(new GetMethodAccessorFactory());
-        options.accessorFactories.add(new IsMethodAccessorFactory());
-
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
         options.nonStandardAccessors.putAll(BASE_NONSTANDARD_ACCESSORS);
@@ -90,6 +89,9 @@ public class WriteOptionsBuilder {
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
         options.excludedFieldNames.putAll(BASE_EXCLUDED_FIELD_NAMES);
+        options.fieldFilters.putAll(BASE_FIELD_FILTERS);
+        options.methodFilters.putAll(BASE_METHOD_FILTERS);
+        options.accessorFactories.putAll(BASE_ACCESSOR_FACTORIES);
     }
 
     /**
@@ -122,13 +124,13 @@ public class WriteOptionsBuilder {
             options.nonRefClasses.addAll(other.nonRefClasses);
 
             options.fieldFilters.clear();
-            options.fieldFilters.addAll(other.fieldFilters);
+            options.fieldFilters.putAll(other.fieldFilters);
 
             options.methodFilters.clear();
-            options.methodFilters.addAll(other.methodFilters);
+            options.methodFilters.putAll(other.methodFilters);
 
             options.accessorFactories.clear();
-            options.accessorFactories.addAll(other.accessorFactories);
+            options.accessorFactories.putAll(other.accessorFactories);
         }
     }
 
@@ -194,6 +196,36 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNonStandardAccessor(Class<?> clazz, String field, String methodName) {
         BASE_NONSTANDARD_ACCESSORS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
+    }
+
+    /**
+     * Add a FieldFilter that is JVM lifecycle scoped.
+     * @param fieldFilter {@link FieldFilter} class used to eliminate fields from being included in the serialized JSON.
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public static void addPermanentFieldFilter(String name, FieldFilter fieldFilter) {
+        BASE_FIELD_FILTERS.put(name, fieldFilter);
+    }
+
+    /**
+     * Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter.
+     * @param name String name of this particular MethodFilter instance.
+     * @param methodFilter {@link MethodFilter} class used to eliminate a particular accessor method from being used.
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public static void addPermanentMethodFilter(String name, MethodFilter methodFilter) {
+        BASE_METHOD_FILTERS.put(name, methodFilter);
+    }
+
+    /**
+     * Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter.
+     * @param name String name of this particular method filter instance.
+     * @param clazz class that contains the method to be filtered (can be derived class, with field defined on parent class).
+     * @param methodName String name of no-argument method to be filtered.
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public static void addPermanentNamedMethodFilter(String name, Class<?> clazz, String methodName) {
+        BASE_METHOD_FILTERS.put(name, new NamedMethodFilter(clazz, methodName));
     }
 
     /**
@@ -595,24 +627,69 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Add FieldFilter to the filter chain. FieldFilters are presented a chance to eliminate a field by returning true
+     * Add FieldFilter to the field filter chain. FieldFilters are presented a chance to eliminate a field by returning true
      * from its boolean filter() method.  If any FieldFilter returns true, the field is excluded.
+     * @param filterName String name of filter
      * @param filter FieldFilter to add
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addFieldFilter(FieldFilter filter) {
-        options.fieldFilters.add(filter);
+    public WriteOptionsBuilder addFieldFilter(String filterName, FieldFilter filter) {
+        options.fieldFilters.put(filterName, filter);
         return this;
     }
 
     /**
-     * Remove FieldFilter from the filter chain. The FieldFilter is presented a chance to eliminate the field
-     * by returning true from its boolean filter() method.  If any FieldFilter returns true, the field is excluded.
-     * @param filter FieldFilter to remove
+     * Remove named FieldFilter from the filter chain.
+     * @param filterName String name of FieldFilter to delete
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder removeFieldFilter(FieldFilter filter) {
-        options.fieldFilters.remove(filter);
+    public WriteOptionsBuilder removeFieldFilter(String filterName) {
+        options.fieldFilters.remove(filterName);
+        return this;
+    }
+
+    /**
+     * Add MethodFilter to the filter chain. MethodFilters are presented a chance to eliminate a field by returning true
+     * from its boolean filter() method.  If any MethodFilter returns true, the method is excluded.
+     * @param filterName String name of filter
+     * @param methodFilter {@link MethodFilter} to add
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public WriteOptionsBuilder addMethodFilter(String filterName, MethodFilter methodFilter) {
+        options.methodFilters.put(filterName, methodFilter);
+        return this;
+    }
+
+    /**
+     * Remove named MethodFilter from the method filter chain.
+     * @param filterName {@link MethodFilter} to remove
+     * @param filterName String name of filter
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public WriteOptionsBuilder removeMethodFilter(String filterName) {
+        options.methodFilters.remove(filterName);
+        return this;
+    }
+
+    /**
+     * Add AccessorFactory to the accessor factories chain. AccessFactories permit adding a standard pattern of
+     * locating "read" methods, for example, there is a built-in "get" and "is" AccessoryFactory.
+     * @param factoryName String name of accessor factory
+     * @param  accessorFactory {@link AccessorFactory} to add
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public WriteOptionsBuilder addAccessorFactory(String factoryName, AccessorFactory accessorFactory) {
+        options.accessorFactories.put(factoryName, accessorFactory);
+        return this;
+    }
+
+    /**
+     * Remove named AccessorFactory from the access factories.
+     * @param factoryName String name of accessor filter
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public WriteOptionsBuilder removeAccessorFactory(String factoryName) {
+        options.accessorFactories.remove(factoryName);
         return this;
     }
 
@@ -630,9 +707,9 @@ public class WriteOptionsBuilder {
         options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
         options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
         options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
-        options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
-        options.methodFilters = Collections.unmodifiableList(options.methodFilters);
-        options.accessorFactories = Collections.unmodifiableList(options.accessorFactories);
+        options.fieldFilters = Collections.unmodifiableMap(options.fieldFilters);
+        options.methodFilters = Collections.unmodifiableMap(options.methodFilters);
+        options.accessorFactories = Collections.unmodifiableMap(options.accessorFactories);
         options.customWrittenClasses = Collections.unmodifiableMap(options.customWrittenClasses);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
@@ -707,9 +784,9 @@ public class WriteOptionsBuilder {
         private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
         private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
         private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
-        private List<FieldFilter> fieldFilters = new ArrayList<>();
-        private List<MethodFilter> methodFilters = new ArrayList<>();
-        private List<AccessorFactory> accessorFactories = new ArrayList<>();
+        private Map<String, FieldFilter> fieldFilters = new LinkedHashMap<>();
+        private Map<String, MethodFilter> methodFilters = new LinkedHashMap<>();
+        private Map<String, AccessorFactory> accessorFactories = new LinkedHashMap<>();
         private Map<Class<?>, JsonWriter.JsonClassWriter> customWrittenClasses = new LinkedHashMap<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
 
@@ -938,33 +1015,45 @@ public class WriteOptionsBuilder {
             accessorsCache.clear();
         }
 
-        private List<Accessor> buildDeepAccessors(final Class<?> c) {
-            final Map<String, Field> fields = getDeepDeclaredFields(c);
+        private List<Accessor> buildDeepAccessors(final Class<?> clazz) {
+            final Map<String, Field> fields = getDeepDeclaredFields(clazz);
             final List<Accessor> accessors = new ArrayList<>(fields.size());
             
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
-                final String key = entry.getKey();
+                final String methodName = entry.getKey();
 
-                Accessor accessor = this.findAccessor(field, key);
+                if (isMethodFiltered(clazz, methodName)) {
+                    continue;
+                }
+
+                Accessor accessor = this.findAccessor(field, methodName);
 
                 if (accessor == null) {
-                    accessor = Accessor.create(field, key);
+                    accessor = Accessor.create(field, methodName);
                 }
 
                 if (accessor != null) {
                     accessors.add(accessor);
                 }
             }
-
             return Collections.unmodifiableList(accessors);
         }
 
+        private boolean isMethodFiltered(Class<?> clazz, String methodName) {
+            for (MethodFilter filter : methodFilters.values()) {
+                if (filter.filter(clazz, methodName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private Accessor findAccessor(Field field, String key) {
-            for (final AccessorFactory factory : this.accessorFactories) {
+            for (final AccessorFactory factory : accessorFactories.values()) {
                 try {
-                    final Accessor accessor = factory.buildAccessor(field, this.nonStandardAccessors, key);
+                    final Accessor accessor = factory.buildAccessor(field, nonStandardAccessors, key);
 
                     if (accessor != null) {
                         return accessor;
@@ -1009,7 +1098,7 @@ public class WriteOptionsBuilder {
                     }
 
                     // FieldFilter or 'Excluded listing' automatically eliminates field.
-                    if (fieldIsFiltered(field) || excluded.contains(fieldName)) {
+                    if (isFieldFiltered(field) || excluded.contains(fieldName)) {
                         continue;
                     }
 
@@ -1030,8 +1119,8 @@ public class WriteOptionsBuilder {
             return Collections.unmodifiableMap(map);
         }
 
-        private boolean fieldIsFiltered(Field field) {
-            for (FieldFilter filter : this.fieldFilters) {
+        private boolean isFieldFiltered(Field field) {
+            for (FieldFilter filter : this.fieldFilters.values()) {
                 if (filter.filter(field)) {
                     return true;
                 }

@@ -1,11 +1,14 @@
 package com.cedarsoftware.io.reflect.filters.method;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 import com.cedarsoftware.io.reflect.filters.MethodFilter;
+import com.cedarsoftware.util.ReflectionUtils;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
+ * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
  *         <br><br>
@@ -21,16 +24,16 @@ import com.cedarsoftware.io.reflect.filters.MethodFilter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class ModifierMethodFilter implements MethodFilter {
+public class DefaultMethodFilter implements MethodFilter {
+    public boolean filter(Class<?> clazz, String methodName) {
+        Method m = ReflectionUtils.getMethod(clazz, methodName, null);
+        if (m == null) {
+            return false;
+        }
 
-    private final int mask;
-
-    public ModifierMethodFilter(int mask) {
-        this.mask = mask;
-    }
-
-    @Override
-    public boolean filter(Method method) {
-        return (method.getModifiers() & mask) == 0;
+        // Only methods with 0 parameters will make it here (null for parameters above filters out methods that have 1+ parameters)
+        return Modifier.isStatic(m.getModifiers()) ||                          // filter any static methods
+                !Modifier.isPublic(m.getDeclaringClass().getModifiers()) ||     // filter any method on non-public classes
+                ((m.getModifiers() & Modifier.PUBLIC) == 0);                    // filter any non-public method
     }
 }

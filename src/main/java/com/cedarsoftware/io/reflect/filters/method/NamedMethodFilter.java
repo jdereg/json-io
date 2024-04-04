@@ -1,12 +1,9 @@
 package com.cedarsoftware.io.reflect.filters.method;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-
 import com.cedarsoftware.io.reflect.filters.MethodFilter;
 
 /**
- * @author Kenny Partlow (kpartlow@gmail.com)
+ * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
  *         <br><br>
@@ -22,11 +19,16 @@ import com.cedarsoftware.io.reflect.filters.MethodFilter;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.*
  */
-public class AccessorMethodFilter implements MethodFilter {
-    @Override
-    public boolean filter(Method m) {
-        return m.getParameterCount() != 0 ||
-                Modifier.isStatic(m.getModifiers()) ||
-                !Modifier.isPublic(m.getDeclaringClass().getModifiers());
+public class NamedMethodFilter implements MethodFilter {
+    private final Class<?> clazz;
+    private final String methodName;
+
+    public NamedMethodFilter(Class<?> clazz, String methodName) {
+        this.clazz = clazz;
+        this.methodName = methodName;
+    }
+
+    public boolean filter(Class<?> clazz, String methodName) {
+        return this.clazz.equals(clazz) && this.methodName.equals(methodName);
     }
 }

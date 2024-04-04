@@ -1,7 +1,5 @@
 package com.cedarsoftware.io.reflect.filters;
 
-import java.lang.reflect.Method;
-
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
  *         <br>
@@ -24,8 +22,9 @@ public interface MethodFilter {
     /**
      * returns true to filer the method
      *
-     * @param method - method we're checking.
+     * @param clazz
+     * @param methodName
      * @return true to filter the method, false to not filter.
      */
-    boolean filter(Method method);
+    boolean filter(Class<?> clazz, String methodName);
 }

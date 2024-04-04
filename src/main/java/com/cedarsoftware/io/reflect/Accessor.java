@@ -84,6 +84,13 @@ public class Accessor {
         }
     }
 
+    /**
+     * @return MethodHandle or null if there is none.
+     */
+    public MethodHandle getMethodHandle() {
+         return methodHandle;
+    }
+
     public Class<?> getFieldType() {
         return this.field.getType();
     }

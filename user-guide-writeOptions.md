@@ -26,10 +26,10 @@ The `WriteOptionsBuilder` "setter" APIs return the `WriteOptionsBuilder` to perm
 ### ClassLoader
 The`ClassLoader`in the `WriteOptonsBuilder` is used to turn `String` class names into `Class` instances.
 >#### `ClassLoader` getClassLoader()
->- [ ] Returns the ClassLoader to resolve String class names when writing JSON.
+>- [ ] Returns the ClassLoader to resolve String class names.
 
 >#### `WriteOptionsBuilder` classLoader(`ClassLoader loader`)
->- [ ] Sets the ClassLoader to resolve String class names when writing JSON.
+>- [ ] Sets the ClassLoader to resolve String class names.
 
 ### MetaKeys - @id, @ref, @type, @items, @keys, @values
 A few additional fields are sometimes added to a JSON object {...} to give `JsonIo` help in determining what
@@ -245,14 +245,27 @@ the JsonIo at a public method that will allow the field value to be read from (a
 For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
  
 ### Field Filters
-These options allows you add/remove FieldFilters (your own derived implementation) to/from the field filter chain. 
-Each filter in the filter chain is presented the reflected field and can return true to exclude a field.  This works
-well when filter a field by a characteristic of a field as opposed to its name. For example, you could exclude fields 
+These options permit adding/removing FieldFilters (your own derived implementation) to/from the field filter chain. 
+Each filter in the field filter chain is presented the reflected field and can return true to exclude it.  This works
+well when filtering a field by a characteristic of a field as opposed to its name. For example, you could exclude fields 
 by field characteristics such as transient, final, volatile, etc.  See existing EnumFieldFilter or StaticFieldFilter.
 >#### `WriteOptionsBuilder` addFieldFilter(`FieldFilter filter`)
 >- [ ] Add a field filter to the field filter chain. 
->#### `WriteOptionsBuilder` removeFieldFilter(`FieldFilter filter`)
->- [ ] Remove a field filter from the field filter chain. 
+
+### Method Filters
+These options permit adding/removing MethodFilters (your own derived implementation) to/from the method filter chain. 
+Each filter in the method filter chain is presented the reflected method and can return true to exclude it.  You can
+filter a method by any criteria you want from the passed in parameters, including method name, owning class, visibility,
+static/non-static, etc.
+>#### `WriteOptionsBuilder` addAccessorFactory(`AccessorFactory accessorFactory`)
+>- [ ] Add a method accessor pattern to the method accessor chain. 
+
+### Method Accessor
+These options permit defining a pattern to choose method accessors ("getters"). A "get" and "is" method accessor is
+supplied with json-io.  You can create your own patterns and add them to the method accessor chain. Your accessors are
+consulted when locating field values from a class being written to JSON.
+>#### `WriteOptionsBuilder` addFieldFilter(`FieldFilter filter`)
+>- [ ] Add a field filter to the field filter chain. 
 
 ### java.util.Date and java.sql.Date format
 This feature allows you to control the format for `java.util.Date` and `java.sql.Date` fields.  The default output format
@@ -289,7 +302,7 @@ objects were treated as "primitives."
 >- [ ] Adds a class to be considered "non-referenceable." 
 
 ---
-## Application Scoped Options (lifecycle of JVM)
+## Application Scoped Options (full lifecycle of JVM)
 These particular options can be set at 'application-scope' to ensure all `WriteOptions` instances are automatically created
 with them, so you don't have to configure each `WriteOptions` instance individually.
 
@@ -331,3 +344,34 @@ reflectively, use this to point `JsonIo` at a public method that will allow the 
 `Instant` example mentioned, you would use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").` 
 Note, this accessor has already been added in by default (the same is true for most JDK classes.)
 >#### WriteOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
+
+### addPermanentFieldFilter
+>#### WriteOptionsBuilder.addPermanentFieldFilter(`String name, FieldFilter fieldFilter`)
+
+Add a FieldFilter that is JVM lifecycle scoped. All WriteOptions instance will contain this filter. A FieldFilter is 
+used to filter (eliminate) a particular field from being serialized.  This allows you to filter a field by a field
+characteristic, for example, you can eliminate a particular type of field that occurs on Enums. See EnumFieldFilter for
+an example.
+
+### addPermanentMethodFilter
+Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter. A MethodFilter is 
+used to filter (eliminate) a method accessor from being called.  For example, a getFoo() method which you would think
+returns the Foo member variable, but instead does 'extra work' that you do not want performed before the value is accessed.
+In this case, you can tell json-io to eliminate the getFoo() accessor and then json-io will use techniques to try to
+read the field directly.
+
+The MethodFilter is passed the Class and the method name and if it returns 'true' for that pairing, the method will be
+eliminated from consideration of use.  This reading/accessing of fields happens when JsonIo is accessing the Java objects 
+to create the JSON content.
+
+The String parament `name` is a unique name you give the filter.  It must be unique amongst the method filters. 
+>#### WriteOptionsBuilder.addPermanentMethodFilter(`String name, MethodFilter methodFilter`) {
+
+### addPermanentMethodNameFilter
+Works like the addPermanentMethodFilter with one simple different.  Whereas on MethodFilter you have to subclass it to 
+write your own, with this API you pass it the Class name and Method name to filter, and it will create the MethodFilter
+for you.
+
+To call the API, pass a unique name that is unique across all MethodFilters, the Class on which the accessor (getter) 
+resides, and the name of the method.
+>#### addPermanentNamedMethodFilter(`String name, Class<?> clazz, String methodName`) 
