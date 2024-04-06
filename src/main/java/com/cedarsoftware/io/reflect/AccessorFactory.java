@@ -2,7 +2,6 @@ package com.cedarsoftware.io.reflect;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -34,8 +33,8 @@ public interface AccessorFactory {
      */
     Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName);
 
-    default Optional<String> getPossibleMethodName(Map<Class<?>, Map<String, String>> nonStandardAccessors, Class<?> clazz, String fieldName) {
+    default String getPossibleMethodName(Map<Class<?>, Map<String, String>> nonStandardAccessors, Class<?> clazz, String fieldName) {
         Map<String, String> nonStandardMap = nonStandardAccessors.get(clazz);
-        return nonStandardMap == null ? Optional.empty() : Optional.ofNullable(nonStandardMap.get(fieldName));
+        return nonStandardMap == null ? null : nonStandardMap.get(fieldName);
     }
 }

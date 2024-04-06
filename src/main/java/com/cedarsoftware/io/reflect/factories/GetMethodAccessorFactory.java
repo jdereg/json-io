@@ -2,7 +2,6 @@ package com.cedarsoftware.io.reflect.factories;
 
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.Optional;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AccessorFactory;
@@ -27,8 +26,8 @@ import com.cedarsoftware.io.reflect.AccessorFactory;
 public class GetMethodAccessorFactory implements AccessorFactory {
     public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName) {
         final String fieldName = field.getName();
-        Optional<String> possibleMethodName = getPossibleMethodName(nonStandardAccessors, field.getDeclaringClass(), fieldName);
-        String methodName = possibleMethodName.orElse(createGetterName(fieldName));
+        String possibleMethodName = getPossibleMethodName(nonStandardAccessors, field.getDeclaringClass(), fieldName);
+        String methodName = possibleMethodName == null ? createGetterName(fieldName) : possibleMethodName;
         return Accessor.createFieldAccessor(field, methodName, uniqueFieldName);
     }
 
