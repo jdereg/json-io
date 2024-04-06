@@ -52,7 +52,6 @@ public class WriteOptionsBuilder {
     // Constants
     public static final String ISO_DATE_FORMAT = "yyyy-MM-dd";
     public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    private final DefaultWriteOptions options;
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
@@ -61,9 +60,10 @@ public class WriteOptionsBuilder {
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
+    private final DefaultWriteOptions options;
 
     static {
-        loadBaseAliasMappings();
+        ReadOptionsBuilder.loadBaseAliasMappings(WriteOptionsBuilder::addPermanentAlias);
         loadBaseWriters();
         loadBaseNonRefs();
         loadBaseExcludedFields();
@@ -76,7 +76,7 @@ public class WriteOptionsBuilder {
         addPermanentAccessorFactory("get", new GetMethodAccessorFactory());
         addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
     }
-    
+
     /**
      * Start with default options
      */
@@ -1150,21 +1150,6 @@ public class WriteOptionsBuilder {
             addPermanentNonRef(clazz);
         });
     }
-
-    private static void loadBaseAliasMappings() {
-        Map<String, String> aliasMappings = MetaUtils.loadMapDefinition("config/aliases.txt");
-        for (Map.Entry<String, String> entry : aliasMappings.entrySet()) {
-            String className = entry.getKey();
-            String alias = entry.getValue();
-            Class<?> clazz = ClassUtilities.forName(className, WriteOptionsBuilder.class.getClassLoader());
-
-            if (clazz == null) {
-                System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
-            } else {
-                addPermanentAlias(clazz, alias);
-            }
-        }
-    }
     
     private static void loadBaseExcludedFields() {
         Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt");
@@ -1178,7 +1163,7 @@ public class WriteOptionsBuilder {
     }
     
     private static void loadBaseNonStandardAccessors() {
-        Map<Class<?>, Map<String, String>> nonStandardAccessorMap = ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardAccessors.txt");
+        Map<Class<?>, Map<String, String>> nonStandardAccessorMap = ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardGetters.txt");
         for (Map.Entry<Class<?>, Map<String, String>> entry : nonStandardAccessorMap.entrySet()) {
             Class<?> clazz = entry.getKey();
             Map<String, String> pairingsMap = entry.getValue();

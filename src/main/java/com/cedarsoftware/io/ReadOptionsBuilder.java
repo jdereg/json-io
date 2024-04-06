@@ -68,21 +68,20 @@ public class ReadOptionsBuilder {
     private static final Map<String, String> BASE_ALIAS_MAPPINGS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_INJECTORS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_INJECTOR_FIELDS = new ConcurrentHashMap<>();
+    private final DefaultReadOptions options;
 
     static {
         // ClassFactories
-        BASE_CLASS_FACTORIES.putAll(loadClassFactory());
-        BASE_READERS.putAll(loadReaders());
-        BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("config/aliases.txt"));
-        BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
-        BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_EXCLUDED_INJECTOR_FIELDS.putAll(loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
-        BASE_NONSTANDARD_INJECTORS.putAll(loadClassToFieldAliasNameMapping("config/nonStandardInjectors.txt"));
+        loadBaseClassFactory();
+        loadBaseReaders();
+        loadBaseAliasMappings(ReadOptionsBuilder::addPermanentAlias);
+        loadBaseCoercedTypes();
+        loadBaseNonRefs();
+        loadBaseExcludedInjectorFields();
+        loadBaseNonStandardSetters();
     }
-
-    private final DefaultReadOptions options;
 
     /**
      * Start with default options
@@ -105,7 +104,7 @@ public class ReadOptionsBuilder {
         options.customReaderClasses.putAll(BASE_READERS);
         options.classFactoryMap.putAll(BASE_CLASS_FACTORIES);
         options.nonRefClasses.addAll(BASE_NON_REFS);
-        options.nonStandardInjectors.putAll(BASE_NONSTANDARD_INJECTORS);
+        options.nonStandardSetters.putAll(BASE_NONSTANDARD_SETTERS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.excludedInjectorFields.putAll(BASE_EXCLUDED_INJECTOR_FIELDS);
     }
@@ -133,8 +132,8 @@ public class ReadOptionsBuilder {
             options.excludedInjectorFields.clear();
             options.excludedInjectorFields.putAll(other.excludedInjectorFields);
 
-            options.nonStandardInjectors.clear();
-            options.nonStandardInjectors.putAll(other.nonStandardInjectors);
+            options.nonStandardSetters.clear();
+            options.nonStandardSetters.putAll(other.nonStandardSetters);
 
             options.coercedTypes.clear();
             options.coercedTypes.putAll(other.coercedTypes);
@@ -234,21 +233,22 @@ public class ReadOptionsBuilder {
      * Java instance. This method can be called more than once, and each Set of field names will be added together.
      * As with a set, duplicate entries will be consolidated.
      * @param clazz Class on which fields will be excluded.
-     * @param fieldNames {@code Set<String>} field names to exclude for the given class.
+     * @param fieldName String field name to exclude for the given class.
      */
-    public static void addPermanentExcludedInjectorField(Class<?> clazz, Set<String> fieldNames) {
-        BASE_EXCLUDED_INJECTOR_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).addAll(fieldNames);
+    public static void addPermanentExcludedInjectorField(Class<?> clazz, String fieldName) {
+        BASE_EXCLUDED_INJECTOR_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
     }
 
     /**
-     * Add the String field name to alias name (getter name) mappings for the passed in Class.
-     * @param clazz Class to which the field/alias name associations will be added.
-     * @param fieldAliasNames {@code Map<String, String>} containing field names from the passed in class, mapped to
-     * their getter name equivalents. This allows json-io to use setter/getters that do not follow the standard
-     * is/get pattern for accessing/injecting values into instances.
+     * Add the String name of the "setter" (injector) associated to the field name. mappings for the passed in Class.
+     * @param clazz Class to which the association will be added.
+     * @param fieldName String name of field that has a non-standard setter (injector)
+     * @param alias String name of setter method that is used to write to the fieldName. An example is Throwable's
+     *              initCause() setter which does not follow a standard naming convention (should be 'setCause()'). In
+     *              this example, use addPermanentNonStandardSetter(Throwable.class, "cause", "initCause").
      */
-    public static void addPermanentNonStandardInjector(Class<?> clazz, Map<String, String> fieldAliasNames) {
-        BASE_NONSTANDARD_INJECTORS.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>()).putAll(fieldAliasNames);
+    public static void addPermanentNonStandardSetter(Class<?> clazz, String fieldName, String alias) {
+        BASE_NONSTANDARD_SETTERS.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>()).put(fieldName, alias);
     }
     
     /**
@@ -268,7 +268,7 @@ public class ReadOptionsBuilder {
         options.excludedInjectorFields = Collections.unmodifiableMap(options.excludedInjectorFields);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
-        options.nonStandardInjectors = Collections.unmodifiableMap(options.nonStandardInjectors);
+        options.nonStandardSetters = Collections.unmodifiableMap(options.nonStandardSetters);
         options.customOptions = Collections.unmodifiableMap(options.customOptions);
         return options;
     }
@@ -606,12 +606,9 @@ public class ReadOptionsBuilder {
     /**
      * Load JsonReader.ClassFactory classes based on contents of resources/classFactory.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class < ?>, JsonReader.ClassFactory> containing the resolved Class -> JsonClassFactory instance.
      */
-    private static Map<Class<?>, JsonReader.ClassFactory> loadClassFactory() {
+    private static void loadBaseClassFactory() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/classFactory.txt");
-        Map<Class<?>, JsonReader.ClassFactory> factories = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -625,9 +622,9 @@ public class ReadOptionsBuilder {
             }
 
             if (factoryClassName.equalsIgnoreCase("Convertable")) {
-                factories.put(clazz, new ConvertableFactory<>(clazz));
+                addPermanentClassFactory(clazz, new ConvertableFactory<>(clazz));
             } else if (factoryClassName.equalsIgnoreCase("ArrayFactory")) {
-                factories.put(clazz, new ArrayFactory<>(clazz));
+                addPermanentClassFactory(clazz, new ArrayFactory<>(clazz));
             } else {
                 try {
                     Class<? extends JsonReader.ClassFactory> factoryClass = (Class<? extends JsonReader.ClassFactory>) ClassUtilities.forName(factoryClassName, classLoader);
@@ -635,24 +632,20 @@ public class ReadOptionsBuilder {
                         System.out.println("Skipping class: " + factoryClassName + " not defined in JVM, but listed in resources/classFactories.txt, as factory for: " + className);
                         continue;
                     }
-                    factories.put(clazz, factoryClass.getConstructor().newInstance());
+                    addPermanentClassFactory(clazz, factoryClass.getConstructor().newInstance());
                 } catch (Exception e) {
                     System.out.println("Unable to create JsonReader.ClassFactory class: " + factoryClassName + ", a factory class for: " + className + ", listed in resources/classFactories.txt");
                 }
             }
         }
-        return factories;
     }
 
     /**
      * Load custom reader classes based on contents of resources/customReaders.txt.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class < ?>, JsonReader.JsonClassReader> containing the resolved Class -> JsonClassReader instance.
      */
-    private static Map<Class<?>, JsonReader.JsonClassReader> loadReaders() {
+    private static void loadBaseReaders() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/customReaders.txt");
-        Map<Class<?>, JsonReader.JsonClassReader> readers = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -663,7 +656,7 @@ public class ReadOptionsBuilder {
                 Class<JsonReader.JsonClassReader> customReaderClass = (Class<JsonReader.JsonClassReader>) ClassUtilities.forName(readerClassName, classLoader);
 
                 try {
-                    readers.put(clazz, customReaderClass.getConstructor().newInstance());
+                    addPermanentReader(clazz, customReaderClass.getConstructor().newInstance());
                 } catch (Exception e) {
                     System.out.println("Note: could not instantiate (custom JsonClassReader class): " + readerClassName + " from resources/customReaders.txt");
                 }
@@ -671,18 +664,14 @@ public class ReadOptionsBuilder {
                 System.out.println("Class: " + className + " not defined in JVM, but listed in resources/customReaders.txt");
             }
         }
-        return readers;
     }
 
     /**
      * Load custom writer classes based on contents of customWriters.txt in the resources folder.
      * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
      */
-    private static Map<Class<?>, Class<?>> loadCoercedTypes() {
+    private static void loadBaseCoercedTypes() {
         Map<String, String> map = MetaUtils.loadMapDefinition("config/coercedTypes.txt");
-        Map<Class<?>, Class<?>> coerced = new HashMap<>();
         ClassLoader classLoader = ReadOptions.class.getClassLoader();
 
         for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -698,9 +687,8 @@ public class ReadOptionsBuilder {
                 System.out.println("Skipping class coercion for source class: " + srcClassName + " cannot be mapped to: " + destClassName + " (not found), listed in resources/coercedTypes.txt");
                 continue;
             }
-            coerced.put(srcType, destType);
+            addPermanentCoercedType(srcType, destType);
         }
-        return coerced;
     }
 
     public static class DefaultConverterOptions implements ConverterOptions {
@@ -769,7 +757,7 @@ public class ReadOptionsBuilder {
 
         // Creating the Accessors (methodHandles) is expensive so cache the list of Accessors per Class
         private final Map<Class<?>, Map<String, Injector>> injectorsCache = new ConcurrentHashMap<>(200, 0.8f, Runtime.getRuntime().availableProcessors());
-        private Map<Class<?>, Map<String, String>> nonStandardInjectors = new HashMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardSetters = new HashMap<>();
 
         // Runtime cache (not feature options)
         private final Map<Class<?>, JsonReader.JsonClassReader> readerCache = new ConcurrentHashMap<>(300);
@@ -1006,7 +994,7 @@ public class ReadOptionsBuilder {
         private Injector findInjector(Field field, String key) {
             for (final InjectorFactory factory : this.injectorFactories) {
                 try {
-                    final Injector injector = factory.createInjector(field, this.nonStandardInjectors, key);
+                    final Injector injector = factory.createInjector(field, this.nonStandardSetters, key);
 
                     if (injector != null) {
                         return injector;
@@ -1147,24 +1135,61 @@ public class ReadOptionsBuilder {
 
     /**
      * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
-     *
-     * @return {@code Set<Class<?>>} which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
      */
-    static Set<Class<?>> loadNonRefs() {
+    private static void loadBaseNonRefs() {
         final Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
         final ClassLoader classLoader = WriteOptions.class.getClassLoader();
-        final Set<Class<?>> result = new HashSet<>();
 
         for (String className : set) {
             Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
 
             if (loadedClass != null) {
-                result.add(loadedClass);
+                addPermanentNonReferenceableClass(loadedClass);
             } else {
                 throw new JsonIoException("Class: " + className + " is undefined.");
             }
         }
+    }
 
-        return result;
+    @FunctionalInterface
+    public interface AliasApplier {
+        void apply(Class<?> clazz, String alias);
+    }
+
+    static void loadBaseAliasMappings(AliasApplier aliasApplier) {
+        Map<String, String> aliasMappings = MetaUtils.loadMapDefinition("config/aliases.txt");
+        for (Map.Entry<String, String> entry : aliasMappings.entrySet()) {
+            String className = entry.getKey();
+            String alias = entry.getValue();
+            Class<?> clazz = ClassUtilities.forName(className, JsonIo.class.getClassLoader());
+
+            if (clazz == null) {
+                System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
+            } else {
+                aliasApplier.apply(clazz, alias);
+            }
+        }
+    }
+
+    private static void loadBaseExcludedInjectorFields() {
+        Map<Class<?>, Set<String>> allExcludedInjectors = loadClassToSetOfStrings("config/excludedInjectorFields.txt");
+        for (Map.Entry<Class<?>, Set<String>> entry : allExcludedInjectors.entrySet()) {
+            Class<?> clazz = entry.getKey();
+            Set<String> excludedInjectors = entry.getValue();
+            for (String excludedInjector : excludedInjectors) {
+                addPermanentExcludedInjectorField(clazz, excludedInjector);
+            }
+        }
+    }
+
+    private static void loadBaseNonStandardSetters() {
+        Map<Class<?>, Map<String, String>> allNonStandardSetters = loadClassToFieldAliasNameMapping("config/nonStandardSetters.txt");
+        for (Map.Entry<Class<?>, Map<String, String>> entry : allNonStandardSetters.entrySet()) {
+            Class<?> clazz = entry.getKey();
+            Map<String, String> nonStandardSetters = entry.getValue();
+            for (Map.Entry<String, String> stringEntry : nonStandardSetters.entrySet()) {
+                addPermanentNonStandardSetter(clazz, stringEntry.getKey(), stringEntry.getValue());
+            }
+        }
     }
 }

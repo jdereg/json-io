@@ -231,19 +231,16 @@ automatically start with this installed so you will not need to add it into the 
 >#### ReadOptionsBuilder.addPermanentNonReferenceableClass(Class<?> clazz)
 
 ### addPermanentExcludedInjectorField
-Add fields to be excluded (stopped) from being injected into the Java object created that is equivalent to the portion
-of JSON being read.  If a field exists in the JSON but you do not want `json-io` to attempt to copy it to the
+Add a field to be excluded (stopped) from being "set" (injected) into the Java object created that is associated to the
+portion of JSON being read.  If a field exists in the JSON but you do not want `json-io` to attempt to copy it to the
 associated Java class, add it here. These fields are effectively skipped from being read from the JSON.  This is on
 the READ side of JSON processing.  There is a similar option on the `WriteOptionsBuilder` to prevent fields from being
 written to JSON.
->#### ReadOptionsBuilder.addPermanentExcludedInjectorField(`Class<?> clazz, Set<String> fieldNames`)
+>#### ReadOptionsBuilder.addPermanentExcludedInjectorField(`Class<?> clazz, String fieldName`)
 
-### addPermanentNonStandardInjector 
-For the passed in Class (clazz), you can add Maps of field-alias names. Each entry in the Map has a key that corresponds
-to a Java field (member variable) name.  The value associated is an alias name, which in the context of reading JSON,
-is the name of the 'setter' method name for that field. The setter names for fields are not always standard, for example
-on the class `Throwable,` you need to use the method `initCause()` to set the cause on the exception. For example, you 
-can use `addPermanentNonStandardInjector(Throwable.class, map),` where the `Map` contains "cause" => "initCause".
-During read processing, as values are being copied from JSON to the associated Java object, it will use the initCause
-"setter" to set the cause into the exception. The name "cause" is the field name on Throwable.
->#### ReadOptionsBuilder.addPermanentNonStandardInjector(`Class<?> clazz, Map<String, String> fieldAliasNames`)
+### addPermanentNonStandardSetter 
+For the passed in Class (clazz), you can add a field-to-setter names. This is useful when the 'setter' method does not
+follow a standard naming convention. For example on the class `Throwable,` the method `initCause()` sets the cause on
+the exception (as opposed to 'setCause'). Using `addPermanentNonStandardSetter(Throwable.class, "cause", "initCause"),`
+will then use the initCause(cause) set the value on the Java object associated to the JSON object being read in.
+>#### ReadOptionsBuilder.addPermanentNonStandardSetter(`Class<?> clazz, String fieldName, String setterName`)

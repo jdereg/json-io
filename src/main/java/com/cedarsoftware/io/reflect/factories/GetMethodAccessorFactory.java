@@ -24,9 +24,9 @@ import com.cedarsoftware.io.reflect.AccessorFactory;
  *         limitations under the License.
  */
 public class GetMethodAccessorFactory implements AccessorFactory {
-    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName) {
+    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardGetters, String uniqueFieldName) {
         final String fieldName = field.getName();
-        String possibleMethodName = getPossibleMethodName(nonStandardAccessors, field.getDeclaringClass(), fieldName);
+        String possibleMethodName = getPossibleMethodName(nonStandardGetters, field.getDeclaringClass(), fieldName);
         String methodName = possibleMethodName == null ? createGetterName(fieldName) : possibleMethodName;
         return Accessor.createMethodAccessor(field, methodName, uniqueFieldName);
     }
