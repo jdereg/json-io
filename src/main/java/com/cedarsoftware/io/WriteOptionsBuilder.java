@@ -1019,13 +1019,13 @@ public class WriteOptionsBuilder {
                 final Field field = entry.getValue();
                 final String uniqueFieldName = entry.getKey();
 
-                Accessor accessor = findAccessor(field, uniqueFieldName);
+                Accessor accessor = findMethodAccessor(field, uniqueFieldName);
                 if (accessor != null && isMethodFiltered(clazz, accessor.getFieldOrMethodName())) {
                     accessor = null;
                 }
 
                 if (accessor == null) {
-                    accessor = Accessor.create(field, uniqueFieldName);
+                    accessor = Accessor.createFieldAccessor(field, uniqueFieldName);
                 }
 
                 if (accessor != null) {
@@ -1044,7 +1044,7 @@ public class WriteOptionsBuilder {
             return false;
         }
 
-        private Accessor findAccessor(Field field, String uniqueFieldName) {
+        private Accessor findMethodAccessor(Field field, String uniqueFieldName) {
             for (final AccessorFactory factory : accessorFactories.values()) {
                 try {
                     final Accessor accessor = factory.buildAccessor(field, nonStandardAccessors, uniqueFieldName);

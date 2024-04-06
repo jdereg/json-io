@@ -29,7 +29,7 @@ public class GetMethodAccessorFactory implements AccessorFactory {
         final String fieldName = field.getName();
         Optional<String> possibleMethodName = getPossibleMethodName(nonStandardAccessors, field.getDeclaringClass(), fieldName);
         String methodName = possibleMethodName.orElse(createGetterName(fieldName));
-        return Accessor.create(field, methodName, uniqueFieldName);
+        return Accessor.createFieldAccessor(field, methodName, uniqueFieldName);
     }
 
     /**

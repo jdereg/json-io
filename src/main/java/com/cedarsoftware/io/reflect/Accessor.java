@@ -47,7 +47,7 @@ public class Accessor {
         this.isMethod = isMethod;
     }
 
-    public static Accessor create(Field field, String uniqueFieldName) {
+    public static Accessor createFieldAccessor(Field field, String uniqueFieldName) {
         if (!(Modifier.isPublic(field.getModifiers()) && Modifier.isPublic(field.getDeclaringClass().getModifiers()))) {
             MetaUtils.trySetAccessible(field);
         }
@@ -60,7 +60,7 @@ public class Accessor {
         }
     }
 
-    public static Accessor create(Field field, String methodName, String uniqueFieldName) {
+    public static Accessor createFieldAccessor(Field field, String methodName, String uniqueFieldName) {
         try {
             MethodType type = MethodType.methodType(field.getType());
             MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, type);

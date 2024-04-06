@@ -30,7 +30,7 @@ public class IsMethodAccessorFactory implements AccessorFactory {
             return null;
         }
 
-        return Accessor.create(field, createIsName(field.getName()), uniqueFieldName);
+        return Accessor.createFieldAccessor(field, createIsName(field.getName()), uniqueFieldName);
     }
 
     /**
