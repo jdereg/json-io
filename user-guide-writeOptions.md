@@ -32,7 +32,7 @@ The`ClassLoader`in the `WriteOptonsBuilder` is used to turn `String` class names
 >- [ ] Sets the ClassLoader to resolve String class names.
 
 ### MetaKeys - @id, @ref, @type, @items, @keys, @values
-A few additional fields are sometimes added to a JSON object {...} to give `JsonIo` help in determining what
+A few additional fields are sometimes added to a JSON object {...} to give `json-io` help in determining what
 class to instantiate and load.  For example, if a class is referenced by more than one field, array, collection element, 
 or Map key or value, then the initial occurrence of the instance will be output with an @id tag and a number _n_.
 Subsequent references will be written as @ref:_n_.  This will significantly shorten the JSON as the full object will not 
@@ -102,7 +102,7 @@ In order to have Multiple line, indented JSON output, or one-line output, turn o
 ### Automatically Close OutputStream (or Not)
 Sometimes you want to close the stream automatically after output, other times you may want to leave it open to write
 additional JSON to the stream.  For example, NDJSON is a format of {...}\n{...}\n{...} To write this format, you can tell 
-`JsonIo` not to close the stream after each write.  See example at the beginning of the user guide.
+`json-io` not to close the stream after each write.  See example at the beginning of the user guide.
 >#### `boolean` isCloseStream()
 >- [ ] Returns `true` if set to automatically close stream after write (the default), or `false`to leave stream open after writing to it.
 
@@ -237,35 +237,48 @@ field is listed in both the includes and excludes list, the exclude list takes p
 This option allows you set accessors (used when writing JSON) that access properties from source Java objects, where 
 the method name does not follow a standard setter/getter property naming convention. For example, on `java.time.Instance,`
 to get the `second` field, the accessor method is `getEpochSecond().` Since this does not follow standard naming 
-conventions, and Java 17+ versions will not allow access to private member variables reflectively, use this to point
-the JsonIo at a public method that will allow the field value to be read from (accessed.)  Note, this accessor for 
-`Instant` has already been added in by default (the same is true for most JDK classes.)
+conventions, and Java 17+ versions will not allow access to private member variables reflectively outside your module,
+use this to point `json-io` at a public method that will allow the field value to be read from (accessed.)  Note,
+this accessor for `Instant` has already been added in by default (the same is true for most JDK classes.)
 >#### `WriteOptionsBuilder` addNonStandardAccessor(`Class, String fieldName, String methodName`)
 >- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. 
 For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
  
 ### Field Filters
-These options permit adding/removing FieldFilters (your own derived implementation) to/from the field filter chain. 
+These options permit adding/removing `FieldFilters` (your own derived implementation) to/from the field filter chain. 
 Each filter in the field filter chain is presented the reflected field and can return true to exclude it.  This works
 well when filtering a field by a characteristic of a field as opposed to its name. For example, you could exclude fields 
-by field characteristics such as transient, final, volatile, etc.  See existing EnumFieldFilter or StaticFieldFilter.
->#### `WriteOptionsBuilder` addFieldFilter(`FieldFilter filter`)
->- [ ] Add a field filter to the field filter chain. 
+by field characteristics such as `transient,` `final,` `volatile,` `public,` `protected,` `private,` etc.  See existing 
+`EnumFieldFilter` or `StaticFieldFilter.`
+>#### `WriteOptionsBuilder` addFieldFilter(`String filterName, FieldFilter filter`)
+>- [ ] Add a named `FielFilter` to the field filter chain. 
+>#### `WriteOptionsBuilder` removeFieldFilter(`String filterName`)
+>- [ ] Remove a named `FieldFilter` from the field filter chain. 
 
 ### Method Filters
-These options permit adding/removing MethodFilters (your own derived implementation) to/from the method filter chain. 
-Each filter in the method filter chain is presented the reflected method and can return true to exclude it.  You can
-filter a method by any criteria you want from the passed in parameters, including method name, owning class, visibility,
-static/non-static, etc.
->#### `WriteOptionsBuilder` addAccessorFactory(`AccessorFactory accessorFactory`)
->- [ ] Add a method accessor pattern to the method accessor chain. 
+These options permit adding/removing `MethodFilters` to/from the method filter chain. Each filter in the method filter
+chain is presented the reflected method and can return true to exclude it from being used. In this case, direct field
+access techniques will be used instead. This may be desired if a getter() method has undesirable side effects when used.
+You can filter a method by any criteria you want from the passed in parameters, including method name, owning class, 
+visibility, static/non-static, etc.
+>#### `WriteOptionsBuilder` addMethodFilter(`String filterName, MethodFilter filter`)
+>- [ ] Add a named `MethodFilter` filter to the method filter chain. Write a subclass of `MethodFilter` and add it to
+the `WriteOptionsBuilder` using this method, or use the `WriteOptionsBuilder.addPermanent*()` APIs to install it as 
+default in all created `WriteOptions.`
+>#### `WriteOptionsBuilder` addNamedMethodFilter(`String filterName, Class name, String methodName`)
+>- [ ] Add a `NamedMethodFilter` filter to the method filter chain.  You supply the Class name and the String name
+of the accessor (getter), and it will create a NamedMethodFilter for you, and add it to the method filter list. Any accessor 
+method (getter) matching this, will not be used and instead direct field level access will be used to obtain the value
+from the field (reflection, etc.) when writing JSON.
+>#### `WriteOptionsBuilder` removeMethodFilter(`String filterName, MethodFilter filter`)
+>- [ ] Remove a named `MethodFilter` to the field filter chain.
 
 ### Method Accessor
 These options permit defining a pattern to choose method accessors ("getters"). A "get" and "is" method accessor is
-supplied with json-io.  You can create your own patterns and add them to the method accessor chain. Your accessors are
+supplied with `json-io.`  You can create your own patterns and add them to the method accessor chain. Your accessors are
 consulted when locating field values from a class being written to JSON.
->#### `WriteOptionsBuilder` addFieldFilter(`FieldFilter filter`)
->- [ ] Add a field filter to the field filter chain. 
+>#### `WriteOptionsBuilder` addAccessorFactory(`AccessorFactory accessorFactory`)
+>- [ ] Add a method accessor pattern to the method accessor chain.
 
 ### java.util.Date and java.sql.Date format
 This feature allows you to control the format for `java.util.Date` and `java.sql.Date` fields.  The default output format
@@ -340,7 +353,7 @@ Call this method to add permanent (JVM lifetime) non-standard accessors that acc
 the method name does not follow standard setter/getter property naming conventions (used when writing JSON). 
 For example, on `java.time.Instance,` to get the `second` field, the accessor method is `getEpochSecond().` Since this
 does not follow standard naming conventions, and Java 17+ versions will not allow access to private member variables 
-reflectively, use this to point `JsonIo` at a public method that will allow the field value to be accessed. For the 
+reflectively, use this to point `json-io` at a public method that will allow the field value to be accessed. For the 
 `Instant` example mentioned, you would use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").` 
 Note, this accessor has already been added in by default (the same is true for most JDK classes.)
 >#### WriteOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
@@ -354,23 +367,24 @@ characteristic, for example, you can eliminate a particular type of field that o
 an example.
 
 ### addPermanentMethodFilter
-Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter. A MethodFilter is 
-used to filter (eliminate) a method accessor from being called.  For example, a getFoo() method which you would think
-returns the Foo member variable, but instead does 'extra work' that you do not want performed before the value is accessed.
-In this case, you can tell json-io to eliminate the getFoo() accessor and then json-io will use techniques to try to
-read the field directly.
+Add a `MethodFilter` that is JVM lifecycle scoped. All `WriteOptions` instances will contain this filter. A `MethodFilter`
+is used to filter (eliminate) a method accessor (getter) from being called. For example, a `getFoo()` method which one
+might think returns the `Foo` member variable, but instead performs undesired extra work before the value is accessed.
+In this case, tell `json-io` to eliminate the `getFoo()` accessor and then json-io will use techniques to attempt
+reading the field directly.
 
-The MethodFilter is passed the Class and the method name and if it returns 'true' for that pairing, the method will be
-eliminated from consideration of use.  This reading/accessing of fields happens when JsonIo is accessing the Java objects 
-to create the JSON content.
+The `MethodFilter` is passed the `Class` and the method name and if it returns 'true' for that pairing, the 'getter' method
+will be not be used.  This reading/accessing of fields happens when `json-io` is accessing the Java objects to create
+JSON content.
 
-The String parament `name` is a unique name you give the filter.  It must be unique amongst the method filters. 
+The String `name` is a unique name you give the filter.  It must be unique amongst the method filters.  The `MethodFilter`
+is a derived implementation to be added that filters methods a new, particular way.
 >#### WriteOptionsBuilder.addPermanentMethodFilter(`String name, MethodFilter methodFilter`) {
 
 ### addPermanentMethodNameFilter
-Works like the addPermanentMethodFilter with one simple different.  Whereas on MethodFilter you have to subclass it to 
-write your own, with this API you pass it the Class name and Method name to filter, and it will create the MethodFilter
-for you.
+Works like the `addPermanentMethodFilter()` with one simple difference.  Whereas one must sublass `MethodFilter,` with
+this API you pass it the `Class` and method name to filter, and it will create a `NamedMethodFilter` for you. No need
+to create a new `MethodFilter` subclass.
 
 To call the API, pass a unique name that is unique across all MethodFilters, the Class on which the accessor (getter) 
 resides, and the name of the method.

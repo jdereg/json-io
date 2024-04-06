@@ -69,6 +69,7 @@ public class WriteOptionsBuilder {
         BASE_NON_REFS.addAll(loadNonRefs());
         BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
         BASE_NONSTANDARD_ACCESSORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
+        // If the lists below become large, then break these out into resource files like we've done for the ones above.
         BASE_FIELD_FILTERS.put("static", new StaticFieldFilter());
         BASE_FIELD_FILTERS.put("enum", new EnumFieldFilter());
         BASE_METHOD_FILTERS.put("default", new DefaultMethodFilter());
@@ -645,14 +646,31 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * Add MethodFilter to the filter chain. MethodFilters are presented a chance to eliminate a field by returning true
-     * from its boolean filter() method.  If any MethodFilter returns true, the method is excluded.
+     * Add MethodFilter to the filter chain. MethodFilters are presented a chance to eliminate a "getter" type accessing
+     * method by returning true from the boolean filter() method.  If any MethodFilter returns true, the accessor method
+     * is excluded.  This means it will drop back to use field access (attempting to access private field in same module
+     * with setAccessible()).  This API is used when you want to write your own implementation of a MethodFilter.
      * @param filterName String name of filter
      * @param methodFilter {@link MethodFilter} to add
      * @return {@link WriteOptionsBuilder} for chained access.
      */
     public WriteOptionsBuilder addMethodFilter(String filterName, MethodFilter methodFilter) {
         options.methodFilters.put(filterName, methodFilter);
+        return this;
+    }
+
+    /**
+     * Add a NamedMethodFilter to the filter chain. NamedMethodFilters are presented a chance to eliminate a "getter"
+     * type accessing method by returning true from the boolean filter() method.  If the NamedMethodFilter matches a class
+     * and accessor method name, and it has no args, is public, and non-static, the accessor method is excluded.  This
+     * means it will drop back to use field access (attempting to access private field in same module with setAccessible()).
+     * @param filterName String name of filter
+     * @param clazz Class containing method to filter
+     * @param methodName String name of method to not use for accessing value.
+     * @return {@link WriteOptionsBuilder} for chained access.
+     */
+    public WriteOptionsBuilder addNamedMethodFilter(String filterName, Class<?> clazz, String methodName) {
+        options.methodFilters.put(filterName, new NamedMethodFilter(clazz, methodName));
         return this;
     }
 
