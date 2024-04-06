@@ -192,7 +192,6 @@ public class WriteOptionsBuilder {
      * @param clazz Class that has the non-standard accessor.  java.time.Instance in the example above.
      * @param field String name of the class property. 'second' in the example above.
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
-     * @return WriteOptionsBuilder for chained access.
      */
     public static void addPermanentNonStandardAccessor(Class<?> clazz, String field, String methodName) {
         BASE_NONSTANDARD_ACCESSORS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
@@ -201,7 +200,6 @@ public class WriteOptionsBuilder {
     /**
      * Add a FieldFilter that is JVM lifecycle scoped.
      * @param fieldFilter {@link FieldFilter} class used to eliminate fields from being included in the serialized JSON.
-     * @return {@link WriteOptionsBuilder} for chained access.
      */
     public static void addPermanentFieldFilter(String name, FieldFilter fieldFilter) {
         BASE_FIELD_FILTERS.put(name, fieldFilter);
@@ -211,7 +209,6 @@ public class WriteOptionsBuilder {
      * Add a MethodFilter that is JVM lifecycle scoped. All WriteOptions instances will contain this filter.
      * @param name String name of this particular MethodFilter instance.
      * @param methodFilter {@link MethodFilter} class used to eliminate a particular accessor method from being used.
-     * @return {@link WriteOptionsBuilder} for chained access.
      */
     public static void addPermanentMethodFilter(String name, MethodFilter methodFilter) {
         BASE_METHOD_FILTERS.put(name, methodFilter);
@@ -222,7 +219,6 @@ public class WriteOptionsBuilder {
      * @param name String name of this particular method filter instance.
      * @param clazz class that contains the method to be filtered (can be derived class, with field defined on parent class).
      * @param methodName String name of no-argument method to be filtered.
-     * @return {@link WriteOptionsBuilder} for chained access.
      */
     public static void addPermanentNamedMethodFilter(String name, Class<?> clazz, String methodName) {
         BASE_METHOD_FILTERS.put(name, new NamedMethodFilter(clazz, methodName));
@@ -662,7 +658,6 @@ public class WriteOptionsBuilder {
 
     /**
      * Remove named MethodFilter from the method filter chain.
-     * @param filterName {@link MethodFilter} to remove
      * @param filterName String name of filter
      * @return {@link WriteOptionsBuilder} for chained access.
      */
@@ -1022,20 +1017,18 @@ public class WriteOptionsBuilder {
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
-                final String methodName = entry.getKey();
+                final String fieldName = entry.getKey();
 
-                if (isMethodFiltered(clazz, methodName)) {
-                    continue;
-                }
-
-                Accessor accessor = this.findAccessor(field, methodName);
+                Accessor accessor = this.findAccessor(field, fieldName);
 
                 if (accessor == null) {
-                    accessor = Accessor.create(field, methodName);
+                    accessor = Accessor.create(field, fieldName);
                 }
 
                 if (accessor != null) {
-                    accessors.add(accessor);
+                    if (!isMethodFiltered(clazz, accessor.getDisplayName())) {
+                        accessors.add(accessor);
+                    }
                 }
             }
             return Collections.unmodifiableList(accessors);

@@ -115,7 +115,7 @@ public interface WriteOptions {
     String getTypeNameAlias(String typeName);
 
     /**
-     * @return Map<String, String> of all aliases within the WriteOptions.
+     * @return {@see Map<String, String>} of all aliases within the WriteOptions.
      */
     Map<String, String> aliases();
 
@@ -203,8 +203,9 @@ public interface WriteOptions {
 
     /**
      * @param c Class to get the excluded fields for.
-     * @return a Set of field names that are to be "excluded" for the class.  This is the list of fields that were defined
-     * in the WriteOptionsBuilder, and these fields will be excluded in the output in the JSON for the given class.
+     * @return a {@see Set<String>} of field names that are to be "excluded" for the class.  This is the list of fields
+     * that were defined in the WriteOptionsBuilder, and these fields will be excluded in the output in the JSON for the
+     * given class.
      */
     Set<String> getExcludedFields(Class<?> c);
 }
