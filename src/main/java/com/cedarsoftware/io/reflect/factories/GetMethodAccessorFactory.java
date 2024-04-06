@@ -22,15 +22,14 @@ import com.cedarsoftware.io.reflect.AccessorFactory;
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
- *         limitations under the License.*
+ *         limitations under the License.
  */
 public class GetMethodAccessorFactory implements AccessorFactory {
-    @Override
-    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
+    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName) {
         final String fieldName = field.getName();
-        Optional<String> possibleMethod = getMapping(mappings, field.getDeclaringClass(), fieldName);
-        String method = possibleMethod.orElse(createGetterName(fieldName));
-        return Accessor.create(field, method, key);
+        Optional<String> possibleMethodName = getPossibleMethodName(nonStandardAccessors, field.getDeclaringClass(), fieldName);
+        String methodName = possibleMethodName.orElse(createGetterName(fieldName));
+        return Accessor.create(field, methodName, uniqueFieldName);
     }
 
     /**

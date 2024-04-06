@@ -24,13 +24,13 @@ import com.cedarsoftware.io.reflect.AccessorFactory;
  *         limitations under the License.*
  */
 public class IsMethodAccessorFactory implements AccessorFactory {
-    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> mappings, String key) {
+    public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName) {
         final Class<?> c = field.getType();
         if (c != Boolean.class && c != boolean.class) {
             return null;
         }
 
-        return Accessor.create(field, createIsName(field.getName()), key);
+        return Accessor.create(field, createIsName(field.getName()), uniqueFieldName);
     }
 
     /**

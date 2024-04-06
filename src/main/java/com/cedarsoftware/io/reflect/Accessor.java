@@ -34,15 +34,15 @@ public class Accessor {
      */
     private final Field field;
     private final boolean isMethod;
-    private final String displayName;
+    private final String fieldOrMethodName;
     private final MethodHandle methodHandle;
     private final boolean isPublic;
 
-    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String displayName, boolean isPublic, boolean isMethod) {
+    private Accessor(Field field, MethodHandle methodHandle, String uniqueFieldName, String fieldOrMethodName, boolean isPublic, boolean isMethod) {
         this.field = field;
         this.methodHandle = methodHandle;
         this.uniqueFieldName = uniqueFieldName;
-        this.displayName = displayName;
+        this.fieldOrMethodName = fieldOrMethodName;
         this.isPublic = isPublic;
         this.isMethod = isMethod;
     }
@@ -60,11 +60,11 @@ public class Accessor {
         }
     }
 
-    public static Accessor create(Field field, String method, String uniqueFieldName) {
+    public static Accessor create(Field field, String methodName, String uniqueFieldName) {
         try {
             MethodType type = MethodType.methodType(field.getType());
-            MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), method, type);
-            return new Accessor(field, handle, uniqueFieldName, method, true, true);
+            MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, type);
+            return new Accessor(field, handle, uniqueFieldName, methodName, true, true);
         } catch (NoSuchMethodException | IllegalAccessException ignore) {
             return null;
         }
@@ -123,8 +123,8 @@ public class Accessor {
      * The display name will be either the underlying field name or the underlying
      * method name from which the method handle was created.
      */
-    public String getDisplayName() {
-        return displayName;
+    public String getFieldOrMethodName() {
+        return fieldOrMethodName;
     }
 
     /**

@@ -458,28 +458,28 @@ class WriteOptionsTest {
         assertThat(accessors).hasSize(4);
 
         assertThat(accessors.get(0).isPublic()).isFalse();
-        assertThat(accessors.get(0).getDisplayName()).isEqualTo("x");
+        assertThat(accessors.get(0).getFieldOrMethodName()).isEqualTo("x");
         assertThat(accessors.get(0).getActualFieldName()).isEqualTo("x");
         assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("x");
         assertThat(accessors.get(0).getFieldType()).isEqualTo(int.class);
         assertThat(accessors.get(0).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
 
         assertThat(accessors.get(1).isPublic()).isFalse();
-        assertThat(accessors.get(1).getDisplayName()).isEqualTo("y");
+        assertThat(accessors.get(1).getFieldOrMethodName()).isEqualTo("y");
         assertThat(accessors.get(1).getActualFieldName()).isEqualTo("y");
         assertThat(accessors.get(1).getUniqueFieldName()).isEqualTo("y");
         assertThat(accessors.get(1).getFieldType()).isEqualTo(int.class);
         assertThat(accessors.get(1).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
 
         assertThat(accessors.get(2).isPublic()).isTrue();
-        assertThat(accessors.get(2).getDisplayName()).isEqualTo("getKey");
+        assertThat(accessors.get(2).getFieldOrMethodName()).isEqualTo("getKey");
         assertThat(accessors.get(2).getActualFieldName()).isEqualTo("key");
         assertThat(accessors.get(2).getUniqueFieldName()).isEqualTo("key");
         assertThat(accessors.get(2).getFieldType()).isEqualTo(String.class);
         assertThat(accessors.get(2).getDeclaringClass()).isEqualTo(PrivateFinalObject.class);
 
         assertThat(accessors.get(3).isPublic()).isTrue();
-        assertThat(accessors.get(3).getDisplayName()).isEqualTo("isFlatuated");
+        assertThat(accessors.get(3).getFieldOrMethodName()).isEqualTo("isFlatuated");
         assertThat(accessors.get(3).getActualFieldName()).isEqualTo("flatuated");
         assertThat(accessors.get(3).getUniqueFieldName()).isEqualTo("flatuated");
         assertThat(accessors.get(3).getFieldType()).isEqualTo(boolean.class);
@@ -492,7 +492,7 @@ class WriteOptionsTest {
 
         assertThat(accessors).hasSize(1);
         assertThat(accessors.get(0).isPublic()).isTrue();
-        assertThat(accessors.get(0).getDisplayName()).isEqualTo("name");
+        assertThat(accessors.get(0).getFieldOrMethodName()).isEqualTo("name");
         assertThat(accessors.get(0).getActualFieldName()).isEqualTo("name");
         assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("name");
         assertThat(accessors.get(0).getFieldType()).isEqualTo(String.class);
@@ -514,7 +514,7 @@ class WriteOptionsTest {
 
         assertThat(accessors).hasSize(1);
         assertThat(accessors.get(0).isPublic()).isTrue();
-        assertThat(accessors.get(0).getDisplayName()).isEqualTo("name");
+        assertThat(accessors.get(0).getFieldOrMethodName()).isEqualTo("name");
         assertThat(accessors.get(0).getActualFieldName()).isEqualTo("name");
         assertThat(accessors.get(0).getUniqueFieldName()).isEqualTo("name");
         assertThat(accessors.get(0).getFieldType()).isEqualTo(String.class);
@@ -531,10 +531,10 @@ class WriteOptionsTest {
         assertThat(list)
                 .hasSize(4);
 
-        assertThat(list.get(0).getDisplayName()).isEqualTo("getTotal");
-        assertThat(list.get(1).getDisplayName()).isEqualTo("y");
-        assertThat(list.get(2).getDisplayName()).isEqualTo("getKey");
-        assertThat(list.get(3).getDisplayName()).isEqualTo("isFlatuated");
+        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("getTotal");
+        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("y");
+        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("getKey");
+        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("isFlatuated");
 
     }
 
@@ -546,7 +546,7 @@ class WriteOptionsTest {
                 .hasSize(1);
 
         //  non-standard mapping for Enum.name()
-        assertThat(list.get(0).getDisplayName()).isEqualTo("name");
+        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("name");
     }
 
     @Test
@@ -557,13 +557,13 @@ class WriteOptionsTest {
         assertThat(list)
                 .hasSize(5);
 
-        assertThat(list.get(0).getDisplayName()).isEqualTo("test1");
-        assertThat(list.get(1).getDisplayName()).isEqualTo("test2");
-        assertThat(list.get(2).getDisplayName()).isEqualTo("test3");
-        assertThat(list.get(3).getDisplayName()).isEqualTo("test4");
+        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("test1");
+        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("test2");
+        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("test3");
+        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("test4");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getDisplayName()).isEqualTo("getTest5");
+        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("getTest5");
     }
 
     @Test
@@ -573,13 +573,13 @@ class WriteOptionsTest {
         assertThat(list)
                 .hasSize(5);
 
-        assertThat(list.get(0).getDisplayName()).isEqualTo("test1");
-        assertThat(list.get(1).getDisplayName()).isEqualTo("test2");
-        assertThat(list.get(2).getDisplayName()).isEqualTo("test3");
-        assertThat(list.get(3).getDisplayName()).isEqualTo("test4");
+        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("test1");
+        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("test2");
+        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("test3");
+        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("test4");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getDisplayName()).isEqualTo("isTest5");
+        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("isTest5");
     }
 
     @Test
@@ -590,12 +590,12 @@ class WriteOptionsTest {
                 .hasSize(5);
 
 
-        assertThat(list.get(0).getDisplayName()).isEqualTo("speed");
-        assertThat(list.get(1).getDisplayName()).isEqualTo("getRating");
-        assertThat(list.get(2).getDisplayName()).isEqualTo("tire");
-        assertThat(list.get(3).getDisplayName()).isEqualTo("isStick");
+        assertThat(list.get(0).getFieldOrMethodName()).isEqualTo("speed");
+        assertThat(list.get(1).getFieldOrMethodName()).isEqualTo("getRating");
+        assertThat(list.get(2).getFieldOrMethodName()).isEqualTo("tire");
+        assertThat(list.get(3).getFieldOrMethodName()).isEqualTo("isStick");
 
         //  public method for accessing test5 so we use that.
-        assertThat(list.get(4).getDisplayName()).isEqualTo("name");
+        assertThat(list.get(4).getFieldOrMethodName()).isEqualTo("name");
     }
 }

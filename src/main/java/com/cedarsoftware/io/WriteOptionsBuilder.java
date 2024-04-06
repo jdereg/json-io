@@ -1017,18 +1017,19 @@ public class WriteOptionsBuilder {
             for (final Map.Entry<String, Field> entry : fields.entrySet()) {
 
                 final Field field = entry.getValue();
-                final String fieldName = entry.getKey();
+                final String uniqueFieldName = entry.getKey();
 
-                Accessor accessor = this.findAccessor(field, fieldName);
+                Accessor accessor = findAccessor(field, uniqueFieldName);
+                if (accessor != null && isMethodFiltered(clazz, accessor.getFieldOrMethodName())) {
+                    accessor = null;
+                }
 
                 if (accessor == null) {
-                    accessor = Accessor.create(field, fieldName);
+                    accessor = Accessor.create(field, uniqueFieldName);
                 }
 
                 if (accessor != null) {
-                    if (!isMethodFiltered(clazz, accessor.getDisplayName())) {
-                        accessors.add(accessor);
-                    }
+                    accessors.add(accessor);
                 }
             }
             return Collections.unmodifiableList(accessors);
@@ -1043,10 +1044,10 @@ public class WriteOptionsBuilder {
             return false;
         }
 
-        private Accessor findAccessor(Field field, String key) {
+        private Accessor findAccessor(Field field, String uniqueFieldName) {
             for (final AccessorFactory factory : accessorFactories.values()) {
                 try {
-                    final Accessor accessor = factory.buildAccessor(field, nonStandardAccessors, key);
+                    final Accessor accessor = factory.buildAccessor(field, nonStandardAccessors, uniqueFieldName);
 
                     if (accessor != null) {
                         return accessor;
