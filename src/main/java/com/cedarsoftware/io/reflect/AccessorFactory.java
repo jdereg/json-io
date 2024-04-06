@@ -31,10 +31,10 @@ public interface AccessorFactory {
      * NOTE: Renamed due to conflict with container environment usage of json-io.
      * NOTE: Do not change method signature, rename method if signature change is needed
      */
-    Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName);
+    Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardGetters, String uniqueFieldName);
 
-    default String getPossibleMethodName(Map<Class<?>, Map<String, String>> nonStandardAccessors, Class<?> clazz, String fieldName) {
-        Map<String, String> nonStandardMap = nonStandardAccessors.get(clazz);
+    default String getPossibleMethodName(Map<Class<?>, Map<String, String>> nonStandardGetters, Class<?> clazz, String fieldName) {
+        Map<String, String> nonStandardMap = nonStandardGetters.get(clazz);
         return nonStandardMap == null ? null : nonStandardMap.get(fieldName);
     }
 }

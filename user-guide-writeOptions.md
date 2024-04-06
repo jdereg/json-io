@@ -240,7 +240,7 @@ to get the `second` field, the accessor method is `getEpochSecond().` Since this
 conventions, and Java 17+ versions will not allow access to private member variables reflectively outside your module,
 use this to point `json-io` at a public method that will allow the field value to be read from (accessed.)  Note,
 this accessor for `Instant` has already been added in by default (the same is true for most JDK classes.)
->#### `WriteOptionsBuilder` addNonStandardAccessor(`Class, String fieldName, String methodName`)
+>#### `WriteOptionsBuilder` addNonStandardGetter(`Class, String fieldName, String methodName`)
 >- [ ] Add another field and non-standard method to the Class's list of non-standard accessors. 
 For the example above, use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").`
  
@@ -347,16 +347,16 @@ particular class, by calling the `addNotCustomWrittenClass()` method.
 
 >#### WriteOptionsBuilder.addPermanentWriter(`Class<?> clazz, JsonWriter.JsonClassWriter writer`)
 
-### addPermanentNonStandardAccessor
+### addPermanentNonStandardGetter
 
-Call this method to add permanent (JVM lifetime) non-standard accessors that access properties from Java objects where
+Call this method to add permanent (JVM lifetime) non-standard getter that accesses properties from Java objects where
 the method name does not follow standard setter/getter property naming conventions (used when writing JSON). 
-For example, on `java.time.Instance,` to get the `second` field, the accessor method is `getEpochSecond().` Since this
+For example, on `java.time.Instance,` to get the `second` field, the getter method is `getEpochSecond().` Since this
 does not follow standard naming conventions, and Java 17+ versions will not allow access to private member variables 
 reflectively, use this to point `json-io` at a public method that will allow the field value to be accessed. For the 
-`Instant` example mentioned, you would use `addNonStandardMapping(Instant.class, "second", "getEpochSecond").` 
+`Instant` example mentioned, you would use `addNonStandardGetter(Instant.class, "second", "getEpochSecond").` 
 Note, this accessor has already been added in by default (the same is true for most JDK classes.)
->#### WriteOptionsBuilder.addPermanentNonStandardAccessor(`Class<?> clazz, String field, String methodName`)
+>#### WriteOptionsBuilder.addPermanentNonStandardGetter(`Class<?> clazz, String field, String methodName`)
 
 ### addPermanentFieldFilter
 >#### WriteOptionsBuilder.addPermanentFieldFilter(`String name, FieldFilter fieldFilter`)

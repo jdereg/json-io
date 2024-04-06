@@ -69,7 +69,7 @@ public class ReadOptionsBuilder {
     private static final Map<Class<?>, Class<?>> BASE_COERCED_TYPES = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_SETTERS = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_INJECTOR_FIELDS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Set<String>> BASE_EXCLUDED_SETTER_FIELDS = new ConcurrentHashMap<>();
     private final DefaultReadOptions options;
 
     static {
@@ -79,7 +79,7 @@ public class ReadOptionsBuilder {
         loadBaseAliasMappings(ReadOptionsBuilder::addPermanentAlias);
         loadBaseCoercedTypes();
         loadBaseNonRefs();
-        loadBaseExcludedInjectorFields();
+        loadBaseExcludedSetterFields();
         loadBaseNonStandardSetters();
     }
 
@@ -106,7 +106,7 @@ public class ReadOptionsBuilder {
         options.nonRefClasses.addAll(BASE_NON_REFS);
         options.nonStandardSetters.putAll(BASE_NONSTANDARD_SETTERS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
-        options.excludedInjectorFields.putAll(BASE_EXCLUDED_INJECTOR_FIELDS);
+        options.excludedSetterFields.putAll(BASE_EXCLUDED_SETTER_FIELDS);
     }
 
     /**
@@ -129,8 +129,8 @@ public class ReadOptionsBuilder {
             options.excludedFieldNames.clear();
             options.excludedFieldNames.putAll(other.excludedFieldNames);
 
-            options.excludedInjectorFields.clear();
-            options.excludedInjectorFields.putAll(other.excludedInjectorFields);
+            options.excludedSetterFields.clear();
+            options.excludedSetterFields.putAll(other.excludedSetterFields);
 
             options.nonStandardSetters.clear();
             options.nonStandardSetters.putAll(other.nonStandardSetters);
@@ -236,7 +236,7 @@ public class ReadOptionsBuilder {
      * @param fieldName String field name to exclude for the given class.
      */
     public static void addPermanentExcludedInjectorField(Class<?> clazz, String fieldName) {
-        BASE_EXCLUDED_INJECTOR_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
+        BASE_EXCLUDED_SETTER_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).add(fieldName);
     }
 
     /**
@@ -265,7 +265,7 @@ public class ReadOptionsBuilder {
         options.converterOptions.converterOverrides = Collections.unmodifiableMap(options.converterOptions.converterOverrides);
         options.converterOptions.customOptions = Collections.unmodifiableMap(options.converterOptions.customOptions);
         options.excludedFieldNames = Collections.unmodifiableMap(options.excludedFieldNames);
-        options.excludedInjectorFields = Collections.unmodifiableMap(options.excludedInjectorFields);
+        options.excludedSetterFields = Collections.unmodifiableMap(options.excludedSetterFields);
         options.fieldFilters = Collections.unmodifiableList(options.fieldFilters);
         options.injectorFactories = Collections.unmodifiableList(options.injectorFactories);
         options.nonStandardSetters = Collections.unmodifiableMap(options.nonStandardSetters);
@@ -750,7 +750,7 @@ public class ReadOptionsBuilder {
         private Map<Class<?>, JsonReader.ClassFactory> classFactoryMap = new LinkedHashMap<>();
         private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
         private Map<Class<?>, Set<String>> excludedFieldNames = new LinkedHashMap<>();
-        private Map<Class<?>, Set<String>> excludedInjectorFields = new LinkedHashMap<>();
+        private Map<Class<?>, Set<String>> excludedSetterFields = new LinkedHashMap<>();
         private List<FieldFilter> fieldFilters = new ArrayList<>();
         private List<InjectorFactory> injectorFactories = new ArrayList<>();
         private Map<String, Object> customOptions = new LinkedHashMap<>();
@@ -1047,7 +1047,7 @@ public class ReadOptionsBuilder {
                     excludedFields.addAll(excludedForClass);
                 }
 
-                final Set<String> excludedInjectors = this.excludedInjectorFields.get(curr);
+                final Set<String> excludedInjectors = this.excludedSetterFields.get(curr);
 
                 if (excludedInjectors != null) {
                     excludedFields.addAll(excludedInjectors);
@@ -1171,7 +1171,7 @@ public class ReadOptionsBuilder {
         }
     }
 
-    private static void loadBaseExcludedInjectorFields() {
+    private static void loadBaseExcludedSetterFields() {
         Map<Class<?>, Set<String>> allExcludedInjectors = loadClassToSetOfStrings("config/excludedInjectorFields.txt");
         for (Map.Entry<Class<?>, Set<String>> entry : allExcludedInjectors.entrySet()) {
             Class<?> clazz = entry.getKey();

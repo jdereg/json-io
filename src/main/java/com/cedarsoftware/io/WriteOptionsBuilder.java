@@ -56,7 +56,7 @@ public class WriteOptionsBuilder {
     private static final Map<Class<?>, JsonWriter.JsonClassWriter> BASE_WRITERS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> BASE_NON_REFS = ConcurrentHashMap.newKeySet();
     static final Map<Class<?>, Set<String>> BASE_EXCLUDED_FIELD_NAMES = new ConcurrentHashMap<>();
-    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_ACCESSORS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, String>> BASE_NONSTANDARD_GETTERS = new ConcurrentHashMap<>();
     private static final Map<String, FieldFilter> BASE_FIELD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, MethodFilter> BASE_METHOD_FILTERS = new ConcurrentHashMap<>();
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
@@ -67,7 +67,7 @@ public class WriteOptionsBuilder {
         loadBaseWriters();
         loadBaseNonRefs();
         loadBaseExcludedFields();
-        loadBaseNonStandardAccessors();
+        loadBaseNonStandardGetters();
 
         // If the lists below become large, then break these out into load* APIs like we've done for the ones above.
         addPermanentFieldFilter("static", new StaticFieldFilter());
@@ -85,7 +85,7 @@ public class WriteOptionsBuilder {
 
         // Start with all BASE_ALIAS_MAPPINGS (more aliases can be added to this instance, and more aliases
         // can be added to the BASE_ALIAS_MAPPINGS via the static method, so that all instances get them.)
-        options.nonStandardAccessors.putAll(BASE_NONSTANDARD_ACCESSORS);
+        options.nonStandardGetters.putAll(BASE_NONSTANDARD_GETTERS);
         options.aliasTypeNames.putAll(BASE_ALIAS_MAPPINGS);
         options.customWrittenClasses.putAll(BASE_WRITERS);
         options.nonRefClasses.addAll(BASE_NON_REFS);
@@ -106,8 +106,8 @@ public class WriteOptionsBuilder {
             options.includedFieldNames.clear();
             options.includedFieldNames.putAll(other.includedFieldNames);
 
-            options.nonStandardAccessors.clear();
-            options.nonStandardAccessors.putAll(other.nonStandardAccessors);
+            options.nonStandardGetters.clear();
+            options.nonStandardGetters.putAll(other.nonStandardGetters);
 
             options.aliasTypeNames.clear();
             options.aliasTypeNames.putAll(other.aliasTypeNames);
@@ -186,16 +186,16 @@ public class WriteOptionsBuilder {
     }
 
     /**
-     * This option permits adding non-standard accessors (used when writing JSON) that access properties from objects,
+     * This option permits adding non-standard getters (used when writing JSON) that access properties from objects,
      * where the method name does not follow a standard setter/getter property name. For example, on java.time.Instance,
      * to get the 'second' field, the accessor method is 'getEpochSecond()'.
      * Anything added here will automatically be made in all WriteOptions.
-     * @param clazz Class that has the non-standard accessor.  java.time.Instance in the example above.
+     * @param clazz Class that has the non-standard getter.  java.time.Instance in the example above.
      * @param field String name of the class property. 'second' in the example above.
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      */
-    public static void addPermanentNonStandardAccessor(Class<?> clazz, String field, String methodName) {
-        BASE_NONSTANDARD_ACCESSORS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
+    public static void addPermanentNonStandardGetter(Class<?> clazz, String field, String methodName) {
+        BASE_NONSTANDARD_GETTERS.computeIfAbsent(clazz, cls -> new ConcurrentHashMap<>()).put(field, methodName);
     }
 
     /**
@@ -598,11 +598,11 @@ public class WriteOptionsBuilder {
      * @param methodName The name of the non-standard method used to get the field value. 'getEpochSecond' in the example above.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder addNonStandardAccessor(Class<?> c, String fieldName, String methodName) {
+    public WriteOptionsBuilder addNonStandardGetter(Class<?> c, String fieldName, String methodName) {
         Convention.throwIfNull(c, "class cannot be null");
         Convention.throwIfNull(fieldName, "fieldName cannot be null");
         Convention.throwIfNull(methodName, "methodName cannot be null");
-        options.nonStandardAccessors.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
+        options.nonStandardGetters.computeIfAbsent(c, cls -> new LinkedHashMap<>()).put(fieldName, methodName);
         return this;
     }
 
@@ -729,7 +729,7 @@ public class WriteOptionsBuilder {
     public WriteOptions build() {
         options.clearCaches();
         options.includedFieldNames = Collections.unmodifiableMap(options.includedFieldNames);
-        options.nonStandardAccessors = Collections.unmodifiableMap(options.nonStandardAccessors);
+        options.nonStandardGetters = Collections.unmodifiableMap(options.nonStandardGetters);
         options.aliasTypeNames = Collections.unmodifiableMap(options.aliasTypeNames);
         options.notCustomWrittenClasses = Collections.unmodifiableSet(options.notCustomWrittenClasses);
         options.nonRefClasses = Collections.unmodifiableSet(options.nonRefClasses);
@@ -755,7 +755,7 @@ public class WriteOptionsBuilder {
         private JsonWriter.JsonClassWriter enumWriter = new Writers.EnumsAsStringWriter();
         private ClassLoader classLoader = WriteOptions.class.getClassLoader();
         private Map<Class<?>, Set<String>> includedFieldNames = new LinkedHashMap<>();
-        private Map<Class<?>, Map<String, String>> nonStandardAccessors = new LinkedHashMap<>();
+        private Map<Class<?>, Map<String, String>> nonStandardGetters = new LinkedHashMap<>();
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Set<Class<?>> notCustomWrittenClasses = new LinkedHashSet<>();
         private Set<Class<?>> nonRefClasses = new LinkedHashSet<>();
@@ -1028,7 +1028,7 @@ public class WriteOptionsBuilder {
         private Accessor findMethodAccessor(Field field, String uniqueFieldName) {
             for (final AccessorFactory factory : accessorFactories.values()) {
                 try {
-                    final Accessor accessor = factory.buildAccessor(field, nonStandardAccessors, uniqueFieldName);
+                    final Accessor accessor = factory.buildAccessor(field, nonStandardGetters, uniqueFieldName);
 
                     if (accessor != null) {
                         return accessor;
@@ -1162,13 +1162,13 @@ public class WriteOptionsBuilder {
         }
     }
     
-    private static void loadBaseNonStandardAccessors() {
-        Map<Class<?>, Map<String, String>> nonStandardAccessorMap = ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardGetters.txt");
-        for (Map.Entry<Class<?>, Map<String, String>> entry : nonStandardAccessorMap.entrySet()) {
+    private static void loadBaseNonStandardGetters() {
+        Map<Class<?>, Map<String, String>> nonStandardGetterMap = ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardGetters.txt");
+        for (Map.Entry<Class<?>, Map<String, String>> entry : nonStandardGetterMap.entrySet()) {
             Class<?> clazz = entry.getKey();
             Map<String, String> pairingsMap = entry.getValue();
             for (Map.Entry<String, String> fieldToAltName : pairingsMap.entrySet()) {
-                addPermanentNonStandardAccessor(clazz, fieldToAltName.getKey(), fieldToAltName.getValue());
+                addPermanentNonStandardGetter(clazz, fieldToAltName.getKey(), fieldToAltName.getValue());
             }
         }
     }
