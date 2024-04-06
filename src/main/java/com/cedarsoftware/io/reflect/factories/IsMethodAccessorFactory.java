@@ -21,7 +21,7 @@ import com.cedarsoftware.io.reflect.AccessorFactory;
  *         distributed under the License is distributed on an "AS IS" BASIS,
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
- *         limitations under the License.*
+ *         limitations under the License.
  */
 public class IsMethodAccessorFactory implements AccessorFactory {
     public Accessor buildAccessor(Field field, Map<Class<?>, Map<String, String>> nonStandardAccessors, String uniqueFieldName) {
