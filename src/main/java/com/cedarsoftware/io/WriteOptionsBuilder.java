@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -64,10 +63,10 @@ public class WriteOptionsBuilder {
     private static final Map<String, AccessorFactory> BASE_ACCESSOR_FACTORIES = new ConcurrentHashMap<>();
 
     static {
-        BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
-        BASE_WRITERS.putAll(loadWriters());
-        BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
+        loadBaseAliasMappings();
+        loadBaseWriters();
+        loadBaseNonRefs();
+        loadBaseExcludedFields();
         BASE_NONSTANDARD_ACCESSORS.putAll(ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardAccessors.txt"));
         // If the lists below become large, then break these out into resource files like we've done for the ones above.
         BASE_FIELD_FILTERS.put("static", new StaticFieldFilter());
@@ -75,6 +74,17 @@ public class WriteOptionsBuilder {
         BASE_METHOD_FILTERS.put("default", new DefaultMethodFilter());
         BASE_ACCESSOR_FACTORIES.put("get", new GetMethodAccessorFactory());
         BASE_ACCESSOR_FACTORIES.put("is", new IsMethodAccessorFactory());
+    }
+
+    private static void loadBaseExcludedFields() {
+        Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt");
+        for (Map.Entry<Class<?>, Set<String>> classSetEntry : allExcludedFields.entrySet()) {
+            Class<?> clazz = classSetEntry.getKey();
+            Set<String> excludedFields = classSetEntry.getValue();
+            for (String fieldName : excludedFields) {
+                addPermanentExcludedField(clazz, fieldName);
+            }
+        }
     }
 
     /**
@@ -728,57 +738,6 @@ public class WriteOptionsBuilder {
         return options;
     }
 
-    /**
-     * Load custom writer classes based on contents of resources/customWriters.txt.
-     * Verify that classes listed are indeed valid classes loaded in the JVM.
-     *
-     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
-     */
-    private static Map<Class<?>, JsonWriter.JsonClassWriter> loadWriters() {
-        Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
-        Map<Class<?>, JsonWriter.JsonClassWriter> writers = new HashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            String writerClassName = entry.getValue();
-            Class<?> clazz = ClassUtilities.forName(className, classLoader);
-            if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
-                continue;
-            }
-            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
-            if (customWriter == null) {
-                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
-            }
-            try {
-                JsonWriter.JsonClassWriter writer = customWriter.newInstance();
-                writers.put(clazz, writer);
-            } catch (Exception e) {
-                System.out.println("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
-            }
-        }
-        return writers;
-    }
-
-    /**
-     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
-     *
-     * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
-     */
-    static Set<Class<?>> loadNonRefs() {
-        Set<Class<?>> nonRefs = new LinkedHashSet<>();
-        Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
-        set.forEach((className) -> {
-            Class<?> clazz = ClassUtilities.forName(className, WriteOptions.class.getClassLoader());
-            if (clazz == null) {
-                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
-            }
-            nonRefs.add(clazz);
-        });
-        return nonRefs;
-    }
-
     static class DefaultWriteOptions implements WriteOptions {
         private boolean shortMetaKeys = false;
         private ShowType showTypeInfo = WriteOptions.ShowType.MINIMAL;
@@ -1138,6 +1097,68 @@ public class WriteOptionsBuilder {
                 }
             }
             return false;
+        }
+    }
+
+    /**
+     * Load custom writer classes based on contents of resources/customWriters.txt.
+     * Verify that classes listed are indeed valid classes loaded in the JVM.
+     *
+     * @return Map<Class < ?>, JsonWriter.JsonClassWriter> containing the resolved Class -> JsonClassWriter instance.
+     */
+    private static void loadBaseWriters() {
+        Map<String, String> map = MetaUtils.loadMapDefinition("config/customWriters.txt");
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String writerClassName = entry.getValue();
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " not defined in the JVM, so custom writer: " + writerClassName + ", will not be used.");
+                continue;
+            }
+            Class<JsonWriter.JsonClassWriter> customWriter = (Class<JsonWriter.JsonClassWriter>) ClassUtilities.forName(writerClassName, classLoader);
+            if (customWriter == null) {
+                System.out.println("Note: class not found (custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+            try {
+                JsonWriter.JsonClassWriter writer = customWriter.newInstance();
+                addPermanentWriter(clazz, writer);
+            } catch (Exception e) {
+                System.out.println("Note: class failed to instantiate (a custom JsonClassWriter class): " + writerClassName + ", listed in resources/customWriters.txt as a custom writer for: " + className);
+            }
+        }
+    }
+
+    /**
+     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
+     *
+     * @return Set<Class < ?>> which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     */
+    static void loadBaseNonRefs() {
+        Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
+        set.forEach((className) -> {
+            Class<?> clazz = ClassUtilities.forName(className, WriteOptions.class.getClassLoader());
+            if (clazz == null) {
+                System.out.println("Class: " + className + " undefined.  Cannot be used as non-referenceable class, listed in resources/nonRefs.txt");
+            }
+            addPermanentNonRef(clazz);
+        });
+    }
+
+    private static void loadBaseAliasMappings() {
+        Map<String, String> aliasMappings = MetaUtils.loadMapDefinition("config/aliases.txt");
+        for (Map.Entry<String, String> entry : aliasMappings.entrySet()) {
+            String className = entry.getKey();
+            String alias = entry.getValue();
+            Class<?> clazz = ClassUtilities.forName(className, WriteOptionsBuilder.class.getClassLoader());
+
+            if (clazz == null) {
+                System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
+            } else {
+                addPermanentAlias(clazz, alias);
+            }
         }
     }
 }
