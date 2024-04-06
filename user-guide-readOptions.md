@@ -230,13 +230,13 @@ Add a class permanently (JVM lifecycle) to the Non-referenceable list. All new `
 automatically start with this installed so you will not need to add it into the `ReadOptions` each time it is created.
 >#### ReadOptionsBuilder.addPermanentNonReferenceableClass(Class<?> clazz)
 
-### addPermanentExcludedInjectorField
-Add a field to be excluded (stopped) from being "set" (injected) into the Java object created that is associated to the
+### addPermanentNotImportedField
+Add a field to exclude (stopped) from being "set" (injected) into the Java object created that is associated to the
 portion of JSON being read.  If a field exists in the JSON but you do not want `json-io` to attempt to copy it to the
 associated Java class, add it here. These fields are effectively skipped from being read from the JSON.  This is on
 the READ side of JSON processing.  There is a similar option on the `WriteOptionsBuilder` to prevent fields from being
 written to JSON.
->#### ReadOptionsBuilder.addPermanentExcludedInjectorField(`Class<?> clazz, String fieldName`)
+>#### ReadOptionsBuilder.addPermanentNotImportedField(`Class<?> clazz, String fieldName`)
 
 ### addPermanentNonStandardSetter 
 For the passed in Class (clazz), you can add a field-to-setter names. This is useful when the 'setter' method does not

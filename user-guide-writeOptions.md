@@ -325,11 +325,11 @@ will automatically be created with permanent aliases added to them.
 
 >#### WriteOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
  
-### addPermanentExcludedField
-Call this method to add a permanent (JVM lifetime) excluded field name of class.  All `WriteOptions` will 
-automatically be created with the named field on the excluded list.
+### addPermanentNotExportedField
+Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will 
+automatically be created with the named field on the not-exported list.
 
->#### WriteOptionsBuilder.addPermanentExcludedField(`Class<?> clazz, String fieldName`) 
+>#### WriteOptionsBuilder.addPermanentNotExportedField(`Class<?> clazz, String fieldName`) 
 
 ### addPermanentNonRef
 

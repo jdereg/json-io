@@ -1152,7 +1152,7 @@ public class WriteOptionsBuilder {
     }
     
     private static void loadBaseExcludedFields() {
-        Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt");
+        Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/fieldsNotExported.txt");
         for (Map.Entry<Class<?>, Set<String>> entry : allExcludedFields.entrySet()) {
             Class<?> clazz = entry.getKey();
             Set<String> excludedFields = entry.getValue();
