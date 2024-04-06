@@ -317,7 +317,7 @@ objects were treated as "primitives."
 ---
 ## Application Scoped Options (full lifecycle of JVM)
 These particular options can be set at 'application-scope' to ensure all `WriteOptions` instances are automatically created
-with them, so you don't have to configure each `WriteOptions` instance individually.
+with them, so you don't have to configure these options for each `WriteOptions` instance individually.
 
 ### addPermanentAlias
 Call this method to add a permanent (JVM lifetime) alias of a class to a shorter, name.  All `WriteOptions`
@@ -379,7 +379,7 @@ JSON content.
 
 The String `name` is a unique name you give the filter.  It must be unique amongst the method filters.  The `MethodFilter`
 is a derived implementation to be added that filters methods a new, particular way.
->#### WriteOptionsBuilder.addPermanentMethodFilter(`String name, MethodFilter methodFilter`) {
+>#### WriteOptionsBuilder.addPermanentMethodFilter(`String name, MethodFilter methodFilter`)
 
 ### addPermanentMethodNameFilter
 Works like the `addPermanentMethodFilter()` with one simple difference.  Whereas one must sublass `MethodFilter,` with

@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.cedarsoftware.io.factory.ArrayFactory;
 import com.cedarsoftware.io.factory.ConvertableFactory;
@@ -75,9 +77,9 @@ public class ReadOptionsBuilder {
         BASE_READERS.putAll(loadReaders());
         BASE_ALIAS_MAPPINGS.putAll(loadMapDefinition("config/aliases.txt"));
         BASE_COERCED_TYPES.putAll(loadCoercedTypes());      // Load coerced types from resource/coerced.txt
-        BASE_NON_REFS.addAll(MetaUtils.loadNonRefs());
-        BASE_EXCLUDED_INJECTOR_FIELDS.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
-        BASE_NONSTANDARD_INJECTORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardInjectors.txt"));
+        BASE_NON_REFS.addAll(loadNonRefs());
+        BASE_EXCLUDED_INJECTOR_FIELDS.putAll(loadClassToSetOfStrings("config/excludedInjectorFields.txt"));
+        BASE_NONSTANDARD_INJECTORS.putAll(loadClassToFieldAliasNameMapping("config/nonStandardInjectors.txt"));
     }
 
     private final DefaultReadOptions options;
@@ -149,17 +151,28 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * Call this method to add a permanent (JVM lifetime) coercion of one
-     * class to another during instance creation.  Examples of classes
-     * that might need this are proxied classes such as HibernateBags, etc.
-     * That you want to create as regular jvm collections.
-     *
-     * @param sourceClass String class name (fully qualified name) that will be coerced to another type.
-     * @param factory     JsonReader.ClassFactory instance which can create the sourceClass and load it's contents,
-     *                    using passed in JsonValues (JsonObject or JsonArray).
+     * Call this method to add a factory class that will be used to create instances of another class.  This is useful
+     * when you have a class that `json-io` cannot instantiate due to private or other constructor issues.  Add
+     * a JsonReader.ClassFactory class (that you implement) and associate it to the passed in 'classToCreate'.  Your
+     * JsonReader.ClassFactory class will be called with the Map (JsonObject) that contains the { ... } that should
+     * be loaded into your class. It is your ClassFactory implementations job to create the instance of the associated
+     * class, and then copy the values from the passed in Map to the Java instance you created.
+     * @param sourceClass String class name (fully qualified name) to associate to your ClassFactory implementation.
+     * @param factory     JsonReader.ClassFactory your ClassFactory implementation that creates/loads the associated
+     *                    class using the Map (JsonObject) of data passed to it.
      */
     public static void addPermanentClassFactory(Class<?> sourceClass, JsonReader.ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(sourceClass, factory);
+    }
+
+    /**
+     * @param classToCreate Class that will need to use a JsonReader.ClassFactory for instantiation and loading.
+     * @param factory       JsonReader.ClassFactory instance that has been created to instantiate a difficult
+     *                      to create and load class (class c).
+     * @deprecated use {@link ReadOptionsBuilder#addPermanentClassFactory} instead.
+     */
+    public static void assignInstantiator(Class<?> classToCreate, JsonReader.ClassFactory factory) {
+        BASE_CLASS_FACTORIES.put(classToCreate, factory);
     }
 
     /**
@@ -203,14 +216,41 @@ public class ReadOptionsBuilder {
     }
 
     /**
-     * @param classToCreate Class that will need to use a JsonReader.ClassFactory for instantiation and loading.
-     * @param factory       JsonReader.ClassFactory instance that has been created to instantiate a difficult
-     *                      to create and load class (class c).
+     * Add a class permanently (JVM lifecycle) to the Non-referenceable list. All new ReadOptions instances created
+     * will automatically start with this, and you will not need to add it into the ReadOptions through the
+     * ReadOptionsBuilder each time.
+     *
+     * @param clazz Class to be added to the non-reference list.  A class that is on this list, will be written
+     *              out to the JSON fully, each time it is encountered, and never be written with an @ref.  Use
+     *              for very simple, atomic type (single field classes).
      */
-    public static void assignInstantiator(Class<?> classToCreate, JsonReader.ClassFactory factory) {
-        BASE_CLASS_FACTORIES.put(classToCreate, factory);
+    public static void addPermanentNonReferenceableClass(Class<?> clazz) {
+        BASE_NON_REFS.add(clazz);
     }
 
+    /**
+     * Add fields to a class that should be excluded from having injectors (setters) used. Any class's field
+     * listed here will be excluded when read from the JSON.  The value will not be "injected" into the associated
+     * Java instance. This method can be called more than once, and each Set of field names will be added together.
+     * As with a set, duplicate entries will be consolidated.
+     * @param clazz Class on which fields will be excluded.
+     * @param fieldNames {@code Set<String>} field names to exclude for the given class.
+     */
+    public static void addPermanentExcludedInjectorField(Class<?> clazz, Set<String> fieldNames) {
+        BASE_EXCLUDED_INJECTOR_FIELDS.computeIfAbsent(clazz, k -> ConcurrentHashMap.newKeySet()).addAll(fieldNames);
+    }
+
+    /**
+     * Add the String field name to alias name (getter name) mappings for the passed in Class.
+     * @param clazz Class to which the field/alias name associations will be added.
+     * @param fieldAliasNames {@code Map<String, String>} containing field names from the passed in class, mapped to
+     * their getter name equivalents. This allows json-io to use setter/getters that do not follow the standard
+     * is/get pattern for accessing/injecting values into instances.
+     */
+    public static void addPermanentNonStandardInjector(Class<?> clazz, Map<String, String> fieldAliasNames) {
+        BASE_NONSTANDARD_INJECTORS.computeIfAbsent(clazz, k -> new ConcurrentHashMap<>()).putAll(fieldAliasNames);
+    }
+    
     /**
      * @return ReadOptions - built options
      */
@@ -1051,5 +1091,80 @@ public class ReadOptionsBuilder {
             }
             return false;
         }
+    }
+
+    /**
+     * Populates a map with a mapping of Class -> Set of Strings
+     */
+    static Map<Class<?>, Set<String>> loadClassToSetOfStrings(String fileName) {
+        Map<String, String> map = loadMapDefinition(fileName);
+        Map<Class<?>, Set<String>> builtMap = new LinkedHashMap<>();
+        ClassLoader classLoader = MetaUtils.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
+            if (clazz == null) {
+                continue;
+            }
+
+            Set<String> resultSet = ConcurrentHashMap.newKeySet();
+            resultSet.addAll(commaSeparatedStringToSet(entry.getValue()));
+            builtMap.put(clazz, resultSet);
+        }
+        return builtMap;
+    }
+
+    static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
+        return Arrays.stream(commaSeparatedString.split(","))
+                .map(String::trim)
+                .collect(Collectors.toSet());
+    }
+
+    static Map<Class<?>, Map<String, String>> loadClassToFieldAliasNameMapping(String fileName) {
+        Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
+        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
+        ClassLoader classLoader = WriteOptions.class.getClassLoader();
+
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            String className = entry.getKey();
+            String mappings = entry.getValue();
+            Class<?> clazz = ClassUtilities.forName(className, classLoader);
+            if (clazz == null) {
+                System.out.println("Class: " + className + " not defined in the JVM");
+                continue;
+            }
+
+            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
+            Set<String> pairs = commaSeparatedStringToSet(mappings);
+            for (String pair : pairs) {
+                String[] fieldAlias = pair.split(":");
+                mapping.put(fieldAlias[0], fieldAlias[1]);
+            }
+        }
+        return nonStandardMapping;
+    }
+
+    /**
+     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
+     *
+     * @return {@code Set<Class<?>>} which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
+     */
+    static Set<Class<?>> loadNonRefs() {
+        final Set<String> set = MetaUtils.loadSetDefinition("config/nonRefs.txt");
+        final ClassLoader classLoader = WriteOptions.class.getClassLoader();
+        final Set<Class<?>> result = new HashSet<>();
+
+        for (String className : set) {
+            Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
+
+            if (loadedClass != null) {
+                result.add(loadedClass);
+            } else {
+                throw new JsonIoException("Class: " + className + " is undefined.");
+            }
+        }
+
+        return result;
     }
 }

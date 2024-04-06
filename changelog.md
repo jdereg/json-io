@@ -1,4 +1,7 @@
 ### Revision History
+* 4.19.14
+  * `MethodFilter` can be applied to remove the use of a method accessor, useful when the method accessor is causing problems (additional unwanted side-effects) during the serialization (outputting of JSON). `MethodFilter's` are added to `WriteOptions` via the `WriteOptionsBuilder.` `MethodFilter's` can be added to a single `WriteOptions` instance or added permanently (jvm lifecyle) so that all created `WriteOptions` include it automatically (see `WriteOptionsBuilder.addPermanent*` APIs).
+  * Significant updates made to User Guide documentation. 
 * 4.19.13
   * `ReadOptionsBuilder` did not have the `withExtendedAliases()` option. This adds in all the `config/extendedAliases.txt` aliases, dramatically shrinking the size of common Java class names in the JSON `@type` field.
   * Both `ReadOptionsBuilder` and `WriteOptionsBuilder` can take an existing `ReadOptions` or `WriteOptions` as a starting point, allowing you to copy from an exist options, and then tweak it from there.

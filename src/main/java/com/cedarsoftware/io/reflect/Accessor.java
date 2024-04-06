@@ -60,12 +60,12 @@ public class Accessor {
         }
     }
 
-    public static Accessor createFieldAccessor(Field field, String methodName, String uniqueFieldName) {
+    public static Accessor createMethodAccessor(Field field, String methodName, String uniqueFieldName) {
         try {
             MethodType type = MethodType.methodType(field.getType());
             MethodHandle handle = MethodHandles.publicLookup().findVirtual(field.getDeclaringClass(), methodName, type);
             return new Accessor(field, handle, uniqueFieldName, methodName, true, true);
-        } catch (NoSuchMethodException | IllegalAccessException ignore) {
+        } catch (Exception ignore) {
             return null;
         }
     }
@@ -91,6 +91,10 @@ public class Accessor {
          return methodHandle;
     }
 
+    public boolean isMethod() {
+        return isMethod;
+    }
+
     public Class<?> getFieldType() {
         return this.field.getType();
     }
@@ -105,10 +109,6 @@ public class Accessor {
 
     public String getActualFieldName() {
         return field.getName();
-    }
-
-    public boolean isMethodHandlePresent() {
-        return methodHandle != null;
     }
 
     /**

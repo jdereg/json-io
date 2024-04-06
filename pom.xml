@@ -6,7 +6,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.19.14-SNAPSHOT</version>
+    <version>4.19.14</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -24,7 +24,7 @@
         <!-- testing only -->
         <version.junit-jupiter-engine>5.10.2</version.junit-jupiter-engine>
         <version.assertj-core>3.25.3</version.assertj-core>
-        <version.java-util>2.4.8</version.java-util>
+        <version.java-util>2.4.9</version.java-util>
         <version.gson>2.10.1</version.gson>
         <version.jackson-core>2.17.0</version.jackson-core>
         <version.slf4j-api>2.0.12</version.slf4j-api>
@@ -40,9 +40,7 @@
         <version.maven-scr-plugin>1.26.4</version.maven-scr-plugin>
         <version.maven-bundle-plugin>5.1.9</version.maven-bundle-plugin>
         <version.moditect-maven-plugin>1.2.1.Final</version.moditect-maven-plugin>
-        <!--
-                    Name of the benchmark Uber-JAR to generate.
-                  -->
+        <!-- Name of the benchmark Uber-JAR to generate -->
         <uberjar.name>benchmarks</uberjar.name>
 
         <!-- release to Maven Central via Sonatype Nexus -->
@@ -238,7 +236,7 @@
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
-<!--                    <release>${maven.compiler.release}</release>-->
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
 

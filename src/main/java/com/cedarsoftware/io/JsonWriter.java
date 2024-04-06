@@ -1649,7 +1649,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         final Class<?> fieldDeclaringClass = accessor.getDeclaringClass();
         Object o;
 
-        //  Only here for enumAsObject writing,.
+        //  Only here for enumAsObject writing
         if (Enum.class.isAssignableFrom(fieldDeclaringClass)) {
             if (!accessor.isPublic() && writeOptions.isEnumPublicFieldsOnly()) {
                 return first;

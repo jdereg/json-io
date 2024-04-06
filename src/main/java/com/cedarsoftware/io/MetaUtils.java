@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,7 +51,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -742,61 +740,7 @@ public class MetaUtils
                 c.isEnum() ||
                 c.equals(Class.class);
     }
-
-    /**
-     * Populates a map with a mapping of Class -> Set of Strings
-     */
-    public static Map<Class<?>, Set<String>> loadClassToSetOfStrings(String fileName) {
-        Map<String, String> map = loadMapDefinition(fileName);
-
-        Map<Class<?>, Set<String>> builtMap = new HashMap<>();
-        ClassLoader classLoader = MetaUtils.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            Class<?> clazz = ClassUtilities.forName(className, classLoader);
-            if (clazz == null) {
-                continue;
-            }
-
-            Set<String> resultSet = ConcurrentHashMap.newKeySet();
-            resultSet.addAll(commaSeparatedStringToSet(entry.getValue()));
-            safelyIgnoreException(() -> builtMap.put(clazz, resultSet));
-        }
-        return builtMap;
-    }
-
-    public static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
-        return Arrays.stream(commaSeparatedString.split(","))
-                .map(String::trim)
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     */
-    public static Map<Class<?>, Map<String, String>> loadNonStandardMethodNames(String fileName) {
-        Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
-        Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
-        ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            String className = entry.getKey();
-            String mappings = entry.getValue();
-            Class<?> clazz = ClassUtilities.forName(className, classLoader);
-            if (clazz == null) {
-                System.out.println("Class: " + className + " not defined in the JVM");
-                continue;
-            }
-
-            Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
-            for (String split : mappings.split(",")) {
-                String[] parts = split.split(":");
-                mapping.put(parts[0].trim(), parts[1].trim());
-            }
-        }
-        return nonStandardMapping;
-    }
-
+    
     /**
      * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
      * Ignores lines beginning with a # and it also ignores blank lines.
@@ -840,7 +784,7 @@ public class MetaUtils
             }
             scanner.close();
         }  catch (Exception e) {
-            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # or blank lines in the file, they will be skipped.");
+            throw new JsonIoException("Error reading in " + resName + ". The file should be in the resources folder. The contents have a single String per line.  You can use # (comment) or blank lines in the file, they will be skipped.");
         }
         return set;
     }
@@ -903,55 +847,31 @@ public class MetaUtils
     }
 
     /**
-     * Fetch the closest class for the passed in Class.  This method always fetches the closest class or returns
-     * the default class, doing the complicated inheritance distance checking.  This method is only called when
-     * a cache miss has happened.  A sentinel 'defaultClass' is returned when no class is found.  This prevents
-     * future cache misses from re-attempting to find classes that do not have a custom writer.
+     * Fetch the closest inherited class for the passed in Class.  This method always fetches the closest class
+     * or returns the default class, doing the complicated inheritance distance checking.  This method is only
+     * called when a cache miss has happened.  A sentinel 'defaultClass' is returned when no class is found.
+     * This prevents future cache misses from re-attempting to find classes that do not have a custom writer.
      *
-     * @param c             Class of object for which fetch a custom writer
+     * @param clazz Class of object for which fetch the closest inherited class
      * @param workerClasses The classes to search through
      * @param defaultClass  the class to return when no viable class was found.
-     * @return JsonClassWriter for the custom class (if one exists), nullWriter otherwise.
+     * @return Class the closest class found or defaultClass if none found.
      */
-    public static <T> T findClosest(Class<?> c, Map<Class<?>, T> workerClasses, T defaultClass) {
-        T closestWriter = defaultClass;
+    public static <T> T findClosest(Class<?> clazz, Map<Class<?>, T> workerClasses, T defaultClass) {
+        T closest = defaultClass;
         int minDistance = Integer.MAX_VALUE;
 
         for (Map.Entry<Class<?>, T> entry : workerClasses.entrySet()) {
             Class<?> clz = entry.getKey();
-            if (clz == c) {
+            if (clz == clazz) {
                 return entry.getValue();
             }
-            int distance = ClassUtilities.computeInheritanceDistance(c, clz);
+            int distance = ClassUtilities.computeInheritanceDistance(clazz, clz);
             if (distance != -1 && distance < minDistance) {
                 minDistance = distance;
-                closestWriter = entry.getValue();
+                closest = entry.getValue();
             }
         }
-        return closestWriter;
-    }
-    
-    /**
-     * Load the list of classes that are intended to be treated as non-referenceable, immutable classes.
-     *
-     * @return {@code Set<Class < ?>>} which is the loaded from resource/nonRefs.txt and verified to exist in JVM.
-     */
-    public static Set<Class<?>> loadNonRefs() {
-        final Set<String> set = loadSetDefinition("config/nonRefs.txt");
-        final ClassLoader classLoader = WriteOptions.class.getClassLoader();
-
-        final Set<Class<?>> result = new HashSet<>();
-
-        for (String className : set) {
-            Class<?> loadedClass = ClassUtilities.forName(className, classLoader);
-
-            if (loadedClass != null) {
-                result.add(loadedClass);
-            } else {
-                throw new JsonIoException("Class: " + className + " is undefined.");
-            }
-        }
-
-        return result;
+        return closest;
     }
 }

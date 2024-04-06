@@ -67,8 +67,8 @@ public class WriteOptionsBuilder {
         BASE_ALIAS_MAPPINGS.putAll(MetaUtils.loadMapDefinition("config/aliases.txt"));
         BASE_WRITERS.putAll(loadWriters());
         BASE_NON_REFS.addAll(loadNonRefs());
-        BASE_EXCLUDED_FIELD_NAMES.putAll(MetaUtils.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
-        BASE_NONSTANDARD_ACCESSORS.putAll(MetaUtils.loadNonStandardMethodNames("config/nonStandardAccessors.txt"));
+        BASE_EXCLUDED_FIELD_NAMES.putAll(ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt"));
+        BASE_NONSTANDARD_ACCESSORS.putAll(ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardAccessors.txt"));
         // If the lists below become large, then break these out into resource files like we've done for the ones above.
         BASE_FIELD_FILTERS.put("static", new StaticFieldFilter());
         BASE_FIELD_FILTERS.put("enum", new EnumFieldFilter());
