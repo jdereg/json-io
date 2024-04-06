@@ -67,26 +67,16 @@ public class WriteOptionsBuilder {
         loadBaseWriters();
         loadBaseNonRefs();
         loadBaseExcludedFields();
-        BASE_NONSTANDARD_ACCESSORS.putAll(ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardAccessors.txt"));
-        // If the lists below become large, then break these out into resource files like we've done for the ones above.
-        BASE_FIELD_FILTERS.put("static", new StaticFieldFilter());
-        BASE_FIELD_FILTERS.put("enum", new EnumFieldFilter());
-        BASE_METHOD_FILTERS.put("default", new DefaultMethodFilter());
-        BASE_ACCESSOR_FACTORIES.put("get", new GetMethodAccessorFactory());
-        BASE_ACCESSOR_FACTORIES.put("is", new IsMethodAccessorFactory());
-    }
+        loadBaseNonStandardAccessors();
 
-    private static void loadBaseExcludedFields() {
-        Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt");
-        for (Map.Entry<Class<?>, Set<String>> classSetEntry : allExcludedFields.entrySet()) {
-            Class<?> clazz = classSetEntry.getKey();
-            Set<String> excludedFields = classSetEntry.getValue();
-            for (String fieldName : excludedFields) {
-                addPermanentExcludedField(clazz, fieldName);
-            }
-        }
+        // If the lists below become large, then break these out into load* APIs like we've done for the ones above.
+        addPermanentFieldFilter("static", new StaticFieldFilter());
+        addPermanentFieldFilter("enum", new EnumFieldFilter());
+        addPermanentMethodFilter("default", new DefaultMethodFilter());
+        addPermanentAccessorFactory("get", new GetMethodAccessorFactory());
+        addPermanentAccessorFactory("is", new IsMethodAccessorFactory());
     }
-
+    
     /**
      * Start with default options
      */
@@ -233,6 +223,20 @@ public class WriteOptionsBuilder {
      */
     public static void addPermanentNamedMethodFilter(String name, Class<?> clazz, String methodName) {
         BASE_METHOD_FILTERS.put(name, new NamedMethodFilter(clazz, methodName));
+    }
+
+    /**
+     * Add an AccessorFactory that is JVM lifecycle scoped.  All WriteOptions instances will contain this AccessorFactory.
+     * It is the job of an AccessorFactory to provide a possible method name for a particular field. json-io ships with
+     * a GetMethodAccessorFactory and an IsMethodAccessFactory.  These produce a possible method name for a given field.
+     * When a field on a Java class is being accessed (read), and it cannot be obtained directly, then all AccessoryFactory
+     * instances will be consulted until an API can be used to read the field.
+     * @param name String name of AccessorFactory.  Each factory should have it's own unique name. This will allow these
+     *             to be defined in a file, later if needed.
+     * @param factory AccessorFactory subclass.
+     */
+    public static void addPermanentAccessorFactory(String name, AccessorFactory factory) {
+        BASE_ACCESSOR_FACTORIES.put(name, factory);
     }
 
     /**
@@ -1158,6 +1162,28 @@ public class WriteOptionsBuilder {
                 System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
             } else {
                 addPermanentAlias(clazz, alias);
+            }
+        }
+    }
+    
+    private static void loadBaseExcludedFields() {
+        Map<Class<?>, Set<String>> allExcludedFields = ReadOptionsBuilder.loadClassToSetOfStrings("config/excludedFieldNames.txt");
+        for (Map.Entry<Class<?>, Set<String>> entry : allExcludedFields.entrySet()) {
+            Class<?> clazz = entry.getKey();
+            Set<String> excludedFields = entry.getValue();
+            for (String fieldName : excludedFields) {
+                addPermanentExcludedField(clazz, fieldName);
+            }
+        }
+    }
+    
+    private static void loadBaseNonStandardAccessors() {
+        Map<Class<?>, Map<String, String>> nonStandardAccessorMap = ReadOptionsBuilder.loadClassToFieldAliasNameMapping("config/nonStandardAccessors.txt");
+        for (Map.Entry<Class<?>, Map<String, String>> entry : nonStandardAccessorMap.entrySet()) {
+            Class<?> clazz = entry.getKey();
+            Map<String, String> pairingsMap = entry.getValue();
+            for (Map.Entry<String, String> fieldToAltName : pairingsMap.entrySet()) {
+                addPermanentNonStandardAccessor(clazz, fieldToAltName.getKey(), fieldToAltName.getValue());
             }
         }
     }
