@@ -61,10 +61,12 @@ ___
 >- [ ] **Packaging**: com.cedarsoftware.util.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format)
 >- [ ] **API**
->  - Static methods on `JsonReader` and `JsonWriter`
->  - Configuration options passed via `Map` with constants defined on `JsonReader`/`JsonWriter`
->  - Use `JsonReader.JsonClassReader` for difficult classes (hard to instantiate & fill).
->  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+>  - Static methods: [JsonReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html).[jsonToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToJava-java.lang.String-java.util.Map-), [jsonToMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToMaps-java.lang.String-java.util.Map-), special: [jsonObjectsToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonObjectsToJava-com.cedarsoftware.util.io.JsonObject-)
+>  - Static methods: [JsonWriter](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html).[objectToJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#objectToJson-java.lang.Object-java.util.Map-)), [formatJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#formatJson-java.lang.String-java.util.Map-java.util.Map-)
+>  - Configuration via `Map` with constants defined in [JsonReader](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/constant-values.html#com.cedarsoftware.util.io.JsonReader.CLASSLOADER)/[JsonWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/constant-values.html#com.cedarsoftware.util.io.JsonWriter.CLASSLOADER).
+>  - Use [JsonReader.JsonClassReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.JsonClassReader.html) or [JsonReader.JsonClassReaderEx](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.JsonClassReaderEx.html) for customer reader
+>  - Use [JsonReader.assignInstantiator()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#assignInstantiator-java.lang.Class-com.cedarsoftware.util.io.JsonReader.Factory-) when `json-io` cannot construct a particular class
+>  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.JsonClassWriter.html) or [JsonWriter.JsonClassWriterEx](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.JsonClassWriterEx.html) to customize particular class output JSON
 >- [ ] Updates will be 4.14.4, 4.14.5, ...
 
 Featured on [json.org](http://json.org).
