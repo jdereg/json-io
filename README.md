@@ -35,7 +35,7 @@ ___
 
 ## Releases
 >#### 5.0.0 (future)
->- [ ] **Maintained**: fully
+>- [ ] **Maintained**: Fully
 >- [ ] **Packaging**: com.cedarsoftware.io
 >- [ ] **Java**: JDK17+ (Class file 61 format, will include module-info.java)
 >- [ ] **API**
@@ -46,7 +46,7 @@ ___
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
 >#### 4.20.x (current)
 >- [ ] **Version**: 4.20.0
->- [ ] **Maintained**: fully
+>- [ ] **Maintained**: Fully
 >- [ ] **Packaging**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.java)
 >- [ ] **API**
@@ -57,7 +57,7 @@ ___
 >- [ ] Updates will be 4.21.0, 4.22.0, ...
 >#### 4.14.x (supported)
 >- [ ] **Version**: 4.14.3
->- [ ] **Maintained**: bug fixes, CVE's
+>- [ ] **Maintained**: Bug fixes, CVE's
 >- [ ] **Packaging**: com.cedarsoftware.util.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format)
 >- [ ] **API**
