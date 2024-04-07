@@ -47,7 +47,7 @@ import static com.cedarsoftware.io.JsonObject.KEYS;
  * limitations under the License.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Resolver implements ReaderContext {
+public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
@@ -135,7 +135,7 @@ public abstract class Resolver implements ReaderContext {
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
+    public <T> T createJavaGraphFromJsonObjectGraph(JsonObject rootObj, Class<T> root) {
         if (rootObj == null) {
             return null;
         }
@@ -159,7 +159,7 @@ public abstract class Resolver implements ReaderContext {
 
     /**
      * Walk a JsonObject (Map of String keys to values) and return the
-     * Java object equivalent filled in as best as possible (everything
+     * Java object equivalent filled in as good as possible (everything
      * except unresolved reference fields or unresolved array/collection elements).
      *
      * @param root JsonObject reference to a Map-of-Maps representation of the JSON
@@ -168,15 +168,17 @@ public abstract class Resolver implements ReaderContext {
      * of Maps representation (JsonObject root).
      */
     public <T> T traverseJsonObjectGraph(final JsonObject root) {
-        if (root.isFinished) {
-            return (T) root.getTarget();
-        }
-
         stack.addFirst(root);
 
         while (!stack.isEmpty()) {
             final JsonObject jsonObj = stack.removeFirst();
-            if (jsonObj.isFinished || visited.containsKey(jsonObj)) {
+
+            if (jsonObj.isFinished) {
+                visited.put(jsonObj, null);
+                continue;
+            }
+            if (visited.containsKey(jsonObj)) {
+                jsonObj.setFinished();
                 continue;
             }
             visited.put(jsonObj, null);
@@ -185,7 +187,7 @@ public abstract class Resolver implements ReaderContext {
         return (T) root.getTarget();
     }
 
-    public void copyJsonValuesToJavaTarget(JsonObject jsonObj) {
+    public <T> T copyJsonValuesToJavaTarget(JsonObject jsonObj) {
         if (jsonObj.isArray()) {
             traverseArray(stack, jsonObj);
         } else if (jsonObj.isCollection()) {
@@ -200,7 +202,10 @@ public abstract class Resolver implements ReaderContext {
                 traverseFields(stack, jsonObj);
             }
         }
+        return (T) jsonObj.getTarget();
     }
+
+    public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj);
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
 
@@ -315,31 +320,25 @@ public abstract class Resolver implements ReaderContext {
         // Coerce class first
         Object target = jsonObj.getTarget();
         if (target != null) {
-            // TODO: The way this is reached, is always from a traverse* method.  Meaning, once we remove the
-            // TODO: traverse at the end of parsing, we will not need this "if" check here.
             return target;
         }
         Class targetType = jsonObj.getJavaType();
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
-
-        if (targetType == null) {
-            System.out.println("targetType = " + targetType);
-        }
-
+        
         // Does a built-in conversion exist?
         if (jsonObj.hasValue() && jsonObj.getValue() != null) {
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
-                Object value = this.getConverter().convert(jsonObj.getValue(), targetType);
+                Object value = getConverter().convert(jsonObj.getValue(), targetType);
                 return jsonObj.setFinishedTarget(value, true);
             }
             //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
             //  TODO: I'd like to have all types that have mpa conversion supported here, but we have an issue with refs
             //  TODO: going to the converter and I'm still thinking of a way to handle that.
-        } else if (targetType != null && MetaUtils.isLogicalPrimitive(targetType) && this.getConverter().isConversionSupportedFor(Map.class, targetType)) {
+        } else if (targetType != null && MetaUtils.isLogicalPrimitive(targetType) && getConverter().isConversionSupportedFor(Map.class, targetType)) {
             Object source = resolveRefs(jsonObj);
-            Object value = this.getConverter().convert(source, targetType);
+            Object value = getConverter().convert(source, targetType);
             return jsonObj.setFinishedTarget(value, true);
         }
 

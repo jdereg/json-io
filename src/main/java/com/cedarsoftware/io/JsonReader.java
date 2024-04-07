@@ -112,7 +112,7 @@ public class JsonReader implements Closeable
 
                 if (entry.getValue() instanceof JsonObject) {
                     JsonObject sub = (JsonObject) entry.getValue();
-                    Object value = resolver.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
+                    Object value = resolver.createJavaGraphFromJsonObjectGraph(sub, sub.getJavaType());
 
                     if (value != null && sub.getJavaType() != null) {
                         arguments.add(value);
@@ -231,15 +231,15 @@ public class JsonReader implements Closeable
         T graph;
 
         if (returnValue instanceof JsonObject) {        // JSON {}
-            graph = convertJsonValueToJava((JsonObject) returnValue, rootType);
+            graph = convertJsonRootToJava((JsonObject) returnValue, rootType);
         } else if (returnValue instanceof Object[]) {  // JSON []
             rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
             rootObj.put(ITEMS, returnValue);
-            graph = convertJsonValueToJava(rootObj, rootType);
+            graph = convertJsonRootToJava(rootObj, rootType);
         } else {                                        // JSON Primitive (String, Boolean, Double, Long)
             rootObj.setValue(returnValue);
-            graph = convertJsonValueToJava(rootObj, rootType);
+            graph = convertJsonRootToJava(rootObj, rootType);
             if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null) {
                 graph = (T)((JsonObject)graph).getValue();
             }
@@ -267,12 +267,12 @@ public class JsonReader implements Closeable
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    protected <T> T convertJsonValueToJava(JsonObject rootObj, Class<T> root) {
+    protected <T> T convertJsonRootToJava(JsonObject rootObj, Class<T> root) {
         try {
             if (root == null) {
                 root = rootObj.getJavaType() == null ? (Class<T>)Object.class : (Class<T>)rootObj.getJavaType();
             }
-            return resolver.reentrantConvertJsonValueToJava(rootObj, root);
+            return resolver.createJavaGraphFromJsonObjectGraph(rootObj, root);
         } catch (Exception e) {
             if (readOptions.isCloseStream()) {
                 MetaUtils.safelyIgnoreException(this::close);

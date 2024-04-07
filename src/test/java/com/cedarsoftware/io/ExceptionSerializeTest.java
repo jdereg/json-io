@@ -70,7 +70,7 @@ class ExceptionSerializeTest
             JsonObject jObjCause = (JsonObject) jObj.get("cause");
             List<Object> arguments = new ArrayList<>();
 
-            Throwable cause = resolver.reentrantConvertJsonValueToJava(jObjCause, Throwable.class);
+            Throwable cause = resolver.createJavaGraphFromJsonObjectGraph(jObjCause, Throwable.class);
 
             if (cause != null) {
                 arguments.add(cause);

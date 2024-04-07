@@ -211,7 +211,7 @@ public class JsonIo {
             readOptions = new ReadOptionsBuilder(readOptions).returnAsJavaObjects().build();
         }
         JsonReader reader = new JsonReader(readOptions);
-        return reader.convertJsonValueToJava(jsonObject, rootType);
+        return reader.convertJsonRootToJava(jsonObject, rootType);
     }
 
     /**
