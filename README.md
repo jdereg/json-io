@@ -31,12 +31,46 @@ ___
 >#### [Usage](/user-guide.md)
 >#### [WriteOptions reference](/user-guide-writeOptions.md)
 >#### [ReadOptions reference](/user-guide-readOptions.md)
+>#### [Revision History](/changelog.md)
 
-For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
+## Releases
+>#### 5.0.0 (future)
+>- [ ] **Maintained**: fully
+>- [ ] **Packaging**: com.cedarsoftware.io
+>- [ ] **Java**: JDK17+ (Class file 61 format, will include module-info.java)
+>- [ ] **API**
+   >  - Static methods on `JsonIo` ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
+>  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
+>  - Use `JsonReader.ClassFactory` for difficult classes (hard to instantiate & fill).
+>  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+>- [ ] Updates will be 5.1.0, 5.2.0, ...
+>#### 4.20.x (current)
+>- [ ] **Version**: 4.20.0
+>- [ ] **Maintained**: fully
+>- [ ] **Packaging**: com.cedarsoftware.io
+>- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.java)
+>- [ ] **API**
+>  - Static methods on `JsonIo` ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
+>  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
+>  - Use `JsonReader.ClassFactory` (not `JsonReader.JsonClassReader`) for difficult classes (hard to instantiate & fill).
+>  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+>- [ ] Updates will be 4.21.0, 4.22.0, ...
+>#### 4.14.x (supported)
+>- [ ] **Version**: 4.14.3
+>- [ ] **Maintained**: bug fixes, CVE's
+>- [ ] **Packaging**: com.cedarsoftware.util.io
+>- [ ] **Java**: JDK1.8+ (Class file 52 format)
+>- [ ] **API**
+>  - Static methods on `JsonReader` and `JsonWriter`
+>  - Configuration options passed via `Map` with constants defined on `JsonReader`/`JsonWriter`
+>  - Use `JsonReader.JsonClassReader` for difficult classes (hard to instantiate & fill).
+>  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+>- [ ] Updates will be 4.14.4, 4.14.5, ...
 
 Featured on [json.org](http://json.org).
 
-[Revision History](/changelog.md)
+For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
+
 ___
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
