@@ -4,7 +4,7 @@ import java.util.Map;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -32,32 +32,32 @@ public class ConvertableFactory<T> implements JsonReader.ClassFactory {
     }
 
     @Override
-    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+    public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         if (jObj.hasValue()) {
             // TODO: surprised we are seeing any entries come through here since we check these in the resolver
             // TODO:  turns out this was factory tests and invalid conversions.
             // TODO:  probably need to leave for invalid conversions (or check for invalid and throw our own exception).
-            Object converted = context.getConverter().convert(jObj.getValue(), getType());
+            Object converted = resolver.getConverter().convert(jObj.getValue(), getType());
             return (T) jObj.setFinishedTarget(converted, true);
         }
 
-        resolveReferences(context, jObj);
+        resolveReferences(resolver, jObj);
 
         Class<?> javaType = jObj.getJavaType();
 
         if (javaType == null) {
             javaType = getType();
         }
-        Object converted = context.getConverter().convert(jObj, javaType);
+        Object converted = resolver.getConverter().convert(jObj, javaType);
         return (T) jObj.setFinishedTarget(converted, true);
     }
 
-    private void resolveReferences(ReaderContext context, JsonObject jObj) {
+    private void resolveReferences(Resolver resolver, JsonObject jObj) {
         for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
             if (entry.getValue() instanceof JsonObject) {
                 JsonObject child = (JsonObject) entry.getValue();
                 if (child.isReference()) {
-                    entry.setValue(context.getReferences().get(child));
+                    entry.setValue(resolver.getReferences().get(child));
                 }
             }
         }

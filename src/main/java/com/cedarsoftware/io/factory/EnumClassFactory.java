@@ -6,7 +6,7 @@ import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.MetaUtils;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author Kenny Partlow (kpartlow@gmail.com)
@@ -27,7 +27,7 @@ import com.cedarsoftware.io.ReaderContext;
  */
 public class EnumClassFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
 
         String name = getEnumName(jObj);
         Optional<Class<?>> cls = MetaUtils.getClassIfEnum(c);

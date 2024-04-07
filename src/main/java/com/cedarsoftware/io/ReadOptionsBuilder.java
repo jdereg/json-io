@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -21,7 +20,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import com.cedarsoftware.io.factory.ArrayFactory;
 import com.cedarsoftware.io.factory.ConvertableFactory;
@@ -1095,18 +1093,12 @@ public class ReadOptionsBuilder {
             }
 
             Set<String> resultSet = ConcurrentHashMap.newKeySet();
-            resultSet.addAll(commaSeparatedStringToSet(entry.getValue()));
+            resultSet.addAll(MetaUtils.commaSeparatedStringToSet(entry.getValue()));
             builtMap.put(clazz, resultSet);
         }
         return builtMap;
     }
-
-    static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
-        return Arrays.stream(commaSeparatedString.split(","))
-                .map(String::trim)
-                .collect(Collectors.toSet());
-    }
-
+    
     static Map<Class<?>, Map<String, String>> loadClassToFieldAliasNameMapping(String fileName) {
         Map<String, String> map = MetaUtils.loadMapDefinition(fileName);
         Map<Class<?>, Map<String, String>> nonStandardMapping = new ConcurrentHashMap<>();
@@ -1122,7 +1114,7 @@ public class ReadOptionsBuilder {
             }
 
             Map<String, String> mapping = nonStandardMapping.computeIfAbsent(clazz, c -> new ConcurrentHashMap<>());
-            Set<String> pairs = commaSeparatedStringToSet(mappings);
+            Set<String> pairs = MetaUtils.commaSeparatedStringToSet(mappings);
             for (String pair : pairs) {
                 String[] fieldAlias = pair.split(":");
                 mapping.put(fieldAlias[0], fieldAlias[1]);

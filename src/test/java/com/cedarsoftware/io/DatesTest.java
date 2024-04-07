@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.Map;
 
 import com.cedarsoftware.util.Converter;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -51,14 +50,7 @@ class DatesTest
         assertEquals(exp.get(Calendar.MONTH), act.get(Calendar.MONTH));
         assertEquals(exp.get(Calendar.DAY_OF_MONTH), act.get(Calendar.DAY_OF_MONTH));
     }
-
-    private ReaderContext context;
-
-    @BeforeEach
-    public void beforeEach() {
-        this.context = new JsonReader(new ReadOptionsBuilder().build());
-    }
-
+    
     @Test
     public void testAssignDateFromEmptyString()
     {

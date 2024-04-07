@@ -11,7 +11,7 @@ import java.util.TreeSet;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * Use to create new instances of collection interfaces (needed for empty collections)
@@ -19,7 +19,7 @@ import com.cedarsoftware.io.ReaderContext;
 @Deprecated // Not really, using as marker to indicate it is not yet LOADING, only creating.
 public class CollectionFactory implements JsonReader.ClassFactory {
     @Override
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
     {
         if (List.class.isAssignableFrom(c))
         {

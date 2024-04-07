@@ -4,7 +4,7 @@ import java.lang.reflect.Array;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -31,7 +31,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
         this.type = c;
     }
 
-    public T newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+    public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         Object[] items = jObj.getArray();
 
         if (items == null) {
@@ -60,10 +60,10 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
                     if (type == null) {
                         type = componentType;
                     }
-                    val = context.getConverter().convert(val, type);
+                    val = resolver.getConverter().convert(val, type);
                     
                 } else {
-                    val = context.getConverter().convert(val, componentType);
+                    val = resolver.getConverter().convert(val, componentType);
                 }
                 Array.set(array, i, val);
             }

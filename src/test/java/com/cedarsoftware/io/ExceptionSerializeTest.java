@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.cedarsoftware.io.factory.ThrowableFactory;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.io.JsonWriter.writeBasicString;
@@ -61,21 +62,21 @@ class ExceptionSerializeTest
     }
 
 
-    public class MyExceptionFactory extends ThrowableFactory
+    public static class MyExceptionFactory extends ThrowableFactory
     {
-        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
         {
             String msg = (String) jObj.get("detailMessage");
             JsonObject jObjCause = (JsonObject) jObj.get("cause");
             List<Object> arguments = new ArrayList<>();
 
-            Throwable cause = context.reentrantConvertJsonValueToJava(jObjCause, Throwable.class);
+            Throwable cause = resolver.reentrantConvertJsonValueToJava(jObjCause, Throwable.class);
 
             if (cause != null) {
                 arguments.add(cause);
             }
 
-            gatherRemainingValues(context, jObj, arguments, MetaUtils.setOf("detailMessage", "cause"));
+            gatherRemainingValues(resolver, jObj, arguments, MetaUtils.setOf("detailMessage", "cause"));
 
             MyException myEx = (MyException) createException(msg, cause);
             Long rn = (Long) jObj.get("recordNumber");
@@ -98,7 +99,7 @@ class ExceptionSerializeTest
          * Only serialize the 'detailMessage' and 'cause' field.  Serialize the cause as a String.
          * Do not write the stackTrace lines out.
          */
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {
             MyException t = (MyException) obj;
             output.write("\"detailMessage\":");
@@ -112,7 +113,7 @@ class ExceptionSerializeTest
             output.write(String.valueOf(t.recordNumber));
         }
 
-        public boolean hasPrimitiveForm() { return false; }
+        public boolean hasPrimitiveForm(WriterContext writerContext) { return false; }
     }
 
     @Test
@@ -174,18 +175,18 @@ class ExceptionSerializeTest
 
         // stacktrace is built when exception is created,
         // will not match the original exception because we
-        // are filterign these excweptions
+        // are filtering these exceptions
         assertThat(t2.getStackTrace())
                 .isNotNull()
                 .isNotEqualTo(t1.getStackTrace());
     }
 
-    /**
+    @Disabled
     @Test
     void testExceptionWithThrowableConstructor_andStackTracesIsNotFiltered() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
-    String json = TestUtil.toJson(t1, new WriteOptionsBuilder().replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
+        String json = TestUtil.toJson(t1, new WriteOptionsBuilder().addExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions")).build());
         Throwable t2 = TestUtil.toObjects(json, null);
 
         assertThat(json).contains("stackTrace");
@@ -209,8 +210,8 @@ class ExceptionSerializeTest
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
 
     String json = TestUtil.toJson(t1, new WriteOptionsBuilder()
-                .replaceExcludedFields(ExceptionWithThrowableConstructor.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
-                .replaceExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
+                .addExcludedFields(ExceptionWithThrowableConstructor.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions,stackTrace"))
+                .addExcludedFields(Throwable.class, MetaUtils.commaSeparatedStringToSet("backtrace,depth,suppressedExceptions"))
                 .build());
 
         Throwable t2 = TestUtil.toObjects(json, null);
@@ -231,7 +232,7 @@ class ExceptionSerializeTest
     @Test
     void testExceptionWithThrowableConstructor_withNoStackTraces() {
         ExceptionWithThrowableConstructor t1 = new ExceptionWithThrowableConstructor(new ExceptionWithStringConstructor("doo"));
-    WriteOptions options = new WriteOptionsBuilder().addFieldFilter(Throwable.class, "stackTrace").build();
+        WriteOptions options = new WriteOptionsBuilder().addExcludedField(Throwable.class, "stackTrace").build();
 
         String json = TestUtil.toJson(t1, options);
         Throwable t2 = TestUtil.toObjects(json, null);
@@ -249,8 +250,7 @@ class ExceptionSerializeTest
 
         assertThat(t2.getStackTrace()).isNotEqualTo(t1.getStackTrace());
         assertThat(t2.getCause().getStackTrace()).isNotEqualTo(t1.getCause().getStackTrace());
-    }
-     */
+    }     
 
     @Test
     void testIllegalArgumentException_whenRethrown_usingThrowableConstructor() {

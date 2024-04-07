@@ -211,11 +211,6 @@ class JsonParser {
         }
 
         --curParseDepth;
-
-        if (false) {
-            // TODO: Solve for why 'c' is null when I uncomment the below.
-            Object javaObject = resolver.createInstance(jObj);
-        }
         return jObj;
     }
 

@@ -105,33 +105,16 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
         default void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
-            this.write(o, showType, output);
         }
-
+        
         /**
-         * When write() is called, it is expected that subclasses will write the appropriate JSON
-         * to the passed in Writer.
-         * @param o Object to be written in JSON format.
-         * @param showType boolean indicating whether to show @type.
-         * @param output Writer destination to where the actual JSON is written.
-         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
-         */
-        default void write(Object o, boolean showType, Writer output) throws IOException {
-        }
-
-        /**
+         * @param context  WriterContext to get writeOptions and other write access
          * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
          * most custom writers will not have a primitive form.
          */
         default boolean hasPrimitiveForm(WriterContext context) {
-            return hasPrimitiveForm();
+            return false;
         }
-
-        /**
-         * @return boolean true if the class being written has a primitive (non-object) form.  Default is false since
-         * most custom writers will not have a primitive form.
-         */
-        default boolean hasPrimitiveForm() { return false; }
 
         /**
          * This default implementation will call the more basic writePrimitiveForm that does not take arguments.  No need
@@ -142,18 +125,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
          * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
          */
         default void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException {
-            this.writePrimitiveForm(o, output);
         }
-
-        /**
-         * This method will be called to write the item in primitive form (if the response to hasPrimitiveForm()
-         * was true).  Override this method if you have a primitive form and need to access the arguments that kicked
-         * off the JsonWriter.
-         * @param o Object to be written
-         * @param output Writer destination to where the actual JSON is written.
-         * @throws IOException if thrown by the writer.  Will be caught at a higher level and wrapped in JsonIoException.
-         */
-        default void writePrimitiveForm(Object o, Writer output) throws IOException {}
     }
 
     /**

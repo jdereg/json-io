@@ -88,20 +88,15 @@ class CustomClassHandlerTest
     public static class WeirdDateWriter extends Writers.PrimitiveTypeWriter
     {
 
-        public void write(Object o, boolean showType, Writer out) throws IOException
+        public void write(Object o, boolean showType, Writer out, WriterContext writerContext) throws IOException
         {
             if (showType) {
                 out.write("\"stuff\":");
             }
-            writePrimitiveForm(o, out);
+            writePrimitiveForm(o, out, null);
         }
 
-        public boolean hasPrimitiveForm()
-        {
-            return true;
-        }
-
-        public void writePrimitiveForm(Object o, Writer out) throws IOException
+        public void writePrimitiveForm(Object o, Writer out, WriterContext writerContext) throws IOException
         {
             String value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format((Date) o);
             out.write("\"");

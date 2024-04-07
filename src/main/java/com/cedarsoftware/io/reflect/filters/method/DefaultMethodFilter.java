@@ -26,7 +26,7 @@ import com.cedarsoftware.util.ReflectionUtils;
  */
 public class DefaultMethodFilter implements MethodFilter {
     public boolean filter(Class<?> clazz, String methodName) {
-        Method m = ReflectionUtils.getMethod(clazz, methodName, null);
+        Method m = ReflectionUtils.getMethod(clazz, methodName);
         if (m == null) {
             return false;
         }

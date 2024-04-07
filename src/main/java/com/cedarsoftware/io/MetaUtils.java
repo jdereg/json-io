@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
@@ -740,7 +742,13 @@ public class MetaUtils
                 c.isEnum() ||
                 c.equals(Class.class);
     }
-    
+
+    static Set<String> commaSeparatedStringToSet(String commaSeparatedString) {
+        return Arrays.stream(commaSeparatedString.split(","))
+                .map(String::trim)
+                .collect(Collectors.toSet());
+    }
+
     /**
      * Load in a Map-style properties file. Expects key and value to be separated by a = (whitespace ignored).
      * Ignores lines beginning with a # and it also ignores blank lines.

@@ -8,7 +8,7 @@ import java.util.Deque;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.MetaUtils;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -32,7 +32,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
 
     public static class RecordReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, ReaderContext context)
+        public Object read(Object o, Deque<JsonObject> stack, Resolver resolver)
         {
             try {
                 JsonObject jsonObj = (JsonObject) o;
@@ -56,7 +56,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     parameterValueJsonObj.setValue(jsonObj.get(parameterName));
 
                     if (parameterValueJsonObj.isLogicalPrimitive()) {
-                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue(context.getConverter(), context.getReadOptions().getClassLoader()));
+                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue(resolver.getConverter(), resolver.getReadOptions().getClassLoader()));
                     }  else {
                         lParameterValues.add(parameterValueJsonObj.getValue());
                     }

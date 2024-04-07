@@ -2,7 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -27,7 +27,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
         super(char[].class);
     }
 
-    public char[] newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+    public char[] newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         Object[] items = jObj.getArray();
         Object value;
         

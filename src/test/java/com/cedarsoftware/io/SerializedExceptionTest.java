@@ -38,7 +38,7 @@ public class SerializedExceptionTest
 
     public static class MyExceptionWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object obj, boolean showType, Writer output) throws IOException
+        public void write(Object obj, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {
             MyException e = (MyException) obj;
             output.write("\"name\":\"");
@@ -51,7 +51,7 @@ public class SerializedExceptionTest
 
     public static class MyExceptionCreator implements JsonReader.ClassFactory
     {
-        public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+        public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
         {
             Map map = jObj;
             String name = (String) map.get("name");

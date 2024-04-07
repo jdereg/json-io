@@ -5,7 +5,7 @@ import java.lang.reflect.Constructor;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.MetaUtils;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -47,7 +47,7 @@ public class StackTraceElementFactory implements JsonReader.ClassFactory {
         constructor2 = MetaUtils.safelyIgnoreException(() -> StackTraceElement.class.getConstructor(String.class, String.class, String.class, String.class, String.class, String.class, int.class), null);
     }
 
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
         String declaringClass = (String) jObj.get(DECLARING_CLASS);
         String methodName = (String) jObj.get(METHOD_NAME);
         String fileName = (String) jObj.get(FILE_NAME);

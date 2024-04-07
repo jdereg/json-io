@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,8 @@ import static com.cedarsoftware.io.JsonObject.KEYS;
 public abstract class Resolver implements ReaderContext {
     private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
+    private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
+    private final Deque<JsonObject> stack = new ArrayDeque<>();
     final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
 
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
@@ -132,7 +135,6 @@ public abstract class Resolver implements ReaderContext {
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    @Override
     public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
         if (rootObj == null) {
             return null;
@@ -142,19 +144,17 @@ public abstract class Resolver implements ReaderContext {
             rootObj = this.getReferences().get(rootObj);
         }
 
-        T graph;
         if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
-            graph = (T) rootObj.getTarget();
+            return (T) rootObj.getTarget();
         } else {
             rootObj.setHintType(root);
             Object instance = rootObj.getTarget() == null ? createInstance(rootObj) : rootObj.getTarget();
             if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
-                graph = (T) instance;
+                return (T) instance;
             } else {
-                graph = convertJsonValuesToJava(rootObj);
+                return traverseJsonObjectGraph(rootObj);
             }
         }
-        return graph;
     }
 
     /**
@@ -167,37 +167,39 @@ public abstract class Resolver implements ReaderContext {
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    protected <T> T convertJsonValuesToJava(final JsonObject root) {
+    public <T> T traverseJsonObjectGraph(final JsonObject root) {
         if (root.isFinished) {
             return (T) root.getTarget();
         }
 
-        if (true) {
-            final Deque<JsonObject> stack = new ArrayDeque<>();
-            stack.addFirst(root);
+        stack.addFirst(root);
 
-            while (!stack.isEmpty()) {
-                final JsonObject jsonObj = stack.removeFirst();
-                if (jsonObj.isFinished) {
-                    continue;
-                }
-                if (jsonObj.isArray()) {
-                    traverseArray(stack, jsonObj);
-                } else if (jsonObj.isCollection()) {
-                    traverseCollection(stack, jsonObj);
-                } else if (jsonObj.isMap()) {
-                    traverseMap(stack, jsonObj);
-                } else {
-                    Object special;
-                    if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null) {
-                        jsonObj.setTarget(special);
-                    } else {
-                        traverseFields(stack, jsonObj);
-                    }
-                }
+        while (!stack.isEmpty()) {
+            final JsonObject jsonObj = stack.removeFirst();
+            if (jsonObj.isFinished || visited.containsKey(jsonObj)) {
+                continue;
             }
+            visited.put(jsonObj, null);
+            copyJsonValuesToJavaTarget(jsonObj);
         }
         return (T) root.getTarget();
+    }
+
+    public void copyJsonValuesToJavaTarget(JsonObject jsonObj) {
+        if (jsonObj.isArray()) {
+            traverseArray(stack, jsonObj);
+        } else if (jsonObj.isCollection()) {
+            traverseCollection(stack, jsonObj);
+        } else if (jsonObj.isMap()) {
+            traverseMap(stack, jsonObj);
+        } else {
+            Object special;
+            if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null) {
+                jsonObj.setTarget(special);
+            } else {
+                traverseFields(stack, jsonObj);
+            }
+        }
     }
 
     protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);

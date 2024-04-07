@@ -178,7 +178,7 @@ public class MetaUtilsTests {
     @ParameterizedTest
     @MethodSource("commaSeparatedStringArguments")
     void testCommaSeparatedStringToSet(String commaSeparatedString) {
-        Set<String> set = ReadOptionsBuilder.commaSeparatedStringToSet(commaSeparatedString);
+        Set<String> set = MetaUtils.commaSeparatedStringToSet(commaSeparatedString);
         assertThat(set).contains("foo", "bar", "qux", "quy");
     }
 

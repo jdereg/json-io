@@ -442,7 +442,7 @@ public class CustomWriterTest
     public static class CustomPersonReader implements JsonReader.JsonClassReader
     {
         @Override
-        public Object read(Object jOb, Deque<JsonObject> stack, ReaderContext context)
+        public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver)
         {
             JsonObject map = (JsonObject) jOb;
             Person p = new Person();
@@ -468,7 +468,7 @@ public class CustomWriterTest
 
     public static class BadCustomPWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {
             throw new RuntimeException("Bad custom writer");
         }

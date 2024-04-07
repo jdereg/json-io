@@ -41,7 +41,7 @@ public class SunMiscTest
         String workaroundString = TestUtil.toJson(array);
 
         ReadOptionsBuilder.addPermanentClassFactory(Dog.Shoe.class, new JsonReader.ClassFactory() {
-            public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+            public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
             {
                 return Dog.Shoe.construct();
             }

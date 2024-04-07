@@ -6,7 +6,7 @@ import java.util.List;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.MetaUtils;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
@@ -34,14 +34,14 @@ public class ThrowableFactory implements JsonReader.ClassFactory
     private static final String CAUSE = "cause";
     private static final String STACK_TRACE = "stackTrace";
 
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
     {
         List<Object> arguments = new ArrayList<>();
         String message = (String) jObj.get(DETAIL_MESSAGE);
         JsonObject jsonCause = (JsonObject) jObj.get(CAUSE);
         Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>)jsonCause.getJavaType();
         causeType = causeType == null ? Throwable.class : causeType;
-        Throwable cause = context.reentrantConvertJsonValueToJava(jsonCause, causeType);
+        Throwable cause = resolver.reentrantConvertJsonValueToJava(jsonCause, causeType);
 
         if (message != null) {
             arguments.add(message);
@@ -51,10 +51,10 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             arguments.add(cause);
         }
 
-        gatherRemainingValues(context, jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        gatherRemainingValues(resolver, jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
-        Throwable t = (Throwable) MetaUtils.newInstance(context.getConverter(), c, arguments);
+        Throwable t = (Throwable) MetaUtils.newInstance(resolver.getConverter(), c, arguments);
 
         if (t.getCause() == null && cause != null) {
             t.initCause(cause);
@@ -66,14 +66,13 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
-                elements[i] = stackTraceMap == null ? null : context.reentrantConvertJsonValueToJava(stackTraceMap, StackTraceElement.class);
+                elements[i] = stackTraceMap == null ? null : resolver.reentrantConvertJsonValueToJava(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }
         return t;
     }
 
-    @Override
     public boolean isObjectFinal()
     {
         return false;

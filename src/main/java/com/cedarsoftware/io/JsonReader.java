@@ -59,7 +59,7 @@ import static com.cedarsoftware.io.JsonObject.ITEMS;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class JsonReader implements Closeable, ReaderContext
+public class JsonReader implements Closeable
 {
     private final FastReader input;
     private final Resolver resolver;
@@ -79,32 +79,18 @@ public class JsonReader implements Closeable, ReaderContext
         /**
          * Implement this method to return a new instance of the passed in Class.  Use the passed
          * in JsonObject to supply values to the construction of the object.
-         * @param c Class of the object that needs to be created
-         * @param jObj JsonObject (if primitive type do jObj.getPrimitiveValue();
-         * @param context ReaderContext for creating objects an getting read options
-         * @return a new instance of C.  If you completely fill the new instance using
-         * the value(s) from object, and no further work is needed for construction, then
-         * override the isObjectFinal() method below and return true.
-         */
-        default Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context) {
-            return MetaUtils.newInstance(context.getConverter(), c, null);
-        }
-
-        /**
-         * Implement this method to return a new instance of the passed in Class.  Use the passed
-         * in JsonObject to supply values to the construction of the object.
          *
-         * @param c       Class of the object that needs to be created
-         * @param jObj    JsonObject (if primitive type do jObj.getPrimitiveValue();
+         * @param c        Class of the object that needs to be created
+         * @param jObj     JsonObject (if primitive type do jObj.getPrimitiveValue();
+         * @param resolver Resolve instance that has references to ID Map, Converter, ReadOptions
          * @return a new instance of C.  If you completely fill the new instance using
          * the value(s) from object, and no further work is needed for construction, then
          * override the isObjectFinal() method below and return true.
          */
-        default Object newInstance(Class<?> c, JsonObject jObj)
-        {
-            return MetaUtils.newInstance(null, c, null);  // can add constructor arg values (pull from jObj)
+        default Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+            return MetaUtils.newInstance(resolver.getConverter(), c, null);
         }
-
+        
         /**
          * @return true if this object is instantiated and completely filled using the contents
          * from the Object [a JsonObject or value].  In this case, no further processing
@@ -116,7 +102,7 @@ public class JsonReader implements Closeable, ReaderContext
             return false;
         }
 
-        default void gatherRemainingValues(ReaderContext context, JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
+        default void gatherRemainingValues(Resolver resolver, JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
             Convention.throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
@@ -126,7 +112,7 @@ public class JsonReader implements Closeable, ReaderContext
 
                 if (entry.getValue() instanceof JsonObject) {
                     JsonObject sub = (JsonObject) entry.getValue();
-                    Object value = context.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
+                    Object value = resolver.reentrantConvertJsonValueToJava(sub, sub.getJavaType());
 
                     if (value != null && sub.getJavaType() != null) {
                         arguments.add(value);
@@ -162,12 +148,12 @@ public class JsonReader implements Closeable, ReaderContext
     public interface JsonClassReader
     {
         /**
-         * @param jOb         Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack       Deque of objects that have been read (Map of Maps view).
-         * @param context  reader context to provide assistance reading the object
+         * @param jOb      Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param stack    Deque of objects that have been read (Map of Maps view).
+         * @param resolver
          * @return Java Object you wish to convert the passed in jOb into.
          */
-        default Object read(Object jOb, Deque<JsonObject> stack, ReaderContext context) {
+        default Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver) {
             // The toMap is expensive, but only if you do not override this default method....and the other
             // methods are soon to be deprecated.
             return this.read(jOb, stack);
@@ -181,11 +167,6 @@ public class JsonReader implements Closeable, ReaderContext
         default Object read(Object jOb, Deque<JsonObject> stack) {
             return null;
         }
-
-//        @Deprecated
-//        default Object read(Object jOb, Deque<JsonObject> stack, Map<String, Object> args) {
-//            return null;
-//        }
     }
 
     /**
@@ -237,115 +218,41 @@ public class JsonReader implements Closeable, ReaderContext
         T returnValue;
         try {
             returnValue = (T) parser.readValue(rootType);
-        }
-        catch (JsonIoException e) {
+            if (returnValue == null) {
+                return null;    // easy, done.
+            }
+        } catch (JsonIoException e) {
             throw e;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new JsonIoException("error parsing JSON value", e);
         }
 
-        if (returnValue == null) {
-            return null;
-        }
-
-        // One return to suit all cases: ReturnType.JSON_OBJECTS, ReturnType.JAVA_OBJECTS, .value()
-//        JsonObject returnObj = (JsonObject) returnValue;
-//        return (T) returnObj.getTarget();
-
-//        if (returnValue instanceof JsonObject)
-//        {
-//            if (readOptions.getReturnType() == ReturnType.JSON_VALUES)
-//            {
-//                return returnValue;
-//            }
-//            JsonObject jObj = (JsonObject) returnValue;
-//            if (jObj.getJavaType() == null)
-//            {
-//                return returnValue;
-//            }
-//        }
-
         JsonObject rootObj = new JsonObject();
-        if (rootType != null) {
-            rootObj.setHintType(rootType);
-        }
-        
         T graph;
-        if (returnValue instanceof Object[]) {
+
+        if (returnValue instanceof JsonObject) {        // JSON {}
+            graph = convertJsonValueToJava((JsonObject) returnValue, rootType);
+        } else if (returnValue instanceof Object[]) {  // JSON []
             rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
             rootObj.put(ITEMS, returnValue);
             graph = convertJsonValueToJava(rootObj, rootType);
-        } else {
-            if (returnValue instanceof JsonObject) {
-                graph = convertJsonValueToJava((JsonObject) returnValue, rootType);
-            } else {
-                rootObj.setValue(returnValue);
-                graph = convertJsonValueToJava(rootObj, rootType);
-                if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null) {
-                    graph = (T)((JsonObject)graph).getValue();
-                }
+        } else {                                        // JSON Primitive (String, Boolean, Double, Long)
+            rootObj.setValue(returnValue);
+            graph = convertJsonValueToJava(rootObj, rootType);
+            if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null) {
+                graph = (T)((JsonObject)graph).getValue();
             }
         }
-
-        // Allow a complete 'Map' return (Javascript style)
+        
+        // Allow a complete 'Map' return (Javascript style), but some of the items inside will be "cleaned up"
+        // and adjusted if a paired class was found - primitives will be converted to the right type, based on field
+        // or Array [] type, however, objects will be left as Maps.
         if (readOptions.isReturningJsonObjects()) {
             return returnValue;
         }
 
         return graph;
-    }
-
-    public Resolver getResolver() {
-        return resolver;
-    }
-
-    public ReadOptions getReadOptions() {
-        return readOptions;
-    }
-
-    public Converter getConverter() {
-        return converter;
-    }
-
-    /**
-     * @return ClassLoader to be used by Custom Writers
-     */
-    public ClassLoader getClassLoader()
-    {
-        return this.readOptions.getClassLoader();
-    }
-
-    @Override
-    public ReferenceTracker getReferences() {
-        return this.resolver.getReferences();
-    }
-
-    /**
-     * This method converts a rootObj Map, (which contains nested Maps
-     * and so forth representing a Java Object graph), to a Java
-     * object instance.  The rootObj map came from using the JsonReader
-     * to parse a JSON graph (using the API that puts the graph
-     * into Maps, not the typed representation).
-     * @param rootObj JsonObject instance that was the rootObj object from the
-     * @param root When you know the type you will be returning.  Can be null (effectively Map.class)
-     * JSON input that was parsed in an earlier call to JsonReader.
-     * @return a typed Java instance that was serialized into JSON.
-     */
-    public <T> T reentrantConvertJsonValueToJava(JsonObject rootObj, Class<T> root) {
-        return this.resolver.reentrantConvertJsonValueToJava(rootObj, root);
-    }
-
-    /**
-     * Walk the Java object fields and copy them from the JSON object to the Java object, performing
-     * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
-     * arrays, Collections, or Maps.
-     * @param stack   Stack (Deque) used for graph traversal.
-     * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
-     */
-    public void traverseFields(Deque<JsonObject> stack, JsonObject jsonObj) {
-        this.resolver.traverseFields(stack, jsonObj);
     }
     
     /**
@@ -365,7 +272,7 @@ public class JsonReader implements Closeable, ReaderContext
             if (root == null) {
                 root = rootObj.getJavaType() == null ? (Class<T>)Object.class : (Class<T>)rootObj.getJavaType();
             }
-            return reentrantConvertJsonValueToJava(rootObj, root);
+            return resolver.reentrantConvertJsonValueToJava(rootObj, root);
         } catch (Exception e) {
             if (readOptions.isCloseStream()) {
                 MetaUtils.safelyIgnoreException(this::close);

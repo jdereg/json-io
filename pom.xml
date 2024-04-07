@@ -123,13 +123,8 @@
                                             </requires>
                                             <exports>
                                                 com.cedarsoftware.io;
-                                                com.cedarsoftware.io.factory;
                                                 com.cedarsoftware.io.reflect;
                                                 com.cedarsoftware.io.reflect.filters;
-                                                com.cedarsoftware.io.reflect.filters.field;
-                                                com.cedarsoftware.io.reflect.filters.method;
-                                                com.cedarsoftware.io.reflect.factories;
-                                                com.cedarsoftware.io.writers;
                                             </exports>
                                         </moduleInfo>
                                     </module>
@@ -213,7 +208,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Export-Package>com.cedarsoftware.io</Export-Package>
+                        <Export-Package>com.cedarsoftware.io, com.cedarsoftware.io.reflect, com.cedarsoftware.io.reflect.filters</Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>

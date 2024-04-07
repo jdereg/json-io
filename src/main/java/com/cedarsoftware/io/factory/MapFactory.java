@@ -8,7 +8,7 @@ import java.util.TreeMap;
 import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.ReaderContext;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * Use to create new instances of Map interfaces (needed for empty Maps).  Used
@@ -18,13 +18,13 @@ import com.cedarsoftware.io.ReaderContext;
 public class MapFactory implements JsonReader.ClassFactory
 {
     /**
-     * @param c       Map interface that was requested for instantiation.
-     * @param jObj JsonObject
-     * @param context ReaderContext
+     * @param c        Map interface that was requested for instantiation.
+     * @param jObj     JsonObject
+     * @param resolver
      * @return a concrete Map type.
      */
     @Override
-    public Object newInstance(Class<?> c, JsonObject jObj, ReaderContext context)
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
     {
         if (SortedMap.class.isAssignableFrom(c))
         {

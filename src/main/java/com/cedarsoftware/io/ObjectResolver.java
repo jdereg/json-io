@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -99,7 +100,7 @@ public class ObjectResolver extends Resolver
                 assignField(stack, jsonObj, injector, rhs);
             } else if (getReadOptions().getMissingFieldHandler() != null) {
                 handleMissingField(stack, jsonObj, rhs, key);
-            }//else no handler so ignore.
+            } //else no handler so ignore.
         }
     }
 
@@ -121,25 +122,12 @@ public class ObjectResolver extends Resolver
                                final Injector injector, final Object rhs)
     {
         final Object target = jsonObj.getTarget();
-        final Class targetClass = target.getClass();
-        try
-        {
+        try {
             final Class fieldType = injector.getType();
-            if (rhs == null)
-            {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
-                if (fieldType.isPrimitive())
-                {
-                    if (isBasicWrapperType(targetClass))
-                    {
-                        jsonObj.setTarget(this.getConverter().convert("0", fieldType));
-                    }
-                    else
-                    {
-                        injector.inject(target, this.getConverter().convert("0", fieldType));
-                    }
-                }
-                else
-                {
+            if (rhs == null) {   // Logically clear field
+                if (fieldType.isPrimitive()) {
+                    injector.inject(target, getConverter().convert(null, fieldType));
+                } else {
                     injector.inject(target, null);
                 }
                 return;
@@ -149,44 +137,33 @@ public class ObjectResolver extends Resolver
             // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
             // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
             // exists).
-            if (rhs instanceof JsonObject)
-            {
-                if (injector.getGenericType() instanceof ParameterizedType)
-                {   // Only JsonObject instances could contain unmarked objects.
+            if (rhs instanceof JsonObject) {
+                if (injector.getGenericType() instanceof ParameterizedType) {   // Only JsonObject instances could contain unmarked objects.
                     markUntypedObjects(injector.getGenericType(), rhs, fieldType);
                 }
 
                 // Ensure 'type' field set on JsonObject
                 final JsonObject job = (JsonObject) rhs;
-                if (job.getJavaType() == null)
-                {
+                if (job.getJavaType() == null) {
                     job.setJavaType(fieldType);
                 }
             }
 
             Object special;
-            if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null)
-            {
+            if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null) {
                 injector.inject(target, special);
-            }
-            else if (rhs.getClass().isArray())
-            {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
+            } else if (rhs.getClass().isArray()) {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 final Object[] elements = (Object[]) rhs;
                 JsonObject jsonArray = new JsonObject();
                 if (char[].class == fieldType)
                 {   // Specially handle char[] because we are writing these
                     // out as UTF8 strings for compactness and speed.
-                    if (elements.length == 0)
-                    {
+                    if (elements.length == 0) {
                         injector.inject(target, new char[]{});
-                    }
-                    else
-                    {
+                    } else {
                         injector.inject(target, ((String) elements[0]).toCharArray());
                     }
-                }
-                else
-                {
+                } else {
                     jsonArray.put(ITEMS, elements);
                     jsonArray.setHintType(fieldType);
                     createInstance(jsonArray);
@@ -194,8 +171,7 @@ public class ObjectResolver extends Resolver
                     stack.addFirst(jsonArray);
                 }
             }
-            else if (rhs instanceof JsonObject)
-            {
+            else if (rhs instanceof JsonObject) {
                 final JsonObject jsRhs = (JsonObject) rhs;
                 final Long ref = jsRhs.getReferenceId();
 
@@ -203,31 +179,20 @@ public class ObjectResolver extends Resolver
                 {    // Correct field references
                     final JsonObject refObject = this.getReferences().get(ref);
 
-                    if (refObject.getTarget() != null)
-                    {
+                    if (refObject.getTarget() != null) {
                         injector.inject(target, refObject.getTarget());
-                    }
-                    else
-                    {
+                    } else {
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, injector.getName(), ref));
                     }
                 }
                 else
                 {    // Assign ObjectMap's to Object (or derived) fields
-                    jsRhs.setHintType(fieldType);
-                    Object fieldObject = createInstance(jsRhs);
+                    Object fieldObject = jsRhs.getTarget();
                     injector.inject(target, fieldObject);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
-                    if (!isNonRefClass)
-                    {
-                        // GOTCHA : if the field is an immutable collection,
-                        // "work instance", where one can accumulate items in (ArrayList)
-                        // and "final instance' (say MetaUtils.listOf() ) can _not_ be the same.
-                        // So, the later the assignment, the better.
-                        Object javaObj = convertJsonValuesToJava(jsRhs);
-                        if (javaObj != fieldObject) {
-                            injector.inject(target, javaObj);
-                        }
+                    if (!isNonRefClass) {
+                        // if Object is a reference-able class, it must be processed (pushed on the stack)
+                        stack.push(jsRhs);
                     }
                 }
             }
@@ -243,8 +208,7 @@ public class ObjectResolver extends Resolver
         }
         catch (Exception e)
         {
-            if (e instanceof JsonIoException)
-            {
+            if (e instanceof JsonIoException) {
                 throw e;
             }
 
@@ -306,7 +270,7 @@ public class ObjectResolver extends Resolver
                         // TODO: Check is finished here?
                         if (!isNonRefClass && !jObj.isFinished)
                         {
-                            stack.addFirst((JsonObject) rhs);
+                            stack.push((JsonObject) rhs);
                         }
                         storeMissingField(target, missingField, javaInstance);
                     } 
@@ -375,16 +339,11 @@ public class ObjectResolver extends Resolver
     {
         final String className = jsonObj.getJavaTypeName();
         final Object[] items = jsonObj.getArray();
-        if (items == null || items.length == 0)
-        {
-            if (className != null && className.startsWith("java.util.Immutable"))
-            {
-                if (className.contains("Set"))
-                {
+        if (ArrayUtilities.isEmpty(items)) {
+            if (className != null && className.startsWith("java.util.Immutable")) {
+                if (className.contains("Set")) {
                     jsonObj.setTarget(MetaUtils.setOf());
-                }
-                else if (className.contains("List"))
-                {
+                } else if (className.contains("List")) {
                     jsonObj.setTarget(MetaUtils.listOf());
                 }
             }
@@ -393,8 +352,7 @@ public class ObjectResolver extends Resolver
 
         Class mayEnumClass = null;
         String mayEnumClasName = (String)jsonObj.get("@enum");
-        if (mayEnumClasName != null)
-        {
+        if (mayEnumClasName != null) {
             mayEnumClass = ClassUtilities.forName(mayEnumClasName, classLoader);
         }
 
@@ -402,75 +360,54 @@ public class ObjectResolver extends Resolver
         final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
-
+        
         for (final Object element : items)
         {
             Object special;
-            if (element == null)
-            {
+            if (element == null) {
                 col.add(null);
-            }
-            else if ((special = readWithFactoryIfExists(element, null, stack)) != null)
-            {
+            } else if ((special = readWithFactoryIfExists(element, null, stack)) != null) {
                 col.add(special);
-            }
-            else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long)
-            {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
-                if (mayEnumClass == null)
-                    col.add(element);
-                else
-                    col.add(Enum.valueOf(mayEnumClass, (String)element));
-            }
-            else if (element.getClass().isArray())
-            {
+            } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
+                col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
+            } else if (element.getClass().isArray()) {
                 final JsonObject jObj = new JsonObject();
                 jObj.setHintType(Object.class);
                 jObj.put(ITEMS, element);
                 createInstance(jObj);
                 col.add(jObj.getTarget());
-                convertJsonValuesToJava(jObj);
-            }
-            else // if (element instanceof JsonObject)
-            {
+                stack.push(jObj);
+            } else { // if (element instanceof JsonObject)
                 final JsonObject jObj = (JsonObject) element;
                 final Long ref = jObj.getReferenceId();
 
-                if (ref != null)
-                {
+                if (ref != null) {
                     JsonObject refObject = this.getReferences().get(ref);
 
-                    if (refObject.getTarget() != null)
-                    {
+                    if (refObject.getTarget() != null) {
                         col.add(refObject.getTarget());
-                    }
-                    else
-                    {
+                    } else {
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
-                        if (isList)
-                        {   // Index-able collection, so set 'null' as element for now - will be patched in later.
+                        if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
                             col.add(null);
                         }
                     }
-                }
-                else
-                {
+                } else {
                     jObj.setHintType(Object.class);
                     createInstance(jObj);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
-                    if (!isNonRefClass)
-                    {
-                        convertJsonValuesToJava(jObj);
+                    if (!isNonRefClass) {
+                        copyJsonValuesToJavaTarget(jObj);
                     }
-                    
-                    if (!(col instanceof EnumSet))
-                    {   // EnumSet has already had it's items added to it.
+
+                    if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
                         col.add(jObj.getTarget());
                     }
                 }
             }
             idx++;
         }
-
+        
         reconcileCollection(jsonObj, col);
         jsonObj.remove(ITEMS);   // Reduce memory required during processing
     }
@@ -479,37 +416,26 @@ public class ObjectResolver extends Resolver
     {
         final String className = jsonObj.getJavaTypeName();
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        
-        if (!isImmutable)
-        {
+
+        if (!isImmutable) {
             return;
         }
-        if (col == null && jsonObj.getTarget() instanceof Collection)
-        {
+        if (col == null && jsonObj.getTarget() instanceof Collection) {
             col = (Collection) jsonObj.getTarget();
         }
-        if (col == null)
-        {
+        if (col == null) {
             return;
         }
 
-        if (className.contains("List"))
-        {
-            if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
-            {
+        if (className.contains("List")) {
+            if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject)) {
                 jsonObj.setTarget(MetaUtils.listOf(col.toArray()));
-            }
-            else
-            {
+            } else {
                 jsonObj.setTarget(col);
             }
-        }
-        else if (className.contains("Set"))
-        {
+        } else if (className.contains("Set")) {
             jsonObj.setTarget(MetaUtils.setOf(col.toArray()));
-        }
-        else
-        {
+        } else {
             jsonObj.setTarget(col);
         }
     }
@@ -546,76 +472,53 @@ public class ObjectResolver extends Resolver
         final Object array = jsonObj.getTarget();
         final Object[] items =  jsonObj.getArray();
 
-        for (int i=0; i < len; i++)
-        {
+        for (int i = 0; i < len; i++) {
             final Object element = items[i];
             Object special;
-            
-            if (element == null)
-            {
+
+            if (element == null) {
                 Array.set(array, i, null);
-            }
-            else if ((special = readWithFactoryIfExists(element, compType, stack)) != null)
-            {
+            } else if ((special = readWithFactoryIfExists(element, compType, stack)) != null) {
                 if (compType.isEnum() && special instanceof String) {
-                    special = Enum.valueOf(compType, (String)special);
+                    special = Enum.valueOf(compType, (String) special);
                 }
                 Array.set(array, i, special);
-            }
-            else if (isPrimitive)
-            {   // Primitive component type array
+            } else if (isPrimitive) {   // Primitive component type array
                 Array.set(array, i, this.getConverter().convert(element, compType));
-            }
-            else if (element.getClass().isArray())
-            {   // Array of arrays
-                if (char[].class == compType)
-                {   // Specially handle char[] because we are writing these
+            } else if (element.getClass().isArray()) {   // Array of arrays
+                if (char[].class == compType) {   // Specially handle char[] because we are writing these
                     // out as UTF-8 strings for compactness and speed.
                     Object[] jsonArray = (Object[]) element;
-                    if (jsonArray.length == 0)
-                    {
+                    if (jsonArray.length == 0) {
                         Array.set(array, i, new char[]{});
-                    }
-                    else
-                    {
+                    } else {
                         final String value = (String) jsonArray[0];
                         final int numChars = value.length();
                         final char[] chars = new char[numChars];
-                        for (int j = 0; j < numChars; j++)
-                        {
+                        for (int j = 0; j < numChars; j++) {
                             chars[j] = value.charAt(j);
                         }
                         Array.set(array, i, chars);
                     }
-                }
-                else
-                {
+                } else {
                     JsonObject jsonObject = new JsonObject();
                     jsonObject.put(ITEMS, element);
                     jsonObject.setHintType(compType);
                     Array.set(array, i, createInstance(jsonObject));
                     stack.addFirst(jsonObject);
                 }
-            }
-            else if (element instanceof JsonObject)
-            {
+            } else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
                 Long ref = jsonObject.getReferenceId();
 
-                if (ref != null)
-                {    // Connect reference
+                if (ref != null) {    // Connect reference
                     JsonObject refObject = this.getReferences().get(ref);
-                    if (refObject.getTarget() != null)
-                    {   // Array element with reference to existing object
+                    if (refObject.getTarget() != null) {   // Array element with reference to existing object
                         Array.set(array, i, refObject.getTarget());
-                    }
-                    else
-                    {    // Array with a forward reference as an element
+                    } else {    // Array with a forward reference as an element
                         unresolvedRefs.add(new UnresolvedReference(jsonObj, i, ref));
                     }
-                }
-                else
-                {    // Convert JSON HashMap to Java Object instance and assign values
+                } else {    // Convert JSON HashMap to Java Object instance and assign values
                     jsonObject.setHintType(compType);
                     Object arrayElement = createInstance(jsonObject);
                     Array.set(array, i, arrayElement);
@@ -625,15 +528,10 @@ public class ObjectResolver extends Resolver
                         stack.addFirst(jsonObject);
                     }
                 }
-            }
-            else
-            {
-                if (element instanceof String && "".equals(((String) element).trim()) && compType != String.class && compType != Object.class)
-                {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
+            } else {
+                if (element instanceof String && "".equals(((String) element).trim()) && compType != String.class && compType != Object.class) {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
                     Array.set(array, i, null);
-                }
-                else
-                {
+                } else {
                     Array.set(array, i, element);
                 }
             }
@@ -745,18 +643,18 @@ public class ObjectResolver extends Resolver
         // we could maybe just do the map conversion (JsonObject) if they were all defined out.
         if (jsonObj.getTarget() == null) {
             if (jsonObj.hasValue() && jsonObj.getValue() != null) {
-                if (this.getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
+                if (getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
 //                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
-                    Object target = this.getConverter().convert(jsonObj.getValue(), c);
+                    Object target = getConverter().convert(jsonObj.getValue(), c);
 
                     return jsonObj.setFinishedTarget(target, true);
                 }
                 //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
                 //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
                 //  TODO: going to the converter and I'm still thinking of a way to handle that.
-            } else if (MetaUtils.isLogicalPrimitive(c) && this.getConverter().isConversionSupportedFor(Map.class, c)) {
+            } else if (MetaUtils.isLogicalPrimitive(c) && getConverter().isConversionSupportedFor(Map.class, c)) {
                 Object source = resolveRefs(jsonObj);
-                Object value = this.getConverter().convert(source, c);
+                Object value = getConverter().convert(source, c);
                 return jsonObj.setFinishedTarget(value, true);
             }
         }
@@ -912,21 +810,15 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type)
-    {
-        if (items == null || items.length < 1)
-        {
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type) {
+        if (items == null || items.length < 1) {
             return;
         }
         Class rawType = getRawType(type);
-        if (rawType != null && Collection.class.isAssignableFrom(rawType))
-        {
+        if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             stack.add(new Object[]{type, items});
-        }
-        else
-        {
-            for (Object o : items)
-            {
+        } else {
+            for (Object o : items) {
                 stack.add(new Object[]{type, o});
             }
         }
@@ -934,15 +826,12 @@ public class ObjectResolver extends Resolver
 
     // Mark 'type' on JsonObject when the type is missing and it is a 'leaf'
     // node (no further subtypes in it's parameterized type definition)
-    private static void stampTypeOnJsonObject(final Object o, final Type t)
-    {
-        Class clazz = t instanceof Class ? (Class)t : getRawType(t);
+    private static void stampTypeOnJsonObject(final Object o, final Type t) {
+        Class clazz = t instanceof Class ? (Class) t : getRawType(t);
 
-        if (o instanceof JsonObject && clazz != null)
-        {
+        if (o instanceof JsonObject && clazz != null) {
             JsonObject jObj = (JsonObject) o;
-            if (jObj.getJavaType() == null && jObj.getTarget() == null)
-            {
+            if (jObj.getJavaType() == null && jObj.getTarget() == null) {
                 jObj.setJavaType(clazz);
             }
         }
@@ -953,14 +842,11 @@ public class ObjectResolver extends Resolver
      * @param t Type to attempt to get raw type from.
      * @return Raw type obtained from the passed in parameterized type or null if T is not a ParameterizedType
      */
-    public static Class getRawType(final Type t)
-    {
-        if (t instanceof ParameterizedType)
-        {
+    public static Class getRawType(final Type t) {
+        if (t instanceof ParameterizedType) {
             ParameterizedType pType = (ParameterizedType) t;
 
-            if (pType.getRawType() instanceof Class)
-            {
+            if (pType.getRawType() instanceof Class) {
                 return (Class) pType.getRawType();
             }
         }

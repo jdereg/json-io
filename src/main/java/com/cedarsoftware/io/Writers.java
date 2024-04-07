@@ -64,7 +64,6 @@ public class Writers
         protected String getKey() { return "value"; }
 
 
-        @Override
         public void write(Object obj, boolean showType, Writer output, WriterContext context) throws IOException
         {
             if (showType)
@@ -77,7 +76,7 @@ public class Writers
         }
 
         @Override
-        public boolean hasPrimitiveForm() { return true; }
+        public boolean hasPrimitiveForm(WriterContext writerContext) { return true; }
     }
 
     /**
@@ -154,8 +153,7 @@ public class Writers
     {
         public String extractString(Object o) { return o.toString(); }
 
-        @Override
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
             JsonWriter.writeJsonUtf8String(output, extractString(o));
         }
     }
@@ -182,7 +180,7 @@ public class Writers
         }
 
         @Override
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
             JsonWriter.writeBasicString(output, extractString(o));
         }
     }
@@ -263,8 +261,7 @@ public class Writers
             this(ZoneId.systemDefault());
         }
 
-        @Override
-        public void writePrimitiveForm(Object o, Writer output) throws IOException {
+        public void writePrimitiveForm(Object o, Writer output, WriterContext writerContext) throws IOException {
 
             //TODO:  Change to using converter and having the writeOptions provide a zoneId;
             //TODO:  If we're going to provide a LocalDateAsLong we should also provide a LocalDateTimeAsLong
@@ -287,9 +284,8 @@ public class Writers
             this.formatter = formatter;
         }
 
-        @Override
         @SuppressWarnings("unchecked")
-        public void writePrimitiveForm(Object obj, Writer output) throws IOException {
+        public void writePrimitiveForm(Object obj, Writer output, WriterContext writerContext) throws IOException {
             this.writePrimitiveForm((T) obj, output);
         }
 
@@ -370,7 +366,7 @@ public class Writers
 
     public static class TimestampWriter implements JsonWriter.JsonClassWriter
     {
-        public void write(Object o, boolean showType, Writer output) throws IOException
+        public void write(Object o, boolean showType, Writer output, WriterContext writerContext) throws IOException
         {
             Timestamp tstamp = (Timestamp) o;
             output.write("\"time\":\"");
@@ -398,7 +394,6 @@ public class Writers
 //            output.write('"');
 //        }
 
-        @Override
         public void writePrimitiveForm(Object o, Writer output, WriterContext context) throws IOException
         {
             Locale locale = (Locale) o;
@@ -441,14 +436,14 @@ public class Writers
         }
 
         @Override
-        public boolean hasPrimitiveForm() { return true; }
+        public boolean hasPrimitiveForm(WriterContext writerContext) { return true; }
 
         /**
          * We can use the String representation for easier handling, but this may break backwards compatibility
          * if an earlier library version is used
          */
         @Override
-        public void writePrimitiveForm(Object o, Writer writer) throws IOException
+        public void writePrimitiveForm(Object o, Writer writer, WriterContext writerContext) throws IOException
         {
             UUID buffer = (UUID) o;
             JsonWriter.writeBasicString(writer, buffer.toString());
