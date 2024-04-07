@@ -30,7 +30,7 @@ public class TestEmptyListForJdk17 {
         final Object o = Collections.emptyList();
 
         String json = JsonWriter.objectToJson(o);
-        List es = (List) JsonReader.jsonToJava(json);
+        List<?> es = (List<?>) JsonReader.jsonToJava(json);
 
         Assert.assertTrue(es.isEmpty());
         Assert.assertEquals(Collections.EMPTY_LIST.getClass(), es.getClass());

@@ -1,11 +1,25 @@
 package com.cedarsoftware.util.io;
 
-import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
-
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
 
+import com.cedarsoftware.util.io.JsonReader.MissingFieldHandler;
+
+import static com.cedarsoftware.util.io.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
@@ -40,15 +54,15 @@ abstract class Resolver
     final Collection<UnresolvedReference>  unresolvedRefs = new ArrayList<>();
     protected final JsonReader reader;
     private static final NullClass nullReader = new NullClass();
-    final Map<Class, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
+    final Map<Class<?>, JsonReader.JsonClassReaderBase> readerCache = new HashMap<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     private final boolean useMaps;
     private final Object unknownClass;
     private final boolean failOnUnknownType;
-    private final static Map<String, Class> coercedTypes = new LinkedHashMap<>();
+    private final static Map<String, Class<?>> coercedTypes = new LinkedHashMap<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
-    Class singletonMap = Collections.singletonMap("foo", "bar").getClass();
+    Class<?> singletonMap = Collections.singletonMap("foo", "bar").getClass();
 
     static {
         coercedTypes.put("java.util.Arrays$ArrayList", ArrayList.class);
@@ -183,7 +197,7 @@ abstract class Resolver
         return root.target;
     }
 
-    protected abstract Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack);
+    protected abstract Object readIfMatching(final Object o, final Class<?> compType, final Deque<JsonObject<String, Object>> stack);
 
     public abstract void traverseFields(Deque<JsonObject<String, Object>> stack, JsonObject<String, Object> jsonObj);
 
@@ -307,7 +321,7 @@ abstract class Resolver
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
-    protected Object createJavaObjectInstance(Class clazz, JsonObject jsonObj)
+    protected Object createJavaObjectInstance(Class<?> clazz, JsonObject jsonObj)
     {
         final boolean useMapsLocal = useMaps;
         String type = jsonObj.type;
@@ -335,7 +349,7 @@ abstract class Resolver
         // @type always takes precedence over inferred Java (clazz) type.
         if (type != null)
         {    // @type is explicitly set, use that as it always takes precedence
-            Class c;
+            Class<?> c;
             try
             {
                 c = MetaUtils.classForName(type, reader.getClassLoader(), failOnUnknownType);
@@ -466,7 +480,7 @@ abstract class Resolver
 
     protected Object coerceCertainTypes(String type)
     {
-        Class clazz = coercedTypes.get(type);
+        Class<?> clazz = coercedTypes.get(type);
         if (clazz == null)
         {
             return null;
@@ -648,7 +662,7 @@ abstract class Resolver
                     {
                         if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject))
                         {
-                            list = List.of(list.toArray());
+                            list = listOf(list.toArray());
                             ref.referencingObj.target = list;
                         }
                     }

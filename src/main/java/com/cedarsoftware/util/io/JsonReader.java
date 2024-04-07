@@ -1,11 +1,32 @@
 package com.cedarsoftware.util.io;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.Closeable;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,10 +103,10 @@ public class JsonReader implements Closeable
     /** Default maximum parsing depth */
     static final int DEFAULT_MAX_PARSE_DEPTH = 1000;
 
-    private static Map<Class, JsonClassReaderBase> BASE_READERS;
+    private static Map<Class<?>, JsonClassReaderBase> BASE_READERS;
     protected final Map<Class, JsonClassReaderBase> readers = new HashMap<>(BASE_READERS);
     protected MissingFieldHandler missingFieldHandler;
-    protected final Set<Class> notCustom = new HashSet<>();
+    protected final Set<Class<?>> notCustom = new HashSet<>();
     private static final Map<String, Factory> factory = new ConcurrentHashMap<>();
     private final Map<Long, JsonObject> objsRead = new HashMap<>();
     private final FastPushbackReader input;
@@ -124,7 +145,7 @@ public class JsonReader implements Closeable
         assignInstantiator(Map.class, mapFactory);
         assignInstantiator(SortedMap.class, mapFactory);
 
-        Map<Class, JsonClassReaderBase> temp = new HashMap<>();
+        Map<Class<?>, JsonClassReaderBase> temp = new HashMap<>();
         temp.put(String.class, new Readers.StringReader());
         temp.put(Date.class, new Readers.DateReader());
         temp.put(AtomicBoolean.class, new Readers.AtomicBooleanReader());
@@ -143,7 +164,7 @@ public class JsonReader implements Closeable
         temp.put(UUID.class, new Readers.UUIDReader());
         try
         {
-            Class recordClass = Class.forName("java.lang.Record");
+            Class<?> recordClass = Class.forName("java.lang.Record");
             temp.put(recordClass, new Readers.RecordReader());
         } catch (ClassNotFoundException e)
         {
@@ -170,7 +191,7 @@ public class JsonReader implements Closeable
      */
     public interface ClassFactory extends Factory
     {
-        Object newInstance(Class c);
+        Object newInstance(Class<?> c);
     }
 
     /**
@@ -186,7 +207,7 @@ public class JsonReader implements Closeable
      */
     public interface ClassFactoryEx extends Factory
     {
-        Object newInstance(Class c, Map args);
+        Object newInstance(Class<?> c, Map args);
     }
 
     /**
@@ -264,11 +285,11 @@ public class JsonReader implements Closeable
      */
     public static class CollectionFactory implements ClassFactory
     {
-        public Object newInstance(Class c)
+        public Object newInstance(Class<?> c)
         {
             if (List.class.isAssignableFrom(c))
             {
-                return new ArrayList();
+                return new ArrayList<>();
             }
             else if (SortedSet.class.isAssignableFrom(c))
             {
@@ -280,7 +301,7 @@ public class JsonReader implements Closeable
             }
             else if (Collection.class.isAssignableFrom(c))
             {
-                return new ArrayList();
+                return new ArrayList<>();
             }
             throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
         }
@@ -296,7 +317,7 @@ public class JsonReader implements Closeable
          * @param c Map interface that was requested for instantiation.
          * @return a concrete Map type.
          */
-        public Object newInstance(Class c)
+        public Object newInstance(Class<?> c)
         {
             if (SortedMap.class.isAssignableFrom(c))
             {
@@ -332,7 +353,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign an ClassFactory to
      * @param f ClassFactory that will create 'c' instances
      */
-    public static void assignInstantiator(Class c, Factory f)
+    public static void assignInstantiator(Class<?> c, Factory f)
     {
         assignInstantiator(c.getName(), f);
     }
@@ -347,7 +368,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
-    public void addReader(Class c, JsonClassReaderBase reader)
+    public void addReader(Class<?> c, JsonClassReaderBase reader)
     {
         readers.put(c, reader);
     }
@@ -364,7 +385,7 @@ public class JsonReader implements Closeable
      * @param c Class to assign a custom JSON reader to
      * @param reader The JsonClassReader which will read the custom JSON format of 'c'
      */
-    public static void addReaderPermanent(Class c, JsonClassReaderBase reader)
+    public static void addReaderPermanent(Class<?> c, JsonClassReaderBase reader)
     {
         BASE_READERS.put(c, reader);
     }
@@ -378,7 +399,7 @@ public class JsonReader implements Closeable
      * parent class of 'c', then calling this method on 'c' will prevent
      * any custom reader from processing class 'c'
      */
-    public void addNotCustomReader(Class c)
+    public void addNotCustomReader(Class<?> c)
     {
         notCustom.add(c);
     }
@@ -496,7 +517,7 @@ public class JsonReader implements Closeable
      * Note that the return type will match the JSON type (array, object, string, long, boolean, or null).
      * No longer recommended: Use jsonToJava with USE_MAPS:true
      * @param json String of JSON content
-     * @param maxDeth Maximum parsing depth.
+     * @param maxDepth Maximum parsing depth.
      * @return Map representing JSON content.  Each object is represented by a Map.
      */
     public static Map jsonToMaps(String json, int maxDepth)

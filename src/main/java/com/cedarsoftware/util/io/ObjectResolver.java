@@ -13,8 +13,9 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+import static com.cedarsoftware.util.io.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.io.CollectionUtilities.setOf;
 import static com.cedarsoftware.util.io.JsonObject.ITEMS;
 import static com.cedarsoftware.util.io.JsonObject.KEYS;
 
@@ -88,7 +89,7 @@ public class ObjectResolver extends Resolver
     {
         final Object javaMate = jsonObj.target;
         final Iterator<Map.Entry<String, Object>> i = jsonObj.entrySet().iterator();
-        final Class cls = javaMate.getClass();
+        final Class<?> cls = javaMate.getClass();
 
         while (i.hasNext())
         {
@@ -107,7 +108,7 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    static boolean isBasicWrapperType(Class clazz) {
+    static boolean isBasicWrapperType(Class<?> clazz) {
         return clazz == Boolean.class || clazz == Integer.class ||
             clazz == Short.class || clazz == Character.class ||
             clazz == Byte.class || clazz == Long.class ||
@@ -127,10 +128,10 @@ public class ObjectResolver extends Resolver
                                final Field field, final Object rhs)
     {
         final Object target = jsonObj.target;
-        final Class targetClass = target.getClass();
+        final Class<?> targetClass = target.getClass();
         try
         {
-            final Class fieldType = field.getType();
+            final Class<?> fieldType = field.getType();
             if (rhs == null)
             {   // Logically clear field (allows null to be set against primitive fields, yielding their zero value.
                 if (fieldType.isPrimitive())
@@ -408,9 +409,9 @@ public class ObjectResolver extends Resolver
         {
             if (className != null && className.startsWith("java.util.Immutable"))
                 if (className.contains("Set")) {
-                    jsonObj.target = Set.of();
+                    jsonObj.target = setOf();
                 } else if (className.contains("List")) {
-                    jsonObj.target = List.of();
+                    jsonObj.target = listOf();
                 }
             return;
         }
@@ -422,7 +423,7 @@ public class ObjectResolver extends Resolver
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        final Collection col = isImmutable ? new ArrayList() : (Collection) jsonObj.target;
+        final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.target;
         final boolean isList = col instanceof List;
         int idx = 0;
 
@@ -512,7 +513,7 @@ public class ObjectResolver extends Resolver
         {
             if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject))
             {
-                jsonObj.target = List.of(col.toArray());
+                jsonObj.target = listOf(col.toArray());
             }
             else
             {
@@ -521,7 +522,7 @@ public class ObjectResolver extends Resolver
         }
         else if (className.contains("Set"))
         {
-            jsonObj.target = Set.of(col.toArray());
+            jsonObj.target = setOf(col.toArray());
         }
         else
         {
@@ -546,7 +547,7 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        final Class compType = jsonObj.getComponentType();
+        final Class<?> compType = jsonObj.getComponentType();
 
         if (char.class == compType)
         {
@@ -667,7 +668,7 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readIfMatching(final Object o, final Class compType, final Deque<JsonObject<String, Object>> stack)
+    protected Object readIfMatching(final Object o, final Class<?> compType, final Deque<JsonObject<String, Object>> stack)
     {
         if (o == null)
         {

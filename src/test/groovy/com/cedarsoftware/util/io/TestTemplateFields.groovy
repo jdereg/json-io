@@ -2,7 +2,7 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import java.awt.Point
+import java.awt.*
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNull

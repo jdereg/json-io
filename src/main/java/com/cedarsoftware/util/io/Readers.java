@@ -145,7 +145,7 @@ public class Readers
                     throw new JsonIoException("Calendar missing 'time' field");
                 }
                 Date date = MetaUtils.dateFormat.get().parse(time);
-                Class c;
+                Class<?> c;
                 if (jObj.getTarget() != null)
                 {
                     c = jObj.getTarget().getClass();
@@ -868,7 +868,7 @@ public class Readers
             {
                 JsonObject jsonObj = (JsonObject) o;
 
-                ArrayList<Class> lParameterTypes = new ArrayList<>(jsonObj.size());
+                ArrayList<Class<?>> lParameterTypes = new ArrayList<>(jsonObj.size());
                 ArrayList<Object> lParameterValues = new ArrayList<>(jsonObj.size());
 
                 Class c = Class.forName(jsonObj.getType());

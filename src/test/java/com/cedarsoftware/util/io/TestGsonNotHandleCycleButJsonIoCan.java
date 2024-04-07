@@ -47,7 +47,7 @@ public class TestGsonNotHandleCycleButJsonIoCan
         try
         {
             Gson gson = new Gson();
-            String json = gson.toJson(alpha);
+            gson.toJson(alpha);
             fail();
         }
         catch(StackOverflowError e)

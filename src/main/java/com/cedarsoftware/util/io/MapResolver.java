@@ -53,7 +53,7 @@ public class MapResolver extends Resolver
         super(reader);
     }
 
-    protected Object readIfMatching(Object o, Class compType, Deque<JsonObject<String, Object>> stack)
+    protected Object readIfMatching(Object o, Class<?> compType, Deque<JsonObject<String, Object>> stack)
     {
         // No custom reader support for maps
         return null;
@@ -63,8 +63,6 @@ public class MapResolver extends Resolver
      * Walk the JsonObject fields and perform necessary substitutions so that all references matched up.
      * This code patches @ref and @id pairings up, in the 'Map of Map' mode.  Where the JSON may contain
      * an @id of an object which can have more than one @ref to it, this code will make sure that each
-     * @ref (value side of the Map associated to a given field name) will be pointer to the appropriate Map
-     * instance.
      * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
@@ -123,7 +121,7 @@ public class MapResolver extends Resolver
                 // a cool feature of json-io, that even when reading a map-of-maps JSON file, it will
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
-                final Class fieldType = field.getType();
+                final Class<?> fieldType = field.getType();
                 if (MetaUtils.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
                 {
                     jsonObj.put(fieldName, MetaUtils.convert(fieldType, rhs));

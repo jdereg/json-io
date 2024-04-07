@@ -1,14 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
-import org.junit.Test;
-
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static junit.framework.TestCase.fail;
+import com.google.gson.Gson;
+import org.junit.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -43,26 +40,26 @@ public class TestGsonNotHandleHeteroCollections
     @Test
     public void testGsonFailOnHeteroCollection()
     {
-        List list = new ArrayList();
+        List<Object> list = new ArrayList<>();
         list.add(1);
         list.add(42L);
         list.add(Math.PI);
         list.add(new Node("Bitcoin"));
         Gson gson = new Gson();
         String json = gson.toJson(list);
-        List newList = gson.fromJson(json, List.class);
+        List<?> newList = gson.fromJson(json, List.class);
 
         // ---------------------------- gson fails ----------------------------
         assert !(newList.get(0) instanceof Integer); // Fail - Integer 1 becomes 1.0 (double)
         assert !(newList.get(1) instanceof Long); // FAIL - Long 42 becomes 42.0 (double))
         assert newList.get(2) instanceof Double;
         assert !(newList.get(3) instanceof Node);   // Fail, last element (Node) converted to Map
-        Map map = (Map) newList.get(3);
+        Map<?,?> map = (Map<?,?>) newList.get(3);
         assert "Bitcoin".equals(map.get("name"));
 
         // ---------------------------- json-io maintains types ----------------------------
         json = JsonWriter.objectToJson(list);
-        newList = (List) JsonReader.jsonToJava(json);
+        newList = (List<?>) JsonReader.jsonToJava(json);
 
         assert newList.get(0) instanceof Integer;
         assert newList.get(1) instanceof Long;

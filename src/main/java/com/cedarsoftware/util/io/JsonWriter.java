@@ -1,14 +1,38 @@
 package com.cedarsoftware.util.io;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.Flushable;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -92,10 +116,10 @@ public class JsonWriter implements Closeable, Flushable
     /** If set to true all maps are transferred to the format @keys[],@items[] regardless of the key_type */
     public static final String FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS = "FORCE_MAP_FORMAT_ARRAY_KEYS_ITEMS";
 
-    private static Map<Class, JsonClassWriterBase> BASE_WRITERS;
-    private final Map<Class, JsonClassWriterBase> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
-    private final Map<Class, JsonClassWriterBase> writerCache = new HashMap<>();
-    private final Set<Class> notCustom = new HashSet<>();
+    private static Map<Class<?>, JsonClassWriterBase> BASE_WRITERS;
+    private final Map<Class<?>, JsonClassWriterBase> writers = new HashMap<>(BASE_WRITERS);  // Add customer writers (these make common classes more succinct)
+    private final Map<Class<?>, JsonClassWriterBase> writerCache = new HashMap<>();
+    private final Set<Class<?>> notCustom = new HashSet<>();
 
     private static final Object[] byteStrings = new Object[256];
     private static final String NEW_LINE = System.getProperty("line.separator");
@@ -126,7 +150,7 @@ public class JsonWriter implements Closeable, Flushable
             byteStrings[i + 128] = chars;
         }
 
-        Map<Class, JsonClassWriterBase> temp = new HashMap<>();
+        Map<Class<?>, JsonClassWriterBase> temp = new HashMap<>();
         temp.put(String.class, new Writers.JsonStringWriter());
         temp.put(Date.class, new Writers.DateWriter());
         temp.put(AtomicBoolean.class, new Writers.AtomicBooleanWriter());
@@ -400,16 +424,16 @@ public class JsonWriter implements Closeable, Flushable
             args.put(CLASSLOADER, JsonWriter.class.getClassLoader());
         }
 
-        Map<Class, JsonClassWriterBase> customWriters = (Map<Class, JsonClassWriterBase>) args.get(CUSTOM_WRITER_MAP);
+        Map<Class<?>, JsonClassWriterBase> customWriters = (Map<Class<?>, JsonClassWriterBase>) args.get(CUSTOM_WRITER_MAP);
         if (customWriters != null)
         {
-            for (Map.Entry<Class, JsonClassWriterBase> entry : customWriters.entrySet())
+            for (Map.Entry<Class<?>, JsonClassWriterBase> entry : customWriters.entrySet())
             {
                 addWriter(entry.getKey(), entry.getValue());
             }
         }
 
-        Collection<Class> notCustomClasses = (Collection<Class>) args.get(NOT_CUSTOM_WRITER_MAP);
+        Collection<Class<?>> notCustomClasses = (Collection<Class<?>>) args.get(NOT_CUSTOM_WRITER_MAP);
         if (notCustomClasses != null)
         {
             for (Class c : notCustomClasses)
@@ -742,7 +766,7 @@ public class JsonWriter implements Closeable, Flushable
         JsonClassWriterBase closestWriter = nullWriter;
         int minDistance = Integer.MAX_VALUE;
 
-        for (Map.Entry<Class, JsonClassWriterBase> entry : writers.entrySet())
+        for (Map.Entry<Class<?>, JsonClassWriterBase> entry : writers.entrySet())
         {
             Class clz = entry.getKey();
             if (clz == c)

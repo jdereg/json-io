@@ -1,11 +1,11 @@
 package com.cedarsoftware.util.io;
 
-import com.google.gson.Gson;
-import org.junit.Test;
-
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import org.junit.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -42,7 +42,7 @@ public class TestGsonNotHandleMapWithNonStringKeysButJsonIoCan
         // ------------------------ gson ------------------------
         Gson gson = new Gson();
         String json = gson.toJson(map);
-        Map newMap = gson.fromJson(json, Map.class);
+        Map<?,?> newMap = gson.fromJson(json, Map.class);
 
         assert newMap.size() == 3;
         assert !newMap.containsKey(pt1);                                // fail, pt1 not found
@@ -51,7 +51,7 @@ public class TestGsonNotHandleMapWithNonStringKeysButJsonIoCan
 
         // ------------------------ json-io ------------------------
         json = JsonWriter.objectToJson(map);
-        newMap = (Map) JsonReader.jsonToJava(json);
+        newMap = (Map<?,?>) JsonReader.jsonToJava(json);
 
         assert newMap.size() == 3;
         assert newMap.containsKey(pt1);                                // success, pt1 not found

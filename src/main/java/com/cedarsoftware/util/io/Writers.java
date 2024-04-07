@@ -147,7 +147,7 @@ public class Writers
     {
         public void write(Object obj, boolean showType, Writer output) throws IOException
         {
-            String value = ((Class) obj).getName();
+            String value = ((Class<?>) obj).getName();
             output.write("\"value\":");
             writeJsonUtf8String(value, output);
         }
@@ -156,7 +156,7 @@ public class Writers
 
         public void writePrimitiveForm(Object o, Writer output) throws IOException
         {
-            writeJsonUtf8String(((Class)o).getName(), output);
+            writeJsonUtf8String(((Class<?>)o).getName(), output);
         }
     }
 

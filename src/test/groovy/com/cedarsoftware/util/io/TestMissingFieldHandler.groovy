@@ -1,10 +1,10 @@
 package com.cedarsoftware.util.io
 
 import groovy.transform.CompileStatic
-
-import static org.junit.Assert.*
-
 import org.junit.Test
+
+import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

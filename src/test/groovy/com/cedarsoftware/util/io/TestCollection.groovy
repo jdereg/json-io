@@ -5,7 +5,11 @@ import org.junit.Test
 import java.awt.*
 import java.util.List
 
-import static org.junit.Assert.*
+import static com.cedarsoftware.util.io.CollectionUtilities.listOf
+import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertNotNull
+import static org.junit.Assert.assertNull
+import static org.junit.Assert.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -59,7 +63,7 @@ class TestCollection {
     }
 
     private static class ManyCollections implements Serializable {
-        private Collection[] _cols;
+        private Collection<?>[] _cols;
         private List _strings_a;
         private List _strings_b;
         private List _strings_c;
@@ -194,8 +198,8 @@ class TestCollection {
             _typedSet.add(17.76)
             _typedSet.add(TimeZone.getTimeZone("PST"))
 
-            _imm_lst_0 = List.of()
-            _imm_lst_1 = List.of("One")
+            _imm_lst_0 = listOf()
+            _imm_lst_1 = listOf("One")
 
         }
     }

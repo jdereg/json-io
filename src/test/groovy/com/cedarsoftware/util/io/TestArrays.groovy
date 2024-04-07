@@ -7,7 +7,12 @@ import org.junit.Test
 import java.lang.reflect.Array
 
 import static com.cedarsoftware.util.io.JsonObject.ITEMS
-import static org.junit.Assert.*
+import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertFalse
+import static org.junit.Assert.assertNotSame
+import static org.junit.Assert.assertNull
+import static org.junit.Assert.assertSame
+import static org.junit.Assert.assertTrue
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -147,8 +152,8 @@ class TestArrays
         private Date[] _dates_a;
         private Date[][] _dates_b;
 
-        private Class[] _classes_a;
-        private Class[][] _classes_b;
+        private Class<?>[] _classes_a;
+        private Class<?>[][] _classes_b;
 
         private StringBuffer _stringbuffer_a;
         private StringBuffer[] _stringbuffer_b;
@@ -816,7 +821,7 @@ class TestArrays
 
         Object[] classes = [LinkedList.class, LinkedList.class] as Object[]
         testReconstituteArrayHelper(classes)
-        Class[] Classes = [LinkedList.class, LinkedList.class] as Class[]
+        Class<?>[] Classes = [LinkedList.class, LinkedList.class] as Class[]
         testReconstituteArrayHelper(Classes)
 
         Date now = new Date()

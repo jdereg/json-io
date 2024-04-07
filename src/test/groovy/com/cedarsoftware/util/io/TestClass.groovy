@@ -32,8 +32,8 @@ class TestClass
         private final Class _BooleanClass;
         private final Object _booleanClassO;
         private final Object _BooleanClassO;
-        private final Class[] _booleanClassArray;
-        private final Class[] _BooleanClassArray;
+        private final Class<?>[] _booleanClassArray;
+        private final Class<?>[] _BooleanClassArray;
         private final Object[] _booleanClassArrayO;
         private final Object[] _BooleanClassArrayO;
 
@@ -41,8 +41,8 @@ class TestClass
         private final Class _CharacterClass;
         private final Object _charClassO;
         private final Object _CharacterClassO;
-        private final Class[] _charClassArray;
-        private final Class[] _CharacterClassArray;
+        private final Class<?>[] _charClassArray;
+        private final Class<?>[] _CharacterClassArray;
         private final Object[] _charClassArrayO;
         private final Object[] _CharacterClassArrayO;
 

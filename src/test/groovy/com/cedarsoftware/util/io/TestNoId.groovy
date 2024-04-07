@@ -2,8 +2,8 @@ package com.cedarsoftware.util.io
 
 import org.junit.Test
 
-import static org.junit.Assert.assertFalse
 import static com.cedarsoftware.util.io.JsonObject.ID
+import static org.junit.Assert.assertFalse
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

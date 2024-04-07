@@ -1,4 +1,7 @@
 ### Revision History
+* 4.14.3 
+  * Updated all build dependency jars.
+* 4.14.2 (skipped)
 * 4.14.1
   * JDK 1.8 is target class file format. @laurgarn
   * JDK 11 is source file format. @laurgarn

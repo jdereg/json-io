@@ -1,11 +1,9 @@
 package com.cedarsoftware.util.io;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.BeforeClass;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)

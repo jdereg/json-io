@@ -1,6 +1,6 @@
 package com.cedarsoftware.util.io
 
-import groovy.transform.CompileStatic
+
 import org.junit.Test
 
 /**

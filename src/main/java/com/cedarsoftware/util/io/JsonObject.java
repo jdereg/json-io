@@ -108,7 +108,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         this.target = target;
     }
 
-    public Class getTargetClass()
+    public Class<?> getTargetClass()
     {
         return target.getClass();
     }
@@ -265,7 +265,7 @@ public class JsonObject<K, V> extends LinkedHashMap<K, V>
         return null;
     }
 
-    public Class getComponentType()
+    public Class<?> getComponentType()
     {
         return target.getClass().getComponentType();
     }

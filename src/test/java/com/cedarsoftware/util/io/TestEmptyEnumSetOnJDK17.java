@@ -1,9 +1,9 @@
 package com.cedarsoftware.util.io;
 
-import org.junit.Test;
-
 import java.util.EnumSet;
 import java.util.Objects;
+
+import org.junit.Test;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -59,7 +59,7 @@ public class TestEmptyEnumSetOnJDK17
         Object o = EnumSet.noneOf(TestEnum.class);
 
         String json = JsonWriter.objectToJson(o);
-        EnumSet es = (EnumSet) JsonReader.jsonToJava(json);
+        EnumSet<?> es = (EnumSet<?>) JsonReader.jsonToJava(json);
 
         assert es.isEmpty();
     }
@@ -67,10 +67,10 @@ public class TestEmptyEnumSetOnJDK17
     @Test
     public void testEnumSetOnJDK17()
     {
-        EnumSet source = EnumSet.of(TestEnum.V1, TestEnum.V3);
+        EnumSet<?> source = EnumSet.of(TestEnum.V1, TestEnum.V3);
 
         String json = JsonWriter.objectToJson(source);
-        EnumSet target = (EnumSet) JsonReader.jsonToJava(json);
+        EnumSet<?> target = (EnumSet<?>) JsonReader.jsonToJava(json);
 
         assert source.equals(target);
     }

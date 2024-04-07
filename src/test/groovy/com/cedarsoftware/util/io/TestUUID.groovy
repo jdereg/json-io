@@ -4,7 +4,9 @@ import groovy.transform.CompileStatic
 import org.junit.Assert
 import org.junit.Test
 
-import static org.junit.Assert.*
+import static org.junit.Assert.assertEquals
+import static org.junit.Assert.assertSame
+import static org.junit.Assert.assertTrue
 
 /**
  * @author Balazs Bessenyei (h143570@gmail.com)

@@ -1,19 +1,45 @@
 package com.cedarsoftware.util.io;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.lang.reflect.Modifier.*;
+import static java.lang.reflect.Modifier.isPrivate;
+import static java.lang.reflect.Modifier.isProtected;
+import static java.lang.reflect.Modifier.isPublic;
 
 /**
  * This utility class has the methods mostly related to reflection related code.
@@ -39,15 +65,15 @@ public class MetaUtils
     public enum Dumpty {}
 
     private MetaUtils () {}
-    private static final Map<Class, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
-    private static final Set<Class> prims = new HashSet<>();
-    private static final Map<String, Class> nameToClass = new HashMap<>();
+    private static final Map<Class<?>, Map<String, Field>> classMetaCache = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> prims = new HashSet<>();
+    private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final Byte[] byteCache = new Byte[256];
     private static final Character[] charCache = new Character[128];
     private static final Pattern extraQuotes = Pattern.compile("([\"]*)([^\"]*)([\"]*)");
-    private static final Class[] emptyClassArray = new Class[]{};
-    private static final ConcurrentMap<Class, Object[]> constructors = new ConcurrentHashMap<>();
-    private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList());
+    private static final Class<?>[] emptyClassArray = new Class<?>[]{};
+    private static final ConcurrentMap<Class<?>, Object[]> constructors = new ConcurrentHashMap<>();
+    private static final Collection unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
     private static final Collection unmodifiableSet = Collections.unmodifiableSet(new HashSet());
     private static final Collection unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet());
     private static final Map unmodifiableMap = Collections.unmodifiableMap(new HashMap());
@@ -126,7 +152,7 @@ public class MetaUtils
      * @param field String name of a field on the class.
      * @return Field instance if the field with the corresponding name is found, null otherwise.
      */
-    public static Field getField(Class c, String field)
+    public static Field getField(Class<?> c, String field)
     {
         return getDeepDeclaredFields(c).get(field);
     }
@@ -136,7 +162,7 @@ public class MetaUtils
      * @return ClassMeta which contains fields of class.  The results are cached internally for performance
      *         when called again with same Class.
      */
-    public static Map<String, Field> getDeepDeclaredFields(Class c)
+    public static Map<String, Field> getDeepDeclaredFields(Class<?> c)
     {
         Map<String, Field> classFields = classMetaCache.get(c);
         if (classFields != null)
@@ -145,7 +171,7 @@ public class MetaUtils
         }
 
         classFields = new LinkedHashMap<String, Field>();
-        Class curr = c;
+        Class<?> curr = c;
 
         while (curr != null)
         {
@@ -198,13 +224,13 @@ public class MetaUtils
      * step upward in the inheritance from one class to the next (calling class.getSuperclass()) is counted
      * as 1. This can be a lot of computational effort, therefore the results of this determination should be cached.
      */
-    public static int getDistance(Class a, Class b)
+    public static int getDistance(Class<?> a, Class<?> b)
     {
         if (a.isInterface())
         {
             return getDistanceToInterface(a, b);
         }
-        Class curr = b;
+        Class<?> curr = b;
         int distance = 0;
 
         while (curr != a)
@@ -227,7 +253,7 @@ public class MetaUtils
      */
     static int getDistanceToInterface(Class<?> to, Class<?> from)
     {
-        Set<Class<?>> possibleCandidates = new LinkedHashSet<Class<?>>();
+        Set<Class<?>> possibleCandidates = new LinkedHashSet<>();
 
         Class<?>[] interfaces = from.getInterfaces();
         // is the interface direct inherited or via interfaces extends interface?
@@ -483,7 +509,7 @@ public class MetaUtils
         }
         if (unmodifiableCollection.getClass().isAssignableFrom(c))
         {
-            return new ArrayList();
+            return new ArrayList<>();
         }
         if (Collections.EMPTY_LIST.getClass().equals(c)) {
             return Collections.emptyList();
@@ -746,7 +772,7 @@ public class MetaUtils
                 }
                 else if (List.class.isAssignableFrom(argType))
                 {
-                    values[i] = new ArrayList();
+                    values[i] = new ArrayList<>();
                 }
                 else if (SortedSet.class.isAssignableFrom(argType))
                 {
@@ -766,7 +792,7 @@ public class MetaUtils
                 }
                 else if (Collection.class.isAssignableFrom(argType))
                 {
-                    values[i] = new ArrayList();
+                    values[i] = new ArrayList<>();
                 }
                 else if (Calendar.class.isAssignableFrom(argType))
                 {
