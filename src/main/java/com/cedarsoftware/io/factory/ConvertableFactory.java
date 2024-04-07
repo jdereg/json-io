@@ -68,9 +68,11 @@ public class ConvertableFactory<T> implements JsonReader.ClassFactory {
     }
 
     /**
-     * @return true.  Strings are always immutable, final.
+     * It is expected that ConvertableFactory instances complete both instantiation of the class, and loadind og the
+     * instance data from JSON in the factory.  If they do not, then override this and return false.  If you go that
+     * route, you would also need to write a custom reader to load later. Not sure why anyone would choose to go that
+     * route.
      */
-    @Override
     public boolean isObjectFinal() {
         return true;
     }
