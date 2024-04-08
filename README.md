@@ -34,8 +34,9 @@ ___
 ## Releases
 >### 5.0.0 (future)
 >- [ ] **Maintained**: Fully
->- [ ] **Packaging**: com.cedarsoftware.io
->- [ ] **Java**: JDK17+ (Class file 61 format, will include module-info.java)
+>- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
+>- [ ] **Java Package**: com.cedarsoftware.io
+>- [ ] **Java**: JDK17+ (Class file 61 format, will include module-info.class)
 >- [ ] **API**
    >  - Static methods on `JsonIo` ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
@@ -44,9 +45,10 @@ ___
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
 >### 4.20.x (current)
 >- [ ] **Version**: 4.20.0
+>- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
 >- [ ] **Maintained**: Fully
->- [ ] **Packaging**: com.cedarsoftware.io
->- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.java)
+>- [ ] **Java Package**: com.cedarsoftware.io
+>- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class)
 >- [ ] **API**
 >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
@@ -55,8 +57,9 @@ ___
 >- [ ] Updates will be 4.21.0, 4.22.0, ...
 >### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
+>- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
 >- [ ] **Maintained**: Bug fixes, CVE's
->- [ ] **Packaging**: com.cedarsoftware.util.io
+>- [ ] **Java Package**: com.cedarsoftware.util.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format)
 >- [ ] **API**
 >  - Static methods on [JsonReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html): [jsonToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToJava-java.lang.String-java.util.Map-), [jsonToMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToMaps-java.lang.String-java.util.Map-), special: [jsonObjectsToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonObjectsToJava-com.cedarsoftware.util.io.JsonObject-)
