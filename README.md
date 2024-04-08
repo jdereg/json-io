@@ -48,10 +48,10 @@ ___
 >- [ ] **Packaging**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.java)
 >- [ ] **API**
->  - Static methods on [JsonIo]() ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
+>  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html).[toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
->  - Use `JsonReader.ClassFactory` (not `JsonReader.JsonClassReader`) for difficult classes (hard to instantiate & fill).
->  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+>  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) (not `JsonReader.JsonClassReader`) for difficult classes (hard to instantiate & fill).
+>  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
 >- [ ] Updates will be 4.21.0, 4.22.0, ...
 >#### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
