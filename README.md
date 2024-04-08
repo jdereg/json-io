@@ -44,7 +44,7 @@ ___
 >  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
 >### 4.20.x (current)
->- [ ] **Version**: 4.20.0
+>- [ ] **Version**: [4.20.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
 >- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
