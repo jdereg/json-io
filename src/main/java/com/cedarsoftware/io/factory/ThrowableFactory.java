@@ -41,7 +41,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
         JsonObject jsonCause = (JsonObject) jObj.get(CAUSE);
         Class<Throwable> causeType = jsonCause == null ? Throwable.class : (Class<Throwable>)jsonCause.getJavaType();
         causeType = causeType == null ? Throwable.class : causeType;
-        Throwable cause = resolver.createJavaGraphFromJsonObjectGraph(jsonCause, causeType);
+        Throwable cause = resolver.toJavaObjects(jsonCause, causeType);
 
         if (message != null) {
             arguments.add(message);
@@ -66,7 +66,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
 
             for (int i = 0; i < stackTrace.length; i++) {
                 JsonObject stackTraceMap = (JsonObject) stackTrace[i];
-                elements[i] = stackTraceMap == null ? null : resolver.createJavaGraphFromJsonObjectGraph(stackTraceMap, StackTraceElement.class);
+                elements[i] = stackTraceMap == null ? null : resolver.toJavaObjects(stackTraceMap, StackTraceElement.class);
             }
             t.setStackTrace(elements);
         }

@@ -31,6 +31,7 @@ class StackTraceElementFactoryTest {
         assertThat(stackTrace.getMethodName()).isEqualTo(methodName);
         assertThat(stackTrace.getFileName()).isEqualTo(fileName);
         assertThat(stackTrace.getLineNumber()).isEqualTo(lineNumber.intValue());
+        // Java 9+ properties
         //assertThat(stackTrace.getModuleName()).isEqualTo(moduleName);
         //assertThat(stackTrace.getModuleVersion()).isEqualTo(moduleVersion);
         //assertThat(stackTrace.getClassLoaderName()).isEqualTo(classLoaderName);

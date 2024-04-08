@@ -168,6 +168,7 @@ public class ReadOptionsBuilder {
      *                      to create and load class (class c).
      * @deprecated use {@link ReadOptionsBuilder#addPermanentClassFactory} instead.
      */
+    @Deprecated
     public static void assignInstantiator(Class<?> classToCreate, JsonReader.ClassFactory factory) {
         BASE_CLASS_FACTORIES.put(classToCreate, factory);
     }

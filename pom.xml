@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <name>json-io</name>
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.19.14</version>
+    <version>4.20.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
+    <developers>
+        <developer>
+            <id>jdereg</id>
+            <name>John DeRegnaucourt</name>
+            <email>jdereg@gmail.com</email>
+        </developer>
+        <developer>
+            <id>kpartlow</id>
+            <name>Kenny Partlow</name>
+            <email>kpartlow@gmail.com</email>
+        </developer>
+    </developers>
+
     <properties>
-        <!-- Customize the timestamp format to match your needs -->
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss.SSSZ</maven.build.timestamp.format>
         <!-- remove source encoding warnings from maven output -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -22,26 +33,26 @@
         <maven.compiler.release>8</maven.compiler.release>
 
         <!-- testing only -->
-        <version.junit-jupiter-engine>5.10.2</version.junit-jupiter-engine>
+        <version.junit-jupiter-api>5.10.2</version.junit-jupiter-api>
+        <version.junit-jupiter-params>5.10.2</version.junit-jupiter-params>
+        <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.25.3</version.assertj-core>
-        <version.java-util>2.4.9</version.java-util>
+        <version.java-util>2.5.0</version.java-util>
         <version.gson>2.10.1</version.gson>
         <version.jackson-core>2.17.0</version.jackson-core>
         <version.slf4j-api>2.0.12</version.slf4j-api>
         <version.logback-classic>1.3.14</version.logback-classic>
 
         <!-- Build maven-***-plugins-->
-        <version.maven-gpg-plugin>3.2.2</version.maven-gpg-plugin>
         <version.maven-jar-plugin>3.3.0</version.maven-jar-plugin>
+        <version.maven-gpg-plugin>3.2.2</version.maven-gpg-plugin>
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
         <version.maven-javadoc-plugin>3.6.3</version.maven-javadoc-plugin>
         <version.maven-surefire-plugin>3.2.5</version.maven-surefire-plugin>
-        <version.maven-source-plugin>3.3.0</version.maven-source-plugin>
+        <version.maven-source-plugin>3.3.1</version.maven-source-plugin>
         <version.maven-scr-plugin>1.26.4</version.maven-scr-plugin>
         <version.maven-bundle-plugin>5.1.9</version.maven-bundle-plugin>
         <version.moditect-maven-plugin>1.2.1.Final</version.moditect-maven-plugin>
-        <!-- Name of the benchmark Uber-JAR to generate -->
-        <uberjar.name>benchmarks</uberjar.name>
 
         <!-- release to Maven Central via Sonatype Nexus -->
         <version.nexus-staging-maven-plugin>1.6.13</version.nexus-staging-maven-plugin>
@@ -60,28 +71,7 @@
             </activation>
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-jar-plugin</artifactId>
-                        <version>${version.maven-jar-plugin}</version> <!-- Use the latest version available -->
-                        <configuration>
-                            <archive>
-                                <manifestEntries>
-                                    <Implementation-Title>json-io</Implementation-Title>
-                                    <Implementation-Version>${project.version}</Implementation-Version>
-                                    <Implementation-Vendor-Id>com.cedarsoftware</Implementation-Vendor-Id>
-                                    <Implementation-URL>https://github.com/jdereg/json-io</Implementation-URL>
-                                    <Built-By>${user.name}</Built-By>
-                                    <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
-                                    <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
-                                    <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
-                                </manifestEntries>
-                                <manifest>
-                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                </manifest>
-                            </archive>
-                        </configuration>
-                    </plugin>
+
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -96,39 +86,6 @@
                                 <configuration>
                                     <keyname>${gpg.keyname}</keyname>
                                     <passphrase>${gpg.passphrase}</passphrase>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.moditect</groupId>
-                        <artifactId>moditect-maven-plugin</artifactId>
-                        <version>${version.moditect-maven-plugin}</version>
-                        <executions>
-                            <execution>
-                                <id>add-module-infos</id>
-                                <goals>
-                                    <goal>add-module-info</goal>
-                                </goals>
-                                <phase>package</phase>
-                                <configuration>
-                                    <jvmVersion>9</jvmVersion>
-                                    <module>
-                                        <moduleInfo>
-                                            <name>com.cedarsoftware.util</name>
-                                            <requires>
-                                                com.cedarsoftware.util;
-                                                com.cedarsoftware.util.convert;
-                                            </requires>
-                                            <exports>
-                                                com.cedarsoftware.io;
-                                                com.cedarsoftware.io.reflect;
-                                                com.cedarsoftware.io.reflect.filters;
-                                            </exports>
-                                        </moduleInfo>
-                                    </module>
-                                    <overwriteExistingFiles>true</overwriteExistingFiles>
                                 </configuration>
                             </execution>
                         </executions>
@@ -151,36 +108,7 @@
         <url>https://github.com/jdereg/json-io</url>
         <connection>scm:git:git://github.com/jdereg/json-io.git</connection>
         <developerConnection>scm:git:git@github.com:jdereg/json-io.git</developerConnection>
-        <tag>HEAD</tag>
     </scm>
-
-    <developers>
-        <developer>
-            <id>jdereg</id>
-            <name>John DeRegnaucourt</name>
-            <email>jdereg@gmail.com</email>
-        </developer>
-        <developer>
-            <id>kpartlow</id>
-            <name>Kenny Partlow</name>
-            <email>kpartlow@gmail.com</email>
-        </developer>
-    </developers>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>central</id>
-            <name>Maven Plugin Repository</name>
-            <url>https://repo1.maven.org/maven2</url>
-            <layout>default</layout>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-        </pluginRepository>
-    </pluginRepositories>
 
     <distributionManagement>
         <snapshotRepository>
@@ -195,6 +123,30 @@
 
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${version.maven-jar-plugin}</version> <!-- Use the latest version available -->
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Implementation-Title>json-io</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Implementation-Vendor-Id>com.cedarsoftware</Implementation-Vendor-Id>
+                            <Implementation-URL>https://github.com/jdereg/json-io</Implementation-URL>
+                            <Built-By>${user.name}</Built-By>
+                            <Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+                            <Build-Jdk>${java.version} (${java.vendor} ${java.vm.version})</Build-Jdk>
+                            <Build-OS>${os.name} ${os.arch} ${os.version}</Build-OS>
+                        </manifestEntries>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-scr-plugin</artifactId>
@@ -208,7 +160,16 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Export-Package>com.cedarsoftware.io, com.cedarsoftware.io.reflect, com.cedarsoftware.io.reflect.filters</Export-Package>
+                        <Import-Package>
+                            com.cedarsoftware.util,
+                            com.cedarsoftware.util.convert</Import-Package>
+                        <Export-Package>
+                            com.cedarsoftware.io,
+                            com.cedarsoftware.io.reflect,
+                            com.cedarsoftware.io.reflect.filters,
+                            com.cedarsoftware.io.reflect.filters.field,
+                            com.cedarsoftware.io.reflect.filters.method
+                        </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>
@@ -285,42 +246,37 @@
                 <version>${version.maven-surefire-plugin}</version>
             </plugin>
 
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-shade-plugin</artifactId>-->
-                <!--<version>2.2</version>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<phase>package</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>shade</goal>-->
-                        <!--</goals>-->
-                        <!--<configuration>-->
-                            <!--<finalName>${uberjar.name}</finalName>-->
-                            <!--<transformers>-->
-                                <!--<transformer-->
-                                        <!--implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">-->
-                                    <!--<mainClass>org.openjdk.jmh.Main</mainClass>-->
-                                <!--</transformer>-->
-                            <!--</transformers>-->
-                            <!--<filters>-->
-                                <!--<filter>-->
-                                    <!--&lt;!&ndash;-->
-                                        <!--Shading signed JARs will fail without this.-->
-                                        <!--http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar-->
-                                    <!--&ndash;&gt;-->
-                                    <!--<artifact>*:*</artifact>-->
-                                    <!--<excludes>-->
-                                        <!--<exclude>META-INF/*.SF</exclude>-->
-                                        <!--<exclude>META-INF/*.DSA</exclude>-->
-                                        <!--<exclude>META-INF/*.RSA</exclude>-->
-                                    <!--</excludes>-->
-                                <!--</filter>-->
-                            <!--</filters>-->
-                        <!--</configuration>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>org.moditect</groupId>
+                <artifactId>moditect-maven-plugin</artifactId>
+                <version>${version.moditect-maven-plugin}</version>
+                <executions>
+                    <execution>
+                        <id>add-module-infos</id>
+                        <goals>
+                            <goal>add-module-info</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <jvmVersion>base</jvmVersion>
+                            <module>
+                                <moduleInfoSource>
+                                    module com.cedarsoftware.io {
+                                    requires com.cedarsoftware.util;
+                                    requires com.cedarsoftware.util.convert;
+                                    exports com.cedarsoftware.io;
+                                    exports com.cedarsoftware.io.reflect;
+                                    exports com.cedarsoftware.io.reflect.filters;
+                                    exports com.cedarsoftware.io.reflect.filters.field;
+                                    exports com.cedarsoftware.io.reflect.filters.method;
+                                    }
+                                </moduleInfoSource>
+                            </module>
+                            <overwriteExistingFiles>true</overwriteExistingFiles>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
         </plugins>
     </build>
@@ -328,23 +284,24 @@
     <dependencies>
 
         <dependency>
+            <groupId>com.cedarsoftware</groupId>
+            <artifactId>java-util</artifactId>
+            <version>${version.java-util}</version>
+        </dependency>
+
+        <!-- ALL test-scope dependencies below -->
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <version>${version.junit-jupiter-engine}</version>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${version.junit-jupiter-api}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>${version.junit-jupiter-engine}</version>
+            <version>${version.junit-jupiter-params}</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.cedarsoftware</groupId>
-            <artifactId>java-util</artifactId>
-            <version>${version.java-util}</version>
         </dependency>
 
         <dependency>
@@ -353,7 +310,7 @@
             <version>${version.gson}</version>
             <scope>test</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -392,17 +349,9 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>${version.logback-classic}</version> <!-- Use the latest version -->
+            <version>${version.logback-classic}</version>
             <scope>test</scope>
         </dependency>
-
-        <!-- Attempting to get the Surefire Logger, so tests can write to it, and then SL4FJ and Logback are not needed -->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.maven.surefire</groupId>-->
-<!--            <artifactId>surefire-api</artifactId>-->
-<!--            <version>3.2.1</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
 
     </dependencies>
 </project>

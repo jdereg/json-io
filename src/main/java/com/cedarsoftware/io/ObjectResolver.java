@@ -397,7 +397,7 @@ public class ObjectResolver extends Resolver
                     createInstance(jObj);
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
                     if (!isNonRefClass) {
-                        copyJsonValuesToJavaTarget(jObj);
+                        traverseSpecificType(jObj);
                     }
 
                     if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
@@ -548,21 +548,17 @@ public class ObjectResolver extends Resolver
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readWithFactoryIfExists(final Object o, final Class inferredType, final Deque<JsonObject> stack)
-    {
-        if (o == null)
-        {
+    protected Object readWithFactoryIfExists(final Object o, final Class inferredType, final Deque<JsonObject> stack) {
+        if (o == null) {
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
 
-        if (inferredType != null && getReadOptions().isNotCustomReaderClass(inferredType))
-        {
+        if (inferredType != null && getReadOptions().isNotCustomReaderClass(inferredType)) {
             return null;
         }
 
         final boolean isJsonObject = o instanceof JsonObject;
-        if (!isJsonObject && inferredType == null)
-        {   // If not a JsonObject (like a Long that represents a date, then compType must be set)
+        if (!isJsonObject && inferredType == null) {   // If not a JsonObject (like a Long that represents a date, then compType must be set)
             return null;
         }
         JsonObject jsonObj;
@@ -570,35 +566,25 @@ public class ObjectResolver extends Resolver
         Class c;
 
         // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)
-        if (isJsonObject)
-        {
+        if (isJsonObject) {
             jsonObj = (JsonObject) o;
-            if (jsonObj.isReference())
-            {   // Don't create a new instance for an @ref.  The pointer to the other instance will be placed
+            if (jsonObj.isReference()) {   // Don't create a new instance for an @ref.  The pointer to the other instance will be placed
                 // where we are now (inside array, inside collection, as a map key, a map value, or a value
                 // pointed to by a field.
                 return null;
             }
 
-            if (jsonObj.getTarget() == null)
-            {   // '@type' parameter used (not target instance)
+            if (jsonObj.getTarget() == null) {   // '@type' parameter used (not target instance)
                 String typeStr = null;
-                try
-                {
-                    String type =  jsonObj.getJavaTypeName();
-                    if (type != null)
-                    {
+                try {
+                    String type = jsonObj.getJavaTypeName();
+                    if (type != null) {
                         typeStr = type;
                         c = ClassUtilities.forName(type, classLoader);
-                    }
-                    else
-                    {
-                        if (inferredType != null)
-                        {
+                    } else {
+                        if (inferredType != null) {
                             c = inferredType;
-                        }
-                        else
-                        {
+                        } else {
                             return null;
                         }
                     }
@@ -612,14 +598,10 @@ public class ObjectResolver extends Resolver
                 } catch (Exception e) {
                     throw new JsonIoException("Unable to determine type", e);
                 }
-            }
-            else
-            {   // Type inferred from target object
+            } else {   // Type inferred from target object
                 c = jsonObj.getJavaType();
             }
-        }
-        else
-        {
+        } else {
             c = inferredType;
 
             jsonObj = new JsonObject();
@@ -663,8 +645,7 @@ public class ObjectResolver extends Resolver
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
         JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
-        if (classFactory != null && jsonObj.getTarget() == null)
-        {
+        if (classFactory != null && jsonObj.getTarget() == null) {
             Object target = createInstanceUsingClassFactory(c, jsonObj);
 
             if (jsonObj.isFinished()) {

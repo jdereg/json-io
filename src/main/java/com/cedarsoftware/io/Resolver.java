@@ -7,12 +7,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.util.ClassUtilities;
@@ -31,20 +29,20 @@ import static com.cedarsoftware.io.JsonObject.KEYS;
  * be replaced with the Object (or Map) that had the corresponding @id.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
- * <br>
- * Copyright (c) Cedar Software LLC
- * <br><br>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <br><br>
- * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
- * <br><br>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class Resolver {
@@ -52,26 +50,21 @@ public abstract class Resolver {
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
     private final Deque<JsonObject> stack = new ArrayDeque<>();
-    final Map<Class<?>, Optional<JsonReader.JsonClassReader>> readerCache = new HashMap<>();
 
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     protected final Collection<Missingfields> missingFields = new ArrayList<>();
 
     private final ReadOptions readOptions;
-
     private final ReferenceTracker references;
-
     private final Converter converter;
 
     public ReadOptions getReadOptions() {
         return this.readOptions;
     }
-
     public ReferenceTracker getReferences() {
         return this.references;
     }
-
     public Converter getConverter() {
         return this.converter;
     }
@@ -135,7 +128,7 @@ public abstract class Resolver {
      * @return a typed Java instance that was serialized into JSON.
      */
     @SuppressWarnings("unchecked")
-    public <T> T createJavaGraphFromJsonObjectGraph(JsonObject rootObj, Class<T> root) {
+    public <T> T toJavaObjects(JsonObject rootObj, Class<T> root) {
         if (rootObj == null) {
             return null;
         }
@@ -152,7 +145,7 @@ public abstract class Resolver {
             if (rootObj.isFinished) {   // Factory method instantiated and completely loaded the object.
                 return (T) instance;
             } else {
-                return traverseJsonObjectGraph(rootObj);
+                return traverseJsonObject(rootObj);
             }
         }
     }
@@ -167,7 +160,7 @@ public abstract class Resolver {
      * @return Properly constructed, typed, Java object graph built from a Map
      * of Maps representation (JsonObject root).
      */
-    public <T> T traverseJsonObjectGraph(final JsonObject root) {
+    public <T> T traverseJsonObject(JsonObject root) {
         stack.addFirst(root);
 
         while (!stack.isEmpty()) {
@@ -182,12 +175,12 @@ public abstract class Resolver {
                 continue;
             }
             visited.put(jsonObj, null);
-            copyJsonValuesToJavaTarget(jsonObj);
+            traverseSpecificType(jsonObj);
         }
         return (T) root.getTarget();
     }
 
-    public <T> T copyJsonValuesToJavaTarget(JsonObject jsonObj) {
+    public <T> void traverseSpecificType(JsonObject jsonObj) {
         if (jsonObj.isArray()) {
             traverseArray(stack, jsonObj);
         } else if (jsonObj.isCollection()) {
@@ -202,7 +195,6 @@ public abstract class Resolver {
                 traverseFields(stack, jsonObj);
             }
         }
-        return (T) jsonObj.getTarget();
     }
 
     public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj);
@@ -221,7 +213,6 @@ public abstract class Resolver {
         }
         unresolvedRefs.clear();
         prettyMaps.clear();
-        readerCache.clear();
         handleMissingFields();
     }
 

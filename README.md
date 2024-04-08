@@ -7,14 +7,12 @@ json-io
 Excellent Java serialization to and from JSON format.
 Available on [Maven Central](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware).
 This library has <b>no external dependencies</b> on other libraries for runtime other than our own `java-util.`
-The `json-io.jar`file is only`185K` and combined with `java-util` totals `250K.` 
-Works with`JDK 1.8`through`JDK 21`.
-The classes in the`.jar`file are version 52 (`JDK 1.8`).
+The `json-io.jar`file is only`185K` and combined with `java-util` totals `250K.` Compatible with JDK1.8+ 
 ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.19.14'
+implementation 'com.cedarsoftware:json-io:4.20.0'
 ```
 
 ##### Maven
@@ -22,7 +20,7 @@ implementation 'com.cedarsoftware:json-io:4.19.14'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.19.14</version>
+      <version>4.20.0</version>
     </dependency>
 ```
 ___
@@ -50,13 +48,13 @@ ___
 >- [ ] **Packaging**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.java)
 >- [ ] **API**
->  - Static methods on `JsonIo` ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
+>  - Static methods on [JsonIo]() ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
 >  - Use `JsonReader.ClassFactory` (not `JsonReader.JsonClassReader`) for difficult classes (hard to instantiate & fill).
 >  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
 >- [ ] Updates will be 4.21.0, 4.22.0, ...
 >#### 4.14.x (supported)
->- [ ] **Version**: 4.14.3
+>- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
 >- [ ] **Maintained**: Bug fixes, CVE's
 >- [ ] **Packaging**: com.cedarsoftware.util.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format)
@@ -72,7 +70,6 @@ ___
 Featured on [json.org](http://json.org).
 
 For useful Java utilities, check out [java-util](http://github.com/jdereg/java-util)
-
 ___
 ### Sponsors
 [![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
