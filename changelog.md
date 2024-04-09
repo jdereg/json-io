@@ -1,4 +1,8 @@
 ### Revision History
+* 4.21.0-SNAPSHOT
+ * Fixed NPE on null writeOptions for `JsonIo.toJson().` The `writeOptions` are now created with defaults for you if null is passed in.
+ * Added `Resolver` as the last argument to the `JsonClassReader.read()` method. The author does not need to use the `Resolver` in there implementation, but it does it come in handy as it has the Map of IDs to JsonObjects, as well as the `ReadOptions,` and the `Converter.`
+ * Deprecated the APIs on `JsonIo` that exist to show one how to convert the old style `Map` options to the new "builder" format. 
 * 4.20.0
   * `MethodFilter` can be applied to remove the use of a method accessor, useful when the method accessor is causing problems (additional unwanted side-effects) during the serialization (outputting of JSON). `MethodFilter's` are added to `WriteOptions` via the `WriteOptionsBuilder.` `MethodFilter's` can be added to a single `WriteOptions` instance or added permanently (jvm lifecyle) so that all created `WriteOptions` include it automatically (see `WriteOptionsBuilder.addPermanent*` APIs).
   * Significant updates made to User Guide documentation.
@@ -52,8 +56,7 @@
 * 4.19.1
   * The old `Map` options method has been superceded by passing instead a `WriteOptions` or `ReadOptions` instance.
     All the prior features are still supported, plus new features have been added.  Use the methods on
-    `Write/ReadOptions` to set them.  The `ReadOptions` currently use a `ReadOptionsBuilder()` to construct the `ReadOptions.`
-    This will change in the 5.x branch to match the `WriteOptions`, where it is the builder/options.
+    `WriteOptionsBuilder` and `ReadOptionsBuilder` to set them.   
     > Example changes required due to this update:
     <br><b>Before</b>
     > ```
@@ -67,7 +70,7 @@
     > ```
     > <b>After</b>
     > ```
-    > A. String json = JsonIo.toJson(srcObj, new WriteOptions().showTypeInfoNever());
+    > A. String json = JsonIo.toJson(srcObj, new WriteOptionsBuilder().showTypeInfoNever().build());
     > B. JsonIo.toJson(srcObj)
     > C. JsonIo.toJson(srcObj, null) // 2nd arg is WriteOptions instance (can be null for defaults)
     > D. return JsonIo.formatJson(json)
