@@ -119,6 +119,9 @@ public class JsonIo {
      */
     public static void toJson(OutputStream out, Object source, WriteOptions writeOptions) {
         Convention.throwIfNull(out, "OutputStream cannot be null");
+        if (writeOptions == null) {
+            writeOptions = new WriteOptionsBuilder().build();
+        }
         JsonWriter writer = null;
         try {
             writer = new JsonWriter(out, writeOptions);
@@ -143,7 +146,7 @@ public class JsonIo {
      * @param rootType Class of the root type of object that will be returned. Can be null, in which
      *                 case a best-guess will be made for the Class type of the return object.  If it
      *                 has an @type meta-property that will be used, otherwise the JSON types { ... }
-     *                 will return a Map, [...] will return Object[] or Collection, and the primtive
+     *                 will return a Map, [...] will return Object[] or Collection, and the primitive
      *                 types will be returned (String, long, Double, boolean, or null).
      * @return rootType Java instance that represents the Java equivalent of the passed in JSON string.
      * @throws JsonIoException A runtime exception thrown if any errors happen during serialization
@@ -173,6 +176,9 @@ public class JsonIo {
      */
     public static <T> T toObjects(InputStream in, ReadOptions readOptions, Class<T> rootType) {
         Convention.throwIfNull(in, "InputStream cannot be null");
+        if (readOptions == null) {
+            readOptions = new ReadOptionsBuilder().returnAsJavaObjects().build();
+        }
 
         JsonReader jr = null;
         try  {
@@ -185,7 +191,7 @@ public class JsonIo {
             throw new JsonIoException(e);
         }
         finally {
-            if (readOptions != null && readOptions.isCloseStream()) {
+            if (readOptions.isCloseStream()) {
                 if (jr != null) {
                     jr.close();
                 }
@@ -279,7 +285,9 @@ public class JsonIo {
      * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
      * @param optionalArgs Map of old json-io options
      * @return ReadOptionsBuilder
+     * @deprecated - This exists to show how the old Map<String, Object> options are crreated using ReadOptionsBuilder.
      */
+    @Deprecated
     public static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs) {
         if (optionalArgs == null) {
             optionalArgs = new HashMap<>();
@@ -377,7 +385,9 @@ public class JsonIo {
      * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
      * @param optionalArgs Map of old json-io options
      * @return WriteOptionsBuilder
+     * @deprecated - This exists to show how the old Map<String, Object> options are crreated using WriteptionsBuilder.
      */
+    @Deprecated
     public static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
         if (optionalArgs == null) {
             optionalArgs = new HashMap<>();

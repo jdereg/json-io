@@ -49,7 +49,7 @@ public class SunMiscTest
 
         Map<Class<Dog.Shoe>, JsonReader.JsonClassReader> customReader = new HashMap<>();
         customReader.put(Dog.Shoe.class, new JsonReader.JsonClassReader() {
-            public Object read(Object jOb, Deque<JsonObject> stack)
+            public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver)
             {
                 // no need to do anything special
                 return jOb;

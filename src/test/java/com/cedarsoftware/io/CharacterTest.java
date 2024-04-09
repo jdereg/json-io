@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,35 @@ public class CharacterTest
         Character ch = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), char.class);
         assert ch == '"';
 
+    }
+
+    @Test
+    void testUnicodeChars1()
+    {
+        String monkeys = "\uD83D\uDE4A\uD83D\uDE49\uD83D\uDE48";
+        String json = JsonIo.toJson(monkeys, null);
+        String rereadJson = JsonIo.toObjects(json, null, String.class);
+        assertEquals(rereadJson, monkeys);
+    }
+
+    @Test
+    void testUnicodeChars2()
+    {
+        String monkeys = "\uD83D\uDE4A\uD83D\uDE49\uD83D\uDE48";
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toJson(baos, monkeys, null);
+        String json = baos.toString();
+        assertEquals(json, '"' + monkeys + '"');
+    }
+
+    @Test
+    void testUnicodeChars3() throws Exception
+    {
+        String monkeys = "\uD83D\uDE4A\uD83D\uDE49\uD83D\uDE48";
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        JsonIo.toJson(baos, monkeys, null);
+        String json = baos.toString();
+        assertEquals('"' + monkeys + '"', json);
     }
 
     private static class ManyCharacters implements Serializable

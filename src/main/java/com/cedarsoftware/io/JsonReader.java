@@ -64,7 +64,6 @@ public class JsonReader implements Closeable
     private final FastReader input;
     private final Resolver resolver;
     private final ReadOptions readOptions;
-    private final Converter converter;
     private final JsonParser parser;
 
     /**
@@ -148,24 +147,13 @@ public class JsonReader implements Closeable
     public interface JsonClassReader
     {
         /**
-         * @param jOb      Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
+         * @param jsonObj  Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
          * @param stack    Deque of objects that have been read (Map of Maps view).
-         * @param resolver
-         * @return Java Object you wish to convert the passed in jOb into.
+         * @param resolver Contains access 
+         * @return Java Object that you filled out with values from the passed in jsonObj.
          */
-        default Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver) {
-            // The toMap is expensive, but only if you do not override this default method....and the other
-            // methods are soon to be deprecated.
-            return this.read(jOb, stack);
-        }
-
-        /**
-         * @param jOb Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack Deque of objects that have been read (Map of Maps view).
-         * @return Object you wish to convert the jOb value into.
-         */
-        default Object read(Object jOb, Deque<JsonObject> stack) {
-            return null;
+        default Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver) {
+            throw new UnsupportedOperationException("You must implement this method and read the JSON content from jsonObj and copy the values from jsonObj to the target class, jsonObj.getTarget()");
         }
     }
 
@@ -191,13 +179,12 @@ public class JsonReader implements Closeable
 
     public JsonReader(InputStream inputStream, ReadOptions readOptions, ReferenceTracker references) {
         this.readOptions = readOptions == null ? new ReadOptionsBuilder().returnAsJavaObjects().build() : readOptions;
-        this.converter = new Converter(this.readOptions.getConverterOptions());
-
+        Converter converter = new Converter(this.readOptions.getConverterOptions());
         this.input = getReader(inputStream);
 
         this.resolver = this.readOptions.isReturningJsonObjects() ?
-                new MapResolver(this.readOptions, references, this.converter) :
-                new ObjectResolver(this.readOptions, references, this.converter);
+                new MapResolver(this.readOptions, references, converter) :
+                new ObjectResolver(this.readOptions, references, converter);
 
         this.parser = new JsonParser(this.input, this.resolver);
     }
@@ -289,6 +276,18 @@ public class JsonReader implements Closeable
         }
     }
 
+    /**
+     * @return a copy of the Resolver being used.  The Resolver is a super class of ObjectResolver or MapResolver.
+     * The ObjectResolver used when the JSON maps are converted to Java objects.  A MapResolver is used to convert
+     * JsonObject field value to match their Java counter parts.  The MapResolver uses the Class associated to the
+     * JsonObject to coerce primitive fields in the Map value side to their correct data types, for example, if a Long
+     * was read in as a String from the JSON, it will be converted back to a Long (inside the Map) because the
+     * associated field (matched by String key name in Map) has a type long/Long.
+     */
+    public Resolver getResolver() {
+        return resolver;
+    }
+    
     public void close() {
         try {
             if (input != null) {

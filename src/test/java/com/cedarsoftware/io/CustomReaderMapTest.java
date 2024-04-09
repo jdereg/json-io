@@ -98,8 +98,7 @@ public class CustomReaderMapTest
 
     private static class CustomPointReader implements JsonReader.JsonClassReader
     {
-        @Override
-        public Object read(Object obj, Deque<JsonObject> stack)
+        public Object read(Object obj, Deque<JsonObject> stack, Resolver resolver)
         {
             JsonObject jObj = (JsonObject) obj;
 

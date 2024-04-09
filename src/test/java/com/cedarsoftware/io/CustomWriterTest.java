@@ -442,9 +442,9 @@ public class CustomWriterTest
     public static class CustomPersonReader implements JsonReader.JsonClassReader
     {
         @Override
-        public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver)
         {
-            JsonObject map = (JsonObject) jOb;
+            JsonObject map = (JsonObject) jsonObj;
             Person p = new Person();
             p.setFirstName((String)map.get("f"));
             p.setLastName((String)map.get("l"));

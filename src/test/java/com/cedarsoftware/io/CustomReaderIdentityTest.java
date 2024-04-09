@@ -127,7 +127,7 @@ public class CustomReaderIdentityTest
 
 	public static class CustomDataReader implements JsonReader.JsonClassReader
 	{
-        public Object read(Object jOb, Deque<JsonObject> stack)
+        public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver)
 		{
 			CustomDataClass customClass = new CustomDataClass();
 			customClass.setTest("blab");

@@ -180,8 +180,8 @@ class RefsTest
     private static class TestObjectReader implements JsonReader.JsonClassReader {
 
         @Override
-        public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver) {
-            JsonObject jObj = (JsonObject) jOb;
+        public Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver) {
+            JsonObject jObj = (JsonObject) jsonObj;
             TestObject x = new TestObject((String) jObj.get("name"));
             JsonObject b1 = (JsonObject) jObj.get("_other");
             JsonObject aRef = (JsonObject) b1.get("_other");
