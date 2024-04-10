@@ -1,9 +1,10 @@
 json-io
 =======
 <!--[![Build Status](https://travis-ci.org/jdereg/json-io.svg?branch=master)](https://travis-ci.org/jdereg/json-io) -->
+![Maven Central](https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-io)
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
-![Maven Central](https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io)
+
 
 
 Great tool for Java serialization to and from JSON format.
