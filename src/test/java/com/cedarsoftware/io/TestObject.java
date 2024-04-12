@@ -28,6 +28,12 @@ public class TestObject implements Comparable, Serializable
         _name = name;
     }
 
+    public TestObject(String name, TestObject other)
+    {
+        _name = name;
+        _other = other;
+    }
+
     public int compareTo(Object that)
     {
         if (!(that instanceof TestObject))

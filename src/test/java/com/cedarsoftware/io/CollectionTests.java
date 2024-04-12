@@ -518,6 +518,47 @@ public class CollectionTests {
         assertTrue(json.contains("list\":[]"));
     }
 
+    @Test
+    void testCollectionOfPrimitiveArrays()
+    {
+        List<Object> list = new ArrayList<>();
+        list.add(new byte[]{1, 3, 5});
+        list.add(new double[]{2.0, 4.0, 6.1});
+
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        TestUtil.printLine(json);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        assert DeepEquals.deepEquals(list, dupe);
+    }
+
+    @Test
+    void testCollectionOfLogicalPrimitiveArrays()
+    {
+        Date now = new Date();
+        List<Object> list = new ArrayList<>();
+        list.add(new String[]{"1", "3", "5"});
+        list.add(new Date[]{now, now, now});
+
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        TestUtil.printLine(json);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        assert DeepEquals.deepEquals(list, dupe);
+    }
+
+    @Test
+    void testCollectionArrayOfObjects()
+    {
+        Date now = new Date();
+        List<Object> list = new ArrayList<>();
+        list.add(new TestObject[]{new TestObject("1", new TestObject("3")), new TestObject("5")});
+        list.add(new Date[]{now, now, now});
+
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        TestUtil.printLine(json);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        assert DeepEquals.deepEquals(list, dupe);
+    }
+
     public static Date _testDate = new Date();
     public static Integer _CONST_INT = Integer.valueOf(36);
 

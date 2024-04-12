@@ -56,10 +56,11 @@ public class ArrayTest
     {
         ManyArrays obj = new ManyArrays();
         obj.init();
-        String jsonOut = TestUtil.toJson(obj);
-        TestUtil.printLine(jsonOut);
+        String json = TestUtil.toJson(obj);
+        TestUtil.printLine(json);
 
-        ManyArrays root = TestUtil.toObjects(jsonOut, null);
+        ManyArrays root = TestUtil.toObjects(json, null);
+        assert DeepEquals.deepEquals(obj, root);
         assertArray(root);
     }
 
@@ -1436,8 +1437,8 @@ public class ArrayTest
         private Date[] _dates_a;
         private Date[][] _dates_b;
 
-        private Class[] _classes_a;
-        private Class[][] _classes_b;
+        private Class<?>[] _classes_a;
+        private Class<?>[][] _classes_b;
 
         private StringBuffer _stringbuffer_a;
         private StringBuffer[] _stringbuffer_b;

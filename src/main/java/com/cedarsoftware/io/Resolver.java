@@ -60,13 +60,13 @@ public abstract class Resolver {
     private final Converter converter;
 
     public ReadOptions getReadOptions() {
-        return this.readOptions;
+        return readOptions;
     }
     public ReferenceTracker getReferences() {
-        return this.references;
+        return references;
     }
     public Converter getConverter() {
-        return this.converter;
+        return converter;
     }
 
     /**
@@ -96,11 +96,10 @@ public abstract class Resolver {
     /**
      * stores missing fields information to notify client after the complete deserialization resolution
      */
-    @SuppressWarnings("FieldMayBeFinal")
     protected static class Missingfields {
-        private Object target;
-        private String fieldName;
-        private Object value;
+        private final Object target;
+        private final String fieldName;
+        private final Object value;
 
         public Missingfields(Object target, String fieldName, Object value) {
             this.target = target;
@@ -134,7 +133,7 @@ public abstract class Resolver {
         }
 
         if (rootObj.isReference()) {
-            rootObj = this.getReferences().get(rootObj);
+            rootObj = getReferences().get(rootObj);
         }
 
         if (rootObj.isFinished) {   // Called on a JsonObject that has already been converted
@@ -161,13 +160,15 @@ public abstract class Resolver {
      * of Maps representation (JsonObject root).
      */
     public <T> T traverseJsonObject(JsonObject root) {
-        stack.addFirst(root);
+        push(root);
 
         while (!stack.isEmpty()) {
-            final JsonObject jsonObj = stack.removeFirst();
+            final JsonObject jsonObj = stack.pop();
 
+            if (jsonObj.isReference()) {
+                continue;
+            }
             if (jsonObj.isFinished) {
-                visited.put(jsonObj, null);
                 continue;
             }
             if (visited.containsKey(jsonObj)) {
@@ -197,9 +198,17 @@ public abstract class Resolver {
         }
     }
 
+    /**
+     * Push a JsonObject on the work stack that has not yet had it's fields move over to it's Java peer (.target)
+     * @param jsonObject JsonObject that supplies the source values for the Java peer (target)
+     */
+    public void push(JsonObject jsonObject) {
+        stack.push(jsonObject);
+    }
+    
     public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj);
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract Object readWithFactoryIfExists(final Object o, final Class<?> compType, final Deque<JsonObject> stack);
 
     protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 
@@ -218,7 +227,7 @@ public abstract class Resolver {
 
     // calls the missing field handler if any for each recorded missing field.
     private void handleMissingFields() {
-        MissingFieldHandler missingFieldHandler = this.readOptions.getMissingFieldHandler();
+        MissingFieldHandler missingFieldHandler = readOptions.getMissingFieldHandler();
         if (missingFieldHandler != null) {
             for (Missingfields mf : missingFields) {
                 missingFieldHandler.fieldMissing(mf.target, mf.fieldName, mf.value);
@@ -252,19 +261,19 @@ public abstract class Resolver {
             throw new JsonIoException("Map written with " + KEYS + " and " + ITEMS + "s entries of different sizes");
         }
 
-        buildCollection(stack, keys);
-        buildCollection(stack, items);
+        buildCollection(keys);
+        buildCollection(items);
 
         // Save these for later so that unresolved references inside keys or values
         // get patched first, and then build the Maps.
         prettyMaps.add(new Object[]{jsonObj, keys, items});
     }
 
-    private static void buildCollection(Deque<JsonObject> stack, Object[] arrayContent) {
+    private void buildCollection(Object[] arrayContent) {
         final JsonObject collection = new JsonObject();
         collection.put(ITEMS, arrayContent);
         collection.setTarget(arrayContent);
-        stack.addFirst(collection);
+        push(collection);
     }
 
     /**
@@ -308,11 +317,11 @@ public abstract class Resolver {
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
     protected Object createInstance(JsonObject jsonObj) {
-        // Coerce class first
         Object target = jsonObj.getTarget();
-        if (target != null) {
+        if (target != null) {   // already created peer Java instance
             return target;
         }
+        // Coerce class first
         Class targetType = jsonObj.getJavaType();
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
@@ -325,10 +334,10 @@ public abstract class Resolver {
                 return jsonObj.setFinishedTarget(value, true);
             }
             //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
-            //  TODO: I'd like to have all types that have mpa conversion supported here, but we have an issue with refs
+            //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
             //  TODO: going to the converter and I'm still thinking of a way to handle that.
         } else if (targetType != null && MetaUtils.isLogicalPrimitive(targetType) && getConverter().isConversionSupportedFor(Map.class, targetType)) {
-            Object source = resolveRefs(jsonObj);
+            Object source = references.get(jsonObj);
             Object value = getConverter().convert(source, targetType);
             return jsonObj.setFinishedTarget(value, true);
         }
@@ -557,13 +566,5 @@ public abstract class Resolver {
                 j++;
             }
         }
-    }
-
-    protected JsonObject resolveRefs(JsonObject jsonObject) {
-
-        JsonObject object = references.get(jsonObject);
-
-
-        return object;
     }
 }

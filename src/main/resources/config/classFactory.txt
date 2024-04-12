@@ -29,7 +29,7 @@ java.lang.Double = Convertable
 [D = ArrayFactory
 
 [Ljava.lang.Character; = ArrayFactory
-[Ljava.lang.Boolean; =ArrayFactory
+[Ljava.lang.Boolean; = ArrayFactory
 [Ljava.lang.Byte; = ArrayFactory
 [Ljava.lang.Short; = ArrayFactory
 [Ljava.lang.Integer; = ArrayFactory
@@ -39,7 +39,7 @@ java.lang.Double = Convertable
 
 [Ljava.lang.Class; = ArrayFactory
 [Ljava.lang.String; = ArrayFactory
-[Ljava.util.Calendar; =ArrayFactory
+[Ljava.util.Calendar; = ArrayFactory
 [Ljava.util.Date; = ArrayFactory
 [Ljava.sql.Date; = ArrayFactory
 [Ljava.sql.Timestamp; = ArrayFactory

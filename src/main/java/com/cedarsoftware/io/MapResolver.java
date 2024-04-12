@@ -49,13 +49,12 @@ import com.cedarsoftware.util.convert.Converter;
  */
 public class MapResolver extends Resolver
 {
-
     protected MapResolver(ReadOptions readOptions, ReferenceTracker references, Converter converter)
     {
         super(readOptions, references, converter);
     }
 
-    protected Object readWithFactoryIfExists(Object o, Class compType, Deque<JsonObject> stack)
+    protected Object readWithFactoryIfExists(Object o, Class<?> compType, Deque<JsonObject> stack)
     {
         // No custom reader support for maps
         return null;
@@ -75,31 +74,24 @@ public class MapResolver extends Resolver
         final Object target = jsonObj.getTarget();
         final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
 
-        for (Map.Entry<Object, Object> e : jsonObj.entrySet())
-        {
+        for (Map.Entry<Object, Object> e : jsonObj.entrySet()) {
             final String fieldName = (String) e.getKey();
             final Injector injector = (injectorMap == null) ? null : injectorMap.get(fieldName);
             final Object rhs = e.getValue();
 
-            if (rhs == null)
-            {
+            if (rhs == null) {
                 jsonObj.put(fieldName, null);
-            }
-            else if (rhs.getClass().isArray())
-            {   // RHS is an array
+            } else if (rhs.getClass().isArray()) {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject jsonArray = new JsonObject();
                 jsonArray.put(JsonObject.ITEMS, rhs);
-                stack.addFirst(jsonArray);
+                push(jsonArray);
 
                 // Assign the array directly to the Map key (field name)
                 jsonObj.put(fieldName, rhs);
-            }
-            else if (rhs instanceof JsonObject)
-            {
+            } else if (rhs instanceof JsonObject) {
                 JsonObject jObj = (JsonObject) rhs;
-                if (injector != null)
-                {
+                if (injector != null) {
                     boolean isNonRefClass = getReadOptions().isNonReferenceableClass(injector.getType());
                     if (isNonRefClass) {
                         // This will be JsonPrimitive.setValue() in the future (clean)
@@ -109,14 +101,11 @@ public class MapResolver extends Resolver
                 }
                 Long refId = jObj.getReferenceId();
 
-                if (refId != null)
-                {    // Correct field references
+                if (refId != null) {    // Correct field references
                     JsonObject refObject = this.getReferences().get(refId);
                     jsonObj.put(fieldName, refObject);    // Update Map-of-Maps reference
-                }
-                else
-                {
-                    stack.addFirst(jObj);
+                } else {
+                    push(jObj);
                 }
             } else if (injector != null) {
                 // The code below is 'upgrading' the RHS values in the passed in JsonObject Map
@@ -126,17 +115,12 @@ public class MapResolver extends Resolver
                 // improve the final types of values in the maps RHS, to be of the field type that
                 // was optionally specified in @type.
                 final Class<?> fieldType = injector.getType();
-                if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType))
-                {
+                if (Primitives.isPrimitive(fieldType) || BigDecimal.class.equals(fieldType) || BigInteger.class.equals(fieldType) || Date.class.equals(fieldType)) {
                     Object convert = this.getConverter().convert(rhs, fieldType);
                     jsonObj.put(fieldName, convert);
-                }
-                else if (rhs instanceof String)
-                {
-                    if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class)
-                    {
-                        if ("".equals(((String)rhs).trim()))
-                        {   // Allow "" to null out a non-String field on the inbound JSON
+                } else if (rhs instanceof String) {
+                    if (fieldType != String.class && fieldType != StringBuilder.class && fieldType != StringBuffer.class) {
+                        if ("".equals(((String) rhs).trim())) {   // Allow "" to null out a non-String field on the inbound JSON
                             jsonObj.put(fieldName, null);
                         }
                     }
@@ -159,45 +143,36 @@ public class MapResolver extends Resolver
     protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final Object[] items = jsonObj.getArray();
-        if (items == null || items.length == 0)
-        {
+        if (items == null || items.length == 0) {
             return;
         }
 
         int idx = 0;
-        final List copy = new ArrayList(items.length);
+        final List copy = new ArrayList<>(items.length);
 
-        for (Object element : items)
-        {
+        for (Object element : items) {
             copy.add(element);
 
-            if (element instanceof Object[])
-            {   // array element inside Collection
+            if (element instanceof Object[]) {   // array element inside Collection
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.put(JsonObject.ITEMS, element);
-                stack.addFirst(jsonObject);
-            }
-            else if (element instanceof JsonObject)
-            {
+                push(jsonObject);
+            } else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;
                 Long refId = jsonObject.getReferenceId();
 
-                if (refId != null)
-                {    // connect reference
+                if (refId != null) {    // connect reference
                     JsonObject refObject = this.getReferences().get(refId);
                     copy.set(idx, refObject);
-                }
-                else
-                {
-                    stack.addFirst(jsonObject);
+                } else {
+                    push(jsonObject);
                 }
             }
             idx++;
         }
         jsonObj.setTarget(null);  // don't waste space (used for typed return, not generic Map return)
 
-        for (int i=0; i < items.length; i++)
-        {
+        for (int i = 0; i < items.length; i++) {
             items[i] = copy.get(i);
         }
     }

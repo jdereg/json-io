@@ -18,6 +18,22 @@ java.lang.Double = double
 java.lang.Character = char
 java.lang.Boolean = boolean
 
+[Ljava.lang.Class; = Class[]
+[Ljava.lang.String; = String[]
+[Ljava.util.Date; = Date[]
+
+[Ljava.lang.Byte; = Byte[]
+[Ljava.lang.Short; = Short[]
+[Ljava.lang.Integer; = Integer[]
+[Ljava.lang.Long; = Long[]
+[Ljava.lang.Float; = Float[]
+[Ljava.lang.Double; = Double[]
+[Ljava.lang.Character; = Character[]
+[Ljava.lang.Boolean; = Boolean[]
+
+[Ljava.math.BigInteger; = BigInt[]
+[Ljava.math.BigDecimal; = BigDec[]
+
 java.util.ArrayList = ArrayList
 java.util.LinkedHashMap = LinkedHashMap
 java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet

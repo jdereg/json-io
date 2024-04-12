@@ -200,11 +200,17 @@ public class JsonReader implements Closeable
     public JsonReader(ReadOptions readOptions) {
         this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
-    
+
+//    static double totalParse = 0.0;
+//    static double totalResolve = 0.0;
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
+//            long start = System.nanoTime();
             returnValue = (T) parser.readValue(rootType);
+//            long end = System.nanoTime();
+//            double parseTime = (end-start) / 1_000_000.0;
+//            totalParse += parseTime;
             if (returnValue == null) {
                 return null;    // easy, done.
             }
@@ -217,6 +223,7 @@ public class JsonReader implements Closeable
         JsonObject rootObj = new JsonObject();
         T graph;
 
+//        long start = System.nanoTime();
         if (returnValue instanceof JsonObject) {        // JSON {}
             graph = toJavaObjects((JsonObject) returnValue, rootType);
         } else if (returnValue instanceof Object[]) {  // JSON []
@@ -231,7 +238,12 @@ public class JsonReader implements Closeable
                 graph = (T)((JsonObject)graph).getValue();
             }
         }
-        
+//        long end = System.nanoTime();
+//        double resolveTime = (end - start) / 1_000_000.0;
+//        totalResolve += resolveTime;
+//        System.out.println("totalParse = " + totalParse);
+//        System.out.println("totalResolve = " + totalResolve);
+
         // Allow a complete 'Map' return (Javascript style), but some of the items inside will be "cleaned up"
         // and adjusted if a paired class was found - primitives will be converted to the right type, based on field
         // or Array [] type, however, objects will be left as Maps.
@@ -278,11 +290,12 @@ public class JsonReader implements Closeable
 
     /**
      * @return a copy of the Resolver being used.  The Resolver is a super class of ObjectResolver or MapResolver.
-     * The ObjectResolver used when the JSON maps are converted to Java objects.  A MapResolver is used to convert
-     * JsonObject field value to match their Java counter parts.  The MapResolver uses the Class associated to the
-     * JsonObject to coerce primitive fields in the Map value side to their correct data types, for example, if a Long
-     * was read in as a String from the JSON, it will be converted back to a Long (inside the Map) because the
-     * associated field (matched by String key name in Map) has a type long/Long.
+     * The ObjectResolver is used to convert JSON maps (JsonObject) to Java objects.  A MapResolver is used to convert
+     * clean-up the value-side of the map only. The MapResolver uses the Class associated to the JsonObject to coerce
+     * primitive fields in the Map's values to their correct data types. For example, if a Long was read in as a String
+     * from the JSON, it will be converted back to a Long (inside the Map) because the associated field (matched by
+     * String key name in Map) to the Java class 's Field, and converts the raw JSON primitive value to the field type
+     * (long/Long).
      */
     public Resolver getResolver() {
         return resolver;

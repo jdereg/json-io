@@ -1,6 +1,6 @@
 #
 # These classes will never output with an @id nor reference (@ref) another instance.  Use for classes
-# that immutable.  Non-referenceable items potentially change the shape of the object graph.
+# that are immutable.  Non-referenceable items potentially change the shape of the object graph.
 # Instance sharing can save memory, however, maintaining the perfect shape of the graph to save memory
 # may be something you sacrifice to improve readability of the JSON.
 #

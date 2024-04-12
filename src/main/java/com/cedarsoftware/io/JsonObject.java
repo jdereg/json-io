@@ -179,11 +179,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return this.containsKey(VALUE) && size() == 1;
     }
 
-    void clearArray() {
-        remove(ITEMS);
-        hash = null;
-    }
-
     public int size() {
         if (containsKey(ITEMS)) {
             if (getArray() == null) {
