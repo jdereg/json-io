@@ -88,7 +88,7 @@ public class ObjectResolver extends Resolver
     {
         final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
-        final Class cls = javaMate.getClass();
+        final Class<?> cls = javaMate.getClass();
         ReadOptions readOptions = getReadOptions();
         final Map<String, Injector> injectorMap = readOptions.getDeepInjectorMap(cls);
 
@@ -103,11 +103,6 @@ public class ObjectResolver extends Resolver
                 handleMissingField(stack, jsonObj, rhs, key);
             } //else no handler so ignore.
         }
-    }
-
-    static boolean isBasicWrapperType(Class clazz)
-    {
-        return Primitives.PRIMITIVE_WRAPPERS.contains(clazz);
     }
 
     /**
