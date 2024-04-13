@@ -115,8 +115,8 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return true;
         }
         if (containsKey(ITEMS) && !containsKey(KEYS)) {
-            String typeName = getJavaTypeName();
-            return typeName != null && !typeName.contains("[");
+            Class<?> type = getJavaType();
+            return type != null && !type.isArray();
         }
         return false;
     }
@@ -188,8 +188,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 return 0;
             }
             return getJsonArray().length;
-        } else if (containsKey(REF)) {
-            return 0;
         }
 
         return jsonStore.size();
