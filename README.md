@@ -35,15 +35,15 @@ ___
 
 ## Releases
 >### 5.0.0 (future)
->- [ ] **Maintained**: Fully
 >- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
+>- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
->- [ ] **Java**: JDK17+ (Class file 61 format, will include module-info.class)
+>- [ ] **Java**: JDK17+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
-   >  - Static methods on `JsonIo` ==> `toJson()`, `toObjects()`, `formatJson()`, `deepCopy()`
->  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo.`
->  - Use `JsonReader.ClassFactory` for difficult classes (hard to instantiate & fill).
->  - Use `JsonWriter.JsonClassWriter` to customize the output JSON for a particular class
+   >  - Static methods on [JsonIo](https://www.javadoc.io/doc/com.cedarsoftware/json-io/latest/com/cedarsoftware/io/JsonIo.html): [toJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toJson(java.lang.Object,com.cedarsoftware.io.WriteOptions)), [toObjects()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#toObjects(java.lang.String,com.cedarsoftware.io.ReadOptions,java.lang.Class)), [formatJson()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#formatJson(java.lang.String,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions)), [deepCopy()](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonIo.html#deepCopy(java.lang.Object,com.cedarsoftware.io.ReadOptions,com.cedarsoftware.io.WriteOptions))
+>  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
+>  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
+>  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
 >### 4.20.0 (current)
 >- [ ] **Version**: [4.20.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
