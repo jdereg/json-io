@@ -67,7 +67,6 @@ public class Injector {
         }
     }
 
-
     public static Injector create(Field field, String methodName, String uniqueFieldName) {
         try {
             MethodType methodType = MethodType.methodType(Void.class, field.getType());
@@ -85,10 +84,6 @@ public class Injector {
         }
 
         try {
-            // TODO: value should be "cleaned up" using Converter.convert(value, Class of field) before injecting.
-            // TODO: This will make the value to best match the destination type.
-            // TODO: This is logical primitive types (all primitives, wrappers, Date, java.sql.Date, LocalDate, LocalTime, ZonedDateTime, Atomic*, Big*, Class, String, etc.)
-            // TODO: This should be performed with there is reflection, and accessor, Method Handle, etc.
             this.injector.invoke(object, value);
         } catch (Throwable t) {
             throw new JsonIoException("Attempting to set field: " + this.getName() + " using " + this.getDisplayName(), t);

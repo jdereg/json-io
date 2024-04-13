@@ -36,40 +36,40 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
 
         if (items == null) {
             jObj.setTarget(null);
-        } else {
-            int len = items.length;
-            Class<?> arrayType = getType();
-            Class<?> componentType = arrayType.getComponentType();
-            Object array = Array.newInstance(componentType, len);
-
-            for (int i = 0; i < len; i++) {
-                Object val = items[i];
-                if (val == null) {
-                } else if (val instanceof JsonObject) {
-                    Class<?> type;
-                    do {
-                        // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
-                        JsonObject jsonObject = (JsonObject) val;
-                        type = jsonObject.getJavaType();
-                        if (!jsonObject.hasValue()) {
-                            break;
-                        }
-                        val = jsonObject.getValue();
-                    } while (val instanceof JsonObject);
-
-                    if (type == null) {
-                        type = componentType;
-                    }
-                    val = resolver.getConverter().convert(val, type);
-                    
-                } else {
-                    val = resolver.getConverter().convert(val, componentType);
-                }
-                Array.set(array, i, val);
-            }
-
-            jObj.setTarget(array);
+            return null;
         }
+        int len = items.length;
+        Class<?> arrayType = getType();
+        Class<?> componentType = arrayType.getComponentType();
+        Object array = Array.newInstance(componentType, len);
+
+        for (int i = 0; i < len; i++) {
+            Object val = items[i];
+            if (val == null) {
+            } else if (val instanceof JsonObject) {
+                Class<?> type;
+                do {
+                    // Allow for {@type:long, value:{@type:int, value:3}}  (and so on...)
+                    JsonObject jsonObject = (JsonObject) val;
+                    type = jsonObject.getJavaType();
+                    if (!jsonObject.hasValue()) {
+                        break;
+                    }
+                    val = jsonObject.getValue();
+                } while (val instanceof JsonObject);
+
+                if (type == null) {
+                    type = componentType;
+                }
+                val = resolver.getConverter().convert(val, type);
+
+            } else {
+                val = resolver.getConverter().convert(val, componentType);
+            }
+            Array.set(array, i, val);
+        }
+
+        jObj.setTarget(array);
         return (T) jObj.getTarget();
     }
 

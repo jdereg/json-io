@@ -476,7 +476,7 @@ public class ObjectResolver extends Resolver
      * associated to it, then have it convert the object.  If there is no custom reader, then return null.
      * @param o Object to read (convert).  Will be either a JsonObject or a JSON primitive String, long, boolean,
      *          double, or null.
-     * @param inferredType Class destination type to which the passed in object should be converted to.
+     * @param inferredType Class to which 'o' should be converted to.
      * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
@@ -484,8 +484,9 @@ public class ObjectResolver extends Resolver
         if (o == null) {
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
+        ReadOptions readOptions = getReadOptions();
 
-        if (inferredType != null && getReadOptions().isNotCustomReaderClass(inferredType)) {
+        if (inferredType != null && readOptions.isNotCustomReaderClass(inferredType)) {
             return null;
         }
 
@@ -500,81 +501,48 @@ public class ObjectResolver extends Resolver
         // Set up class type to check against reader classes (specified as @type, or jObj.target, or compType)
         if (isJsonObject) {
             jsonObj = (JsonObject) o;
-            if (jsonObj.isReference()) {   // Don't create a new instance for an @ref.  The pointer to the other instance will be placed
-                // where we are now (inside array, inside collection, as a map key, a map value, or a value
-                // pointed to by a field.
+            if (jsonObj.isReference()) {   // No factory/customer reader for an @ref
                 return null;
             }
 
             if (jsonObj.getTarget() == null) {   // '@type' parameter used (not target instance)
-                try {
-                    String type = jsonObj.getJavaTypeName();
-                    if (type != null) {
-                        c = ClassUtilities.forName(type, classLoader);
-                    } else {
-                        if (inferredType != null) {
-                            c = inferredType;
-                        } else {
-                            return null;
-                        }
-                    }
-                    jsonObj.setHintType(c);
-                    Object factoryCreated = createInstance(jsonObj);
-                    if (factoryCreated != null && jsonObj.isFinished) {
-                        return factoryCreated;
-                    }
-                } catch (JsonIoException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new JsonIoException("Unable to determine type", e);
+                c = jsonObj.getJavaType();
+                if (c == null || inferredType == null) {
+                    return null;
+                }
+                jsonObj.setHintType(c);
+                Object factoryCreated = createInstance(jsonObj);
+                if (factoryCreated != null && jsonObj.isFinished) {
+                    return factoryCreated;
                 }
             } else {   // Type inferred from target object
                 c = jsonObj.getJavaType();
             }
         } else {
-            c = inferredType;
-
+            c = inferredType.equals(Object.class) ? o.getClass() : inferredType;
             jsonObj = new JsonObject();
             jsonObj.setValue(o);
+            jsonObj.setHintType(c);
         }
 
-        if (null == c) {
-            // Class not found using multiple techniques.  There is no custom factory or reader;
-            return null;
-        }
-
-        if (jsonObj.getJavaType() == null) {
-            jsonObj.setJavaType(c);
-        }
-
-        if (getReadOptions().isNotCustomReaderClass(c)) {
+        if (readOptions.isNotCustomReaderClass(c)) {
             // Explicitly instructed not to use a custom reader for this class.
             return null;
         }
 
-        // we could maybe just do the map conversion (JsonObject) if they were all defined out.
         if (jsonObj.getTarget() == null) {
-            if (jsonObj.hasValue() && jsonObj.getValue() != null) {
+            if (jsonObj.hasValue()) {
                 if (getConverter().isConversionSupportedFor(jsonObj.getValue().getClass(), c)) {
-//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
                     Object target = getConverter().convert(jsonObj.getValue(), c);
-
                     return jsonObj.setFinishedTarget(target, true);
                 }
-                //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
-                //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
-                //  TODO: going to the converter and I'm still thinking of a way to handle that.
-            } else if (MetaUtils.isLogicalPrimitive(c) && getConverter().isConversionSupportedFor(Map.class, c)) {
-                Object source = getReferences().get(jsonObj);
-                Object value = getConverter().convert(source, c);
-                return jsonObj.setFinishedTarget(value, true);
             }
         }
 
 
         // from here on out it is assumed you have json object.
         // Use custom classFactory if one exists and target hasn't already been created.
-        JsonReader.ClassFactory classFactory = getReadOptions().getClassFactory(c);
+        JsonReader.ClassFactory classFactory = readOptions.getClassFactory(c);
         if (classFactory != null && jsonObj.getTarget() == null) {
             Object target = createInstanceUsingClassFactory(c, jsonObj);
 
@@ -584,7 +552,7 @@ public class ObjectResolver extends Resolver
         }
 
         // Use custom reader if one exists
-        JsonReader.JsonClassReader closestReader = getReadOptions().getCustomReader(c);
+        JsonReader.JsonClassReader closestReader = readOptions.getCustomReader(c);
         if (closestReader == null) {
             return null;
         }

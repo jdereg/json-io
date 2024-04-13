@@ -64,7 +64,9 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             "BigDec",
             "java.math.BigDecimal",
             "class",
-            "java.lang.Class"
+            "java.lang.Class",
+            "string",
+            "java.lang.String"
     )));
 
     public String toString() {
@@ -241,10 +243,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public Object put(Object key, Object value) {
         hash = null;
-        if (key == null) {
-            return jsonStore.put(null, value);
-        }
-
         if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS))) {
             isMap = true;
         }

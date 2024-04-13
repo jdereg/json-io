@@ -321,25 +321,24 @@ public abstract class Resolver {
         if (target != null) {   // already created peer Java instance
             return target;
         }
+
         // Coerce class first
         Class targetType = jsonObj.getJavaType();
         jsonObj.setJavaType(coerceClassIfNeeded(targetType));
         targetType = jsonObj.getJavaType();
         
-        // Does a built-in conversion exist?
+        // Does a 'Converter' conversion exist?
         if (jsonObj.hasValue() && jsonObj.getValue() != null) {
             if (converter.isConversionSupportedFor(jsonObj.getValue().getClass(), targetType)) {
-//                System.out.println("jsonObj.getValue() = " + jsonObj.getValue());
-                Object value = getConverter().convert(jsonObj.getValue(), targetType);
+                Object value = converter.convert(jsonObj.getValue(), targetType);
                 return jsonObj.setFinishedTarget(value, true);
             }
-            //  TODO: Handle primitives that are written as map with conversion logic (no refs on these types, I think)
-            //  TODO: I'd like to have all types that have map conversion supported here, but we have an issue with refs
-            //  TODO: going to the converter and I'm still thinking of a way to handle that.
-        } else if (targetType != null && MetaUtils.isLogicalPrimitive(targetType) && getConverter().isConversionSupportedFor(Map.class, targetType)) {
-            Object source = references.get(jsonObj);
-            Object value = getConverter().convert(source, targetType);
-            return jsonObj.setFinishedTarget(value, true);
+        } else if (!jsonObj.isEmpty() && converter.isConversionSupportedFor(Map.class, targetType)) {
+            try {
+                Object value = converter.convert(jsonObj, targetType);
+                return jsonObj.setFinishedTarget(value, true);  // Calendar, Timestamp, Duration, Instance, LocalDateTime, ...
+            } catch (Exception ignored) {   // will be discovered later
+            }
         }
 
         // ClassFactory defined
@@ -363,10 +362,9 @@ public abstract class Resolver {
         // Arrays
         Class<?> c = jsonObj.getJavaType();
         Object[] items = jsonObj.getArray();
-        if (c != null && (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS)))) {    // Handle []
+        if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
-            // TODO: Process array elements NOW (not later)
             jsonObj.setTarget(mate);
             return mate;
         }
@@ -393,13 +391,13 @@ public abstract class Resolver {
                 jsonObject.setJavaType(Map.class);
                 mate = jsonObject;
             } else {
-                mate = MetaUtils.newInstance(getConverter(), unknownClass, null);   // can add constructor arg values
+                mate = MetaUtils.newInstance(converter, unknownClass, null);   // can add constructor arg values
             }
         } else {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = MetaUtils.newInstance(getConverter(), c, null);  // can add constructor arg values
+            mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
         }
         jsonObj.setTarget(mate);
         return mate;
