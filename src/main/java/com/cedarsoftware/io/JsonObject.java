@@ -274,10 +274,11 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     }
 
     /**
-     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
-     * to have its keys placed into @keys, and its values placed into @items.
+     * Return the keys/values of this Map as a Map.Entry, where the key is Object[] of keys, and the value is
+     * Object[] values. Currently, this has a side effect on the JsonObject, changing how it stores the keys
+     * and items internally.  No calling code should be written to be sensitive to this.
      */
-    public Map.Entry<Object[], Object[]> getMapAsTwoArrays() {
+    Map.Entry<Object[], Object[]> asTwoArrays() {
         if (!containsKey(KEYS) && !isReference()) {
             final Object[] keys = new Object[size()];
             final Object[] values = new Object[size()];
@@ -297,5 +298,27 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         }
 
         return new AbstractMap.SimpleImmutableEntry<>((Object[]) get(KEYS), (Object[]) get(ITEMS));
+    }
+
+    void rehashMaps(boolean useMapsLocal, Object[] keys, Object[] items) {
+        Object[] javaKeys, javaValues;
+        Map<Object, Object> map;
+
+        if (useMapsLocal) {   // Move from two Object[]'s storage internally back to Map(key, value)
+            map = this;
+            javaKeys = (Object[]) remove(KEYS);
+            javaValues = (Object[]) remove(ITEMS);
+        } else {              // Populate peer Java Map instance
+            map = (Map<Object, Object>) getTarget();
+            javaKeys = keys;
+            javaValues = items;
+        }
+        jsonStore.clear();
+        hash = null;
+        int len = javaKeys.length;
+
+        for (int i=0; i < len; i++) {
+            map.put(javaKeys[i], javaValues[i]);
+        }
     }
 }

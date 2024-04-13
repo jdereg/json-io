@@ -129,12 +129,8 @@ public abstract class SerializationDeserializationMinimumTests<T> {
         assertThat(expected[0]).isSameAs(expected[1]);
 
         // asserts.
-        assertThat(actual[0])
-                .isEqualTo(expected[0]);
-
-        assertThat(actual[1])
-                .isEqualTo(expected[1]);
-
+        assertThat(actual[0]).isEqualTo(expected[0]);
+        assertThat(actual[1]).isEqualTo(expected[1]);
         assertReferentialIdentity(actual[0], actual[1]);
     }
 

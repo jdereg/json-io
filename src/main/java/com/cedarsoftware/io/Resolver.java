@@ -50,10 +50,9 @@ public abstract class Resolver {
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
     private final Deque<JsonObject> stack = new ArrayDeque<>();
-
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
-    protected final Collection<Missingfields> missingFields = new ArrayList<>();
+    final Collection<Missingfields> missingFields = new ArrayList<>();
 
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
@@ -243,7 +242,7 @@ public abstract class Resolver {
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
     protected void traverseMap(JsonObject jsonObj) {
-        Map.Entry<Object[], Object[]> pair = jsonObj.getMapAsTwoArrays();
+        Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
         final Object[] keys = pair.getKey();
         final Object[] items = pair.getValue();
 
@@ -254,7 +253,7 @@ public abstract class Resolver {
             return;
         }
 
-        final int size = keys.length;
+        int size = keys.length;
         if (size != items.length) {
             throw new JsonIoException("Unbalance { } in JSON, it has " + KEYS + " and " + ITEMS + "s entries of different sizes. They should be same length.");
         }
@@ -288,7 +287,7 @@ public abstract class Resolver {
      * @return a new Java object of the appropriate type (clazz) using the jsonObj to provide
      * enough hints to get the right class instantiated.  It is not populated when returned.
      */
-    protected Object createInstance(JsonObject jsonObj) {
+    Object createInstance(JsonObject jsonObj) {
         Object target = jsonObj.getTarget();
         if (target != null) {   // already created peer Java instance
             return target;
@@ -309,7 +308,7 @@ public abstract class Resolver {
             try {
                 Object value = converter.convert(jsonObj, targetType);
                 return jsonObj.setFinishedTarget(value, true);  // Calendar, Timestamp, Duration, Instance, LocalDateTime, ...
-            } catch (Exception ignored) {   // will be discovered later
+            } catch (Exception ignored) {   // will be created later, below
             }
         }
 
@@ -351,7 +350,7 @@ public abstract class Resolver {
      * TODO: method.  As they are loaded, they will move up.  Also, pulling primitives, class, and others into
      * TODO: factories will shrink this to just unknown generic classes, Object[]'s, and Collections of such.
      */
-    protected Object createInstanceUsingType(JsonObject jsonObj) {
+    private Object createInstanceUsingType(JsonObject jsonObj) {
         Class<?> c = jsonObj.getJavaType();
         boolean useMaps = readOptions.isReturningJsonObjects();
         Object mate;
@@ -408,7 +407,7 @@ public abstract class Resolver {
         return target;
     }
 
-    protected Class<?> coerceClassIfNeeded(Class<?> type) {
+    private Class<?> coerceClassIfNeeded(Class<?> type) {
         if (type == null) {
             return null;
         }
@@ -416,7 +415,7 @@ public abstract class Resolver {
         return clazz == null ? type : clazz;
     }
 
-    protected EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj) {
+    private EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj) {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
@@ -454,7 +453,7 @@ public abstract class Resolver {
      * For all fields where the value was "@ref":"n" where 'n' was the id of an object
      * that had not yet been encountered in the stream, make the final substitution.
      */
-    protected void patchUnresolvedReferences() {
+    private void patchUnresolvedReferences() {
         Iterator i = unresolvedRefs.iterator();
         while (i.hasNext()) {
             UnresolvedReference ref = (UnresolvedReference) i.next();
@@ -507,34 +506,15 @@ public abstract class Resolver {
      * and then drop these two entries from the map.
      * <br>
      * This hashes both Sets and Maps because the JDK sets are implemented
-     * as Maps.  If you have a custom built Set, this would not 'treat' it
+     * as Maps.  If you have a custom-built Set, this would not 'treat' it,
      * and you would need to provide a custom reader for that set.
      */
-    protected void rehashMaps() {
+    private void rehashMaps() {
         final boolean useMapsLocal = readOptions.isReturningJsonObjects();
 
         for (Object[] mapPieces : prettyMaps) {
-            JsonObject jObj = (JsonObject) mapPieces[0];
-            Object[] javaKeys, javaValues;
-            Map map;
-
-            if (useMapsLocal) {   // Make the @keys be the actual keys of the map.
-                map = jObj;
-                javaKeys = (Object[]) jObj.remove(KEYS);
-                javaValues = (Object[]) jObj.remove(ITEMS);
-            } else {
-                map = (Map) jObj.getTarget();
-                javaKeys = (Object[]) mapPieces[1];
-                javaValues = (Object[]) mapPieces[2];
-                jObj.clear();
-            }
-
-            int j = 0;
-
-            while (javaKeys != null && j < javaKeys.length) {
-                map.put(javaKeys[j], javaValues[j]);
-                j++;
-            }
+            JsonObject jsonObj = (JsonObject) mapPieces[0];
+            jsonObj.rehashMaps(useMapsLocal, (Object[]) mapPieces[1], (Object[]) mapPieces[2]);
         }
     }
 }

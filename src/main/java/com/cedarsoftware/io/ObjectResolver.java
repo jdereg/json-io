@@ -586,7 +586,7 @@ public class ObjectResolver extends Resolver
 
                 if (Map.class.isAssignableFrom(clazz)) {
                     JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
-                    Map.Entry<Object[], Object[]> pair = jsonObj.getMapAsTwoArrays();
+                    Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
                     Object[] keys = pair.getKey();
                     Object[] items = pair.getValue();
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
