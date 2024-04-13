@@ -26,8 +26,6 @@ import java.util.Optional;
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.FastWriter;
 
-import static com.cedarsoftware.io.JsonObject.ITEMS;
-
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
  * references and can serialize any Object graph without requiring a class
@@ -981,7 +979,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         }
         tabIn();
 
-        Object[] items = (Object[]) jObj.get(ITEMS);
+        Object[] items = jObj.getJsonArray();
         final int lenMinus1 = len - 1;
 
         for (int i = 0; i < len; i++) {
@@ -1060,7 +1058,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
         beginCollection(showType, referenced);
 
-        Object[] items = (Object[]) jObj.get(ITEMS);
+        Object[] items = jObj.getJsonArray();
         final int itemsLen = items.length;
         final int itemsLenMinus1 = itemsLen - 1;
 

@@ -15,8 +15,6 @@ import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.io.JsonObject.ITEMS;
-
 /**
  * Read an object graph in JSON format and make it available in Java objects, or
  * in a "Map of Maps." (untyped representation).  This code handles cyclic references
@@ -229,7 +227,7 @@ public class JsonReader implements Closeable
         } else if (returnValue instanceof Object[]) {  // JSON []
             rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
-            rootObj.put(ITEMS, returnValue);
+            rootObj.setJsonArray((Object[])returnValue);
             graph = toJavaObjects(rootObj, rootType);
         } else {                                        // JSON Primitive (String, Boolean, Double, Long)
             rootObj.setValue(returnValue);

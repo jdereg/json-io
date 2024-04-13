@@ -1,6 +1,7 @@
 package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -124,7 +125,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     public boolean isArray() {
         if (getTarget() == null) {
             if (getJavaType() != null) {
-                return getJavaTypeName().contains("[");
+                return getJavaType().isArray();
             }
             return containsKey(ITEMS) && !containsKey(KEYS);
         }
@@ -134,8 +135,12 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
     // represented in the JSON.  This also occurs if a specified array type is used (not Object[], but Integer[], for
     // example).
-    public Object[] getArray() {
+    public Object[] getJsonArray() {
         return (Object[]) get(ITEMS);
+    }
+
+    public void setJsonArray(Object[] jsonArray) {
+        put(ITEMS, jsonArray);
     }
 
     public int getLength() {
@@ -149,7 +154,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private Integer getLenientSize() {
         if (isArray()) {
             if (getTarget() == null) {
-                Object[] items = (Object[]) get(ITEMS);
+                Object[] items = getJsonArray();
                 return items == null ? 0 : items.length;
             }
             if (char[].class.isAssignableFrom(getTarget().getClass())) {
@@ -159,14 +164,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             return Array.getLength(getTarget());
         }
         if (isCollection() || isMap()) {
-            Object[] items = (Object[]) get(ITEMS);
+            Object[] items = getJsonArray();
             return items == null ? 0 : items.length;
         }
         return null;
-    }
-
-    public Class<?> getComponentType() {
-        return getTarget().getClass().getComponentType();
     }
 
     public Object setValue(Object o) {
@@ -183,10 +184,10 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public int size() {
         if (containsKey(ITEMS)) {
-            if (getArray() == null) {
+            if (getJsonArray() == null) {
                 return 0;
             }
-            return getArray().length;
+            return getJsonArray().length;
         } else if (containsKey(REF)) {
             return 0;
         }
@@ -196,7 +197,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     private int calculateArrayHash() {
         int hashCode = 0;
-        Object array = get(ITEMS);
+        Object array = getJsonArray();
         if (array != null) {
             int len = Array.getLength(array);
             for (int j = 0; j < len; j++) {
@@ -270,5 +271,31 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     public Set<Entry<Object, Object>> entrySet() {
         return jsonStore.entrySet();
+    }
+
+    /**
+     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
+     * to have its keys placed into @keys, and its values placed into @items.
+     */
+    public Map.Entry<Object[], Object[]> getMapAsTwoArrays() {
+        if (!containsKey(KEYS) && !isReference()) {
+            final Object[] keys = new Object[size()];
+            final Object[] values = new Object[size()];
+            int i = 0;
+
+            for (Object e : entrySet()) {
+                final Map.Entry entry = (Map.Entry) e;
+                keys[i] = entry.getKey();
+                values[i] = entry.getValue();
+                i++;
+            }
+            Class<?> saveType = getJavaType();
+            jsonStore.clear();  // Removes key/values (they are added in as parallel collections), and leaves ID alone.
+            setJavaType(saveType);
+            put(KEYS, keys);
+            put(ITEMS, values);
+        }
+
+        return new AbstractMap.SimpleImmutableEntry<>((Object[]) get(KEYS), (Object[]) get(ITEMS));
     }
 }

@@ -19,9 +19,6 @@ import com.cedarsoftware.util.ArrayUtilities;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
-import static com.cedarsoftware.io.JsonObject.ITEMS;
-import static com.cedarsoftware.io.JsonObject.KEYS;
-
 /**
  * <p>The ObjectResolver converts the raw Maps created from the JsonParser to Java
  * objects (a graph of Java instances).  The Maps have an optional type entry associated
@@ -150,7 +147,7 @@ public class ObjectResolver extends Resolver
             } else if (rhs.getClass().isArray()) {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
                 final Object[] elements = (Object[]) rhs;
                 JsonObject jsonArray = new JsonObject();
-                jsonArray.put(ITEMS, elements);
+                jsonArray.setJsonArray(elements);
                 jsonArray.setHintType(fieldType);
                 createInstance(jsonArray);
                 injector.inject(target, jsonArray.getTarget());
@@ -291,7 +288,7 @@ public class ObjectResolver extends Resolver
     protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
         final String className = jsonObj.getJavaTypeName();
-        final Object[] items = jsonObj.getArray();
+        final Object[] items = jsonObj.getJsonArray();
         if (ArrayUtilities.isEmpty(items)) {
             return;
         }
@@ -318,7 +315,7 @@ public class ObjectResolver extends Resolver
             } else if (element.getClass().isArray()) {
                 final JsonObject jObj = new JsonObject();
                 jObj.setHintType(Object.class);
-                jObj.put(ITEMS, element);
+                jObj.setJsonArray((Object[]) element);
                 createInstance(jObj);
                 col.add(jObj.getTarget());
                 push(jObj);
@@ -401,9 +398,9 @@ public class ObjectResolver extends Resolver
             return;
         }
 
-        final Class compType = jsonObj.getComponentType();
         final Object array = jsonObj.getTarget();
-        final Object[] items =  jsonObj.getArray();
+        final Class compType = array.getClass().getComponentType();
+        final Object[] items =  jsonObj.getJsonArray();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.
 
         for (int i = 0; i < len; i++) {
@@ -434,7 +431,7 @@ public class ObjectResolver extends Resolver
                     }
                 } else {
                     JsonObject jsonObject = new JsonObject();
-                    jsonObject.put(ITEMS, element);
+                    jsonObject.setJsonArray((Object[]) element);
                     jsonObject.setHintType(compType);
                     Array.set(array, i, createInstance(jsonObject));
                     push(jsonObject);
@@ -577,9 +574,9 @@ public class ObjectResolver extends Resolver
             final Type t = (Type) item[0];
             final Object instance = item[1];
             if (t instanceof ParameterizedType) {
-                final Class clazz = getRawType(t);
-                final ParameterizedType pType = (ParameterizedType) t;
-                final Type[] typeArgs = pType.getActualTypeArguments();
+                Class<?> clazz = getRawType(t);
+                ParameterizedType pType = (ParameterizedType) t;
+                Type[] typeArgs = pType.getActualTypeArguments();
 
                 if (typeArgs == null || typeArgs.length < 1 || clazz == null) {
                     continue;
@@ -588,15 +585,11 @@ public class ObjectResolver extends Resolver
                 stampTypeOnJsonObject(instance, t);
 
                 if (Map.class.isAssignableFrom(clazz)) {
-                    Map map = (Map) instance;
-                    if (!map.containsKey(KEYS) && !map.containsKey(ITEMS) && map instanceof JsonObject) {   // Maps created in Javascript will come over without @keys / @items.
-                        convertMapToKeysItems((JsonObject) map);
-                    }
-
-                    Object[] keys = (Object[]) map.get(KEYS);
+                    JsonObject jsonObj = (JsonObject) instance; // Maps are brought in as JsonObjects
+                    Map.Entry<Object[], Object[]> pair = jsonObj.getMapAsTwoArrays();
+                    Object[] keys = pair.getKey();
+                    Object[] items = pair.getValue();
                     getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
-
-                    Object[] items = (Object[]) map.get(ITEMS);
                     getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
                     if (instance instanceof Object[]) {
@@ -610,8 +603,8 @@ public class ObjectResolver extends Resolver
                             } else if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
                                 coll.setJavaType(clazz);
+                                coll.setJsonArray((Object[]) vals);
                                 List items = Arrays.asList((Object[]) vals);
-                                coll.put(ITEMS, items.toArray());
                                 stack.addFirst(new Object[]{t, items});
                                 array[i] = coll;
                             } else {
@@ -625,7 +618,7 @@ public class ObjectResolver extends Resolver
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
-                        final Object[] array = jObj.getArray();
+                        final Object[] array = jObj.getJsonArray();
                         if (array != null) {
                             for (Object o : array) {
                                 stack.addFirst(new Object[]{typeArgs[0], o});
@@ -663,7 +656,7 @@ public class ObjectResolver extends Resolver
         if (items == null || items.length < 1) {
             return;
         }
-        Class rawType = getRawType(type);
+        Class<?> rawType = getRawType(type);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
             stack.add(new Object[]{type, items});
         } else {
@@ -676,7 +669,7 @@ public class ObjectResolver extends Resolver
     // Mark 'type' on JsonObject when the type is missing and it is a 'leaf'
     // node (no further subtypes in it's parameterized type definition)
     private static void stampTypeOnJsonObject(final Object o, final Type t) {
-        Class clazz = t instanceof Class ? (Class) t : getRawType(t);
+        Class<?> clazz = t instanceof Class ? (Class<?>) t : getRawType(t);
 
         if (o instanceof JsonObject && clazz != null) {
             JsonObject jObj = (JsonObject) o;
@@ -691,7 +684,7 @@ public class ObjectResolver extends Resolver
      * @param t Type to attempt to get raw type from.
      * @return Raw type obtained from the passed in parameterized type or null if T is not a ParameterizedType
      */
-    public static Class getRawType(final Type t) {
+    private static Class<?> getRawType(final Type t) {
         if (t instanceof ParameterizedType) {
             ParameterizedType pType = (ParameterizedType) t;
 

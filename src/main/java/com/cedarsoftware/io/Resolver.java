@@ -187,7 +187,7 @@ public abstract class Resolver {
         } else if (jsonObj.isCollection()) {
             traverseCollection(stack, jsonObj);
         } else if (jsonObj.isMap()) {
-            traverseMap(stack, jsonObj);
+            traverseMap(jsonObj);
         } else {
             Object special;
             if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null) {
@@ -240,25 +240,23 @@ public abstract class Resolver {
      * so that the serialization does not expose the class internals
      * (internal fields of TreeMap for example).
      *
-     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseMap(Deque<JsonObject> stack, JsonObject jsonObj) {
-        // Convert @keys to a Collection of Java objects.
-        convertMapToKeysItems(jsonObj);
-        final Object[] keys = (Object[]) jsonObj.get(KEYS);
-        final Object[] items = jsonObj.getArray();
+    protected void traverseMap(JsonObject jsonObj) {
+        Map.Entry<Object[], Object[]> pair = jsonObj.getMapAsTwoArrays();
+        final Object[] keys = pair.getKey();
+        final Object[] items = pair.getValue();
 
         if (keys == null || items == null) {
             if (keys != items) {
-                throw new JsonIoException("Unbalanced Object in JSON, it has " + KEYS + " or " + ITEMS + " empty");
+                throw new JsonIoException("Unbalanced { } in JSON, it has " + KEYS + " or " + ITEMS + " empty. They should be same null, empty, or same length.");
             }
             return;
         }
 
         final int size = keys.length;
         if (size != items.length) {
-            throw new JsonIoException("Map written with " + KEYS + " and " + ITEMS + "s entries of different sizes");
+            throw new JsonIoException("Unbalance { } in JSON, it has " + KEYS + " and " + ITEMS + "s entries of different sizes. They should be same length.");
         }
 
         buildCollection(keys);
@@ -271,35 +269,9 @@ public abstract class Resolver {
 
     private void buildCollection(Object[] arrayContent) {
         final JsonObject collection = new JsonObject();
-        collection.put(ITEMS, arrayContent);
+        collection.setJsonArray(arrayContent);
         collection.setTarget(arrayContent);
         push(collection);
-    }
-
-    /**
-     * Convert an input JsonObject map (known to represent a Map.class or derivative) that has regular keys and values
-     * to have its keys placed into @keys, and its values placed into @items.
-     *
-     * @param jObj Map to convert
-     */
-    protected static void convertMapToKeysItems(final JsonObject jObj) {
-        if (!jObj.containsKey(KEYS) && !jObj.isReference()) {
-            final Object[] keys = new Object[jObj.size()];
-            final Object[] values = new Object[jObj.size()];
-            int i = 0;
-
-            for (Object e : jObj.entrySet()) {
-                final Map.Entry entry = (Map.Entry) e;
-                keys[i] = entry.getKey();
-                values[i] = entry.getValue();
-                i++;
-            }
-            String saveType = jObj.getJavaTypeName();
-            jObj.clear();
-            jObj.setJavaType(ClassUtilities.forName(saveType, Resolver.class.getClassLoader()));
-            jObj.put(KEYS, keys);
-            jObj.put(ITEMS, values);
-        }
     }
 
     /**
@@ -361,7 +333,7 @@ public abstract class Resolver {
 
         // Arrays
         Class<?> c = jsonObj.getJavaType();
-        Object[] items = jsonObj.getArray();
+        Object[] items = jsonObj.getJsonArray();
         if (c.isArray() || (items != null && c == Object.class && !jsonObj.containsKey(KEYS))) {    // Handle []
             int size = (items == null) ? 0 : items.length;
             mate = Array.newInstance(c.isArray() ? c.getComponentType() : Object.class, size);
@@ -448,7 +420,7 @@ public abstract class Resolver {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
                 : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
-        Object[] items = jsonObj.getArray();
+        Object[] items = jsonObj.getJsonArray();
         if (items == null || items.length == 0) {
             if (enumClass != null) {
                 return EnumSet.noneOf(enumClass);

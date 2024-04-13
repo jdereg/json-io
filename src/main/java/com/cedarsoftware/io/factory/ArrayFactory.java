@@ -32,7 +32,7 @@ public class ArrayFactory<T> implements JsonReader.ClassFactory {
     }
 
     public T newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object[] items = jObj.getArray();
+        Object[] items = jObj.getJsonArray();
 
         if (items == null) {
             jObj.setTarget(null);

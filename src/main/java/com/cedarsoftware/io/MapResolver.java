@@ -84,7 +84,7 @@ public class MapResolver extends Resolver
             } else if (rhs.getClass().isArray()) {   // RHS is an array
                 // Trace the contents of the array (so references inside the array and into the array work)
                 JsonObject jsonArray = new JsonObject();
-                jsonArray.put(JsonObject.ITEMS, rhs);
+                jsonArray.setJsonArray((Object[])rhs);
                 push(jsonArray);
 
                 // Assign the array directly to the Map key (field name)
@@ -142,7 +142,7 @@ public class MapResolver extends Resolver
      */
     protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
     {
-        final Object[] items = jsonObj.getArray();
+        final Object[] items = jsonObj.getJsonArray();
         if (items == null || items.length == 0) {
             return;
         }
@@ -155,7 +155,7 @@ public class MapResolver extends Resolver
 
             if (element instanceof Object[]) {   // array element inside Collection
                 JsonObject jsonObject = new JsonObject();
-                jsonObject.put(JsonObject.ITEMS, element);
+                jsonObject.setJsonArray((Object[]) element);
                 push(jsonObject);
             } else if (element instanceof JsonObject) {
                 JsonObject jsonObject = (JsonObject) element;

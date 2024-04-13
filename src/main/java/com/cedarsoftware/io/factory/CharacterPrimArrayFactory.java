@@ -28,7 +28,7 @@ public class CharacterPrimArrayFactory extends ArrayFactory<char[]> {
     }
 
     public char[] newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        Object[] items = jObj.getArray();
+        Object[] items = jObj.getJsonArray();
         Object value;
         
         if (items == null) {

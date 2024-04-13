@@ -22,7 +22,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static com.cedarsoftware.io.JsonObject.ITEMS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -640,10 +639,10 @@ public class ArrayTest
         list = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertNotNull(list);
         assertEquals(2, list.length);
-        Map e1 = (Map) list[0];
-        Map e2 = (Map) list[1];
-        assertEquals(e1.get(ITEMS), e2.get(ITEMS));
-        assertEquals(0, ((Object[]) e1.get(ITEMS)).length);
+        JsonObject e1 = (JsonObject) list[0];
+        JsonObject e2 = (JsonObject) list[1];
+        assertEquals(e1.getJsonArray(), e2.getJsonArray());
+        assertEquals(0, e1.getJsonArray().length);
 
         json1 = TestUtil.toJson(list);
         TestUtil.printLine("json1=" + json1);

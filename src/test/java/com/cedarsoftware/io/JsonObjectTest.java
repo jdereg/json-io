@@ -251,12 +251,12 @@ class JsonObjectTest
         assert !jObj.isArray();
         assert !jObj.isCollection();
         assert !jObj.isMap();
-        jObj.put(JsonObject.ITEMS, new Object[] {"hello", "goodbye"});
+        jObj.setJsonArray(new Object[] {"hello", "goodbye"});
         assert jObj.isArray();
         assert !jObj.isCollection();
         assert !jObj.isMap();
         JsonObject jObj2 = new JsonObject();
-        jObj2.put(JsonObject.ITEMS, new Object[] {"hello", "goodbye"});
+        jObj2.setJsonArray(new Object[] {"hello", "goodbye"});
         assert DeepEquals.deepEquals(jObj, jObj2);
     }
 }

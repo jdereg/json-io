@@ -186,18 +186,8 @@ class JsonParser {
                     loadId(value, jObj);
                     break;
 
-                case ITEMS:
-                    // load Items
-                    jObj.put(field, value);
-                    break;
-
-                case KEYS:
-                    // load Keys
-                    jObj.put(field, value);
-                    break;
-
                 default:
-                    jObj.put(field, value); // Load field/value pair
+                    jObj.put(field, value); // Load key/value pair
                     break;
             }
 
