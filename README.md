@@ -35,7 +35,7 @@ ___
 
 ## Releases
 >### 5.0.0 (future)
->- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
+>- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK17+ (Class file 52 format, includes module-info.class - multi-release JAR)
@@ -47,7 +47,7 @@ ___
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
 >### 4.20.0 (current)
 >- [ ] **Version**: [4.20.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
->- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
+>- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
 >- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
