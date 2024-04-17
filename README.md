@@ -6,7 +6,7 @@ json-io
 
 
 
-Great tool for Java serialization to and from JSON format.
+Useful tool for Java serialization to and from JSON format.
 Available on [Maven Central](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware).
 This library has <b>no dependencies</b> on other libraries for runtime other than our own `java-util.`
 The `json-io.jar`file is only`185K` and `java-util` is `250K.` Compatible with JDK1.8 through JDK 22.

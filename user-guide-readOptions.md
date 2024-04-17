@@ -59,12 +59,51 @@ vectors.
 Although the JSON spec does not support Nan and Infinity, it can be convenient to allow it in the JSON, and have
 the values be both written and read properly. This feature is off by default.  Although the JSON with Nan and Infinity may 
 work for your application, keep in mind, NaN, +Inf, -Inf are not necessarily going to be supported by other APIs and services.
-> #### `boolean`isAllowNanAndInfinity
->- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
 
+JSON payloads can carry floating point numbers that are much larger than a Java IEEE 754 `Double` can hold. These options allow you
+configure json-io to return these as `BigDecimal` always, only when needed, or never.
+> #### `boolean`isAllowNanAndInfinity()
+>- [ ] Returns`true`if set to allow serialization of`NaN`and`Infinity`for`doubles`and`floats.`
 >#### `ReadOptionsBuilder` allowNanAndInfinity(`boolean allow`)
 >- [ ] true will allow`doubles`and`floats`to be output as`NaN`and`INFINITY`,`false`and these values will come across
    as`null.` 
+
+>#### `boolean` isFloatingPointDouble()
+>- [ ] return `true` if floating point values should always be returned as `Double.`  This is the default.
+>#### `ReadOptionsBuilder` floatPointDouble()
+>- [ ] Set Floating Point types to be returned as `Double.`  This is the default.
+
+>#### `boolean` isFloatingPointBigDecimal()
+>- [ ] return `true` if floating point values should always be returned as `BigDecimal.`
+>#### `ReadOptionsBuilder` floatPointBigDecimal()
+>- [ ] Set Floating Point types to be returned as `BigDecimal.`
+
+>#### `ReadOptionsBuilder` floatPointBoth()
+>- [ ] Set Floating Point types to be returned as either `Double` or `BigDecimal,` depending on precision required to hold the number sourced from JSON.
+>#### `boolean` isFloatingPointBoth()
+>- [ ] return `true` if floating point values should always be returned dynamically, as `Double` or `BigDecimal,`
+favoring `Double` except when precision would be lost, then `BigDecimal` is returned.
+                                              
+### Integer Options
+JSON payloads can carry integer numbers that are much larger than a Java `Long` can hold. These options allow you
+configure json-io to return these as `BigInteger` always, only when needed, or never.
+
+>#### `boolean` isIntegerTypeLong()
+>- [ ] return `true` if integer values should always be returned as a `Long.`  This is the default.
+>#### `ReadOptionsBuilder` integerTypeLong()
+>- [ ] Set integer Types to be returned as `Long.` This is the default.
+
+>#### `boolean` isIntegerTypeBigInteger()
+>- [ ] return `true` if integer values should always be returned as `BigInteger.`
+>#### `ReadOptionsBuilder` integerTypeBigInteger()
+>- [ ] Set integer Types to be returned as `BigInteger.`
+
+>#### `boolean` isIntegerTypeBoth()
+>- [ ] return `true` if integer values should always be returned dynamically, as `Long` or `BigInteger,` favoring `Long` except when precision would be lost, then `BigInteger` is returned.
+>#### `ReadOptionsBuilder` integerTypeBoth()
+>- [ ] Set integer types to be returned as either `Long` or `BigInteger,` depending on precision required to hold the
+number sourced from JSON.  If the value is within the range of `Long.MIN_VALUE` to `Long.MAX_VALUE,` then `Long` will be returned
+otherwise a `BigInteger` will be returned.
 
 ### Close Stream
 Sometimes you want to close the stream automatically after reading, other times you may want to leave it open to read
