@@ -3,12 +3,19 @@ package com.cedarsoftware.io;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
@@ -63,6 +70,33 @@ public class JsonReader implements Closeable
     private final Resolver resolver;
     private final ReadOptions readOptions;
     private final JsonParser parser;
+
+    static final Set<Class<?>> jsonPrimitives = new HashSet<>(Arrays.asList(
+            boolean.class,
+            Boolean.class,
+            AtomicBoolean.class,
+            char.class,
+            Character.class,
+            byte.class,
+            Byte.class,
+            short.class,
+            Short.class,
+            int.class,
+            Integer.class,
+            AtomicInteger.class,
+            long.class,
+            Long.class,
+            AtomicLong.class,
+            float.class,
+            Float.class,
+            double.class,
+            Double.class,
+            BigInteger.class,
+            BigDecimal.class,
+            String.class,
+            StringBuffer.class,
+            StringBuilder.class
+    ));
 
     /**
      * Subclass this interface and create a class that will return a new instance of the
@@ -199,16 +233,10 @@ public class JsonReader implements Closeable
         this(new FastByteArrayInputStream(new byte[]{}), readOptions);
     }
 
-//    static double totalParse = 0.0;
-//    static double totalResolve = 0.0;
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
-//            long start = System.nanoTime();
             returnValue = (T) parser.readValue(rootType);
-//            long end = System.nanoTime();
-//            double parseTime = (end-start) / 1_000_000.0;
-//            totalParse += parseTime;
             if (returnValue == null) {
                 return null;    // easy, done.
             }
@@ -218,40 +246,46 @@ public class JsonReader implements Closeable
             throw new JsonIoException("error parsing JSON value", e);
         }
 
-        JsonObject rootObj = new JsonObject();
         T graph;
+        boolean asMaps = readOptions.isReturningJsonObjects();
 
-//        long start = System.nanoTime();
-        if (returnValue instanceof JsonObject) {        // JSON {}
+        // JSON {} at root
+        if (returnValue instanceof JsonObject) {
             graph = toJavaObjects((JsonObject) returnValue, rootType);
-        } else if (returnValue instanceof Object[]) {  // JSON []
+            return asMaps ? returnValue : graph;
+        }
+
+        // JSON [] at root
+        if (returnValue instanceof Object[]) {
+            JsonObject rootObj = new JsonObject();
             rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
             rootObj.setJsonArray((Object[])returnValue);
             graph = toJavaObjects(rootObj, rootType);
-        } else {                                        // JSON Primitive (String, Boolean, Double, Long)
-            rootObj.setValue(returnValue);
-            graph = toJavaObjects(rootObj, rootType);
-            if (graph instanceof JsonObject && ((JsonObject)graph).getValue() != null) {
-                graph = (T)((JsonObject)graph).getValue();
+            return asMaps ? returnValue : graph;
+        }
+
+        // JSON Primitive (String, Boolean, Double, Long), or convertible types
+        if (rootType != null) {
+            if (jsonPrimitives.contains(rootType))
+            {
+                // Always return as the Java type because the Java type matches one of the JSON primitive types.
+                return resolver.getConverter().convert(returnValue, rootType);
             }
-        }
-//        long end = System.nanoTime();
-//        double resolveTime = (end - start) / 1_000_000.0;
-//        totalResolve += resolveTime;
-//        System.out.println("totalParse = " + totalParse);
-//        System.out.println("totalResolve = " + totalResolve);
 
-        // Allow a complete 'Map' return (Javascript style), but some of the items inside will be "cleaned up"
-        // and adjusted if a paired class was found - primitives will be converted to the right type, based on field
-        // or Array [] type, however, objects will be left as Maps.
-        if (readOptions.isReturningJsonObjects()) {
-            return returnValue;
+            // Look at setting
+            graph = resolver.getConverter().convert(returnValue, rootType);
+            if (asMaps) {
+                JsonObject rootObj = new JsonObject();
+                rootObj.setTarget(graph);
+                return (T)rootObj;
+            }
+            return graph;
         }
 
-        return graph;
+        return returnValue;
     }
-    
+
     /**
      * This method converts a rootObj Map, (which contains nested Maps
      * and so forth representing a Java Object graph), to a Java

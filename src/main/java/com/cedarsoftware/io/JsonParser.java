@@ -2,6 +2,8 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +24,8 @@ import static com.cedarsoftware.io.JsonObject.SHORT_KEYS;
 import static com.cedarsoftware.io.JsonObject.SHORT_REF;
 import static com.cedarsoftware.io.JsonObject.SHORT_TYPE;
 import static com.cedarsoftware.io.JsonObject.TYPE;
+import static com.cedarsoftware.io.JsonReader.jsonPrimitives;
+import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
  * Parse the JSON input stream supplied by the FastPushbackReader to the constructor.
@@ -223,7 +227,6 @@ class JsonParser {
 
     /**
      * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
-     *
      * @param suggestedClass JsonValue Owning entity.
      */
     Object readValue(Class<?> suggestedClass) throws IOException {
@@ -239,19 +242,14 @@ class JsonParser {
             case '"':
                 String str = readString();
                 return str;
-
             case '{':
                 input.pushback('{');
                 JsonObject jObj = readJsonObject(suggestedClass);
                 final boolean useMaps = readOptions.isReturningJsonObjects();
-
-                if (jObj.isLogicalPrimitive()) {
-                    if (useMaps) {
-                        jObj.isFinished = true;
-                        return jObj.getPrimitiveValue(this.resolver.getConverter(), readOptions.getClassLoader());
-                    }
+                boolean worked = jObj.valueToTarget(resolver.getConverter());
+                if (useMaps && worked && jsonPrimitives.contains(jObj.getJavaType())) {
+                    return jObj.getTarget();
                 }
-                
                 return jObj;
             case '[':
                 Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
@@ -393,10 +391,11 @@ class JsonParser {
 
         try {
             Number val;
+            String numStr = number.toString();
             if (isFloat) {
-                val = Double.parseDouble(number.toString());
+                val = readFloatingPoint(numStr);
             } else {
-                val = Long.parseLong(number.toString(), 10);
+                val = readInteger(numStr);
             }
             final Number cachedInstance = numberCache.get(val);
             if (cachedInstance != null) {
@@ -411,6 +410,38 @@ class JsonParser {
         }
     }
 
+    private Number readInteger(String numStr) {
+        if (readOptions.isIntegerTypeBigInteger()) {
+            return new BigInteger(numStr);
+        }
+
+        try {
+            return Long.parseLong(numStr);
+        } catch (Exception e) {
+            BigInteger bigInt = new BigInteger(numStr);
+            if (readOptions.isIntegerTypeBoth()) {
+                return bigInt;
+            } else {
+                // Super-big integers (more than 19 digits) will "wrap around" as expected, similar to casting a long
+                // to an int, where the originating long is larger than Integer.MAX_VALUE.
+                return bigInt.longValue();
+            }
+        }
+    }
+
+    private Number readFloatingPoint(String numStr) {
+        if (readOptions.isFloatingPointBigDecimal()) {
+            return new BigDecimal(numStr);
+        }
+
+        Number number = parseToMinimalNumericType(numStr);
+        if (readOptions.isFloatingPointBoth()) {
+            return number;
+        } else {
+            return number.doubleValue();
+        }
+    }
+    
     private static final int STRING_START = 0;
     private static final int STRING_SLASH = 1;
     private static final int HEX_DIGITS = 2;

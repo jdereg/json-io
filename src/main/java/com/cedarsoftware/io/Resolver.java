@@ -180,7 +180,7 @@ public abstract class Resolver {
         return (T) root.getTarget();
     }
 
-    public <T> void traverseSpecificType(JsonObject jsonObj) {
+    public void traverseSpecificType(JsonObject jsonObj) {
         if (jsonObj.isArray()) {
             traverseArray(stack, jsonObj);
         } else if (jsonObj.isCollection()) {

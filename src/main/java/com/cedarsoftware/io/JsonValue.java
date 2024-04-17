@@ -33,7 +33,7 @@ public abstract class JsonValue {
     public static final String VALUE = "value";
     protected Class<?> javaType = null;
     protected Class<?> hintType = null;
-    private Object target = null;
+    protected Object target = null;
     protected boolean isFinished = false;
     protected long id = -1L;
     protected Long refId = null;

@@ -153,29 +153,22 @@ class BigIntegerTest
     }
 
     @Test
-    void testNumTooBig()
+    void testHandlesEnormousIntegers()
     {
         String json = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
-        try
-        {
-            TestUtil.toObjects(json, null);
-            fail();
-        }
-        catch (JsonIoException e)
-        {
-            assert e.getCause() instanceof NumberFormatException;
-        }
+        Object num = TestUtil.toObjects(json,  new ReadOptionsBuilder().integerTypeBoth().build(), null);
+        assert num instanceof BigInteger;
     }
 
     @Test
-    void testHugeBigInteger()
+    void testHugeBigIntegerDataTypeTrumpsReadOptionsSetting()
     {
         String json = "{\"@type\":\"java.math.BigInteger\",\"value\":\"" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\"}";
-        BigInteger x = TestUtil.toObjects(json, null);
+        BigInteger x = TestUtil.toObjects(json, new ReadOptionsBuilder().integerTypeLong().build(), null);
         assertEquals(new BigInteger("1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890" +
                 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"), x);
     }

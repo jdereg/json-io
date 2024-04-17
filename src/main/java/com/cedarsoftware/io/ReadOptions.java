@@ -45,6 +45,50 @@ public interface ReadOptions {
         JAVA_OBJECTS
     }
 
+    enum Decimals {
+        DOUBLE,
+        BIG_DECIMAL,
+        BOTH
+    }
+
+    enum Integers {
+        LONG,
+        BIG_INTEGER,
+        BOTH
+    }
+
+    /**
+     * @return true if floating point values should always be returned as Doubles.  This is the default.
+     */
+    boolean isFloatingPointDouble();
+
+    /**
+     * @return true if floating point values should always be returned as BigDecimals.
+     */
+    boolean isFloatingPointBigDecimal();
+
+    /**
+     * @return true if floating point values should always be returned dynamically, as Double or BigDecimal, favoring
+     * Double except when precision would be lost, then BigDecimal is returned.
+     */
+    boolean isFloatingPointBoth();
+
+    /**
+     * @return true if integer values should always be returned as Longs.  This is the default.
+     */
+    boolean isIntegerTypeLong();
+
+    /**
+     * @return true if integer values should always be returned as BigIntegers.
+     */
+    boolean isIntegerTypeBigInteger();
+
+    /**
+     * @return true if integer values should always be returned dynamically, as Long or BigInteger, favoring
+     * Long except when precision would be lost, then BigInteger is returned.
+     */
+    boolean isIntegerTypeBoth();
+
     boolean isAllowNanAndInfinity();
 
     /**
@@ -73,7 +117,6 @@ public interface ReadOptions {
      * attack vectors.
      */
     int getMaxDepth();
-
 
     /**
      * Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
@@ -154,7 +197,6 @@ public interface ReadOptions {
     boolean isReturningJavaObjects();
 
     Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse);
-
 
     void clearCaches();
 

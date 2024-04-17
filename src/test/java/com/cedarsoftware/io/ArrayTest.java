@@ -462,7 +462,7 @@ public class ArrayTest
         String json1 = TestUtil.toJson(array);
         TestUtil.printLine("json1=" + json1);
 
-        // Read back into typed Java objects, the Maps of Maps versus that was dumped out
+        // Read back into typed Java objects, the Maps of Maps versus what was dumped out
         Object[] result = TestUtil.toObjects(json1, null);
         assertEquals(3, result.length);
         Object[] arr1 = (Object[]) result[0];
@@ -585,21 +585,21 @@ public class ArrayTest
 
     @Test
     void testReconstitute_withCalendars_whenArrayTypeisObject() {
-        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("GMT-05:00"));
         Object[] calendars = new Object[]{cal, cal};
         testReconstituteArrayHelper(calendars);
     }
 
     @Test
     void testReconsitutute_withCalendars_whenArrayTypeIsCalendar() {
-        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("GMT-05:00"));
         Calendar[] Calendars = new Calendar[]{cal, cal};
         testReconstituteArrayHelper(Calendars);
     }
 
     @Test
     void testReconstitute_withGregorianCalendars_whenArrayTypeIsCalendar() {
-        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        GregorianCalendar cal = (GregorianCalendar) Calendar.getInstance(TimeZone.getTimeZone("GMT-05:00"));
         GregorianCalendar[] calendarz = new GregorianCalendar[]{cal, cal};
         testReconstituteArrayHelper(calendarz);
     }

@@ -103,6 +103,19 @@ public class WriteOptionsBuilder {
         if (copy != null) {
             DefaultWriteOptions other = (DefaultWriteOptions) copy;
 
+            // Copy simple settings
+            options.allowNanAndInfinity = other.allowNanAndInfinity;
+            options.closeStream = other.closeStream;
+            options.classLoader = other.classLoader;
+            options.enumPublicFieldsOnly = other.enumPublicFieldsOnly;
+            options.forceMapOutputAsTwoArrays = other.forceMapOutputAsTwoArrays;
+            options.prettyPrint = other.prettyPrint;
+            options.shortMetaKeys = other.shortMetaKeys;
+            options.showTypeInfo = other.showTypeInfo;
+            options.skipNullFields = other.skipNullFields;
+            options.writeLongsAsStrings = other.writeLongsAsStrings;
+
+            // Copy complex settings
             options.includedFieldNames.clear();
             options.includedFieldNames.putAll(other.includedFieldNames);
 

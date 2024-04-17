@@ -115,6 +115,18 @@ public class ReadOptionsBuilder {
         if (copy != null) {
             DefaultReadOptions other = (DefaultReadOptions) copy;
 
+            // Copy simple settings
+            options.allowNanAndInfinity = other.allowNanAndInfinity;
+            options.closeStream = other.closeStream;
+            options.failOnUnknownType = other.failOnUnknownType;
+            options.maxDepth = other.maxDepth;
+            options.returnType = other.returnType;
+            options.unknownTypeClass = other.unknownTypeClass;
+            options.missingFieldHandler = other.missingFieldHandler;
+            options.decimalType = other.decimalType;
+            options.integerType = other.integerType;
+
+            // Copy complex settings
             options.aliasTypeNames.clear();
             options.aliasTypeNames.putAll(other.aliasTypeNames);
 
@@ -372,6 +384,56 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder returnAsJavaObjects() {
         options.returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
+        return this;
+    }
+
+    /**
+     * Set Floating Point types to be returned as Doubles.  This is the default.
+     */
+    public ReadOptionsBuilder floatPointDouble() {
+        options.decimalType = ReadOptions.Decimals.DOUBLE;
+        return this;
+    }
+
+    /**
+     * Set Floating Point types to be returned as BigDecimals.
+     */
+    public ReadOptionsBuilder floatPointBigDecimal() {
+        options.decimalType = ReadOptions.Decimals.BIG_DECIMAL;
+        return this;
+    }
+
+    /**
+     * Set Floating Point types to be returned as either Doubles or BigDecimals, depending on precision required to
+     * hold the number sourced from JSON.
+     */
+    public ReadOptionsBuilder floatPointBoth() {
+        options.decimalType = ReadOptions.Decimals.BOTH;
+        return this;
+    }
+
+    /**
+     * Set Integer Types to be returned as Longs.  This is the default.
+     */
+    public ReadOptionsBuilder integerTypeLong() {
+        options.integerType = ReadOptions.Integers.LONG;
+        return this;
+    }
+
+    /**
+     * Set Integer Types to be returned as BigIntegers.
+     */
+    public ReadOptionsBuilder integerTypeBigInteger() {
+        options.integerType = ReadOptions.Integers.BOTH;
+        return this;
+    }
+
+    /**
+     * Set Integer Types to be returned as either Longs or BigIntegers, depending on precision required to
+     * hold the number sourced from JSON.
+     */
+    public ReadOptionsBuilder integerTypeBoth() {
+        options.integerType = ReadOptions.Integers.BOTH;
         return this;
     }
 
@@ -739,6 +801,8 @@ public class ReadOptionsBuilder {
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
         private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
+        private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
+        private ReadOptions.Integers integerType = Integers.LONG;
         private boolean allowNanAndInfinity = false;
         private Map<String, String> aliasTypeNames = new LinkedHashMap<>();
         private Map<Class<?>, Class<?>> coercedTypes = new LinkedHashMap<>();
@@ -953,6 +1017,50 @@ public class ReadOptionsBuilder {
          */
         public boolean isReturningJavaObjects() {
             return returnType == ReadOptions.ReturnType.JAVA_OBJECTS;
+        }
+
+        /**
+         * @return true if floating point values should always be returned as Doubles.  This is the default.
+         */
+        public boolean isFloatingPointDouble() {
+            return decimalType == Decimals.DOUBLE;
+        }
+
+        /**
+         * @return true if floating point values should always be returned as BigDecimals.
+         */
+        public boolean isFloatingPointBigDecimal() {
+            return decimalType == Decimals.BIG_DECIMAL;
+        }
+
+        /**
+         * @return true if floating point values should always be returned dynamically, as Double or BigDecimal, favoring
+         * Double except when precision would be lost, then BigDecimal is returned.
+         */
+        public boolean isFloatingPointBoth() {
+            return decimalType == Decimals.BOTH;
+        }
+
+        /**
+         * @return true if integer values should always be returned as Longs.  This is the default.
+         */
+        public boolean isIntegerTypeLong() {
+            return integerType == Integers.LONG;
+        }
+
+        /**
+         * @return true if integer values should always be returned as BigIntegers.
+         */
+        public boolean isIntegerTypeBigInteger() {
+            return integerType == Integers.BIG_INTEGER;
+        }
+
+        /**
+         * @return true if integer values should always be returned dynamically, as Long or BigInteger, favoring
+         * Long except when precision would be lost, then BigInteger is returned.
+         */
+        public boolean isIntegerTypeBoth() {
+            return integerType == Integers.BOTH;
         }
 
         public Map<String, Injector> getDeepInjectorMap(Class<?> classToTraverse) {

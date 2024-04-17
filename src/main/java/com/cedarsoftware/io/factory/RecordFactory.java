@@ -50,15 +50,15 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     lParameterTypes.add(type);
 
                     String parameterName = (String) recordComponent.getClass().getMethod("getName").invoke(recordComponent);
-                    JsonObject parameterValueJsonObj = new JsonObject();
+                    JsonObject paramValueJsonObj = new JsonObject();
 
-                    parameterValueJsonObj.setJavaType(type);
-                    parameterValueJsonObj.setValue(jsonObj.get(parameterName));
+                    paramValueJsonObj.setJavaType(type);
+                    paramValueJsonObj.setValue(jsonObj.get(parameterName));
 
-                    if (parameterValueJsonObj.isLogicalPrimitive()) {
-                        lParameterValues.add(parameterValueJsonObj.getPrimitiveValue(resolver.getConverter(), resolver.getReadOptions().getClassLoader()));
-                    }  else {
-                        lParameterValues.add(parameterValueJsonObj.getValue());
+                    if (paramValueJsonObj.valueToTarget(resolver.getConverter())) {
+                        lParameterValues.add(paramValueJsonObj.getTarget());
+                    } else {
+                        lParameterValues.add(paramValueJsonObj.getValue());
                     }
                 }
 

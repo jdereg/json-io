@@ -119,13 +119,13 @@ public class TimeZoneTests
         Object[] actual = TestUtil.toObjects(json, null);
 
         // assert
-        assertThat(json).containsIgnoringCase("@id")
-                .containsIgnoringCase("@ref");
+        assertThat(json).doesNotContain("@id");
+        assertThat(json).doesNotContain("@ref");
 
         assertThat(actual).hasSize(2)
                 .hasOnlyElementsOfType(TimeZone.class);
 
-        assertThat(actual[0]).isSameAs(actual[1]);
+        assertThat(actual[0]).isEqualTo(actual[1]);
     }
 
     @Test
@@ -216,13 +216,13 @@ public class TimeZoneTests
 
         // assert
         assertThat(json)
-                .contains("@id")
-                .contains("@ref");
+                .doesNotContain("@id")
+                .doesNotContain("@ref");
 
         assertThat(actual).hasSize(2);
         assertThat(actual[0])
                 .isEqualTo(pst)
-                .isSameAs(actual[1]);
+                .isEqualTo(actual[1]);
     }
 
     private static Stream<Arguments> argumentsForOldFormatValidation() {
@@ -285,16 +285,16 @@ public class TimeZoneTests
         List<TimeZone> actual = TestUtil.toObjects(json, null);
 
         // assert
-        assertThat(json).contains("@id").contains("@ref");
+        assertThat(json).doesNotContain("@id").doesNotContain("@ref");
         assertThat(actual)
                 .containsAll(list)
                 .hasSize(5);
 
         assertThat(actual.get(0))
-                .isSameAs(actual.get(1))
-                .isSameAs(actual.get(2))
-                .isSameAs(actual.get(3))
-                .isSameAs(actual.get(4));
+                .isEqualTo(actual.get(1))
+                .isEqualTo(actual.get(2))
+                .isEqualTo(actual.get(3))
+                .isEqualTo(actual.get(4));
     }
 
     @Test

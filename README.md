@@ -59,10 +59,10 @@ ___
 >- [ ] Updates will be 4.21.0, 4.22.0, ...
 >### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
->- [ ] **Bundling**: Both OSGi (Open Service Gateway initiative) and JPMS (Java Platform Module System)
+>- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Bug fixes, CVE's
 >- [ ] **Java Package**: com.cedarsoftware.util.io
->- [ ] **Java**: JDK1.8+ (Class file 52 format)
+>- [ ] **Java**: JDK1.8+ (Class file 52 format, includes module-info.class - multi-release JAR)
 >- [ ] **API**
 >  - Static methods on [JsonReader](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html): [jsonToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToJava-java.lang.String-java.util.Map-), [jsonToMaps()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonToMaps-java.lang.String-java.util.Map-), special: [jsonObjectsToJava()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonReader.html#jsonObjectsToJava-com.cedarsoftware.util.io.JsonObject-)
 >  - Static methods on [JsonWriter](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html): [objectToJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#objectToJson-java.lang.Object-java.util.Map-)), [formatJson()](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/com/cedarsoftware/util/io/JsonWriter.html#formatJson-java.lang.String-java.util.Map-java.util.Map-)

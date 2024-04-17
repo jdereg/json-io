@@ -7,7 +7,6 @@ import java.math.BigInteger;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -567,8 +566,8 @@ class MapsTest
         assert map2.get("Character") instanceof Character;
         assert map2.get("Character").equals('z');
 
-        assert map2.get("date") instanceof Date;
-        assert map2.get("date").equals(cal.getTime());
+        assert map2.get("date") instanceof JsonObject;
+        assert ((JsonObject) map2.get("date")).getTarget().equals(cal.getTime());
 
         assert map2.get("BigInteger") instanceof BigInteger;
         assert map2.get("BigInteger").equals(new BigInteger("55"));

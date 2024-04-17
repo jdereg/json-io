@@ -57,3 +57,5 @@ java.util.UUID
 java.util.concurrent.atomic.AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger
 java.util.concurrent.atomic.AtomicLong
+
+sun.util.calendar.ZoneInfo

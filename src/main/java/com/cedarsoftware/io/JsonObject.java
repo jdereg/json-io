@@ -6,11 +6,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
 /**
@@ -41,23 +41,26 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private boolean isMap = false;
     private Integer hash = null;
 
-    private static final Set<String> logicalPrimitives = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "boolean",
-            "java.lang.Boolean",
-            "double",
-            "java.lang.Double",
-            "long",
-            "java.lang.Long",
+    private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "byte",
             "java.lang.Byte",
-            "char",
-            "java.lang.Character",
-            "float",
-            "java.lang.Float",
-            "int",
-            "java.lang.Integer",
             "short",
             "java.lang.Short",
+            "int",
+            "java.lang.Integer",
+            "java.util.concurrent.atomic.AtomicInteger",
+            "long",
+            "java.lang.Long",
+            "java.util.concurrent.atomic.AtomicLong",
+            "float",
+            "java.lang.Float",
+            "double",
+            "java.lang.Double",
+            "boolean",
+            "java.lang.Boolean",
+            "java.util.concurrent.atomic.AtomicBoolean",
+//            "char",
+            "java.lang.Character",
             "date",
             "java.util.Date",
             "BigInt",
@@ -67,55 +70,120 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             "class",
             "java.lang.Class",
             "string",
-            "java.lang.String"
+            "java.lang.String",
+            "java.lang.StringBuffer",
+            "java.lang.StringBuilder",
+            "java.sql.Date",
+            "java.sql.Timestamp",
+            "java.time.OffsetDateTime",
+            "java.net.URI",
+            "java.net.URL",
+            "java.util.Calendar",
+            "java.util.GregorianCalendar",
+            "java.util.Locale",
+            "java.util.UUID",
+            "java.util.TimeZone",
+            "java.time.Duration",
+            "java.time.Instant",
+            "java.time.MonthDay",
+            "java.time.OffsetDateTime",
+            "java.time.OffsetTime",
+            "java.time.LocalDate",
+            "java.time.LocalDateTime",
+            "java.time.LocalTime",
+            "java.time.Period",
+            "java.time.Year",
+            "java.time.YearMonth",
+            "java.time.ZonedDateTime",
+            "java.time.ZoneId",
+            "java.time.ZoneOffset",
+            "java.time.ZoneRegion",
+            "sun.util.calendar.ZoneInfo"
     )));
 
     public String toString() {
         String jType = javaType == null ? "not set" : javaType.getName();
-        String targetInfo = getTarget() == null ? "null" : jType;
+        String targetInfo = target == null ? "null" : jType;
         return "JsonObject(id:" + id + ", type:" + jType + ", target:" + targetInfo + ", line:" + line + ", col:" + col + ", size:" + size() + ")";
     }
 
-    // TODO: Remove this API and use setTarget() once finished flag is removed.
     public Object setFinishedTarget(Object o, boolean isFinished) {
-        this.setTarget(o);
+        setTarget(o);
         this.isFinished = isFinished;
-        return this.getTarget();
+        return target;
     }
 
-    public boolean isLogicalPrimitive() {
-        if (getJavaType() == null) {
+    public boolean isConvertable(Class<?> type) {
+        return convertableValues.contains(type.getName());
+    }
+
+    static int count = 0;
+    public boolean valueToTarget(Converter converter)
+    {
+        if (javaType == null) {
+            if (hintType == null) {
+                return false;
+            }
+            javaType = hintType;
+        }
+
+        if (javaType.isArray() && isConvertable(javaType.getComponentType())) {
+            Object[] jsonItems = (Object[]) get(ITEMS);
+            Class<?> componentType = javaType.getComponentType();
+            if (jsonItems == null) {    // empty array
+                setFinishedTarget(null, true);
+                return true;
+            }
+            Object javaArray = Array.newInstance(componentType, jsonItems.length);
+            for (int i=0; i < jsonItems.length; i++) {
+                try {
+                    Class<?> type = componentType;
+                    if (jsonItems[i] instanceof JsonObject) {
+                        JsonObject jObj = (JsonObject) jsonItems[i];
+                        if (jObj.getJavaType() != null) {
+                            type = jObj.getJavaType();
+                        }
+                    }
+                    Array.set(javaArray, i, converter.convert(jsonItems[i], type));
+                } catch (Exception e) {
+                    JsonIoException jioe = new JsonIoException(e.getMessage());
+                    jioe.setStackTrace(e.getStackTrace());
+                    throw jioe;
+                }
+            }
+            setFinishedTarget(javaArray, true);
+            return true;
+        }
+
+        if (!isConvertable(javaType)) {
+//            count++;
+//            System.out.println(count + " javaType = " + javaType.getName());
             return false;
         }
 
-        return logicalPrimitives.contains(getJavaTypeName());
-    }
-
-    public Object getPrimitiveValue(Converter converter, ClassLoader classloader) {
-        final Object value = getValue();
-        String type = getJavaTypeName();
-        if ("class".equals(type) || "java.lang.Class".equals(type)) {
-            return ClassUtilities.forName((String) value, classloader);
+        try {
+            Object value = converter.convert(this, javaType);
+            setFinishedTarget(value, true);
+            return true;
+        } catch (Exception e) {
+            JsonIoException jioe = new JsonIoException(e.getMessage());
+            jioe.setStackTrace(e.getStackTrace());
+            throw jioe;
         }
-        Class<?> clazz = ClassUtilities.forName(type, classloader);
-        if (clazz == null) {
-            throw new JsonIoException("Invalid primitive type, line " + line + ", col " + col);
-        }
-        return converter.convert(value, clazz);
     }
     
     // Map APIs
     public boolean isMap() {
-        return isMap || getTarget() instanceof Map;
+        return isMap || target instanceof Map;
     }
 
     // Collection APIs
     public boolean isCollection() {
-        if (getTarget() instanceof Collection) {
+        if (target instanceof Collection) {
             return true;
         }
         if (containsKey(ITEMS) && !containsKey(KEYS)) {
-            Class<?> type = getJavaType();
+            Class<?> type = javaType;
             return type != null && !type.isArray();
         }
         return false;
@@ -123,13 +191,13 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     // Array APIs
     public boolean isArray() {
-        if (getTarget() == null) {
-            if (getJavaType() != null) {
-                return getJavaType().isArray();
+        if (target == null) {
+            if (javaType != null) {
+                return javaType.isArray();
             }
             return containsKey(ITEMS) && !containsKey(KEYS);
         }
-        return getTarget().getClass().isArray();
+        return target.getClass().isArray();
     }
 
     // Return the array that this JSON object wraps.  This is used when there is a Collection class (like ArrayList)
@@ -153,15 +221,15 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
     private Integer getLenientSize() {
         if (isArray()) {
-            if (getTarget() == null) {
+            if (target == null) {
                 Object[] items = getJsonArray();
                 return items == null ? 0 : items.length;
             }
-            if (char[].class.isAssignableFrom(getTarget().getClass())) {
+            if (char[].class.isAssignableFrom(target.getClass())) {
                 // Verify this for Character[]
                 return 1;
             }
-            return Array.getLength(getTarget());
+            return Array.getLength(target);
         }
         if (isCollection() || isMap()) {
             Object[] items = getJsonArray();
@@ -170,16 +238,16 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return null;
     }
 
-    public Object setValue(Object o) {
-        return this.put(VALUE, o);
+    public void setValue(Object o) {
+        put(VALUE, o);
     }
 
     public Object getValue() {
-        return this.get(VALUE);
+        return get(VALUE);
     }
 
     public boolean hasValue() {
-        return this.containsKey(VALUE) && size() == 1;
+        return containsKey(VALUE) && size() == 1;
     }
 
     public int size() {
@@ -193,25 +261,34 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return jsonStore.size();
     }
 
-    private int calculateArrayHash() {
-        int hashCode = 0;
-        Object array = getJsonArray();
-        if (array != null) {
-            int len = Array.getLength(array);
-            for (int j = 0; j < len; j++) {
-                Object elem = Array.get(array, j);
-                hashCode += elem == null ? 0 : elem.hashCode();
-            }
-        } else {
-            hashCode = super.hashCode();
+    private int hashCode(Object array, Map<Object, Integer> seen) {
+        if (array == null) {
+            return super.hashCode();
         }
-        return hashCode;
+        if (!array.getClass().isArray()) {
+            return super.hashCode();
+        }
+
+        if (seen.containsKey(array)) {
+            return hash;
+        }
+
+        seen.put(array, null);
+        int result = 1;
+        int length = Array.getLength(array);
+        for (int i = 0; i < length; i++) {
+            Object item = Array.get(array, i);
+            hash = hashCode(item, seen);
+            result = 31 * result + hash;
+        }
+        seen.remove(array);
+        return result;
     }
 
     public int hashCode() {
         if (hash == null) {
             if (isArray() || isCollection()) {
-                hash = calculateArrayHash();
+                hash = hashCode(getJsonArray(), new IdentityHashMap<>());
             } else {
                 hash = jsonStore.hashCode();
             }
@@ -240,6 +317,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         return jsonStore.remove(key);
     }
 
+    // TODO: What value is flipping isMap that our isMap() API is not catching?
     public Object put(Object key, Object value) {
         hash = null;
         if ((ITEMS.equals(key) && containsKey(KEYS)) || (KEYS.equals(key) && containsKey(ITEMS))) {
@@ -288,7 +366,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 values[i] = entry.getValue();
                 i++;
             }
-            Class<?> saveType = getJavaType();
+            Class<?> saveType = javaType;
             jsonStore.clear();  // Removes key/values (they are added in as parallel collections), and leaves ID alone.
             setJavaType(saveType);
             put(KEYS, keys);
@@ -307,7 +385,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
             javaKeys = (Object[]) remove(KEYS);
             javaValues = (Object[]) remove(ITEMS);
         } else {              // Populate peer Java Map instance
-            map = (Map<Object, Object>) getTarget();
+            map = (Map<Object, Object>) target;
             javaKeys = keys;
             javaValues = items;
         }
