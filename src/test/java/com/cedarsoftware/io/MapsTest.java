@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.ModelHoldingSingleHashMap;
+import com.cedarsoftware.io.util.EmptyMap;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -104,7 +105,7 @@ class MapsTest
     }
 
     @Test
-    public void testMap()
+    void testMap()
     {
         ManyMaps obj = new ManyMaps();
         obj.init();
@@ -112,6 +113,26 @@ class MapsTest
         ManyMaps root = TestUtil.toObjects(jsonOut, null);
         assertMap(root);
         assert DeepEquals.deepEquals(obj, root);
+    }
+
+    @Test
+    void testEmptyMap()
+    {
+        Map<String, Object> map = Collections.emptyMap();
+        String json = TestUtil.toJson(map, null);
+        Map<String, Object> map2 = TestUtil.toObjects(json, null);
+        assert map2 instanceof EmptyMap;
+        assert map2.isEmpty();
+        assertThrows(UnsupportedOperationException.class, () -> map2.put("foo", "bar")).getMessage().contains("not supported");
+    }
+
+    @Test
+    void testEmptyNavigableMap()
+    {
+        Map<String, Object> map = Collections.emptyNavigableMap();
+        String json = TestUtil.toJson(map, null);
+        Map<String, Object> map2 = TestUtil.toObjects(json, null);
+        assert map2.isEmpty();
     }
 
     @Test
@@ -222,7 +243,7 @@ class MapsTest
     }
 
     @Test
-    public void testReconstituteMap()
+    void testReconstituteMap()
     {
         ManyMaps testMap = new ManyMaps();
         testMap.init();
@@ -239,7 +260,7 @@ class MapsTest
     }
 
     @Test
-    public void testMap2()
+    void testMap2()
     {
         TestObject a = new TestObject("A");
         TestObject b = new TestObject("B");
@@ -262,7 +283,7 @@ class MapsTest
     }
 
     @Test
-    public void testMap3()
+    void testMap3()
     {
         Map map = new HashMap<>();
         map.put("a", "b");
@@ -274,7 +295,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapArrayKey()
+    void testMapArrayKey()
     {
         MapArrayKey m = new MapArrayKey();
         m.setContent(new LinkedHashMap<>());
@@ -305,7 +326,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapSetKey()
+    void testMapSetKey()
     {
         MapSetKey m = new MapSetKey();
         m.setContent(new LinkedHashMap<>());
@@ -339,7 +360,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapToMapCompatibility()
+    void testMapToMapCompatibility()
     {
         String json0 = "{\"rows\":[{\"columns\":[{\"name\":\"FOO\",\"value\":\"9000\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]},{\"columns\":[{\"name\":\"FOO\",\"value\":\"9713\"},{\"name\":\"VON\",\"value\":\"0001-01-01\"},{\"name\":\"BAR\",\"value\":\"0001-01-01\"}]}],\"selectedRows\":\"110\"}";
         Map root = TestUtil.toObjects(json0, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
@@ -353,7 +374,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapWithAtType()
+    void testMapWithAtType()
     {
         AssignToList atl = new AssignToList();
         String json = "{\"@id\":1,\"@type\":\"java.util.LinkedHashMap\",\"@keys\":[\"1000004947\",\"0000020985\",\"0000029443\",\"0000020994\"],\"@items\":[\"Me\",\"Fox, James\",\"Renewals, CORE\",\"Gade, Raja\"]}";
@@ -365,7 +386,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapWithParameterizedTypes()
+    void testMapWithParameterizedTypes()
     {
         String json = "{\"@type\":\"" + ParameterizedMap.class.getName() + "\", \"content\":{\"foo\":{\"one\":{\"x\":1,\"y\":2},\"two\":{\"x\":10,\"y\":20}},\"bar\":{\"ten\":{\"x\":3,\"y\":4},\"twenty\":{\"x\":30,\"y\":40}}}}";
         ParameterizedMap pCol = TestUtil.toObjects(json, null);
@@ -383,7 +404,7 @@ class MapsTest
     }
 
     @Test
-    public void testOddMaps()
+    void testOddMaps()
     {
         String json = "{\"@type\":\"java.util.HashMap\",\"@keys\":null,\"@items\":null}";
         Map map = TestUtil.toObjects(json, null);
@@ -406,7 +427,7 @@ class MapsTest
     }
 
     @Test
-    public void testReconstituteMapEmpty()
+    void testReconstituteMapEmpty()
     {
         Map map = new LinkedHashMap<>();
         String json0 = TestUtil.toJson(map);
@@ -423,7 +444,7 @@ class MapsTest
     }
 
     @Test
-    public void testReconstituteRefMap()
+    void testReconstituteRefMap()
     {
         Map m1 = new HashMap<>();
         Object[] root = new Object[]{m1, m1};
@@ -444,7 +465,7 @@ class MapsTest
     }
 
     @Test
-    public void testReconstituteMapSimple()
+    void testReconstituteMapSimple()
     {
         SimpleMapTest smt = new SimpleMapTest();
         smt.getMap().put("a", "alpha");
@@ -461,7 +482,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapFromUnknown()
+    void testMapFromUnknown()
     {
         Map map = TestUtil.toObjects("{\"a\":\"alpha\", \"b\":\"beta\"}", new ReadOptionsBuilder().unknownTypeClass(ConcurrentHashMap.class).build(), null);
         assert map instanceof ConcurrentHashMap;
@@ -483,7 +504,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapWithQuoteInKey()
+    void testMapWithQuoteInKey()
     {
         Map<Serializable, Long> quoteInKeyMap = new LinkedHashMap<>(3);
         quoteInKeyMap.put(0L, 0L);
@@ -511,7 +532,7 @@ class MapsTest
     }
 
     @Test
-    public void testMapWithPrimitiveValues()
+    void testMapWithPrimitiveValues()
     {
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         cal.clear();
@@ -577,7 +598,7 @@ class MapsTest
     }
 
     @Test
-    public void testSingletonMap()
+    void testSingletonMap()
     {
         // SingleTon Maps are simple one key, one value Maps (inner class to Collections) and must be reconstituted
         // in a special way.  Make sure that works.
@@ -595,7 +616,7 @@ class MapsTest
             return content;
         }
 
-        public void setContent(Map<Object[], String> content)
+        void setContent(Map<Object[], String> content)
         {
             this.content = content;
         }
@@ -610,7 +631,7 @@ class MapsTest
             return content;
         }
 
-        public void setContent(Map<Set<Point>, String> content)
+        void setContent(Map<Set<Point>, String> content)
         {
             this.content = content;
         }
@@ -625,7 +646,7 @@ class MapsTest
             return content;
         }
 
-        public void setContent(Map<String, Map<String, Point>> content)
+        void setContent(Map<String, Map<String, Point>> content)
         {
             this.content = content;
         }
@@ -640,7 +661,7 @@ class MapsTest
             return assignTo;
         }
 
-        public void setAssignTo(Map assignTo)
+        void setAssignTo(Map assignTo)
         {
             this.assignTo = assignTo;
         }
@@ -655,7 +676,7 @@ class MapsTest
             return map;
         }
 
-        public void setMap(Map map)
+        void setMap(Map map)
         {
             this.map = map;
         }

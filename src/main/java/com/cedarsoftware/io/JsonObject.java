@@ -366,9 +366,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
                 values[i] = entry.getValue();
                 i++;
             }
-            Class<?> saveType = javaType;
-            jsonStore.clear();  // Removes key/values (they are added in as parallel collections), and leaves ID alone.
-            setJavaType(saveType);
             put(KEYS, keys);
             put(ITEMS, values);
         }

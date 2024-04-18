@@ -4,6 +4,7 @@ import java.awt.*;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +21,8 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.cedarsoftware.io.util.EmptyNavigableSet;
+import com.cedarsoftware.io.util.EmptySet;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
@@ -28,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,9 +51,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class CollectionTests {
+class CollectionTests {
     @Test
-    public void testCollection() {
+    void testCollection() {
         TestUtil.printLine("\nTestJsonReaderWriter.testCollection()");
         ManyCollections obj = new ManyCollections();
         obj.init();
@@ -67,6 +71,46 @@ public class CollectionTests {
 //        System.out.TestUtil.printLine("writer._identity = " + writer._identity)
     }
 
+    @Test
+    void testEmptyList()
+    {
+        List<?> list = Collections.emptyList();
+        String json = TestUtil.toJson(list, null);
+        List<?> list2 = TestUtil.toObjects(json, null);
+        assert list2.getClass().equals(Collections.emptyList().getClass());
+    }
+
+    @Test
+    void testEmptySet()
+    {
+        Set<String> set = Collections.emptySet();
+        String json = TestUtil.toJson(set, null);
+        Set<String> set2 = TestUtil.toObjects(json, null);
+        assert set2 instanceof EmptySet;
+        assert set2.isEmpty();
+        assertThrows(UnsupportedOperationException.class, () -> set2.add("foo")).getMessage().contains("Cannot add elements to an empty set");
+    }
+
+    @Test
+    void testEmptySortedSet()
+    {
+        Set<String> set = Collections.emptySortedSet();
+        String json = TestUtil.toJson(set, null);
+        Set<String> set2 = TestUtil.toObjects(json, null);
+        assert set2.isEmpty();
+        assert set2.getClass().equals(EmptyNavigableSet.class);
+    }
+
+    @Test
+    void testEmptyNavigableSet()
+    {
+        Set<String> set = Collections.emptyNavigableSet();
+        String json = TestUtil.toJson(set, null);
+        Set<String> set2 = TestUtil.toObjects(json, null);
+        assert set2.isEmpty();
+        assert set2.getClass().equals(EmptyNavigableSet.class);
+    }
+    
     private void assertCollection(ManyCollections root) {
         assertEquals(3, root._cols.length);
         assertEquals(root._cols[0].getClass(), ArrayList.class);
@@ -202,7 +246,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testReconstituteCollection2() {
+    void testReconstituteCollection2() {
         ManyCollections testCol = new ManyCollections();
         testCol.init();
         String json0 = TestUtil.toJson(testCol);
@@ -218,7 +262,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testAlwaysShowType() {
+    void testAlwaysShowType() {
         ManyCollections tc = new ManyCollections();
         tc.init();
         WriteOptions writeOptions = new WriteOptionsBuilder().showTypeInfoAlways().build();
@@ -230,7 +274,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testCollectionWithEmptyElement() {
+    void testCollectionWithEmptyElement() {
         List list = new ArrayList<>();
         list.add("a");
         list.add(null);
@@ -248,7 +292,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testCollectionWithReferences() {
+    void testCollectionWithReferences() {
         TestObject o = new TestObject("JSON");
         List list = new ArrayList<>();
         list.add(o);
@@ -268,7 +312,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testCollectionWithNonJsonPrimitives() {
+    void testCollectionWithNonJsonPrimitives() {
         Collection col = new ArrayList<>();
         col.add(Integer.valueOf(7));
         col.add(Short.valueOf((short) 9));
@@ -279,7 +323,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testCollectionWithParameterizedTypes() {
+    void testCollectionWithParameterizedTypes() {
         String json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[{\"x\":1,\"y\":2},{\"x\":10,\"y\":20}],\"bar\":[{\"x\":3,\"y\":4}, {\"x\":30,\"y\":40}]}}";
         ParameterizedCollection pCol = TestUtil.toObjects(json, null);
         Set<Point> points = pCol.getContent().get("foo");
@@ -314,7 +358,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testEmptyCollections() {
+    void testEmptyCollections() {
         EmptyCols emptyCols;
         String className = CollectionTests.class.getName();
         String json = "{\"@type\":\"" + className + "$EmptyCols\",\"col\":{},\"list\":{},\"map\":{},\"set\":{},\"sortedSet\":{},\"sortedMap\":{}}";
@@ -336,7 +380,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testEnumsInsideOfACollection_whenWritingAsObject_withPrivateMembersIncluded() {
+    void testEnumsInsideOfACollection_whenWritingAsObject_withPrivateMembersIncluded() {
 
         WriteOptions writeOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(false).build();
 
@@ -371,7 +415,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testLocaleInCollection() {
+    void testLocaleInCollection() {
         Locale locale = new Locale(Locale.ENGLISH.getLanguage(), Locale.US.getCountry());
         List list = new ArrayList<>();
         list.add(locale);
@@ -383,7 +427,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testMapOfMapsCollection() {
+    void testMapOfMapsCollection() {
         List stuff = new ArrayList<>();
         stuff.add("Hello");
         Object testObj = new TestObject("test object");
@@ -415,7 +459,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testReconstituteCollection() {
+    void testReconstituteCollection() {
         TestObject to = new TestObject("football");
         Collection objs = new ArrayList<>();
         Date now = new Date();
@@ -459,7 +503,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testReconstituteEmptyCollection() {
+    void testReconstituteEmptyCollection() {
         Collection empty = new ArrayList<>();
         String json0 = TestUtil.toJson(empty);
         TestUtil.printLine("json0=" + json0);
@@ -487,7 +531,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testUntypedCollections() {
+    void testUntypedCollections() {
         Object[] poly = new Object[]{"Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"};
         String json = TestUtil.toJson(poly);
         TestUtil.printLine("json=" + json);
@@ -506,7 +550,7 @@ public class CollectionTests {
     }
 
     @Test
-    public void testEmptyArrayList() {
+    void testEmptyArrayList() {
         EmptyArrayList x = new EmptyArrayList();
         String json = TestUtil.toJson(x);
         TestUtil.printLine(json);
@@ -569,7 +613,7 @@ public class CollectionTests {
             return foo;
         }
 
-        public void setFoo(String foo) {
+        void setFoo(String foo) {
             this.foo = foo;
         }
 
@@ -583,7 +627,7 @@ public class CollectionTests {
             return col;
         }
 
-        public void setCol(Collection col) {
+        void setCol(Collection col) {
             this.col = col;
         }
 
@@ -591,7 +635,7 @@ public class CollectionTests {
             return list;
         }
 
-        public void setList(List list) {
+        void setList(List list) {
             this.list = list;
         }
 
@@ -599,7 +643,7 @@ public class CollectionTests {
             return map;
         }
 
-        public void setMap(Map map) {
+        void setMap(Map map) {
             this.map = map;
         }
 
@@ -607,7 +651,7 @@ public class CollectionTests {
             return set;
         }
 
-        public void setSet(Set set) {
+        void setSet(Set set) {
             this.set = set;
         }
 
@@ -615,7 +659,7 @@ public class CollectionTests {
             return sortedSet;
         }
 
-        public void setSortedSet(SortedSet sortedSet) {
+        void setSortedSet(SortedSet sortedSet) {
             this.sortedSet = sortedSet;
         }
 
@@ -623,7 +667,7 @@ public class CollectionTests {
             return sortedMap;
         }
 
-        public void setSortedMap(SortedMap sortedMap) {
+        void setSortedMap(SortedMap sortedMap) {
             this.sortedMap = sortedMap;
         }
 
@@ -640,7 +684,7 @@ public class CollectionTests {
             return content;
         }
 
-        public void setContent(Map<String, Set<Point>> content) {
+        void setContent(Map<String, Set<Point>> content) {
             this.content = content;
         }
 
@@ -652,7 +696,7 @@ public class CollectionTests {
             return points;
         }
 
-        public void setPoints(List<Point> points) {
+        void setPoints(List<Point> points) {
             this.points = points;
         }
 
@@ -664,7 +708,7 @@ public class CollectionTests {
             return list;
         }
 
-        public void setList(ArrayList<String> list) {
+        void setList(ArrayList<String> list) {
             this.list = list;
         }
 

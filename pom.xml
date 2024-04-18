@@ -37,7 +37,7 @@
         <version.junit-jupiter-params>5.10.2</version.junit-jupiter-params>
         <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.25.3</version.assertj-core>
-        <version.java-util>2.6.0-SNAPSHOT</version.java-util>
+        <version.java-util>2.6.0</version.java-util>
         <version.gson>2.10.1</version.gson>
         <version.jackson-core>2.17.0</version.jackson-core>
         <version.slf4j-api>2.0.12</version.slf4j-api>
