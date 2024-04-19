@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.util.StringUtilities;
 
 import static java.lang.reflect.Modifier.isPublic;
 
@@ -85,8 +86,16 @@ public class Injector {
 
         try {
             this.injector.invoke(object, value);
-        } catch (Throwable t) {
-            throw new JsonIoException("Attempting to set field: " + this.getName() + " using " + this.getDisplayName(), t);
+        }
+        catch (ClassCastException e) {
+            String msg = e.getMessage();
+            if (StringUtilities.hasContent(msg) && msg.toLowerCase().contains("linkedhashmap")) {
+                throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName() + ". If using 'withExtendedAliases()' option, make it is set on both ReadOptions and WriteOptions.", e);
+            }
+            throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName() + ". Getting a ClassCastExcepton.", e);
+        }
+        catch (Throwable t) {
+            throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName(), t);
         }
     }
 

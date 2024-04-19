@@ -51,7 +51,14 @@ java.util.TreeMap = TreeMap
 java.util.TreeMap$KeySet = TreeMapKeySet
 java.util.TreeMap$Values = TreeMapValues
 
+java.util.Collections$EmptyEnumeration = EmptyEnumeration
+java.util.Collections$EmptyIterator = EmptyIterator
 java.util.Collections$EmptyList = EmptyList
+java.util.Collections$EmptyListIterator = EmptyListIterator
+java.util.Collections$EmptyMap = EmptyMap
+java.util.Collections$EmptySet = EmptySet
+java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = EmptyNavigableMap
+java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = EmptyNavigableSet
 
 java.util.Collections$UnmodifiableRandomAccessList = CollectionsUnmodifiableRandomAccessList
 java.util.Collections$UnmodifiableMap = UnmodifiableMap

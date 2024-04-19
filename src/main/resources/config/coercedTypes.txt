@@ -6,9 +6,12 @@ java.time.ZoneRegion = java.time.ZoneId
 
 java.util.Arrays$ArrayList = java.util.ArrayList
 
+java.util.Collections$EmptyIterator = com.cedarsoftware.io.util.EmptyIterator
+java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.util.EmptyEnumeration
 java.util.Collections$EmptySet = com.cedarsoftware.io.util.EmptySet
 java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoftware.io.util.EmptyNavigableSet
 java.util.Collections$EmptyMap = com.cedarsoftware.io.util.EmptyMap
+java.util.Collections$EmptyListIterator = com.cedarsoftware.io.util.EmptyListIterator
 
 java.util.Collections$SingletonList = java.util.ArrayList
 java.util.Collections$SingletonMap = java.util.LinkedHashMap

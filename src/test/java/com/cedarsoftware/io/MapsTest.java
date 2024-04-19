@@ -7,14 +7,20 @@ import java.math.BigInteger;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -135,6 +141,39 @@ class MapsTest
         assert map2.isEmpty();
     }
 
+    private static class EmptyStuff {
+        public Iterator emptyIterator;
+        public SortedSet emptySortedSet;
+        public Set emptySet;
+        public Map emptyMap;
+        public SortedMap emptySortedMap;
+        public List emptyList;
+        public Enumeration emptyEnumeration;
+        public ListIterator emptyListIterator;
+        public NavigableMap emptyNavigableMap;
+        public NavigableSet emptyNavigableSet;
+    }
+
+    @Test
+    void testFoo()
+    {
+        EmptyStuff stuff = new EmptyStuff();
+        stuff.emptyIterator = Collections.emptyIterator();
+        stuff.emptySortedSet = Collections.emptySortedSet();
+        stuff.emptySet = Collections.emptySet();
+        stuff.emptyMap = Collections.emptyMap();
+        stuff.emptySortedMap = Collections.emptySortedMap();
+        stuff.emptyList = Collections.emptyList();
+        stuff.emptyEnumeration = Collections.emptyEnumeration();
+        stuff.emptyListIterator = Collections.emptyListIterator();
+        stuff.emptyNavigableMap = Collections.emptyNavigableMap();
+        stuff.emptyNavigableSet = Collections.emptyNavigableSet();
+
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
+        EmptyStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), EmptyStuff.class);
+        assert DeepEquals.deepEquals(stuff, stuff2);
+    }
+    
     @Test
     void testObject_holdingMap_withStringOfStrings_andAlwaysShowingType() {
         HashMap<String, String> map = new HashMap<>();
