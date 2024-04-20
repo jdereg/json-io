@@ -4,6 +4,7 @@ import java.awt.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,18 +24,24 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TimeZone;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.models.ModelHoldingSingleHashMap;
-import com.cedarsoftware.io.util.EmptyMap;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.io.MetaUtils.listOf;
+import static com.cedarsoftware.io.MetaUtils.mapOf;
+import static com.cedarsoftware.io.MetaUtils.setOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -121,59 +128,253 @@ class MapsTest
         assert DeepEquals.deepEquals(obj, root);
     }
 
-    @Test
-    void testEmptyMap()
-    {
-        Map<String, Object> map = Collections.emptyMap();
-        String json = TestUtil.toJson(map, null);
-        Map<String, Object> map2 = TestUtil.toObjects(json, null);
-        assert map2 instanceof EmptyMap;
-        assert map2.isEmpty();
-        assertThrows(UnsupportedOperationException.class, () -> map2.put("foo", "bar")).getMessage().contains("not supported");
-    }
-
-    @Test
-    void testEmptyNavigableMap()
-    {
-        Map<String, Object> map = Collections.emptyNavigableMap();
-        String json = TestUtil.toJson(map, null);
-        Map<String, Object> map2 = TestUtil.toObjects(json, null);
-        assert map2.isEmpty();
-    }
-
     private static class EmptyStuff {
-        public Iterator emptyIterator;
-        public SortedSet emptySortedSet;
-        public Set emptySet;
-        public Map emptyMap;
-        public SortedMap emptySortedMap;
-        public List emptyList;
         public Enumeration emptyEnumeration;
+        public Iterator emptyIterator;
         public ListIterator emptyListIterator;
-        public NavigableMap emptyNavigableMap;
-        public NavigableSet emptyNavigableSet;
+        public List<String> emptyList;
+        public Set<String> emptySet;
+        public SortedSet<String> emptySortedSet;
+        public NavigableSet<String> emptyNavigableSet;
+        public Map<String, Object> emptyMap;
+        public SortedMap<String, Object> emptySortedMap;
+        public NavigableMap<String, Object> emptyNavigableMap;
     }
 
     @Test
-    void testFoo()
+    void testAllEmptyCollectionTypes()
     {
         EmptyStuff stuff = new EmptyStuff();
+        stuff.emptyEnumeration = Collections.emptyEnumeration();
         stuff.emptyIterator = Collections.emptyIterator();
-        stuff.emptySortedSet = Collections.emptySortedSet();
+        stuff.emptyListIterator = Collections.emptyListIterator();
+        stuff.emptyList = Collections.emptyList();
         stuff.emptySet = Collections.emptySet();
+        stuff.emptyNavigableSet = Collections.emptyNavigableSet();
+        stuff.emptySortedSet = Collections.emptySortedSet();
         stuff.emptyMap = Collections.emptyMap();
         stuff.emptySortedMap = Collections.emptySortedMap();
-        stuff.emptyList = Collections.emptyList();
-        stuff.emptyEnumeration = Collections.emptyEnumeration();
-        stuff.emptyListIterator = Collections.emptyListIterator();
         stuff.emptyNavigableMap = Collections.emptyNavigableMap();
-        stuff.emptyNavigableSet = Collections.emptyNavigableSet();
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
         EmptyStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), EmptyStuff.class);
+
+        try {
+            stuff2.emptyList.add("a");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptySet.add("a");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptySortedSet.add("a");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptyNavigableSet.add("a");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptyMap.put("a", "b");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptySortedMap.put("a", "b");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
+        try {
+            stuff2.emptyNavigableMap.put("a", "b");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+
         assert DeepEquals.deepEquals(stuff, stuff2);
     }
     
+    private static class SingletonStuff {
+        public List<String> singletonList;
+        public Set<String> singletonSet;
+        public Map<String, Object> singletonMap;
+    }
+
+    @Test
+    void testAllSingletonCollectionTypes()
+    {
+        SingletonStuff stuff = new SingletonStuff();
+        stuff.singletonList = Collections.singletonList("Ethereum");
+        stuff.singletonSet = Collections.singleton("Bitcoin");
+        stuff.singletonMap = Collections.singletonMap("Solana", "Bitcoin");
+
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
+        System.out.println("json = " + json);
+        SingletonStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), SingletonStuff.class);
+
+        assert stuff2.singletonList.size() == 1;
+        assert stuff2.singletonSet.size() == 1;
+        assert stuff2.singletonMap.size() == 1;
+
+        assert stuff2.singletonList.contains("Ethereum");
+        assert stuff2.singletonSet.contains("Bitcoin");
+        assert stuff2.singletonMap.containsKey("Solana");
+
+        try {
+            stuff2.singletonList.add("t-rex");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+        try {
+            stuff2.singletonSet.add("triceratops");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+        try {
+            stuff2.singletonMap.put("dino", "dna");
+            fail();
+        } catch(UnsupportedOperationException ignored) {
+        }
+        
+        assert DeepEquals.deepEquals(stuff, stuff2);
+    }
+
+    private static class UnmodifiableStuff {
+        public Collection<String> unmodifiableCollection;
+        public Map<String, Object> unmodifiableMap;
+        public List<String> unmodifiableList;
+        public Set<String> unmodifiableSet;
+        public SortedSet<String> unmodifiableSortedSet;
+        public NavigableSet<String> unmodifiableNavigableSet;
+        public SortedMap<String, Object> unmodifiableSortedMap;
+        public NavigableMap<String, Object> unmodifiableNavigableMap;
+    }
+
+    @Test
+    void testAllUnmodifiableCollectionTypes()
+    {
+        UnmodifiableStuff stuff = new UnmodifiableStuff();
+        stuff.unmodifiableCollection = Collections.unmodifiableCollection(Arrays.asList("foo", "bar"));
+        stuff.unmodifiableList = Collections.unmodifiableList(listOf("foo", "bar", "baz", "qux"));
+        stuff.unmodifiableMap = Collections.unmodifiableMap(mapOf("foo", "bar", "baz", "qux"));
+        stuff.unmodifiableSet = Collections.unmodifiableSet(setOf("foo", "bar", "baz", "qux"));
+        SortedSet<String> sortedSet = new TreeSet<>();
+        sortedSet.add("foo");
+        sortedSet.add("bar");
+        sortedSet.add("baz");
+        sortedSet.add("qux");
+        stuff.unmodifiableSortedSet = Collections.unmodifiableSortedSet(sortedSet);
+        NavigableSet<String> navSet = new TreeSet<>();
+        navSet.add("foo");
+        navSet.add("bar");
+        navSet.add("baz");
+        navSet.add("qux");
+        stuff.unmodifiableNavigableSet = Collections.unmodifiableNavigableSet(navSet);
+        SortedMap<String, Object> sortedMap = new TreeMap<>();
+        sortedMap.put("foo", "bar");
+        sortedMap.put("baz", "qux");
+        stuff.unmodifiableSortedMap = Collections.unmodifiableSortedMap(sortedMap);
+        NavigableMap<String, Object> navMap = new TreeMap<>();
+        navMap.put("foo", "bar");
+        navMap.put("baz", "qux");
+        stuff.unmodifiableNavigableMap = Collections.unmodifiableNavigableMap(navMap);
+
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
+        UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), UnmodifiableStuff.class);
+        // TODO: Make unmodifiable after serializing
+        stuff2.unmodifiableCollection.add("a");
+        assert DeepEquals.deepEquals(stuff, stuff2);
+    }
+
+    private static class SynchronizedStuff {
+        public Collection<String> synchronizedCollection;
+        public List<String> synchronizedList;
+        public Set<String> synchronizedSet;
+        public SortedSet<String> synchronizedSortedSet;
+        public NavigableSet<String> synchronizedNavigableSet;
+        public Map<String, Object> synchronizedMap;
+        public SortedMap<String, Object> synchronizedSortedMap;
+        public NavigableMap<String, Object> synchronizedNavigableMap;
+    }
+
+    @Test
+    void testAllSynchronizedCollectionTypes()
+    {
+        SynchronizedStuff stuff = new SynchronizedStuff();
+        stuff.synchronizedCollection = Collections.synchronizedCollection(Arrays.asList("foo", "bar"));
+        stuff.synchronizedList = Collections.synchronizedList(Arrays.asList("foo", "bar", "baz", "qux"));
+        stuff.synchronizedMap = Collections.synchronizedMap(mapOf("foo", "bar", "baz", "qux"));
+        stuff.synchronizedSet = Collections.synchronizedSet(setOf("foo", "bar", "baz", "qux"));
+        SortedSet<String> sortedSet = new TreeSet<>();
+        sortedSet.addAll(Arrays.asList("foo", "bar", "baz", "qux"));
+        stuff.synchronizedSortedSet = Collections.synchronizedSortedSet(sortedSet);
+        NavigableSet<String> navSet = new TreeSet<>();
+        navSet.addAll(Arrays.asList("foo", "bar", "baz", "qux"));
+        stuff.synchronizedNavigableSet = Collections.synchronizedNavigableSet(navSet);
+        SortedMap<String, Object> sortedMap = new TreeMap<>();
+        sortedMap.put("foo", "bar");
+        sortedMap.put("baz", "qux");
+        stuff.synchronizedSortedMap = Collections.synchronizedSortedMap(sortedMap);
+        NavigableMap<String, Object> navMap = new TreeMap<>();
+        navMap.put("foo", "bar");
+        navMap.put("baz", "qux");
+        stuff.synchronizedNavigableMap = Collections.synchronizedNavigableMap(navMap);
+
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
+        SynchronizedStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), SynchronizedStuff.class);
+        assert DeepEquals.deepEquals(stuff, stuff2);
+    }
+
+    private static class ConcurrentStuff {
+        public Collection<String> concurrentCollection;
+        public List<String> concurrentList;
+        public Set<String> concurrentSet;
+        public SortedSet<String> concurrentSortedSet;
+        public NavigableSet<String> concurrentNavigableSet;
+        public Map<String, Object> concurrentMap;
+        public SortedMap<String, Object> concurrentSortedMap;
+        public NavigableMap<String, Object> concurrentNavigableMap;
+    }
+
+    @Test
+    void testAllConcurrentCollectionTypes()
+    {
+        ConcurrentStuff stuff = new ConcurrentStuff();
+        stuff.concurrentCollection = new Vector<>(Arrays.asList("foo", "bar"));
+        stuff.concurrentList = new CopyOnWriteArrayList<>(Arrays.asList("foo", "bar", "baz", "qux")); // Using CopyOnWriteArrayList
+        stuff.concurrentMap = new ConcurrentHashMap<>();
+        stuff.concurrentMap.put("foo", "bar");
+        stuff.concurrentMap.put("baz", "qux");
+        stuff.concurrentSet = ConcurrentHashMap.newKeySet();
+        stuff.concurrentSet.addAll(Arrays.asList("foo", "bar", "baz", "qux"));
+
+        NavigableSet<String> navSet = new TreeSet<>();
+        navSet.addAll(Arrays.asList("foo", "bar", "baz", "qux"));
+        stuff.concurrentNavigableSet = new ConcurrentSkipListSet<>(navSet);
+        
+        NavigableMap<String, Object> navMap = new TreeMap<>();
+        navMap.put("foo", "bar");
+        navMap.put("baz", "qux");
+        stuff.concurrentNavigableMap = new ConcurrentSkipListMap<>();
+        stuff.concurrentNavigableMap.put("foo", "bar");
+        stuff.concurrentNavigableMap.put("baz", "qux");
+
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
+        ConcurrentStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), ConcurrentStuff.class);
+
+        assert DeepEquals.deepEquals(stuff, stuff2);
+    }
+
     @Test
     void testObject_holdingMap_withStringOfStrings_andAlwaysShowingType() {
         HashMap<String, String> map = new HashMap<>();
