@@ -142,6 +142,56 @@ class JsonParser {
     }
 
     /**
+     * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
+     * @param suggestedClass JsonValue Owning entity.
+     */
+    Object readValue(JsonObject jsonObj, Class<?> suggestedClass) throws IOException {
+        if (curParseDepth > maxParseDepth) {
+            error("Maximum parsing depth exceeded");
+        }
+
+        int c = skipWhitespaceRead(true);
+        if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I') {
+            return readNumber(c);
+        }
+        switch (c) {
+            case '"':
+                String str = readString();
+                return str;
+            case '{':
+                input.pushback('{');
+                JsonObject jObj = readJsonObject(suggestedClass);
+                final boolean useMaps = readOptions.isReturningJsonObjects();
+                boolean worked = jObj.valueToTarget(resolver.getConverter());
+                if (useMaps && worked && jsonPrimitives.contains(jObj.getJavaType())) {
+                    return jObj.getTarget();
+                }
+                return jObj;
+            case '[':
+                jsonObj.setTypeSafely(suggestedClass == null ? null : suggestedClass.getComponentType());
+                Object[] array = readArray(jsonObj, suggestedClass == null ? null : suggestedClass.getComponentType());
+                return array;
+            case ']':   // empty array
+                input.pushback(']');
+                return EMPTY_ARRAY;
+            case 'f':
+            case 'F':
+                readToken("false");
+                return false;
+            case 'n':
+            case 'N':
+                readToken("null");
+                return null;
+            case 't':
+            case 'T':
+                readToken("true");
+                return true;
+        }
+
+        return error("Unknown JSON value type");
+    }
+
+    /**
      * Read a JSON object { ... }
      *
      * @return JsonObject that represents the { ... } being read in.  If the JSON object type can be inferred,
@@ -173,7 +223,8 @@ class JsonParser {
                 field = substitutes.get(field);
             }
             Injector injector = injectors.get(field);
-            Object value = readValue(injector == null ? null : injector.getType());
+            jObj.setTypeSafely(injector == null ? null : injector.getType());
+            Object value = readValue(jObj, injector == null ? null : injector.getType());
 
             // process key-value pairing
             switch (field) {
@@ -226,63 +277,14 @@ class JsonParser {
     }
 
     /**
-     * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
-     * @param suggestedClass JsonValue Owning entity.
-     */
-    Object readValue(Class<?> suggestedClass) throws IOException {
-        if (curParseDepth > maxParseDepth) {
-            error("Maximum parsing depth exceeded");
-        }
-
-        int c = skipWhitespaceRead(true);
-        if (c >= '0' && c <= '9' || c == '-' || c == 'N' || c == 'I') {
-            return readNumber(c);
-        }
-        switch (c) {
-            case '"':
-                String str = readString();
-                return str;
-            case '{':
-                input.pushback('{');
-                JsonObject jObj = readJsonObject(suggestedClass);
-                final boolean useMaps = readOptions.isReturningJsonObjects();
-                boolean worked = jObj.valueToTarget(resolver.getConverter());
-                if (useMaps && worked && jsonPrimitives.contains(jObj.getJavaType())) {
-                    return jObj.getTarget();
-                }
-                return jObj;
-            case '[':
-                Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
-                return array;
-            case ']':   // empty array
-                input.pushback(']');
-                return EMPTY_ARRAY;
-            case 'f':
-            case 'F':
-                readToken("false");
-                return false;
-            case 'n':
-            case 'N':
-                readToken("null");
-                return null;
-            case 't':
-            case 'T':
-                readToken("true");
-                return true;
-        }
-
-        return error("Unknown JSON value type");
-    }
-
-    /**
      * Read a JSON array
      */
-    private Object[] readArray(Class<?> suggestedClass) throws IOException {
+    private Object[] readArray(JsonObject jsonObj, Class<?> suggestedClass) throws IOException {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
-            final Object value = readValue(suggestedClass);
+            final Object value = readValue(jsonObj, suggestedClass);
 
             if (value != EMPTY_ARRAY) {
                 array.add(value);

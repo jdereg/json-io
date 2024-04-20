@@ -94,7 +94,72 @@ public abstract class JsonValue {
     }
 
     public void setJavaType(Class<?> type) {
-        this.javaType = type;
+        javaType = type;
+        if (hintType == null) {
+            hintType = type;
+        }
+    }
+
+    public void setTypeSafely(Class<?> type) {
+        // Rule 1: If the passed type is Object.class or null, do nothing and return.
+        if (type == null || type == Object.class || target != null) {
+            return;
+        }
+
+        // Rule 2: If both hintType and javaType are null, set hintType to type and return.
+        if (hintType == null && javaType == null) {
+            hintType = type;
+            return;
+        }
+
+        // Rule 3: If hintType is not null and javaType is null,
+        // determine the "more derived" type and set javaType and hintType accordingly.
+        if (hintType != null && javaType == null) {
+            if (isMoreDerivedThan(type, hintType)) {
+                javaType = type;
+            } else {
+                javaType = hintType;
+                hintType = type;
+            }
+            return;
+        }
+
+        // Additional rule: Ensure javaType is always the most derived type
+        // and hintType the next most derived if all are non-null.
+        if (hintType != null && javaType != null) {
+            Class<?> mostDerived = getMostDerived(type, hintType, javaType);
+            Class<?> middleDerived = getMiddleDerived(type, hintType, javaType, mostDerived);
+
+            javaType = mostDerived;
+            hintType = middleDerived;
+        }
+    }
+
+    private boolean isMoreDerivedThan(Class<?> candidate, Class<?> current) {
+        if (candidate.isArray() && current.isArray()) {
+            return candidate.getComponentType().isAssignableFrom(current.getComponentType());
+        }
+        return candidate.isAssignableFrom(current);
+    }
+
+    private Class<?> getMostDerived(Class<?> a, Class<?> b, Class<?> c) {
+        if (isMoreDerivedThan(a, b) && isMoreDerivedThan(a, c)) {
+            return a;
+        } else if (isMoreDerivedThan(b, c)) {
+            return b;
+        } else {
+            return c;
+        }
+    }
+
+    private Class<?> getMiddleDerived(Class<?> a, Class<?> b, Class<?> c, Class<?> mostDerived) {
+        if (mostDerived == a) {
+            return isMoreDerivedThan(b, c) ? b : c;
+        } else if (mostDerived == b) {
+            return isMoreDerivedThan(a, c) ? a : c;
+        } else {
+            return isMoreDerivedThan(a, b) ? a : b;
+        }
     }
 
     public void setHintType(Class<?> type) {

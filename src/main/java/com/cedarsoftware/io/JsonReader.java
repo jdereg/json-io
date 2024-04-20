@@ -236,7 +236,9 @@ public class JsonReader implements Closeable
     public <T> T readObject(Class<T> rootType) {
         T returnValue;
         try {
-            returnValue = (T) parser.readValue(rootType);
+            JsonObject root = new JsonObject();
+            root.setHintType(rootType);
+            returnValue = (T) parser.readValue(root, rootType);
             if (returnValue == null) {
                 return null;    // easy, done.
             }
