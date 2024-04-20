@@ -14,7 +14,7 @@ ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.20.0'
+implementation 'com.cedarsoftware:json-io:4.21.0'
 ```
 
 ##### Maven
@@ -22,7 +22,7 @@ implementation 'com.cedarsoftware:json-io:4.20.0'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.20.0</version>
+      <version>4.21.0</version>
     </dependency>
 ```
 ___
@@ -45,8 +45,8 @@ ___
 >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
 >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
->### 4.20.0 (current)
->- [ ] **Version**: [4.20.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
+>### 4.21.0 (current)
+>- [ ] **Version**: [4.21.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
@@ -56,7 +56,7 @@ ___
 >  - Use [ReadOptionsBuilder](/user-guide-readOptions.md) and [WriteOptionsBuilder](/user-guide-writeOptions.md) to configure `JsonIo`
 >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
 >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
->- [ ] Updates will be 4.21.0, 4.22.0, ...
+>- [ ] Updates will be 4.22.0, 4.23.0, ...
 >### 4.14.x (supported)
 >- [ ] **Version**: [4.14.3](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.14.3/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)

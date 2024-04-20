@@ -285,7 +285,7 @@ public class JsonIo {
      * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
      * @param optionalArgs Map of old json-io options
      * @return ReadOptionsBuilder
-     * @deprecated - This exists to show how the old Map<String, Object> options are crreated using ReadOptionsBuilder.
+     * @deprecated - This exists to show how the old {@code Map<String, Object>} options are crreated using ReadOptionsBuilder.
      */
     @Deprecated
     public static ReadOptionsBuilder getReadOptionsBuilder(Map<String, Object> optionalArgs) {
@@ -385,7 +385,7 @@ public class JsonIo {
      * however, this API will be the fastest route to bridge an old installation using json-io to the new API.
      * @param optionalArgs Map of old json-io options
      * @return WriteOptionsBuilder
-     * @deprecated - This exists to show how the old Map<String, Object> options are crreated using WriteptionsBuilder.
+     * @deprecated - This exists to show how the old {@code Map<String, Object>} options are crreated using WriteptionsBuilder.
      */
     @Deprecated
     public static WriteOptionsBuilder getWriteOptionsBuilder(Map<String, Object> optionalArgs) {
