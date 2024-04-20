@@ -25,16 +25,16 @@ java.util.Collections$UnmodifiableSet = java.util.LinkedHashSet
 java.util.Collections$SynchronizedCollection = java.util.Vector
 java.util.Collections$SynchronizedList = java.util.Vector
 java.util.Collections$SynchronizedRandomAccessList = java.util.Vector
-java.util.Collections$SynchronizedSet = com.cedarsoftware.util.ConcurrentHashSet
+java.util.Collections$SynchronizedSet = com.cedarsoftware.io.util.ConcurrentHashSet
 java.util.Collections$SynchronizedSortedSet = java.util.concurrent.ConcurrentSkipListSet
 java.util.Collections$SynchronizedNavigableSet = java.util.concurrent.ConcurrentSkipListSet
 java.util.Collections$SynchronizedMap = java.util.concurrent.ConcurrentHashMap
 java.util.Collections$SynchronizedSortedMap = java.util.concurrent.ConcurrentSkipListMap
 java.util.Collections$SynchronizedNavigableMap = java.util.concurrent.ConcurrentSkipListMap
 
-java.util.concurrent.ConcurrentHashMap$KeySetView = com.cedarsoftware.util.ConcurrentHashSet
+java.util.concurrent.ConcurrentHashMap$KeySetView = com.cedarsoftware.io.util.ConcurrentHashSet
 java.util.concurrent.ConcurrentHashMap$ValuesView = java.util.ArrayList
-java.util.concurrent.ConcurrentSkipListMap$KeySet = com.cedarsoftware.util.ConcurrentHashSet
+java.util.concurrent.ConcurrentSkipListMap$KeySet = com.cedarsoftware.io.util.ConcurrentHashSet
 java.util.concurrent.ConcurrentSkipListMap$Values = java.util.ArrayList
 
 java.util.HashMap$KeySet = java.util.HashSet
