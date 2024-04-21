@@ -1,14 +1,7 @@
-#
 # List of aliases.
 # Class name = Alias name
-#
-java.math.BigInteger = BigInt
-java.math.BigDecimal = BigDec
 
-java.lang.Class = class
-java.lang.String = string
-java.util.Date = date
-
+# java.lang
 java.lang.Byte = byte
 java.lang.Short = short
 java.lang.Integer = int
@@ -17,11 +10,54 @@ java.lang.Float = float
 java.lang.Double = double
 java.lang.Character = char
 java.lang.Boolean = boolean
+java.lang.StackTraceElement = StackTraceElementElement
+java.lang.StringBuffer = StringBuffer
+java.lang.StringBuilder = StringBuilder
+java.lang.Class = class
+java.lang.String = string
+java.util.Date = date
+
+# java.math
+java.math.BigInteger = BigInt
+java.math.BigDecimal = BigDec
 
 # Atomics
 java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean
 java.util.concurrent.atomic.AtomicInteger = AtomicInteger
 java.util.concurrent.atomic.AtomicLong = AtomicLong
+
+# java.sql
+java.sql.Date = SqlDate
+java.sql.Timestamp = Timestamp
+
+# Temporal
+java.time.Duration = Duration
+java.time.Instant = Instant
+java.time.LocalDate = LocalDate
+java.time.LocalDateTime = LocalDateTime
+java.time.LocalTime = LocalTime
+java.time.MonthDay = MonthDau
+java.time.OffsetDateTime = OffsetDatetime
+java.time.OffsetTime = OffsetTime
+java.time.Period = Period
+java.time.Year = Year
+java.time.YearMonth = YearMonth
+java.time.ZonedDateTime = ZonedDateTime
+java.time.ZoneId = ZoneId
+java.time.ZoneOffset = ZoneOffset
+java.time.ZoneRegion = ZoneRegion
+
+# java.util
+java.util.UUID = UUID
+java.util.Calendar = Calendar
+java.util.GregorianCalendar = GregorianCalendar
+java.util.TimeZone = TimeZone
+java.util.Locale = Locale
+sun.util.calendar.ZoneInfo = ZoneInfo
+
+# java.net
+java.net.URL = URL
+java.net.URI = URI
 
 # Arrays of primitives and common types
 [Ljava.lang.Class; = Class[]
@@ -67,12 +103,12 @@ java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = EmptyNavigabl
 java.util.Collections$EmptyMap = EmptyMap
 java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = EmptyNavigableMap
 
-#Collections "Singleton" types
+# Collections "Singleton" types
 java.util.Collections$SingletonList = SingletonList
 java.util.Collections$SingletonSet = SingletonSet
 java.util.Collections$SingletonMap = SingletonMap
 
-#Collections "Unmodifiable" types
+# Collections "Unmodifiable" types
 java.util.Collections$UnmodifiableCollection = UnmodifiableCollection
 java.util.Collections$UnmodifiableRandomAccessList = UnmodifiableRandomAccessList
 java.util.Collections$UnmodifiableSet = UnmodifiableSet
@@ -82,7 +118,7 @@ java.util.Collections$UnmodifiableMap = UnmodifiableMap
 java.util.Collections$UnmodifiableSortedMap = UnmodifiableSortedMap
 java.util.Collections$UnmodifiableNavigableMap = UnmodifiableNavigableMap
 
-#Collections "synchronized" types
+# Collections "synchronized" types
 java.util.Collections$SynchronizedCollection = SynchronizedCollection
 java.util.Collections$SynchronizedList = SynchronizedList
 java.util.Collections$SynchronizedRandomAccessList = SynchronizedRandomAccessList
@@ -93,6 +129,7 @@ java.util.Collections$SynchronizedMap = SynchronizedMap
 java.util.Collections$SynchronizedSortedMap = SynchronizedSortedMap
 java.util.Collections$SynchronizedNavigableMap = SynchronizedNavigableMap
 
+# Collections "concurrent" types
 java.util.concurrent.ConcurrentHashMap = ConcurrentHashMap
 java.util.concurrent.ConcurrentSkipListMap = ConcurrentSkipListMap
 java.util.concurrent.ConcurrentSkipListSet = ConcurrentSkipListSet

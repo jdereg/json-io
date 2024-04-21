@@ -2,6 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -264,5 +266,15 @@ class RefsTest
         assert kid6 != kid5;
         assert root.date.equals(LocalDate.of(2023, 12, 25));
         assert kid6.date.equals(LocalDate.of(2023, 11, 17));
+    }
+
+    @Test
+    void testConvertableReferences() {
+        String json = "[{\"@ref\":1},{\"@id\":1,\"@type\":\"ZonedDateTime\",\"value\":\"2024-04-21T14:55:53.77587-04:00[America/New_York]\"}]";
+        Object[] dates = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().withExtendedAliases().build(), null);
+        ZonedDateTime zdt1 = (ZonedDateTime) dates[0];
+        ZonedDateTime zdt2 = (ZonedDateTime) dates[1];
+        assertEquals(zdt1, zdt2);
+        assertNotSame(zdt1, zdt2);
     }
 }

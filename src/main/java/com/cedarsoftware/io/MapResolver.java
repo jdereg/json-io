@@ -173,8 +173,8 @@ public class MapResolver extends Resolver
                     Class<?> type = refObject.getJavaType();
                     
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        items[i] = converter.convert(refObject, type);
-                        jsonObject.setFinished();
+                        refObject.setFinishedTarget(converter.convert(refObject, type), true);
+                        items[i] = refObject.getTarget();
                     } else {
                         items[i] = refObject;
                     }
