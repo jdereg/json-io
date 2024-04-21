@@ -250,11 +250,11 @@ class MapsTest
 
     private static class UnmodifiableStuff {
         public Collection<String> unmodifiableCollection;
-        public Map<String, Object> unmodifiableMap;
         public List<String> unmodifiableList;
         public Set<String> unmodifiableSet;
         public SortedSet<String> unmodifiableSortedSet;
         public NavigableSet<String> unmodifiableNavigableSet;
+        public Map<String, Object> unmodifiableMap;
         public SortedMap<String, Object> unmodifiableSortedMap;
         public NavigableMap<String, Object> unmodifiableNavigableMap;
     }
@@ -265,8 +265,8 @@ class MapsTest
         UnmodifiableStuff stuff = new UnmodifiableStuff();
         stuff.unmodifiableCollection = Collections.unmodifiableCollection(Arrays.asList("foo", "bar"));
         stuff.unmodifiableList = Collections.unmodifiableList(listOf("foo", "bar", "baz", "qux"));
-        stuff.unmodifiableMap = Collections.unmodifiableMap(mapOf("foo", "bar", "baz", "qux"));
         stuff.unmodifiableSet = Collections.unmodifiableSet(setOf("foo", "bar", "baz", "qux"));
+        stuff.unmodifiableMap = Collections.unmodifiableMap(mapOf("foo", "bar", "baz", "qux"));
         SortedSet<String> sortedSet = new TreeSet<>();
         sortedSet.add("foo");
         sortedSet.add("bar");
@@ -312,8 +312,8 @@ class MapsTest
         SynchronizedStuff stuff = new SynchronizedStuff();
         stuff.synchronizedCollection = Collections.synchronizedCollection(Arrays.asList("foo", "bar"));
         stuff.synchronizedList = Collections.synchronizedList(Arrays.asList("foo", "bar", "baz", "qux"));
-        stuff.synchronizedMap = Collections.synchronizedMap(mapOf("foo", "bar", "baz", "qux"));
         stuff.synchronizedSet = Collections.synchronizedSet(setOf("foo", "bar", "baz", "qux"));
+        stuff.synchronizedMap = Collections.synchronizedMap(mapOf("foo", "bar", "baz", "qux"));
         SortedSet<String> sortedSet = new TreeSet<>();
         sortedSet.addAll(Arrays.asList("foo", "bar", "baz", "qux"));
         stuff.synchronizedSortedSet = Collections.synchronizedSortedSet(sortedSet);

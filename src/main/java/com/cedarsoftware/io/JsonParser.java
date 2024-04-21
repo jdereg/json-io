@@ -145,7 +145,7 @@ class JsonParser {
      * Read a JSON value (see json.org).  A value can be a JSON object, array, string, number, ("true", "false"), or "null".
      * @param suggestedClass JsonValue Owning entity.
      */
-    Object readValue(JsonObject jsonObj, Class<?> suggestedClass) throws IOException {
+    Object readValue(Class<?> suggestedClass) throws IOException {
         if (curParseDepth > maxParseDepth) {
             error("Maximum parsing depth exceeded");
         }
@@ -168,8 +168,7 @@ class JsonParser {
                 }
                 return jObj;
             case '[':
-                jsonObj.setTypeSafely(suggestedClass == null ? null : suggestedClass.getComponentType());
-                Object[] array = readArray(jsonObj, suggestedClass == null ? null : suggestedClass.getComponentType());
+                Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
                 return array;
             case ']':   // empty array
                 input.pushback(']');
@@ -223,8 +222,7 @@ class JsonParser {
                 field = substitutes.get(field);
             }
             Injector injector = injectors.get(field);
-            jObj.setTypeSafely(injector == null ? null : injector.getType());
-            Object value = readValue(jObj, injector == null ? null : injector.getType());
+            Object value = readValue(injector == null ? null : injector.getType());
 
             // process key-value pairing
             switch (field) {
@@ -279,12 +277,12 @@ class JsonParser {
     /**
      * Read a JSON array
      */
-    private Object[] readArray(JsonObject jsonObj, Class<?> suggestedClass) throws IOException {
+    private Object[] readArray(Class<?> suggestedClass) throws IOException {
         final List<Object> array = new ArrayList<>();
         ++curParseDepth;
 
         while (true) {
-            final Object value = readValue(jsonObj, suggestedClass);
+            final Object value = readValue(suggestedClass);
 
             if (value != EMPTY_ARRAY) {
                 array.add(value);

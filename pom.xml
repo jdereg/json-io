@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-io</artifactId>
     <packaging>bundle</packaging>
-    <version>4.21.0</version>
+    <version>4.22.0</version>
     <description>Java JSON serialization</description>
     <url>https://github.com/jdereg/json-io</url>
 
@@ -35,17 +35,17 @@
         <!-- testing only -->
         <version.junit-jupiter-api>5.10.2</version.junit-jupiter-api>
         <version.junit-jupiter-params>5.10.2</version.junit-jupiter-params>
-        <version.mockito-junit-jupiter>4.11.0</version.mockito-junit-jupiter>
+        <version.mockito-junit-jupiter>5.11.0</version.mockito-junit-jupiter>
         <version.assertj-core>3.25.3</version.assertj-core>
-        <version.java-util>2.6.0</version.java-util>
+        <version.java-util>2.7.0</version.java-util>
         <version.gson>2.10.1</version.gson>
         <version.jackson-core>2.17.0</version.jackson-core>
-        <version.slf4j-api>2.0.12</version.slf4j-api>
-        <version.logback-classic>1.3.14</version.logback-classic>
+        <version.slf4j-api>2.0.13</version.slf4j-api>
+        <version.logback-classic>1.5.6</version.logback-classic>
 
         <!-- Build maven-***-plugins-->
-        <version.maven-jar-plugin>3.3.0</version.maven-jar-plugin>
-        <version.maven-gpg-plugin>3.2.2</version.maven-gpg-plugin>
+        <version.maven-jar-plugin>3.4.1</version.maven-jar-plugin>
+        <version.maven-gpg-plugin>3.2.4</version.maven-gpg-plugin>
         <version.maven-compiler-plugin>3.13.0</version.maven-compiler-plugin>
         <version.maven-javadoc-plugin>3.6.3</version.maven-javadoc-plugin>
         <version.maven-surefire-plugin>3.2.5</version.maven-surefire-plugin>
@@ -269,6 +269,7 @@
                                     exports com.cedarsoftware.io.reflect.filters;
                                     exports com.cedarsoftware.io.reflect.filters.field;
                                     exports com.cedarsoftware.io.reflect.filters.method;
+                                    exports com.cedarsoftware.io.util;
                                     }
                                 </moduleInfoSource>
                             </module>

@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 
 import com.cedarsoftware.io.JsonIoException;
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.StringUtilities;
 
 import static java.lang.reflect.Modifier.isPublic;
@@ -31,11 +32,8 @@ import static java.lang.reflect.Modifier.isPublic;
 public class Injector {
 
     private final Field field;
-
     private final String displayName;
-
     private final String uniqueFieldName;
-
     private MethodHandle injector;
 
 
@@ -81,41 +79,45 @@ public class Injector {
 
     public void inject(Object object, Object value) {
         if (object == null) {
-            throw new JsonIoException("Attempting to set field: " + this.getName() + " on null object.");
+            throw new JsonIoException("Attempting to set field: " + getName() + " on null object.");
         }
 
         try {
-            this.injector.invoke(object, value);
+            injector.invoke(object, value);
         }
         catch (ClassCastException e) {
             String msg = e.getMessage();
-            if (StringUtilities.hasContent(msg) && msg.toLowerCase().contains("linkedhashmap")) {
-                throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName() + ". If using 'withExtendedAliases()' option, make it is set on both ReadOptions and WriteOptions.", e);
+            if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
+                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". If using 'withExtendedAliases()' option, make it is set on both ReadOptions and WriteOptions.", e);
             }
-            throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName() + ". Getting a ClassCastExcepton.", e);
+            try {
+                injector.invoke(object, Converter.convert(value, field.getType()));
+            } catch (Throwable ex) {
+                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastExcepton.", e);
+            }
         }
         catch (Throwable t) {
-            throw new JsonIoException("Unable to set field: " + this.getName() + " using " + this.getDisplayName(), t);
+            throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName(), t);
         }
     }
 
     public Class<?> getType() {
-        return this.field.getType();
+        return field.getType();
     }
 
     public String getName() {
-        return this.field.getName();
+        return field.getName();
     }
 
     public Type getGenericType() {
-        return this.field.getGenericType();
+        return field.getGenericType();
     }
 
     public String getDisplayName() {
-        return this.displayName;
+        return displayName;
     }
 
     public String getUniqueFieldName() {
-        return this.uniqueFieldName;
+        return uniqueFieldName;
     }
 }

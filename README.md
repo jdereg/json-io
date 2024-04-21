@@ -4,17 +4,28 @@ json-io
 [![Maven Central](https://badgen.net/maven/v/maven-central/com.cedarsoftware/json-io)](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware)
 [![Javadoc](https://javadoc.io/badge/com.cedarsoftware/json-io.svg)](http://www.javadoc.io/doc/com.cedarsoftware/json-io)
 
-
-
 Useful tool for Java serialization to and from JSON format.
 Available on [Maven Central](https://central.sonatype.com/search?q=json-io&namespace=com.cedarsoftware).
 This library has <b>no dependencies</b> on other libraries for runtime other than our own `java-util.`
-The `json-io.jar`file is only`185K` and `java-util` is `250K.` Compatible with JDK1.8 through JDK 22.
+The `json-io.jar`file is only`185K` and `java-util` is `260K.` Compatible with JDK1.8 through JDK 22.
+## Compatibility
+
+### JPMS (Java Platform Module System)
+
+This library is fully compatible with JPMS, commonly known as Java Modules. It includes a `module-info.class` file that
+specifies module dependencies and exports.
+
+### OSGi
+
+This library also supports OSGi environments. It comes with pre-configured OSGi metadata in the `MANIFEST.MF` file, ensuring easy integration into any OSGi-based application.
+
+Both of these features ensure that our library can be seamlessly integrated into modular Java applications, providing robust dependency management and encapsulation.
+
 ___
 To include in your project:
 ##### Gradle
 ```
-implementation 'com.cedarsoftware:json-io:4.21.0'
+implementation 'com.cedarsoftware:json-io:4.22.0'
 ```
 
 ##### Maven
@@ -22,7 +33,7 @@ implementation 'com.cedarsoftware:json-io:4.21.0'
     <dependency>
       <groupId>com.cedarsoftware</groupId>
       <artifactId>json-io</artifactId>
-      <version>4.21.0</version>
+      <version>4.22.0</version>
     </dependency>
 ```
 ___
@@ -45,8 +56,8 @@ ___
 >  - Use [JsonReader.ClassFactory](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonReader.ClassFactory.html) for difficult classes (hard to instantiate & fill)
 >  - Use [JsonWriter.JsonClassWriter](https://www.javadoc.io/static/com.cedarsoftware/json-io/4.20.0/com/cedarsoftware/io/JsonWriter.JsonClassWriter.html) to customize the output JSON for a particular class
 >- [ ] Updates will be 5.1.0, 5.2.0, ...
->### 4.21.0 (current)
->- [ ] **Version**: [4.21.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
+>### 4.22.0 (current)
+>- [ ] **Version**: [4.22.0](https://www.javadoc.io/doc/com.cedarsoftware/json-io/4.20.0/index.html)
 >- [ ] **Bundling**: Both JPMS (Java Platform Module System) and OSGi (Open Service Gateway initiative)
 >- [ ] **Maintained**: Fully
 >- [ ] **Java Package**: com.cedarsoftware.io
