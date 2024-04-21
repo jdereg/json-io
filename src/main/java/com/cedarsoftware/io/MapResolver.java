@@ -2,9 +2,7 @@ package com.cedarsoftware.io;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
@@ -144,12 +142,11 @@ public class MapResolver extends Resolver
             return;
         }
 
-        int idx = 0;
-        final List copy = new ArrayList<>(items.length);
         Converter converter = getConverter();
+        int len = items.length;
 
-        for (Object element : items) {
-            copy.add(element);
+        for (int i=0; i < len; i++) {
+            Object element = items[i];
 
             if (element instanceof Object[]) {   // array element inside Collection
                 JsonObject jsonObject = new JsonObject();
@@ -166,23 +163,26 @@ public class MapResolver extends Resolver
                     // will be placed on the value-side of the Map
                     Class<?> type = jsonObject.getJavaType();
                     if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
-                        copy.set(idx, converter.convert(jsonObject, type));
+                        items[i] = converter.convert(jsonObject, type);
                         jsonObject.setFinished();
                     } else {
                         push(jsonObject);
                     }
                 } else {    // connect reference
-                    JsonObject refObject = this.getReferences().get(refId);
-                    copy.set(idx, refObject);
+                    JsonObject refObject = getReferences().get(refId);
+                    Class<?> type = refObject.getJavaType();
+                    
+                    if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
+                        items[i] = converter.convert(refObject, type);
+                        jsonObject.setFinished();
+                    } else {
+                        items[i] = refObject;
+                    }
                 }
             }
-            idx++;
         }
+        jsonObj.setFinished();
         jsonObj.setTarget(null);  // don't waste space (used for typed return, not generic Map return)
-
-        for (int i = 0; i < items.length; i++) {
-            items[i] = copy.get(i);
-        }
     }
 
     protected void traverseArray(JsonObject jsonObj)
