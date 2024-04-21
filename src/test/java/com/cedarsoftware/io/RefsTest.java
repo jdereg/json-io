@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -180,7 +179,7 @@ class RefsTest
     private static class TestObjectReader implements JsonReader.JsonClassReader {
 
         @Override
-        public Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver) {
+        public Object read(Object jsonObj, Resolver resolver) {
             JsonObject jObj = (JsonObject) jsonObj;
             TestObject x = new TestObject((String) jObj.get("name"));
             JsonObject b1 = (JsonObject) jObj.get("_other");

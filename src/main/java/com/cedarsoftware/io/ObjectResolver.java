@@ -78,10 +78,9 @@ public class ObjectResolver extends Resolver
      * Walk the Java object fields and copy them from the JSON object to the Java object, performing
      * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
      * arrays, Collections, or Maps.
-     * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
+    public void traverseFields(final JsonObject jsonObj)
     {
         final Object javaMate = jsonObj.getTarget();
         final Iterator<Map.Entry<Object, Object>> i = jsonObj.entrySet().iterator();
@@ -95,9 +94,9 @@ public class ObjectResolver extends Resolver
             final Injector injector = injectorMap.get(key);
             Object rhs = e.getValue();
             if (injector != null) {
-                assignField(stack, jsonObj, injector, rhs);
+                assignField(jsonObj, injector, rhs);
             } else if (readOptions.getMissingFieldHandler() != null) {
-                handleMissingField(stack, jsonObj, rhs, key);
+                handleMissingField(jsonObj, rhs, key);
             } //else no handler so ignore.
         }
     }
@@ -105,88 +104,78 @@ public class ObjectResolver extends Resolver
     /**
      * Map Json Map object field to Java object field.
      *
-     * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @param injector  instance of injector used for setting values on the object.
      * @param rhs     the JSON value that will be converted and stored in the 'field' on the associated
      *                Java target object.
      */
-    protected void assignField(final Deque<JsonObject> stack, final JsonObject jsonObj,
-                               final Injector injector, final Object rhs) {
+    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {
         final Object target = jsonObj.getTarget();
-        try {
-            final Class fieldType = injector.getType();
-            if (rhs == null) {   // Logically clear field
-                if (fieldType.isPrimitive()) {
-                    injector.inject(target, getConverter().convert(null, fieldType));
-                } else {
-                    injector.inject(target, null);
-                }
-                return;
-            }
-
-            // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the sub-objects may not have a
-            // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
-            // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
-            // exists).
-            if (rhs instanceof JsonObject) {
-                if (injector.getGenericType() instanceof ParameterizedType) {   // Only JsonObject instances could contain unmarked objects.
-                    markUntypedObjects(injector.getGenericType(), rhs, fieldType);
-                }
-
-                // Ensure 'type' field set on JsonObject
-                final JsonObject jObj = (JsonObject) rhs;
-                if (jObj.getJavaType() == null) {
-                    jObj.setJavaType(fieldType);
-                }
-            }
-
-            Object special;
-            if ((special = readWithFactoryIfExists(rhs, fieldType, stack)) != null) {
-                injector.inject(target, special);
-            } else if (rhs.getClass().isArray()) {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
-                final Object[] elements = (Object[]) rhs;
-                JsonObject jsonArray = new JsonObject();
-                jsonArray.setJsonArray(elements);
-                jsonArray.setHintType(fieldType);
-                createInstance(jsonArray);
-                injector.inject(target, jsonArray.getTarget());
-                push(jsonArray);
-            } else if (rhs instanceof JsonObject) {
-                final JsonObject jsRhs = (JsonObject) rhs;
-                final Long ref = jsRhs.getReferenceId();
-
-                if (ref != null) {    // Correct field references
-                    final JsonObject refObject = getReferences().get(ref);
-
-                    if (refObject.getTarget() != null) {
-                        injector.inject(target, refObject.getTarget());
-                    } else {
-                        unresolvedRefs.add(new UnresolvedReference(jsonObj, injector.getName(), ref));
-                    }
-                } else {    // Assign ObjectMap's to Object (or derived) fields
-                    Object fieldObject = jsRhs.getTarget();
-                    injector.inject(target, fieldObject);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
-                    if (!isNonRefClass) {
-                        // if Object is a reference-able class, it must be processed (pushed on the stack)
-                        push(jsRhs);
-                    }
-                }
+        final Class fieldType = injector.getType();
+        if (rhs == null) {   // Logically clear field
+            if (fieldType.isPrimitive()) {
+                injector.inject(target, getConverter().convert(null, fieldType));
             } else {
-                if (rhs instanceof String && ((String) rhs).trim().isEmpty() && fieldType != String.class) {
-                    // Allow "" to null out a non-String field
-                    injector.inject(target, null);
-                } else {
-                    injector.inject(target, rhs);
-                }
+                injector.inject(target, null);
             }
-        } catch (Exception e) {
-            if (e instanceof JsonIoException) {
-                throw e;
+            return;
+        }
+
+        // If there is a "tree" of objects (e.g, Map<String, List<Person>>), the sub-objects may not have a
+        // @type on them, if the source of the JSON is from JSON.stringify().  Deep traverse the args and
+        // mark @type on the items within the Maps and Collections, based on the parameterized type (if it
+        // exists).
+        if (rhs instanceof JsonObject) {
+            if (injector.getGenericType() instanceof ParameterizedType) {   // Only JsonObject instances could contain unmarked objects.
+                markUntypedObjects(injector.getGenericType(), rhs, fieldType);
             }
 
-            throw new JsonIoException("Unable to set field: " + injector.getName() + " on target: " + safeToString(target) + " with value: " + rhs, e);
+            // Ensure 'type' field set on JsonObject
+            final JsonObject jObj = (JsonObject) rhs;
+            if (jObj.getJavaType() == null) {
+                jObj.setJavaType(fieldType);
+            }
+        }
+
+        Object special;
+        if ((special = readWithFactoryIfExists(rhs, fieldType)) != null) {
+            injector.inject(target, special);
+        } else if (rhs.getClass().isArray()) {    // LHS of assignment is an [] field or RHS is an array and LHS is Object
+            final Object[] elements = (Object[]) rhs;
+            JsonObject jsonArray = new JsonObject();
+            jsonArray.setJsonArray(elements);
+            jsonArray.setHintType(fieldType);
+            createInstance(jsonArray);
+            injector.inject(target, jsonArray.getTarget());
+            push(jsonArray);
+        } else if (rhs instanceof JsonObject) {
+            final JsonObject jsRhs = (JsonObject) rhs;
+            final Long ref = jsRhs.getReferenceId();
+
+            if (ref != null) {    // Correct field references
+                final JsonObject refObject = getReferences().get(ref);
+
+                if (refObject.getTarget() != null) {
+                    injector.inject(target, refObject.getTarget());
+                } else {
+                    unresolvedRefs.add(new UnresolvedReference(jsonObj, injector.getName(), ref));
+                }
+            } else {    // Assign ObjectMap's to Object (or derived) fields
+                Object fieldObject = jsRhs.getTarget();
+                injector.inject(target, fieldObject);
+                boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jsRhs.getJavaType());
+                if (!isNonRefClass) {
+                    // if Object is a reference-able class, it must be processed (pushed on the stack)
+                    push(jsRhs);
+                }
+            }
+        } else {
+            if (rhs instanceof String && ((String) rhs).trim().isEmpty() && fieldType != String.class) {
+                // Allow "" to null out a non-String field
+                injector.inject(target, null);
+            } else {
+                injector.inject(target, rhs);
+            }
         }
     }
 
@@ -196,12 +185,11 @@ public class ObjectResolver extends Resolver
 	 * be candidate for the missing field callback, others will be ignored. 
 	 * All missing field are stored for later notification
      *
-     * @param stack Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      * @param rhs the JSON value that will be converted and stored in the 'field' on the associated Java target object.
      * @param missingField name of the missing field in the java object.
      */
-    protected void handleMissingField(final Deque<JsonObject> stack, final JsonObject jsonObj, final Object rhs,
+    protected void handleMissingField(final JsonObject jsonObj, final Object rhs,
                                       final String missingField) {
         final Object target = jsonObj.getTarget();
         try {
@@ -212,7 +200,7 @@ public class ObjectResolver extends Resolver
 
             // we have a jsonObject with a type
             Object special;
-            if ((special = readWithFactoryIfExists(rhs, null, stack)) != null) {
+            if ((special = readWithFactoryIfExists(rhs, null)) != null) {
                 storeMissingField(target, missingField, special);
             } else if (rhs.getClass().isArray()) {
                 // impossible to determine the array type.
@@ -285,7 +273,7 @@ public class ObjectResolver extends Resolver
      * unresolved references are added via .add().
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
+    protected void traverseCollection(final JsonObject jsonObj)
     {
         final String className = jsonObj.getJavaTypeName();
         final Object[] items = jsonObj.getJsonArray();
@@ -308,7 +296,7 @@ public class ObjectResolver extends Resolver
             Object special;
             if (element == null) {
                 col.add(null);
-            } else if ((special = readWithFactoryIfExists(element, null, stack)) != null) {
+            } else if ((special = readWithFactoryIfExists(element, null)) != null) {
                 col.add(special);
             } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
                 col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
@@ -388,10 +376,9 @@ public class ObjectResolver extends Resolver
      * to each array element.  All array elements are processed excluding elements
      * that reference an unresolved object.  These are filled in later.
      *
-     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseArray(final Deque<JsonObject> stack, final JsonObject jsonObj)
+    protected void traverseArray(final JsonObject jsonObj)
     {
         final int len = jsonObj.getLength();
         if (len == 0) {
@@ -399,6 +386,9 @@ public class ObjectResolver extends Resolver
         }
 
         final Object array = jsonObj.getTarget();
+        if (array == null) {
+            System.out.println();
+        }
         final Class compType = array.getClass().getComponentType();
         final Object[] items =  jsonObj.getJsonArray();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.
@@ -409,7 +399,7 @@ public class ObjectResolver extends Resolver
 
             if (element == null) {
                 Array.set(array, i, null);
-            } else if ((special = readWithFactoryIfExists(element, compType, stack)) != null) {
+            } else if ((special = readWithFactoryIfExists(element, compType)) != null) {
                 if (compType.isEnum() && special instanceof String) {
                     special = Enum.valueOf(compType, (String) special);
                 }
@@ -474,10 +464,9 @@ public class ObjectResolver extends Resolver
      * @param o Object to read (convert).  Will be either a JsonObject or a JSON primitive String, long, boolean,
      *          double, or null.
      * @param inferredType Class to which 'o' should be converted to.
-     * @param stack   a Stack (Deque) used to support graph traversal.
      * @return Java object converted from the passed in object o, or if there is no custom reader.
      */
-    protected Object readWithFactoryIfExists(final Object o, final Class<?> inferredType, final Deque<JsonObject> stack) {
+    protected Object readWithFactoryIfExists(final Object o, final Class<?> inferredType) {
         if (o == null) {
             throw new JsonIoException("Bug in json-io, null must be checked before calling this method.");
         }
@@ -554,7 +543,7 @@ public class ObjectResolver extends Resolver
             return null;
         }
 
-        Object read = closestReader.read(o, stack, this);
+        Object read = closestReader.read(o, this);
         if (read == null) {
             return null;
         }
@@ -565,12 +554,12 @@ public class ObjectResolver extends Resolver
 
     private void markUntypedObjects(final Type type, final Object rhs, final Class<?> fieldType)
     {
-        final Deque<Object[]> stack = new ArrayDeque<>();
-        stack.addFirst(new Object[]{type, rhs});
+        final Deque<Object[]> stack2 = new ArrayDeque<>();
+        stack2.addFirst(new Object[]{type, rhs});
 
         Map<String, Injector> classFields = getReadOptions().getDeepInjectorMap(fieldType);
-        while (!stack.isEmpty()) {
-            Object[] item = stack.removeFirst();
+        while (!stack2.isEmpty()) {
+            Object[] item = stack2.removeFirst();
             final Type t = (Type) item[0];
             final Object instance = item[1];
             if (t instanceof ParameterizedType) {
@@ -589,39 +578,39 @@ public class ObjectResolver extends Resolver
                     Map.Entry<Object[], Object[]> pair = jsonObj.asTwoArrays();
                     Object[] keys = pair.getKey();
                     Object[] items = pair.getValue();
-                    getTemplateTraverseWorkItem(stack, keys, typeArgs[0]);
-                    getTemplateTraverseWorkItem(stack, items, typeArgs[1]);
+                    getTemplateTraverseWorkItem(stack2, keys, typeArgs[0]);
+                    getTemplateTraverseWorkItem(stack2, items, typeArgs[1]);
                 } else if (Collection.class.isAssignableFrom(clazz)) {
                     if (instance instanceof Object[]) {
                         Object[] array = (Object[]) instance;
                         for (int i = 0; i < array.length; i++) {
                             Object vals = array[i];
-                            stack.addFirst(new Object[]{t, vals});
+                            stack2.addFirst(new Object[]{t, vals});
 
                             if (vals instanceof JsonObject) {
-                                stack.addFirst(new Object[]{t, vals});
+                                stack2.addFirst(new Object[]{t, vals});
                             } else if (vals instanceof Object[]) {
                                 JsonObject coll = new JsonObject();
                                 coll.setJavaType(clazz);
                                 coll.setJsonArray((Object[]) vals);
                                 List items = Arrays.asList((Object[]) vals);
-                                stack.addFirst(new Object[]{t, items});
+                                stack2.addFirst(new Object[]{t, items});
                                 array[i] = coll;
                             } else {
-                                stack.addFirst(new Object[]{t, vals});
+                                stack2.addFirst(new Object[]{t, vals});
                             }
                         }
                     } else if (instance instanceof Collection) {
                         final Collection col = (Collection) instance;
                         for (Object o : col) {
-                            stack.addFirst(new Object[]{typeArgs[0], o});
+                            stack2.addFirst(new Object[]{typeArgs[0], o});
                         }
                     } else if (instance instanceof JsonObject) {
                         final JsonObject jObj = (JsonObject) instance;
                         final Object[] array = jObj.getJsonArray();
                         if (array != null) {
                             for (Object o : array) {
-                                stack.addFirst(new Object[]{typeArgs[0], o});
+                                stack2.addFirst(new Object[]{typeArgs[0], o});
                             }
                         }
                     }
@@ -640,7 +629,7 @@ public class ObjectResolver extends Resolver
                                     if (entry.getValue() instanceof JsonObject && ((JsonObject) entry.getValue()).get("@enum") != null) {
                                         pt = injector.getGenericType();
                                     }
-                                    stack.addFirst(new Object[]{pt, entry.getValue()});
+                                    stack2.addFirst(new Object[]{pt, entry.getValue()});
                                 }
                             }
                         }
@@ -652,16 +641,16 @@ public class ObjectResolver extends Resolver
         }
     }
 
-    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack, final Object[] items, final Type type) {
+    private static void getTemplateTraverseWorkItem(final Deque<Object[]> stack2, final Object[] items, final Type type) {
         if (items == null || items.length < 1) {
             return;
         }
         Class<?> rawType = getRawType(type);
         if (rawType != null && Collection.class.isAssignableFrom(rawType)) {
-            stack.add(new Object[]{type, items});
+            stack2.add(new Object[]{type, items});
         } else {
             for (Object o : items) {
-                stack.add(new Object[]{type, o});
+                stack2.add(new Object[]{type, o});
             }
         }
     }

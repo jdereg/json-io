@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -179,12 +178,15 @@ public class JsonReader implements Closeable
     public interface JsonClassReader
     {
         /**
+         * Read a custom object. Only process the non-structural values for any given reader, and push the structural
+         * elements (non-primitive fields) onto the resolver's stack, to be processed.
          * @param jsonObj  Object being read.  Could be a fundamental JSON type (String, long, boolean, double, null, or JsonObject)
-         * @param stack    Deque of objects that have been read (Map of Maps view).
-         * @param resolver Contains access 
+         * @param resolver Provides access to push non-primitive items onto the stack for further processing. This will
+         *                allow it to be processed by a standard processor (array, Map, Collection) or another custom
+         *                factory or reader that handles the "next level."  You can handle sub-objects here if you wanted.
          * @return Java Object that you filled out with values from the passed in jsonObj.
          */
-        default Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver) {
+        default Object read(Object jsonObj, Resolver resolver) {
             throw new UnsupportedOperationException("You must implement this method and read the JSON content from jsonObj and copy the values from jsonObj to the target class, jsonObj.getTarget()");
         }
     }

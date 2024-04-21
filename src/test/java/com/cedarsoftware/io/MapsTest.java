@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -812,7 +813,7 @@ class MapsTest
         assert map2.get("Short").equals((short)179);
 
         assert map2.get("Integer") instanceof Integer;
-        assert map2.get("Integer").equals((int)179);
+        assert map2.get("Integer").equals(179);
 
         assert map2.get("Long") instanceof Long;
         assert map2.get("Long").equals(179L);
@@ -826,8 +827,8 @@ class MapsTest
         assert map2.get("Character") instanceof Character;
         assert map2.get("Character").equals('z');
 
-        assert map2.get("date") instanceof JsonObject;
-        assert ((JsonObject) map2.get("date")).getTarget().equals(cal.getTime());
+        assert map2.get("date") instanceof Date;
+        assert map2.get("date").equals(cal.getTime());
 
         assert map2.get("BigInteger") instanceof BigInteger;
         assert map2.get("BigInteger").equals(new BigInteger("55"));

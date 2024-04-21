@@ -1,7 +1,6 @@
 package com.cedarsoftware.io;
 
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +97,7 @@ public class CustomReaderMapTest
 
     private static class CustomPointReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object obj, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object obj, Resolver resolver)
         {
             JsonObject jObj = (JsonObject) obj;
 

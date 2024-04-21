@@ -4,15 +4,20 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
+import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -49,24 +54,74 @@ public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
     private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
-    private final Deque<JsonObject> stack = new ArrayDeque<>();
+    protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     final Collection<Missingfields> missingFields = new ArrayList<>();
-
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
     private final Converter converter;
 
-    public ReadOptions getReadOptions() {
-        return readOptions;
-    }
-    public ReferenceTracker getReferences() {
-        return references;
-    }
-    public Converter getConverter() {
-        return converter;
-    }
+    private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "byte",
+            "java.lang.Byte",
+            "short",
+            "java.lang.Short",
+            "int",
+            "java.lang.Integer",
+            "java.util.concurrent.atomic.AtomicInteger",
+            "long",
+            "java.lang.Long",
+            "java.util.concurrent.atomic.AtomicLong",
+            "float",
+            "java.lang.Float",
+            "double",
+            "java.lang.Double",
+            "boolean",
+            "java.lang.Boolean",
+            "java.util.concurrent.atomic.AtomicBoolean",
+//            "char",
+            "java.lang.Character",
+            "date",
+            "java.util.Date",
+            "BigInt",
+            "java.math.BigInteger",
+            "BigDec",
+            "java.math.BigDecimal",
+            "class",
+            "java.lang.Class",
+            "string",
+            "java.lang.String",
+            "java.lang.StringBuffer",
+            "java.lang.StringBuilder",
+            "java.sql.Date",
+            "java.sql.Timestamp",
+            "java.time.OffsetDateTime",
+            "java.net.URI",
+            "java.net.URL",
+            "java.util.Calendar",
+            "java.util.GregorianCalendar",
+            "java.util.Locale",
+            "java.util.UUID",
+            "java.util.TimeZone",
+            "java.time.Duration",
+            "java.time.Instant",
+            "java.time.MonthDay",
+            "java.time.OffsetDateTime",
+            "java.time.OffsetTime",
+            "java.time.LocalDate",
+            "java.time.LocalDateTime",
+            "java.time.LocalTime",
+            "java.time.Period",
+            "java.time.Year",
+            "java.time.YearMonth",
+            "java.time.ZonedDateTime",
+            "java.time.ZoneId",
+            "java.time.ZoneOffset",
+            "java.time.ZoneRegion",
+            "sun.util.calendar.ZoneInfo"
+    )));
+
 
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
@@ -111,6 +166,16 @@ public abstract class Resolver {
         this.readOptions = readOptions;
         this.references = references;
         this.converter = converter;
+    }
+
+    public ReadOptions getReadOptions() {
+        return readOptions;
+    }
+    public ReferenceTracker getReferences() {
+        return references;
+    }
+    public Converter getConverter() {
+        return converter;
     }
 
     /**
@@ -182,17 +247,17 @@ public abstract class Resolver {
 
     public void traverseSpecificType(JsonObject jsonObj) {
         if (jsonObj.isArray()) {
-            traverseArray(stack, jsonObj);
+            traverseArray(jsonObj);
         } else if (jsonObj.isCollection()) {
-            traverseCollection(stack, jsonObj);
+            traverseCollection(jsonObj);
         } else if (jsonObj.isMap()) {
             traverseMap(jsonObj);
         } else {
             Object special;
-            if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null) {
+            if ((special = readWithFactoryIfExists(jsonObj, null)) != null) {
                 jsonObj.setTarget(special);
             } else {
-                traverseFields(stack, jsonObj);
+                traverseFields(jsonObj);
             }
         }
     }
@@ -205,15 +270,18 @@ public abstract class Resolver {
         stack.push(jsonObject);
     }
     
-    public abstract void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj);
+    public abstract void traverseFields(final JsonObject jsonObj);
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Class<?> compType, final Deque<JsonObject> stack);
+    protected abstract Object readWithFactoryIfExists(final Object o, final Class<?> compType);
 
-    protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
+    protected abstract void traverseCollection(JsonObject jsonObj);
 
-    protected abstract void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj);
+    protected abstract void traverseArray(JsonObject jsonObj);
 
-    protected void cleanup() {
+    public abstract void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs);
+
+
+        protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
         if (references != null) {
@@ -516,5 +584,63 @@ public abstract class Resolver {
             JsonObject jsonObj = (JsonObject) mapPieces[0];
             jsonObj.rehashMaps(useMapsLocal, (Object[]) mapPieces[1], (Object[]) mapPieces[2]);
         }
+    }
+    
+    public boolean valueToTarget(JsonObject jsonObject)
+    {
+        if (jsonObject.javaType == null) {
+            if (jsonObject.hintType == null) {
+                return false;
+            }
+            jsonObject.javaType = jsonObject.hintType;
+        }
+
+        // TODO: Support multiple dimensions
+        // TODO: Support char
+        if (jsonObject.javaType.isArray() && isConvertable(jsonObject.javaType.getComponentType())) {
+            Object[] jsonItems = jsonObject.getJsonArray();
+            Class<?> componentType = jsonObject.javaType.getComponentType();
+            if (jsonItems == null) {    // empty array
+                jsonObject.setFinishedTarget(null, true);
+                return true;
+            }
+            Object javaArray = Array.newInstance(componentType, jsonItems.length);
+            for (int i=0; i < jsonItems.length; i++) {
+                try {
+                    Class<?> type = componentType;
+                    if (jsonItems[i] instanceof JsonObject) {
+                        JsonObject jObj = (JsonObject) jsonItems[i];
+                        if (jObj.getJavaType() != null) {
+                            type = jObj.getJavaType();
+                        }
+                    }
+                    Array.set(javaArray, i, converter.convert(jsonItems[i], type));
+                } catch (Exception e) {
+                    JsonIoException jioe = new JsonIoException(e.getMessage());
+                    jioe.setStackTrace(e.getStackTrace());
+                    throw jioe;
+                }
+            }
+            jsonObject.setFinishedTarget(javaArray, true);
+            return true;
+        }
+
+        if (!isConvertable(jsonObject.javaType)) {
+            return false;
+        }
+
+        try {
+            Object value = converter.convert(jsonObject, jsonObject.javaType);
+            jsonObject.setFinishedTarget(value, true);
+            return true;
+        } catch (Exception e) {
+            JsonIoException jioe = new JsonIoException(e.getMessage());
+            jioe.setStackTrace(e.getStackTrace());
+            throw jioe;
+        }
+    }
+
+    public boolean isConvertable(Class<?> type) {
+        return convertableValues.contains(type.getName());
     }
 }

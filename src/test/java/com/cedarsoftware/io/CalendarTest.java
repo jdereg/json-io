@@ -13,7 +13,6 @@ import java.util.TimeZone;
 import java.util.stream.Stream;
 
 import com.cedarsoftware.io.factory.ConvertableFactory;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -178,9 +177,8 @@ public class CalendarTest
         TestUtil.printLine("json=" + json);
 
         Object[] items = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
-        Map item = (Map) items[0];
-        Assertions.assertTrue(item.containsKey("time"));
-        Assertions.assertTrue(item.containsKey("zone"));
+        Calendar item = (Calendar) items[0];
+        assertEquals(item, now);
     }
 
     @Test

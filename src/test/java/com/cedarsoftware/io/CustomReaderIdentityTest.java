@@ -1,6 +1,5 @@
 package com.cedarsoftware.io;
 
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -127,7 +126,7 @@ public class CustomReaderIdentityTest
 
 	public static class CustomDataReader implements JsonReader.JsonClassReader
 	{
-        public Object read(Object jOb, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object jOb, Resolver resolver)
 		{
 			CustomDataClass customClass = new CustomDataClass();
 			customClass.setTest("blab");

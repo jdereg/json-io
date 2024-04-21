@@ -2,16 +2,11 @@ package com.cedarsoftware.io;
 
 import java.lang.reflect.Array;
 import java.util.AbstractMap;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-
-import com.cedarsoftware.util.convert.Converter;
 
 /**
  * This class holds a JSON object in a LinkedHashMap.
@@ -40,67 +35,7 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
     private final Map<Object, Object> jsonStore = new LinkedHashMap<>();
     private boolean isMap = false;
     private Integer hash = null;
-
-    private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "byte",
-            "java.lang.Byte",
-            "short",
-            "java.lang.Short",
-            "int",
-            "java.lang.Integer",
-            "java.util.concurrent.atomic.AtomicInteger",
-            "long",
-            "java.lang.Long",
-            "java.util.concurrent.atomic.AtomicLong",
-            "float",
-            "java.lang.Float",
-            "double",
-            "java.lang.Double",
-            "boolean",
-            "java.lang.Boolean",
-            "java.util.concurrent.atomic.AtomicBoolean",
-//            "char",
-            "java.lang.Character",
-            "date",
-            "java.util.Date",
-            "BigInt",
-            "java.math.BigInteger",
-            "BigDec",
-            "java.math.BigDecimal",
-            "class",
-            "java.lang.Class",
-            "string",
-            "java.lang.String",
-            "java.lang.StringBuffer",
-            "java.lang.StringBuilder",
-            "java.sql.Date",
-            "java.sql.Timestamp",
-            "java.time.OffsetDateTime",
-            "java.net.URI",
-            "java.net.URL",
-            "java.util.Calendar",
-            "java.util.GregorianCalendar",
-            "java.util.Locale",
-            "java.util.UUID",
-            "java.util.TimeZone",
-            "java.time.Duration",
-            "java.time.Instant",
-            "java.time.MonthDay",
-            "java.time.OffsetDateTime",
-            "java.time.OffsetTime",
-            "java.time.LocalDate",
-            "java.time.LocalDateTime",
-            "java.time.LocalTime",
-            "java.time.Period",
-            "java.time.Year",
-            "java.time.YearMonth",
-            "java.time.ZonedDateTime",
-            "java.time.ZoneId",
-            "java.time.ZoneOffset",
-            "java.time.ZoneRegion",
-            "sun.util.calendar.ZoneInfo"
-    )));
-
+    
     public String toString() {
         String jType = javaType == null ? "not set" : javaType.getName();
         String targetInfo = target == null ? "null" : jType;
@@ -111,65 +46,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
         setTarget(o);
         this.isFinished = isFinished;
         return target;
-    }
-
-    public boolean isConvertable(Class<?> type) {
-        return convertableValues.contains(type.getName());
-    }
-
-    static int count = 0;
-    public boolean valueToTarget(Converter converter)
-    {
-        if (javaType == null) {
-            if (hintType == null) {
-                return false;
-            }
-            javaType = hintType;
-        }
-
-        if (javaType.isArray() && isConvertable(javaType.getComponentType())) {
-            Object[] jsonItems = (Object[]) get(ITEMS);
-            Class<?> componentType = javaType.getComponentType();
-            if (jsonItems == null) {    // empty array
-                setFinishedTarget(null, true);
-                return true;
-            }
-            Object javaArray = Array.newInstance(componentType, jsonItems.length);
-            for (int i=0; i < jsonItems.length; i++) {
-                try {
-                    Class<?> type = componentType;
-                    if (jsonItems[i] instanceof JsonObject) {
-                        JsonObject jObj = (JsonObject) jsonItems[i];
-                        if (jObj.getJavaType() != null) {
-                            type = jObj.getJavaType();
-                        }
-                    }
-                    Array.set(javaArray, i, converter.convert(jsonItems[i], type));
-                } catch (Exception e) {
-                    JsonIoException jioe = new JsonIoException(e.getMessage());
-                    jioe.setStackTrace(e.getStackTrace());
-                    throw jioe;
-                }
-            }
-            setFinishedTarget(javaArray, true);
-            return true;
-        }
-
-        if (!isConvertable(javaType)) {
-//            count++;
-//            System.out.println(count + " javaType = " + javaType.getName());
-            return false;
-        }
-
-        try {
-            Object value = converter.convert(this, javaType);
-            setFinishedTarget(value, true);
-            return true;
-        } catch (Exception e) {
-            JsonIoException jioe = new JsonIoException(e.getMessage());
-            jioe.setStackTrace(e.getStackTrace());
-            throw jioe;
-        }
     }
     
     // Map APIs

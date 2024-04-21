@@ -3,7 +3,6 @@ package com.cedarsoftware.io.factory;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Deque;
 
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
@@ -32,7 +31,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
 
     public static class RecordReader implements JsonReader.JsonClassReader
     {
-        public Object read(Object o, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object o, Resolver resolver)
         {
             try {
                 JsonObject jsonObj = (JsonObject) o;
@@ -55,7 +54,7 @@ public class RecordFactory implements JsonReader.ClassFactory {
                     paramValueJsonObj.setJavaType(type);
                     paramValueJsonObj.setValue(jsonObj.get(parameterName));
 
-                    if (paramValueJsonObj.valueToTarget(resolver.getConverter())) {
+                    if (resolver.valueToTarget(paramValueJsonObj)) {
                         lParameterValues.add(paramValueJsonObj.getTarget());
                     } else {
                         lParameterValues.add(paramValueJsonObj.getValue());

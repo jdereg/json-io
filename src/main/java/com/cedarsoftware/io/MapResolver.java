@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +53,7 @@ public class MapResolver extends Resolver
         super(readOptions, references, converter);
     }
 
-    protected Object readWithFactoryIfExists(Object o, Class<?> compType, Deque<JsonObject> stack)
+    protected Object readWithFactoryIfExists(Object o, Class<?> compType)
     {
         // No custom reader support for maps
         return null;
@@ -66,10 +65,9 @@ public class MapResolver extends Resolver
      * an '@id' of an object which can have more than one @ref to it, this code will make sure that each
      * '@ref' (value side of the Map associated to a given field name) will be pointer to the appropriate Map
      * instance.
-     * @param stack   Stack (Deque) used for graph traversal.
      * @param jsonObj a Map-of-Map representation of the current object being examined (containing all fields).
      */
-    public void traverseFields(final Deque<JsonObject> stack, final JsonObject jsonObj)
+    public void traverseFields(final JsonObject jsonObj)
     {
         final Object target = jsonObj.getTarget();
         final Map<String, Injector> injectorMap = (target == null) ? null : getReadOptions().getDeepInjectorMap(target.getClass());
@@ -137,10 +135,9 @@ public class MapResolver extends Resolver
      * are filled in later.  For an indexable collection, the unresolved references are set
      * back into the proper element location.  For non-indexable collections (Sets), the
      * unresolved references are added via .add().
-     * @param stack   a Stack (Deque) used to support graph traversal.
      * @param jsonObj a Map-of-Map representation of the JSON input stream.
      */
-    protected void traverseCollection(final Deque<JsonObject> stack, final JsonObject jsonObj)
+    protected void traverseCollection(final JsonObject jsonObj)
     {
         final Object[] items = jsonObj.getJsonArray();
         if (items == null || items.length == 0) {
@@ -149,6 +146,7 @@ public class MapResolver extends Resolver
 
         int idx = 0;
         final List copy = new ArrayList<>(items.length);
+        Converter converter = getConverter();
 
         for (Object element : items) {
             copy.add(element);
@@ -161,11 +159,21 @@ public class MapResolver extends Resolver
                 JsonObject jsonObject = (JsonObject) element;
                 Long refId = jsonObject.getReferenceId();
 
-                if (refId != null) {    // connect reference
+                if (refId == null) {
+                    // When the JsonObject inside a Collection or Array is convertable from Map to it's destination type,
+                    // make the conversion.  This way, even in Map of Maps mode, the value associated to the String key
+                    // field will be the correct "convertable" type (more than primitives, ZonedDateTime, etc. all of those
+                    // will be placed on the value-side of the Map
+                    Class<?> type = jsonObject.getJavaType();
+                    if (type != null && converter.isConversionSupportedFor(Map.class, type)) {
+                        copy.set(idx, converter.convert(jsonObject, type));
+                        jsonObject.setFinished();
+                    } else {
+                        push(jsonObject);
+                    }
+                } else {    // connect reference
                     JsonObject refObject = this.getReferences().get(refId);
                     copy.set(idx, refObject);
-                } else {
-                    push(jsonObject);
                 }
             }
             idx++;
@@ -177,8 +185,10 @@ public class MapResolver extends Resolver
         }
     }
 
-    protected void traverseArray(Deque<JsonObject> stack, JsonObject jsonObj)
+    protected void traverseArray(JsonObject jsonObj)
     {
-        traverseCollection(stack, jsonObj);
+        traverseCollection(jsonObj);
     }
+
+    public void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs) {}
 }

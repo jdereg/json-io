@@ -3,7 +3,6 @@ package com.cedarsoftware.io;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -57,7 +56,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions0 = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
@@ -142,7 +141,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().build();
@@ -193,7 +192,7 @@ public class CustomWriterTest
     {
         Person p = createTestPerson();
 
-        Map<Class<Person>, CustomPersonReader> customReaders = new HashMap<>();
+        Map<Class<?>, JsonReader.JsonClassReader> customReaders = new HashMap<>();
         customReaders.put(Person.class, new CustomPersonReader());
 
         WriteOptions writeOptions = new WriteOptionsBuilder().addCustomWrittenClass(Person.class, new CustomPersonWriter()).build();
@@ -431,7 +430,6 @@ public class CustomWriterTest
 
     public static class CustomPersonWriterAddField implements JsonWriter.JsonClassWriter
     {
-        @Override
         public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException
         {
             output.write("\"_version\":12,");
@@ -441,8 +439,7 @@ public class CustomWriterTest
 
     public static class CustomPersonReader implements JsonReader.JsonClassReader
     {
-        @Override
-        public Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object jsonObj, Resolver resolver)
         {
             JsonObject map = (JsonObject) jsonObj;
             Person p = new Person();
@@ -463,7 +460,6 @@ public class CustomWriterTest
 
             return p;
         }
-
     }
 
     public static class BadCustomPWriter implements JsonWriter.JsonClassWriter
@@ -472,6 +468,5 @@ public class CustomWriterTest
         {
             throw new RuntimeException("Bad custom writer");
         }
-
     }
 }

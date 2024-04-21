@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -194,11 +195,8 @@ public class TimeZoneTests
         Object[] items = TestUtil.toObjects(json, options, null);
 
         // assert
-        Map actual = (Map) items[0];
-
-        assertThat(actual)
-                .hasSize(1)
-                .containsEntry("value", "America/Los_Angeles");
+        TimeZone actual = (TimeZone) items[0];
+        assertEquals(pst, actual);
     }
 
     @Test

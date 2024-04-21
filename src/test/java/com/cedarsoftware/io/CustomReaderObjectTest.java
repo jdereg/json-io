@@ -1,6 +1,5 @@
 package com.cedarsoftware.io;
 
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,9 +42,9 @@ public class CustomReaderObjectTest
 
 	public class CustomReader implements JsonReader.JsonClassReader
 	{
-        public Object read(Object jsonObj, Deque<JsonObject> stack, Resolver resolver)
+        public Object read(Object jsonObj, Resolver resolver)
 		{
-			resolver.traverseFields(stack, (JsonObject) jsonObj);
+			resolver.traverseFields((JsonObject) jsonObj);
             Object target = ((JsonObject) jsonObj).getTarget();
 			madeItHere = true;
 			return target;

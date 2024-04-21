@@ -24,7 +24,6 @@ import static com.cedarsoftware.io.JsonObject.SHORT_KEYS;
 import static com.cedarsoftware.io.JsonObject.SHORT_REF;
 import static com.cedarsoftware.io.JsonObject.SHORT_TYPE;
 import static com.cedarsoftware.io.JsonObject.TYPE;
-import static com.cedarsoftware.io.JsonReader.jsonPrimitives;
 import static com.cedarsoftware.util.MathUtilities.parseToMinimalNumericType;
 
 /**
@@ -161,11 +160,6 @@ class JsonParser {
             case '{':
                 input.pushback('{');
                 JsonObject jObj = readJsonObject(suggestedClass);
-                final boolean useMaps = readOptions.isReturningJsonObjects();
-                boolean worked = jObj.valueToTarget(resolver.getConverter());
-                if (useMaps && worked && jsonPrimitives.contains(jObj.getJavaType())) {
-                    return jObj.getTarget();
-                }
                 return jObj;
             case '[':
                 Object[] array = readArray(suggestedClass == null ? null : suggestedClass.getComponentType());
@@ -217,7 +211,7 @@ class JsonParser {
         Map<String, Injector> injectors = readOptions.getDeepInjectorMap(suggestedClass);
 
         while (true) {
-            String field = readField();
+            String field = readFieldName();
             if (substitutes.containsKey(field)) {
                 field = substitutes.get(field);
             }
@@ -261,7 +255,7 @@ class JsonParser {
      *
      * @return String field name.
      */
-    private String readField() throws IOException {
+    private String readFieldName() throws IOException {
         int c = skipWhitespaceRead(true);
         if (c != '"') {
             error("Expected quote before field name");
@@ -282,7 +276,7 @@ class JsonParser {
         ++curParseDepth;
 
         while (true) {
-            final Object value = readValue(suggestedClass);
+            Object value = readValue(suggestedClass);
 
             if (value != EMPTY_ARRAY) {
                 array.add(value);
