@@ -9,10 +9,10 @@ import com.google.gson.Gson;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.DeepEquals.deepEquals;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -142,16 +142,17 @@ class RootsTest
     @Test
     void testRootConvertableNonJsonPrimitiveStaysAsJsonObject()
     {
-        ZonedDateTime zdt = ZonedDateTime.now();
+        ZonedDateTime zdt = ZonedDateTime.parse("2024-04-22T01:34:57.170836-04:00[America/New_York]");
         String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().withExtendedAliases().build());
 
-        // Should throw ClassCastException because this will return JsonObject - only JSON primitives (and their slick cousins like AtomicLong), [], and { } can be returned.
-        assertThrows(ClassCastException.class, () -> { ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        assertThatThrownBy(() -> { ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .withExtendedAliases()
                 .returnAsNativeJsonObjects()
                 .build(), null);
-        });
-
+        })
+                .isInstanceOf(ClassCastException.class)
+                .hasMessageContaining("class com.cedarsoftware.io.JsonObject cannot be cast to class java.time.ZonedDateTime");
+        
         // When forced, it's ok.
         ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
@@ -160,14 +161,15 @@ class RootsTest
         assertEquals(zdt2, zdt);
 
         // If you forget withExtendedAliases() and have failOnUnknownType() == true (default)
-        // The following two tests work. Why?  Because although the type is unknown, the Map has a "value" key and a
-        // root type is specified.  The converter converts the map that has a "value" key to the specified type,
-        // never looking at @type (Maps can be converted to many types via the converter.)
-        Exception e = assertThrows(JsonIoException.class, () -> TestUtil.toObjects(json, new ReadOptionsBuilder()
+        // The following two tests work. Why?  Because although the @type is unknown, the Map has a "value" key and a
+        // root type is specified (ZonedDateTime.class). The converter converts the map that has a "value" key to the
+        // specified type, never looking at @type (Maps can be converted to many types via the converter.)
+        assertThatThrownBy(() -> TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .build(), ZonedDateTime.class));
-        assert e.getMessage().contains("'ZonedDateTime' not defined");
-
+                .build(), ZonedDateTime.class))
+                .isInstanceOf(JsonIoException.class)
+                .hasMessageContaining("'ZonedDateTime' not defined");
+        
         // If you forget withExtendedAliases() and have .failOnUnknownType() == false,
         ZonedDateTime zdt3 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
