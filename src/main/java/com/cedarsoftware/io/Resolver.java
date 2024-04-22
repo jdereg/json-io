@@ -281,7 +281,7 @@ public abstract class Resolver {
     public abstract void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs);
 
 
-        protected void cleanup() {
+    protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
         if (references != null) {

@@ -47,7 +47,7 @@ class MapOfMapsTest
     @Test
     void testToObjects_withUnknownClass_returnsALinkedHashMap() {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
-        Map stuff = TestUtil.toObjects(json, null);
+        Map stuff = TestUtil.toObjects(json, new ReadOptionsBuilder().failOnUnknownType(false).build(), null);
 
         assertThat(stuff)
                 .isInstanceOf(LinkedHashMap.class)
@@ -61,7 +61,10 @@ class MapOfMapsTest
     void testToObjects_asMaps_returnsALinkedHashMap()
     {
         String json = "{\"@type\":\"com.foo.bar.baz.Qux\",\"_name\":\"Hello\",\"_other\":null}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .returnAsNativeJsonObjects()
+                .failOnUnknownType(false)
+                .build(), null);
 
         assertThat(map)
                 .isInstanceOf(Map.class)
@@ -542,6 +545,22 @@ class MapOfMapsTest
         map = TestUtil.toObjects(json, null);
         assert map.size() == 2;
         assert map.get("first").equals("Sam");
+        assert map.get("last").equals("Adams");
+    }
+
+    @Test
+    public void testSkipNullFieldsMapOfMaps2()
+    {
+        String json = "{\"first\":\"Sam\",\"middle\":null,\"last\":\"Adams\"}";
+        Map person = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .returnAsNativeJsonObjects()
+                .build(), Map.class);
+        json = TestUtil.toJson(person);
+
+        Map map = TestUtil.toObjects(json, null);
+        assert map.size() == 3;
+        assert map.get("first").equals("Sam");
+        assert map.get("middle") == null;
         assert map.get("last").equals("Adams");
     }
 

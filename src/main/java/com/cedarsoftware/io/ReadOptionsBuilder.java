@@ -795,7 +795,7 @@ public class ReadOptionsBuilder {
 
     static class DefaultReadOptions implements ReadOptions {
         private Class<?> unknownTypeClass = null;
-        private boolean failOnUnknownType = false;
+        private boolean failOnUnknownType = true;
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;

@@ -386,9 +386,6 @@ public class ObjectResolver extends Resolver
         }
 
         final Object array = jsonObj.getTarget();
-        if (array == null) {
-            System.out.println();
-        }
         final Class compType = array.getClass().getComponentType();
         final Object[] items =  jsonObj.getJsonArray();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.

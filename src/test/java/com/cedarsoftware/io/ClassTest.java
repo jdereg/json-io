@@ -104,7 +104,7 @@ public class ClassTest
         String json = "16.0";
         assertThatThrownBy(() -> TestUtil.toObjects(json, Class.class))
                 .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("Unsupported conversion, source type [Double (16.0)] target type 'Class'");
+                .hasMessageContaining("Return type mismatch, expected: java.lang.Class, actual: java.lang.Double");
     }
 
     @Test

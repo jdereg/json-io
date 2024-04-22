@@ -247,13 +247,14 @@ class ErrorsTest
     @Test
     void testBadType()
     {
+        ReadOptions readOptions = new ReadOptionsBuilder().failOnUnknownType(false).build();
         String json = "{\"@type\":\"non.existent.class.Non\"}";
-        Map map = TestUtil.toObjects(json, null);
+        Map map = TestUtil.toObjects(json, readOptions, null);
         assert map.size() == 0;
 
         // Bad class inside a Collection
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[null, true, {\"@type\":\"bogus.class.Name\", \"fingers\":5}]}";
-        List list = TestUtil.toObjects(json, null);
+        List list = TestUtil.toObjects(json, readOptions, null);
         assert list.size() == 3;
         assert list.get(0) == null;
         assert list.get(1) != null;

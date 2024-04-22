@@ -30,7 +30,10 @@ public class UnknownObjectTypeTest
     public void testUnknownObjects()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        JsonObject myParams = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
+        JsonObject myParams = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .returnAsNativeJsonObjects()
+                .failOnUnknownType(false)
+                .build(), null);
         Object inputParams = JsonIo.toObjects(myParams, new ReadOptionsBuilder().build(), null);
         assert inputParams instanceof Map;
         String json2 = TestUtil.toJson(inputParams);
@@ -40,7 +43,8 @@ public class UnknownObjectTypeTest
     public void testUnknownClassType()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        Map java = TestUtil.toObjects(json, null);
+        Map java = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .failOnUnknownType(false).build(), null);
         assert java.get("name").equals("Joe");
     }
 
@@ -48,7 +52,7 @@ public class UnknownObjectTypeTest
     public void testUnknownClassTypePassesWhenFailOptionFalse()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\"}";
-        Map java = TestUtil.toObjects(json, null);// failOnUnknownType = false (default no need to set option)
+        Map java = TestUtil.toObjects(json, new ReadOptionsBuilder().failOnUnknownType(false).build(), null);
         assert java.get("name").equals("Joe");
     }
 
@@ -63,7 +67,10 @@ public class UnknownObjectTypeTest
     public void testUnknownClassSwappedWithConcurrentSkipListMap()
     {
         String json = "{\"@type\":\"foo.bar.baz.Qux\", \"name\":\"Joe\",\"age\":50}";
-        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder().unknownTypeClass(ConcurrentSkipListMap.class).build(), null);
+        Map map = TestUtil.toObjects(json, new ReadOptionsBuilder()
+                .unknownTypeClass(ConcurrentSkipListMap.class)
+                .failOnUnknownType(false)
+                .build(), null);
         assert map instanceof ConcurrentSkipListMap;
         assert map.get("name").equals("Joe");
         assert map.get("age").equals(50L);

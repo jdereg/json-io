@@ -32,15 +32,20 @@ a`JsonIoException`will be thrown. Turn this feature off, and the parser will cre
 to store the content from the JSON object being read.  If you want, you can set your own class to be created
 instead of a`LinkedHashMap,`however, it should be noted that`Maps`are useful because any field encountered in the
 JSON can be`put`into a`Map.`
+
+****Note**** If you use `withExtendedAliases()` on the `WriteOptionsBuilder` make sure you also set that for
+`ReadOptionsBuilder.`  If you forget to match `withExtendedAliases()` on both ReadOptions/WriteOptions, then you will
+often receive an error indicating that a "Class: *abbreviation* is not defined" (when unknownTypes is `true`).  If 
+you have this set to `false,` you will likely get a `ClassCastException` with `LinkedHashMap` or a `LinkedHashMap` returned. 
 >#### `boolean` isFailOnUnknownType()
->- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set
+>- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set. The default setting is `true.` 
 >####  `Class` getUnknownTypeClass()
 >- [ ] Get the Class used to store content when the indicated class cannot be loaded by the JVM.  Defaults to`null.` When`null`, `LinkedHashMap` is used. It is usually best to use a `Map` derivative, as it will be able to have the various field names encountered to be 'set' into it.
 
 >#### `ReadOptionsBuilder` failOnUnknownType(`boolean fail`)
 >- [ ] Set to`true`to indicate that an exception should be thrown if an unknown class type is encountered,`false`otherwise.
    If`fail`is`false,`then the default class used will be`LinkedHashMap` for the particular JSON object encountered. You can
-   set this to your own class using the`unknownTypeClass()`feature. 
+   set this to your own class using the`unknownTypeClass()`feature. The default setting is `true.` 
 >####  `ReadOptionsBuilder` unknownTypeClass(`Class`)
 >- [ ] Set the class to use (defaults to`LinkedHashMap.class`) when a JSON object is encountered and there is no
    corresponding Java class to instantiate to receive the values. 

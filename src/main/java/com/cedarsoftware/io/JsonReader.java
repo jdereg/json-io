@@ -6,16 +6,12 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
+import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.FastByteArrayInputStream;
 import com.cedarsoftware.util.FastReader;
@@ -69,33 +65,6 @@ public class JsonReader implements Closeable
     private final Resolver resolver;
     private final ReadOptions readOptions;
     private final JsonParser parser;
-
-    static final Set<Class<?>> jsonPrimitives = new HashSet<>(Arrays.asList(
-            boolean.class,
-            Boolean.class,
-            AtomicBoolean.class,
-            char.class,
-            Character.class,
-            byte.class,
-            Byte.class,
-            short.class,
-            Short.class,
-            int.class,
-            Integer.class,
-            AtomicInteger.class,
-            long.class,
-            Long.class,
-            AtomicLong.class,
-            float.class,
-            Float.class,
-            double.class,
-            Double.class,
-            BigInteger.class,
-            BigDecimal.class,
-            String.class,
-            StringBuffer.class,
-            StringBuilder.class
-    ));
 
     /**
      * Subclass this interface and create a class that will return a new instance of the
@@ -243,18 +212,23 @@ public class JsonReader implements Closeable
                 return null;    // easy, done.
             }
         } catch (JsonIoException e) {
-            throw e;
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("Last read") && e.getMessage().contains("line") && e.getMessage().contains("col")) {
+                throw e;
+            } else {
+                JsonIoException ex = new JsonIoException(getErrorMessage(e.getMessage()));
+                ex.setStackTrace(e.getStackTrace());
+                throw ex;
+            }
         } catch (Exception e) {
-            throw new JsonIoException("error parsing JSON value", e);
+            throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
 
-        T graph;
         boolean asMaps = readOptions.isReturningJsonObjects();
 
         // JSON {} at root
         if (returnValue instanceof JsonObject) {
-            graph = toJavaObjects((JsonObject) returnValue, rootType);
-            return asMaps ? returnValue : graph;
+            return determineReturnValueWhenJsonObjectRoot(rootType, returnValue);
         }
 
         // JSON [] at root
@@ -263,29 +237,61 @@ public class JsonReader implements Closeable
             rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
             rootObj.setJsonArray((Object[])returnValue);
-            graph = toJavaObjects(rootObj, rootType);
+            T graph = toJavaObjects(rootObj, rootType);
             return asMaps ? returnValue : graph;
         }
 
         // JSON Primitive (String, Boolean, Double, Long), or convertible types
         if (rootType != null) {
-            if (jsonPrimitives.contains(rootType))
-            {
-                // Always return as the Java type because the Java type matches one of the JSON primitive types.
-                return resolver.getConverter().convert(returnValue, rootType);
+            Converter converter = resolver.getConverter();
+            if (converter.isConversionSupportedFor(returnValue.getClass(), rootType)) {
+                return converter.convert(returnValue, rootType);
             }
 
-            // Look at setting
-            graph = resolver.getConverter().convert(returnValue, rootType);
-            if (asMaps) {
-                JsonObject rootObj = new JsonObject();
-                rootObj.setTarget(graph);
-                return (T)rootObj;
-            }
-            return graph;
+            throw new JsonIoException(getErrorMessage("Return type mismatch, expected: " + rootType.getName() + ", actual: " + returnValue.getClass().getName()));
         }
 
         return returnValue;
+    }
+
+    private <T> T determineReturnValueWhenJsonObjectRoot(Class<T> rootType, T returnValue) {
+        boolean asMaps = readOptions.isReturningJsonObjects();
+        T graph = toJavaObjects((JsonObject) returnValue, rootType);
+
+        // Handle the case where no specific rootType is provided
+        if (rootType == null) {
+            return (!asMaps || isJsonPrimitive(graph)) ? graph : returnValue;
+        }
+
+        // Check for type compatibility or required conversion
+        if (!rootType.isAssignableFrom(graph.getClass()) && !ClassUtilities.doesOneWrapTheOther(rootType, graph.getClass())) {
+            return attemptTypeConversion(graph, rootType, returnValue);
+        }
+
+        // Directly handle Map specific logic or return the processed graph
+        return Map.class.isAssignableFrom(rootType) ? (T) pickNotEmpty((Map<?, ?>) graph, (Map<?, ?>) returnValue) : graph;
+    }
+    
+    private <T> T attemptTypeConversion(T graph, Class<T> rootType, T returnValue) {
+        Converter converter = getResolver().getConverter();
+        if (converter.isConversionSupportedFor(graph.getClass(), rootType)) {
+            return (graph instanceof Map) ?
+                    converter.convert((T) pickNotEmpty((Map<?, ?>) graph, (Map<?, ?>) returnValue), rootType)
+                    : converter.convert(graph, rootType);
+        }
+        throw new JsonIoException("Return type mismatch, expected: " + rootType.getName() + ", actual: " + graph.getClass().getName() +
+                ".\nIf you are using .withExtendedAliases(), make sure it is set for both ReadOptions & WriteOptions." +
+                "\nYou could be encountering an 'unknownType' (class) that cannot be created, in which case a LinkedHashMap is returned." +
+                "\nYou may need to add a ClassFactory to create the unknown class.");
+    }
+    private boolean isJsonPrimitive(Object obj) {
+        return obj instanceof Long || obj instanceof BigInteger ||
+                obj instanceof Double || obj instanceof BigDecimal ||
+                obj instanceof Boolean || obj instanceof String;
+    }
+
+    private Map<?,?> pickNotEmpty(Map<?, ?> a, Map<?, ?> b) {
+        return a.isEmpty() ? b : a;
     }
 
     /**
