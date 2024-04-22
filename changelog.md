@@ -1,4 +1,7 @@
 ### Revision History
+* 4.22.0
+  * Many more `@type` aliases added to keep the JSON succinct and more human-readable.
+  * Broader conversion support for rootTypes: `JsonIo.toObjects(..., rootType)` Includes all the `java-utils` `Converter.convert()` pairings (680+)   
 * 4.21.0
   * Empty Lists, Sets, and Maps enforce 'emptiness' on reconstruction
   * Singleton Lists, Sets, and Maps enforce 'singleton-ness' on reconstruction
