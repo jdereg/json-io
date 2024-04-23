@@ -31,4 +31,7 @@ public interface WriterContext {
      * Allows you to use the current JsonWriter to write an object out.
      */
     void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException;
+
+    void writeImpl(Object obj, boolean showType) throws IOException;
+
 }

@@ -212,14 +212,7 @@ public class JsonReader implements Closeable
                 return null;    // easy, done.
             }
         } catch (JsonIoException e) {
-            String msg = e.getMessage();
-            if (msg != null && msg.contains("Last read") && e.getMessage().contains("line") && e.getMessage().contains("col")) {
-                throw e;
-            } else {
-                JsonIoException ex = new JsonIoException(getErrorMessage(e.getMessage()));
-                ex.setStackTrace(e.getStackTrace());
-                throw ex;
-            }
+            throw e;
         } catch (Exception e) {
             throw new JsonIoException(getErrorMessage("error parsing JSON value"), e);
         }
@@ -234,7 +227,6 @@ public class JsonReader implements Closeable
         // JSON [] at root
         if (returnValue instanceof Object[]) {
             JsonObject rootObj = new JsonObject();
-            rootObj.setJavaType(Object[].class);
             rootObj.setTarget(returnValue);
             rootObj.setJsonArray((Object[])returnValue);
             T graph = toJavaObjects(rootObj, rootType);

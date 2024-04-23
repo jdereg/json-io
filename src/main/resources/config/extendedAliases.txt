@@ -77,6 +77,7 @@ java.net.URI = URI
 [Ljava.math.BigDecimal; = BigDec[]
 
 java.util.ArrayList = ArrayList
+java.util.Arrays$ArrayList = ArraysAsList
 java.util.LinkedHashMap = LinkedHashMap
 java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
 java.util.LinkedHashMap$LinkedValues = LinkedValues
