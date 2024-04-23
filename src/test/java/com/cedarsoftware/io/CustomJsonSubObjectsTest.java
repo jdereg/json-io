@@ -42,7 +42,7 @@ class CustomJsonSubObjectsTest
 	}
 
 	/**
-	 * Customer Reader for the Person object's local fields.
+	 * Custom Reader for the Person object's local fields.
 	 */
 	class PersonFactory implements JsonReader.ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
