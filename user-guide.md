@@ -74,10 +74,9 @@ and then rewrite the String/stream.
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
 not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply
 arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has never seen.  It can instantiate many classes, and
-resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating for you, you can
-add a `JsonReader.ClassFactory` (that you write, which subclasses this interface) and associate it to the class you
-want to instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do 
-this.
+resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating, add a
+`JsonReader.ClassFactory` (one that you write, which subclasses this interface) and associate it to the class you want to
+instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do this.
 ~~~
 JsonReader.ClassFactory    // Create a class that implements this interface
 JsonWriter.JsonClassWriter // Create a class that implements this interface
