@@ -90,7 +90,7 @@ the primitives in your class (see the examples below for how to 'tee up' the `Re
 you.)
 
 The [code examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) below show how to tell `json-io` 
-to associate your `CustomFactory` and `CustomWriter` to particular classes. Often you never need to resort to this, 
+to associate your `CustomFactory` and `CustomWriter` to particular classes. Often you don't need to resort to a `CustomFactory,` 
 however, when you run into that one difficult class, these tools allow you to breeze through creating, reading, and 
 writing it. The [WriteOptions Reference](/user-guide-writeOptions.md) and [ReadOptions Reference](/user-guide-readOptions.md) 
 have lots of additional information for Read/Write options. 
