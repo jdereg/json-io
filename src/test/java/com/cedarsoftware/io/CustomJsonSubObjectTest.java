@@ -90,7 +90,7 @@ class CustomJsonSubObjectTest
 				.withExtendedAliases();
 
 		Person p1 = createPersonJohn();
-		String json = JsonIo.toJson(p1, writeOptions.build());	// default WriteOptions
+		String json = JsonIo.toJson(p1, writeOptions.build());
 		System.out.println(json);
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
