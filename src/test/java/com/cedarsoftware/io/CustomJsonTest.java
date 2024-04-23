@@ -2,11 +2,12 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
+
+import static com.cedarsoftware.util.DeepEquals.deepEquals;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -31,18 +32,17 @@ class CustomJsonTest
 		private String firstName;
 		private String lastName;
 		private String phoneNumber;
-		private ZonedDateTime dob;
+		private OffsetDateTime dob;
 	}
 
-	class PersonReader implements JsonReader.JsonClassReader {
-		public Object read(Object jsonObj, Resolver resolver)
-		{
+    class PersonFactory implements JsonReader.ClassFactory {
+		public Object newInstance(Class<?> c, JsonObject jsonObject, Resolver resolver) {
 			Person person = new Person();
-			Map<String, Object> map = (Map<String, Object>) jsonObj;
+			Map<String, Object> map = (Map)jsonObject;
 			person.firstName = (String) map.get("first");
 			person.lastName = (String) map.get("last");
 			person.phoneNumber = (String) map.get("phone");
-			person.dob = ZonedDateTime.parse((String) map.get("dob"));
+			person.dob = OffsetDateTime.parse((String) map.get("dob"));
 			return person;
 		}
 	}
@@ -68,7 +68,7 @@ class CustomJsonTest
 		john.firstName = "John";
 		john.lastName = "Smith";
 		john.phoneNumber = "213-555-1212";
-		john.dob = ZonedDateTime.parse("1976-07-04T16:20:00-08:00");
+		john.dob = OffsetDateTime.parse("1976-07-04T16:20:00-08:00");
 		return john;
 	}
 
@@ -76,7 +76,7 @@ class CustomJsonTest
 	void testCustomReaderSimple()
 	{
 		ReadOptionsBuilder readOptions = new ReadOptionsBuilder()
-				.addCustomReaderClass(Person.class, new PersonReader())
+				.addClassFactory(Person.class, new PersonFactory())
 				.aliasTypeName(Person.class, "Person")
 				.withExtendedAliases();
 
@@ -89,6 +89,6 @@ class CustomJsonTest
 		String json = JsonIo.toJson(p1, writeOptions.build());	// default WriteOptions
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
-		assert DeepEquals.deepEquals(p1, p2);
+		assert deepEquals(p1, p2);
 	}
 }

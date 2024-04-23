@@ -71,15 +71,31 @@ do not exist in the JVM that is parsing the JSON, to completely read the String/
 and then rewrite the String/stream.
 
 ## Advanced Usage
+Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
+not want to be instantiated easily.  A class that has private constructors, constructor with many difficult to supply
+arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has never seen.  It can instantiate many classes, and
+resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating for you, you can
+add a `JsonReader.ClassFactory` (that you write, which subclasses this interface) and associate it to the class you
+want to instantiate.
 
-### Custom Factory
-### Custom Reader & Custom Writer
-See [Example Code - Basic](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+### JsonReader.ClassFactory - Help with creating difficult to instantiate classes
+Your `JsonReader.ClassFactory` class is called after the JSON is parsed and json-io is converting all the Maps to
+Java instances.  Your factory class is passed the JsonObject (a Map) with the fields and values from the JSON so that 
+you can **create** your class and **populate** it at the same time.  You can use the Resolver to load complex fields
+of your class (Non-primitives, Object[]'s, typed arrays, Lists, Maps).
 
-See [Example Code - Medium](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+The examples below show how to tell `json-io` to associate your CustomFactory and CustomWriter to particular classes.
+Often you never need to resort to this, however, when you run into that one difficult class, these tools allow you to
+breeze through creating, reading, and writing it.
 
-See [Example Code - Advanced](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+See the code examples below to see how this is performed.
 
+### Custom Factory & CustomWriter
+[Example Code - Primitive fields](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+
+[Example Code - Primitive and non-primitive fields (sub-object)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
+
+[Example Code - Primitive, array, type array, List, Map](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java)
 
 ---
 ## Javascript

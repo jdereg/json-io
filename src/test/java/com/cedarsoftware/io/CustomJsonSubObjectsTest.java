@@ -2,7 +2,7 @@ package com.cedarsoftware.io;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +34,7 @@ class CustomJsonSubObjectsTest
 		private String firstName;
 		private String lastName;
 		private String phoneNumber;
-		private ZonedDateTime dob;
+		private OffsetDateTime dob;
 		private TestObjectKid[] kids;
 		private Object[] friends;
 		private List pets;
@@ -44,14 +44,14 @@ class CustomJsonSubObjectsTest
 	/**
 	 * Customer Reader for the Person object's local fields.
 	 */
-	class PersonReader implements JsonReader.JsonClassReader {
-		public Object read(Object jsonObj, Resolver resolver) {
+	class PersonFactory implements JsonReader.ClassFactory {
+		public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
 			Person person = new Person();
-			Map<String, Object> map = (Map<String, Object>) jsonObj;
+			Map<String, Object> map = (Map) jsonObj;
 			person.firstName = (String) map.get("first");
 			person.lastName = (String) map.get("last");
 			person.phoneNumber = (String) map.get("phone");
-			person.dob = ZonedDateTime.parse((String) map.get("dob"));
+			person.dob = OffsetDateTime.parse((String) map.get("dob"));
 
 			// Typed[]
 			// New instance is created and assigned to the field, but has not been resolved.
@@ -113,7 +113,7 @@ class CustomJsonSubObjectsTest
 		john.firstName = "John";
 		john.lastName = "Smith";
 		john.phoneNumber = "213-555-1212";
-		john.dob = ZonedDateTime.parse("1976-07-04T16:20:00-08:00");
+		john.dob = OffsetDateTime.parse("1976-07-04T16:20:00-08:00");
 		john.kids = new TestObjectKid[] {new TestObjectKid("Lisa", "lisa@gmail.com"), new TestObjectKid("Annie", "annie@gmail.com")};
 
 		// Put a cycle in the object graph
@@ -135,7 +135,7 @@ class CustomJsonSubObjectsTest
 		// You do not need to create all the aliases, I did that to make the JSON look cleaner.
 		// I do recommend using .withExtendedAliases() as that will catch all the common Java types and Collections, Maps, etc.
 		ReadOptionsBuilder readOptions = new ReadOptionsBuilder()
-				.addCustomReaderClass(Person.class, new PersonReader())
+				.addClassFactory(Person.class, new PersonFactory())
 				.aliasTypeName(Person.class, "Person")
 				.aliasTypeName(TestObjectKid.class, "TestObjKid")
 				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]")
@@ -164,7 +164,6 @@ class CustomJsonSubObjectsTest
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());	// default WriteOptions
-		System.out.println(json);
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
 		assert DeepEquals.deepEquals(p1, p2);
