@@ -76,21 +76,29 @@ not want to be instantiated easily.  A class that has private constructors, cons
 arguments, etc. There are unlimited Java classes 'out-there' that `json-io` has never seen.  It can instantiate many classes, and
 resorts to a lot of "tricks" to make that happen.  However, if a particular class is not instantiating for you, you can
 add a `JsonReader.ClassFactory` (that you write, which subclasses this interface) and associate it to the class you
-want to instantiate.
+want to instantiate. See [examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) for how to do 
+this.
+~~~
+JsonReader.ClassFactory    // Create a class that implements this interface
+JsonWriter.JsonClassWriter // Create a class that implements this interface
+~~~
 
-### JsonReader.ClassFactory - Help with creating difficult to instantiate classes
-Your `JsonReader.ClassFactory` class is called after the JSON is parsed and json-io is converting all the Maps to
+Your `JsonReader.ClassFactory` class is called after the JSON is parsed and `json-io` is converting all the Maps to
 Java instances.  Your factory class is passed the JsonObject (a Map) with the fields and values from the JSON so that 
-you can **create** your class and **populate** it at the same time.  You can use the Resolver to load complex fields
-of your class (Non-primitives, Object[]'s, typed arrays, Lists, Maps).
+you can **create** your class and **populate** it at the same time.  Use the `Resolver` to load complex fields
+of your class (Non-primitives, Object[]'s, typed arrays, Lists, Maps), making things easy - you only have to worry about
+the primitives in your class (see the examples below for how to 'tee up' the `Resolver` to load the sub-graph for
+you.)
 
-The examples below show how to tell `json-io` to associate your CustomFactory and CustomWriter to particular classes.
-Often you never need to resort to this, however, when you run into that one difficult class, these tools allow you to
-breeze through creating, reading, and writing it.
+The [code examples](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectsTest.java) below show how to tell `json-io` 
+to associate your `CustomFactory` and `CustomWriter` to particular classes. Often you never need to resort to this, 
+however, when you run into that one difficult class, these tools allow you to breeze through creating, reading, and 
+writing it. The [WriteOptions Reference](/user-guide-writeOptions.md) and [ReadOptions Reference](/user-guide-readOptions.md) 
+have lots of additional information for Read/Write options. 
 
-See the code examples below to see how this is performed.
 
-### Custom Factory & CustomWriter
+### ClassFactory and CustomWriter Examples
+
 [Example Code - Primitive fields](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
 
 [Example Code - Primitive and non-primitive fields (sub-object)](/src/test/java/com/cedarsoftware/io/CustomJsonSubObjectTest.java)
