@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Map;
@@ -246,33 +247,33 @@ class RootsTest
     @Test
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaZonedDateTime()
     {
-        ZonedDateTime zdt = ZonedDateTime.now();
-        String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().withExtendedAliases().build());
+        OffsetDateTime odt = OffsetDateTime.now();
+        String json = TestUtil.toJson(odt, new WriteOptionsBuilder().withExtendedAliases().build());
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .withExtendedAliases()
                 .build(), null);
         assert what instanceof JsonObject;
         Map<?,?> map = (Map<?,?>) what;
-        assert map.get("value").equals(zdt.toString());
+        assert map.get("value").equals(odt.toString());
 
-        ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        OffsetDateTime odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
                 .withExtendedAliases()
-                .build(), ZonedDateTime.class);
-        assertEquals(zdt2, zdt);
+                .build(), OffsetDateTime.class);
+        assertEquals(odt2, odt);
 
-        zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
                 .withExtendedAliases()
                 .build(), null);
-        assertEquals(zdt2, zdt);
+        assertEquals(odt2, odt);
 
-        zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
+        odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
                 .withExtendedAliases()
-                .build(), ZonedDateTime.class);
-        assertEquals(zdt2, zdt);
+                .build(), OffsetDateTime.class);
+        assertEquals(odt2, odt);
     }
 
     @Test

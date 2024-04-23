@@ -123,7 +123,7 @@ public class CustomWriterTest
             fail();
         }
         catch (JsonIoException e) {
-            assert e.getMessage().toLowerCase().contains("error writing object");
+            assert e.getMessage().toLowerCase().contains("unable to write custom formatted object");
         }
     }
 

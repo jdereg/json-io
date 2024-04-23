@@ -219,19 +219,15 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * @param output Writer where the actual JSON is being written to.
      * @return boolean true if written, false is there is no custom writer for the passed in object.
      */
-    public boolean writeUsingCustomWriter(Object o, boolean showType, Writer output)
-    {
+    public boolean writeUsingCustomWriter(Object o, boolean showType, Writer output) {
         Class<?> c = o.getClass();
         if (writeOptions.isNotCustomWrittenClass(c)) {
             return false;
         }
 
-        try
-        {
+        try {
             return writeCustom(c, o, !writeOptions.isNeverShowingType() && showType, output);
-        }
-        catch (IOException e)
-        {
+        } catch (Exception e) {
             throw new JsonIoException("Unable to write custom formatted object:", e);
         }
     }
@@ -512,11 +508,10 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      * JsonObject, Map, Map of JsonObjects, Collection, Collection of JsonObject, any regular
      * object, or a JsonObject representing a regular object.
      * @param obj Object to be written
-     * @param showType if set to true, the @type tag will be output.  If false, it will be
+     * @param showType if set to true, the @type tag will be output. 
      * @throws IOException if one occurs on the underlying output stream.
      */
-    public void writeImpl(Object obj, boolean showType) throws IOException
-    {
+    public void writeImpl(Object obj, boolean showType) throws IOException {
         // For security - write instances of these classes out as null
         if (obj == null ||
                 obj instanceof ProcessBuilder ||
@@ -540,7 +535,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (obj.getClass().isArray()) {
             writeArray(obj, showType);
         } else if (obj instanceof EnumSet) {
-            writeEnumSet((EnumSet<?>)obj);
+            writeEnumSet((EnumSet<?>) obj);
         } else if (obj instanceof Collection) {
             writeCollection((Collection<?>) obj, showType);
         } else if (obj instanceof JsonObject) {   // symmetric support for writing Map of Maps representation back as equivalent JSON format.
@@ -556,16 +551,11 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
             } else {
                 writeJsonObjectObject(jObj, showType);
             }
-        }
-        else if (obj instanceof Map)
-        {   // Map instanceof check must be after JsonObject check above (JsonObject is a subclass of Map)
-            if (!writeMapWithStringKeys((Map) obj, showType))
-            {
+        } else if (obj instanceof Map) {   // Map instanceof check must be after JsonObject check above (JsonObject is a subclass of Map)
+            if (!writeMapWithStringKeys((Map) obj, showType)) {
                 writeMap((Map) obj, showType);
             }
-        }
-        else
-        {
+        } else {
             writeObject(obj, showType, false);
         }
     }
@@ -1420,10 +1410,8 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     public static boolean ensureJsonPrimitiveKeys(Map map)
     {
-        for (Object o : map.keySet())
-        {
-            if (!(o instanceof String))
-            {
+        for (Object o : map.keySet()) {
+            if (!(o instanceof String)) {
                 return false;
             }
         }
@@ -1437,8 +1425,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
      */
     private void writeCollectionElement(Object o) throws IOException
     {
-        if (o == null)
-        {
+        if (o == null) {
             out.write("null");
         } else if (o instanceof Boolean || o instanceof Double) {
             writePrimitive(o, false);

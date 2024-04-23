@@ -5,6 +5,7 @@ import java.io.Writer;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
+import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.DeepEquals.deepEquals;
@@ -35,14 +36,16 @@ class CustomJsonTest
 		private OffsetDateTime dob;
 	}
 
-    class PersonFactory implements JsonReader.ClassFactory {
+    static class PersonFactory implements JsonReader.ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jsonObject, Resolver resolver) {
-			Person person = new Person();
-			Map<String, Object> map = (Map)jsonObject;
-			person.firstName = (String) map.get("first");
-			person.lastName = (String) map.get("last");
-			person.phoneNumber = (String) map.get("phone");
-			person.dob = OffsetDateTime.parse((String) map.get("dob"));
+			Person person = new Person();		// Factory - create Java peer instance - root class only.
+			Map<String, Object> map = (Map) jsonObject;
+			Converter converter = resolver.getConverter();
+
+			person.firstName = converter.convert(map.get("first"), String.class);
+			person.lastName = converter.convert(map.get("last"), String.class);
+			person.phoneNumber = converter.convert(map.get("phone"), String.class);
+			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
 			return person;
 		}
 	}
@@ -56,8 +59,7 @@ class CustomJsonTest
 			output.write(p.lastName);
 			output.write("\",\"phone\":\"");
 			output.write(p.phoneNumber);
-			output.write("\"");
-			output.write(",\"dob\":\"");
+			output.write("\",\"dob\":\"");
 			output.write(p.dob.toString());
 			output.write("\"");
 		}

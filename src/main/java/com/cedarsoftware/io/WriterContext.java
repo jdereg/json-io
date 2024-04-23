@@ -32,6 +32,8 @@ public interface WriterContext {
      */
     void writeObject(final Object obj, boolean showType, boolean bodyOnly) throws IOException;
 
+    /**
+     * Write any object fully.
+     */
     void writeImpl(Object obj, boolean showType) throws IOException;
-
 }

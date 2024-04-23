@@ -9,6 +9,7 @@ import java.util.Map;
 
 import com.cedarsoftware.util.CompactMap;
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,52 +38,38 @@ class CustomJsonSubObjectsTest
 		private OffsetDateTime dob;
 		private TestObjectKid[] kids;
 		private Object[] friends;
-		private List pets;
+		private List<TestObjectKid> pets;
 		private Map<String, Object> items;
 	}
 
 	/**
 	 * Custom Reader for the Person object's local fields.
 	 */
-	class PersonFactory implements JsonReader.ClassFactory {
+    static class PersonFactory implements JsonReader.ClassFactory {
+		@SuppressWarnings("unchecked")
 		public Object newInstance(Class<?> c, JsonObject jsonObj, Resolver resolver) {
-			Person person = new Person();
+			Person person = new Person();		// Factory - create Java peer instance - root class only.
+
 			Map<String, Object> map = (Map) jsonObj;
-			person.firstName = (String) map.get("first");
-			person.lastName = (String) map.get("last");
-			person.phoneNumber = (String) map.get("phone");
-			person.dob = OffsetDateTime.parse((String) map.get("dob"));
+			Converter converter = resolver.getConverter();
 
-			// Typed[]
-			// New instance is created and assigned to the field, but has not been resolved.
-			JsonObject kids = (JsonObject) map.get("kids");
-			person.kids = (TestObjectKid[])resolver.createInstance(kids);
-			resolver.push(kids);	// Ask the resolver to finish the deep mapping work.
-			
-			// Object[]
-			JsonObject array = new JsonObject();
-			person.friends = (Object[]) map.get("friends");
-			array.setTarget(person.friends);
-			array.setJsonArray(person.friends);
-			resolver.push(array);	// resolver - you do the rest of the mapping
+			// Scoop values from JsonObject
+			person.firstName = converter.convert(map.get("first"), String.class);
+			person.lastName = converter.convert(map.get("last"), String.class);
+			person.phoneNumber = converter.convert(map.get("phone"), String.class);
+			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
 
-			// List
-			JsonObject pets = (JsonObject) map.get("pets");
-			person.pets = (List)resolver.createInstance(pets);
-			resolver.push(pets);	// thank you, resolver
-
-			// Map
-			JsonObject items = (JsonObject) map.get("items");
-			person.items = (Map<String, Object>)resolver.createInstance(items);
-			resolver.push(items);	// finish up the Map for me
-
-			// Person's local fields are filled in here, and the resolver will continue processing the items on the
-			// stack and fill in the "kids" substructure automatically.
+			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
+			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
+			person.kids = (TestObjectKid[]) resolver.createJavaFromJson(map.get("kids"));
+			person.friends = (Object[]) resolver.createJavaFromJson(map.get("friends"));
+			person.pets = (List<TestObjectKid>) resolver.createJavaFromJson(map.get("pets"));
+			person.items = (Map<String, Object>) resolver.createJavaFromJson(map.get("items"));
 			return person;
 		}
 	}
 
-	class PersonWriter implements JsonWriter.JsonClassWriter {
+	static class PersonWriter implements JsonWriter.JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
 			// Changing the field names on the Person class
@@ -92,12 +79,11 @@ class CustomJsonSubObjectsTest
 			output.write(p.lastName);
 			output.write("\",\"phone\":\"");
 			output.write(p.phoneNumber);
-			output.write("\"");
-			output.write(",\"dob\":\"");
+			output.write("\",\"dob\":\"");
 			output.write(p.dob.toString());
-			output.write("\",\"kids\":");
 
 			// Handles substructure, with unknown depth here.
+			output.write("\",\"kids\":");
 			context.writeImpl(p.kids, true);
 			output.write(",\"friends\":");
 			context.writeImpl(p.friends, false);

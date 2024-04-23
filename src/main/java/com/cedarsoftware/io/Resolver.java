@@ -643,4 +643,27 @@ public abstract class Resolver {
     public boolean isConvertable(Class<?> type) {
         return convertableValues.contains(type.getName());
     }
+
+    /**
+     * Create peer Java object to the passed in root JsonObject.  In the special case that root is an Object[],
+     * then create a JsonObject to wrap it, set the passed in Object[] to be the target of the JsonObject, ensure
+     * that the root Object[] items are copied to the JsonObject, and then return the JsonObject wrapper.  If
+     * called with a primitive (anythning else), just return it.
+     */
+    Object createJavaFromJson(Object root)
+    {
+        if (root instanceof Object[]) {
+            JsonObject array = new JsonObject();
+            array.setTarget(root);
+            array.setJsonArray((Object[])root);
+            push(array);	// resolver - you do the rest of the mapping
+            return root;
+        } else if (root instanceof JsonObject) {
+            Object ret = createInstance((JsonObject) root);
+            push((JsonObject) root);	// thank you, resolver
+            return ret;
+        } else {
+            return root;
+        }
+    }
 }

@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 
 import com.cedarsoftware.util.DeepEquals;
+import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,21 +36,25 @@ class CustomJsonSubObjectTest
 		private TestObjectKid kid;
 	}
 
-	class PersonFactory implements JsonReader.ClassFactory {
+	static class PersonFactory implements JsonReader.ClassFactory {
 		public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-			Person person = new Person();
+			Person person = new Person();		// Factory - create Java peer instance - root class only.
 			Map<String, Object> map = (Map) jObj;
-			person.firstName = (String) map.get("first");
-			person.lastName = (String) map.get("last");
-			person.phoneNumber = (String) map.get("phone");
-			person.dob = OffsetDateTime.parse((String) map.get("dob"));
-			person.kid = (TestObjectKid)resolver.createInstance((JsonObject)map.get("kid"));
-			resolver.push((JsonObject)map.get("kid"));
+			Converter converter = resolver.getConverter();
+
+			person.firstName = converter.convert(map.get("first"), String.class);
+			person.lastName = converter.convert(map.get("last"), String.class);
+			person.phoneNumber = converter.convert(map.get("phone"), String.class);
+			person.dob = converter.convert(map.get("dob"), OffsetDateTime.class);
+
+			// Handle the complex field types by delegating to the Resolver, which will place these on its internal
+			// work stack, and ultimately map the values from the JsonObject (Map) to the peer Java instance.
+			person.kid = (TestObjectKid) resolver.createJavaFromJson(map.get("kid"));
 			return person;
 		}
 	}
 
-	class PersonWriter implements JsonWriter.JsonClassWriter {
+	static class PersonWriter implements JsonWriter.JsonClassWriter {
 		public void write(Object o, boolean showType, Writer output, WriterContext context) throws IOException {
 			Person p = (Person) o;
 			output.write("\"first\":\"");
@@ -58,8 +63,7 @@ class CustomJsonSubObjectTest
 			output.write(p.lastName);
 			output.write("\",\"phone\":\"");
 			output.write(p.phoneNumber);
-			output.write("\"");
-			output.write(",\"dob\":\"");
+			output.write("\",\"dob\":\"");
 			output.write(p.dob.toString());
 			output.write("\",\"kid\":");
 			context.writeObject(p.kid, false, false);
@@ -91,7 +95,6 @@ class CustomJsonSubObjectTest
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());
-		System.out.println(json);
 		Person p2 = JsonIo.toObjects(json, readOptions.build(), Person.class);
 
 		assert DeepEquals.deepEquals(p1, p2);
