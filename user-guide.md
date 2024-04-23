@@ -70,6 +70,17 @@ original input JSON stream.  This permits you to receive JSON strings / streams 
 do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
 and then rewrite the String/stream.
 
+## Advanced Usage
+
+### Custom Factory
+### Custom Reader & Custom Writer
+See [Example Code - Basic](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+
+See [Example Code - Medium](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+
+See [Example Code - Advanced](/src/test/java/com/cedarsoftware/io/CustomJsonTest.java)
+
+
 ---
 ## Javascript
 Included is a small Javascript utility (`jsonUtil.js` in the root folder) that will take a JSON output
