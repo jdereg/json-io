@@ -44,7 +44,7 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
         sealed = false;
     }
 
-    private void checkIfSealed() {
+    private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");
         }
@@ -75,12 +75,12 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     }
 
     public boolean add(T t) {
-        checkIfSealed();
+        throwIfSealed();
         return set.add(t);
     }
 
     public boolean remove(Object o) {
-        checkIfSealed();
+        throwIfSealed();
         return set.remove(o);
     }
 
@@ -89,22 +89,22 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     }
 
     public boolean addAll(Collection<? extends T> c) {
-        checkIfSealed();
+        throwIfSealed();
         return set.addAll(c);
     }
 
     public boolean retainAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return set.retainAll(c);
     }
 
     public boolean removeAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return set.removeAll(c);
     }
 
     public void clear() {
-        checkIfSealed();
+        throwIfSealed();
         set.clear();
     }
 

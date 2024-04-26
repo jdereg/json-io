@@ -50,7 +50,7 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmod
         sealed = false;
     }
 
-    private void checkIfSealed() {
+    private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This map has been sealed and is now immutable");
         }
@@ -109,12 +109,12 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmod
     }
 
     public Entry<K, V> pollFirstEntry() {
-        checkIfSealed();
+        throwIfSealed();
         return map.pollFirstEntry();
     }
 
     public Entry<K, V> pollLastEntry() {
-        checkIfSealed();
+        throwIfSealed();
         return map.pollLastEntry();
     }
 
@@ -175,22 +175,22 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmod
     }
 
     public V put(K key, V value) {
-        checkIfSealed();
+        throwIfSealed();
         return map.put(key, value);
     }
 
     public V remove(Object key) {
-        checkIfSealed();
+        throwIfSealed();
         return map.remove(key);
     }
 
     public void putAll(Map<? extends K, ? extends V> m) {
-        checkIfSealed();
+        throwIfSealed();
         map.putAll(m);
     }
 
     public void clear() {
-        checkIfSealed();
+        throwIfSealed();
         map.clear();
     }
 

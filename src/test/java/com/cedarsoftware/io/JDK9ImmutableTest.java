@@ -254,12 +254,22 @@ class JDK9ImmutableTest
         l2 = listOf("a", 2L);
         l3 = listOf("a", 2L, 4.3);
         l4 = listOf("a", 2L, 3.14, (byte)7);
-        
+        assertThrows(UnsupportedOperationException.class, () -> l0.add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> l1.add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> l2.add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> l3.add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> l4.add("foo"));
+
         Object[] lists = new Object[] {l0, l1, l2, l3, l4};
         String json = TestUtil.toJson(lists, new WriteOptionsBuilder().withExtendedAliases().build());
-        
+        System.out.println(json);
         Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
         assert DeepEquals.deepEquals(lists, newLists);
+        assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[0]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[1]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[2]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[3]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[4]).add("foo"));
     }
 
     static class Node {

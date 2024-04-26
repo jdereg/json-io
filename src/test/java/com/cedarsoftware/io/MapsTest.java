@@ -291,9 +291,8 @@ class MapsTest
 
         String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
         UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), UnmodifiableStuff.class);
-        // TODO: Make unmodifiable after serializing
-        stuff2.unmodifiableCollection.add("a");
         assert DeepEquals.deepEquals(stuff, stuff2);
+        assertThrows(UnsupportedOperationException.class, () -> stuff2.unmodifiableCollection.add("a"));
     }
 
     private static class SynchronizedStuff {

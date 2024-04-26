@@ -7,21 +7,14 @@ import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.SortedSet;
 
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.util.Unmodifiable;
-import com.cedarsoftware.io.util.UnmodifiableList;
-import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
-import com.cedarsoftware.io.util.UnmodifiableSet;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -342,35 +335,9 @@ public class ObjectResolver extends Resolver
         }
 
         if (col instanceof Unmodifiable) {
-            convertToRealUnmodifiable(jsonObj, col);
+            ((Unmodifiable) col).seal();
         }
         jsonObj.clear();   // Reduce memory required during processing
-    }
-
-    private static void convertToRealUnmodifiable(JsonObject jsonObj, Collection col)
-    {
-        Class<?> type = jsonObj.getJavaType();
-        if (NavigableSet.class.isAssignableFrom(type)) {
-            Unmodifiable unmodNavSet = new UnmodifiableNavigableSet<>(col);
-            unmodNavSet.seal();
-            jsonObj.setTarget(unmodNavSet);
-        } else if (SortedSet.class.isAssignableFrom(type)) {
-            Unmodifiable unmodSortedSet = new UnmodifiableNavigableSet<>(col);
-            unmodSortedSet.seal();
-            jsonObj.setTarget(unmodSortedSet);
-        } else if (Set.class.isAssignableFrom(type)) {
-            Unmodifiable unmodSet = new UnmodifiableSet(col);
-            unmodSet.seal();
-            jsonObj.setTarget(unmodSet);
-        } else if (List.class.isAssignableFrom(type)) {
-            Unmodifiable unmodList = new UnmodifiableList((List)col);
-            unmodList.seal();
-            jsonObj.setTarget(unmodList);
-        } else if (Collection.class.isAssignableFrom(type)) {
-            jsonObj.setTarget(Collections.unmodifiableCollection(col));
-        } else {
-            throw new JsonIoException("Encountered unknown unmodifiable Collection type: " + type.getName());
-        }
     }
 
     /**

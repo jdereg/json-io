@@ -110,14 +110,14 @@ java.util.Collections$SingletonSet = SingletonSet
 java.util.Collections$SingletonMap = SingletonMap
 
 # Collections "Unmodifiable" types
-java.util.Collections$UnmodifiableCollection = FixedCollection
-java.util.Collections$UnmodifiableRandomAccessList = FixedList
-java.util.Collections$UnmodifiableSet = FixedSet
-java.util.Collections$UnmodifiableSortedSet = FixedSortedSet
-java.util.Collections$UnmodifiableNavigableSet = FixedNavigableSet
-java.util.Collections$UnmodifiableMap = FixedMap
-java.util.Collections$UnmodifiableSortedMap = FixedSortedMap
-java.util.Collections$UnmodifiableNavigableMap = FixedNavigableMap
+java.util.Collections$UnmodifiableCollection = UnModCollection
+java.util.Collections$UnmodifiableRandomAccessList = UnModList
+java.util.Collections$UnmodifiableSet = UnModSet
+java.util.Collections$UnmodifiableSortedSet = UnModSortedSet
+java.util.Collections$UnmodifiableNavigableSet = UnModNavigableSet
+java.util.Collections$UnmodifiableMap = UnModMap
+java.util.Collections$UnmodifiableSortedMap = UnModSortedMap
+java.util.Collections$UnmodifiableNavigableMap = UnModNavigableMap
 
 java.util.ImmutableCollections$ListN = ListN
 java.util.ImmutableCollections$List12 = List12

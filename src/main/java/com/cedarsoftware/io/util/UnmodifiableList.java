@@ -45,7 +45,7 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
         sealed = false;
     }
 
-    private void checkIfSealed() {
+    private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This list has been sealed and is now immutable");
         }
@@ -76,12 +76,12 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     }
 
     public boolean add(T t) {
-        checkIfSealed();
+        throwIfSealed();
         return list.add(t);
     }
 
     public boolean remove(Object o) {
-        checkIfSealed();
+        throwIfSealed();
         return list.remove(o);
     }
 
@@ -90,27 +90,27 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     }
 
     public boolean addAll(Collection<? extends T> c) {
-        checkIfSealed();
+        throwIfSealed();
         return list.addAll(c);
     }
 
     public boolean addAll(int index, Collection<? extends T> c) {
-        checkIfSealed();
+        throwIfSealed();
         return list.addAll(index, c);
     }
 
     public boolean removeAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return list.removeAll(c);
     }
 
     public boolean retainAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return list.retainAll(c);
     }
 
     public void clear() {
-        checkIfSealed();
+        throwIfSealed();
         list.clear();
     }
 
@@ -119,17 +119,17 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     }
 
     public T set(int index, T element) {
-        checkIfSealed();
+        throwIfSealed();
         return list.set(index, element);
     }
 
     public void add(int index, T element) {
-        checkIfSealed();
+        throwIfSealed();
         list.add(index, element);
     }
 
     public T remove(int index) {
-        checkIfSealed();
+        throwIfSealed();
         return list.remove(index);
     }
 

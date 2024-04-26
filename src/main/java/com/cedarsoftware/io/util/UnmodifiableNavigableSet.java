@@ -56,39 +56,39 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
         sealed = false;
     }
 
-    private void checkIfSealed() {
+    private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");
         }
     }
 
     public boolean add(T e) {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.add(e);
     }
 
     public boolean addAll(Collection<? extends T> c) {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.addAll(c);
     }
 
     public void clear() {
-        checkIfSealed();
+        throwIfSealed();
         navigableSet.clear();
     }
 
     public boolean remove(Object o) {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.remove(o);
     }
 
     public boolean removeAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.removeAll(c);
     }
 
     public boolean retainAll(Collection<?> c) {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.retainAll(c);
     }
 
@@ -109,12 +109,12 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
     }
 
     public T pollFirst() {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.pollFirst();
     }
 
     public T pollLast() {
-        checkIfSealed();
+        throwIfSealed();
         return navigableSet.pollLast();
     }
 

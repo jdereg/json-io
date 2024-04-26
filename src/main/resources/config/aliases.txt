@@ -15,8 +15,8 @@ java.lang.Double = double
 java.lang.Character = char
 java.lang.Boolean = boolean
 
-com.cedarsoftware.io.util.UnmodifiableList = FixedList
-com.cedarsoftware.io.util.UnmodifiableSet = FixedSet
-com.cedarsoftware.io.util.UnmodifiableNavigableSet = FixedNavigableSet
-com.cedarsoftware.io.util.UnmodifiableMap = FixedMap
-com.cedarsoftware.io.util.UnmodifiableNavigableMap = FixedNavigableMap
+com.cedarsoftware.io.util.UnmodifiableList = UnModList
+com.cedarsoftware.io.util.UnmodifiableSet = UnModSet
+com.cedarsoftware.io.util.UnmodifiableNavigableSet = UnModNavigableSet
+com.cedarsoftware.io.util.UnmodifiableMap = UnmodMap
+com.cedarsoftware.io.util.UnmodifiableNavigableMap = UnmodNavigableMap

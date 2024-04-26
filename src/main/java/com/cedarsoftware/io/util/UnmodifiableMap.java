@@ -45,7 +45,7 @@ public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
         sealed = false;
     }
 
-    private void checkIfSealed() {
+    private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This map has been sealed and is now immutable");
         }
@@ -72,22 +72,22 @@ public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
     }
 
     public V put(K key, V value) {
-        checkIfSealed();
+        throwIfSealed();
         return map.put(key, value);
     }
 
     public V remove(Object key) {
-        checkIfSealed();
+        throwIfSealed();
         return map.remove(key);
     }
 
     public void putAll(Map<? extends K, ? extends V> m) {
-        checkIfSealed();
+        throwIfSealed();
         map.putAll(m);
     }
 
     public void clear() {
-        checkIfSealed();
+        throwIfSealed();
         map.clear();
     }
 
