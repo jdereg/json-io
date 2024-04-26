@@ -7,15 +7,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.MapUtilities;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
+import static com.cedarsoftware.util.DeepEquals.deepEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * This class tests the JDK9+ List.of(), Set.of(), Map.of() which return immutable collections.  In addition,
+ * it tests Unmodifiable collections, and finally, in the process it tests forward references within immutable
+ * collections.
+ *
+ * @author Laurent Garnier (original)
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br>
+ *         Copyright (c) Cedar Software LLC
+ *         <br><br>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br><br>
+ *         <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ *         <br><br>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
+ */
 class JDK9ImmutableTest
 {
     static class Rec {
@@ -53,7 +75,7 @@ class JDK9ImmutableTest
         List<Object> es = TestUtil.toObjects(json, null);
 
         assertEquals(0, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add(7));
     }
 
@@ -65,7 +87,7 @@ class JDK9ImmutableTest
         List<Object> es = TestUtil.toObjects(json, null);
 
         assertEquals(1, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add(3));
     }
 
@@ -77,7 +99,7 @@ class JDK9ImmutableTest
         List<Object> es = TestUtil.toObjects(json, null);
 
         assertEquals(2, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));
     }
 
@@ -89,7 +111,7 @@ class JDK9ImmutableTest
         List<Object> es = TestUtil.toObjects(json, null);
 
         assertEquals(3, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));
     }
 
@@ -114,7 +136,7 @@ class JDK9ImmutableTest
         Set<Object> es = TestUtil.toObjects(json, null);
 
         assertEquals(0, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));
     }
 
@@ -126,7 +148,7 @@ class JDK9ImmutableTest
         Set<String> es = TestUtil.toObjects(json, null);
 
         assertEquals(1, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));;
     }
 
@@ -138,7 +160,7 @@ class JDK9ImmutableTest
         Set<String> es = TestUtil.toObjects(json, null);
 
         assertEquals(2, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));;
     }
 
@@ -150,7 +172,7 @@ class JDK9ImmutableTest
         Set<String> es = TestUtil.toObjects(json, null);
 
         assertEquals(3, es.size());
-        assert DeepEquals.deepEquals(o, es);
+        assert deepEquals(o, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add("nope"));;
     }
 
@@ -160,29 +182,19 @@ class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        rec1.mlinks = new ArrayList<>(listOf());
-        rec2.mlinks = new ArrayList<>(listOf(rec1));
-        List<Rec> ol = new ArrayList<>(listOf(rec1, rec2, rec1));
+        rec1.mlinks = listOf();
+        rec2.mlinks = listOf(rec1);
+        List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
         List<Rec> recs = TestUtil.toObjects(json, null);
 
-        assertEquals(ol.getClass(), recs.getClass());
         assertEquals(ol.size(), recs.size());
-
-        assertEquals(ol.get(0).s, recs.get(0).s);
-        assertEquals(ol.get(0).i, recs.get(0).i);
-        assertEquals(recs.get(1), recs.get(0).link);
-        assertEquals(ol.get(1).s, recs.get(1).s);
-        assertEquals(ol.get(1).i, recs.get(1).i);
-        assertEquals(recs.get(0), recs.get(1).link);
-
-        assertEquals(recs.get(0), recs.get(2));
-
-        assertEquals(ol.get(0).mlinks.size(), recs.get(0).mlinks.size());
-        assertEquals(ol.get(0).mlinks.getClass(), recs.get(0).mlinks.getClass());
-        assertEquals(ol.get(1).mlinks.size(), recs.get(1).mlinks.size());
-        assertEquals(ol.get(1).mlinks.getClass(), recs.get(1).mlinks.getClass());
+        assert deepEquals(ol, recs);
+        assertThrows(UnsupportedOperationException.class, () -> recs.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> rec1.mlinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> rec2.mlinks.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> ol.add(rec1));
     }
 
     @Test
@@ -191,14 +203,17 @@ class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.link = rec2;
         rec2.link = rec1;
-        rec1.mlinks = new ArrayList<>(listOf());
-        rec2.mlinks = new ArrayList<>(listOf(rec1));
+        rec1.mlinks = listOf();
+        rec2.mlinks = listOf(rec1);
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
         List<Rec> recs = TestUtil.toObjects(json, null);
 
-        assert DeepEquals.deepEquals(ol, recs);
+        assert deepEquals(ol, recs);
+        assertThrows(UnsupportedOperationException.class, () -> recs.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> rec1.mlinks.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> rec2.mlinks.add(rec1));
     }
 
     @Test
@@ -209,14 +224,19 @@ class JDK9ImmutableTest
         rec2.link = rec1;
         rec1.ilinks = listOf(rec2);
         rec2.ilinks = listOf();
-        rec1.mlinks = new ArrayList<>(listOf());
-        rec2.mlinks = new ArrayList<>(listOf(rec1));
+        rec1.mlinks = listOf();
+        rec2.mlinks = listOf(rec1);
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol);
         Object es = TestUtil.toObjects(json, null);
 
-        assert DeepEquals.deepEquals(es, ol);
+        assert deepEquals(es, ol);
+        assertThrows(UnsupportedOperationException.class, () -> ol.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> rec1.ilinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> rec2.ilinks.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> rec1.mlinks.add(rec2));
+        assertThrows(UnsupportedOperationException.class, () -> rec2.mlinks.add(rec1));
     }
 
     @Test
@@ -231,13 +251,19 @@ class JDK9ImmutableTest
 
         String json = TestUtil.toJson(ol, new WriteOptionsBuilder().withExtendedAliases().build());
 
-        List es = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        List<Rec> es = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
         json = TestUtil.toJson(es, new WriteOptionsBuilder().withExtendedAliases().build());
 
-        List again = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        List<Rec> again = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
         json = TestUtil.toJson(again, new WriteOptionsBuilder().withExtendedAliases().build());
 
-        assert DeepEquals.deepEquals(ol, es);
+        assert deepEquals(ol, es);
+        assertThrows(UnsupportedOperationException.class, () -> es.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> again.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> es.get(0).ilinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> again.get(0).ilinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> es.get(0).smap.put("foo", rec2));
+        assertThrows(UnsupportedOperationException.class, () -> again.get(0).smap.put("foo", rec2));
     }
 
     @Test
@@ -262,9 +288,9 @@ class JDK9ImmutableTest
 
         Object[] lists = new Object[] {l0, l1, l2, l3, l4};
         String json = TestUtil.toJson(lists, new WriteOptionsBuilder().withExtendedAliases().build());
-        System.out.println(json);
+        
         Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
-        assert DeepEquals.deepEquals(lists, newLists);
+        assert deepEquals(lists, newLists);
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[0]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[1]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[2]).add("foo"));
@@ -293,8 +319,13 @@ class JDK9ImmutableTest
         Object[] sets = new Object[] {s0, s1, s2, s3, s4};
         String json = TestUtil.toJson(sets, new WriteOptionsBuilder().withExtendedAliases().build());
 
-        Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
-        assert DeepEquals.deepEquals(sets, newLists);
+        Object[] newSets = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        assert deepEquals(sets, newSets);
+        assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[0]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[1]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[2]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[3]).add("foo"));
+        assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[4]).add("foo"));
     }
 
     @Test
@@ -312,12 +343,14 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().withExtendedAliases().build());
 
         // Deserialize the list
-        List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
+        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
 
         // Assertions to check if the forward reference is maintained after deserialization
         assertEquals("Node2", deserializedNodes.get(0).next.name);
         assertEquals("Node1", deserializedNodes.get(1).next.name);
+        assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node2));
 
+        // Hand-crafted JSON, intentionally listing the @ref before the @id occurs.
         json = "{\n" +
                 "  \"@type\": \"List12\",\n" +
                 "  \"@items\": [\n" +
@@ -340,10 +373,10 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
+        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
         // Assertions to check if the forward reference is maintained after deserialization
-        assertEquals("Node1", deserializedNodes.get(0).next.name);
-        assertEquals("Node2", deserializedNodes.get(1).next.name);
+        assertEquals("Node1", deserializedNodes2.get(0).next.name);
+        assertEquals("Node2", deserializedNodes2.get(1).next.name);
     }
 
     @Test
@@ -361,15 +394,18 @@ class JDK9ImmutableTest
         String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().withExtendedAliases().build());
         
         // Deserialize the list
-        Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
-
+        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
+        assert deepEquals(nodes, deserializedNodes);
+        assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node1));
         // Assertions to check if the forward reference is maintained after deserialization
         Iterator<Node> i = deserializedNodes.iterator();
         Node node1st = i.next();
         Node node2nd = i.next();
+
         assertEquals("Node2", node1st.next.name);
         assertEquals("Node1", node2nd.next.name);
 
+        // Hand-crafted JSON, intentionally listing the @ref before the @id occurs.
         json = "{\n" +
                 "  \"@type\": \"Set12\",\n" +
                 "  \"@items\": [\n" +
@@ -392,9 +428,9 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
+        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
         // Assertions to check if the forward reference is maintained after deserialization
-        i = deserializedNodes.iterator();
+        i = deserializedNodes2.iterator();
         node1st = i.next();
         node2nd = i.next();
         assertEquals("Node2", node1st.next.name);
