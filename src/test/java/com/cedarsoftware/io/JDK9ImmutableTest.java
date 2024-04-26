@@ -14,6 +14,7 @@ import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static com.cedarsoftware.util.DeepEquals.deepEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -245,9 +246,9 @@ class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.ilinks = listOf(rec2, rec1);
         rec2.ilinks = listOf();
+        rec1.smap = MapUtilities.mapOf("a", rec1, "b", rec2);
+        rec2.smap = MapUtilities.mapOf();   // Empty Immutable Map is different class than one with elements in it
         List<Rec> ol = listOf(rec1, rec2, rec1);
-
-        rec1.smap = MapUtilities.mapOf();
 
         String json = TestUtil.toJson(ol, new WriteOptionsBuilder().withExtendedAliases().build());
 
@@ -262,8 +263,22 @@ class JDK9ImmutableTest
         assertThrows(UnsupportedOperationException.class, () -> again.add(rec1));
         assertThrows(UnsupportedOperationException.class, () -> es.get(0).ilinks.add(rec1));
         assertThrows(UnsupportedOperationException.class, () -> again.get(0).ilinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> es.get(1).ilinks.add(rec1));
+        assertThrows(UnsupportedOperationException.class, () -> again.get(1).ilinks.add(rec1));
         assertThrows(UnsupportedOperationException.class, () -> es.get(0).smap.put("foo", rec2));
         assertThrows(UnsupportedOperationException.class, () -> again.get(0).smap.put("foo", rec2));
+        assertThrows(UnsupportedOperationException.class, () -> es.get(1).smap.put("foo", rec2));
+        assertThrows(UnsupportedOperationException.class, () -> again.get(1).smap.put("foo", rec2));
+
+        Map<String, Rec> map = again.get(0).smap;
+        assertThrows(UnsupportedOperationException.class, () -> map.remove("a"));
+
+        Iterator<Map.Entry<String, Rec>> i = map.entrySet().iterator();
+        assertThrows(UnsupportedOperationException.class, () -> i.remove());
+
+        Map.Entry<String, Rec> entry = i.next();
+        assertNotNull(entry);
+        assertThrows(UnsupportedOperationException.class, () -> entry.setValue(rec1));
     }
 
     @Test

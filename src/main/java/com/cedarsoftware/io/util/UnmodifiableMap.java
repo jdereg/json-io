@@ -1,6 +1,10 @@
 package com.cedarsoftware.io.util;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -92,15 +96,43 @@ public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
     }
 
     public Set<K> keySet() {
-        return map.keySet();
+        return Collections.unmodifiableSet(map.keySet());   // read-only
     }
 
     public Collection<V> values() {
-        return map.values();
+        return Collections.unmodifiableCollection(map.values());    // read-only
     }
 
-    public Set<Entry<K, V>> entrySet() {
-        return map.entrySet();
+    /**
+     * Need structural read-only-ness like keySet() and values(), but also need to prevent
+     * .setValue() from being called as well. By returning AbstractMap.SimpleImmutableEntry
+     * to enforce no modifications via .setValue().
+     */
+    public Set<Map.Entry<K, V>> entrySet() {
+        Set<Map.Entry<K, V>> es = new AbstractSet<Entry<K, V>>() {
+            public Iterator<Map.Entry<K, V>> iterator() {
+                Iterator<Map.Entry<K, V>> i = map.entrySet().iterator();
+                return new Iterator<Entry<K, V>>() {
+                    public boolean hasNext() {
+                        return i.hasNext();
+                    }
+
+                    public Map.Entry<K, V> next() {
+                        Map.Entry<K, V> entry = i.next();
+                        return new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue());
+                    }
+
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+
+            public int size() {
+                return map.size();
+            }
+        };
+        return Collections.unmodifiableSet(es);
     }
 
     public boolean equals(Object o) {
