@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -123,10 +124,10 @@ public class DoubleTest
     public void testNanArrayElement()
     {
         WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
-        String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)), args);
+        String json = TestUtil.toJson(new ArrayList<>(listOf(Double.NaN)), args);
         assert json.contains("null");
 
-        json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NEGATIVE_INFINITY)), args);
+        json = TestUtil.toJson(new ArrayList<>(listOf(Double.NEGATIVE_INFINITY)), args);
         assert json.contains("null");
 
         LinkedHashMap<String, Double> map2 = new LinkedHashMap<>(1);
@@ -187,10 +188,10 @@ public class DoubleTest
     @Test
     void testNanArrayElement2()
     {
-        String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NaN)));
+        String json = TestUtil.toJson(new ArrayList<>(listOf(Double.NaN)));
         assertThat(json).contains("null");
 
-        json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Double.NEGATIVE_INFINITY)));
+        json = TestUtil.toJson(new ArrayList<>(listOf(Double.NEGATIVE_INFINITY)));
         assert json.contains("null");
 
         LinkedHashMap<String, Double> map = new LinkedHashMap<>(1);

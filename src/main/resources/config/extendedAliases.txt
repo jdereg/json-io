@@ -110,14 +110,19 @@ java.util.Collections$SingletonSet = SingletonSet
 java.util.Collections$SingletonMap = SingletonMap
 
 # Collections "Unmodifiable" types
-java.util.Collections$UnmodifiableCollection = UnmodifiableCollection
-java.util.Collections$UnmodifiableRandomAccessList = UnmodifiableRandomAccessList
-java.util.Collections$UnmodifiableSet = UnmodifiableSet
-java.util.Collections$UnmodifiableSortedSet = UnmodifiableSortedSet
-java.util.Collections$UnmodifiableNavigableSet = UnmodifiableNavigableSet
-java.util.Collections$UnmodifiableMap = UnmodifiableMap
-java.util.Collections$UnmodifiableSortedMap = UnmodifiableSortedMap
-java.util.Collections$UnmodifiableNavigableMap = UnmodifiableNavigableMap
+java.util.Collections$UnmodifiableCollection = FixedCollection
+java.util.Collections$UnmodifiableRandomAccessList = FixedList
+java.util.Collections$UnmodifiableSet = FixedSet
+java.util.Collections$UnmodifiableSortedSet = FixedSortedSet
+java.util.Collections$UnmodifiableNavigableSet = FixedNavigableSet
+java.util.Collections$UnmodifiableMap = FixedMap
+java.util.Collections$UnmodifiableSortedMap = FixedSortedMap
+java.util.Collections$UnmodifiableNavigableMap = FixedNavigableMap
+
+java.util.ImmutableCollections$ListN = ListN
+java.util.ImmutableCollections$List12 = List12
+java.util.ImmutableCollections$SetN = SetN
+java.util.ImmutableCollections$Set12 = Set12
 
 # Collections "synchronized" types
 java.util.Collections$SynchronizedCollection = SynchronizedCollection

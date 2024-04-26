@@ -14,6 +14,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -138,7 +140,7 @@ class InstantTests {
 
 
     protected List<String> getPossibleClassNamesForType() {
-        return MetaUtils.listOf(getTestClass().getName());
+        return listOf(getTestClass().getName());
     }
 
     //  standalone
@@ -341,7 +343,7 @@ class InstantTests {
 
     @Test
     void testCollection_withNoDuplicates() {
-        List expected = MetaUtils.listOf(provideT1(), provideT2(), provideT3(), provideT4());
+        List expected = listOf(provideT1(), provideT2(), provideT3(), provideT4());
 
         // act
         List actual = TestUtil.serializeDeserialize(expected);
@@ -362,7 +364,7 @@ class InstantTests {
     @Test
     void testCollection_withDuplicates() {
         Instant instance = provideT1();
-        List expected = MetaUtils.listOf(instance, provideT2(), provideT3(), provideT4(), instance);
+        List expected = listOf(instance, provideT2(), provideT3(), provideT4(), instance);
 
         // act
         String json = TestUtil.toJson(expected);
@@ -389,7 +391,7 @@ class InstantTests {
     @Test
     void testMap_withNoDuplicates() {
         // arrange
-        Map<String, Instant> expected = MetaUtils.mapOf("foo", provideT1(), "bar", provideT2());
+        Map<String, Instant> expected = mapOf("foo", provideT1(), "bar", provideT2());
 
         // act
         String json = TestUtil.toJson(expected);
@@ -413,7 +415,7 @@ class InstantTests {
     @Test
     void testMap_withDuplicates() {
         Instant instance = provideT4();
-        Map<String, Instant> expected = MetaUtils.mapOf("foo", instance, "bar", instance);
+        Map<String, Instant> expected = mapOf("foo", instance, "bar", instance);
 
         // act
         String json = TestUtil.toJson(expected);

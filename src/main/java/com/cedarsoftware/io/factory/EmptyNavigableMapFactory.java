@@ -1,7 +1,10 @@
-package com.cedarsoftware.io.util;
+package com.cedarsoftware.io.factory;
 
-import java.util.Enumeration;
-import java.util.NoSuchElementException;
+import java.util.Collections;
+
+import com.cedarsoftware.io.JsonObject;
+import com.cedarsoftware.io.JsonReader;
+import com.cedarsoftware.io.Resolver;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -20,24 +23,8 @@ import java.util.NoSuchElementException;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EmptyEnumeration<T> implements Enumeration<T> {
-
-    /**
-     * Returns {@code false} as there are no elements in the enumeration.
-     *
-     * @return {@code false} always.
-     */
-    public boolean hasMoreElements() {
-        return false;
-    }
-
-    /**
-     * Throws NoSuchElementException because there are no elements to return.
-     *
-     * @return nothing.
-     * @throws NoSuchElementException always thrown.
-     */
-    public T nextElement() {
-        throw new NoSuchElementException("No elements in the enumeration.");
+public class EmptyNavigableMapFactory implements JsonReader.ClassFactory {
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        return Collections.emptyNavigableMap();
     }
 }

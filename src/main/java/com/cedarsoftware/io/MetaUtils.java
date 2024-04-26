@@ -19,22 +19,23 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
@@ -90,11 +91,6 @@ public class MetaUtils
 
     private static final Map<String, Class<?>> nameToClass = new HashMap<>();
     private static final ConcurrentMap<String, CachedConstructor> constructors = new ConcurrentHashMap<>();
-    private static final Collection<?> unmodifiableCollection = Collections.unmodifiableCollection(new ArrayList<>());
-    private static final Set<?> unmodifiableSet = Collections.unmodifiableSet(new HashSet<>());
-    private static final SortedSet<?> unmodifiableSortedSet = Collections.unmodifiableSortedSet(new TreeSet<>());
-    private static final Map<?, ?> unmodifiableMap = Collections.unmodifiableMap(new HashMap<>());
-    private static final SortedMap<?, ?> unmodifiableSortedMap = Collections.unmodifiableSortedMap(new TreeMap<>());
     static final ThreadLocal<SimpleDateFormat> dateFormat = ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
     private static boolean useUnsafe = false;
     private static Unsafe unsafe;
@@ -112,6 +108,7 @@ public class MetaUtils
         DIRECT_CLASS_MAPPING.put(java.sql.Date.class, () -> new java.sql.Date(System.currentTimeMillis()));
         DIRECT_CLASS_MAPPING.put(LocalDate.class, LocalDate::now);
         DIRECT_CLASS_MAPPING.put(LocalDateTime.class, LocalDateTime::now);
+        DIRECT_CLASS_MAPPING.put(OffsetDateTime.class, OffsetDateTime::now);
         DIRECT_CLASS_MAPPING.put(ZonedDateTime.class, ZonedDateTime::now);
         DIRECT_CLASS_MAPPING.put(ZoneId.class, ZoneId::systemDefault);
         DIRECT_CLASS_MAPPING.put(AtomicBoolean.class, AtomicBoolean::new);
@@ -129,8 +126,10 @@ public class MetaUtils
         // order is important
         ASSIGNABLE_CLASS_MAPPING.put(EnumSet.class, () -> null);
         ASSIGNABLE_CLASS_MAPPING.put(List.class, ArrayList::new);
+        ASSIGNABLE_CLASS_MAPPING.put(NavigableSet.class, TreeSet::new);
         ASSIGNABLE_CLASS_MAPPING.put(SortedSet.class, TreeSet::new);
         ASSIGNABLE_CLASS_MAPPING.put(Set.class, LinkedHashSet::new);
+        ASSIGNABLE_CLASS_MAPPING.put(NavigableMap.class, TreeMap::new);
         ASSIGNABLE_CLASS_MAPPING.put(SortedMap.class, TreeMap::new);
         ASSIGNABLE_CLASS_MAPPING.put(Map.class, LinkedHashMap::new);
         ASSIGNABLE_CLASS_MAPPING.put(Collection.class, ArrayList::new);
@@ -170,68 +169,6 @@ public class MetaUtils
         nameToClass.put("string", String.class);
         nameToClass.put("date", Date.class);
         nameToClass.put("class", Class.class);
-    }
-
-    /**
-     * For JDK1.8 support.  Remove this and change to List.of() for JDK11+
-     */
-    @SafeVarargs
-    public static <T> List<T> listOf(T... items)
-    {
-        if (items == null || items.length ==0)
-        {
-            return Collections.unmodifiableList(new ArrayList<>());
-        }
-        List<T> list = new ArrayList<>();
-        Collections.addAll(list, items);
-        return Collections.unmodifiableList(list);
-    }
-
-    /**
-     * For JDK1.8 support.  Remove this and change to Set.of() for JDK11+
-     */
-    @SafeVarargs
-    public static <T> Set<T> setOf(T... items)
-    {
-        if (items == null || items.length ==0)
-        {
-            return (Set<T>) unmodifiableSet;
-        }
-        Set<T> set = new LinkedHashSet<>();
-        Collections.addAll(set, items);
-        return set;
-    }
-
-    /**
-     * For JDK1.8 support.  Remove this and change to Map.of() for JDK11+
-     */
-    public static <K, V> Map<K, V> mapOf()
-    {
-        return Collections.unmodifiableMap(new LinkedHashMap<>());
-    }
-
-    public static <K, V> Map<K, V> mapOf(K k, V v)
-    {
-        Map<K, V> map = new LinkedHashMap<>();
-        map.put(k, v);
-        return Collections.unmodifiableMap(map);
-    }
-
-    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2)
-    {
-        Map<K, V> map = new LinkedHashMap<>();
-        map.put(k1, v1);
-        map.put(k2, v2);
-        return Collections.unmodifiableMap(map);
-    }
-
-    public static <K, V> Map<K, V> mapOf(K k1, V v1, K k2, V v2, K k3, V v3)
-    {
-        Map<K, V> map = new LinkedHashMap<>();
-        map.put(k1, v1);
-        map.put(k2, v2);
-        map.put(k3, v3);
-        return Collections.unmodifiableMap(map);
     }
     
     public static Optional<Class<?>> getClassIfEnum(Class<?> c) {
@@ -525,26 +462,7 @@ public class MetaUtils
 
         final String cacheKey = createCacheKey(c, argumentValues);
         CachedConstructor cachedConstructor = constructors.get(cacheKey);
-        if (cachedConstructor == null)
-        {
-            if (unmodifiableSortedMap.getClass().isAssignableFrom(c)) {
-                return new TreeMap<>();
-            }
-            if (unmodifiableMap.getClass().isAssignableFrom(c)) {
-                return new LinkedHashMap<>();
-            }
-            if (unmodifiableSortedSet.getClass().isAssignableFrom(c)) {
-                return new TreeSet<>();
-            }
-            if (unmodifiableSet.getClass().isAssignableFrom(c)) {
-                return new LinkedHashSet<>();
-            }
-            if (unmodifiableCollection.getClass().isAssignableFrom(c)) {
-                return new ArrayList<>();
-            }
-            if (Collections.EMPTY_LIST.getClass().equals(c)) {
-                return Collections.emptyList();
-            }
+        if (cachedConstructor == null) {
             if (c.isInterface()) {
                 throw new JsonIoException("Cannot instantiate unknown interface: " + c.getName());
             }

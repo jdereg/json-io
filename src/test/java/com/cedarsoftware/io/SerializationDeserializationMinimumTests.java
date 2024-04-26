@@ -8,6 +8,8 @@ import com.cedarsoftware.util.DeepEquals;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -40,7 +42,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     protected abstract Class<T> getTestClass();
 
     protected List<String> getPossibleClassNamesForType() {
-        return MetaUtils.listOf(getTestClass().getName());
+        return listOf(getTestClass().getName());
     }
 
     protected boolean isReferenceable() {
@@ -343,7 +345,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
 
     @Test
     protected void testCollection_withNoDuplicates() {
-        List expected = MetaUtils.listOf(provideT1(), provideT2(), provideT3(), provideT4());
+        List expected = listOf(provideT1(), provideT2(), provideT3(), provideT4());
 
         // act
         List actual = TestUtil.serializeDeserialize(expected);
@@ -364,7 +366,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testCollection_withDuplicates() {
         T instance = provideT1();
-        List expected = MetaUtils.listOf(instance, provideT2(), provideT3(), provideT4(), instance);
+        List expected = listOf(instance, provideT2(), provideT3(), provideT4(), instance);
 
         // act
         String json = TestUtil.toJson(expected);
@@ -391,7 +393,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testMap_withNoDuplicates() {
         // arrange
-        Map<String, T> expected = MetaUtils.mapOf("foo", provideT1(), "bar", provideT2());
+        Map<String, T> expected = mapOf("foo", provideT1(), "bar", provideT2());
 
         // act
         String json = TestUtil.toJson(expected);
@@ -415,7 +417,7 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     @Test
     protected void testMap_withDuplicates() {
         T instance = provideT4();
-        Map<String, T> expected = MetaUtils.mapOf("foo", instance, "bar", instance);
+        Map<String, T> expected = mapOf("foo", instance, "bar", instance);
 
         // act
         String json = TestUtil.toJson(expected);

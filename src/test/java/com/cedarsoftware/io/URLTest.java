@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -119,7 +120,7 @@ class URLTest
     @Test
     void testURL_referencedInArray() throws Exception {
         URL url = new URL(OUTSIDE_DOMAIN);
-        List<URL> list = MetaUtils.listOf(url, url, url, url, url);
+        List<URL> list = listOf(url, url, url, url, url);
         String json = TestUtil.toJson(list);
 
         List<URL> actual = TestUtil.toObjects(json, null);

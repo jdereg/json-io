@@ -36,6 +36,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.setOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -215,7 +217,7 @@ class WriteOptionsTest {
                 Arguments.of("java.util.TreeMap", "TreeMap"),
                 Arguments.of("java.util.LinkedHashMap", "LinkedHashMap"),
                 Arguments.of("java.util.Collections$SingletonMap", "SingletonMap"),
-                Arguments.of("java.util.Collections$UnmodifiableMap", "UnmodifiableMap"),
+                Arguments.of("java.util.Collections$UnmodifiableMap", "FixedMap"),
                 Arguments.of("java.util.HashMap$KeySet", "HashMapKeySet"),
                 Arguments.of("java.util.concurrent.ConcurrentHashMap$KeySetView", "ConcurrentHashMapKeySetView"),
                 Arguments.of("java.util.concurrent.ConcurrentSkipListMap$KeySet", "ConcurrentSkipListMapKeySet")
@@ -246,7 +248,7 @@ class WriteOptionsTest {
 
     @Test
     void testAliasTypeNames_addedByMap() {
-        Map<String, String> map = MetaUtils.mapOf("int", "properInt", "long", "properLong");
+        Map<String, String> map = mapOf("int", "properInt", "long", "properLong");
 
         WriteOptions options = new WriteOptionsBuilder()
                 .aliasTypeNames(map)
@@ -259,7 +261,7 @@ class WriteOptionsTest {
     // TODO: not sure we want to throw an exception on this?
     @Test
     void teatAliasTypeNames_whenAliasAlreadyExists_throwsException() {
-        Map<String, String> map = MetaUtils.mapOf("java.lang.Integer", "properInt");
+        Map<String, String> map = mapOf("java.lang.Integer", "properInt");
 
         WriteOptionsBuilder builder = new WriteOptionsBuilder();
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> builder.aliasTypeNames(map));
@@ -348,7 +350,7 @@ class WriteOptionsTest {
 
     @Test
     void testCustomWrittenClasses_asAsMap() {
-        Map<Class<?>, JsonWriter.JsonClassWriter> map = MetaUtils.mapOf(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter());
+        Map<Class<?>, JsonWriter.JsonClassWriter> map = mapOf(CustomWriterTest.Person.class, new CustomWriterTest.CustomPersonWriter());
 
         WriteOptions options = new WriteOptionsBuilder()
                 .addCustomWrittenClasses(map)
@@ -386,7 +388,7 @@ class WriteOptionsTest {
     @Test
     void testSetNotCustomWrittenClasses() {
         WriteOptions options = new WriteOptionsBuilder()
-                .setNotCustomWrittenClasses(MetaUtils.setOf(String.class, Long.class, Integer.class))
+                .setNotCustomWrittenClasses(setOf(String.class, Long.class, Integer.class))
                 .build();
 
         assertThat(options.isCustomWrittenClass(String.class)).isTrue();

@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -151,10 +152,10 @@ public class FloatTest
     public void testNanArrayElement()
     {
         WriteOptions args = new WriteOptionsBuilder().showTypeInfoNever().build();
-        String json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Float.NaN)), args);
+        String json = TestUtil.toJson(new ArrayList<>(listOf(Float.NaN)), args);
         assert json.contains("null");
 
-        json = TestUtil.toJson(new ArrayList<>(MetaUtils.listOf(Float.NEGATIVE_INFINITY)), args);
+        json = TestUtil.toJson(new ArrayList<>(listOf(Float.NEGATIVE_INFINITY)), args);
         assert json.contains("null");
 
         LinkedHashMap<String, Float> map = new LinkedHashMap<>(1);
@@ -216,10 +217,10 @@ public class FloatTest
     public void testNanArrayElement2()
     {
         WriteOptions options = new WriteOptionsBuilder().allowNanAndInfinity(false).build();
-        String json = TestUtil.toJson(MetaUtils.listOf(Float.NaN), options);
+        String json = TestUtil.toJson(listOf(Float.NaN), options);
         assert json.contains("null");
 
-        json = TestUtil.toJson(MetaUtils.listOf(Float.NEGATIVE_INFINITY), options);
+        json = TestUtil.toJson(listOf(Float.NEGATIVE_INFINITY), options);
         assert json.contains("null");
 
         LinkedHashMap<String, Float> map = new LinkedHashMap<>(1);

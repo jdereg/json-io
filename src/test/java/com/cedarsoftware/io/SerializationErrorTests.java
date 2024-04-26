@@ -12,6 +12,7 @@ import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,7 +46,7 @@ class SerializationErrorTests {
     @Test
     void testClone_whenWantingToAddtoDatabase_ClearsTheId() {
         WriteOptions writeOptions = new WriteOptionsBuilder()
-                .addExcludedFields(SecurityGroup.class, MetaUtils.listOf("id")).build();
+                .addExcludedFields(SecurityGroup.class, listOf("id")).build();
 
         SecurityGroup group = new SecurityGroup();
         group.setId(45L);

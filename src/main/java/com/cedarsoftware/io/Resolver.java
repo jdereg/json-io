@@ -11,13 +11,13 @@ import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
+import com.cedarsoftware.io.util.Unmodifiable;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -485,8 +485,7 @@ public abstract class Resolver {
 
     private EnumSet<?> extractEnumSet(Class c, JsonObject jsonObj) {
         String enumClassName = (String) jsonObj.get("@enum");
-        Class enumClass = enumClassName == null ? null
-                : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
+        Class enumClass = enumClassName == null ? null : ClassUtilities.forName(enumClassName, readOptions.getClassLoader());
         Object[] items = jsonObj.getJsonArray();
         if (items == null || items.length == 0) {
             if (enumClass != null) {
@@ -522,30 +521,29 @@ public abstract class Resolver {
      * that had not yet been encountered in the stream, make the final substitution.
      */
     private void patchUnresolvedReferences() {
-        Iterator i = unresolvedRefs.iterator();
-        while (i.hasNext()) {
-            UnresolvedReference ref = (UnresolvedReference) i.next();
+        for (UnresolvedReference ref : unresolvedRefs) {
             Object objToFix = ref.referencingObj.getTarget();
             JsonObject objReferenced = this.references.get(ref.refId);
 
             if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
-                if (objToFix instanceof List) {   // Patch up Indexable Collections
+                if (objToFix instanceof List) {
                     List list = (List) objToFix;
-                    list.set(ref.index, objReferenced.getTarget());
-                    String containingTypeName = ref.referencingObj.getJavaTypeName();
-                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("List")) {
-                        if (list.stream().noneMatch(c -> c == null || c instanceof JsonObject)) {
-                            list = MetaUtils.listOf(list.toArray());
-                            ref.referencingObj.setTarget(list);
-                        }
+                    if (objToFix instanceof Unmodifiable) {   // Patch up Indexable Collections
+                        Unmodifiable unmodifiable = (Unmodifiable) objToFix;
+                        unmodifiable.unseal();
+                        list.set(ref.index, objReferenced.getTarget());
+                        unmodifiable.seal();
+                    } else {   // Patch up Indexable Collections
+                        list.set(ref.index, objReferenced.getTarget());
                     }
-                } else if (objToFix instanceof Collection) {
-                    String containingTypeName = ref.referencingObj.getJavaTypeName();
+                } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
                     Collection col = (Collection) objToFix;
-                    if (containingTypeName != null && containingTypeName.startsWith("java.util.Immutable") && containingTypeName.contains("Set")) {
-                        throw new JsonIoException("Error setting set entry of ImmutableSet '" + ref.referencingObj.getJavaTypeName() + "', @ref = " + ref.refId);
+                    if (objToFix instanceof Unmodifiable) {
+                        Unmodifiable unmodifiable = (Unmodifiable) objToFix;
+                        unmodifiable.unseal();
+                        col.add(objReferenced.getTarget());
+                        unmodifiable.seal();
                     } else {
-                        // Add element (since it was not indexable, add it to collection)
                         col.add(objReferenced.getTarget());
                     }
                 } else {

@@ -36,6 +36,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -60,28 +62,28 @@ public class MetaUtilsTests {
 
     private static Stream<Arguments> ensureFillArgsInstanceOf() {
         return Stream.of(
-                Arguments.of(Set.class, MetaUtils.listOf(LinkedHashSet.class, Set.class)),
-                Arguments.of(SortedSet.class, MetaUtils.listOf(SortedSet.class, Set.class, TreeSet.class)),
-                Arguments.of(SortedMap.class, MetaUtils.listOf(SortedMap.class, TreeMap.class)),
-                Arguments.of(Collection.class, MetaUtils.listOf(Collection.class, ArrayList.class)),
-                Arguments.of(Calendar.class, MetaUtils.listOf(Calendar.class)),
-                Arguments.of(TimeZone.class, MetaUtils.listOf(TimeZone.class)),
-                Arguments.of(BigInteger.class, MetaUtils.listOf(BigInteger.class)),
-                Arguments.of(BigDecimal.class, MetaUtils.listOf(BigDecimal.class, BigDecimal.class)),
-                Arguments.of(StringBuilder.class, MetaUtils.listOf(StringBuilder.class)),
-                Arguments.of(StringBuffer.class, MetaUtils.listOf(StringBuffer.class)),
-                Arguments.of(Locale.class, MetaUtils.listOf(Locale.class)),
-                Arguments.of(Timestamp.class, MetaUtils.listOf(Timestamp.class)),
-                Arguments.of(Date.class, MetaUtils.listOf(Date.class)),
-                Arguments.of(Class.class, MetaUtils.listOf(Class.class)),
-                Arguments.of(LocalDate.class, MetaUtils.listOf(LocalDate.class)),
-                Arguments.of(LocalDateTime.class, MetaUtils.listOf(LocalDateTime.class)),
-                Arguments.of(ZonedDateTime.class, MetaUtils.listOf(ZonedDateTime.class)),
-                Arguments.of(ZoneId.class, MetaUtils.listOf(ZoneId.class)),
-                Arguments.of(AtomicBoolean.class, MetaUtils.listOf(AtomicBoolean.class)),
-                Arguments.of(AtomicInteger.class, MetaUtils.listOf(AtomicInteger.class)),
-                Arguments.of(AtomicLong.class, MetaUtils.listOf(AtomicLong.class)),
-                Arguments.of(Object.class, MetaUtils.listOf(Object.class)));
+                Arguments.of(Set.class, listOf(LinkedHashSet.class, Set.class)),
+                Arguments.of(SortedSet.class, listOf(SortedSet.class, Set.class, TreeSet.class)),
+                Arguments.of(SortedMap.class, listOf(SortedMap.class, TreeMap.class)),
+                Arguments.of(Collection.class, listOf(Collection.class, ArrayList.class)),
+                Arguments.of(Calendar.class, listOf(Calendar.class)),
+                Arguments.of(TimeZone.class, listOf(TimeZone.class)),
+                Arguments.of(BigInteger.class, listOf(BigInteger.class)),
+                Arguments.of(BigDecimal.class, listOf(BigDecimal.class, BigDecimal.class)),
+                Arguments.of(StringBuilder.class, listOf(StringBuilder.class)),
+                Arguments.of(StringBuffer.class, listOf(StringBuffer.class)),
+                Arguments.of(Locale.class, listOf(Locale.class)),
+                Arguments.of(Timestamp.class, listOf(Timestamp.class)),
+                Arguments.of(Date.class, listOf(Date.class)),
+                Arguments.of(Class.class, listOf(Class.class)),
+                Arguments.of(LocalDate.class, listOf(LocalDate.class)),
+                Arguments.of(LocalDateTime.class, listOf(LocalDateTime.class)),
+                Arguments.of(ZonedDateTime.class, listOf(ZonedDateTime.class)),
+                Arguments.of(ZoneId.class, listOf(ZoneId.class)),
+                Arguments.of(AtomicBoolean.class, listOf(AtomicBoolean.class)),
+                Arguments.of(AtomicInteger.class, listOf(AtomicInteger.class)),
+                Arguments.of(AtomicLong.class, listOf(AtomicLong.class)),
+                Arguments.of(Object.class, listOf(Object.class)));
 
     }
 
@@ -135,21 +137,21 @@ public class MetaUtilsTests {
 
     @Test
     void getWithDefault_whenObjectIsFound_returnsObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
+        Map map = mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForMissing(map, "foo", "qux");
         assertThat(actual).isEqualTo("bar");
     }
 
     @Test
     void getWithDefault_whenObjectIsNotFound_returnsDefaultObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
+        Map map = mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForMissing(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }
 
     @Test
     void getWithDefaultForNull_whenObjectIsNotFound_returnsDefaultObject() {
-        Map map = MetaUtils.mapOf("foo", "bar");
+        Map map = mapOf("foo", "bar");
         String actual = MetaUtils.getValueWithDefaultForNull(map, "blah", "qux");
         assertThat(actual).isEqualTo("qux");
     }

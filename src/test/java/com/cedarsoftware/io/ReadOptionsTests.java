@@ -8,6 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.setOf;
+
 public class ReadOptionsTests {
 
     private static Stream<Arguments> filteredFields() {
@@ -22,7 +24,7 @@ public class ReadOptionsTests {
     void testContains_fieldsThatShouldBeFiltered(Class c, String... fieldNames) {
 
         ReadOptions options = new ReadOptionsBuilder().build();
-        Set set = MetaUtils.setOf(fieldNames);
+        Set set = setOf(fieldNames);
 //        List<Field> fields = getFields(c, set);
 //
 //        KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
@@ -35,7 +37,7 @@ public class ReadOptionsTests {
     @Test
     void testAddMapping() {
 //        KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
-//        List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("detailMessage"));
+//        List<Field> fields = getFields(Throwable.class, CollectionUtilities.setOf("detailMessage"));
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isFalse();
 //
 //        knownFilteredFields.addFieldFilter(Throwable.class, "detailMessage");
@@ -45,11 +47,11 @@ public class ReadOptionsTests {
     @Test
     void testAddMappings() {
 //        KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
-//        List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("detailMessage", "cause"));
+//        List<Field> fields = getFields(Throwable.class, CollectionUtilities.setOf("detailMessage", "cause"));
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isFalse();
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(1))).isFalse();
 //
-//        knownFilteredFields.addFieldFilters(Throwable.class, MetaUtils.listOf("detailMessage", "cause"));
+//        knownFilteredFields.addFieldFilters(Throwable.class, CollectionUtilities.listOf("detailMessage", "cause"));
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isTrue();
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(1))).isTrue();
     }
@@ -57,7 +59,7 @@ public class ReadOptionsTests {
     @Test
     void testRemoveMapping() {
 //        KnownFilteredFields knownFilteredFields = KnownFilteredFields.instance();
-//        List<Field> fields = getFields(Throwable.class, MetaUtils.setOf("stackTrace"));
+//        List<Field> fields = getFields(Throwable.class, CollectionUtilities.setOf("stackTrace"));
 //        assertThat(knownFilteredFields.isFieldFiltered(fields.get(0))).isTrue();
 //
 //        knownFilteredFields.removeFieldFilters(Throwable.class, "stackTrace");

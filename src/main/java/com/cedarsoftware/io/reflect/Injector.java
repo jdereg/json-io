@@ -92,11 +92,14 @@ public class Injector {
             }
             try {
                 injector.invoke(object, Converter.convert(value, field.getType()));
-            } catch (Throwable ex) {
+            } catch (Throwable t) {
                 throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastExcepton.", e);
             }
         }
         catch (Throwable t) {
+            if (t instanceof JsonIoException) {
+                throw (JsonIoException) t;
+            }
             throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName(), t);
         }
     }

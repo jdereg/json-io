@@ -6,21 +6,9 @@ java.time.ZoneRegion = java.time.ZoneId
 
 java.util.Arrays$ArrayList = java.util.ArrayList
 
-java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.util.EmptyEnumeration
-java.util.Collections$EmptyIterator = com.cedarsoftware.io.util.EmptyIterator
-java.util.Collections$EmptyListIterator = com.cedarsoftware.io.util.EmptyListIterator
-java.util.Collections$EmptySet = com.cedarsoftware.io.util.EmptySet
-java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoftware.io.util.EmptyNavigableSet
-java.util.Collections$EmptyMap = com.cedarsoftware.io.util.EmptyMap
-java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.util.EmptyNavigableMap
-
 java.util.Collections$SingletonList = com.cedarsoftware.io.util.SingletonList
 java.util.Collections$SingletonSet = com.cedarsoftware.io.util.SingletonSet
 java.util.Collections$SingletonMap = com.cedarsoftware.io.util.SingletonMap
-
-java.util.Collections$UnmodifiableMap = java.util.LinkedHashMap
-java.util.Collections$UnmodifiableRandomAccessList = java.util.ArrayList
-java.util.Collections$UnmodifiableSet = java.util.LinkedHashSet
 
 java.util.Collections$SynchronizedCollection = com.cedarsoftware.util.ConcurrentList
 java.util.Collections$SynchronizedList = com.cedarsoftware.util.ConcurrentList

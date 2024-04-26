@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -484,7 +485,7 @@ class MapOfMapsTest
         pCopy.setAge(new BigDecimal("39"));
         pCopy.setBirthYear(1975);
         pCopy.setIq(new BigInteger("140"));
-        List<Person> list = MetaUtils.listOf(p, p, pCopy);
+        List<Person> list = listOf(p, p, pCopy);
 
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().showTypeInfoNever().build());
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
@@ -509,8 +510,8 @@ class MapOfMapsTest
         pCopy.setBirthYear(1975);
         pCopy.setIq(new BigInteger("140"));
 
-        List<Person> list = MetaUtils.listOf(p, p, pCopy);
-        List<List<Person>> holder = MetaUtils.listOf(list, list);
+        List<Person> list = listOf(p, p, pCopy);
+        List<List<Person>> holder = listOf(list, list);
 
         String json = TestUtil.toJson(holder, new WriteOptionsBuilder().showTypeInfoNever().build());
         Object[] array = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);

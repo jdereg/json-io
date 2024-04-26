@@ -2,6 +2,7 @@ package com.cedarsoftware.io.factory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -11,27 +12,30 @@ import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
 
 /**
- * Use to create new instances of Map interfaces (needed for empty Maps).  Used
- * internally to handle Map, SortedMap when they are within parameterized types.
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ * <br>
+ * Copyright (c) Cedar Software LLC
+ * <br><br>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <br><br>
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">License</a>
+ * <br><br>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-@Deprecated // Not really, indicating it is creating, but not LOADING.
-public class MapFactory implements JsonReader.ClassFactory
-{
-    /**
-     * @param c        Map interface that was requested for instantiation.
-     * @param jObj     JsonObject
-     * @param resolver
-     * @return a concrete Map type.
-     */
-    @Override
-    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver)
-    {
-        if (SortedMap.class.isAssignableFrom(c))
-        {
+public class MapFactory implements JsonReader.ClassFactory {
+
+    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
+        if (NavigableMap.class.isAssignableFrom(c)) {
             return new TreeMap<>();
-        }
-        else if (Map.class.isAssignableFrom(c))
-        {
+        } else if (SortedMap.class.isAssignableFrom(c)) {
+            return new TreeMap<>();
+        } else if (Map.class.isAssignableFrom(c)) {
             return new LinkedHashMap<>();
         }
         throw new JsonIoException("MapFactory handed Class for which it was not expecting: " + c.getName());

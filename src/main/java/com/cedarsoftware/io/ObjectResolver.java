@@ -5,17 +5,23 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.SortedSet;
 
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.util.ArrayUtilities;
+import com.cedarsoftware.io.util.Unmodifiable;
+import com.cedarsoftware.io.util.UnmodifiableList;
+import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
+import com.cedarsoftware.io.util.UnmodifiableSet;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -275,11 +281,7 @@ public class ObjectResolver extends Resolver
      */
     protected void traverseCollection(final JsonObject jsonObj)
     {
-        final String className = jsonObj.getJavaTypeName();
-        final Object[] items = jsonObj.getJsonArray();
-        if (ArrayUtilities.isEmpty(items)) {
-            return;
-        }
+        Object[] items = jsonObj.getJsonArray();
 
         Class mayEnumClass = null;
         String mayEnumClasName = (String)jsonObj.get("@enum");
@@ -287,86 +289,87 @@ public class ObjectResolver extends Resolver
             mayEnumClass = ClassUtilities.forName(mayEnumClasName, classLoader);
         }
 
-        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-        final Collection col = isImmutable ? new ArrayList<>() : (Collection) jsonObj.getTarget();
+        final Collection col = (Collection) jsonObj.getTarget();
         final boolean isList = col instanceof List;
         int idx = 0;
-        
-        for (final Object element : items) {
-            Object special;
-            if (element == null) {
-                col.add(null);
-            } else if ((special = readWithFactoryIfExists(element, null)) != null) {
-                col.add(special);
-            } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
-                col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
-            } else if (element.getClass().isArray()) {
-                final JsonObject jObj = new JsonObject();
-                jObj.setHintType(Object.class);
-                jObj.setJsonArray((Object[]) element);
-                createInstance(jObj);
-                col.add(jObj.getTarget());
-                push(jObj);
-            } else { // if (element instanceof JsonObject)
-                final JsonObject jObj = (JsonObject) element;
-                final Long ref = jObj.getReferenceId();
 
-                if (ref != null) {
-                    JsonObject refObject = getReferences().get(ref);
+        if (items != null) {
+            for (final Object element : items) {
+                Object special;
+                if (element == null) {
+                    col.add(null);
+                } else if ((special = readWithFactoryIfExists(element, null)) != null) {
+                    col.add(special);
+                } else if (element instanceof String || element instanceof Boolean || element instanceof Double || element instanceof Long) {    // Allow Strings, Booleans, Longs, and Doubles to be "inline" without Java object decoration (@id, @type, etc.)
+                    col.add(mayEnumClass == null ? element : Enum.valueOf(mayEnumClass, (String) element));
+                } else if (element.getClass().isArray()) {
+                    final JsonObject jObj = new JsonObject();
+                    jObj.setHintType(Object.class);
+                    jObj.setJsonArray((Object[]) element);
+                    createInstance(jObj);
+                    col.add(jObj.getTarget());
+                    push(jObj);
+                } else { // if (element instanceof JsonObject)
+                    final JsonObject jObj = (JsonObject) element;
+                    final Long ref = jObj.getReferenceId();
 
-                    if (refObject.getTarget() != null) {
-                        col.add(refObject.getTarget());
+                    if (ref != null) {
+                        JsonObject refObject = getReferences().get(ref);
+
+                        if (refObject.getTarget() != null) {
+                            col.add(refObject.getTarget());
+                        } else {
+                            unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
+                            if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
+                                col.add(null);
+                            }
+                        }
                     } else {
-                        unresolvedRefs.add(new UnresolvedReference(jsonObj, idx, ref));
-                        if (isList) {   // Index-able collection, so set 'null' as element for now - will be patched in later.
-                            col.add(null);
+                        jObj.setHintType(Object.class);
+                        createInstance(jObj);
+                        boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
+                        if (!isNonRefClass) {
+                            traverseSpecificType(jObj);
+                        }
+
+                        if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
+                            col.add(jObj.getTarget());
                         }
                     }
-                } else {
-                    jObj.setHintType(Object.class);
-                    createInstance(jObj);
-                    boolean isNonRefClass = getReadOptions().isNonReferenceableClass(jObj.getJavaType());
-                    if (!isNonRefClass) {
-                        traverseSpecificType(jObj);
-                    }
-
-                    if (!(col instanceof EnumSet)) {   // EnumSet has already had it's items added to it.
-                        col.add(jObj.getTarget());
-                    }
                 }
+                idx++;
             }
-            idx++;
         }
-        
-        reconcileCollection(jsonObj, col);
+
+        if (col instanceof Unmodifiable) {
+            convertToRealUnmodifiable(jsonObj, col);
+        }
         jsonObj.clear();   // Reduce memory required during processing
     }
 
-    public static void reconcileCollection(JsonObject jsonObj, Collection col)
+    private static void convertToRealUnmodifiable(JsonObject jsonObj, Collection col)
     {
-        final String className = jsonObj.getJavaTypeName();
-        final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
-
-        if (!isImmutable) {
-            return;
-        }
-        if (col == null && jsonObj.getTarget() instanceof Collection) {
-            col = (Collection) jsonObj.getTarget();
-        }
-        if (col == null) {
-            return;
-        }
-
-        if (className.contains("List")) {
-            if (col.stream().noneMatch(c -> c == null || c instanceof JsonObject)) {
-                jsonObj.setTarget(MetaUtils.listOf(col.toArray()));
-            } else {
-                jsonObj.setTarget(col);
-            }
-        } else if (className.contains("Set")) {
-            jsonObj.setTarget(MetaUtils.setOf(col.toArray()));
+        Class<?> type = jsonObj.getJavaType();
+        if (NavigableSet.class.isAssignableFrom(type)) {
+            Unmodifiable unmodNavSet = new UnmodifiableNavigableSet<>(col);
+            unmodNavSet.seal();
+            jsonObj.setTarget(unmodNavSet);
+        } else if (SortedSet.class.isAssignableFrom(type)) {
+            Unmodifiable unmodSortedSet = new UnmodifiableNavigableSet<>(col);
+            unmodSortedSet.seal();
+            jsonObj.setTarget(unmodSortedSet);
+        } else if (Set.class.isAssignableFrom(type)) {
+            Unmodifiable unmodSet = new UnmodifiableSet(col);
+            unmodSet.seal();
+            jsonObj.setTarget(unmodSet);
+        } else if (List.class.isAssignableFrom(type)) {
+            Unmodifiable unmodList = new UnmodifiableList((List)col);
+            unmodList.seal();
+            jsonObj.setTarget(unmodList);
+        } else if (Collection.class.isAssignableFrom(type)) {
+            jsonObj.setTarget(Collections.unmodifiableCollection(col));
         } else {
-            jsonObj.setTarget(col);
+            throw new JsonIoException("Encountered unknown unmodifiable Collection type: " + type.getName());
         }
     }
 

@@ -12,6 +12,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,7 +136,7 @@ public class TimeZoneTests
     void testTimeZone_inCollection()
     {
         // arrange
-        List expected = MetaUtils.listOf(getEST(), getPST());
+        List expected = listOf(getEST(), getPST());
 
         // act
         String json = TestUtil.toJson(expected);
@@ -151,7 +153,7 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asValue()
     {
-       Map expected = MetaUtils.mapOf("p", getPST());
+       Map expected = mapOf("p", getPST());
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
@@ -166,7 +168,7 @@ public class TimeZoneTests
     @SuppressWarnings("unchecked")
     void testTimeZone_inMap_asKey()
     {
-        Map expected = MetaUtils.mapOf(getPST(), "p");
+        Map expected = mapOf(getPST(), "p");
 
         String json = TestUtil.toJson(expected);
         TestUtil.printLine("json=" + json);
@@ -275,7 +277,7 @@ public class TimeZoneTests
     void testTimeZone_referencedInList() throws Exception {
         // arrange
         TimeZone tz =  getPST();
-        List list = MetaUtils.listOf(tz, tz, tz, tz, tz);
+        List list = listOf(tz, tz, tz, tz, tz);
 
         // act
         String json = TestUtil.toJson(list);

@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -90,10 +91,10 @@ class EnumTests {
     void testCollectionOfEnums(WriteOptions writeOptions) {
 
         List input = new LinkedList<>();
-        input.addAll(MetaUtils.listOf(TestEnum1.values()));
-        input.addAll(MetaUtils.listOf(TestEnum2.values()));
-        input.addAll(MetaUtils.listOf(TestEnum3.values()));
-        input.addAll(MetaUtils.listOf(ExternalEnum.values()));
+        input.addAll(listOf(TestEnum1.values()));
+        input.addAll(listOf(TestEnum2.values()));
+        input.addAll(listOf(TestEnum3.values()));
+        input.addAll(listOf(ExternalEnum.values()));
 
         String json = TestUtil.toJson(input, writeOptions);
 
@@ -202,7 +203,7 @@ class EnumTests {
 
     @Test
     void testEnumInCollection_whenEnumsAreObject_andNoType_justOutputsPublicFields() {
-        List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
+        List list = listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
         WriteOptions options = new WriteOptionsBuilder()
                 .writeEnumAsJsonObject(true)
@@ -215,7 +216,7 @@ class EnumTests {
 
     @Test
     void testEnumInCollection_whenEnumsArePrimitive_andNoType_outputsNameOnly() {
-        List list = MetaUtils.listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
+        List list = listOf(FederationStrategy.FEDERATE_THIS, FederationStrategy.EXCLUDE);
 
         WriteOptions options = new WriteOptionsBuilder().showTypeInfoNever().build();
 

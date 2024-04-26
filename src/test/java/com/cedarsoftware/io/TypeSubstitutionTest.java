@@ -8,6 +8,8 @@ import java.util.Map;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -33,7 +35,7 @@ public class TypeSubstitutionTest
         LinkedHashMap<String, String> map = new LinkedHashMap<>(1);
         map.put("java.util.ArrayList", "al");
         Map<String, String> types = map;
-        List list = MetaUtils.listOf("alpha", "bravo", "charlie");
+        List list = listOf("alpha", "bravo", "charlie");
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().aliasTypeNames(types).build());
         List test = TestUtil.toObjects(json, new ReadOptionsBuilder().aliasTypeNames(types).build(), null);
         assert DeepEquals.deepEquals(list, test);

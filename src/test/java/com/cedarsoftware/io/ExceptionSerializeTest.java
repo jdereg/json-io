@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.io.JsonWriter.writeBasicString;
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -76,7 +78,7 @@ class ExceptionSerializeTest
                 arguments.add(cause);
             }
 
-            gatherRemainingValues(resolver, jObj, arguments, MetaUtils.setOf("detailMessage", "cause"));
+            gatherRemainingValues(resolver, jObj, arguments, setOf("detailMessage", "cause"));
 
             MyException myEx = (MyException) createException(msg, cause);
             Long rn = (Long) jObj.get("recordNumber");
@@ -287,7 +289,7 @@ class ExceptionSerializeTest
 
     @Test
     void testExceptionWithNonStandardConstructors() {
-        ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
+        ExceptionWithAThousandCuts t1 = new ExceptionWithAThousandCuts(listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis("())")));
 
         String json = TestUtil.toJson(t1);
         ExceptionWithAThousandCuts t2 = TestUtil.toObjects(json, null);
@@ -299,7 +301,7 @@ class ExceptionSerializeTest
 
     @Test
     void testMultiParameterExceptionWithNullFields() {
-        List<StupidEmojis> emojis = MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
+        List<StupidEmojis> emojis = listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
         MultipleParameterConstructor t1 = new MultipleParameterConstructor("foobar",
                 "some random thoughts",
                 null,
@@ -324,7 +326,7 @@ class ExceptionSerializeTest
 
     @Test
     void testMultiParameterExceptionWithNullFields1() {
-        List<StupidEmojis> emojis = MetaUtils.listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
+        List<StupidEmojis> emojis = listOf(new StupidEmojis(":)"), new StupidEmojis("(:"), new StupidEmojis(":o)"));
         MultipleParameterConstructor t1 = new MultipleParameterConstructor("some random thoughts",
                 "message",
                 null,

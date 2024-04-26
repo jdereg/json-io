@@ -13,6 +13,7 @@ import java.util.TimeZone;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -90,7 +91,7 @@ public class NoTypeTest
         Junk j = new Junk();
         j.setStuff(new Object[]{1, 2L, BigInteger.valueOf(3), new BigDecimal("4"), cal.getTime(), "Hello", Junk.class});
         j.setName("Zeus");
-        j.setThings(MetaUtils.listOf(1, 2L, BigInteger.valueOf(3), new BigDecimal("4"), cal.getTime(), "Hello", Junk.class));
+        j.setThings(listOf(1, 2L, BigInteger.valueOf(3), new BigDecimal("4"), cal.getTime(), "Hello", Junk.class));
         j.getNamesToAge().put("Appollo", 2500L);
         j.getNamesToAge().put("Hercules", 2489);
         j.getNamesToAge().put("Poseidon", BigInteger.valueOf(2502));
@@ -133,7 +134,7 @@ public class NoTypeTest
     void testCollections()
     {
         CollectionTest cols = new CollectionTest();
-        cols.setFoos(MetaUtils.listOf(1, 2, "4", 8));
+        cols.setFoos(listOf(1, 2, "4", 8));
         cols.setBars(new Object[]{1, 3, "5", 7});
 
         String json = TestUtil.toJson(cols, new WriteOptionsBuilder().showTypeInfoNever().build());
@@ -152,7 +153,7 @@ public class NoTypeTest
         assert listBars[2].equals("5");
         assert listBars[3].equals(7L);
 
-        json = TestUtil.toJson(MetaUtils.listOf(1, 2, 3, 4), new WriteOptionsBuilder().showTypeInfoNever().build());
+        json = TestUtil.toJson(listOf(1, 2, 3, 4), new WriteOptionsBuilder().showTypeInfoNever().build());
         assert "[1,2,3,4]".equals(json);
 
         json = TestUtil.toJson(new Object[]{1, 2, 3, 4}, new WriteOptionsBuilder().showTypeInfoNever().build());

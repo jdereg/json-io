@@ -3,7 +3,6 @@ package com.cedarsoftware.io.reflect;
 import java.util.Date;
 import java.util.List;
 
-import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.TestUtil;
 import com.cedarsoftware.io.WriteOptions;
 import com.cedarsoftware.io.WriteOptionsBuilder;
@@ -13,13 +12,14 @@ import com.cedarsoftware.io.reflect.filters.models.Entity;
 import com.cedarsoftware.io.reflect.filters.models.Part;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ClassDescriptorsTests {
     @Test
     void testCloningObject_withFieldBlacklistedAtSubclassOfEntity_fieldsAreAvailableOnOtherSubsOfEntity() {
         WriteOptions options = new WriteOptionsBuilder()
-                .addExcludedFields(Car.class, MetaUtils.listOf("id", "updated", "created")).build();
+                .addExcludedFields(Car.class, listOf("id", "updated", "created")).build();
 
         Car initial = createCar();
 
@@ -46,7 +46,7 @@ class ClassDescriptorsTests {
     @Test
     void testCloningObject_fieldBlacklistedAtSuperClassEntity_isNotAvailableOnAnySubClass() {
         WriteOptions options = new WriteOptionsBuilder()
-                .addExcludedFields(Entity.class, MetaUtils.listOf("id", "updated", "created")).build();
+                .addExcludedFields(Entity.class, listOf("id", "updated", "created")).build();
 
         Car initial = createCar();
 
@@ -93,7 +93,7 @@ class ClassDescriptorsTests {
         exhaust.setDescription("Brand Dual Exhast");
         exhaust.setName("Brando");
 
-        return MetaUtils.listOf(tire, steeringWheel, exhaust);
+        return listOf(tire, steeringWheel, exhaust);
     }
 
     private List<Part> createAccessories() {
@@ -109,7 +109,7 @@ class ClassDescriptorsTests {
         exhaust.setDescription("Floor Mats");
         exhaust.setName("Floor Mats");
 
-        return MetaUtils.listOf(tire, steeringWheel, exhaust);
+        return listOf(tire, steeringWheel, exhaust);
     }
 
     private <T extends Entity> T create(T entity, Long id) {

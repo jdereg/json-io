@@ -6,17 +6,15 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
- * This class provides an immutable, empty implementation of the NavigableMap interface.
- * It is designed to be a singleton as there is no internal state that varies between instances.
+ * UnmodifiableNavigableMap provides a toggle between a mutable and immutable navigable map.
+ * The map can be sealed to prevent further modifications.
  *
- * @param <K> the type of keys maintained by this map
- * @param <V> the type of mapped values
- * @author John DeRegnaucourt
+ * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
  *         <br><br>
@@ -32,163 +30,179 @@ import java.util.SortedMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EmptyNavigableMap<K, V> implements NavigableMap<K, V> {
+public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmodifiable {
+    private final NavigableMap<K, V> map;
+    private boolean sealed = false;
+
+    public UnmodifiableNavigableMap() {
+        this.map = new TreeMap<>();
+    }
+
+    public UnmodifiableNavigableMap(Map<K, V> map) {
+        this.map = new TreeMap<>(map);
+    }
+
+    public void seal() {
+        sealed = true;
+    }
+
+    public void unseal() {
+        sealed = false;
+    }
+
+    private void checkIfSealed() {
+        if (sealed) {
+            throw new UnsupportedOperationException("This map has been sealed and is now immutable");
+        }
+    }
 
     public Comparator<? super K> comparator() {
-        return null;
+        return map.comparator();
     }
 
     public K firstKey() {
-        throw new NoSuchElementException("The map is empty.");
+        return map.firstKey();
     }
 
     public K lastKey() {
-        throw new NoSuchElementException("The map is empty.");
+        return map.lastKey();
     }
 
     public Entry<K, V> lowerEntry(K key) {
-        return null;
+        return map.lowerEntry(key);
     }
 
     public K lowerKey(K key) {
-        return null;
+        return map.lowerKey(key);
     }
 
     public Entry<K, V> floorEntry(K key) {
-        return null;
+        return map.floorEntry(key);
     }
 
     public K floorKey(K key) {
-        return null;
+        return map.floorKey(key);
     }
 
     public Entry<K, V> ceilingEntry(K key) {
-        return null;
+        return map.ceilingEntry(key);
     }
 
     public K ceilingKey(K key) {
-        return null;
+        return map.ceilingKey(key);
     }
 
     public Entry<K, V> higherEntry(K key) {
-        return null;
+        return map.higherEntry(key);
     }
 
     public K higherKey(K key) {
-        return null;
+        return map.higherKey(key);
     }
 
     public Entry<K, V> firstEntry() {
-        return null;
+        return map.firstEntry();
     }
 
     public Entry<K, V> lastEntry() {
-        return null;
+        return map.lastEntry();
     }
 
     public Entry<K, V> pollFirstEntry() {
-        return null;
+        checkIfSealed();
+        return map.pollFirstEntry();
     }
 
     public Entry<K, V> pollLastEntry() {
-        return null;
+        checkIfSealed();
+        return map.pollLastEntry();
     }
 
     public NavigableMap<K, V> descendingMap() {
-        return this;
+        return Collections.unmodifiableNavigableMap(map.descendingMap());
     }
 
     public NavigableSet<K> navigableKeySet() {
-        return Collections.emptyNavigableSet();
+        return Collections.unmodifiableNavigableSet(map.navigableKeySet());
     }
 
     public NavigableSet<K> descendingKeySet() {
-        return Collections.emptyNavigableSet();
+        return Collections.unmodifiableNavigableSet(map.descendingKeySet());
     }
 
     public NavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
-        return this;
+        return Collections.unmodifiableNavigableMap(map.subMap(fromKey, fromInclusive, toKey, toInclusive));
     }
 
     public NavigableMap<K, V> headMap(K toKey, boolean inclusive) {
-        return this;
+        return Collections.unmodifiableNavigableMap(map.headMap(toKey, inclusive));
     }
 
     public NavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
-        return this;
+        return Collections.unmodifiableNavigableMap(map.tailMap(fromKey, inclusive));
     }
 
     public SortedMap<K, V> subMap(K fromKey, K toKey) {
-        return this.subMap(fromKey, true, toKey, false);
+        return Collections.unmodifiableSortedMap(map.subMap(fromKey, toKey));
     }
 
     public SortedMap<K, V> headMap(K toKey) {
-        return this.headMap(toKey, false);
+        return Collections.unmodifiableSortedMap(map.headMap(toKey));
     }
 
     public SortedMap<K, V> tailMap(K fromKey) {
-        return this.tailMap(fromKey, true);
+        return Collections.unmodifiableSortedMap(map.tailMap(fromKey));
     }
 
     public int size() {
-        return 0;
+        return map.size();
     }
 
     public boolean isEmpty() {
-        return true;
+        return map.isEmpty();
     }
 
     public boolean containsKey(Object key) {
-        return false;
+        return map.containsKey(key);
     }
 
     public boolean containsValue(Object value) {
-        return false;
+        return map.containsValue(value);
     }
 
     public V get(Object key) {
-        return null;
+        return map.get(key);
     }
 
     public V put(K key, V value) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, put() not supported.");
+        checkIfSealed();
+        return map.put(key, value);
     }
 
     public V remove(Object key) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, remove() not supported.");
+        checkIfSealed();
+        return map.remove(key);
     }
 
     public void putAll(Map<? extends K, ? extends V> m) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, putAll() not supported.");
+        checkIfSealed();
+        map.putAll(m);
     }
 
     public void clear() {
-        // No-op
+        checkIfSealed();
+        map.clear();
     }
 
     public Set<K> keySet() {
-        return Collections.emptySet();
+        return Collections.unmodifiableSet(map.keySet());
     }
 
     public Collection<V> values() {
-        return Collections.emptyList();
+        return Collections.unmodifiableCollection(map.values());
     }
 
     public Set<Entry<K, V>> entrySet() {
-        return Collections.emptySet();
-    }
-
-    public boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        }
-        if (!(o instanceof Map)) {
-            return false;
-        }
-        return size() == ((Map<?, ?>) o).size();
-    }
-
-    public int hashCode() {
-        return 0;
+        return Collections.unmodifiableSet(map.entrySet());
     }
 }

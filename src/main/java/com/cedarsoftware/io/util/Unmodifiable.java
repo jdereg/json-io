@@ -1,10 +1,8 @@
 package com.cedarsoftware.io.util;
 
-import java.util.Comparator;
-import java.util.NoSuchElementException;
-import java.util.SortedSet;
-
 /**
+ * Marker interface to facilitate reconstruction of correct unmodifiable collection classes.
+ * 
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -21,28 +19,7 @@ import java.util.SortedSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EmptySortedSet<E> extends EmptySet<E> implements SortedSet<E> {
-    public Comparator<? super E> comparator() {
-        return null;
-    }
-
-    public SortedSet<E> subSet(E fromElement, E toElement) {
-        return new EmptySortedSet<>();
-    }
-
-    public SortedSet<E> headSet(E toElement) {
-        return new EmptySortedSet<>();
-    }
-
-    public SortedSet<E> tailSet(E fromElement) {
-        return new EmptySortedSet<>();
-    }
-
-    public E first() {
-        throw new NoSuchElementException("This is an EmptySortedSet, first() will always return null.");
-    }
-
-    public E last() {
-        throw new NoSuchElementException("This is an EmptySortedSet, last() will always return null.");
-    }
+public interface Unmodifiable {
+    void seal();
+    void unseal();
 }

@@ -17,6 +17,8 @@ import java.util.TreeSet;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -49,10 +51,10 @@ public class UnmodifiableCollectionTest
         col.add("baz");
         col.add("qux");
         col = Collections.unmodifiableCollection(col);
-        String json = TestUtil.toJson(col);
-        List<String> root = TestUtil.toObjects(json, null);
+        String json = TestUtil.toJson(col, new WriteOptionsBuilder().withExtendedAliases().build());
+        List<String> root = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, listOf("foo", "bar", "baz", "qux"));
 
         col = new ArrayList<>();
         col.add("foo");
@@ -63,7 +65,7 @@ public class UnmodifiableCollectionTest
         json = TestUtil.toJson(col);
         root = TestUtil.toObjects(json, null);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, MetaUtils.listOf("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, listOf("foo", "bar", "baz", "qux"));
     }
 
     @Test
@@ -78,7 +80,7 @@ public class UnmodifiableCollectionTest
         String json = TestUtil.toJson(col);
         Set<String> root = TestUtil.toObjects(json, null);
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, setOf("foo", "bar", "baz", "qux"));
 
         col = new HashSet<>();
         col.add("foo");
@@ -90,7 +92,7 @@ public class UnmodifiableCollectionTest
         root = TestUtil.toObjects(json, null);
         assert root instanceof Set;
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, MetaUtils.setOf("foo", "bar", "baz", "qux"));
+        assert DeepEquals.deepEquals(root, setOf("foo", "bar", "baz", "qux"));
 
         col = new TreeSet<>();
         col.add("foo");
@@ -102,7 +104,7 @@ public class UnmodifiableCollectionTest
         root = TestUtil.toObjects(json, null);
         assert root instanceof SortedSet;
         assert root.size() == 4;
-        assert DeepEquals.deepEquals(root, MetaUtils.setOf("bar", "baz", "foo", "qux"));
+        assert DeepEquals.deepEquals(root, setOf("bar", "baz", "foo", "qux"));
         // DeepEquals does not impose order on Sets for equivalency, which is correct
         assertEquals(root.iterator().next(), "bar");
     }

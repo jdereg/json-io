@@ -7,6 +7,9 @@ import java.util.Map;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
+
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -35,9 +38,9 @@ public class ShortMetaNamesTest
         b._other = a;
         Map map = new LinkedHashMap<>();
         map.put(a, b);
-        List list = MetaUtils.listOf(map);
+        List list = listOf(map);
 
-        Map<String, String> shortNames = MetaUtils.mapOf("java.util.ArrayList", "al", "java.util.LinkedHashMap", "lmap", TestObject.class.getName(), "to");
+        Map<String, String> shortNames = mapOf("java.util.ArrayList", "al", "java.util.LinkedHashMap", "lmap", TestObject.class.getName(), "to");
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).aliasTypeNames(shortNames).build());
         List clone = TestUtil.toObjects(json, new ReadOptionsBuilder().aliasTypeNames(shortNames).build(), null);
         assert DeepEquals.deepEquals(list, clone);

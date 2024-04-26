@@ -8,6 +8,8 @@ import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.MetaUtils;
 import com.cedarsoftware.io.Resolver;
 
+import static com.cedarsoftware.util.CollectionUtilities.setOf;
+
 /**
  * Factory class to create Throwable instances.  Needed for JDK17+ as the only way to set the
  * 'detailMessage' field on a Throwable is via its constructor.
@@ -51,7 +53,7 @@ public class ThrowableFactory implements JsonReader.ClassFactory
             arguments.add(cause);
         }
 
-        gatherRemainingValues(resolver, jObj, arguments, MetaUtils.setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
+        gatherRemainingValues(resolver, jObj, arguments, setOf(DETAIL_MESSAGE, CAUSE, STACK_TRACE));
 
         // Only need the values
         Throwable t = (Throwable) MetaUtils.newInstance(resolver.getConverter(), c, arguments);

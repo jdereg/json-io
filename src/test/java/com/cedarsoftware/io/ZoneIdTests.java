@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static com.cedarsoftware.io.TestUtil.toObjects;
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -107,7 +108,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     }
 
     protected List<String> getPossibleClassNamesForType() {
-        return MetaUtils.listOf(getTestClass().getName(), "java.time.ZoneRegion", "java.time.ZoneOffset");
+        return listOf(getTestClass().getName(), "java.time.ZoneRegion", "java.time.ZoneOffset");
     }
 
     @ParameterizedTest

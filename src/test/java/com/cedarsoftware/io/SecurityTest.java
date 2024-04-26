@@ -12,6 +12,7 @@ import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.ReflectionUtils;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -71,7 +72,7 @@ public class SecurityTest
         assert array[0] == null;
 
         // attempt to write inside List
-        List listOfObj = MetaUtils.listOf(obj);
+        List listOfObj = listOf(obj);
         json = TestUtil.toJson(listOfObj);
         o = TestUtil.toObjects(json, null);
         List list = (List) o;

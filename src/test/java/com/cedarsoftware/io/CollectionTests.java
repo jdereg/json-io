@@ -21,14 +21,14 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.cedarsoftware.io.util.EmptyNavigableSet;
-import com.cedarsoftware.io.util.EmptySet;
 import com.cedarsoftware.util.DeepEquals;
 import com.cedarsoftware.util.FastByteArrayOutputStream;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -86,9 +86,9 @@ class CollectionTests {
         Set<String> set = Collections.emptySet();
         String json = TestUtil.toJson(set, null);
         Set<String> set2 = TestUtil.toObjects(json, null);
-        assert set2 instanceof EmptySet;
+        assert set2.getClass().equals(Collections.emptySet().getClass());
         assert set2.isEmpty();
-        assertThrows(UnsupportedOperationException.class, () -> set2.add("foo")).getMessage().contains("Cannot add elements to an empty set");
+        assertThrows(UnsupportedOperationException.class, () -> set2.add("foo"));
     }
 
     @Test
@@ -98,7 +98,8 @@ class CollectionTests {
         String json = TestUtil.toJson(set, null);
         Set<String> set2 = TestUtil.toObjects(json, null);
         assert set2.isEmpty();
-        assert set2.getClass().equals(EmptyNavigableSet.class);
+        assert set2.getClass().equals(Collections.emptySortedSet().getClass());
+        assertThrows(UnsupportedOperationException.class, () -> set2.add("foo"));
     }
 
     @Test
@@ -108,7 +109,8 @@ class CollectionTests {
         String json = TestUtil.toJson(set, null);
         Set<String> set2 = TestUtil.toObjects(json, null);
         assert set2.isEmpty();
-        assert set2.getClass().equals(EmptyNavigableSet.class);
+        assert set2.getClass().equals(Collections.emptyNavigableSet().getClass());
+        assertThrows(UnsupportedOperationException.class, () -> set2.add("foo"));
     }
     
     private void assertCollection(ManyCollections root) {
@@ -285,10 +287,10 @@ class CollectionTests {
 
         json = "{\"@type\":\"java.util.ArrayList\",\"@items\":[\"a\",{},\"b\"]}";
         list2 = TestUtil.toObjects(json, null);
-        assertTrue(list2.size() == 3);
-        assertTrue(list2.get(0).equals("a"));
+        assertEquals(3, list2.size());
+        assertEquals("a", list2.get(0));
         assertEquals(list2.get(1).getClass(), JsonObject.class);
-        assertTrue(list2.get(2).equals("b"));
+        assertEquals("b", list2.get(2));
     }
 
     @Test
@@ -329,14 +331,14 @@ class CollectionTests {
         Set<Point> points = pCol.getContent().get("foo");
         assertNotNull(points);
         assertEquals(2, points.size());
-        points.contains(new Point(1, 2));
-        points.contains(new Point(10, 20));
+        assert points.contains(new Point(1, 2));
+        assert points.contains(new Point(10, 20));
 
         points = pCol.getContent().get("bar");
         assertNotNull(points);
         assertEquals(2, points.size());
-        points.contains(new Point(3, 4));
-        points.contains(new Point(30, 40));
+        assert points.contains(new Point(3, 4));
+        assert points.contains(new Point(30, 40));
 
         json = "{\"@type\":\"" + ParameterizedCollection.class.getName() + "\", \"content\":{\"foo\":[],\"bar\":null}}";
         pCol = TestUtil.toObjects(json, null);
@@ -366,17 +368,17 @@ class CollectionTests {
         emptyCols = TestUtil.toObjects(json, null);
 
         assertEquals(0, emptyCols.getCol().size());
-        assertTrue(emptyCols.getCol() instanceof ArrayList);
+        assertInstanceOf(ArrayList.class, emptyCols.getCol());
         assertEquals(0, emptyCols.getList().size());
-        assertTrue(emptyCols.getList() instanceof ArrayList);
+        assertInstanceOf(ArrayList.class, emptyCols.getList());
         assertEquals(0, emptyCols.getMap().size());
-        assertTrue(emptyCols.getMap() instanceof LinkedHashMap);
+        assertInstanceOf(LinkedHashMap.class, emptyCols.getMap());
         assertEquals(0, emptyCols.getSet().size());
-        assertTrue(emptyCols.getSet() instanceof LinkedHashSet);
+        assertInstanceOf(LinkedHashSet.class, emptyCols.getSet());
         assertEquals(0, emptyCols.getSortedSet().size());
-        assertTrue(emptyCols.getSortedSet() instanceof TreeSet);
+        assertInstanceOf(TreeSet.class, emptyCols.getSortedSet());
         assertEquals(0, emptyCols.getSortedMap().size());
-        assertTrue(emptyCols.getSortedMap() instanceof TreeMap);
+        assertInstanceOf(TreeMap.class, emptyCols.getSortedMap());
     }
 
     @Test
@@ -397,7 +399,7 @@ class CollectionTests {
 
         WriteOptions writeOptions = new WriteOptionsBuilder().writeEnumAsJsonObject(true).build();
 
-        List list = MetaUtils.listOf(TestEnum4.B);
+        List list = listOf(TestEnum4.B);
         String json = TestUtil.toJson(list, writeOptions);
         Object o = TestUtil.toObjects(json, null);
 
@@ -409,7 +411,7 @@ class CollectionTests {
         String className = PointList.class.getName();
         String json = "{\"@type\":\"" + className + "\",\"points\":{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"x\":1,\"y\":2}]}}";
         PointList list = TestUtil.toObjects(json, null);
-        assertTrue(list.getPoints().size() == 1);
+        assertEquals(1, list.getPoints().size());
         Point p1 = list.getPoints().get(0);
         assertTrue(p1.getX() == 1 && p1.getY() == 2);
     }
@@ -490,10 +492,10 @@ class CollectionTests {
         assertEquals("This is a string", col1.get(2));
         assertNull(col1.get(3));
         assertEquals(col1.get(4), to);
-        assertTrue(col1.get(5) instanceof Object[]);
+        assertInstanceOf(Object[].class, col1.get(5));
         Object[] oa = (Object[]) col1.get(5);
         assertEquals("dog", oa[0]);
-        assertTrue(oa[1] instanceof String[]);
+        assertInstanceOf(String[].class, oa[1]);
         String[] sa = (String[]) oa[1];
         assertEquals("a", sa[0]);
         assertEquals("b", sa[1]);
@@ -535,7 +537,7 @@ class CollectionTests {
         Object[] poly = new Object[]{"Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"};
         String json = TestUtil.toJson(poly);
         TestUtil.printLine("json=" + json);
-        assertTrue("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]".equals(json));
+        assertEquals("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]", json);
         Collection col = new ArrayList<>();
         col.add("string");
         col.add(Long.valueOf(16));
@@ -603,8 +605,8 @@ class CollectionTests {
         assert DeepEquals.deepEquals(list, dupe);
     }
 
-    public static Date _testDate = new Date();
-    public static Integer _CONST_INT = Integer.valueOf(36);
+    private static Date _testDate = new Date();
+    private static Integer _CONST_INT = Integer.valueOf(36);
 
     private static enum TestEnum4 {
         A, B, C;
@@ -688,7 +690,7 @@ class CollectionTests {
             this.content = content;
         }
 
-        private Map<String, Set<Point>> content = new LinkedHashMap<String, Set<Point>>();
+        private Map<String, Set<Point>> content = new LinkedHashMap<>();
     }
 
     public static class PointList {
@@ -712,7 +714,7 @@ class CollectionTests {
             this.list = list;
         }
 
-        private ArrayList<String> list = new ArrayList<String>();
+        private ArrayList<String> list = new ArrayList<>();
     }
 
     private static class ManyCollections implements Serializable {
@@ -828,8 +830,8 @@ class CollectionTests {
             _typedSet.add(17.76);
             _typedSet.add(TimeZone.getTimeZone("PST"));
 
-            _imm_lst_0 = MetaUtils.listOf();
-            _imm_lst_1 = MetaUtils.listOf("One");
+            _imm_lst_0 = listOf();
+            _imm_lst_1 = listOf("One");
 
         }
 

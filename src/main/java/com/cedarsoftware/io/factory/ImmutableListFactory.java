@@ -1,18 +1,9 @@
 package com.cedarsoftware.io.factory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.NavigableSet;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
-import com.cedarsoftware.io.JsonIoException;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
+import com.cedarsoftware.io.util.UnmodifiableList;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -31,20 +22,8 @@ import com.cedarsoftware.io.Resolver;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class CollectionFactory implements JsonReader.ClassFactory {
-    @Override
+public class ImmutableListFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        if (List.class.isAssignableFrom(c)) {
-            return new ArrayList<>();
-        } else if (NavigableSet.class.isAssignableFrom(c)) {
-            return new TreeSet<>();
-        } else if (SortedSet.class.isAssignableFrom(c)) {
-            return new TreeSet<>();
-        } else if (Set.class.isAssignableFrom(c)) {
-            return new LinkedHashSet<>();
-        } else if (Collection.class.isAssignableFrom(c)) {
-            return new ArrayList<>();
-        }
-        throw new JsonIoException("CollectionFactory handed Class for which it was not expecting: " + c.getName());
+        return new UnmodifiableList<>();
     }
 }

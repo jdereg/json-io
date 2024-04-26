@@ -10,6 +10,7 @@ import com.cedarsoftware.util.DateUtilities;
 import com.cedarsoftware.util.convert.Converter;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -49,7 +50,7 @@ class CustomClassHandlerTest
 
         json = TestUtil.toJson(now, new WriteOptionsBuilder()
                 .addCustomWrittenClass(WeirdDate.class, new WeirdDateWriter())
-                .setNotCustomWrittenClasses(MetaUtils.listOf(WeirdDate.class))
+                .setNotCustomWrittenClasses(listOf(WeirdDate.class))
                 .build());
         TestUtil.printLine("json=" + json);
         assertEquals(now, date);

@@ -1,11 +1,14 @@
 package com.cedarsoftware.io.util;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /**
+ * UnmodifiableMap provides a toggle between a mutable and immutable map.
+ * The map can be sealed to prevent further modifications.
+ *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -22,66 +25,89 @@ import java.util.Set;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class EmptyMap<K, V> implements Map<K, V> {
+public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
+    private final Map<K, V> map;
+    private boolean sealed = false;
+
+    public UnmodifiableMap() {
+        this.map = new LinkedHashMap<>();
+    }
+
+    public UnmodifiableMap(Map<K, V> map) {
+        this.map = new LinkedHashMap<>(map);
+    }
+
+    public void seal() {
+        sealed = true;
+    }
+
+    public void unseal() {
+        sealed = false;
+    }
+
+    private void checkIfSealed() {
+        if (sealed) {
+            throw new UnsupportedOperationException("This map has been sealed and is now immutable");
+        }
+    }
+
     public int size() {
-        return 0;
+        return map.size();
     }
 
     public boolean isEmpty() {
-        return true;
+        return map.isEmpty();
     }
 
     public boolean containsKey(Object key) {
-        return false;
+        return map.containsKey(key);
     }
 
     public boolean containsValue(Object value) {
-        return false;
+        return map.containsValue(value);
     }
 
     public V get(Object key) {
-        return null;
+        return map.get(key);
     }
 
     public V put(K key, V value) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, put() not supported.");
+        checkIfSealed();
+        return map.put(key, value);
     }
 
     public V remove(Object key) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, remove() not supported.");
+        checkIfSealed();
+        return map.remove(key);
     }
 
     public void putAll(Map<? extends K, ? extends V> m) {
-        throw new UnsupportedOperationException("This is an intentionally empty map, putAll() not supported.");
+        checkIfSealed();
+        map.putAll(m);
     }
 
     public void clear() {
-        // No-op
+        checkIfSealed();
+        map.clear();
     }
 
     public Set<K> keySet() {
-        return Collections.emptySet();
+        return map.keySet();
     }
 
     public Collection<V> values() {
-        return Collections.emptyList();
+        return map.values();
     }
 
     public Set<Entry<K, V>> entrySet() {
-        return Collections.emptySet();
+        return map.entrySet();
     }
 
     public boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        }
-        if (!(o instanceof Map)) {
-            return false;
-        }
-        return size() == ((Map<?, ?>) o).size();
+        return o == this || map.equals(o);
     }
 
     public int hashCode() {
-        return 0;
+        return map.hashCode();
     }
 }

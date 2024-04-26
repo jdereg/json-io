@@ -11,6 +11,7 @@ import java.util.Map;
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -106,7 +107,7 @@ public class CustomWriterTest
         customPersonReaderMap.put(Person.class, new CustomPersonReader());
         Person personOrig = TestUtil.toObjects(jsonOrig, new ReadOptionsBuilder()
                 .replaceCustomReaderClasses(customPersonReaderMap)
-                .replaceNotCustomReaderClasses(MetaUtils.listOf(Person.class))
+                .replaceNotCustomReaderClasses(listOf(Person.class))
                 .build(), null);
         assert personOrig.equals(personCustom);
 

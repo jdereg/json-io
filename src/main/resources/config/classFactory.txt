@@ -94,10 +94,39 @@ java.util.Collection = com.cedarsoftware.io.factory.CollectionFactory
 java.util.Date = Convertable
 java.util.GregorianCalendar = Convertable
 java.util.List = com.cedarsoftware.io.factory.CollectionFactory
-java.util.Map = com.cedarsoftware.io.factory.MapFactory
 java.util.Set = com.cedarsoftware.io.factory.CollectionFactory
-java.util.SortedMap = com.cedarsoftware.io.factory.MapFactory
 java.util.SortedSet = com.cedarsoftware.io.factory.CollectionFactory
+java.util.NavigableSet = com.cedarsoftware.io.factory.CollectionFactory
+java.util.Map = com.cedarsoftware.io.factory.MapFactory
+java.util.SortedMap = com.cedarsoftware.io.factory.MapFactory
+java.util.NavigableMap = com.cedarsoftware.io.factory.MapFactory
 
 java.util.TimeZone = Convertable
 sun.util.calendar.ZoneInfo = Convertable
+
+# Use factory classes to re-create empty Collections classes as they are not easily instantiated
+java.util.Collections$EmptyEnumeration = com.cedarsoftware.io.factory.EmptyEnumerationFactory
+java.util.Collections$EmptyIterator = com.cedarsoftware.io.factory.EmptyIteratorFactory
+java.util.Collections$EmptyListIterator = com.cedarsoftware.io.factory.EmptyListIteratorFactory
+java.util.Collections$EmptyList = com.cedarsoftware.io.factory.EmptyListFactory
+java.util.Collections$EmptySet = com.cedarsoftware.io.factory.EmptySetFactory
+java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoftware.io.factory.EmptyNavigableSetFactory
+java.util.Collections$EmptyMap = com.cedarsoftware.io.factory.EmptyMapFactory
+java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.factory.EmptyNavigableMapFactory
+
+# Use factory classes to re-create unmodifiable Collections classes -> these are "marker" collections that will be
+# "flipped" to Unmodifiable classes once filled, keeping them the same instance as the original.
+java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.UnmodifiableListFactory
+java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.UnmodifiableListFactory
+java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.UnmodifiableListFactory
+java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.UnmodifiableSetFactory
+java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
+java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
+java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.UnmodifiableMapFactory
+java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
+java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
+
+java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory
+java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory
+java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.ImmutableSetFactory
+java.util.ImmutableCollections$Set12 = com.cedarsoftware.io.factory.ImmutableSetFactory

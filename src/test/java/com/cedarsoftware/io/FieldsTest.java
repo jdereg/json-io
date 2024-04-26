@@ -21,6 +21,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.CollectionUtilities.listOf;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -241,9 +243,9 @@ public class FieldsTest
 
     private static Stream<Arguments> includeFieldsFromClass_withInheritance() {
         return Stream.of(
-                Arguments.of(Human.class, MetaUtils.listOf("name"), 1),
-                Arguments.of(Human.class, MetaUtils.listOf("name", "Race.name", "age"), 3),
-                Arguments.of(Human.class, MetaUtils.listOf("name", "age", "strength"), 3)
+                Arguments.of(Human.class, listOf("name"), 1),
+                Arguments.of(Human.class, listOf("name", "Race.name", "age"), 3),
+                Arguments.of(Human.class, listOf("name", "age", "strength"), 3)
 
         );
     }
@@ -269,7 +271,7 @@ public class FieldsTest
 
     @Test
     void testIncludedFields_onlyIncludesFieldsFromClass_althoughTheyCanBeOnTheParent() {
-        Map<Class<?>, Collection<String>> includedFields = MetaUtils.mapOf(MorePainfulToSerialize.class, MetaUtils.listOf("name"));
+        Map<Class<?>, Collection<String>> includedFields = mapOf(MorePainfulToSerialize.class, listOf("name"));
 
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
@@ -285,7 +287,7 @@ public class FieldsTest
 
     @Test
     void testIncludedFields_whenDefinedOnOurClass_definesInclusion() {
-        Map<Class<?>, Collection<String>> includedFields = MetaUtils.mapOf(MorePainfulToSerialize.class, MetaUtils.listOf("name", "age"));
+        Map<Class<?>, Collection<String>> includedFields = mapOf(MorePainfulToSerialize.class, listOf("name", "age"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
@@ -301,7 +303,7 @@ public class FieldsTest
 
     @Test
     void testIncludedFields_whenDefinedOnParentClass_doesNothingToSubClass() {
-        Map<Class<?>, Collection<String>> includedFields = MetaUtils.mapOf(PainfulToSerialize.class, MetaUtils.listOf("name"));
+        Map<Class<?>, Collection<String>> includedFields = mapOf(PainfulToSerialize.class, listOf("name"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
@@ -318,7 +320,7 @@ public class FieldsTest
     public void testExcludedFieldsInheritance()
     {
         Map<Class<?>, Collection<String>> excludedFields = new LinkedHashMap<>();
-        excludedFields.put(PainfulToSerialize.class, MetaUtils.listOf("classLoader"));
+        excludedFields.put(PainfulToSerialize.class, listOf("classLoader"));
         MorePainfulToSerialize painful = new MorePainfulToSerialize();
         painful.setName("Android rocks");
         painful.setAge(50);
@@ -371,7 +373,7 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
-                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")).build());
+                .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
@@ -385,7 +387,7 @@ public class FieldsTest
         painful.setAge(50);
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
-                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")).build());
+                .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals(2, check.size());
         assertTrue(check.containsKey("name"));
@@ -399,8 +401,8 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
-                .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name"))
-                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader")).build());
+                .addIncludedFields(PainfulToSerialize.class, listOf("name"))
+                .addExcludedFields(PainfulToSerialize.class, listOf("name", "classLoader")).build());
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals(0, check.size());
     }
@@ -412,8 +414,8 @@ public class FieldsTest
         painful.setName("Android rocks");
 
         String json = TestUtil.toJson(painful, new WriteOptionsBuilder()
-                .addIncludedFields(PainfulToSerialize.class, MetaUtils.listOf("name", "classLoader"))
-                .addExcludedFields(PainfulToSerialize.class, MetaUtils.listOf("classLoader")).build());
+                .addIncludedFields(PainfulToSerialize.class, listOf("name", "classLoader"))
+                .addExcludedFields(PainfulToSerialize.class, listOf("classLoader")).build());
         Map check = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         assertEquals(1, check.size());
         assertTrue(check.containsKey("name"));
