@@ -87,18 +87,18 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
     public NavigableMap<K, V> descendingMap() { return new UnmodifiableNavigableMap<>(map.descendingMap(), sealedSupplier); }
     public NavigableSet<K> navigableKeySet() { return new UnmodifiableNavigableSet<>(map.navigableKeySet(), sealedSupplier); }
     public NavigableSet<K> descendingKeySet() { return new UnmodifiableNavigableSet<>(map.descendingKeySet(), sealedSupplier); }
+    public SortedMap<K, V> subMap(K fromKey, K toKey) { return subMap(fromKey, true, toKey, false); }
     public NavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
         return new UnmodifiableNavigableMap<>(map.subMap(fromKey, fromInclusive, toKey, toInclusive), sealedSupplier);
     }
+    public SortedMap<K, V> headMap(K toKey) { return headMap(toKey, false); }
     public NavigableMap<K, V> headMap(K toKey, boolean inclusive) {
         return new UnmodifiableNavigableMap<>(map.headMap(toKey, inclusive), sealedSupplier);
     }
+    public SortedMap<K, V> tailMap(K fromKey) { return tailMap(fromKey, true); }
     public NavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
         return new UnmodifiableNavigableMap<>(map.tailMap(fromKey, inclusive), sealedSupplier);
     }
-    public SortedMap<K, V> subMap(K fromKey, K toKey) { return subMap(fromKey, true, toKey, false); }
-    public SortedMap<K, V> headMap(K toKey) { return headMap(toKey, false); }
-    public SortedMap<K, V> tailMap(K fromKey) { return tailMap(fromKey, true); }
 
     // Mutable APIs
     public Map.Entry<K, V> pollFirstEntry() { throwIfSealed(); return map.pollFirstEntry(); }
