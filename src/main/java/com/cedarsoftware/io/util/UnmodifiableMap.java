@@ -8,6 +8,10 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
+ * NOTE: Please do not reformat this code. This is a very lambda-like implementation
+ * and it makes it easy to see over all structure.  The individual methods are trivial
+ * because this is about APIs and delegating.
+ * <br><br>
  * UnmodifiableMap provides a Map that can be 'sealed' and 'unsealed'. When sealed,
  * the Map is read-only. Before sealing, it can be modified. The iterator,
  * keySet, entrySet, and values() return views that honor the original Map's

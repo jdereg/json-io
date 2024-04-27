@@ -2,6 +2,7 @@ package com.cedarsoftware.io.util;
 
 import java.util.Iterator;
 import java.util.NavigableSet;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,10 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class UnmodifiableNavigableSetTest {
 
     private UnmodifiableNavigableSet<Integer> set;
+    private volatile boolean sealedState = false;
+    private Supplier<Boolean> sealedSupplier = () -> sealedState;
 
     @BeforeEach
     void setUp() {
-        set = new UnmodifiableNavigableSet<>();
+        set = new UnmodifiableNavigableSet<>(sealedSupplier);
         set.add(10);
         set.add(20);
         set.add(30);
@@ -41,7 +44,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testIteratorModificationException() {
         Iterator<Integer> iterator = set.iterator();
-        set.seal();
+        sealedState = true;
         assertDoesNotThrow(iterator::next);
         assertThrows(UnsupportedOperationException.class, iterator::remove);
     }
@@ -49,7 +52,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testDescendingIteratorModificationException() {
         Iterator<Integer> iterator = set.descendingIterator();
-        set.seal();
+        sealedState = true;
         assertDoesNotThrow(iterator::next);
         assertThrows(UnsupportedOperationException.class, iterator::remove);
     }
@@ -57,7 +60,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testTailSetModificationException() {
         NavigableSet<Integer> tailSet = set.tailSet(20, true);
-        set.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> tailSet.add(40));
         assertThrows(UnsupportedOperationException.class, tailSet::clear);
     }
@@ -65,7 +68,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testHeadSetModificationException() {
         NavigableSet<Integer> headSet = set.headSet(20, false);
-        set.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> headSet.add(5));
         assertThrows(UnsupportedOperationException.class, headSet::clear);
     }
@@ -73,7 +76,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testSubSetModificationException() {
         NavigableSet<Integer> subSet = set.subSet(10, true, 30, true);
-        set.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> subSet.add(25));
         assertThrows(UnsupportedOperationException.class, subSet::clear);
     }
@@ -81,7 +84,7 @@ class UnmodifiableNavigableSetTest {
     @Test
     void testDescendingSetModificationException() {
         NavigableSet<Integer> descendingSet = set.descendingSet();
-        set.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> descendingSet.add(5));
         assertThrows(UnsupportedOperationException.class, descendingSet::clear);
     }
@@ -90,7 +93,7 @@ class UnmodifiableNavigableSetTest {
     void testSealAfterModification() {
         Iterator<Integer> iterator = set.iterator();
         NavigableSet<Integer> tailSet = set.tailSet(20, true);
-        set.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, iterator::remove);
         assertThrows(UnsupportedOperationException.class, () -> tailSet.add(40));
     }

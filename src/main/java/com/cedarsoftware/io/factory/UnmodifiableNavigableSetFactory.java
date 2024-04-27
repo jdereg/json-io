@@ -24,6 +24,6 @@ import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
  */
 public class UnmodifiableNavigableSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableNavigableSet<>();
+        return new UnmodifiableNavigableSet<>(resolver.sealedSupplier);
     }
 }

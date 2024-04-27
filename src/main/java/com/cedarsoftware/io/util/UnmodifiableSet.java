@@ -75,14 +75,14 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
                 // Doing a 'Solid' for Maps that use UnmodifiableSet for entrySet() implementation. Before just
                 // blindly returning the entry, see if we are in sealed mode, and if so, return an ImmutableEntry
                 // so that user cannot modify the entry via entry.setValue() API.
-                Object item = iterator.next();
+                T item = iterator.next();
                 if (item instanceof Map.Entry) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
                     if (sealedSupplier.get()) {
                         return (T) new AbstractMap.SimpleImmutableEntry(entry.getKey(), entry.getValue());  // prevent .setValue() on the entry's value.
                     }
                 }
-                return (T) item;
+                return item;
             }
             public void remove() { throwIfSealed(); iterator.remove(); }
         };
