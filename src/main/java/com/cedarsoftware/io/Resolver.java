@@ -20,6 +20,8 @@ import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.util.Unmodifiable;
 import com.cedarsoftware.io.util.UnmodifiableList;
+import com.cedarsoftware.io.util.UnmodifiableMap;
+import com.cedarsoftware.io.util.UnmodifiableSet;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -64,11 +66,7 @@ public abstract class Resolver {
     private final ReferenceTracker references;
     private final Converter converter;
     private volatile boolean sealed = false;
-    public final Supplier<Boolean> sealedSupplier = new Supplier<Boolean>() {
-        public Boolean get() {
-            return sealed;
-        }
-    };
+    public final Supplier<Boolean> sealedSupplier = () -> sealed;
 
     private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "byte",
@@ -444,7 +442,11 @@ public abstract class Resolver {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            if (UnmodifiableList.class.isAssignableFrom(c)) {
+            if (UnmodifiableMap.class.isAssignableFrom(c)) {
+                mate = new UnmodifiableMap<>(sealedSupplier);
+            } else if (UnmodifiableSet.class.isAssignableFrom(c)) {
+                mate = new UnmodifiableSet<>(sealedSupplier);
+            } else if (UnmodifiableList.class.isAssignableFrom(c)) {
                 mate = new UnmodifiableList<>(sealedSupplier);
             } else {
                 mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
@@ -540,14 +542,7 @@ public abstract class Resolver {
             if (ref.index >= 0) {    // Fix []'s and Collections containing a forward reference.
                 if (objToFix instanceof List) {
                     List list = (List) objToFix;
-                    if (objToFix instanceof Unmodifiable) {   // Patch up Indexable Collections
-                        Unmodifiable unmodifiable = (Unmodifiable) objToFix;
-                        unmodifiable.unseal();
-                        list.set(ref.index, objReferenced.getTarget());
-                        unmodifiable.seal();
-                    } else {   // Patch up Indexable Collections
-                        list.set(ref.index, objReferenced.getTarget());
-                    }
+                    list.set(ref.index, objReferenced.getTarget());
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
                     Collection col = (Collection) objToFix;
                     if (objToFix instanceof Unmodifiable) {

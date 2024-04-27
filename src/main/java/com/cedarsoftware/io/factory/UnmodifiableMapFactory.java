@@ -24,6 +24,6 @@ import com.cedarsoftware.io.util.UnmodifiableMap;
  */
 public class UnmodifiableMapFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableMap<>();
+        return new UnmodifiableMap<>(resolver.sealedSupplier);
     }
 }

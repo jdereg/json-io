@@ -1,12 +1,11 @@
 package com.cedarsoftware.io.util;
 
-import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * UnmodifiableMap provides a Map that can be 'sealed' and 'unsealed'. When sealed,
@@ -32,18 +31,22 @@ import java.util.Set;
  */
 public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
     private final Map<K, V> map = new LinkedHashMap<>();
-    private volatile boolean sealed = false;
+    private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableMap() { }
-    public UnmodifiableMap(Map<K, V> items) { map.putAll(items); }
-    public void seal() { sealed = true; }
-    public void unseal() { sealed = false; }
+    public UnmodifiableMap(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
+    public UnmodifiableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; map.putAll(items); }
+
+    // TODO: Remove these two methods
+    public void seal() { }
+    public void unseal() { }
+    
     private void throwIfSealed() {
-        if (sealed) {
+        if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This map has been sealed and is now immutable");
         }
     }
 
+    // Immutable
     public boolean equals(Object obj) { return map.equals(obj); }
     public int hashCode() { return map.hashCode(); }
     public int size() { return map.size(); }
@@ -51,73 +54,13 @@ public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
     public boolean containsKey(Object key) { return map.containsKey(key); }
     public boolean containsValue(Object value) { return map.containsValue(value); }
     public V get(Object key) { return map.get(key); }
+    public Set<K> keySet() { return new UnmodifiableSet<>(map.keySet(), sealedSupplier); }
+    public Collection<V> values() { return new UnmodifiableList<>(new ArrayList<>(map.values()), sealedSupplier); }
+    public Set<Map.Entry<K, V>> entrySet() { return new UnmodifiableSet<>(map.entrySet(), sealedSupplier); }
+
+    // Mutable
     public V put(K key, V value) { throwIfSealed(); return map.put(key, value); }
     public V remove(Object key) { throwIfSealed(); return map.remove(key); }
     public void putAll(Map<? extends K, ? extends V> m) { throwIfSealed(); map.putAll(m); }
     public void clear() { throwIfSealed(); map.clear(); }
-    public Set<K> keySet() { return createSealHonoringSet(map.keySet()); }
-    public Collection<V> values() { return createSealHonoringCollection(map.values()); }
-    public Set<Map.Entry<K, V>> entrySet() { return createSealHonoringSet((Set)map.entrySet()); }
-
-    private Set<K> createSealHonoringSet(Set<K> set) {
-        return new LinkedHashSet<K>() {
-            public int size() { return set.size(); }
-            public boolean isEmpty() { return set.isEmpty(); }
-            public boolean contains(Object o) { return set.contains(o); }
-            public Iterator<K> iterator() {
-                return new Iterator<K>() {
-                    private final Iterator<K> it = set.iterator();
-                    public boolean hasNext() { return it.hasNext(); }
-                    public K next() {
-                        K element = it.next();
-                        if (element instanceof Map.Entry) {
-                            Map.Entry entry = (Map.Entry)element;
-                            return (K) new AbstractMap.SimpleImmutableEntry(entry.getKey(), entry.getValue());  // prevent .setValue() on the entry's value.
-                        } else {
-                            return element;
-                        }
-                    }
-                    public void remove() { throwIfSealed(); it.remove(); }
-                };
-            }
-            public Object[] toArray() { return set.toArray(); }
-            public <T> T[] toArray(T[] a) { return set.toArray(a); }
-            public boolean add(K k) { throwIfSealed(); return set.add(k); }
-            public boolean remove(Object o) { throwIfSealed(); return set.remove(o); }
-            public boolean containsAll(Collection<?> c) { return set.containsAll(c); }
-            public boolean addAll(Collection<? extends K> c) { throwIfSealed(); return set.addAll(c); }
-            public boolean retainAll(Collection<?> c) { throwIfSealed(); return set.retainAll(c); }
-            public boolean removeAll(Collection<?> c) { throwIfSealed(); return set.removeAll(c); }
-            public void clear() { throwIfSealed(); set.clear(); }
-            public boolean equals(Object o) { return set.equals(o); }
-            public int hashCode() { return set.hashCode(); }
-        };
-    }
-
-    private Collection<V> createSealHonoringCollection(Collection<V> col) {
-        return new Collection<V>() {
-            public int size() { return col.size(); }
-            public boolean isEmpty() { return col.isEmpty(); }
-            public boolean contains(Object o) { return col.contains(o); }
-            public Iterator<V> iterator() {
-                return new Iterator<V>() {
-                    private final Iterator<V> it = col.iterator();
-                    public boolean hasNext() { return it.hasNext(); }
-                    public V next() { return it.next(); }
-                    public void remove() { throwIfSealed(); it.remove(); }
-                };
-            }
-            public Object[] toArray() { return col.toArray(); }
-            public <T> T[] toArray(T[] a) { return col.toArray(a); }
-            public boolean add(V v) { throwIfSealed(); return col.add(v); }
-            public boolean remove(Object o) { throwIfSealed(); return col.remove(o); }
-            public boolean containsAll(Collection<?> c) { return col.containsAll(c); }
-            public boolean addAll(Collection<? extends V> c) { throwIfSealed(); return col.addAll(c); }
-            public boolean retainAll(Collection<?> c) { throwIfSealed(); return col.retainAll(c); }
-            public boolean removeAll(Collection<?> c) { throwIfSealed(); return col.removeAll(c); }
-            public void clear() { throwIfSealed(); col.clear(); }
-            public boolean equals(Object o) { return col.equals(o); }
-            public int hashCode() { return col.hashCode(); }
-        };
-    }
 }

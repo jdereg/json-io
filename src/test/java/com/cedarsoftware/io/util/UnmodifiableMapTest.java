@@ -4,6 +4,7 @@ import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,10 +36,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UnmodifiableMapTest {
 
     private UnmodifiableMap<String, Integer> map;
+    private volatile boolean sealedState = false;
+    private Supplier<Boolean> sealedSupplier = () -> sealedState;
 
     @BeforeEach
     void setUp() {
-        map = new UnmodifiableMap<>();
+        map = new UnmodifiableMap<>(sealedSupplier);
         map.put("one", 1);
         map.put("two", 2);
         map.put("three", 3);
@@ -60,20 +63,20 @@ class UnmodifiableMapTest {
 
     @Test
     void testPutWhenSealed() {
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> map.put("five", 5));
     }
 
     @Test
     void testRemoveWhenSealed() {
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> map.remove("one"));
     }
 
     @Test
     void testModifyEntrySetWhenSealed() {
         Set<Map.Entry<String, Integer>> entries = map.entrySet();
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> entries.removeIf(e -> e.getKey().equals("one")));
         assertThrows(UnsupportedOperationException.class, () -> entries.iterator().remove());
     }
@@ -81,7 +84,7 @@ class UnmodifiableMapTest {
     @Test
     void testModifyKeySetWhenSealed() {
         Set<String> keys = map.keySet();
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> keys.remove("two"));
         assertThrows(UnsupportedOperationException.class, keys::clear);
     }
@@ -89,28 +92,28 @@ class UnmodifiableMapTest {
     @Test
     void testModifyValuesWhenSealed() {
         Collection<Integer> values = map.values();
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> values.remove(3));
         assertThrows(UnsupportedOperationException.class, values::clear);
     }
 
     @Test
     void testClearWhenSealed() {
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, map::clear);
     }
 
     @Test
     void testPutAllWhenSealed() {
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> map.putAll(mapOf("ten", 10)));
     }
 
     @Test
     void testSealAndUnseal() {
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> map.put("six", 6));
-        map.unseal();
+        sealedState = false;
         map.put("six", 6);
         assertEquals(6, map.get("six"));
     }
@@ -121,7 +124,7 @@ class UnmodifiableMapTest {
         assertNotNull(entries);
         assertTrue(entries.stream().anyMatch(e -> e.getKey().equals("one") && e.getValue().equals(1)));
 
-        map.seal();
+        sealedState = true;
         Map.Entry<String, Integer> entry = new AbstractMap.SimpleImmutableEntry<>("five", 5);
         assertThrows(UnsupportedOperationException.class, () -> entries.add(entry));
     }
@@ -132,7 +135,7 @@ class UnmodifiableMapTest {
         assertNotNull(keys);
         assertTrue(keys.contains("two"));
 
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> keys.add("five"));
     }
 
@@ -142,13 +145,13 @@ class UnmodifiableMapTest {
         assertNotNull(values);
         assertTrue(values.contains(3));
 
-        map.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> values.add(5));
     }
 
     @Test
     void testMapEquality() {
-        UnmodifiableMap<String, Integer> anotherMap = new UnmodifiableMap<>();
+        UnmodifiableMap<String, Integer> anotherMap = new UnmodifiableMap<>(sealedSupplier);
         anotherMap.put("one", 1);
         anotherMap.put("two", 2);
         anotherMap.put("three", 3);

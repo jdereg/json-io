@@ -37,9 +37,7 @@ class UnmodifiableListTest {
     
     private UnmodifiableList<Integer> list;
     private volatile boolean sealedState = false;
-    private Supplier<Boolean> sealedSupplier = new Supplier<Boolean>() {
-        public Boolean get() { return sealedState; }
-    };
+    private Supplier<Boolean> sealedSupplier = () -> sealedState;
     
     @BeforeEach
     void setUp() {

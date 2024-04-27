@@ -3,6 +3,7 @@ package com.cedarsoftware.io.util;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,10 +35,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UnmodifiableSetTest {
 
     private UnmodifiableSet<Integer> set;
+    private volatile boolean sealed = false;
+    private Supplier<Boolean> sealedSupplier = () -> sealed;
 
     @BeforeEach
     void setUp() {
-        set = new UnmodifiableSet<>();
+        set = new UnmodifiableSet<>(sealedSupplier);
         set.add(10);
         set.add(20);
     }
@@ -56,27 +59,27 @@ class UnmodifiableSetTest {
 
     @Test
     void testAddWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> set.add(40));
     }
 
     @Test
     void testRemoveWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> set.remove(10));
     }
 
     @Test
     void testIteratorRemoveWhenSealed() {
         Iterator<Integer> iterator = set.iterator();
-        set.seal();
+        sealed = true;
         iterator.next(); // Move to first element
         assertThrows(UnsupportedOperationException.class, iterator::remove);
     }
 
     @Test
     void testClearWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, set::clear);
     }
 
@@ -94,9 +97,9 @@ class UnmodifiableSetTest {
     void testRootSealStateHonored() {
         Iterator<Integer> iterator = set.iterator();
         assertEquals(Integer.valueOf(10), iterator.next());
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> iterator.remove());
-        set.unseal();
+        sealed = false;
         iterator.remove();
         assertEquals(set.size(), 1);
     }
@@ -116,7 +119,7 @@ class UnmodifiableSetTest {
 
     @Test
     void testRetainAllWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> set.retainAll(Arrays.asList(10)));
     }
 
@@ -128,7 +131,7 @@ class UnmodifiableSetTest {
 
     @Test
     void testAddAllWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> set.addAll(Arrays.asList(30, 40)));
     }
 
@@ -140,7 +143,7 @@ class UnmodifiableSetTest {
 
     @Test
     void testRemoveAllWhenSealed() {
-        set.seal();
+        sealed = true;
         assertThrows(UnsupportedOperationException.class, () -> set.removeAll(Arrays.asList(10, 20)));
     }
 
@@ -170,7 +173,7 @@ class UnmodifiableSetTest {
 
     @Test
     void testEquals() {
-        UnmodifiableSet<Integer> other = new UnmodifiableSet<>();
+        UnmodifiableSet<Integer> other = new UnmodifiableSet<>(sealedSupplier);
         other.add(10);
         other.add(20);
         assertEquals(set, other);

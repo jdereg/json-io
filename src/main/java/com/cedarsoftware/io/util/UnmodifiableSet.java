@@ -1,9 +1,12 @@
 package com.cedarsoftware.io.util;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * NOTE: Please do not reformat this code. This is a very lambda-like implementation and it
@@ -31,25 +34,22 @@ import java.util.Set;
  */
 public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     private final Set<T> set = new LinkedHashSet<>();
-    private volatile boolean sealed = false;
+    private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableSet() { }
-    public UnmodifiableSet(Collection<T> items) { set.addAll(items); }
-    public void seal() { sealed = true; }
-    public void unseal() { sealed = false; }
+    public UnmodifiableSet(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
+    public UnmodifiableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; set.addAll(items); }
+
+    // TODO: Remove
+    public void seal() { }
+    public void unseal() { }
+
     private void throwIfSealed() {
-        if (sealed) {
+        if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");
         }
     }
 
-    public Iterator<T> iterator() { return createSealHonoringIterator(set.iterator()); }
-    public boolean add(T t) { throwIfSealed(); return set.add(t); }
-    public boolean remove(Object o) { throwIfSealed(); return set.remove(o); }
-    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return set.addAll(c); }
-    public boolean removeAll(Collection<?> c) { throwIfSealed(); return set.removeAll(c); }
-    public boolean retainAll(Collection<?> c) { throwIfSealed(); return set.retainAll(c); }
-    public void clear() { throwIfSealed(); set.clear(); }
+    // Immutable APIs
     public int size() { return set.size(); }
     public boolean isEmpty() { return set.isEmpty(); }
     public boolean contains(Object o) { return set.contains(o); }
@@ -58,11 +58,32 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     public boolean containsAll(Collection<?> c) { return set.containsAll(c); }
     public boolean equals(Object o) { return set.equals(o); }
     public int hashCode() { return set.hashCode(); }
-    
+    public Iterator<T> iterator() { return createSealHonoringIterator(set.iterator()); }
+
+    // Mutable APIs
+    public boolean add(T t) { throwIfSealed(); return set.add(t); }
+    public boolean remove(Object o) { throwIfSealed(); return set.remove(o); }
+    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return set.addAll(c); }
+    public boolean removeAll(Collection<?> c) { throwIfSealed(); return set.removeAll(c); }
+    public boolean retainAll(Collection<?> c) { throwIfSealed(); return set.retainAll(c); }
+    public void clear() { throwIfSealed(); set.clear(); }
+
     private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
         return new Iterator<T>() {
             public boolean hasNext() { return iterator.hasNext(); }
-            public T next() { return iterator.next(); }
+            public T next() {
+                // Doing a 'Solid' for Maps that use UnmodifiableSet for entrySet() implementation. Before just
+                // blindly returning the entry, see if we are in sealed mode, and if so, return an ImmutableEntry
+                // so that user cannot modify the entry via entry.setValue() API.
+                Object item = iterator.next();
+                if (item instanceof Map.Entry) {
+                    Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
+                    if (sealedSupplier.get()) {
+                        return (T) new AbstractMap.SimpleImmutableEntry(entry.getKey(), entry.getValue());  // prevent .setValue() on the entry's value.
+                    }
+                }
+                return (T) item;
+            }
             public void remove() { throwIfSealed(); iterator.remove(); }
         };
     }
