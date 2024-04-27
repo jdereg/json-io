@@ -1,7 +1,8 @@
 package com.cedarsoftware.io.util;
 
 /**
- * Marker interface to facilitate reconstruction of correct unmodifiable collection classes.
+ * Marker interface to facilitate indicate internal collections that are mutable immutables.
+ * They are mutable while being built, but must be immutable afterward.
  * 
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>

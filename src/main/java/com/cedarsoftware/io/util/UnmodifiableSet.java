@@ -51,7 +51,7 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     public boolean contains(Object o) { return set.contains(o); }
     public Object[] toArray() { return set.toArray(); }
     public <T1> T1[] toArray(T1[] a) { return set.toArray(a); }
-    public boolean containsAll(Collection<?> c) { return set.containsAll(c); }
+    public boolean containsAll(Collection<?> col) { return set.containsAll(col); }
     public boolean equals(Object o) { return set.equals(o); }
     public int hashCode() { return set.hashCode(); }
     public Iterator<T> iterator() { return createSealHonoringIterator(set.iterator()); }
@@ -59,9 +59,9 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     // Mutable APIs
     public boolean add(T t) { throwIfSealed(); return set.add(t); }
     public boolean remove(Object o) { throwIfSealed(); return set.remove(o); }
-    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return set.addAll(c); }
-    public boolean removeAll(Collection<?> c) { throwIfSealed(); return set.removeAll(c); }
-    public boolean retainAll(Collection<?> c) { throwIfSealed(); return set.retainAll(c); }
+    public boolean addAll(Collection<? extends T> col) { throwIfSealed(); return set.addAll(col); }
+    public boolean removeAll(Collection<?> col) { throwIfSealed(); return set.removeAll(col); }
+    public boolean retainAll(Collection<?> col) { throwIfSealed(); return set.retainAll(col); }
     public void clear() { throwIfSealed(); set.clear(); }
 
     private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {

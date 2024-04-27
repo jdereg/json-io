@@ -18,11 +18,6 @@ import java.util.function.Supplier;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.io.util.UnmodifiableList;
-import com.cedarsoftware.io.util.UnmodifiableMap;
-import com.cedarsoftware.io.util.UnmodifiableNavigableMap;
-import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
-import com.cedarsoftware.io.util.UnmodifiableSet;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -443,19 +438,7 @@ public abstract class Resolver {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            if (UnmodifiableNavigableMap.class.isAssignableFrom(c)) {
-                mate = new UnmodifiableNavigableMap<>(sealedSupplier);
-            } else if (UnmodifiableNavigableSet.class.isAssignableFrom(c)) {
-                mate = new UnmodifiableNavigableSet<>(sealedSupplier);
-            } else if (UnmodifiableMap.class.isAssignableFrom(c)) {
-                mate = new UnmodifiableMap<>(sealedSupplier);
-            } else if (UnmodifiableSet.class.isAssignableFrom(c)) {
-                mate = new UnmodifiableSet<>(sealedSupplier);
-            } else if (UnmodifiableList.class.isAssignableFrom(c)) {
-                mate = new UnmodifiableList<>(sealedSupplier);
-            } else {
-                mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
-            }
+            mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
         }
         jsonObj.setTarget(mate);
         return mate;

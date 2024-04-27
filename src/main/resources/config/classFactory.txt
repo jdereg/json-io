@@ -126,6 +126,12 @@ java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.Unmodifiabl
 java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
 java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
 
+com.cedarsoftware.io.util.UnmodifiableList = com.cedarsoftware.io.factory.UnmodifiableListFactory
+com.cedarsoftware.io.util.UnmodifiableSet = com.cedarsoftware.io.factory.UnmodifiableSetFactory
+com.cedarsoftware.io.util.UnmodifiableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
+com.cedarsoftware.io.util.UnmodifiableMap = com.cedarsoftware.io.factory.UnmodifiableMapFactory
+com.cedarsoftware.io.util.UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
+
 java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory
 java.util.ImmutableCollections$SetN = com.cedarsoftware.io.factory.ImmutableSetFactory

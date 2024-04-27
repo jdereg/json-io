@@ -59,7 +59,7 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     public int size() { return list.size(); }
     public boolean isEmpty() { return list.isEmpty(); }
     public boolean contains(Object o) { return list.contains(o); }
-    public boolean containsAll(Collection<?> c) { return new HashSet<>(list).containsAll(c); }
+    public boolean containsAll(Collection<?> col) { return new HashSet<>(list).containsAll(col); }
     public int indexOf(Object o) { return list.indexOf(o); }
     public int lastIndexOf(Object o) { return list.lastIndexOf(o); }
     public T get(int index) { return list.get(index); }
@@ -73,10 +73,10 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     // Mutable APIs
     public boolean add(T t) { throwIfSealed(); return list.add(t); }
     public boolean remove(Object o) { throwIfSealed(); return list.remove(o); }
-    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return list.addAll(c); }
-    public boolean addAll(int index, Collection<? extends T> c) { throwIfSealed(); return list.addAll(index, c); }
-    public boolean removeAll(Collection<?> c) { throwIfSealed(); return list.removeAll(c); }
-    public boolean retainAll(Collection<?> c) { throwIfSealed(); return list.retainAll(c); }
+    public boolean addAll(Collection<? extends T> col) { throwIfSealed(); return list.addAll(col); }
+    public boolean addAll(int index, Collection<? extends T> col) { throwIfSealed(); return list.addAll(index, col); }
+    public boolean removeAll(Collection<?> col) { throwIfSealed(); return list.removeAll(col); }
+    public boolean retainAll(Collection<?> col) { throwIfSealed(); return list.retainAll(col); }
     public void clear() { throwIfSealed(); list.clear(); }
     public T set(int index, T element) { throwIfSealed(); return list.set(index, element); }
     public void add(int index, T element) { throwIfSealed(); list.add(index, element); }

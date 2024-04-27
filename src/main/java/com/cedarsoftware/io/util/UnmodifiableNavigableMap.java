@@ -12,6 +12,10 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 
 /**
+ * NOTE: Please do not reformat this code. This is a very lambda-like implementation
+ * and it makes it easy to see over all structure.  The individual methods are trivial
+ * because this is about APIs and delegating.
+ *  <br><br>
  * UnmodifiableNavigableMap provides a NavigableMap that can be 'sealed' and 'unsealed'.
  * When sealed, the map is read-only. Before sealing, it can be modified.
  * The iterator, keySet, entrySet, and navigableKeySet return views that honor the
