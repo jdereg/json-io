@@ -1,8 +1,11 @@
 package com.cedarsoftware.io.util;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -202,7 +205,35 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmod
         return Collections.unmodifiableCollection(map.values());
     }
 
-    public Set<Entry<K, V>> entrySet() {
-        return Collections.unmodifiableSet(map.entrySet());
+    /**
+     * Need structural read-only-ness like keySet() and values(), but also need to prevent
+     * .setValue() from being called as well. By returning AbstractMap.SimpleImmutableEntry
+     * to enforce no modifications via .setValue().
+     */
+    public Set<Map.Entry<K, V>> entrySet() {
+        Set<Map.Entry<K, V>> es = new AbstractSet<Entry<K, V>>() {
+            public Iterator<Entry<K, V>> iterator() {
+                Iterator<Map.Entry<K, V>> i = map.entrySet().iterator();
+                return new Iterator<Entry<K, V>>() {
+                    public boolean hasNext() {
+                        return i.hasNext();
+                    }
+
+                    public Map.Entry<K, V> next() {
+                        Map.Entry<K, V> entry = i.next();
+                        return new AbstractMap.SimpleImmutableEntry<>(entry.getKey(), entry.getValue());
+                    }
+
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+
+            public int size() {
+                return map.size();
+            }
+        };
+        return Collections.unmodifiableSet(es);
     }
 }

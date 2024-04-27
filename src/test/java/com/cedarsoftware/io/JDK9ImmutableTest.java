@@ -1,18 +1,21 @@
 package com.cedarsoftware.io;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
+import java.util.TreeMap;
 
-import com.cedarsoftware.util.MapUtilities;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.CollectionUtilities.setOf;
 import static com.cedarsoftware.util.DeepEquals.deepEquals;
+import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -49,7 +52,7 @@ class JDK9ImmutableTest
             this.i = i;
         }
 
-        Rec       link;
+        Rec link;
         List<Rec> ilinks;
         List<Rec> mlinks;
 
@@ -246,8 +249,11 @@ class JDK9ImmutableTest
         Rec rec2 = new Rec("Two", 2);
         rec1.ilinks = listOf(rec2, rec1);
         rec2.ilinks = listOf();
-        rec1.smap = MapUtilities.mapOf("a", rec1, "b", rec2);
-        rec2.smap = MapUtilities.mapOf();   // Empty Immutable Map is different class than one with elements in it
+        rec1.smap = mapOf("a", rec1, "b", rec2);
+        rec2.smap = new TreeMap<>(); // NavigableMap
+        rec2.smap.put("alpha", rec2);
+        rec2.smap.put("beta", rec1);
+        rec2.smap = Collections.unmodifiableNavigableMap((NavigableMap<String, ? extends Rec>) rec2.smap);
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
         String json = TestUtil.toJson(ol, new WriteOptionsBuilder().withExtendedAliases().build());
@@ -270,15 +276,23 @@ class JDK9ImmutableTest
         assertThrows(UnsupportedOperationException.class, () -> es.get(1).smap.put("foo", rec2));
         assertThrows(UnsupportedOperationException.class, () -> again.get(1).smap.put("foo", rec2));
 
-        Map<String, Rec> map = again.get(0).smap;
-        assertThrows(UnsupportedOperationException.class, () -> map.remove("a"));
+        final Map<String, Rec> map0 = again.get(0).smap;
+        assertThrows(UnsupportedOperationException.class, () -> map0.remove("a"));
+        final Map<String, Rec> map1 = again.get(1).smap;
+        assertThrows(UnsupportedOperationException.class, () -> map1.remove("a"));
 
-        Iterator<Map.Entry<String, Rec>> i = map.entrySet().iterator();
+        final Iterator<Map.Entry<String, Rec>> i = map0.entrySet().iterator();
         assertThrows(UnsupportedOperationException.class, () -> i.remove());
+        final Iterator<Map.Entry<String, Rec>> j = map1.entrySet().iterator();
+        assertThrows(UnsupportedOperationException.class, () -> j.remove());
 
-        Map.Entry<String, Rec> entry = i.next();
-        assertNotNull(entry);
-        assertThrows(UnsupportedOperationException.class, () -> entry.setValue(rec1));
+        final Map.Entry<String, Rec> entry0 = i.next();
+        assertNotNull(entry0);
+        assertThrows(UnsupportedOperationException.class, () -> entry0.setValue(rec1));
+
+        final Map.Entry<String, Rec> entry1 = j.next();
+        assertNotNull(entry1);
+        assertThrows(UnsupportedOperationException.class, () -> entry1.setValue(rec2));
     }
 
     @Test
@@ -389,9 +403,15 @@ class JDK9ImmutableTest
 
         // Deserialize the list (hand created to force forward reference)
         final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
+        assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node2));
+
         // Assertions to check if the forward reference is maintained after deserialization
         assertEquals("Node1", deserializedNodes2.get(0).next.name);
         assertEquals("Node2", deserializedNodes2.get(1).next.name);
+        assertThrows(UnsupportedOperationException.class, () -> deserializedNodes2.remove(node1));
+
+        final Iterator<Node> i = deserializedNodes2.iterator();
+        assertThrows(UnsupportedOperationException. class, () -> i.remove());
     }
 
     @Test
@@ -450,5 +470,9 @@ class JDK9ImmutableTest
         node2nd = i.next();
         assertEquals("Node2", node1st.next.name);
         assertEquals("Node1", node2nd.next.name);
+        
+        final Iterator<Node> j = deserializedNodes2.iterator();
+        assertThrows(UnsupportedOperationException.class, () -> j.remove());
+        assertThrows(UnsupportedOperationException.class, () -> deserializedNodes2.clear());
     }
 }

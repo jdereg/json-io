@@ -63,10 +63,6 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
         return list.contains(o);
     }
 
-    public Iterator<T> iterator() {
-        return list.iterator();  // Direct delegation
-    }
-
     public Object[] toArray() {
         return list.toArray();
     }
@@ -141,15 +137,77 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
         return list.lastIndexOf(o);
     }
 
-    public ListIterator<T> listIterator() {
-        return list.listIterator();
+    public Iterator<T> iterator() {
+        return new Iterator<T>() {
+            private final Iterator<T> i = list.iterator();
+
+            public boolean hasNext() {
+                return i.hasNext();
+            }
+
+            public T next() {
+                return i.next();
+            }
+
+            public void remove() {
+                throwIfSealed();
+                i.remove();
+            }
+        };
     }
 
-    public ListIterator<T> listIterator(int index) {
-        return list.listIterator(index);
+    public ListIterator<T> listIterator() {
+        return listIterator(0);
+    }
+
+    public ListIterator<T> listIterator(final int index) {
+        return new ListIterator<T>() {
+            private final ListIterator<T> i = list.listIterator(index);
+
+            public boolean hasNext() {
+                return i.hasNext();
+            }
+
+            public T next() {
+                return i.next();
+            }
+
+            public boolean hasPrevious() {
+                return i.hasPrevious();
+            }
+
+            public T previous() {
+                return i.previous();
+            }
+
+            public int nextIndex() {
+                return i.nextIndex();
+            }
+
+            public int previousIndex() {
+                return i.previousIndex();
+            }
+
+            public void remove() {
+                throwIfSealed();
+                i.remove();
+            }
+
+            public void set(T e) {
+                throwIfSealed();
+                i.set(e);
+            }
+
+            public void add(T e) {
+                throwIfSealed();
+                i.add(e);
+            }
+        };
     }
 
     public List<T> subList(int fromIndex, int toIndex) {
-        return list.subList(fromIndex, toIndex);  // Note: This sublist is not sealable
+        UnmodifiableList<T> sublist = new UnmodifiableList<>(list.subList(fromIndex, toIndex));
+        sublist.sealed = this.sealed;  // Set the sealed state of the sublist to match the original list
+        return sublist;
     }
 }

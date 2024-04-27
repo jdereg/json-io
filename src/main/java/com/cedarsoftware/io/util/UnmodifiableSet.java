@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @author John DeRegnaucourt
  *         <br>
- *         Copyright (c) Cedar Software LLC
+ *         Copyright Cedar Software LLC
  *         <br><br>
  *         Licensed under the Apache License, Version 2.0 (the "License");
  *         you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import java.util.Set;
  */
 public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     private final Set<T> set = new LinkedHashSet<>();
-    private boolean sealed = false;
+    private volatile boolean sealed = false;
 
     public UnmodifiableSet() {
     }
@@ -50,28 +50,25 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
         }
     }
 
-    public int size() {
-        return set.size();
-    }
+    private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
+        return new Iterator<T>() {
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
 
-    public boolean isEmpty() {
-        return set.isEmpty();
-    }
+            public T next() {
+                return iterator.next();
+            }
 
-    public boolean contains(Object o) {
-        return set.contains(o);
+            public void remove() {
+                throwIfSealed();
+                iterator.remove();
+            }
+        };
     }
 
     public Iterator<T> iterator() {
-        return set.iterator();  // Direct delegation
-    }
-
-    public Object[] toArray() {
-        return set.toArray();
-    }
-
-    public <T1> T1[] toArray(T1[] a) {
-        return set.toArray(a);
+        return createSealHonoringIterator(set.iterator());
     }
 
     public boolean add(T t) {
@@ -84,18 +81,9 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
         return set.remove(o);
     }
 
-    public boolean containsAll(Collection<?> c) {
-        return set.containsAll(c);
-    }
-
     public boolean addAll(Collection<? extends T> c) {
         throwIfSealed();
         return set.addAll(c);
-    }
-
-    public boolean retainAll(Collection<?> c) {
-        throwIfSealed();
-        return set.retainAll(c);
     }
 
     public boolean removeAll(Collection<?> c) {
@@ -103,9 +91,38 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
         return set.removeAll(c);
     }
 
+    public boolean retainAll(Collection<?> c) {
+        throwIfSealed();
+        return set.retainAll(c);
+    }
+
     public void clear() {
         throwIfSealed();
         set.clear();
+    }
+
+    public int size() {
+        return set.size();
+    }
+
+    public boolean isEmpty() {
+        return set.isEmpty();
+    }
+
+    public boolean contains(Object o) {
+        return set.contains(o);
+    }
+
+    public Object[] toArray() {
+        return set.toArray();
+    }
+
+    public <T1> T1[] toArray(T1[] a) {
+        return set.toArray(a);
+    }
+
+    public boolean containsAll(Collection<?> c) {
+        return set.containsAll(c);
     }
 
     public boolean equals(Object o) {
