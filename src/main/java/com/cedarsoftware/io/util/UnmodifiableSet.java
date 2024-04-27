@@ -43,14 +43,6 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
         }
     }
 
-    private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
-        return new Iterator<T>() {
-            public boolean hasNext() { return iterator.hasNext(); }
-            public T next() { return iterator.next(); }
-            public void remove() { throwIfSealed(); iterator.remove(); }
-        };
-    }
-
     public Iterator<T> iterator() { return createSealHonoringIterator(set.iterator()); }
     public boolean add(T t) { throwIfSealed(); return set.add(t); }
     public boolean remove(Object o) { throwIfSealed(); return set.remove(o); }
@@ -64,6 +56,14 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     public Object[] toArray() { return set.toArray(); }
     public <T1> T1[] toArray(T1[] a) { return set.toArray(a); }
     public boolean containsAll(Collection<?> c) { return set.containsAll(c); }
-    public boolean equals(Object o) { return o == this || set.equals(o); }
+    public boolean equals(Object o) { return set.equals(o); }
     public int hashCode() { return set.hashCode(); }
+    
+    private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
+        return new Iterator<T>() {
+            public boolean hasNext() { return iterator.hasNext(); }
+            public T next() { return iterator.next(); }
+            public void remove() { throwIfSealed(); iterator.remove(); }
+        };
+    }
 }

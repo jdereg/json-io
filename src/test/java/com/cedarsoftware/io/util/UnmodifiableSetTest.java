@@ -91,6 +91,17 @@ class UnmodifiableSetTest {
     }
 
     @Test
+    void testRootSealStateHonored() {
+        Iterator<Integer> iterator = set.iterator();
+        assertEquals(Integer.valueOf(10), iterator.next());
+        set.seal();
+        assertThrows(UnsupportedOperationException.class, () -> iterator.remove());
+        set.unseal();
+        iterator.remove();
+        assertEquals(set.size(), 1);
+    }
+
+    @Test
     void testContainsAll() {
         assertTrue(set.containsAll(Arrays.asList(10, 20)));
         assertFalse(set.containsAll(Arrays.asList(10, 30)));

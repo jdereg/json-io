@@ -45,6 +45,7 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
             throw new UnsupportedOperationException("This list has been sealed and is now immutable");
         }
     }
+    
     public boolean equals(Object other) { return list.equals(other); }
     public int hashCode() { return list.hashCode(); }
     public int size() { return list.size(); }
@@ -66,7 +67,11 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     public T remove(int index) { throwIfSealed(); return list.remove(index); }
     public int indexOf(Object o) { return list.indexOf(o); }
     public int lastIndexOf(Object o) { return list.lastIndexOf(o); }
-    
+    public Iterator<T> iterator() { return createSealHonoringIterator(list.iterator()); }
+    public ListIterator<T> listIterator() { return createSealHonoringListIterator(list.listIterator()); }
+    public ListIterator<T> listIterator(final int index) { return createSealHonoringListIterator(list.listIterator(index)); }
+    public List<T> subList(int fromIndex, int toIndex) { return createSealHonoringView(list.subList(fromIndex, toIndex)); }
+
     private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
         return new Iterator<T>() {
             public boolean hasNext() { return iterator.hasNext(); }
@@ -91,6 +96,8 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
 
     private List<T> createSealHonoringView(List<T> lst) {
         return new List<T>() {
+            public boolean equals(Object obj) { return lst.equals(obj); }
+            public int hashCode() { return lst.hashCode(); }
             public boolean add(T t) { throwIfSealed(); return lst.add(t); }
             public void add(int index, T element) { throwIfSealed(); lst.add(index, element); }
             public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return lst.addAll(c); }
@@ -114,13 +121,6 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
             public Object[] toArray() { return lst.toArray(); }
             public <T1> T1[] toArray(T1[] a) { return lst.toArray(a); }
             public List<T> subList(int fromIndex, int toIndex) { return createSealHonoringView(lst.subList(fromIndex, toIndex)); }
-            public boolean equals(Object obj) { return lst.equals(obj); }
-            public int hashCode() { return lst.hashCode(); }
         };
     }
-
-    public Iterator<T> iterator() { return createSealHonoringIterator(list.iterator()); }
-    public ListIterator<T> listIterator() { return createSealHonoringListIterator(list.listIterator()); }
-    public ListIterator<T> listIterator(final int index) { return createSealHonoringListIterator(list.listIterator(index)); }
-    public List<T> subList(int fromIndex, int toIndex) { return createSealHonoringView(list.subList(fromIndex, toIndex)); }
 }

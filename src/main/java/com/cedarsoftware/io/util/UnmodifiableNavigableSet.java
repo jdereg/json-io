@@ -8,6 +8,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
+ * NOTE: Please do not reformat this code. This is a very lambda-like implementation
+ * and it makes it easy to see over all structure.  The individual methods are trivial
+ * because this is about APIs and delegating.
+ * <br><br>
  * UnmodifiableNavigableSet provides a toggle between a mutable and immutable navigable set.
  * The set can be sealed to prevent further modifications. Iterators and views (and iterators
  * on views, and so on) respect the orginal enclosing Sets sealed state.
@@ -32,51 +36,66 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
     private final NavigableSet<T> navigableSet;
     private volatile boolean sealed = false;
 
-    public UnmodifiableNavigableSet() {
-        navigableSet = new TreeSet<>();
-    }
-
-    public UnmodifiableNavigableSet(Comparator<? super T> comparator) {
-        navigableSet = new TreeSet<>(comparator);
-    }
-
-    public UnmodifiableNavigableSet(Collection<? extends T> c) {
-        this();
-        addAll(c);
-    }
-
-    public UnmodifiableNavigableSet(SortedSet<T> s) {
-        navigableSet = new TreeSet<>(s);
-    }
-
-    public void seal() {
-        sealed = true;
-    }
-
-    public void unseal() {
-        sealed = false;
-    }
-
+    public UnmodifiableNavigableSet() { navigableSet = new TreeSet<>(); }
+    public UnmodifiableNavigableSet(Comparator<? super T> comparator) { navigableSet = new TreeSet<>(comparator); }
+    public UnmodifiableNavigableSet(Collection<? extends T> c) { this(); addAll(c); }
+    public UnmodifiableNavigableSet(SortedSet<T> s) { navigableSet = new TreeSet<>(s); }
+    public void seal() { sealed = true; }
+    public void unseal() { sealed = false; }
     private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");
         }
     }
-
+    
+    public boolean add(T e) { throwIfSealed(); return navigableSet.add(e); }
+    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return navigableSet.addAll(c); }
+    public void clear() { throwIfSealed(); navigableSet.clear(); }
+    public boolean remove(Object o) { throwIfSealed(); return navigableSet.remove(o); }
+    public boolean removeAll(Collection<?> c) { throwIfSealed(); return navigableSet.removeAll(c); }
+    public boolean retainAll(Collection<?> c) { throwIfSealed(); return navigableSet.retainAll(c); }
+    public T lower(T e) { return navigableSet.lower(e); }
+    public T floor(T e) { return navigableSet.floor(e); }
+    public T ceiling(T e) { return navigableSet.ceiling(e); }
+    public T higher(T e) { return navigableSet.higher(e); }
+    public T pollFirst() { throwIfSealed(); return navigableSet.pollFirst(); }
+    public T pollLast() { throwIfSealed(); return navigableSet.pollLast(); }
+    public Iterator<T> iterator() { return createSealHonoringIterator(navigableSet.iterator()); }
+    public Iterator<T> descendingIterator() { return createSealHonoringIterator(navigableSet.descendingIterator()); }
+    public NavigableSet<T> descendingSet() { return createSealHonoringView(navigableSet.descendingSet());}
+    public SortedSet<T> subSet(T fromElement, T toElement) { return createSealHonoringView((NavigableSet<T>) navigableSet.subSet(fromElement, toElement));}
+    public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+        return createSealHonoringView(navigableSet.subSet(fromElement, fromInclusive, toElement, toInclusive));
+    }
+    public NavigableSet<T> headSet(T toElement, boolean inclusive) {
+        return createSealHonoringView(navigableSet.headSet(toElement, inclusive));
+    }
+    public SortedSet<T> headSet(T toElement) {
+        return createSealHonoringView((NavigableSet<T>) navigableSet.headSet(toElement));
+    }
+    public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
+        return createSealHonoringView(navigableSet.tailSet(fromElement, inclusive));
+    }
+    public SortedSet<T> tailSet(T fromElement) {
+        return createSealHonoringView((NavigableSet<T>) navigableSet.tailSet(fromElement));
+    }
+    public Comparator<? super T> comparator() { return navigableSet.comparator(); }
+    public T first() { return navigableSet.first(); }
+    public T last() { return navigableSet.last(); }
+    public boolean contains(Object o) { return navigableSet.contains(o); }
+    public boolean containsAll(Collection<?> c) { return navigableSet.containsAll(c);}
+    public boolean isEmpty() { return navigableSet.isEmpty(); }
+    public Object[] toArray() { return navigableSet.toArray(); }
+    public <T> T[] toArray(T[] a) { return navigableSet.toArray(a); }
+    public int size() { return navigableSet.size(); }
+    public boolean equals(Object o) { return o == this || navigableSet.equals(o); }
+    public int hashCode() { return navigableSet.hashCode(); }
+    
     private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
         return new Iterator<T>() {
-            public boolean hasNext() {
-                return iterator.hasNext();
-            }
-
-            public T next() {
-                return iterator.next();
-            }
-
-            public void remove() {
-                throwIfSealed();
-                iterator.remove();
-            }
+            public boolean hasNext() { return iterator.hasNext(); }
+            public T next() { return iterator.next(); }
+            public void remove() { throwIfSealed(); iterator.remove(); }
         };
     }
 
@@ -127,141 +146,5 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
             public boolean equals(Object o) { return o == this || set.equals(o); }
             public int hashCode() { return set.hashCode(); }
         };
-    }
-
-    public boolean add(T e) {
-        throwIfSealed();
-        return navigableSet.add(e);
-    }
-
-    public boolean addAll(Collection<? extends T> c) {
-        throwIfSealed();
-        return navigableSet.addAll(c);
-    }
-
-    public void clear() {
-        throwIfSealed();
-        navigableSet.clear();
-    }
-
-    public boolean remove(Object o) {
-        throwIfSealed();
-        return navigableSet.remove(o);
-    }
-
-    public boolean removeAll(Collection<?> c) {
-        throwIfSealed();
-        return navigableSet.removeAll(c);
-    }
-
-    public boolean retainAll(Collection<?> c) {
-        throwIfSealed();
-        return navigableSet.retainAll(c);
-    }
-
-    public T lower(T e) {
-        return navigableSet.lower(e);
-    }
-
-    public T floor(T e) {
-        return navigableSet.floor(e);
-    }
-
-    public T ceiling(T e) {
-        return navigableSet.ceiling(e);
-    }
-
-    public T higher(T e) {
-        return navigableSet.higher(e);
-    }
-
-    public T pollFirst() {
-        throwIfSealed();
-        return navigableSet.pollFirst();
-    }
-
-    public T pollLast() {
-        throwIfSealed();
-        return navigableSet.pollLast();
-    }
-
-    public Iterator<T> iterator() {
-        return createSealHonoringIterator(navigableSet.iterator());
-    }
-
-    public Iterator<T> descendingIterator() {
-        return createSealHonoringIterator(navigableSet.descendingIterator());
-    }
-
-    public NavigableSet<T> descendingSet() {
-        return createSealHonoringView(navigableSet.descendingSet());
-    }
-
-    public SortedSet<T> subSet(T fromElement, T toElement) {
-        return createSealHonoringView((NavigableSet<T>) navigableSet.subSet(fromElement, toElement));
-    }
-
-    public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        return createSealHonoringView(navigableSet.subSet(fromElement, fromInclusive, toElement, toInclusive));
-    }
-
-    public NavigableSet<T> headSet(T toElement, boolean inclusive) {
-        return createSealHonoringView(navigableSet.headSet(toElement, inclusive));
-    }
-
-    public SortedSet<T> headSet(T toElement) {
-        return createSealHonoringView((NavigableSet<T>) navigableSet.headSet(toElement));
-    }
-
-    public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
-        return createSealHonoringView(navigableSet.tailSet(fromElement, inclusive));
-    }
-
-    public SortedSet<T> tailSet(T fromElement) {
-        return createSealHonoringView((NavigableSet<T>) navigableSet.tailSet(fromElement));
-    }
-    
-    public Comparator<? super T> comparator() {
-        return navigableSet.comparator();
-    }
-
-    public T first() {
-        return navigableSet.first();
-    }
-
-    public T last() {
-        return navigableSet.last();
-    }
-
-    public boolean contains(Object o) {
-        return navigableSet.contains(o);
-    }
-
-    public boolean containsAll(Collection<?> c) {
-        return navigableSet.containsAll(c);
-    }
-
-    public boolean isEmpty() {
-        return navigableSet.isEmpty();
-    }
-
-    public Object[] toArray() {
-        return navigableSet.toArray();
-    }
-
-    public <T> T[] toArray(T[] a) {
-        return navigableSet.toArray(a);
-    }
-
-    public int size() {
-        return navigableSet.size();
-    }
-
-    public boolean equals(Object o) {
-        return o == this || navigableSet.equals(o);
-    }
-
-    public int hashCode() {
-        return navigableSet.hashCode();
     }
 }
