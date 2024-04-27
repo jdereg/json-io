@@ -32,11 +32,21 @@ import java.util.function.Supplier;
  *         limitations under the License.
  */
 public class UnmodifiableSet<T> implements Set<T> {
-    private final Set<T> set = new LinkedHashSet<>();
+    private final Set<T> set;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableSet(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
-    public UnmodifiableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; set.addAll(items); }
+    public UnmodifiableSet(Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.set = new LinkedHashSet<>();
+    }
+    public UnmodifiableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.set = new LinkedHashSet<>(items);
+    }
+    public UnmodifiableSet(Set<T> items, Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.set = items;
+    }
 
     private void throwIfSealed() {
         if (sealedSupplier.get()) {

@@ -91,22 +91,22 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
         return new UnmodifiableNavigableSet<>(navigableSet.descendingSet(), sealedSupplier);
     }
     public SortedSet<T> subSet(T fromElement, T toElement) {
-        return new UnmodifiableNavigableSet<>(navigableSet.subSet(fromElement, toElement), sealedSupplier);
+        return subSet(fromElement, true, toElement, false);
     }
     public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
         return new UnmodifiableNavigableSet<>(navigableSet.subSet(fromElement, fromInclusive, toElement, toInclusive), sealedSupplier);
     }
+    public SortedSet<T> headSet(T toElement) {
+        return headSet(toElement, false);
+    }
     public NavigableSet<T> headSet(T toElement, boolean inclusive) {
         return new UnmodifiableNavigableSet<>(navigableSet.headSet(toElement, inclusive), sealedSupplier);
     }
-    public SortedSet<T> headSet(T toElement) {
-        return new UnmodifiableNavigableSet<>(navigableSet.headSet(toElement), sealedSupplier);
+    public SortedSet<T> tailSet(T fromElement) {
+        return tailSet(fromElement, false);
     }
     public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
         return new UnmodifiableNavigableSet<>(navigableSet.tailSet(fromElement, inclusive), sealedSupplier);
-    }
-    public SortedSet<T> tailSet(T fromElement) {
-        return new UnmodifiableNavigableSet<>(navigableSet.tailSet(fromElement), sealedSupplier);
     }
 
     // Mutable APIs

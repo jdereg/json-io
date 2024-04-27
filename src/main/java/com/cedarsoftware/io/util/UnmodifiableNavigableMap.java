@@ -45,6 +45,10 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
         this.sealedSupplier = sealedSupplier;
         this.map = new ConcurrentSkipListMap<>();
     }
+    public UnmodifiableNavigableMap(SortedMap<K, V> map, Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.map = new ConcurrentSkipListMap<>(map);
+    }
     public UnmodifiableNavigableMap(NavigableMap<K, V> map, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = map;

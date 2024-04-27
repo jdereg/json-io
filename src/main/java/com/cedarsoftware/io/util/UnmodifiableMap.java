@@ -34,11 +34,17 @@ import java.util.function.Supplier;
  *         limitations under the License.
  */
 public class UnmodifiableMap<K, V> implements Map<K, V> {
-    private final Map<K, V> map = new LinkedHashMap<>();
+    private final Map<K, V> map;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableMap(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
-    public UnmodifiableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; map.putAll(items); }
+    public UnmodifiableMap(Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.map = new LinkedHashMap<>();
+    }
+    public UnmodifiableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        this.map = items;
+    }
     
     private void throwIfSealed() {
         if (sealedSupplier.get()) {

@@ -2,12 +2,14 @@ package com.cedarsoftware.io.util;
 
 import java.util.Iterator;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -96,5 +98,30 @@ class UnmodifiableNavigableSetTest {
         sealedState = true;
         assertThrows(UnsupportedOperationException.class, iterator::remove);
         assertThrows(UnsupportedOperationException.class, () -> tailSet.add(40));
+    }
+
+    @Test
+    void testSubset()
+    {
+        Set<Integer> subset = set.subSet(5, true, 25, true);
+        assertEquals(subset.size(), 2);
+        subset.add(5);
+        assertEquals(subset.size(), 3);
+        subset.add(25);
+        assertEquals(subset.size(), 4);
+        assertThrows(IllegalArgumentException.class, () -> subset.add(26));
+        assertEquals(set.size(), 5);
+    }
+
+    @Test
+    void testSubset2()
+    {
+        Set<Integer> subset = set.subSet(5, 25);
+        assertEquals(subset.size(), 2);
+        assertThrows(IllegalArgumentException.class, () -> subset.add(4));
+        subset.add(5);
+        assertEquals(subset.size(), 3);
+        assertThrows(IllegalArgumentException.class, () -> subset.add(25));
+        assertEquals(4, set.size());
     }
 }

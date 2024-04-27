@@ -38,15 +38,15 @@ public class UnmodifiableList<T> implements List<T> {
     private final List<T> list;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableList(List<T> list, Supplier<Boolean> sealedSupplier) {
-        this.list = list;
-        this.sealedSupplier = sealedSupplier;
-    }
     public UnmodifiableList(Supplier<Boolean> sealedSupplier) {
         this.list = new ArrayList<>();
         this.sealedSupplier = sealedSupplier;
     }
-    
+    public UnmodifiableList(List<T> list, Supplier<Boolean> sealedSupplier) {
+        this.list = list;
+        this.sealedSupplier = sealedSupplier;
+    }
+
     private void throwIfSealed() {
         if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This list has been sealed and is now immutable");
