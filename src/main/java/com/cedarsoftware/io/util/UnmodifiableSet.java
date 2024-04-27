@@ -6,9 +6,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * NOTE: Please do not reformat this code. This is a very lambda-like implementation
- * and it makes it easy to see over all structure.  The individual methods are trivial
- * because this is about APIs and delegating.
+ * NOTE: Please do not reformat this code. This is a very lambda-like implementation and it
+ * makes it easy to see the overall structure.  The individual methods are trivial because
+ * this is APIs, scope, and delegation.
  * <br><br>
  * UnmodifiableSet provides a toggle between a mutable and immutable set.
  * The set can be sealed to prevent further modifications.

@@ -24,6 +24,6 @@ import com.cedarsoftware.io.util.UnmodifiableList;
  */
 public class UnmodifiableListFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableList<>();
+        return new UnmodifiableList<>(resolver.sealedSupplier);
     }
 }

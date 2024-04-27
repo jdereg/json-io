@@ -14,10 +14,12 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
 import com.cedarsoftware.io.util.Unmodifiable;
+import com.cedarsoftware.io.util.UnmodifiableList;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -61,6 +63,12 @@ public abstract class Resolver {
     private final ReadOptions readOptions;
     private final ReferenceTracker references;
     private final Converter converter;
+    private volatile boolean sealed = false;
+    public final Supplier<Boolean> sealedSupplier = new Supplier<Boolean>() {
+        public Boolean get() {
+            return sealed;
+        }
+    };
 
     private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "byte",
@@ -121,8 +129,7 @@ public abstract class Resolver {
             "java.time.ZoneRegion",
             "sun.util.calendar.ZoneInfo"
     )));
-
-
+    
     /**
      * UnresolvedReference is created to hold a logical pointer to a reference that
      * could not yet be loaded, as the @ref appears ahead of the referenced object's
@@ -290,6 +297,7 @@ public abstract class Resolver {
         unresolvedRefs.clear();
         prettyMaps.clear();
         handleMissingFields();
+        sealed = true;
     }
 
     // calls the missing field handler if any for each recorded missing field.
@@ -436,7 +444,11 @@ public abstract class Resolver {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
+            if (UnmodifiableList.class.isAssignableFrom(c)) {
+                mate = new UnmodifiableList<>(sealedSupplier);
+            } else {
+                mate = MetaUtils.newInstance(converter, c, null);  // can add constructor arg values
+            }
         }
         jsonObj.setTarget(mate);
         return mate;

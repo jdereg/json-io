@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,12 +34,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         limitations under the License.
  */
 class UnmodifiableListTest {
-
+    
     private UnmodifiableList<Integer> list;
-
+    private volatile boolean sealedState = false;
+    private Supplier<Boolean> sealedSupplier = new Supplier<Boolean>() {
+        public Boolean get() { return sealedState; }
+    };
+    
     @BeforeEach
     void setUp() {
-        list = new UnmodifiableList<>();
+        sealedState = false;
+        list = new UnmodifiableList<>(sealedSupplier);
         list.add(10);
         list.add(20);
         list.add(30);
@@ -62,20 +68,20 @@ class UnmodifiableListTest {
 
     @Test
     void testAddWhenSealed() {
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> list.add(50));
     }
 
     @Test
     void testRemoveWhenSealed() {
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> list.remove(Integer.valueOf(10)));
     }
 
     @Test
     void testIteratorWhenSealed() {
-        list.seal();
         Iterator<Integer> it = list.iterator();
+        sealedState = true;
         assertTrue(it.hasNext());
         assertEquals(10, it.next());
         assertThrows(UnsupportedOperationException.class, it::remove);
@@ -83,8 +89,8 @@ class UnmodifiableListTest {
 
     @Test
     void testListIteratorSetWhenSealed() {
-        list.seal();
         ListIterator<Integer> it = list.listIterator();
+        sealedState = true;
         it.next();
         assertThrows(UnsupportedOperationException.class, () -> it.set(100));
     }
@@ -104,33 +110,33 @@ class UnmodifiableListTest {
     @Test
     void testSubListWhenSealed() {
         List<Integer> sublist = list.subList(0, 2);
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> sublist.add(35));
         assertThrows(UnsupportedOperationException.class, () -> sublist.remove(Integer.valueOf(10)));
     }
 
     @Test
     void testClearWhenSealed() {
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, list::clear);
     }
 
     @Test
     void testSetWhenSealed() {
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> list.set(1, 100));
     }
 
     @Test
     void testListIteratorAddWhenSealed() {
-        list.seal();
         ListIterator<Integer> it = list.listIterator();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> it.add(45));
     }
 
     @Test
     void testAddAllWhenSealed() {
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> list.addAll(Arrays.asList(50, 60)));
     }
 
@@ -160,7 +166,7 @@ class UnmodifiableListTest {
 
     @Test
     void testEquals() {
-        UnmodifiableList<Integer> other = new UnmodifiableList<>();
+        UnmodifiableList<Integer> other = new UnmodifiableList<>(sealedSupplier);
         other.add(10);
         other.add(20);
         other.add(30);
@@ -171,7 +177,7 @@ class UnmodifiableListTest {
 
     @Test
     void testHashCode() {
-        UnmodifiableList<Integer> other = new UnmodifiableList<>();
+        UnmodifiableList<Integer> other = new UnmodifiableList<>(sealedSupplier);
         other.add(10);
         other.add(20);
         other.add(30);
@@ -190,9 +196,9 @@ class UnmodifiableListTest {
         l5.add(40);
         assertEquals(list.size(), 4);
         assertEquals(list.get(3), 40);
-        list.seal();
+        sealedState = true;
         assertThrows(UnsupportedOperationException.class, () -> l5.add(50));
-        list.unseal();
+        sealedState = false;
         l5.add(50);
         assertEquals(list.size(), 5);
     }
