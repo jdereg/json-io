@@ -7,9 +7,15 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * UnmodifiableList provides a toggle between a mutable and immutable list.
- * The list can be sealed to prevent further modifications.
- *
+ * NOTE: Please do not reformat this code. This is a very lambda-like implementation
+ * and it makes it easy to see over all structure.  The individual methods are trivial
+ * because this is about APIs and delegating.
+ * <br><br>
+ * UnmodifiableList provides a List that can be 'sealed' and 'unsealed.  When
+ * sealed, the List can be mutated, when unsealed it is read-only. The iterator,
+ * listIterator, and subList() return views that honor the original List's
+ * sealed state.
+ * <br><br>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
  *         Copyright (c) Cedar Software LLC
@@ -28,186 +34,93 @@ import java.util.ListIterator;
  */
 public class UnmodifiableList<T> implements List<T>, Unmodifiable {
     private final List<T> list = new ArrayList<>();
-    private boolean sealed = false;
+    private volatile boolean sealed = false;
 
-    public UnmodifiableList() {
-    }
-    
-    public UnmodifiableList(List<T> items) {
-        list.addAll(items);
-    }
-
-    public void seal() {
-        sealed = true;
-    }
-
-    public void unseal() {
-        sealed = false;
-    }
-
+    public UnmodifiableList() { }
+    public UnmodifiableList(List<T> items) { list.addAll(items); }
+    public void seal() { sealed = true; }
+    public void unseal() { sealed = false; }
     private void throwIfSealed() {
         if (sealed) {
             throw new UnsupportedOperationException("This list has been sealed and is now immutable");
         }
     }
-
-    public int size() {
-        return list.size();
-    }
-
-    public boolean isEmpty() {
-        return list.isEmpty();
-    }
-
-    public boolean contains(Object o) {
-        return list.contains(o);
-    }
-
-    public Object[] toArray() {
-        return list.toArray();
-    }
-
-    public <T1> T1[] toArray(T1[] a) {
-        return list.toArray(a);
-    }
-
-    public boolean add(T t) {
-        throwIfSealed();
-        return list.add(t);
-    }
-
-    public boolean remove(Object o) {
-        throwIfSealed();
-        return list.remove(o);
-    }
-
-    public boolean containsAll(Collection<?> c) {
-        return list.containsAll(c);
-    }
-
-    public boolean addAll(Collection<? extends T> c) {
-        throwIfSealed();
-        return list.addAll(c);
-    }
-
-    public boolean addAll(int index, Collection<? extends T> c) {
-        throwIfSealed();
-        return list.addAll(index, c);
-    }
-
-    public boolean removeAll(Collection<?> c) {
-        throwIfSealed();
-        return list.removeAll(c);
-    }
-
-    public boolean retainAll(Collection<?> c) {
-        throwIfSealed();
-        return list.retainAll(c);
-    }
-
-    public void clear() {
-        throwIfSealed();
-        list.clear();
-    }
-
-    public T get(int index) {
-        return list.get(index);
-    }
-
-    public T set(int index, T element) {
-        throwIfSealed();
-        return list.set(index, element);
-    }
-
-    public void add(int index, T element) {
-        throwIfSealed();
-        list.add(index, element);
-    }
-
-    public T remove(int index) {
-        throwIfSealed();
-        return list.remove(index);
-    }
-
-    public int indexOf(Object o) {
-        return list.indexOf(o);
-    }
-
-    public int lastIndexOf(Object o) {
-        return list.lastIndexOf(o);
-    }
-
-    public Iterator<T> iterator() {
+    public boolean equals(Object other) { return list.equals(other); }
+    public int hashCode() { return list.hashCode(); }
+    public int size() { return list.size(); }
+    public boolean isEmpty() { return list.isEmpty(); }
+    public boolean contains(Object o) { return list.contains(o); }
+    public Object[] toArray() { return list.toArray(); }
+    public <T1> T1[] toArray(T1[] a) { return list.toArray(a);}
+    public boolean add(T t) { throwIfSealed(); return list.add(t); }
+    public boolean remove(Object o) { throwIfSealed(); return list.remove(o); }
+    public boolean containsAll(Collection<?> c) { return list.containsAll(c); }
+    public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return list.addAll(c); }
+    public boolean addAll(int index, Collection<? extends T> c) { throwIfSealed(); return list.addAll(index, c); }
+    public boolean removeAll(Collection<?> c) { throwIfSealed(); return list.removeAll(c); }
+    public boolean retainAll(Collection<?> c) { throwIfSealed(); return list.retainAll(c); }
+    public void clear() { throwIfSealed(); list.clear(); }
+    public T get(int index) { return list.get(index); }
+    public T set(int index, T element) { throwIfSealed(); return list.set(index, element); }
+    public void add(int index, T element) { throwIfSealed(); list.add(index, element); }
+    public T remove(int index) { throwIfSealed(); return list.remove(index); }
+    public int indexOf(Object o) { return list.indexOf(o); }
+    public int lastIndexOf(Object o) { return list.lastIndexOf(o); }
+    
+    private Iterator<T> createSealHonoringIterator(Iterator<T> iterator) {
         return new Iterator<T>() {
-            private final Iterator<T> i = list.iterator();
-
-            public boolean hasNext() {
-                return i.hasNext();
-            }
-
-            public T next() {
-                return i.next();
-            }
-
-            public void remove() {
-                throwIfSealed();
-                i.remove();
-            }
+            public boolean hasNext() { return iterator.hasNext(); }
+            public T next() { return iterator.next(); }
+            public void remove() { throwIfSealed(); iterator.remove(); }
         };
     }
 
-    public ListIterator<T> listIterator() {
-        return listIterator(0);
-    }
-
-    public ListIterator<T> listIterator(final int index) {
+    private ListIterator<T> createSealHonoringListIterator(ListIterator<T> iterator) {
         return new ListIterator<T>() {
-            private final ListIterator<T> i = list.listIterator(index);
-
-            public boolean hasNext() {
-                return i.hasNext();
-            }
-
-            public T next() {
-                return i.next();
-            }
-
-            public boolean hasPrevious() {
-                return i.hasPrevious();
-            }
-
-            public T previous() {
-                return i.previous();
-            }
-
-            public int nextIndex() {
-                return i.nextIndex();
-            }
-
-            public int previousIndex() {
-                return i.previousIndex();
-            }
-
-            public void remove() {
-                throwIfSealed();
-                i.remove();
-            }
-
-            public void set(T e) {
-                throwIfSealed();
-                i.set(e);
-            }
-
-            public void add(T e) {
-                throwIfSealed();
-                i.add(e);
-            }
+            public boolean hasNext() { return iterator.hasNext();}
+            public T next() { return iterator.next(); }
+            public boolean hasPrevious() { return iterator.hasPrevious(); }
+            public T previous() { return iterator.previous(); }
+            public int nextIndex() { return iterator.nextIndex(); }
+            public int previousIndex() { return iterator.previousIndex(); }
+            public void remove() { throwIfSealed(); iterator.remove(); }
+            public void set(T e) { throwIfSealed(); iterator.set(e); }
+            public void add(T e) { throwIfSealed(); iterator.add(e);}
         };
     }
 
-    public List<T> subList(int fromIndex, int toIndex) {
-        UnmodifiableList<T> sublist = new UnmodifiableList<>(list.subList(fromIndex, toIndex));
-        sublist.sealed = this.sealed;  // Set the sealed state of the sublist to match the original list
-        return sublist;
+    private List<T> createSealHonoringView(List<T> lst) {
+        return new List<T>() {
+            public boolean add(T t) { throwIfSealed(); return lst.add(t); }
+            public void add(int index, T element) { throwIfSealed(); lst.add(index, element); }
+            public boolean addAll(Collection<? extends T> c) { throwIfSealed(); return lst.addAll(c); }
+            public boolean addAll(int index, Collection<? extends T> c) { throwIfSealed(); return lst.addAll(index, c);}
+            public T set(int index, T element) { throwIfSealed(); return lst.set(index, element);}
+            public T remove(int index) { throwIfSealed(); return lst.remove(index); }
+            public int indexOf(Object o) { return lst.indexOf(o); }
+            public int lastIndexOf(Object o) { return lst.lastIndexOf(o); }
+            public boolean remove(Object o) { throwIfSealed(); return lst.remove(o); }
+            public boolean containsAll(Collection<?> c) { return lst.containsAll(c); }
+            public void clear() { throwIfSealed(); lst.clear(); }
+            public T get(int index) { return lst.get(index); }
+            public boolean removeAll(Collection<?> c) { throwIfSealed(); return lst.removeAll(c); }
+            public boolean retainAll(Collection<?> c) { throwIfSealed(); return lst.retainAll(c); }
+            public ListIterator<T> listIterator(int index) { return createSealHonoringListIterator(lst.listIterator(index)); }
+            public ListIterator<T> listIterator() { return createSealHonoringListIterator(lst.listIterator()); }
+            public int size() { return lst.size(); }
+            public boolean isEmpty() { return lst.isEmpty(); }
+            public boolean contains(Object o) { return lst.contains(o); }
+            public Iterator<T> iterator() { return createSealHonoringIterator(lst.iterator()); }
+            public Object[] toArray() { return lst.toArray(); }
+            public <T1> T1[] toArray(T1[] a) { return lst.toArray(a); }
+            public List<T> subList(int fromIndex, int toIndex) { return createSealHonoringView(lst.subList(fromIndex, toIndex)); }
+            public boolean equals(Object obj) { return lst.equals(obj); }
+            public int hashCode() { return lst.hashCode(); }
+        };
     }
+
+    public Iterator<T> iterator() { return createSealHonoringIterator(list.iterator()); }
+    public ListIterator<T> listIterator() { return createSealHonoringListIterator(list.listIterator()); }
+    public ListIterator<T> listIterator(final int index) { return createSealHonoringListIterator(list.listIterator(index)); }
+    public List<T> subList(int fromIndex, int toIndex) { return createSealHonoringView(list.subList(fromIndex, toIndex)); }
 }

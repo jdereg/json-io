@@ -9,7 +9,8 @@ import java.util.TreeSet;
 
 /**
  * UnmodifiableNavigableSet provides a toggle between a mutable and immutable navigable set.
- * The set can be sealed to prevent further modifications.
+ * The set can be sealed to prevent further modifications. Iterators and views (and iterators
+ * on views, and so on) respect the orginal enclosing Sets sealed state.
  *
  * @author John DeRegnaucourt
  *         <br>
@@ -85,14 +86,8 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
             public T floor(T e) { return set.floor(e); }
             public T ceiling(T e) { return set.ceiling(e); }
             public T higher(T e) { return set.higher(e); }
-            public T pollFirst() {
-                throwIfSealed();
-                return set.pollFirst();
-            }
-            public T pollLast() {
-                throwIfSealed();
-                return set.pollLast();
-            }
+            public T pollFirst() { throwIfSealed(); return set.pollFirst(); }
+            public T pollLast() { throwIfSealed(); return set.pollLast();}
             public int size() { return set.size(); }
             public boolean isEmpty() { return set.isEmpty(); }
             public boolean contains(Object o) { return set.contains(o); }
