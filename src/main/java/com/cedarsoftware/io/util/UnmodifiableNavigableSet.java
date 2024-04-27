@@ -35,7 +35,7 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiable {
+public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
     private final NavigableSet<T> navigableSet;
     private final Supplier<Boolean> sealedSupplier;
 

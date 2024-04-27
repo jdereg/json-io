@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
+public class UnmodifiableMap<K, V> implements Map<K, V> {
     private final Map<K, V> map = new LinkedHashMap<>();
     private final Supplier<Boolean> sealedSupplier;
 

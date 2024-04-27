@@ -37,7 +37,7 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V>, Unmodifiable {
+public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
     private final NavigableMap<K, V> map;
     private final Supplier<Boolean> sealedSupplier;
 

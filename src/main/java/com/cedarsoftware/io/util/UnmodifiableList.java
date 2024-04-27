@@ -34,7 +34,7 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableList<T> implements List<T>, Unmodifiable {
+public class UnmodifiableList<T> implements List<T> {
     private final List<T> list;
     private final Supplier<Boolean> sealedSupplier;
 

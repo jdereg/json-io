@@ -32,7 +32,7 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
+public class UnmodifiableSet<T> implements Set<T> {
     private final Set<T> set = new LinkedHashSet<>();
     private final Supplier<Boolean> sealedSupplier;
 
