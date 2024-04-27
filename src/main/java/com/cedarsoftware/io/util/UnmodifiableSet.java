@@ -1,6 +1,5 @@
 package com.cedarsoftware.io.util;
 
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -68,19 +67,38 @@ public class UnmodifiableSet<T> implements Set<T> {
         return new Iterator<T>() {
             public boolean hasNext() { return iterator.hasNext(); }
             public T next() {
-                // Doing a 'Solid' for Maps that use UnmodifiableSet for entrySet() implementation. Before just
-                // blindly returning the entry, see if we are in sealed mode, and if so, return an ImmutableEntry
-                // so that user cannot modify the entry via entry.setValue() API.
                 T item = iterator.next();
                 if (item instanceof Map.Entry) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
-                    if (sealedSupplier.get()) {
-                        return (T) new AbstractMap.SimpleImmutableEntry(entry.getKey(), entry.getValue());  // prevent .setValue() on the entry's value.
-                    }
+                    return (T) new SealAwareEntry<>(entry, sealedSupplier);
                 }
                 return item;
             }
             public void remove() { throwIfSealed(); iterator.remove(); }
         };
+    }
+
+    // Must enforce immutability after the Map.Entry was "handed out" because
+    // it could have been handed out when the map was unsealed or sealed.
+    static class SealAwareEntry<K, V> implements Map.Entry<K, V> {
+        private final Map.Entry<K, V> entry;
+        private final Supplier<Boolean> sealedSupplier;
+
+        SealAwareEntry(Map.Entry<K, V> entry, Supplier<Boolean> sealedSupplier) {
+            this.entry = entry;
+            this.sealedSupplier = sealedSupplier;
+        }
+
+        public K getKey() { return entry.getKey(); }
+        public V getValue() { return entry.getValue(); }
+        public V setValue(V value) {
+            if (sealedSupplier.get()) {
+                throw new UnsupportedOperationException("Cannot modify, set is sealed");
+            }
+            return entry.setValue(value);
+        }
+
+        public boolean equals(Object o) { return entry.equals(o); }
+        public int hashCode() { return entry.hashCode(); }
     }
 }

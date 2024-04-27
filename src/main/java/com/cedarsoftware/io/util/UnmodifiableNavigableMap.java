@@ -8,7 +8,7 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Supplier;
 
 /**
@@ -43,11 +43,11 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
 
     public UnmodifiableNavigableMap(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        this.map = new TreeMap<>();
+        this.map = new ConcurrentSkipListMap<>();
     }
     public UnmodifiableNavigableMap(NavigableMap<K, V> map, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        this.map = new TreeMap<>(map);
+        this.map = map;
     }
 
     private void throwIfSealed() {

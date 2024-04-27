@@ -1,13 +1,12 @@
 package com.cedarsoftware.io.util;
 
-import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Supplier;
 
 /**
@@ -41,11 +40,11 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
 
     public UnmodifiableNavigableSet(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        navigableSet = new TreeSet<>();
+        navigableSet = new ConcurrentSkipListSet<>();
     }
     public UnmodifiableNavigableSet(Comparator<? super T> comparator, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        navigableSet = new TreeSet<>(comparator);
+        navigableSet = new ConcurrentSkipListSet<>(comparator);
     }
     public UnmodifiableNavigableSet(Collection<? extends T> col, Supplier<Boolean> sealedSupplier) {
         this(sealedSupplier);
@@ -53,7 +52,11 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
     }
     public UnmodifiableNavigableSet(SortedSet<T> set, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
-        navigableSet = new TreeSet<>(set);
+        navigableSet = new ConcurrentSkipListSet<>(set);
+    }
+    public UnmodifiableNavigableSet(NavigableSet<T> set, Supplier<Boolean> sealedSupplier) {
+        this.sealedSupplier = sealedSupplier;
+        navigableSet = set;
     }
 
     private void throwIfSealed() {
@@ -120,19 +123,14 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
         return new Iterator<T>() {
             public boolean hasNext() { return iterator.hasNext(); }
             public T next() {
-                // Doing a 'Solid' for Maps that use UnmodifiableNavigableSet for entrySet() implementation. Before just
-                // blindly returning the entry, see if we are in sealed mode, and if so, return an ImmutableEntry
-                // so that user cannot modify the entry via entry.setValue() API.
                 T item = iterator.next();
                 if (item instanceof Map.Entry) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
-                    if (sealedSupplier.get()) {
-                        return (T) new AbstractMap.SimpleImmutableEntry(entry.getKey(), entry.getValue());  // prevent .setValue() on the entry's value.
-                    }
+                    return (T) new UnmodifiableSet.SealAwareEntry<>(entry, sealedSupplier);
                 }
                 return item;
             }
-            public void remove() { throwIfSealed(); iterator.remove(); }
+            public void remove() { throwIfSealed(); iterator.remove();}
         };
     }
 }
