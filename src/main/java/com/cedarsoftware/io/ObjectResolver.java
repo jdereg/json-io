@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.io.util.Unmodifiable;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.convert.Converter;
 
@@ -334,9 +333,6 @@ public class ObjectResolver extends Resolver
             }
         }
 
-        if (col instanceof Unmodifiable) {
-            ((Unmodifiable) col).seal();
-        }
         jsonObj.clear();   // Reduce memory required during processing
     }
 

@@ -18,9 +18,9 @@ import java.util.function.Supplier;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
-import com.cedarsoftware.io.util.Unmodifiable;
 import com.cedarsoftware.io.util.UnmodifiableList;
 import com.cedarsoftware.io.util.UnmodifiableMap;
+import com.cedarsoftware.io.util.UnmodifiableNavigableMap;
 import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
 import com.cedarsoftware.io.util.UnmodifiableSet;
 import com.cedarsoftware.util.ClassUtilities;
@@ -443,7 +443,9 @@ public abstract class Resolver {
             // Handle regular field.object reference
             // ClassFactory already consulted above, likely regular business/data classes.
             // If the newInstance(c) fails, it throws a JsonIoException.
-            if (UnmodifiableNavigableSet.class.isAssignableFrom(c)) {
+            if (UnmodifiableNavigableMap.class.isAssignableFrom(c)) {
+                mate = new UnmodifiableNavigableMap<>(sealedSupplier);
+            } else if (UnmodifiableNavigableSet.class.isAssignableFrom(c)) {
                 mate = new UnmodifiableNavigableSet<>(sealedSupplier);
             } else if (UnmodifiableMap.class.isAssignableFrom(c)) {
                 mate = new UnmodifiableMap<>(sealedSupplier);
@@ -548,14 +550,7 @@ public abstract class Resolver {
                     list.set(ref.index, objReferenced.getTarget());
                 } else if (objToFix instanceof Collection) {   // Patch up Indexable Collections
                     Collection col = (Collection) objToFix;
-                    if (objToFix instanceof Unmodifiable) {
-                        Unmodifiable unmodifiable = (Unmodifiable) objToFix;
-                        unmodifiable.unseal();
-                        col.add(objReferenced.getTarget());
-                        unmodifiable.seal();
-                    } else {
-                        col.add(objReferenced.getTarget());
-                    }
+                    col.add(objReferenced.getTarget());
                 } else {
                     Array.set(objToFix, ref.index, objReferenced.getTarget());        // patch array element here
                 }

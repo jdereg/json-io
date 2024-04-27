@@ -46,10 +46,7 @@ public class UnmodifiableList<T> implements List<T>, Unmodifiable {
         this.list = new ArrayList<>();
         this.sealedSupplier = sealedSupplier;
     }
-
-    public void seal() { }
-    public void unseal() { }
-
+    
     private void throwIfSealed() {
         if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This list has been sealed and is now immutable");

@@ -20,6 +20,4 @@ package com.cedarsoftware.io.util;
  *         limitations under the License.
  */
 public interface Unmodifiable {
-    void seal();
-    void unseal();
 }

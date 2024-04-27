@@ -8,8 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.cedarsoftware.io.util.Unmodifiable;
-
 /**
  * This class holds a JSON object in a LinkedHashMap.
  * LinkedHashMap used to keep fields in same order as they are
@@ -270,11 +268,6 @@ public class JsonObject extends JsonValue implements Map<Object, Object> {
 
         for (int i=0; i < len; i++) {
             map.put(javaKeys[i], javaValues[i]);
-        }
-
-        // Support Immutable 'Map.of()' and Unmodifiable 'Collections.unmodifiableMap(map)'
-        if (map instanceof Unmodifiable) {
-            ((Unmodifiable) map).seal();
         }
     }
 }

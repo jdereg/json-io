@@ -39,10 +39,6 @@ public class UnmodifiableMap<K, V> implements Map<K, V>, Unmodifiable {
 
     public UnmodifiableMap(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
     public UnmodifiableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; map.putAll(items); }
-
-    // TODO: Remove these two methods
-    public void seal() { }
-    public void unseal() { }
     
     private void throwIfSealed() {
         if (sealedSupplier.get()) {

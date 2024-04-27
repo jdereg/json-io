@@ -56,10 +56,6 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T>, Unmodifiabl
         navigableSet = new TreeSet<>(set);
     }
 
-    // TODO: Remove the two methods below
-    public void seal() { }
-    public void unseal() { }
-    
     private void throwIfSealed() {
         if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");

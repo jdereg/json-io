@@ -39,10 +39,6 @@ public class UnmodifiableSet<T> implements Set<T>, Unmodifiable {
     public UnmodifiableSet(Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; }
     public UnmodifiableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) { this.sealedSupplier = sealedSupplier; set.addAll(items); }
 
-    // TODO: Remove
-    public void seal() { }
-    public void unseal() { }
-
     private void throwIfSealed() {
         if (sealedSupplier.get()) {
             throw new UnsupportedOperationException("This set has been sealed and is now immutable");
