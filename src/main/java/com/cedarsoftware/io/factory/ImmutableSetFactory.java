@@ -3,7 +3,7 @@ package com.cedarsoftware.io.factory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.UnmodifiableSet;
+import com.cedarsoftware.io.util.SealableSet;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -24,6 +24,6 @@ import com.cedarsoftware.io.util.UnmodifiableSet;
  */
 public class ImmutableSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableSet<>(resolver.sealedSupplier);
+        return new SealableSet<>(resolver.sealedSupplier);
     }
 }

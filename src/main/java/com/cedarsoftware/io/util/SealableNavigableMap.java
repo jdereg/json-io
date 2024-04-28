@@ -16,10 +16,9 @@ import java.util.function.Supplier;
  * and it makes it easy to see over all structure.  The individual methods are trivial
  * because this is about APIs and delegating.
  *  <br><br>
- * UnmodifiableNavigableMap provides a NavigableMap that can be 'sealed' and 'unsealed'.
- * When sealed, the map is read-only. Before sealing, it can be modified.
- * The iterator, keySet, entrySet, and navigableKeySet return views that honor the
- * original Map's sealed state.
+ * SealableNavigableMap provides a NavigableMap that can be 'sealed' and 'unsealed'.
+ * When sealed, the map is read-only. otherwise it is mutable. The iterator, keySet,
+ * entrySet, and navigableKeySet return views that honor the original Map's sealed state.
  *
  * @author John DeRegnaucourt
  *         <br>
@@ -37,19 +36,19 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
+public class SealableNavigableMap<K, V> implements NavigableMap<K, V> {
     private final NavigableMap<K, V> map;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableNavigableMap(Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableMap(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = new ConcurrentSkipListMap<>();
     }
-    public UnmodifiableNavigableMap(SortedMap<K, V> map, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableMap(SortedMap<K, V> map, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = new ConcurrentSkipListMap<>(map);
     }
-    public UnmodifiableNavigableMap(NavigableMap<K, V> map, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableMap(NavigableMap<K, V> map, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = map;
     }
@@ -71,9 +70,9 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
     public Comparator<? super K> comparator() { return map.comparator(); }
     public K firstKey() { return map.firstKey(); }
     public K lastKey() { return map.lastKey(); }
-    public Set<K> keySet() { return new UnmodifiableSet<>(map.keySet(), sealedSupplier); }
-    public Collection<V> values() { return new UnmodifiableList<>(new ArrayList<>(map.values()), sealedSupplier); }
-    public Set<Entry<K, V>> entrySet() { return new UnmodifiableSet<>(map.entrySet(), sealedSupplier); }
+    public Set<K> keySet() { return new SealableSet<>(map.keySet(), sealedSupplier); }
+    public Collection<V> values() { return new SealableList<>(new ArrayList<>(map.values()), sealedSupplier); }
+    public Set<Entry<K, V>> entrySet() { return new SealableSet<>(map.entrySet(), sealedSupplier); }
     public Map.Entry<K, V> lowerEntry(K key) { return map.lowerEntry(key); }
     public K lowerKey(K key) { return map.lowerKey(key); }
     public Map.Entry<K, V> floorEntry(K key) { return map.floorEntry(key); }
@@ -84,20 +83,20 @@ public class UnmodifiableNavigableMap<K, V> implements NavigableMap<K, V> {
     public K higherKey(K key) { return map.higherKey(key); }
     public Map.Entry<K, V> firstEntry() { return map.firstEntry(); }
     public Map.Entry<K, V> lastEntry() { return map.lastEntry(); }
-    public NavigableMap<K, V> descendingMap() { return new UnmodifiableNavigableMap<>(map.descendingMap(), sealedSupplier); }
-    public NavigableSet<K> navigableKeySet() { return new UnmodifiableNavigableSet<>(map.navigableKeySet(), sealedSupplier); }
-    public NavigableSet<K> descendingKeySet() { return new UnmodifiableNavigableSet<>(map.descendingKeySet(), sealedSupplier); }
+    public NavigableMap<K, V> descendingMap() { return new SealableNavigableMap<>(map.descendingMap(), sealedSupplier); }
+    public NavigableSet<K> navigableKeySet() { return new SealableNavigableSet<>(map.navigableKeySet(), sealedSupplier); }
+    public NavigableSet<K> descendingKeySet() { return new SealableNavigableSet<>(map.descendingKeySet(), sealedSupplier); }
     public SortedMap<K, V> subMap(K fromKey, K toKey) { return subMap(fromKey, true, toKey, false); }
     public NavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
-        return new UnmodifiableNavigableMap<>(map.subMap(fromKey, fromInclusive, toKey, toInclusive), sealedSupplier);
+        return new SealableNavigableMap<>(map.subMap(fromKey, fromInclusive, toKey, toInclusive), sealedSupplier);
     }
     public SortedMap<K, V> headMap(K toKey) { return headMap(toKey, false); }
     public NavigableMap<K, V> headMap(K toKey, boolean inclusive) {
-        return new UnmodifiableNavigableMap<>(map.headMap(toKey, inclusive), sealedSupplier);
+        return new SealableNavigableMap<>(map.headMap(toKey, inclusive), sealedSupplier);
     }
     public SortedMap<K, V> tailMap(K fromKey) { return tailMap(fromKey, true); }
     public NavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
-        return new UnmodifiableNavigableMap<>(map.tailMap(fromKey, inclusive), sealedSupplier);
+        return new SealableNavigableMap<>(map.tailMap(fromKey, inclusive), sealedSupplier);
     }
 
     // Mutable APIs

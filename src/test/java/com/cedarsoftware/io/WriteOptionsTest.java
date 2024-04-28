@@ -217,7 +217,7 @@ class WriteOptionsTest {
                 Arguments.of("java.util.TreeMap", "TreeMap"),
                 Arguments.of("java.util.LinkedHashMap", "LinkedHashMap"),
                 Arguments.of("java.util.Collections$SingletonMap", "SingletonMap"),
-                Arguments.of("java.util.Collections$UnmodifiableMap", "UnModMap"),
+                Arguments.of("java.util.Collections$UnmodifiableMap", "UnmodifiableMap"),
                 Arguments.of("java.util.HashMap$KeySet", "HashMapKeySet"),
                 Arguments.of("java.util.concurrent.ConcurrentHashMap$KeySetView", "ConcurrentHashMapKeySetView"),
                 Arguments.of("java.util.concurrent.ConcurrentSkipListMap$KeySet", "ConcurrentSkipListMapKeySet")

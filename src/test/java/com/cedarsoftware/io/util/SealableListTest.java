@@ -33,16 +33,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableListTest {
+class SealableListTest {
     
-    private UnmodifiableList<Integer> list;
+    private SealableList<Integer> list;
     private volatile boolean sealedState = false;
     private Supplier<Boolean> sealedSupplier = () -> sealedState;
     
     @BeforeEach
     void setUp() {
         sealedState = false;
-        list = new UnmodifiableList<>(sealedSupplier);
+        list = new SealableList<>(sealedSupplier);
         list.add(10);
         list.add(20);
         list.add(30);
@@ -164,7 +164,7 @@ class UnmodifiableListTest {
 
     @Test
     void testEquals() {
-        UnmodifiableList<Integer> other = new UnmodifiableList<>(sealedSupplier);
+        SealableList<Integer> other = new SealableList<>(sealedSupplier);
         other.add(10);
         other.add(20);
         other.add(30);
@@ -175,7 +175,7 @@ class UnmodifiableListTest {
 
     @Test
     void testHashCode() {
-        UnmodifiableList<Integer> other = new UnmodifiableList<>(sealedSupplier);
+        SealableList<Integer> other = new SealableList<>(sealedSupplier);
         other.add(10);
         other.add(20);
         other.add(30);

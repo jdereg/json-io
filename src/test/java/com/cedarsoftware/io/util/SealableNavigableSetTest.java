@@ -29,15 +29,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableNavigableSetTest {
+class SealableNavigableSetTest {
 
-    private UnmodifiableNavigableSet<Integer> set;
+    private SealableNavigableSet<Integer> set;
     private volatile boolean sealedState = false;
     private Supplier<Boolean> sealedSupplier = () -> sealedState;
 
     @BeforeEach
     void setUp() {
-        set = new UnmodifiableNavigableSet<>(sealedSupplier);
+        set = new SealableNavigableSet<>(sealedSupplier);
         set.add(10);
         set.add(20);
         set.add(30);

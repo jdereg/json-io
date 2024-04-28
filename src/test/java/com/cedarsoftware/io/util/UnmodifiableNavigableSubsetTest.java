@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         limitations under the License.
  */
 class UnmodifiableNavigableSubsetTest {
-    private UnmodifiableNavigableSet<Integer> unmodifiableSet;
+    private SealableNavigableSet<Integer> unmodifiableSet;
     private volatile boolean sealedState = false;
     private final Supplier<Boolean> sealedSupplier = () -> sealedState;
 
@@ -40,7 +40,7 @@ class UnmodifiableNavigableSubsetTest {
         for (int i = 10; i <= 100; i += 10) {
             testSet.add(i);
         }
-        unmodifiableSet = new UnmodifiableNavigableSet<>(testSet, sealedSupplier);
+        unmodifiableSet = new SealableNavigableSet<>(testSet, sealedSupplier);
     }
 
     @Test

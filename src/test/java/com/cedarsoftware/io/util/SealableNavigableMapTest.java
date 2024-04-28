@@ -31,10 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableNavigableMapTest {
+class SealableNavigableMapTest {
 
     private NavigableMap<String, Integer> map;
-    private UnmodifiableNavigableMap<String, Integer> unmodifiableMap;
+    private SealableNavigableMap<String, Integer> unmodifiableMap;
     private Supplier<Boolean> sealedSupplier;
     private boolean sealed;
 
@@ -48,7 +48,7 @@ class UnmodifiableNavigableMapTest {
         map.put("two", 2);
         map.put("three", 3);
 
-        unmodifiableMap = new UnmodifiableNavigableMap<>(map, sealedSupplier);
+        unmodifiableMap = new SealableNavigableMap<>(map, sealedSupplier);
     }
 
     @Test

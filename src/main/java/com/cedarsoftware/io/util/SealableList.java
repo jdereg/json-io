@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  * and it makes it easy to see over all structure.  The individual methods are trivial
  * because this is about APIs and delegating.
  * <br><br>
- * UnmodifiableList provides a List that can be 'sealed' and 'unsealed.  When
+ * SealableList provides a List that can be 'sealed' and 'unsealed.  When
  * sealed, the List can be mutated, when unsealed it is read-only. The iterator,
  * listIterator, and subList() return views that honor the original List's
  * sealed state.
@@ -34,15 +34,15 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableList<T> implements List<T> {
+public class SealableList<T> implements List<T> {
     private final List<T> list;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableList(Supplier<Boolean> sealedSupplier) {
+    public SealableList(Supplier<Boolean> sealedSupplier) {
         this.list = new ArrayList<>();
         this.sealedSupplier = sealedSupplier;
     }
-    public UnmodifiableList(List<T> list, Supplier<Boolean> sealedSupplier) {
+    public SealableList(List<T> list, Supplier<Boolean> sealedSupplier) {
         this.list = list;
         this.sealedSupplier = sealedSupplier;
     }
@@ -68,7 +68,7 @@ public class UnmodifiableList<T> implements List<T> {
     public Iterator<T> iterator() { return createSealHonoringIterator(list.iterator()); }
     public ListIterator<T> listIterator() { return createSealHonoringListIterator(list.listIterator()); }
     public ListIterator<T> listIterator(final int index) { return createSealHonoringListIterator(list.listIterator(index)); }
-    public List<T> subList(int fromIndex, int toIndex) { return new UnmodifiableList<>(list.subList(fromIndex, toIndex), sealedSupplier); }
+    public List<T> subList(int fromIndex, int toIndex) { return new SealableList<>(list.subList(fromIndex, toIndex), sealedSupplier); }
     
     // Mutable APIs
     public boolean add(T t) { throwIfSealed(); return list.add(t); }

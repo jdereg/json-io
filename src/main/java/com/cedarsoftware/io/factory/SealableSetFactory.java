@@ -3,7 +3,7 @@ package com.cedarsoftware.io.factory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.UnmodifiableList;
+import com.cedarsoftware.io.util.SealableSet;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,8 +22,8 @@ import com.cedarsoftware.io.util.UnmodifiableList;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableListFactory implements JsonReader.ClassFactory {
+public class SealableSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableList<>(resolver.sealedSupplier);
+        return new SealableSet<>(resolver.sealedSupplier);
     }
 }

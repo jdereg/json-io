@@ -28,8 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableNavigableMapSubsetTest {
-    private UnmodifiableNavigableMap<Integer, String> unmodifiableMap;
+class SealableNavigableMapSubsetTest {
+    private SealableNavigableMap<Integer, String> unmodifiableMap;
     private volatile boolean sealedState = false;
     private final Supplier<Boolean> sealedSupplier = () -> sealedState;
 
@@ -39,7 +39,7 @@ class UnmodifiableNavigableMapSubsetTest {
         for (int i = 10; i <= 100; i += 10) {
             testMap.put(i, String.valueOf(i));
         }
-        unmodifiableMap = new UnmodifiableNavigableMap<>(testMap, sealedSupplier);
+        unmodifiableMap = new SealableNavigableMap<>(testMap, sealedSupplier);
     }
 
     @Test

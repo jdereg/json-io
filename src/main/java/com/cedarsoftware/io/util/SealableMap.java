@@ -12,10 +12,9 @@ import java.util.function.Supplier;
  * and it makes it easy to see over all structure.  The individual methods are trivial
  * because this is about APIs and delegating.
  * <br><br>
- * UnmodifiableMap provides a Map that can be 'sealed' and 'unsealed'. When sealed,
- * the Map is read-only. Before sealing, it can be modified. The iterator,
- * keySet, entrySet, and values() return views that honor the original Map's
- * sealed state.
+ * SealableMap provides a Map that can be 'sealed' and 'unsealed'. When sealed,
+ * the Map is read-only, otherwise it is mutable. The iterator, keySet, entrySet, and
+ * values() return views that honor the original Map's sealed state.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -33,15 +32,15 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableMap<K, V> implements Map<K, V> {
+public class SealableMap<K, V> implements Map<K, V> {
     private final Map<K, V> map;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableMap(Supplier<Boolean> sealedSupplier) {
+    public SealableMap(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = new LinkedHashMap<>();
     }
-    public UnmodifiableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) {
+    public SealableMap(Map<K, V> items, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.map = items;
     }
@@ -60,9 +59,9 @@ public class UnmodifiableMap<K, V> implements Map<K, V> {
     public boolean containsKey(Object key) { return map.containsKey(key); }
     public boolean containsValue(Object value) { return map.containsValue(value); }
     public V get(Object key) { return map.get(key); }
-    public Set<K> keySet() { return new UnmodifiableSet<>(map.keySet(), sealedSupplier); }
-    public Collection<V> values() { return new UnmodifiableList<>(new ArrayList<>(map.values()), sealedSupplier); }
-    public Set<Map.Entry<K, V>> entrySet() { return new UnmodifiableSet<>(map.entrySet(), sealedSupplier); }
+    public Set<K> keySet() { return new SealableSet<>(map.keySet(), sealedSupplier); }
+    public Collection<V> values() { return new SealableList<>(new ArrayList<>(map.values()), sealedSupplier); }
+    public Set<Map.Entry<K, V>> entrySet() { return new SealableSet<>(map.entrySet(), sealedSupplier); }
 
     // Mutable
     public V put(K key, V value) { throwIfSealed(); return map.put(key, value); }

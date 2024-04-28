@@ -148,21 +148,21 @@ java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoft
 
 # Use factory classes to re-create unmodifiable Collections classes -> these are "marker" collections that will be
 # "flipped" to Unmodifiable classes once filled, keeping them the same instance as the original.
-java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.UnmodifiableListFactory
-java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.UnmodifiableListFactory
-java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.UnmodifiableListFactory
-java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.UnmodifiableSetFactory
-java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
-java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
-java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.UnmodifiableMapFactory
-java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
-java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
+java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.SealableListFactory
+java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.SealableListFactory
+java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.SealableListFactory
+java.util.Collections$UnmodifiableSet = com.cedarsoftware.io.factory.SealableSetFactory
+java.util.Collections$UnmodifiableSortedSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
+java.util.Collections$UnmodifiableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
+java.util.Collections$UnmodifiableMap = com.cedarsoftware.io.factory.SealableMapFactory
+java.util.Collections$UnmodifiableSortedMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
+java.util.Collections$UnmodifiableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
 
-com.cedarsoftware.io.util.UnmodifiableList = com.cedarsoftware.io.factory.UnmodifiableListFactory
-com.cedarsoftware.io.util.UnmodifiableSet = com.cedarsoftware.io.factory.UnmodifiableSetFactory
-com.cedarsoftware.io.util.UnmodifiableNavigableSet = com.cedarsoftware.io.factory.UnmodifiableNavigableSetFactory
-com.cedarsoftware.io.util.UnmodifiableMap = com.cedarsoftware.io.factory.UnmodifiableMapFactory
-com.cedarsoftware.io.util.UnmodifiableNavigableMap = com.cedarsoftware.io.factory.UnmodifiableNavigableMapFactory
+com.cedarsoftware.io.util.SealableList = com.cedarsoftware.io.factory.SealableListFactory
+com.cedarsoftware.io.util.SealableSet = com.cedarsoftware.io.factory.SealableSetFactory
+com.cedarsoftware.io.util.SealableNavigableSet = com.cedarsoftware.io.factory.SealableNavigableSetFactory
+com.cedarsoftware.io.util.SealableMap = com.cedarsoftware.io.factory.SealableMapFactory
+com.cedarsoftware.io.util.SealableNavigableMap = com.cedarsoftware.io.factory.SealableNavigableMapFactory
 
 java.util.ImmutableCollections$ListN = com.cedarsoftware.io.factory.ImmutableListFactory
 java.util.ImmutableCollections$List12 = com.cedarsoftware.io.factory.ImmutableListFactory

@@ -32,15 +32,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableSetTest {
+class SealableSetTest {
 
-    private UnmodifiableSet<Integer> set;
+    private SealableSet<Integer> set;
     private volatile boolean sealed = false;
     private Supplier<Boolean> sealedSupplier = () -> sealed;
 
     @BeforeEach
     void setUp() {
-        set = new UnmodifiableSet<>(sealedSupplier);
+        set = new SealableSet<>(sealedSupplier);
         set.add(10);
         set.add(20);
     }
@@ -173,7 +173,7 @@ class UnmodifiableSetTest {
 
     @Test
     void testEquals() {
-        UnmodifiableSet<Integer> other = new UnmodifiableSet<>(sealedSupplier);
+        SealableSet<Integer> other = new SealableSet<>(sealedSupplier);
         other.add(10);
         other.add(20);
         assertEquals(set, other);

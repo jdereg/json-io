@@ -33,15 +33,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-class UnmodifiableMapTest {
+class SealableMapTest {
 
-    private UnmodifiableMap<String, Integer> map;
+    private SealableMap<String, Integer> map;
     private volatile boolean sealedState = false;
     private Supplier<Boolean> sealedSupplier = () -> sealedState;
 
     @BeforeEach
     void setUp() {
-        map = new UnmodifiableMap<>(sealedSupplier);
+        map = new SealableMap<>(sealedSupplier);
         map.put("one", 1);
         map.put("two", 2);
         map.put("three", 3);
@@ -151,7 +151,7 @@ class UnmodifiableMapTest {
 
     @Test
     void testMapEquality() {
-        UnmodifiableMap<String, Integer> anotherMap = new UnmodifiableMap<>(sealedSupplier);
+        SealableMap<String, Integer> anotherMap = new SealableMap<>(sealedSupplier);
         anotherMap.put("one", 1);
         anotherMap.put("two", 2);
         anotherMap.put("three", 3);

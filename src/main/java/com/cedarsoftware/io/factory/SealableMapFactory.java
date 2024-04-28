@@ -3,7 +3,7 @@ package com.cedarsoftware.io.factory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.UnmodifiableMap;
+import com.cedarsoftware.io.util.SealableMap;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,8 +22,8 @@ import com.cedarsoftware.io.util.UnmodifiableMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableMapFactory implements JsonReader.ClassFactory {
+public class SealableMapFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableMap<>(resolver.sealedSupplier);
+        return new SealableMap<>(resolver.sealedSupplier);
     }
 }

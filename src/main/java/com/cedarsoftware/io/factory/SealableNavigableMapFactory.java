@@ -3,7 +3,7 @@ package com.cedarsoftware.io.factory;
 import com.cedarsoftware.io.JsonObject;
 import com.cedarsoftware.io.JsonReader;
 import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
+import com.cedarsoftware.io.util.SealableNavigableMap;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,8 +22,8 @@ import com.cedarsoftware.io.util.UnmodifiableNavigableSet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableNavigableSetFactory implements JsonReader.ClassFactory {
+public class SealableNavigableMapFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new UnmodifiableNavigableSet<>(resolver.sealedSupplier);
+        return new SealableNavigableMap<>(resolver.sealedSupplier);
     }
 }

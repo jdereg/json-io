@@ -12,7 +12,7 @@ import java.util.function.Supplier;
  * makes it easy to see the overall structure.  The individual methods are trivial because
  * this is APIs, scope, and delegation.
  * <br><br>
- * UnmodifiableSet provides a toggle between a mutable and immutable set.
+ * SealableSet provides a toggle between a mutable and immutable set.
  * The set can be sealed to prevent further modifications.
  * <br><br>
  * @author John DeRegnaucourt
@@ -31,19 +31,19 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableSet<T> implements Set<T> {
+public class SealableSet<T> implements Set<T> {
     private final Set<T> set;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableSet(Supplier<Boolean> sealedSupplier) {
+    public SealableSet(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.set = new LinkedHashSet<>();
     }
-    public UnmodifiableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) {
+    public SealableSet(Collection<T> items, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.set = new LinkedHashSet<>(items);
     }
-    public UnmodifiableSet(Set<T> items, Supplier<Boolean> sealedSupplier) {
+    public SealableSet(Set<T> items, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         this.set = items;
     }

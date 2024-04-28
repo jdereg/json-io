@@ -14,7 +14,7 @@ import java.util.function.Supplier;
  * and it makes it easy to see over all structure.  The individual methods are trivial
  * because this is about APIs and delegating.
  * <br><br>
- * UnmodifiableNavigableSet provides a toggle between a mutable and immutable navigable set.
+ * SealableNavigableSet provides a toggle between a mutable and immutable navigable set.
  * The set can be sealed to prevent further modifications. Iterators and views (and iterators
  * on views, and so on) respect the orginal enclosing Sets sealed state.
  *
@@ -34,27 +34,27 @@ import java.util.function.Supplier;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
+public class SealableNavigableSet<T> implements NavigableSet<T> {
     private final NavigableSet<T> navigableSet;
     private final Supplier<Boolean> sealedSupplier;
 
-    public UnmodifiableNavigableSet(Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableSet(Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         navigableSet = new ConcurrentSkipListSet<>();
     }
-    public UnmodifiableNavigableSet(Comparator<? super T> comparator, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableSet(Comparator<? super T> comparator, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         navigableSet = new ConcurrentSkipListSet<>(comparator);
     }
-    public UnmodifiableNavigableSet(Collection<? extends T> col, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableSet(Collection<? extends T> col, Supplier<Boolean> sealedSupplier) {
         this(sealedSupplier);
         addAll(col);
     }
-    public UnmodifiableNavigableSet(SortedSet<T> set, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableSet(SortedSet<T> set, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         navigableSet = new ConcurrentSkipListSet<>(set);
     }
-    public UnmodifiableNavigableSet(NavigableSet<T> set, Supplier<Boolean> sealedSupplier) {
+    public SealableNavigableSet(NavigableSet<T> set, Supplier<Boolean> sealedSupplier) {
         this.sealedSupplier = sealedSupplier;
         navigableSet = set;
     }
@@ -88,25 +88,25 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
         return createSealHonoringIterator(navigableSet.descendingIterator());
     }
     public NavigableSet<T> descendingSet() {
-        return new UnmodifiableNavigableSet<>(navigableSet.descendingSet(), sealedSupplier);
+        return new SealableNavigableSet<>(navigableSet.descendingSet(), sealedSupplier);
     }
     public SortedSet<T> subSet(T fromElement, T toElement) {
         return subSet(fromElement, true, toElement, false);
     }
     public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        return new UnmodifiableNavigableSet<>(navigableSet.subSet(fromElement, fromInclusive, toElement, toInclusive), sealedSupplier);
+        return new SealableNavigableSet<>(navigableSet.subSet(fromElement, fromInclusive, toElement, toInclusive), sealedSupplier);
     }
     public SortedSet<T> headSet(T toElement) {
         return headSet(toElement, false);
     }
     public NavigableSet<T> headSet(T toElement, boolean inclusive) {
-        return new UnmodifiableNavigableSet<>(navigableSet.headSet(toElement, inclusive), sealedSupplier);
+        return new SealableNavigableSet<>(navigableSet.headSet(toElement, inclusive), sealedSupplier);
     }
     public SortedSet<T> tailSet(T fromElement) {
         return tailSet(fromElement, false);
     }
     public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
-        return new UnmodifiableNavigableSet<>(navigableSet.tailSet(fromElement, inclusive), sealedSupplier);
+        return new SealableNavigableSet<>(navigableSet.tailSet(fromElement, inclusive), sealedSupplier);
     }
 
     // Mutable APIs
@@ -126,7 +126,7 @@ public class UnmodifiableNavigableSet<T> implements NavigableSet<T> {
                 T item = iterator.next();
                 if (item instanceof Map.Entry) {
                     Map.Entry<?, ?> entry = (Map.Entry<?, ?>) item;
-                    return (T) new UnmodifiableSet.SealAwareEntry<>(entry, sealedSupplier);
+                    return (T) new SealableSet.SealAwareEntry<>(entry, sealedSupplier);
                 }
                 return item;
             }
