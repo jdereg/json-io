@@ -53,7 +53,7 @@ import static com.cedarsoftware.io.JsonObject.KEYS;
 public abstract class Resolver {
     private static final String NO_FACTORY = "_︿_ψ_☼";
     final Collection<UnresolvedReference> unresolvedRefs = new ArrayList<>();
-    private final IdentityHashMap<Object, Object> visited = new IdentityHashMap<>();
+    private final Map<Object, Object> visited = new IdentityHashMap<>();
     protected final Deque<JsonObject> stack = new ArrayDeque<>();
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
@@ -280,17 +280,17 @@ public abstract class Resolver {
     protected abstract void traverseArray(JsonObject jsonObj);
 
     public abstract void assignField(final JsonObject jsonObj, final Injector injector, final Object rhs);
-
-
+    
     protected void cleanup() {
         patchUnresolvedReferences();
         rehashMaps();
-        if (references != null) {
-            references.clear();
-        }
+        references.clear();
         unresolvedRefs.clear();
         prettyMaps.clear();
         handleMissingFields();
+        missingFields.clear();
+        stack.clear();
+        visited.clear();
         sealed = true;
     }
 

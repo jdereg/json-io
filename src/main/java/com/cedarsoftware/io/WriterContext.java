@@ -21,6 +21,7 @@ import java.io.IOException;
  */
 public interface WriterContext {
 
+    // TODO: Add access to all objects while writing
     /**
      * Gets the write options for the current serialization
      * @return WriteOptions

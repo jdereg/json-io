@@ -15,7 +15,8 @@ java.lang.StringBuffer = StringBuffer
 java.lang.StringBuilder = StringBuilder
 java.lang.Class = class
 java.lang.String = string
-java.util.Date = date
+java.lang.Enum = Enum
+java.lang.Throwable = Throwable
 
 # java.math
 java.math.BigInteger = BigInt
@@ -48,12 +49,18 @@ java.time.ZoneOffset = ZoneOffset
 java.time.ZoneRegion = ZoneRegion
 
 # java.util
-java.util.UUID = UUID
+java.util.Date = date
 java.util.Calendar = Calendar
 java.util.GregorianCalendar = GregorianCalendar
-java.util.TimeZone = TimeZone
 java.util.Locale = Locale
+java.util.TimeZone = TimeZone
+java.util.UUID = UUID
+
 sun.util.calendar.ZoneInfo = ZoneInfo
+
+# java.io
+java.io.File = File
+java.nio.file.Path = Path
 
 # java.net
 java.net.URL = URL
@@ -76,11 +83,18 @@ java.net.URI = URI
 [Ljava.math.BigInteger; = BigInt[]
 [Ljava.math.BigDecimal; = BigDec[]
 
+java.time.Clock = Clock
+java.time.ZoneRules = ZoneRules
+
 java.util.ArrayList = ArrayList
 java.util.Arrays$ArrayList = ArraysAsList
 java.util.LinkedHashMap = LinkedHashMap
 java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
 java.util.LinkedHashMap$LinkedValues = LinkedValues
+
+java.util.LinkedList = LinkedList
+java.util.Stack = Stack
+java.util.Vector = Vector
 
 java.util.HashMap = HashMap
 java.util.HashMap$KeySet = HashMapKeySet
@@ -89,6 +103,10 @@ java.util.HashMap$Values = HashMapValues
 java.util.IdentityHashMap = IdentityHashMap
 java.util.IdentityHashMap$KeySet = IdentityHashMapKeySet
 java.util.IdentityHashMap$Values = IdentityHashMapValues
+
+java.util.BitSet = BitSet
+java.util.Optional = Optional
+java.util.Properties = Properties
 
 java.util.TreeMap = TreeMap
 java.util.TreeMap$KeySet = TreeMapKeySet
@@ -143,3 +161,5 @@ java.util.concurrent.ConcurrentSkipListMap$KeySet = ConcurrentSkipListMapKeySet
 java.util.concurrent.ConcurrentSkipListMap$Values = ConcurrentSkipListMapValues
 java.util.concurrent.ConcurrentHashMap$KeySetView = ConcurrentHashMapKeySetView
 java.util.concurrent.ConcurrentHashMap$ValuesView = ConcurrentHashMapValuesView
+java.util.concurrent.CopyOnWriteArrayList = CopyOnWriteArrayList
+java.util.concurrent.CopyOnWriteArraySet = CopyOnWriteArraySet

@@ -247,7 +247,7 @@ class RootsTest
     @Test
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaZonedDateTime()
     {
-        OffsetDateTime odt = OffsetDateTime.now();
+        OffsetDateTime odt = OffsetDateTime.parse("2024-04-27T22:11:01-08:00");
         String json = TestUtil.toJson(odt, new WriteOptionsBuilder().withExtendedAliases().build());
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()

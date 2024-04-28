@@ -1,15 +1,19 @@
 package com.cedarsoftware.io;
 
+import java.time.ZonedDateTime;
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static com.cedarsoftware.util.CollectionUtilities.listOf;
@@ -18,6 +22,7 @@ import static com.cedarsoftware.util.DeepEquals.deepEquals;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -474,5 +479,199 @@ class JDK9ImmutableTest
         final Iterator<Node> j = deserializedNodes2.iterator();
         assertThrows(UnsupportedOperationException.class, () -> j.remove());
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes2.clear());
+    }
+
+    @Test
+    void testMapKeyForwardReference() {
+        Map<Temporal, Object> map = new LinkedHashMap<>();
+        ZonedDateTime zdt = ZonedDateTime.parse("2024-04-27T20:13:00-05:00");
+        map.put(zdt, zdt);
+        map.put(ZonedDateTime.parse("2024-01-27T20:10:00-05:00"), 16L);
+        map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
+        map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
+
+        String json = TestUtil.toJson(map, new WriteOptionsBuilder().withExtendedAliases().build());
+        json = "{\n" +
+                "  \"@type\": \"LinkedHashMap\",\n" +
+                "  \"@keys\": [\n" +
+                "    {\n" +
+                "      \"@ref\": 1\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-01-27T20:10:00-05:00\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-02-27T20:11:00-05:00\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-03-27T20:12:00-05:00\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"@items\": [\n" +
+                "    {\n" +
+                "      \"@id\": 1,\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
+                "    },\n" +
+                "    16,\n" +
+                "    8,\n" +
+                "    4\n" +
+                "  ]\n" +
+                "}\n";
+
+        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Map.class);
+        assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
+    }
+
+    @Test
+    void testMapValueReferenceKey() {
+        Map<Temporal, Object> map = new LinkedHashMap<>();
+        ZonedDateTime zdt = ZonedDateTime.parse("2024-04-27T20:13:00-05:00");
+        map.put(zdt, zdt);
+        map.put(ZonedDateTime.parse("2024-01-27T20:10:00-05:00"), 16L);
+        map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
+        map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
+
+        String json = TestUtil.toJson(map, new WriteOptionsBuilder().withExtendedAliases().build());
+        // JSON below has been manually rearranged to force forward reference
+        json = "{\n" +
+                "  \"@type\": \"LinkedHashMap\",\n" +
+                "  \"@keys\": [\n" +
+                "    {\n" +
+                "      \"@id\": 1,\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-01-27T20:10:00-05:00\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-02-27T20:11:00-05:00\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@type\": \"ZonedDateTime\",\n" +
+                "      \"value\": \"2024-03-27T20:12:00-05:00\"\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"@items\": [\n" +
+                "    {\n" +
+                "      \"@ref\": 1" +
+                "    },\n" +
+                "    16,\n" +
+                "    8,\n" +
+                "    4\n" +
+                "  ]\n" +
+                "}\n";
+
+        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Map.class);
+        assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
+    }
+
+    @Test
+    void testMapKeyForwardReferenceOutsideMap() {
+        Map<Temporal, Object> map = new LinkedHashMap<>();
+        ZonedDateTime zdt = ZonedDateTime.parse("2024-04-27T20:13:00-05:00");
+        map.put(zdt, 32);
+        map.put(ZonedDateTime.parse("2024-01-27T20:10:00-05:00"), 16L);
+        map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
+        map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
+        Object[] items = new Object[] { map, zdt };
+
+        String json = TestUtil.toJson(items, new WriteOptionsBuilder().withExtendedAliases().build());
+        // JSON below has been manually rearranged to force forward reference
+        json = "[\n" +
+                "  {\n" +
+                "    \"@type\": \"LinkedHashMap\",\n" +
+                "    \"@keys\": [\n" +
+                "      {\n" +
+                "        \"@ref\":1\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-01-27T20:10:00-05:00\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-02-27T20:11:00-05:00\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-03-27T20:12:00-05:00\"\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"@items\": [\n" +
+                "      {\n" +
+                "        \"@type\": \"int\",\n" +
+                "        \"value\": 32\n" +
+                "      },\n" +
+                "      16,\n" +
+                "      8,\n" +
+                "      4\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@id\": 1,\n" +
+                "    \"@type\": \"ZonedDateTime\",\n" +
+                "    \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
+                "  }\n" +
+                "]";
+
+        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Object[].class);
+        Map map2 = (Map) objs[0];
+        ZonedDateTime zdt2 = (ZonedDateTime) objs[1];
+        assertEquals(zdt2.toEpochSecond(),zdt.toEpochSecond());
+        assertEquals(((ZonedDateTime)map2.keySet().iterator().next()).toEpochSecond(), zdt2.toEpochSecond());
+    }
+
+    @Disabled
+    @Test
+    void testMapValueForwardReferenceOutsideMap() {
+        Map<Temporal, Object> map = new LinkedHashMap<>();
+        ZonedDateTime zdt = ZonedDateTime.parse("2024-04-27T20:13:00-05:00");
+        map.put(zdt, 32);
+        map.put(ZonedDateTime.parse("2024-01-27T20:10:00-05:00"), 16L);
+        map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
+        map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
+        Object[] items = new Object[] { map, zdt };
+
+        String json = TestUtil.toJson(items, new WriteOptionsBuilder().withExtendedAliases().build());
+        System.out.println(json);
+        // JSON below has been manually rearranged to force forward reference
+        json = "[\n" +
+                "  {\n" +
+                "    \"@type\": \"LinkedHashMap\",\n" +
+                "    \"@keys\": [\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-01-27T20:10:00-05:00\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-02-27T20:11:00-05:00\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "        \"@type\": \"ZonedDateTime\",\n" +
+                "        \"value\": \"2024-03-27T20:12:00-05:00\"\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"@items\": [{\"@ref\": 1}, 16, 8, 4]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@ref\": 1,\n" +
+                "    \"@type\": \"ZonedDateTime\",\n" +
+                "    \"value\": \"2024-04-27T20:13:00-05:00\"\n" +
+                "  }\n" +
+                "]\n";
+
+        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Object[].class);
     }
 }

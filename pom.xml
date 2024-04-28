@@ -244,6 +244,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${version.maven-surefire-plugin}</version>
+                <configuration>
+                    <argLine>-Duser.timezone=America/New_York -Duser.language=en -Duser.region=US -Duser.country=US</argLine>
+                </configuration>
             </plugin>
 
             <plugin>

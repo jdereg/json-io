@@ -353,11 +353,11 @@ public class ObjectResolver extends Resolver
 
         final Object array = jsonObj.getTarget();
         final Class compType = array.getClass().getComponentType();
-        final Object[] items =  jsonObj.getJsonArray();
+        final Object[] jsonItems =  jsonObj.getJsonArray();
         // Primitive arrays never make it here, as the ArrayFactory (ClassFactory) processes them in assignField.
 
         for (int i = 0; i < len; i++) {
-            final Object element = items[i];
+            final Object element = jsonItems[i];
             Object special;
 
             if (element == null) {
@@ -383,11 +383,16 @@ public class ObjectResolver extends Resolver
                         Array.set(array, i, chars);
                     }
                 } else {
-                    JsonObject jsonObject = new JsonObject();
-                    jsonObject.setJsonArray((Object[]) element);
-                    jsonObject.setHintType(compType);
-                    Array.set(array, i, createInstance(jsonObject));
-                    push(jsonObject);
+                    // Prep a JsonObject for array[i]
+                    JsonObject jsonArray = new JsonObject();
+                    jsonArray.setJsonArray((Object[]) element);
+                    jsonArray.setHintType(compType);
+
+                    // create and set it into enclosing array
+                    Array.set(array, i, createInstance(jsonArray)); // Enclosing [i] assigned to []
+
+                    // traverse items within this array - if non-primitive
+                    push(jsonArray);
                 }
             } else if (element instanceof JsonObject) {
                 JsonObject jsonElement = (JsonObject) element;

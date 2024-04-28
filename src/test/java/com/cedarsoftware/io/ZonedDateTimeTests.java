@@ -53,7 +53,7 @@ class ZonedDateTimeTests extends SerializationDeserializationMinimumTests<ZonedD
 
     @Test
     void testSimpleCase() {
-        LocalTime now = LocalTime.now();
+        LocalTime now = LocalTime.parse("12:34:01");
         ZonedDateTime date = ZonedDateTime.of(LocalDate.now(), now, ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
         ZonedDateTime date2 = ZonedDateTime.of(LocalDate.of(2022, 12, 23), now, ZoneId.of(ZoneId.getAvailableZoneIds().iterator().next()));
         NestedZonedDateTime expected = new NestedZonedDateTime(date, date2);

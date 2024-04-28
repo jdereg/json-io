@@ -800,4 +800,11 @@ public class MetaUtils
         }
         return closest;
     }
+
+    static final Pattern primArray = Pattern.compile("\\[+[ZBCDFIJS]");
+
+    static boolean isPrimitiveArrayUsingClassName(Class<?> arrayClass) {
+        String className = arrayClass.getName();
+        return primArray.matcher(className).matches();
+    }
 }

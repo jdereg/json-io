@@ -1,10 +1,14 @@
 package com.cedarsoftware.io.factory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Queue;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -34,7 +38,11 @@ import com.cedarsoftware.io.Resolver;
 public class CollectionFactory implements JsonReader.ClassFactory {
     @Override
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        if (List.class.isAssignableFrom(c)) {
+        if (Deque.class.isAssignableFrom(c)) {
+            return new ArrayDeque<>();
+        } else if (Queue.class.isAssignableFrom(c)) {
+            return new LinkedList<>();
+        } else if (List.class.isAssignableFrom(c)) {
             return new ArrayList<>();
         } else if (NavigableSet.class.isAssignableFrom(c)) {
             return new TreeSet<>();
