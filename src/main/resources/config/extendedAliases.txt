@@ -13,8 +13,6 @@ java.lang.Boolean = boolean
 java.lang.StackTraceElement = StackTraceElementElement
 java.lang.StringBuffer = StringBuffer
 java.lang.StringBuilder = StringBuilder
-java.lang.Class = class
-java.lang.String = string
 java.lang.Enum = Enum
 java.lang.Throwable = Throwable
 
@@ -49,7 +47,6 @@ java.time.ZoneOffset = ZoneOffset
 java.time.ZoneRegion = ZoneRegion
 
 # java.util
-java.util.Date = date
 java.util.Calendar = Calendar
 java.util.GregorianCalendar = GregorianCalendar
 java.util.Locale = Locale

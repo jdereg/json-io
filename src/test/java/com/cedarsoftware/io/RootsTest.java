@@ -143,11 +143,13 @@ class RootsTest
     @Test
     void testRootConvertableNonJsonPrimitiveStaysAsJsonObject()
     {
+        // NOTE: Now extendedAliases are always turned on by default, getting everyone set up so that their
+        //       systems will have supported extended aliases on the read-side for "a while." Then, in a year
+        //       or so, we can move the "extended aliases" to the standard aliases.
         ZonedDateTime zdt = ZonedDateTime.parse("2024-04-22T01:34:57.170836-04:00[America/New_York]");
         String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().withExtendedAliases().build());
 
         assertThatThrownBy(() -> { ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .withExtendedAliases()
                 .returnAsNativeJsonObjects()
                 .build(), null);
         })
@@ -157,26 +159,8 @@ class RootsTest
         // When forced, it's ok.
         ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), ZonedDateTime.class);
         assertEquals(zdt2, zdt);
-
-        // If you forget withExtendedAliases() and have failOnUnknownType() == true (default)
-        // The following two tests work. Why?  Because although the @type is unknown, the Map has a "value" key and a
-        // root type is specified (ZonedDateTime.class). The converter converts the map that has a "value" key to the
-        // specified type, never looking at @type (Maps can be converted to many types via the converter.)
-        assertThatThrownBy(() -> TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
-                .build(), ZonedDateTime.class))
-                .isInstanceOf(JsonIoException.class)
-                .hasMessageContaining("'ZonedDateTime' not defined");
-        
-        // If you forget withExtendedAliases() and have .failOnUnknownType() == false,
-        ZonedDateTime zdt3 = TestUtil.toObjects(json, new ReadOptionsBuilder()
-                .returnAsNativeJsonObjects()
-                .failOnUnknownType(false)
-                .build(), ZonedDateTime.class);  // Forces conversion to ZonedDateTime
-        deepEquals(zdt3, zdt);
     }
 
     @Test

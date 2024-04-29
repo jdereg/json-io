@@ -111,7 +111,7 @@ public class SingletonList<T> implements List<T> {
     }
 
     public boolean retainAll(Collection<?> c) {
-        throw new UnsupportedOperationException("Cannot remove items to SingletonList");
+        throw new UnsupportedOperationException("Cannot remove items from SingletonList");
     }
 
     public void clear() {

@@ -442,8 +442,15 @@ class JDK9ImmutableTest
         Node node1st = i.next();
         Node node2nd = i.next();
 
-        assertEquals("Node2", node1st.next.name);
-        assertEquals("Node1", node2nd.next.name);
+        // Set order is unknown
+        if (node1st.name.equals("Node1")) {
+            assertEquals("Node2", node1st.next.name);
+            assertEquals("Node1", node2nd.next.name);
+
+        } else {
+            assertEquals("Node1", node1st.next.name);
+            assertEquals("Node2", node2nd.next.name);
+        }
 
         // Hand-crafted JSON, intentionally listing the @ref before the @id occurs.
         json = "{\n" +
@@ -473,9 +480,17 @@ class JDK9ImmutableTest
         i = deserializedNodes2.iterator();
         node1st = i.next();
         node2nd = i.next();
-        assertEquals("Node2", node1st.next.name);
-        assertEquals("Node1", node2nd.next.name);
-        
+
+        // Set order is unknown
+        if (node1st.name.equals("Node1")) {
+            assertEquals("Node2", node1st.next.name);
+            assertEquals("Node1", node2nd.next.name);
+
+        } else {
+            assertEquals("Node1", node1st.next.name);
+            assertEquals("Node2", node2nd.next.name);
+        }
+
         final Iterator<Node> j = deserializedNodes2.iterator();
         assertThrows(UnsupportedOperationException.class, () -> j.remove());
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes2.clear());

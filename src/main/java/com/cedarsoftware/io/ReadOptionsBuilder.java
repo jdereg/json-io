@@ -105,6 +105,7 @@ public class ReadOptionsBuilder {
         options.nonStandardSetters.putAll(BASE_NONSTANDARD_SETTERS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
+        withExtendedAliases();
     }
 
     /**
@@ -114,6 +115,11 @@ public class ReadOptionsBuilder {
         this(); // initialize to empty
         if (copy != null) {
             DefaultReadOptions other = (DefaultReadOptions) copy;
+
+            // Pointing this ReadOptions.converterOptions to the other ReadOptions.converterOptions
+            // is OK, as we are not (yet) changing any of the values. However, if we decide to override
+            // one of the ConverterOptions settings, then we must deep-copy the ConverterOptions.
+            options.converterOptions = other.converterOptions;
 
             // Copy simple settings
             options.allowNanAndInfinity = other.allowNanAndInfinity;
@@ -150,6 +156,9 @@ public class ReadOptionsBuilder {
 
             options.customReaderClasses.clear();
             options.customReaderClasses.putAll(other.customReaderClasses);
+
+            options.notCustomReadClasses.clear();
+            options.notCustomReadClasses.addAll(other.notCustomReadClasses);
 
             options.classFactoryMap.clear();
             options.classFactoryMap.putAll(other.classFactoryMap);
@@ -799,7 +808,7 @@ public class ReadOptionsBuilder {
         private boolean closeStream = true;
         private int maxDepth = 1000;
         private JsonReader.MissingFieldHandler missingFieldHandler = null;
-        private final DefaultConverterOptions converterOptions = new DefaultConverterOptions();
+        private DefaultConverterOptions converterOptions = new DefaultConverterOptions();
         private ReadOptions.ReturnType returnType = ReadOptions.ReturnType.JAVA_OBJECTS;
         private ReadOptions.Decimals decimalType = Decimals.DOUBLE;
         private ReadOptions.Integers integerType = Integers.LONG;

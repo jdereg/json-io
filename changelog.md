@@ -1,4 +1,8 @@
 ### Revision History
+* 4.23.0
+  * `Collections.unmodifiableXXX()` instances when serialized, restore back to unmodifiable instances.
+  * `ImmutableList` and `ImmutableSet` restore back unmodifiable instances.
+  * `ReadOptionsBuilder` now include all extended aliases by default (`.withExtendedAliases()`). You can take advantage of this on the sending side by using the `WriteOptionsBuilder().withExtendAliases().` We will default this on the `WriteOptionsBuilder` in the future as the new default makes it "out there."  Remember: You can read them even if they are not sent, but you can't write them if the reader is not ready for them. 
 * 4.22.0
   * Many more `@type` aliases added to keep the JSON succinct and more human-readable.
   * Broader conversion support for rootTypes: `JsonIo.toObjects(..., rootType)` Includes all the `java-utils` `Converter.convert()` pairings (680+)
