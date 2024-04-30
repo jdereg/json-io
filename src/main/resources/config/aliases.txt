@@ -15,8 +15,8 @@ java.lang.Double = double
 java.lang.Character = char
 java.lang.Boolean = boolean
 
-com.cedarsoftware.util.SealableList = SealableList
-com.cedarsoftware.util.SealableSet = SealableSet
-com.cedarsoftware.util.SealableNavigableSet = SealableNavigableSet
-com.cedarsoftware.util.SealableMap = SealableMap
-com.cedarsoftware.util.SealableNavigableMap = SealableNavigableMap
+com.cedarsoftware.util.SealableList = UnmodifiableRandomAccessList
+com.cedarsoftware.util.SealableSet = UnmodifiableSet
+com.cedarsoftware.util.SealableNavigableSet = UnmodifiableNavigableSet
+com.cedarsoftware.util.SealableMap = UnmodifiableMap
+com.cedarsoftware.util.SealableNavigableMap = UnmodifiableNavigableMap

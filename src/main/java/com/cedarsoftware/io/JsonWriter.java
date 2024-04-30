@@ -26,6 +26,11 @@ import java.util.Optional;
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.util.FastWriter;
 
+import static com.cedarsoftware.io.JsonValue.ID;
+import static com.cedarsoftware.io.JsonValue.SHORT_ID;
+import static com.cedarsoftware.io.JsonValue.SHORT_TYPE;
+import static com.cedarsoftware.io.JsonValue.TYPE;
+
 /**
  * Output a Java object graph in JSON format.  This code handles cyclic
  * references and can serialize any Object graph without requiring a class
@@ -562,7 +567,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
 
     private void writeId(final String id) throws IOException
     {
-        out.write(writeOptions.isShortMetaKeys() ? "\"@i\":" : "\"@id\":");
+        out.write(writeOptions.isShortMetaKeys() ? "\"" + SHORT_ID + "\":" : "\"" + ID + "\":");
         out.write(id == null ? "0" : id);
     }
 
@@ -570,7 +575,7 @@ public class JsonWriter implements WriterContext, Closeable, Flushable
         if (writeOptions.isNeverShowingType()) {
             return;
         }
-        output.write(writeOptions.isShortMetaKeys() ? "\"@t\":\"" : "\"@type\":\"");
+        output.write(writeOptions.isShortMetaKeys() ? "\"" + SHORT_TYPE + "\":\"" : "\"" + TYPE + "\":\"");
         String alias = writeOptions.getTypeNameAlias(name);
         output.write(alias);
         output.write('"');
