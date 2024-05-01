@@ -42,7 +42,8 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     protected abstract Class<T> getTestClass();
 
     protected List<String> getPossibleClassNamesForType() {
-        return listOf(getTestClass().getName());
+        String x = getTestClass().getSimpleName();
+        return listOf(x);
     }
 
     protected boolean isReferenceable() {
@@ -485,7 +486,9 @@ public abstract class SerializationDeserializationMinimumTests<T> {
     }
 
     protected String[] buildPossibleClassNamesArray() {
-        return getPossibleClassNamesForType().stream()
+
+        List<String> possibleNamesForType = getPossibleClassNamesForType();
+        return possibleNamesForType.stream()
                 .map(this::buildTypeNameSearch)
                 .collect(Collectors.toList())
                 .toArray(new String[]{});

@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -176,17 +177,17 @@ class WriteOptionsTest {
 
     private static Stream<Arguments> aliasDefaults() {
         return Stream.of(
-                Arguments.of("java.lang.Class", "class"),
-                Arguments.of("java.lang.String", "string"),
-                Arguments.of("java.util.Date", "date"),
-                Arguments.of("java.lang.Byte", "byte"),
-                Arguments.of("java.lang.Short", "short"),
-                Arguments.of("java.lang.Integer", "int"),
-                Arguments.of("java.lang.Long", "long"),
-                Arguments.of("java.lang.Float", "float"),
-                Arguments.of("java.lang.Double", "double"),
-                Arguments.of("java.lang.Character", "char"),
-                Arguments.of("java.lang.Boolean", "boolean")
+                Arguments.of("java.lang.Class", "Class"),
+                Arguments.of("java.lang.String", "String"),
+                Arguments.of("java.util.Date", "Date"),
+                Arguments.of("java.lang.Byte", "Byte"),
+                Arguments.of("java.lang.Short", "Short"),
+                Arguments.of("java.lang.Integer", "Integer"),
+                Arguments.of("java.lang.Long", "Long"),
+                Arguments.of("java.lang.Float", "Float"),
+                Arguments.of("java.lang.Double", "Double"),
+                Arguments.of("java.lang.Character", "Character"),
+                Arguments.of("java.lang.Boolean", "Boolean")
         );
     }
 
@@ -199,17 +200,17 @@ class WriteOptionsTest {
 
     private static Stream<Arguments> aliasWithExtended() {
         return Stream.of(
-                Arguments.of("java.lang.Class", "class"),
-                Arguments.of("java.lang.String", "string"),
-                Arguments.of("java.util.Date", "date"),
-                Arguments.of("java.lang.Byte", "byte"),
-                Arguments.of("java.lang.Short", "short"),
-                Arguments.of("java.lang.Integer", "int"),
-                Arguments.of("java.lang.Long", "long"),
-                Arguments.of("java.lang.Float", "float"),
-                Arguments.of("java.lang.Double", "double"),
-                Arguments.of("java.lang.Character", "char"),
-                Arguments.of("java.lang.Boolean", "boolean"),
+                Arguments.of("java.lang.Class", "Class"),
+                Arguments.of("java.lang.String", "String"),
+                Arguments.of("java.util.Date", "Date"),
+                Arguments.of("java.lang.Byte", "Byte"),
+                Arguments.of("java.lang.Short", "Short"),
+                Arguments.of("java.lang.Integer", "Integer"),
+                Arguments.of("java.lang.Long", "Long"),
+                Arguments.of("java.lang.Float", "Float"),
+                Arguments.of("java.lang.Double", "Double"),
+                Arguments.of("java.lang.Character", "Character"),
+                Arguments.of("java.lang.Boolean", "Boolean"),
                 Arguments.of("java.util.ArrayList", "ArrayList"),
                 Arguments.of("java.util.LinkedHashMap$LinkedValues", "LinkedValues"),
                 Arguments.of("java.util.HashMap$Values", "HashMapValues"),
@@ -250,12 +251,9 @@ class WriteOptionsTest {
     void testAliasTypeNames_addedByMap() {
         Map<String, String> map = mapOf("int", "properInt", "long", "properLong");
 
-        WriteOptions options = new WriteOptionsBuilder()
+        assertThrows(IllegalArgumentException.class, () -> new WriteOptionsBuilder()
                 .aliasTypeNames(map)
-                .build();
-
-        assertEquals("properInt", options.getTypeNameAlias("int"));
-        assertEquals("properLong", options.getTypeNameAlias("long"));
+                .build());
     }
 
     // TODO: not sure we want to throw an exception on this?
@@ -269,13 +267,10 @@ class WriteOptionsTest {
 
     @Test
     void testAliasTypeNames_addedByNameValue() {
-        WriteOptions options = new WriteOptionsBuilder()
+        assertThrows(IllegalArgumentException.class, ()-> new WriteOptionsBuilder()
                 .aliasTypeName("int", "properInt")
                 .aliasTypeName("long", "properLong")
-                .build();
-
-        assertEquals("properInt", options.getTypeNameAlias("int"));
-        assertEquals("properLong", options.getTypeNameAlias("long"));
+                .build());
     }
 
     @Test

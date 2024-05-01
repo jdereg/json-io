@@ -283,7 +283,7 @@ public class WriteOptionsBuilder {
     /**
      * @param type  Class to alias
      * @param alias String shorter name to use, typically.
-     * @return ReadOptions for chained access.
+     * @return WriteOptionsBuilder for chained access.
      */
     public WriteOptionsBuilder aliasTypeName(Class<?> type, String alias) {
         options.aliasTypeNames.put(type.getName(), alias);
@@ -307,8 +307,7 @@ public class WriteOptionsBuilder {
      */
     private void addUniqueAlias(String typeName, String alias) {
         Convention.throwIfClassNotFound(typeName, options.classLoader);
-        Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias" + typeName + " -> " + alias + ", but it is already aliased to: " + options.aliasTypeNames.get(typeName));
-
+        Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias '" + alias + "' for '" + typeName + "', but it is already aliased to: " + options.aliasTypeNames.get(typeName));
         options.aliasTypeNames.put(typeName, alias);
     }
 

@@ -2,13 +2,10 @@ package com.cedarsoftware.io;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
-
-import static com.cedarsoftware.util.CollectionUtilities.listOf;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -30,18 +27,6 @@ import static com.cedarsoftware.util.CollectionUtilities.listOf;
 public class TypeSubstitutionTest
 {
     @Test
-    public void testBasicTypeSubAtRoot()
-    {
-        LinkedHashMap<String, String> map = new LinkedHashMap<>(1);
-        map.put("java.util.ArrayList", "al");
-        Map<String, String> types = map;
-        List list = listOf("alpha", "bravo", "charlie");
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().aliasTypeNames(types).build());
-        List test = TestUtil.toObjects(json, new ReadOptionsBuilder().aliasTypeNames(types).build(), null);
-        assert DeepEquals.deepEquals(list, test);
-    }
-
-    @Test
     public void testBasicTypeSubInFieldAndInnerClass()
     {
         Person p = new Person();
@@ -52,7 +37,6 @@ public class TypeSubstitutionTest
         p.setPets(map);
 
         LinkedHashMap<String, String> map1 = new LinkedHashMap<>(2);
-        map1.put("java.util.LinkedHashMap", "lmap");
         map1.put("com.cedarsoftware.io.TypeSubstitutionTest$Person", "person");
 
         Map<String, String> types = map1;

@@ -1,22 +1,180 @@
 #
-# List of aliases.
+# List of aliases
 # Class name = Alias name
 #
-java.lang.Class = class
-java.lang.String = string
-java.util.Date = date
 
-java.lang.Byte = byte
-java.lang.Short = short
-java.lang.Integer = int
-java.lang.Long = long
-java.lang.Float = float
-java.lang.Double = double
-java.lang.Character = char
-java.lang.Boolean = boolean
+byte=byte
+short=short
+int=int
+long=long
+float=float
+double=double
+boolean=boolean
+char=char
 
+# java.lang
+java.lang.Byte = Byte
+java.lang.Short = Short
+java.lang.Integer = Integer
+java.lang.Long = Long
+java.lang.Float = Float
+java.lang.Double = Double
+java.lang.Character = Character
+java.lang.Boolean = Boolean
+java.lang.Class = Class
+java.lang.Object = Object
+java.lang.String = String
+java.lang.StackTraceElement = StackTraceElementElement
+java.lang.StringBuffer = StringBuffer
+java.lang.StringBuilder = StringBuilder
+java.lang.Enum = Enum
+java.lang.Throwable = Throwable
+
+# java.time
+java.time.Clock = Clock
+java.time.Duration = Duration
+java.time.Instant = Instant
+java.time.LocalDate = LocalDate
+java.time.LocalDateTime = LocalDateTime
+java.time.LocalTime = LocalTime
+java.time.MonthDay = MonthDay
+java.time.OffsetDateTime = OffsetDateTime
+java.time.OffsetTime = OffsetTime
+java.time.Period = Period
+java.time.Year = Year
+java.time.YearMonth = YearMonth
+java.time.ZonedDateTime = ZonedDateTime
+java.time.ZoneId = ZoneId
+java.time.ZoneOffset = ZoneOffset
+java.time.ZoneRegion = ZoneRegion
+java.time.ZoneRules = ZoneRules
+
+sun.util.calendar.ZoneInfo = ZoneInfo
+
+# java.math
+java.math.BigInteger = BigInteger
+java.math.BigDecimal = BigDecimal
+
+# java.util
+java.util.Date = Date
+java.util.Calendar = Calendar
+java.util.GregorianCalendar = GregorianCalendar
+java.util.Locale = Locale
+java.util.TimeZone = TimeZone
+java.util.UUID = UUID
+java.util.ArrayList = ArrayList
+java.util.Arrays$ArrayList = ArraysAsList
+java.util.LinkedHashMap = LinkedHashMap
+java.util.LinkedHashMap$LinkedKeySet = LinkedKeySet
+java.util.LinkedHashMap$LinkedValues = LinkedValues
+java.util.LinkedList = LinkedList
+java.util.Stack = Stack
+java.util.Vector = Vector
+java.util.HashMap = HashMap
+java.util.HashMap$KeySet = HashMapKeySet
+java.util.HashMap$Values = HashMapValues
+java.util.IdentityHashMap = IdentityHashMap
+java.util.IdentityHashMap$KeySet = IdentityHashMapKeySet
+java.util.IdentityHashMap$Values = IdentityHashMapValues
+java.util.BitSet = BitSet
+java.util.Optional = Optional
+java.util.Properties = Properties
+java.util.TreeMap = TreeMap
+java.util.TreeMap$KeySet = TreeMapKeySet
+java.util.TreeMap$Values = TreeMapValues
+
+# Atomics
+java.util.concurrent.atomic.AtomicBoolean = AtomicBoolean
+java.util.concurrent.atomic.AtomicInteger = AtomicInteger
+java.util.concurrent.atomic.AtomicLong = AtomicLong
+
+# java.io
+java.io.File = File
+java.nio.file.Path = Path
+
+# java.net
+java.net.URL = URL
+java.net.URI = URI
+
+# java.sql
+java.sql.Date = SqlDate
+java.sql.Timestamp = Timestamp
+
+# Collections "Singleton" types
+#   Intentionally re-using alias. WriteOptions keeps both (class -> alias).
+#   This will make our collection write out like the alias for the JDK
+#   collection.  When read back in, it is "coerced" back to our version
+#   for infinite clean round-trips.
+java.util.Collections$SingletonList = SingletonList
+com.cedarsoftware.io.util.SingletonList = SingletonList
+
+java.util.Collections$SingletonSet = SingletonSet
+com.cedarsoftware.io.util.SingletonSet = SingletonSet
+
+java.util.Collections$SingletonMap = SingletonMap
+com.cedarsoftware.io.util.SingletonMap = SingletonMap
+
+# Collections "Unmodifiable" types
+#   Intentionally re-using alias. WriteOptions keeps both (class -> alias).
+#   This will make our collection write out like the alias for the JDK
+#   collection.  When read back in, it is "coerced" back to our version
+#   for infinite clean round-trips.
+java.util.Collections$UnmodifiableCollection = UnmodifiableCollection
+
+java.util.Collections$UnmodifiableRandomAccessList = UnmodifiableRandomAccessList
 com.cedarsoftware.util.SealableList = UnmodifiableRandomAccessList
+
+java.util.Collections$UnmodifiableSet = UnmodifiableSet
 com.cedarsoftware.util.SealableSet = UnmodifiableSet
+
+java.util.Collections$UnmodifiableSortedSet = UnmodifiableSortedSet
+
+java.util.Collections$UnmodifiableNavigableSet = UnmodifiableNavigableSet
 com.cedarsoftware.util.SealableNavigableSet = UnmodifiableNavigableSet
+
+java.util.Collections$UnmodifiableMap = UnmodifiableMap
 com.cedarsoftware.util.SealableMap = UnmodifiableMap
+
+java.util.Collections$UnmodifiableSortedMap = UnmodifiableSortedMap
+
+java.util.Collections$UnmodifiableNavigableMap = UnmodifiableNavigableMap
 com.cedarsoftware.util.SealableNavigableMap = UnmodifiableNavigableMap
+
+# Collections "Empty" types
+java.util.Collections$EmptyEnumeration = EmptyEnumeration
+java.util.Collections$EmptyIterator = EmptyIterator
+java.util.Collections$EmptyList = EmptyList
+java.util.Collections$EmptyListIterator = EmptyListIterator
+java.util.Collections$EmptySet = EmptySet
+java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = EmptyNavigableSet
+java.util.Collections$EmptyMap = EmptyMap
+java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = EmptyNavigableMap
+
+java.util.ImmutableCollections$ListN = ListN
+java.util.ImmutableCollections$List12 = List12
+java.util.ImmutableCollections$SetN = SetN
+java.util.ImmutableCollections$Set12 = Set12
+
+# Collections "synchronized" types
+java.util.Collections$SynchronizedCollection = SynchronizedCollection
+java.util.Collections$SynchronizedList = SynchronizedList
+java.util.Collections$SynchronizedRandomAccessList = SynchronizedRandomAccessList
+java.util.Collections$SynchronizedSet = SynchronizedSet
+java.util.Collections$SynchronizedSortedSet = SynchronizedSortedSet
+java.util.Collections$SynchronizedNavigableSet = SynchronizedNavigableSet
+java.util.Collections$SynchronizedMap = SynchronizedMap
+java.util.Collections$SynchronizedSortedMap = SynchronizedSortedMap
+java.util.Collections$SynchronizedNavigableMap = SynchronizedNavigableMap
+
+# Collections "concurrent" types
+java.util.concurrent.ConcurrentHashMap = ConcurrentHashMap
+java.util.concurrent.ConcurrentSkipListMap = ConcurrentSkipListMap
+java.util.concurrent.ConcurrentSkipListSet = ConcurrentSkipListSet
+java.util.concurrent.ConcurrentSkipListMap$KeySet = ConcurrentSkipListMapKeySet
+java.util.concurrent.ConcurrentSkipListMap$Values = ConcurrentSkipListMapValues
+java.util.concurrent.ConcurrentHashMap$KeySetView = ConcurrentHashMapKeySetView
+java.util.concurrent.ConcurrentHashMap$ValuesView = ConcurrentHashMapValuesView
+java.util.concurrent.CopyOnWriteArrayList = CopyOnWriteArrayList
+java.util.concurrent.CopyOnWriteArraySet = CopyOnWriteArraySet
+com.cedarsoftware.util.ConcurrentList = ConcurrentList
+com.cedarsoftware.util.ConcurrentSet = ConcurrentSet

@@ -391,7 +391,7 @@ class CollectionTests {
         String json = TestUtil.toJson(arrayList, writeOptions);
         TestUtil.printLine(json);
         String className = CollectionTests.class.getName();
-        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"age\":21,\"foo\":\"bar\",\"name\":\"B\"}]}", json);
+        assertEquals("{\"@type\":\"ArrayList\",\"@items\":[{\"@type\":\"" + className + "$TestEnum4\",\"age\":21,\"foo\":\"bar\",\"name\":\"B\"}]}", json);
     }
 
     @Test
@@ -537,7 +537,7 @@ class CollectionTests {
         Object[] poly = new Object[]{"Road Runner", 16L, 3.1415d, true, false, null, 7, "Coyote", "Coyote"};
         String json = TestUtil.toJson(poly);
         TestUtil.printLine("json=" + json);
-        assertEquals("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"int\",\"value\":7},\"Coyote\",\"Coyote\"]", json);
+        assertEquals("[\"Road Runner\",16,3.1415,true,false,null,{\"@type\":\"Integer\",\"value\":7},\"Coyote\",\"Coyote\"]", json);
         Collection col = new ArrayList<>();
         col.add("string");
         col.add(Long.valueOf(16));
@@ -548,7 +548,7 @@ class CollectionTests {
         col.add(Integer.valueOf(7));
         json = TestUtil.toJson(col);
         TestUtil.printLine("json=" + json);
-        assertEquals("{\"@type\":\"java.util.ArrayList\",\"@items\":[\"string\",16,3.14159,true,false,null,{\"@type\":\"int\",\"value\":7}]}", json);
+        assertEquals("{\"@type\":\"ArrayList\",\"@items\":[\"string\",16,3.14159,true,false,null,{\"@type\":\"Integer\",\"value\":7}]}", json);
     }
 
     @Test
@@ -587,7 +587,7 @@ class CollectionTests {
 
         String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
         TestUtil.printLine(json);
-        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert DeepEquals.deepEquals(list, dupe);
     }
 

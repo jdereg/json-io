@@ -1,5 +1,6 @@
 package com.cedarsoftware.io;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
@@ -1274,7 +1275,14 @@ public class ReadOptionsBuilder {
             if (clazz == null) {
                 System.out.println("Could not find class: " + className + " which has associated alias value: " + alias + " config/aliases.txt");
             } else {
+                // Add the alias and 1D to 3D array versions of it.
+                Class<?> clazz1 = Array.newInstance(clazz, 0).getClass();
+                Class<?> clazz2 = Array.newInstance(clazz1, 0).getClass();
+                Class<?> clazz3 = Array.newInstance(clazz2, 0).getClass();
                 aliasApplier.apply(clazz, alias);
+                aliasApplier.apply(clazz1, alias + "[]");
+                aliasApplier.apply(clazz2, alias + "[][]");
+                aliasApplier.apply(clazz3, alias + "[][][]");
             }
         }
     }

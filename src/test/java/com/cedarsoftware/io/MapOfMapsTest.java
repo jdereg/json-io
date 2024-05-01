@@ -339,7 +339,7 @@ class MapOfMapsTest
     @Test
     public void writeJsonObjectMapWithStringKeys()
     {
-        String json = "{\n  \"@type\":\"java.util.LinkedHashMap\",\n  \"age\":\"36\",\n  \"name\":\"chris\"\n}";
+        String json = "{\n  \"@type\":\"LinkedHashMap\",\n  \"age\":\"36\",\n  \"name\":\"chris\"\n}";
         Map<String, String> map1 = new LinkedHashMap<>(2);
         map1.put("age", "36");
         map1.put("name", "chris");
@@ -358,7 +358,7 @@ class MapOfMapsTest
     @Test
     public void writeMapWithStringKeys()
     {
-        String json = "{\"@type\":\"java.util.LinkedHashMap\",\"age\":\"36\",\"name\":\"chris\"}";
+        String json = "{\"@type\":\"LinkedHashMap\",\"age\":\"36\",\"name\":\"chris\"}";
         Map<String, String> map1 = new LinkedHashMap<>(2);
         map1.put("age", "36");
         map1.put("name", "chris");

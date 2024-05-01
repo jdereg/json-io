@@ -1,14 +1,11 @@
 package com.cedarsoftware.io;
 
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 
-import static com.cedarsoftware.util.CollectionUtilities.listOf;
 import static com.cedarsoftware.util.MapUtilities.mapOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -36,13 +33,10 @@ public class ShortMetaNamesTest
         TestObject b = new TestObject("B");
         a._other = b;
         b._other = a;
-        Map map = new LinkedHashMap<>();
-        map.put(a, b);
-        List list = listOf(map);
 
-        Map<String, String> shortNames = mapOf("java.util.ArrayList", "al", "java.util.LinkedHashMap", "lmap", TestObject.class.getName(), "to");
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).aliasTypeNames(shortNames).build());
-        List clone = TestUtil.toObjects(json, new ReadOptionsBuilder().aliasTypeNames(shortNames).build(), null);
-        assert DeepEquals.deepEquals(list, clone);
+        Map<String, String> shortNames = mapOf("java.util.ArrayList", "al", "java.util.LinkedHashMap", "lmap");
+
+        new WriteOptionsBuilder().aliasTypeNames(mapOf(TestObject.class.getName(), "TO"));
+        assertThrows(IllegalArgumentException.class, () -> new WriteOptionsBuilder().aliasTypeNames(shortNames));
     }
 }

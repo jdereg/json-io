@@ -16,12 +16,12 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import com.cedarsoftware.util.DeepEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import static com.cedarsoftware.util.DeepEquals.deepEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,7 +59,7 @@ public class ArrayTest
         TestUtil.printLine(json);
 
         ManyArrays root = TestUtil.toObjects(json, null);
-        assert DeepEquals.deepEquals(obj, root);
+        assert deepEquals(obj, root);
         assertArray(root);
     }
 
@@ -716,7 +716,7 @@ public class ArrayTest
 
         String json0 = TestUtil.toJson(ta, options);
         ManyArrays thatTa = TestUtil.toObjects(json0, null);
-        assertTrue(DeepEquals.deepEquals(ta, thatTa));
+        assertTrue(deepEquals(ta, thatTa));
         String json1 = TestUtil.toJson(ta);
         TestUtil.printLine("json0 = " + json0);
         TestUtil.printLine("json1 = " + json1);
@@ -748,8 +748,8 @@ public class ArrayTest
 
     private static Stream<Arguments> charArrayParams() {
         return Stream.of(
-                Arguments.of(new char[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[C\",\"@items\":[\"a\\t\\u0005\"]}"),
-                Arguments.of(new char[] { 'Z', '1', '\0' }, "{\"@type\":\"[C\",\"@items\":[\"Z1\\u0000\"]}")
+                Arguments.of(new char[] { 'a', '\t', '\u0005' }, "{\"@type\":\"char[]\",\"@items\":[\"a\\t\\u0005\"]}"),
+                Arguments.of(new char[] { 'Z', '1', '\0' }, "{\"@type\":\"char[]\",\"@items\":[\"Z1\\u0000\"]}")
         );
     }
 
@@ -769,8 +769,8 @@ public class ArrayTest
 
     private static Stream<Arguments> charObjectArrayParams() {
         return Stream.of(
-                Arguments.of(new Character[] { 'a', '\t', '\u0005' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"a\",\"\\t\",\"\\u0005\"]}"),
-                Arguments.of(new Character[] { 'Z', '1', '\0' }, "{\"@type\":\"[Ljava.lang.Character;\",\"@items\":[\"Z\",\"1\",\"\\u0000\"]}")
+                Arguments.of(new Character[] { 'a', '\t', '\u0005' }, "{\"@type\":\"Character[]\",\"@items\":[\"a\",\"\\t\",\"\\u0005\"]}"),
+                Arguments.of(new Character[] { 'Z', '1', '\0' }, "{\"@type\":\"Character[]\",\"@items\":[\"Z\",\"1\",\"\\u0000\"]}")
         );
     }
 
@@ -982,7 +982,7 @@ public class ArrayTest
 
         Object[] restoredNumbers;
         restoredNumbers = TestUtil.toObjects(json, null);
-        assert DeepEquals.deepEquals(Arrays.asList(restoredNumbers), numbers);
+        assert deepEquals(Arrays.asList(restoredNumbers), numbers);
     }
 
     @Test
@@ -1108,7 +1108,7 @@ public class ArrayTest
         Object[] array = {10, 20, 30};
 
         String json = TestUtil.toJson(array, options);
-        assertThat(json).isEqualTo("[{\"@type\":\"int\",\"value\":10},{\"@type\":\"int\",\"value\":20},{\"@type\":\"int\",\"value\":30}]");
+        assertThat(json).isEqualTo("[{\"@type\":\"Integer\",\"value\":10},{\"@type\":\"Integer\",\"value\":20},{\"@type\":\"Integer\",\"value\":30}]");
     }
 
     private static Stream<Arguments> integerVariants() {
@@ -1145,7 +1145,7 @@ public class ArrayTest
         Object[] array = {10L, 20L, 30L};
 
         String json = TestUtil.toJson(array, writeOptions);
-        assertThat(json).isEqualTo("[{\"@type\":\"long\",\"value\":\"10\"},{\"@type\":\"long\",\"value\":\"20\"},{\"@type\":\"long\",\"value\":\"30\"}]");
+        assertThat(json).isEqualTo("[{\"@type\":\"Long\",\"value\":\"10\"},{\"@type\":\"Long\",\"value\":\"20\"},{\"@type\":\"Long\",\"value\":\"30\"}]");
     }
 
     private static Stream<Arguments> stringVariants() {

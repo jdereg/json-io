@@ -2,23 +2,23 @@
   "@type":"com.cedarsoftware.io.PrettyPrintTest$Nice",
   "name":"Louie",
   "items":{
-    "@type":"java.util.ArrayList",
+    "@type":"ArrayList",
     "@items":[
       "One",
       1,
       {
-        "@type":"int",
+        "@type":"Integer",
         "value":1
       },
       true
     ]
   },
   "dictionary":{
-    "@type":"java.util.LinkedHashMap",
+    "@type":"LinkedHashMap",
     "grade":"A",
     "price":100.0,
     "bigdec":{
-      "@type":"java.math.BigDecimal",
+      "@type":"BigDecimal",
       "value":"3.141592653589793238462643383"
     }
   }

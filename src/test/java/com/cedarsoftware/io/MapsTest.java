@@ -105,7 +105,7 @@ class MapsTest
     void testEmptyMap_whenMapIsNotDefaultMap_includesType(Class<? extends Map> c) throws Exception {
         Map map = c.getConstructor().newInstance();
         String json = TestUtil.toJson(map);
-        assertThat(json).isEqualTo("{\"@type\":\"" + c.getName() + "\"}");
+        assertThat(json).isEqualTo("{\"@type\":\"" + c.getSimpleName() + "\"}");
     }
 
     @SuppressWarnings("rawtypes")

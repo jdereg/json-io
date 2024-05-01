@@ -146,8 +146,7 @@ java.util.Collections$UnmodifiableNavigableSet$EmptyNavigableSet = com.cedarsoft
 java.util.Collections$EmptyMap = com.cedarsoftware.io.factory.EmptyMapFactory
 java.util.Collections$UnmodifiableNavigableMap$EmptyNavigableMap = com.cedarsoftware.io.factory.EmptyNavigableMapFactory
 
-# Use factory classes to re-create unmodifiable Collections classes -> these are "marker" collections that will be
-# "flipped" to Unmodifiable classes once filled, keeping them the same instance as the original.
+# Use factory classes to re-create unmodifiable Collections classes
 java.util.Collections$UnmodifiableCollection = com.cedarsoftware.io.factory.SealableListFactory
 java.util.Collections$UnmodifiableList = com.cedarsoftware.io.factory.SealableListFactory
 java.util.Collections$UnmodifiableRandomAccessList = com.cedarsoftware.io.factory.SealableListFactory

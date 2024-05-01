@@ -108,7 +108,7 @@ class ZoneIdTests extends SerializationDeserializationMinimumTests<ZoneId> {
     }
 
     protected List<String> getPossibleClassNamesForType() {
-        return listOf(getTestClass().getName(), "java.time.ZoneRegion", "java.time.ZoneOffset");
+        return listOf(getTestClass().getSimpleName(), "ZoneRegion", "ZoneOffset");
     }
 
     @ParameterizedTest
