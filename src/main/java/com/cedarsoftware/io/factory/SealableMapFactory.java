@@ -24,6 +24,6 @@ import com.cedarsoftware.util.SealableMap;
  */
 public class SealableMapFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new SealableMap<>(resolver.sealedSupplier);
+        return new SealableMap<>(resolver.getSealedSupplier());
     }
 }

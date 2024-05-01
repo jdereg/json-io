@@ -14,7 +14,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import com.cedarsoftware.io.JsonReader.MissingFieldHandler;
 import com.cedarsoftware.io.reflect.Injector;
@@ -58,11 +57,10 @@ public abstract class Resolver {
     private final Collection<Object[]> prettyMaps = new ArrayList<>();
     // store the missing field found during deserialization to notify any client after the complete resolution is done
     final Collection<Missingfields> missingFields = new ArrayList<>();
-    private final ReadOptions readOptions;
-    private final ReferenceTracker references;
-    private final Converter converter;
-    private volatile boolean sealed = false;
-    public final Supplier<Boolean> sealedSupplier = () -> sealed;
+    private ReadOptions readOptions;
+    private ReferenceTracker references;
+    private Converter converter;
+    private SealedSupplier sealedSupplier = new SealedSupplier();
 
     private static final Set<String> convertableValues = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "byte",
@@ -263,6 +261,10 @@ public abstract class Resolver {
         }
     }
 
+    public SealedSupplier getSealedSupplier() {
+        return sealedSupplier;
+    }
+
     /**
      * Push a JsonObject on the work stack that has not yet had it's fields move over to it's Java peer (.target)
      * @param jsonObject JsonObject that supplies the source values for the Java peer (target)
@@ -291,7 +293,10 @@ public abstract class Resolver {
         missingFields.clear();
         stack.clear();
         visited.clear();
-        sealed = true;
+        references = null;
+        readOptions = null;
+        sealedSupplier.seal();
+        sealedSupplier = null;
     }
 
     // calls the missing field handler if any for each recorded missing field.

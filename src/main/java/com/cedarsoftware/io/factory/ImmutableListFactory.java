@@ -24,6 +24,6 @@ import com.cedarsoftware.util.SealableList;
  */
 public class ImmutableListFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new SealableList<>(resolver.sealedSupplier);
+        return new SealableList<>(resolver.getSealedSupplier());
     }
 }

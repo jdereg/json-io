@@ -24,6 +24,6 @@ import com.cedarsoftware.util.SealableSet;
  */
 public class SealableSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new SealableSet<>(resolver.sealedSupplier);
+        return new SealableSet<>(resolver.getSealedSupplier());
     }
 }

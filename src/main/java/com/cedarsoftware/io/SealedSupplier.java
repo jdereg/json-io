@@ -1,9 +1,6 @@
-package com.cedarsoftware.io.factory;
+package com.cedarsoftware.io;
 
-import com.cedarsoftware.io.JsonObject;
-import com.cedarsoftware.io.JsonReader;
-import com.cedarsoftware.io.Resolver;
-import com.cedarsoftware.util.SealableNavigableMap;
+import java.util.function.Supplier;
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -22,8 +19,14 @@ import com.cedarsoftware.util.SealableNavigableMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SealableNavigableMapFactory implements JsonReader.ClassFactory {
-    public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new SealableNavigableMap<>(resolver.getSealedSupplier());
+public class SealedSupplier implements Supplier<Boolean> {
+    private volatile boolean sealed = false;
+
+    public Boolean get() {
+        return sealed;
+    }
+
+    void seal() {
+        sealed = true;
     }
 }

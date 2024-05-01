@@ -24,6 +24,6 @@ import com.cedarsoftware.util.SealableNavigableSet;
  */
 public class SealableNavigableSetFactory implements JsonReader.ClassFactory {
     public Object newInstance(Class<?> c, JsonObject jObj, Resolver resolver) {
-        return new SealableNavigableSet<>(resolver.sealedSupplier);
+        return new SealableNavigableSet<>(resolver.getSealedSupplier());
     }
 }
