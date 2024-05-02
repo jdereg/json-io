@@ -50,25 +50,26 @@ In this example, an`InputStream`is supplying the JSON.
 **json-io** provides the choice to use the generic `Map` of `Maps` representation of an object, akin to a Javascript
 associative array.  When reading from a JSON `String` or`InputStream`of JSON, use `JsonIo:`
 
+``` 
     String json = // or InputStream to JSON providing source
     ReadOptions readOptions = new ReadOptionsBuilder().returnAsNativeJsonObjects().build();
     Map root = JsonIo.toObjects(json, readOptions);    
+```
+See the `ReadOptions` below for the feature control options. In the provided example, rather than returning the objects
+converted into Java classes, the raw JSON values are parsed and returned as `Maps`. This forms a graph consisting of all 
+`Map` instances, arrays, and primitive types.
 
-See the `ReadOptions` below for the feature control options.  In the example #4 above, rather than return the objects
-converted into Java classes, the raw JSON values being parsed are returned as `Maps`.  It is a graph that consists of
-all `Map` instances, arrays, and primitive types.  
+### Representation of JSON Structures as Maps
+When `Map` is returned, the root value can represent one of the following:
+- **JSON Object (`{...}`)**: Transformed into a `Map` that represents any JSON object `{...}`.
+- **JSON Array (`[...]`)**: Represented as a `Map` with a key of `@items` which holds the list representing the JSON array `[...]`.
+- **JSON Primitive**: Such as boolean (true/false), null, numbers (long, double), and strings, directly represented as their Java equivalents.
 
-When `Map` is returned, your root value will represent one of:
-* `a JSON object {...}`
-  * `Map` that represents any JSON object {...}.
-* `JSON array [...]`
-  * `Map` that has a key of `@items` which represents any JSON array [...].
-* `JSON primitive (boolean true/false, null, long, double, String).`
-
-This `Map` representation can be re-written to a JSON String or Stream and the output JSON will match the
-original input JSON stream.  This permits you to receive JSON strings / streams that contain class references which
-do not exist in the JVM that is parsing the JSON, to completely read the String/Stream, perhaps manipulate the content,
-and then rewrite the String/stream.
+### Manipulating and Rewriting JSON
+This `Map` representation can be rewritten to a JSON String or Stream, ensuring that the output JSON will match the 
+original input JSON stream. This feature is especially useful for handling JSON strings or streams containing class
+references not present in the JVM parsing the JSON. It allows complete reading and potential manipulation of the content, 
+followed by rewriting the String or stream, providing a robust solution for dynamic data handling.
 
 ## Advanced Usage
 Sometimes you will run into a class that does not want to serialize.  On the read-side, this can be a class that does
