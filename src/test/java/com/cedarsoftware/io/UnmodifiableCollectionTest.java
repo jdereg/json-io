@@ -51,8 +51,8 @@ public class UnmodifiableCollectionTest
         col.add("baz");
         col.add("qux");
         col = Collections.unmodifiableCollection(col);
-        String json = TestUtil.toJson(col, new WriteOptionsBuilder().withExtendedAliases().build());
-        List<String> root = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        String json = TestUtil.toJson(col, new WriteOptionsBuilder().build());
+        List<String> root = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert root.size() == 4;
         assert DeepEquals.deepEquals(root, listOf("foo", "bar", "baz", "qux"));
 

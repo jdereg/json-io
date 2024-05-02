@@ -33,10 +33,6 @@ to store the content from the JSON object being read.  If you want, you can set 
 instead of a`LinkedHashMap,`however, it should be noted that`Maps`are useful because any field encountered in the
 JSON can be`put`into a`Map.`
 
-****Note**** If you use `withExtendedAliases()` on the `WriteOptionsBuilder` make sure you also set that for
-`ReadOptionsBuilder.`  If you forget to match `withExtendedAliases()` on both ReadOptions/WriteOptions, then you will
-often receive an error indicating that a "Class: *abbreviation* is not defined" (when unknownTypes is `true`).  If 
-you have this set to `false,` you will likely get a `ClassCastException` with `LinkedHashMap` or a `LinkedHashMap` returned. 
 >#### `boolean` isFailOnUnknownType()
 >- [ ] Returns`true` if an 'unknownTypeClass' is set,`false`if it is not set. The default setting is `true.` 
 >####  `Class` getUnknownTypeClass()
@@ -124,6 +120,9 @@ additional JSON from the stream.  For example, NDJSON is a format of {...}\n{...
 Aliasing is used to turn long java package names to simple class names, e.g. `java.util.ArrayList` becomes `ArrayList`
 in the JSON.  By default, `json-io` has most of the common JDK classes aliased to make the JSON content smaller.  You can
 add additional aliases for classes in your program.
+
+An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
+a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Pass in a String class name, and it will return the alias for it, or it will return the same string you passed in (non-aliased).
 

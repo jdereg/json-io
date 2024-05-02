@@ -143,11 +143,8 @@ class RootsTest
     @Test
     void testRootConvertableNonJsonPrimitiveStaysAsJsonObject()
     {
-        // NOTE: Now extendedAliases are always turned on by default, getting everyone set up so that their
-        //       systems will have supported extended aliases on the read-side for "a while." Then, in a year
-        //       or so, we can move the "extended aliases" to the standard aliases.
         ZonedDateTime zdt = ZonedDateTime.parse("2024-04-22T01:34:57.170836-04:00[America/New_York]");
-        String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(zdt, new WriteOptionsBuilder().build());
 
         assertThatThrownBy(() -> { ZonedDateTime zdt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
@@ -167,10 +164,9 @@ class RootsTest
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaAtomicLong()
     {
         Number number = new AtomicLong(16);
-        String json = TestUtil.toJson(number, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert what instanceof JsonObject;
         Map<?,?> map = (Map<?,?>) what;
@@ -179,19 +175,16 @@ class RootsTest
         // Specifying root of AtomicLong.class below "trumps" returnAsNativeJsonObjects()
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), AtomicLong.class);
         assert deepEquals(number2, new AtomicLong(16));
 
         number = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert deepEquals(number, new AtomicLong(16));
 
         number = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), AtomicLong.class);
         assert deepEquals(number, new AtomicLong(16));
     }
@@ -200,10 +193,9 @@ class RootsTest
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaByte()
     {
         Number number = Byte.valueOf("16");
-        String json = TestUtil.toJson(number, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(number, new WriteOptionsBuilder().build());
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert what instanceof JsonObject;
         Map<?,?> map = (Map<?,?>) what;
@@ -211,19 +203,16 @@ class RootsTest
 
         Number number2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), Byte.class);
         assertEquals(number2, Byte.valueOf("16"));
 
         number = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(number, Byte.valueOf("16"));
 
         number = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), Byte.class);
         assertEquals(number, Byte.valueOf("16"));
     }
@@ -232,10 +221,9 @@ class RootsTest
     void testRootConvertableJsonPrimitiveCousinConvertsToJavaZonedDateTime()
     {
         OffsetDateTime odt = OffsetDateTime.parse("2024-04-27T22:11:01-08:00");
-        String json = TestUtil.toJson(odt, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(odt, new WriteOptionsBuilder().build());
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert what instanceof JsonObject;
         Map<?,?> map = (Map<?,?>) what;
@@ -243,19 +231,16 @@ class RootsTest
 
         OffsetDateTime odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), OffsetDateTime.class);
         assertEquals(odt2, odt);
 
         odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(odt2, odt);
 
         odt2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), OffsetDateTime.class);
         assertEquals(odt2, odt);
     }
@@ -266,25 +251,21 @@ class RootsTest
         String json = "{\"@type\":\"string\",\"value\":\"json-io\"}";
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(what, "json-io");
 
         String s2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), String.class);
         assertEquals(s2, "json-io");
 
         s2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(s2, "json-io");
 
         s2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), String.class);
         assertEquals(s2, "json-io");
     }
@@ -295,33 +276,28 @@ class RootsTest
         String json = "{\"@type\":\"long\",\"value\":16}";
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(what, 16L);
 
         json = "{\"@type\":\"long\",\"value\":\"16\"}";
         what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(what, 16L);
 
         json = "{\"@type\":\"long\",\"value\":\"16\"}";
         long l2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), long.class);
         assertEquals(l2, 16L);
 
         l2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assertEquals(l2, 16L);
 
         l2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), Long.class);
         assertEquals(l2, 16L);
     }
@@ -332,7 +308,6 @@ class RootsTest
         String json = "{\"@type\":\"StringBuilder\",\"value\":\"json-io\"}";
         Object what = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert what instanceof JsonObject;
         Map<?,?> map = (Map<?,?>) what;
@@ -340,37 +315,31 @@ class RootsTest
 
         StringBuilder b2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), StringBuilder.class);
         assert deepEquals(b2, new StringBuilder("json-io"));
 
         String sb = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsNativeJsonObjects()
-                .withExtendedAliases()
                 .build(), String.class);    // String.class forces the conversion.
         assert deepEquals(sb, "json-io");
 
         b2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), null);
         assert deepEquals(b2, new StringBuilder("json-io"));    // respects the @type=StringBuilder
 
         sb = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), String.class);
         assertEquals(sb, "json-io");
 
         b2 = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), StringBuilder.class);                 // forced to StringBuilder and @type=StringBuilder, you get StringBuilder
         assertEquals(sb, "json-io");
 
         StringBuffer stringBuffer = TestUtil.toObjects(json, new ReadOptionsBuilder()
                 .returnAsJavaObjects()
-                .withExtendedAliases()
                 .build(), StringBuffer.class);                 // forced to StringBuffer and @type=StringBuilder, you get StringBuffer
         deepEquals(stringBuffer, "json-io");
     }

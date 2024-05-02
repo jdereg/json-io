@@ -1,3 +1,0 @@
-# List of aliases.
-# Class name = Alias name
-

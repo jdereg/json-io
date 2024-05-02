@@ -61,13 +61,6 @@ entries that match values in the passed in Map. New entries in the Map are added
 >- [ ] Sets the alias for a given class name.
 >#### `WriteOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
->#### `WriteOptionsBuilder` withExtendedAliases()
->- [ ] All the aliases listed in the resources folder `config/extendedAliases.txt` will be used when writing to shorten 
-the length of the output JSON. If you would like to add aliases that stay for the lifecycle of the JVM run, use 
-`WriteOptionsBuilder.addPermanentAlias(Class, String alas)` API.  All new `WriteOptions` instances will include these aliases.
-To add permanent aliases, that will be there longer than JVM lifecycle, copy the config/extendedAliases.txt file to your 
-config/resources folder and add more alias to it. Make sure your file is in the classpath ahead of the one that ships
-with json-io.jar.
 
 ### @type
 Used to provide hint to JsonReader to know what Classes to instantiate. Frequently, json-io can determine
@@ -324,7 +317,19 @@ Call this method to add a permanent (JVM lifetime) alias of a class to a shorter
 will automatically be created with permanent aliases added to them.
 
 >#### WriteOptionsBuilder.addPermanentAlias(`Class<?> clazz, String alias`)
- 
+
+### removeAliasedClassNamesMatching
+Call this method to remove alias entries from the `WriteOptionsBuilder` so that when it writes JSON,
+the classes that match the passed in pattern are not aliased. This API matches your wildcard patterns containing
+*, ?, and regular characters, against class names in its cache. It removes the entries (className to aliasName)
+from the cache to prevent the resultant classes from being aliased during JSON writing.
+
+This String parameter is a "wild-card" pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
+
+An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
+a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
+>#### WriteOptionsBuilder.removeAliasedClassNamesMatching(`String classNamePattern`)
+
 ### addPermanentNotExportedField
 Call this method to add a permanent (JVM lifetime) excluded (not exported) field name of class.  All `WriteOptions` will 
 automatically be created with the named field on the not-exported list.

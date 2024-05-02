@@ -88,12 +88,12 @@ public class Injector {
         catch (ClassCastException e) {
             String msg = e.getMessage();
             if (StringUtilities.hasContent(msg) && msg.contains("LinkedHashMap")) {
-                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". If using 'withExtendedAliases()' option, make it is set on both ReadOptions and WriteOptions.", e);
+                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ".", e);
             }
             try {
                 injector.invoke(object, Converter.convert(value, field.getType()));
             } catch (Throwable t) {
-                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastExcepton.", e);
+                throw new JsonIoException("Unable to set field: " + getName() + " using " + getDisplayName() + ". Getting a ClassCastException.", e);
             }
         }
         catch (Throwable t) {

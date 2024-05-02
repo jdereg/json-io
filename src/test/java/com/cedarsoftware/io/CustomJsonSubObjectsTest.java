@@ -119,22 +119,19 @@ class CustomJsonSubObjectsTest
 	void testCustomReaderSimple()
 	{
 		// You do not need to create all the aliases, I did that to make the JSON look cleaner.
-		// I do recommend using .withExtendedAliases() as that will catch all the common Java types and Collections, Maps, etc.
 		ReadOptionsBuilder readOptions = new ReadOptionsBuilder()
 				.addClassFactory(Person.class, new PersonFactory())
 				.aliasTypeName(Person.class, "Person")
 				.aliasTypeName(TestObjectKid.class, "TestObjKid")
 				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]")
-				.aliasTypeName(CompactMap.class, "CompactMap")
-				.withExtendedAliases();
+				.aliasTypeName(CompactMap.class, "CompactMap");
 
 		WriteOptionsBuilder writeOptions = new WriteOptionsBuilder()
 				.addCustomWrittenClass(Person.class, new PersonWriter())
 				.aliasTypeName(Person.class, "Person")
 				.aliasTypeName(TestObjectKid.class, "TestObjKid")
 				.aliasTypeName(TestObjectKid[].class, "TestObjKid[]")
-				.aliasTypeName(CompactMap.class, "CompactMap")
-				.withExtendedAliases();
+				.aliasTypeName(CompactMap.class, "CompactMap");
 
 		// Note: You could use the ReadOptionsBuilder/WriteOptionsBuilder's static "addPermanent()" APIs instead of
 		// calling the ReadOptions/WriteOptions each time for transfer (for some options). This will set them for

@@ -263,8 +263,8 @@ public class JsonIo {
             return null;
         }
 
-        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).withExtendedAliases().build();
-        readOptions = new ReadOptionsBuilder(readOptions).withExtendedAliases().build();
+        writeOptions = new WriteOptionsBuilder(writeOptions).showTypeInfoMinimal().shortMetaKeys(true).build();
+        readOptions = new ReadOptionsBuilder(readOptions).build();
 
         String json = toJson(source, writeOptions);
         return (T) toObjects(json, readOptions, source.getClass());

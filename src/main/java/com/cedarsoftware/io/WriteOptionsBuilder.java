@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import com.cedarsoftware.io.reflect.Accessor;
 import com.cedarsoftware.io.reflect.AccessorFactory;
@@ -27,6 +28,7 @@ import com.cedarsoftware.io.reflect.filters.method.NamedMethodFilter;
 import com.cedarsoftware.util.ClassUtilities;
 import com.cedarsoftware.util.Convention;
 import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.StringUtilities;
 
 /**
  * Builder class for building the writeOptions.
@@ -158,7 +160,22 @@ public class WriteOptionsBuilder {
     public static void addPermanentAlias(Class<?> clazz, String alias) {
         BASE_ALIAS_MAPPINGS.put(clazz.getName(), alias);
     }
-    
+
+    /**
+     * Call this method to remove alias patterns from the WriteOptionsBuilder so that when it writes JSON,
+     * the classes that match the passed in pattern are not aliased. This API matches your wildcard pattern
+     * of *, ?, and characters against class names in its cache. It removes the entries (className to aliasName)
+     * from the cache to prevent the resultant classes from being aliased during output.
+     *
+     * @param classNamePattern String pattern to match class names. This String matches using a wild-card
+     * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
+     */
+    public static void removeAliasedClassNamesMatching(String classNamePattern) {
+        String regex = StringUtilities.wildcardToRegexString(classNamePattern);
+        Pattern pattern = Pattern.compile(regex);
+        BASE_ALIAS_MAPPINGS.keySet().removeIf(key -> pattern.matcher(key).matches());
+    }
+
     /**
      * Call this method to add a permanent (JVM lifetime) excluded field name of class.  All WriteOptions will
      * automatically be created this field field on the excluded list.
@@ -309,16 +326,6 @@ public class WriteOptionsBuilder {
         Convention.throwIfClassNotFound(typeName, options.classLoader);
         Convention.throwIfKeyExists(options.aliasTypeNames, typeName, "Tried to create @type alias '" + alias + "' for '" + typeName + "', but it is already aliased to: " + options.aliasTypeNames.get(typeName));
         options.aliasTypeNames.put(typeName, alias);
-    }
-
-    /**
-     * Add all the aliases in the config/extendedAliases.txt to the alias list.
-     * @return WriteOptionsBuilder for chained access.
-     */
-    public WriteOptionsBuilder withExtendedAliases() {
-        Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
-        extendedAliases.forEach((key, value) -> options.aliasTypeNames.putIfAbsent(key, value));
-        return this;
     }
 
     /**

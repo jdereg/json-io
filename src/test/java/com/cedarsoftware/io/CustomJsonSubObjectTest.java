@@ -85,13 +85,11 @@ class CustomJsonSubObjectTest
 	{
 		ReadOptionsBuilder readOptions = new ReadOptionsBuilder()
 				.addClassFactory(Person.class, new PersonFactory())
-				.aliasTypeName(Person.class, "Person")
-				.withExtendedAliases();
+				.aliasTypeName(Person.class, "Person");
 
 		WriteOptionsBuilder writeOptions = new WriteOptionsBuilder()
 				.addCustomWrittenClass(Person.class, new PersonWriter())
-				.aliasTypeName(Person.class, "Person")
-				.withExtendedAliases();
+				.aliasTypeName(Person.class, "Person");
 
 		Person p1 = createPersonJohn();
 		String json = JsonIo.toJson(p1, writeOptions.build());

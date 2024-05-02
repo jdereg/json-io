@@ -272,7 +272,6 @@ public class JsonReader implements Closeable
                     : converter.convert(graph, rootType);
         }
         throw new JsonIoException("Return type mismatch, expected: " + rootType.getName() + ", actual: " + graph.getClass().getName() +
-                ".\nIf you are using .withExtendedAliases(), make sure it is set for both ReadOptions & WriteOptions." +
                 "\nYou could be encountering an 'unknownType' (class) that cannot be created, in which case a LinkedHashMap is returned." +
                 "\nYou may need to add a ClassFactory to create the unknown class.");
     }

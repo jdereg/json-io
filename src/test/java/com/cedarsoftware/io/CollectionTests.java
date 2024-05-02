@@ -571,9 +571,9 @@ class CollectionTests {
         list.add(new byte[]{1, 3, 5});
         list.add(new double[]{2.0, 4.0, 6.1});
 
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).build());
         TestUtil.printLine(json);
-        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert DeepEquals.deepEquals(list, dupe);
     }
 
@@ -585,7 +585,7 @@ class CollectionTests {
         list.add(new String[]{"1", "3", "5"});
         list.add(new Date[]{now, now, now});
 
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).build());
         TestUtil.printLine(json);
         List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert DeepEquals.deepEquals(list, dupe);
@@ -599,9 +599,9 @@ class CollectionTests {
         list.add(new TestObject[]{new TestObject("1", new TestObject("3")), new TestObject("5")});
         list.add(new Date[]{now, now, now});
 
-        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).withExtendedAliases().build());
+        String json = TestUtil.toJson(list, new WriteOptionsBuilder().shortMetaKeys(true).build());
         TestUtil.printLine(json);
-        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        List<Object> dupe = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert DeepEquals.deepEquals(list, dupe);
     }
 

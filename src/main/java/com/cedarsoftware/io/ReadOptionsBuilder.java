@@ -106,7 +106,6 @@ public class ReadOptionsBuilder {
         options.nonStandardSetters.putAll(BASE_NONSTANDARD_SETTERS);
         options.excludedFieldNames.putAll(WriteOptionsBuilder.BASE_EXCLUDED_FIELD_NAMES);
         options.fieldsNotImported.putAll(BASE_NOT_IMPORTED_FIELDS);
-        withExtendedAliases();
     }
 
     /**
@@ -540,16 +539,6 @@ public class ReadOptionsBuilder {
      */
     public ReadOptionsBuilder aliasTypeName(String typeName, String alias) {
         addUniqueAlias(typeName, alias);
-        return this;
-    }
-
-    /**
-     * Add all the aliases in from config/extendedAliases.txt
-     * @return ReadOptionsBuilder for chained access.
-     */
-    public ReadOptionsBuilder withExtendedAliases() {
-        Map<String, String> extendedAliases = MetaUtils.loadMapDefinition("config/extendedAliases.txt");
-        extendedAliases.forEach((key, value) -> options.aliasTypeNames.putIfAbsent(value, key));
         return this;
     }
 

@@ -33,7 +33,7 @@ class AliasTest {
         set.add("baz");
         set = Collections.unmodifiableSet(set);
 
-        WriteOptions writeOptionss = new WriteOptionsBuilder().withExtendedAliases().build();
+        WriteOptions writeOptionss = new WriteOptionsBuilder().build();
         String json = TestUtil.toJson(set, writeOptionss);
         assert json.contains("\"UnmodifiableSet\"");
 

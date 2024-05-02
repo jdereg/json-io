@@ -271,7 +271,7 @@ class RefsTest
     @Test
     void testConvertableReferences() {
         String json = "[{\"@ref\":1},{\"@id\":1,\"@type\":\"ZonedDateTime\",\"value\":\"2024-04-21T14:55:53.77587-04:00[America/New_York]\"}]";
-        Object[] dates = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().withExtendedAliases().build(), null);
+        Object[] dates = TestUtil.toObjects(json, new ReadOptionsBuilder().returnAsNativeJsonObjects().build(), null);
         ZonedDateTime zdt1 = (ZonedDateTime) dates[0];
         ZonedDateTime zdt2 = (ZonedDateTime) dates[1];
         assertEquals(zdt1, zdt2);

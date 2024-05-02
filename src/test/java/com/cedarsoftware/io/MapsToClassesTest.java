@@ -57,7 +57,7 @@ public class MapsToClassesTest
         assert !types.getaBoolean();
         assert types.getaByte() == (byte) 0;
         assert types.getaShort() == (short) 0;
-        assert types.getAnInt() == (int) 0;
+        assert types.getAnInt() == 0;
         assert types.getaLong() == (long) 0;
         assert types.getaFloat() == 0.0f;
         assert types.getaDouble() == 0.0d;
@@ -65,7 +65,7 @@ public class MapsToClassesTest
         assert types.getaDate() == null;
         assert types.getaByteWrap() == (byte) 0;
         assert types.getaShortWrap() == (short) 0;
-        assert types.getAnIntWrap() == (int) 0;
+        assert types.getAnIntWrap() == 0;
         assert types.getaLongWrap() == (long) 0;
         assert types.getaFloatWrap() == 0.0f;
         assert types.getaDoubleWrap() == 0.0d;
@@ -82,7 +82,7 @@ public class MapsToClassesTest
         assert !types.getaBoolean();
         assert types.getaByte() == (byte) 0;
         assert types.getaShort() == (short) 0;
-        assert types.getAnInt() == (int) 0;
+        assert types.getAnInt() == 0;
         assert types.getaLong() == (long) 0;
         assert types.getaFloat() == 0.0f;
         assert types.getaDouble() == 0.0d;

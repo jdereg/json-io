@@ -607,7 +607,7 @@ class JsonParser {
         Class<?> clazz = ClassUtilities.forName(javaType, readOptions.getClassLoader());
         if (clazz == null) {
             if (readOptions.isFailOnUnknownType()) {
-                error("Unknown type (class) '" + javaType + "' not defined. If using .withExtendedAliases(), make sure it is set on both ReadOptions & WriteOptions.");
+                error("Unknown type (class) '" + javaType + "' not defined.");
             }
             clazz = readOptions.getUnknownTypeClass();
             if (clazz == null) {

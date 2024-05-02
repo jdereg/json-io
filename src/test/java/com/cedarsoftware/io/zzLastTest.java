@@ -1,9 +1,12 @@
 package com.cedarsoftware.io;
 
+import java.math.BigInteger;
+import java.util.Arrays;
+
 import org.junit.jupiter.api.Test;
 
 /**
- * Last test to run, dumps out statistics.
+ * Last test to run, deals with static data and dumps out statistics.
  *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br>
@@ -23,6 +26,37 @@ import org.junit.jupiter.api.Test;
  */
 class zzLastTest
 {
+    @Test
+    void testRemovingAliases()
+    {
+        Object[] objects = new Object[] {
+                "Hello",
+                16,
+                16L,
+                (byte) 16,
+                (short) 16,
+                Arrays.asList("foo", true, 'a', BigInteger.ONE)
+        };
+        String json = TestUtil.toJson(objects);
+        WriteOptionsBuilder.removeAliasedClassNamesMatching("j*a?lang.*");
+        String json2 = TestUtil.toJson(objects);
+
+        assert json.contains("Integer") && !json.contains("java.lang.Integer");
+        assert json.contains("Byte") && !json.contains("java.lang.Byte");
+        assert json.contains("BigInteger") && !json.contains("java.math.BigInteger");
+        assert json.contains("ArraysAsList") && !json.contains("java.util.Arrays$ArrayList");
+
+        assert json2.contains("java.lang.Integer");
+        assert json2.contains("java.lang.Byte");
+        assert !json2.contains("java.math.BigInteger");
+        assert !json2.contains("java.util.Arrays$ArrayList");
+
+        WriteOptionsBuilder.removeAliasedClassNamesMatching("*");
+        json2 = TestUtil.toJson(objects);
+        assert json2.contains("java.math.BigInteger");
+        assert json2.contains("java.util.Arrays$ArrayList");
+    }
+
     @Test
     void testZTimings()
     {

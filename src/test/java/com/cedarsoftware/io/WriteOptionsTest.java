@@ -228,7 +228,7 @@ class WriteOptionsTest {
     @ParameterizedTest
     @MethodSource("aliasWithExtended")
     void testAliasTypeNames_includingExtendedDefaults(String fqName, String shortName) {
-        WriteOptions options = new WriteOptionsBuilder().withExtendedAliases().build();
+        WriteOptions options = new WriteOptionsBuilder().build();
         assertThat(options.getTypeNameAlias(fqName)).isEqualTo(shortName);
     }
 
@@ -242,7 +242,7 @@ class WriteOptionsTest {
     @ParameterizedTest
     @MethodSource("aliasExceptions")
     void testAliasTypeNames_exceptionCases(String fqName, String shortName) {
-        WriteOptions options = new WriteOptionsBuilder().withExtendedAliases().build();
+        WriteOptions options = new WriteOptionsBuilder().build();
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() ->
                 new WriteOptionsBuilder().aliasTypeName(fqName, shortName));
     }

@@ -157,8 +157,8 @@ class MapsTest
         stuff.emptySortedMap = Collections.emptySortedMap();
         stuff.emptyNavigableMap = Collections.emptyNavigableMap();
 
-        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
-        EmptyStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), EmptyStuff.class);
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
+        EmptyStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), EmptyStuff.class);
 
         try {
             stuff2.emptyList.add("a");
@@ -219,8 +219,8 @@ class MapsTest
         stuff.singletonSet = Collections.singleton("Bitcoin");
         stuff.singletonMap = Collections.singletonMap("Solana", "Bitcoin");
 
-        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
-        SingletonStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), SingletonStuff.class);
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
+        SingletonStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), SingletonStuff.class);
 
         assert stuff2.singletonList.size() == 1;
         assert stuff2.singletonSet.size() == 1;
@@ -289,8 +289,8 @@ class MapsTest
         navMap.put("baz", "qux");
         stuff.unmodifiableNavigableMap = Collections.unmodifiableNavigableMap(navMap);
 
-        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
-        UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), UnmodifiableStuff.class);
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
+        UnmodifiableStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), UnmodifiableStuff.class);
         assert DeepEquals.deepEquals(stuff, stuff2);
         assertThrows(UnsupportedOperationException.class, () -> stuff2.unmodifiableCollection.add("a"));
     }
@@ -329,8 +329,8 @@ class MapsTest
         navMap.put("baz", "qux");
         stuff.synchronizedNavigableMap = Collections.synchronizedNavigableMap(navMap);
 
-        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
-        SynchronizedStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), SynchronizedStuff.class);
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
+        SynchronizedStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), SynchronizedStuff.class);
         assert DeepEquals.deepEquals(stuff, stuff2);
     }
 
@@ -368,8 +368,8 @@ class MapsTest
         stuff.concurrentNavigableMap.put("foo", "bar");
         stuff.concurrentNavigableMap.put("baz", "qux");
 
-        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().withExtendedAliases().build());
-        ConcurrentStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), ConcurrentStuff.class);
+        String json = TestUtil.toJson(stuff, new WriteOptionsBuilder().build());
+        ConcurrentStuff stuff2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), ConcurrentStuff.class);
 
         assert DeepEquals.deepEquals(stuff, stuff2);
     }

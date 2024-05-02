@@ -261,13 +261,13 @@ class JDK9ImmutableTest
         rec2.smap = Collections.unmodifiableNavigableMap((NavigableMap<String, ? extends Rec>) rec2.smap);
         List<Rec> ol = listOf(rec1, rec2, rec1);
 
-        String json = TestUtil.toJson(ol, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(ol, new WriteOptionsBuilder().build());
 
-        List<Rec> es = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
-        json = TestUtil.toJson(es, new WriteOptionsBuilder().withExtendedAliases().build());
+        List<Rec> es = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        json = TestUtil.toJson(es, new WriteOptionsBuilder().build());
 
-        List<Rec> again = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
-        json = TestUtil.toJson(again, new WriteOptionsBuilder().withExtendedAliases().build());
+        List<Rec> again = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
+        json = TestUtil.toJson(again, new WriteOptionsBuilder().build());
 
         assert deepEquals(ol, es);
         assertThrows(UnsupportedOperationException.class, () -> es.add(rec1));
@@ -321,9 +321,9 @@ class JDK9ImmutableTest
         assertThrows(UnsupportedOperationException.class, () -> l4.add("foo"));
 
         Object[] lists = new Object[] {l0, l1, l2, l3, l4};
-        String json = TestUtil.toJson(lists, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(lists, new WriteOptionsBuilder().build());
         
-        Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        Object[] newLists = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert deepEquals(lists, newLists);
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[0]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((List)newLists[1]).add("foo"));
@@ -351,9 +351,9 @@ class JDK9ImmutableTest
         Set s4 = setOf("a", 2, 4.3, (byte)7);
 
         Object[] sets = new Object[] {s0, s1, s2, s3, s4};
-        String json = TestUtil.toJson(sets, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(sets, new WriteOptionsBuilder().build());
 
-        Object[] newSets = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), null);
+        Object[] newSets = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), null);
         assert deepEquals(sets, newSets);
         assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[0]).add("foo"));
         assertThrows(UnsupportedOperationException.class, () -> ((Set)newSets[1]).add("foo"));
@@ -374,10 +374,10 @@ class JDK9ImmutableTest
         List<Node> nodes = listOf(node1, node2);
 
         // Serialize the list
-        String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
 
         // Deserialize the list
-        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
+        final List<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), List.class);
 
         // Assertions to check if the forward reference is maintained after deserialization
         assertEquals("Node2", deserializedNodes.get(0).next.name);
@@ -407,7 +407,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), List.class);
+        final List<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), List.class);
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node2));
 
         // Assertions to check if the forward reference is maintained after deserialization
@@ -431,10 +431,10 @@ class JDK9ImmutableTest
         Set<Node> nodes = setOf(node1, node2);
 
         // Serialize the list
-        String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = JsonIo.toJson(nodes, new WriteOptionsBuilder().build());
         
         // Deserialize the list
-        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
+        final Set<Node> deserializedNodes = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), Set.class);
         assert deepEquals(nodes, deserializedNodes);
         assertThrows(UnsupportedOperationException.class, () -> deserializedNodes.add(node1));
         // Assertions to check if the forward reference is maintained after deserialization
@@ -475,7 +475,7 @@ class JDK9ImmutableTest
                 "}";
 
         // Deserialize the list (hand created to force forward reference)
-        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Set.class);
+        final Set<Node> deserializedNodes2 = JsonIo.toObjects(json, new ReadOptionsBuilder().build(), Set.class);
         // Assertions to check if the forward reference is maintained after deserialization
         i = deserializedNodes2.iterator();
         node1st = i.next();
@@ -505,7 +505,7 @@ class JDK9ImmutableTest
         map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
         map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
 
-        String json = TestUtil.toJson(map, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(map, new WriteOptionsBuilder().build());
         json = "{\n" +
                 "  \"@type\": \"LinkedHashMap\",\n" +
                 "  \"@keys\": [\n" +
@@ -537,7 +537,7 @@ class JDK9ImmutableTest
                 "  ]\n" +
                 "}\n";
 
-        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Map.class);
+        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
         assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
     }
 
@@ -550,7 +550,7 @@ class JDK9ImmutableTest
         map.put(ZonedDateTime.parse("2024-02-27T20:11:00-05:00"), 8L);
         map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
 
-        String json = TestUtil.toJson(map, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(map, new WriteOptionsBuilder().build());
         // JSON below has been manually rearranged to force forward reference
         json = "{\n" +
                 "  \"@type\": \"LinkedHashMap\",\n" +
@@ -583,7 +583,7 @@ class JDK9ImmutableTest
                 "  ]\n" +
                 "}\n";
 
-        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Map.class);
+        Map<Temporal, Object> map2 = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Map.class);
         assertSame(map2.keySet().iterator().next(), map2.values().iterator().next());
     }
 
@@ -597,7 +597,7 @@ class JDK9ImmutableTest
         map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
         Object[] items = new Object[] { map, zdt };
 
-        String json = TestUtil.toJson(items, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(items, new WriteOptionsBuilder().build());
         // JSON below has been manually rearranged to force forward reference
         json = "[\n" +
                 "  {\n" +
@@ -636,7 +636,7 @@ class JDK9ImmutableTest
                 "  }\n" +
                 "]";
 
-        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Object[].class);
+        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
         Map map2 = (Map) objs[0];
         ZonedDateTime zdt2 = (ZonedDateTime) objs[1];
         assertEquals(zdt2.toEpochSecond(),zdt.toEpochSecond());
@@ -654,7 +654,7 @@ class JDK9ImmutableTest
         map.put(ZonedDateTime.parse("2024-03-27T20:12:00-05:00"), 4L);
         Object[] items = new Object[] { map, zdt };
 
-        String json = TestUtil.toJson(items, new WriteOptionsBuilder().withExtendedAliases().build());
+        String json = TestUtil.toJson(items, new WriteOptionsBuilder().build());
         System.out.println(json);
         // JSON below has been manually rearranged to force forward reference
         json = "[\n" +
@@ -687,6 +687,6 @@ class JDK9ImmutableTest
                 "  }\n" +
                 "]\n";
 
-        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().withExtendedAliases().build(), Object[].class);
+        Object[] objs = TestUtil.toObjects(json, new ReadOptionsBuilder().build(), Object[].class);
     }
 }
