@@ -272,12 +272,15 @@ argument type.
 >#### ReadOptionsBuilder.addPermanentAlias(`Class<?> sourceClass, String alias`)
 
 ### removePermanentAliasTypeNamesMatching
-Call this method to remove alias entries from the "base" `ReadOptionsBuilder` so that new instances of `ReadOptionsBuilders`
-do not contain the removed entries (JVM lifetime). This removes the substitution pairings so that 'read' JSON will not understand
-the short-name aliases that were removed. __Be cautious with removing aliases on the 'read' side. It is usually OK for the
-`ReadOptions` to contain many aliases.  It is the `WriteOptions` you want to manage carefully, especially in a large micro-service
-environment. You want to control what alias substitutions happen on the written side, to ensure that receiving services have
-the appropriate aliases already 'understood' in their alias maps so that they can make the appropriate substitutions.__  
+Use this method to remove alias entries from the "base" `ReadOptionsBuilder.` This ensures that new instances of 
+`ReadOptionsBuilders` won't contain these removed entries for the duration of the JVM's lifetime. Removing these
+substitution pairings means that JSON read operations will no longer recognize the short-name aliases that were deleted. 
+__Exercise caution when removing aliases on the 'read' side; typically, it's safe for `ReadOptions` to maintain a broad set of aliases.__
+
+However, you should manage `WriteOptions` more __stringently__, particularly in environments with numerous micro-services.
+It's crucial to control the alias substitutions on the 'write' side to ensure that the receiving services are prepared
+to interpret the aliases contained in the received JSON. __Always expand your READ alias support before enhancing your 
+WRITE alias support, unless you plan to update all servers simultaneously.__  
 
 This API matches your wildcard patterns containing *, ?, and regular characters, against fully qualified class names in 
 its cache, and removes the matching entries.
