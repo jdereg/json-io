@@ -127,7 +127,7 @@ The APIs below affect one instance of a `ReadOptions` created from a `ReadOption
 if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
 
 An alternative to using this API is to place your own [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` ships with
-a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead.
+a pretty extensive list - you can supply your own file instead.
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Pass in a String class name, and it will return the alias for it, or it will return the same string you passed in (non-aliased).
 
@@ -283,7 +283,7 @@ This API matches your wildcard patterns containing *, ?, and regular characters,
 its cache, and removes the matching entries.
 
 An alternative to using this API is to place your own [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` ships with
-a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead.
+a pretty extensive list - you can supply your own file instead.
 
 >#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 

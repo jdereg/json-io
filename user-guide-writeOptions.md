@@ -56,7 +56,7 @@ The APIs below affect one instance of a `WriteOptions` created from a `WriteOpti
 if you add `com.mycompany.Foo ==> Foo` alias, then `Foo[], Foo[][],` and `Foo[][][]` are added as aliases too.
 
 An alternative to using this API is to place your own [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` ships with
-a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
+a pretty extensive list - you can supply your own file instead.
 
 >#### `String` getTypeNameAlias(`String typeName`)
 >- [ ] Alias Type Names, e.g. "ArrayList" instead of "java.util.ArrayList".
@@ -340,7 +340,7 @@ shorter (aliased) names for the types (fully qualified class names) matched. Thi
 *, ?, and regular characters, against class names in its cache, and removes the matching entries.
 
 An alternative to using this API is to place your own [aliases.txt](/src/main/resources/config/aliases.txt) file in the class path. `json-io` ships with
-a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`
+a pretty extensive list - you can supply your own file instead.
 >#### WriteOptionsBuilder.removePermanentAliasTypeNamesMatching(`String classNamePattern`)
 
 ### addPermanentNotExportedField
