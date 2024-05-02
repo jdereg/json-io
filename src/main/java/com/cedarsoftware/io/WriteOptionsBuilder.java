@@ -335,7 +335,7 @@ public class WriteOptionsBuilder {
      * pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
      * @return WriteOptionsBuilder for chained access.
      */
-    public WriteOptionsBuilder removeAliasTypeNameMatching(String typeNamePattern) {
+    public WriteOptionsBuilder removeAliasTypeNamesMatching(String typeNamePattern) {
         String regex = StringUtilities.wildcardToRegexString(typeNamePattern);
         Pattern pattern = Pattern.compile(regex);
         options.aliasTypeNames.keySet().removeIf(key -> pattern.matcher(key).matches());

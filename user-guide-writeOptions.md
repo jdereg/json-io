@@ -67,7 +67,7 @@ entries that match values in the passed in Map. New entries in the Map are added
 >- [ ] Sets the alias for a given class name.
 >#### `WriteOptionsBuilder` aliasTypeName(`Class, String alias`)
 >- [ ] Sets the alias for a given class.
->#### `WriteOptionsBuilder` removeAliasTypeNameMatching(`String typeNamePattern`)
+>#### `WriteOptionsBuilder` removeAliasTypeNamesMatching(`String typeNamePattern`)
 >- [ ] Remove alias entries from this `WriteOptionsBuilder` instance where the Java fully qualified string class name
    matches the passed in wildcard pattern. The `typeNamePattern` matches using a wild-card pattern, where * matches
    anything and ? matches one character. As many * or ? can be used as needed.
@@ -335,8 +335,6 @@ Call this method to remove alias entries from the "base" `WriteOptionsBuilder` s
 do not contain the removed entries (JVM lifetime). This removes the substitution pairings so that written JSON will not include
 shorter (aliased) names for the types (fully qualified class names) matched. This API matches your wildcard patterns containing
 *, ?, and regular characters, against class names in its cache, and removes the matching entries.
-
-This String parameter is a "wild-card" pattern, where * matches anything and ? matches one character. As many * or ? can be used as needed.
 
 An alternative to using this API is to place your own `aliases.txt` file in the class path. `json-io` ships with
 a pretty extensive list - you can supply your own [aliases.txt](/src/main/resources/config/aliases.txt) file instead of the one shipped with `json-io.`

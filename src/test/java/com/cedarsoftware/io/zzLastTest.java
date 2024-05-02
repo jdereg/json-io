@@ -57,7 +57,7 @@ class zzLastTest
         };
         String json = TestUtil.toJson(objects);
         System.out.println(json);
-        WriteOptions writeOptions = new WriteOptionsBuilder().removeAliasTypeNameMatching("j*a?lang.*").build();
+        WriteOptions writeOptions = new WriteOptionsBuilder().removeAliasTypeNamesMatching("j*a?lang.*").build();
         String json2 = TestUtil.toJson(objects, writeOptions);
         System.out.println(json2);
 
@@ -71,7 +71,7 @@ class zzLastTest
         assert !json2.contains("java.math.BigInteger");
         assert !json2.contains("java.util.Arrays$ArrayList");
 
-        writeOptions = new WriteOptionsBuilder(writeOptions).removeAliasTypeNameMatching("*").build();
+        writeOptions = new WriteOptionsBuilder(writeOptions).removeAliasTypeNamesMatching("*").build();
         json2 = TestUtil.toJson(objects, writeOptions);
         assert json2.contains("java.math.BigInteger");
         assert json2.contains("java.util.Arrays$ArrayList");
